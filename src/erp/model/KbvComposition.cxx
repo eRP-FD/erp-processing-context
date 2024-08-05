@@ -11,7 +11,7 @@
 namespace model
 {
 KbvComposition::KbvComposition(NumberAsStringParserDocument&& document)
-    : Resource<KbvComposition, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<KbvComposition>(std::move(document))
 {
 }
 

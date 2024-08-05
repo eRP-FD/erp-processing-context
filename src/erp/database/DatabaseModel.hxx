@@ -109,6 +109,7 @@ public:
     std::optional<EncryptedBlob> receipt;
     std::optional<EncryptedBlob> healthcareProviderPrescription;
     std::optional<EncryptedBlob> owner;
+    std::optional<model::Timestamp> lastMedicationDispense;
 };
 
 class MedicationDispense

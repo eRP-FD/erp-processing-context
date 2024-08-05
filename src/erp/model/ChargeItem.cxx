@@ -101,18 +101,17 @@ const std::unordered_map<ChargeItem::SupportingInfoType, std::string_view>
         {ChargeItem::SupportingInfoType::receiptBundle, structure_definition::receipt}};
 
 ChargeItem::ChargeItem()
-    : Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>{
-          resource::structure_definition::chargeItem,
-          []() {
-              ::std::call_once(onceFlag, initTemplates);
-              return chargeItemTemplate;
-          }()
-              .instance()}
+    : Resource{profileType,
+               []() {
+                   ::std::call_once(onceFlag, initTemplates);
+                   return chargeItemTemplate;
+               }()
+                   .instance()}
 {
 }
 
 ChargeItem::ChargeItem(NumberAsStringParserDocument&& jsonTree)
-    : Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(std::move(jsonTree))
+    : Resource(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
 }
@@ -273,7 +272,7 @@ void ChargeItem::setSupportingInfoReference(SupportingInfoType supportingInfoTyp
 // GEMREQ-end setSupportingInfoReference
 
 
-void ChargeItem::setMarkingFlags(const ::model::Extension& markingFlags)
+void ChargeItem::setMarkingFlags(const ChargeItemMarkingFlags& markingFlags)
 {
     const auto containedMarkingFlagAndPos =
         findMemberInArray(extensionArrayPointer, urlPointer, ChargeItemMarkingFlags::url, urlPointer);
@@ -391,5 +390,11 @@ std::string ChargeItem::supportingInfoTypeToReference(ChargeItem::SupportingInfo
     Fail("invalid SupportingInfoType: " + std::to_string(::uintmax_t(supportingInfoType)));
 }
 // GEMREQ-end supportingInfoTypeToReference
+
+
+std::optional<model::Timestamp> ChargeItem::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 
 }// namespace model

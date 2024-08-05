@@ -201,9 +201,8 @@ std::vector<std::shared_ptr<const Element>> ErpElement::subElements(const std::s
     rapidjson::Pointer primitivePointer{"/_" + name};
 
     auto subPointerList = mDefinitionPointer.subDefinitions(*mFhirStructureRepository, name);
-    FPExpect(! subPointerList.empty(), mDefinitionPointer.profile()->url() + '|' +
-                                           mDefinitionPointer.profile()->version() + " no such element: " + elementId +
-                                           '.' + name);
+    FPExpect(! subPointerList.empty(),
+             mDefinitionPointer.profile()->urlAndVersion() + " no such element: " + elementId + '.' + name);
     auto subPtr = subPointerList.back();
     bool isResource = subPtr.isResource();
     bool isPrimitive =

@@ -26,7 +26,7 @@ const rapidjson::Pointer messagePointer ("/message");
 OuterResponseErrorData::OuterResponseErrorData(const std::string_view& xRequestId, HttpStatus status,
                                                const std::string_view& error,
                                                const std::optional<std::string_view>& message)
-    : ResourceBase(ResourceBase::NoProfile)
+    : ResourceBase()
 {
     setXRequestId(xRequestId);
     setStatus(status);

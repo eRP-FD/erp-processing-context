@@ -89,10 +89,8 @@ const rj::Pointer valuePointer(ElementName::path(elements::value));
 }  // anonymous namespace
 
 
-Device::Device(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
-    : Resource<Device>(ResourceVersion::deprecatedProfile(profileVersion)
-                           ? resource::structure_definition::deprecated::device
-                           : resource::structure_definition::device,
+Device::Device()
+    : Resource<Device>(profileType,
                        []() {
                            std::call_once(onceFlag, initTemplates);
                            return deviceTemplate;
@@ -198,4 +196,8 @@ std::string Device::createReferenceUrl(const std::string& linkBase)
     return linkBase + "/Device/" + std::to_string(Id);
 }
 
+std::optional<model::Timestamp> Device::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 } // namespace model

@@ -13,7 +13,9 @@
 
 namespace fhirtools
 {
+class FhirStructureRepository;
 class FhirStructureRepositoryBackend;
+class FhirResourceGroupResolver;
 }
 
 class DefaultFhirStructureRepository
@@ -21,11 +23,11 @@ class DefaultFhirStructureRepository
 public:
     static std::list<std::filesystem::path> defaultProfileFiles();
 
-    static const fhirtools::FhirStructureRepositoryBackend& get();
-    static const fhirtools::FhirStructureRepositoryBackend& getWithTest();
+    static const std::shared_ptr<const fhirtools::FhirStructureRepository>& get();
+    static const std::shared_ptr<const fhirtools::FhirStructureRepository>& getWithTest();
 
     static std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend>
-    create(const std::list<std::filesystem::path>&);
+    create(const std::list<std::filesystem::path>&, const fhirtools::FhirResourceGroupResolver& resolver);
 
 private:
 };

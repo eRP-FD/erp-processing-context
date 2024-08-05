@@ -232,12 +232,33 @@ void MockDatabaseProxy::updateTask(const model::PrescriptionId& taskId,
     mDatabase.updateTask(taskId, accessCode, blobId, salt);
 }
 
+void MockDatabaseProxy::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId, const model::Timestamp& lastModified)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    mDatabase.updateTaskDeleteMedicationDispense(taskId, lastModified);
+}
+
 void MockDatabaseProxy::updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                                     model::Task::Status taskStatus,
                                                     const model::Timestamp& lastModified)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     mDatabase.updateTaskClearPersonalData(taskId, taskStatus, lastModified);
+}
+
+void MockDatabaseProxy::updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                                     const model::Timestamp& lastModified,
+                                                     const model::Timestamp& lastMedicationDispense,
+                                                     const db_model::EncryptedBlob& medicationDispense,
+                                                     BlobId medicationDispenseBlobId,
+                                                     const db_model::HashedTelematikId& telematicId,
+                                                     const model::Timestamp& whenHandedOver,
+                                                     const std::optional<model::Timestamp>& whenPrepared)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    mDatabase.updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense,
+                                           medicationDispenseBlobId, telematicId,
+                                           whenHandedOver, whenPrepared);
 }
 
 void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
@@ -248,12 +269,13 @@ void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(const model::Prescri
                                                             const db_model::HashedTelematikId& telematicId,
                                                             const model::Timestamp& whenHandedOver,
                                                             const std::optional<model::Timestamp>& whenPrepared,
-                                                            const db_model::EncryptedBlob& receipt)
+                                                            const db_model::EncryptedBlob& receipt,
+                                                            const model::Timestamp& lastMedicationDispense)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     mDatabase.updateTaskMedicationDispenseReceipt(taskId, taskStatus, lastModified, medicationDispense,
                                                   medicationDispenseBlobId, telematicId,
-                                                  whenHandedOver, whenPrepared, receipt);
+                                                  whenHandedOver, whenPrepared, receipt, lastMedicationDispense);
 }
 
 void MockDatabaseProxy::updateTaskStatusAndSecret(const model::PrescriptionId& taskId,

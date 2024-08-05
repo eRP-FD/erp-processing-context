@@ -31,16 +31,16 @@ public:
     static constexpr std::string_view offsetKey = "__offset";
     static constexpr std::string_view idKey = "_id";
 
-    explicit PagingArgument (void);
+    explicit PagingArgument ();
 
     /**
      * Value is accepted as string so that input validation is offloaded from the caller to this method.
      * @throw ErpException if the input can not be interpreted as unsigned number
      */
     void setCount (const std::string& countString);
-    bool hasDefaultCount (void) const;
-    size_t getCount (void) const;
-    static size_t getDefaultCount (void);
+    bool hasDefaultCount () const;
+    size_t getCount () const;
+    static size_t getDefaultCount ();
 
     void setEntryTimestampRange(const model::Timestamp& firstEntry, const model::Timestamp& lastEntry);
     std::optional<std::pair<model::Timestamp, model::Timestamp>> getEntryTimestampRange() const;
@@ -50,25 +50,34 @@ public:
      * @throw ErpException if the input can not be interpreted as unsigned number
      */
     void setOffset (const std::string& offset);
-    size_t getOffset (void) const;
+    size_t getOffset () const;
 
     /**
      * Return whether either or both of offset and count have non-default values.
      */
-    bool isSet (void) const;
+    bool isSet () const;
     /**
      * Return whether there is a 'prev' page.
      * That is always the case when offset > 0.
      */
-    bool hasPreviousPage (void) const;
+    bool hasPreviousPage () const;
     /**
      * Return whether there is a 'next' page.
      */
-    bool hasNextPage (const std::size_t& totalSearchMatches) const;
+    bool hasNextPage (const std::size_t totalSearchMatches) const;
+    /**
+     * totalSearchMatches from Handler
+     */
+    void setTotalSearchMatches(const std::size_t totalSearchMatches);
+    size_t getTotalSearchMatches () const;
+
+    size_t getOffsetLastPage () const;
+
 
 private:
     size_t mCount;
     size_t mOffset;
+    size_t mTotalSearchMatches;
     std::optional<std::pair<model::Timestamp, model::Timestamp>> mEntryTimestampRange;
 };
 

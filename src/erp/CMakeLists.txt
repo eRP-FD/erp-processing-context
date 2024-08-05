@@ -75,6 +75,7 @@ list(
         crypto/SecureRandomGenerator.cxx
         crypto/Seeder.cxx
         crypto/Sha256.cxx
+        crypto/SignedPrescription.cxx
         database/Database.cxx
         database/DatabaseCodec.cxx
         database/DatabaseConnectionInfo.cxx
@@ -139,9 +140,7 @@ list(
         model/KbvBundle.cxx
         model/KbvComposition.cxx
         model/KbvCoverage.cxx
-        model/KbvMedicationBase.cxx
         model/KbvMedicationCompounding.cxx
-        model/KbvMedicationDummy.cxx
         model/KbvMedicationFreeText.cxx
         model/KbvMedicationIngredient.cxx
         model/KbvMedicationPzn.cxx
@@ -165,11 +164,13 @@ list(
         model/Patient.cxx
         model/PrescriptionId.cxx
         model/PrescriptionType.cxx
+        model/ProfileType.cxx
         model/Pzn.cxx
         model/Reference.cxx
         model/Resource.cxx
+        model/ResourceBase.cxx
         model/ResourceFactory.cxx
-        model/ResourceVersion.cxx
+        model/ResourceNames.cxx
         model/Signature.cxx
         model/Subscription.cxx
         model/Task.cxx
@@ -215,6 +216,7 @@ list(
         service/ErpRequestHandler.cxx
         service/HealthHandler.cxx
         service/MedicationDispenseHandler.cxx
+        service/MedicationDispenseHandlerBase.cxx
         service/MetaDataHandler.cxx
         service/Operation.cxx
         service/RedisInterface.hxx
@@ -235,6 +237,7 @@ list(
         service/task/ActivateTaskHandler.cxx
         service/task/CloseTaskHandler.cxx
         service/task/CreateTaskHandler.cxx
+        service/task/DispenseTaskHandler.cxx
         service/task/GetTaskHandler.cxx
         service/task/RejectTaskHandler.cxx
         service/task/TaskHandler.cxx
@@ -307,21 +310,7 @@ list(
         util/Version.cxx
         util/search/UrlArguments.cxx
         util/WorkDay.cxx
-        validation/InCodeValidator.cxx
         validation/JsonValidator.cxx
-        validation/KbvBundleValidator.cxx
-        validation/KbvCompositionValidator.cxx
-        validation/KbvCoverageValidator.cxx
-        validation/KbvMedicationCompoundingValidator.cxx
-        validation/KbvMedicationFreeTextValidator.cxx
-        validation/KbvMedicationIngredientValidator.cxx
-        validation/KbvMedicationPZNValidator.cxx
-        validation/KbvMedicationRequestValidator.cxx
-        validation/KbvOrganizationValidator.cxx
-        validation/KbvPatientValidator.cxx
-        validation/KbvPractitionerValidator.cxx
-        validation/KbvPracticeSupplyValidator.cxx
-        validation/KbvValidationUtils.cxx
         validation/RapidjsonErrorDocument.cxx
         validation/XmlValidator.cxx
         xml/XmlDocument.cxx

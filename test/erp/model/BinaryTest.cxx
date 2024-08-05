@@ -28,13 +28,6 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
     const auto profilePointer = ::rapidjson::Pointer{"/meta/profile/0"};
     const auto metaVersionIdPointer = ::rapidjson::Pointer{"/meta/versionId"};
     const auto contentTypePointer = ::rapidjson::Pointer{"/contentType"};
-    const auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = deprecatedProfile(profileVersion);
-    auto sdBinary = isDeprecated ? model::resource::structure_definition::deprecated::binary
-                                 : model::resource::structure_definition::binary;
-
-    auto sdDigest = isDeprecated ? model::resource::structure_definition::deprecated::digest
-                                 : model::resource::structure_definition::digest;
     {
         model::FriendlyBinary binary(id, data, Binary::Type::PKCS7);
         ASSERT_EQ(id, binary.id());
@@ -45,7 +38,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
         const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
 
-        EXPECT_EQ(profileParts[0], sdBinary);
+        EXPECT_EQ(profileParts[0], model::resource::structure_definition::binary);
 
         const auto contentType = binary.getOptionalStringValue(contentTypePointer);
         ASSERT_TRUE(contentType.has_value());
@@ -56,7 +49,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
     }
 
     {
-        model::FriendlyBinary binary(id, data, ::model::Binary::Type::Digest, profileVersion, "SomeMetaVersionId");
+        model::FriendlyBinary binary(id, data, ::model::Binary::Type::Digest, "SomeMetaVersionId");
         ASSERT_EQ(id, binary.id());
         ASSERT_EQ(data, binary.data());
 
@@ -64,7 +57,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
         ASSERT_TRUE(profile);
         const auto profileParts = String::split(profile.value(), '|');
         ASSERT_GE(profileParts.size(), 1);
-        EXPECT_EQ(profileParts[0], sdDigest);
+        EXPECT_EQ(profileParts[0], model::resource::structure_definition::digest);
 
         const auto contentType = binary.getOptionalStringValue(contentTypePointer);
         ASSERT_TRUE(contentType.has_value());
@@ -75,7 +68,7 @@ TEST(BinaryTest, Constructor)//NOLINT(readability-function-cognitive-complexity)
     }
 
     {
-        model::FriendlyBinary binary(id, data, Binary::Type::PKCS7, profileVersion, std::nullopt);
+        model::FriendlyBinary binary(id, data, Binary::Type::PKCS7, std::nullopt);
         EXPECT_FALSE(binary.getOptionalStringValue(metaVersionIdPointer).has_value());
     }
 }

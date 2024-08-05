@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
+#include "erp/model/ResourceNames.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <ostream>
 
@@ -29,10 +30,6 @@ protected:
     void SetUp() override
     {
         ErpWorkflowTestTemplate<::testing::TestWithParam<Params>>::SetUp();
-        if (serverUsesOldProfile() && model::IsPkv(GetParam().mPrescriptionType))
-        {
-            GTEST_SKIP_("PKV not testable with old profiles");
-        }
     }
 
 public:
@@ -116,9 +113,9 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
 
     // GET MedicationDispense/?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
     {
-        auto meds = medicationDispenseGetAll("identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                                 task1.toString(),
-                                             JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
+        auto meds = medicationDispenseGetAll(
+            "identifier=" + std::string{model::resource::naming_system::prescriptionID} + "|" + task1.toString(),
+            JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
@@ -138,6 +135,11 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
 
 TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//NOLINT(readability-function-cognitive-complexity)
 {
+    (void) Fhir::instance();
+    auto id = [](const model::PrescriptionId& prescriptionID) {
+        return std::string{model::resource::naming_system::prescriptionID}.append("|").append(
+            prescriptionID.toString());
+    };
     auto kvnr = generateNewRandomKVNR().id();
     auto task1 = createClosedTask(kvnr);
     auto task2 = createClosedTask(kvnr);
@@ -158,11 +160,9 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         }
     }
 
-    // GET MedicationDispense/?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
     {
-        auto meds = medicationDispenseGetAll("identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                                 task1.toString(),
-                                             JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
+        auto meds =
+            medicationDispenseGetAll("identifier=" + id(task1), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
@@ -174,9 +174,8 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         }
     }
     {
-        auto meds = medicationDispenseGetAll("identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                                 task2.toString(),
-                                             JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
+        auto meds =
+            medicationDispenseGetAll("identifier=" + id(task2), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
@@ -188,9 +187,8 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         }
     }
     {
-        auto meds = medicationDispenseGetAll("identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                                 task3.toString(),
-                                             JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
+        auto meds =
+            medicationDispenseGetAll("identifier=" + id(task3), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
@@ -202,9 +200,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         }
     }
     {
-        const auto searchArgument = "identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                    task1.toString() + ",https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                    task3.toString();
+        const auto searchArgument = "identifier=" + id(task1) + "," + id(task3);
         auto meds = medicationDispenseGetAll(searchArgument, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses * 2);
@@ -217,10 +213,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         }
     }
     {
-        const auto searchArgument = "identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                    task1.toString() + ",https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                    task2.toString() + ",https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                    task3.toString();
+        const auto searchArgument = "identifier=" + id(task1) + ',' + id(task2) + ',' + id(task3);
         auto meds = medicationDispenseGetAll(searchArgument, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
         ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses * 3);

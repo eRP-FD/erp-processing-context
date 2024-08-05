@@ -14,7 +14,7 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvComposition : public Resource<KbvComposition, ResourceVersion::KbvItaErp>
+class KbvComposition : public Resource<KbvComposition>
 {
 public:
     static constexpr auto resourceTypeName = "Composition";
@@ -26,10 +26,12 @@ public:
     [[nodiscard]] std::optional<std::string_view> authorIdentifierValue(size_t idx) const;
 
 private:
-    friend Resource<KbvComposition, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvComposition>;
     explicit KbvComposition(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvComposition>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_MODEL_KBVCOMPOSITION_HXX

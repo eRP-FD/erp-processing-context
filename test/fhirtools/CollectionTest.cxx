@@ -19,7 +19,7 @@ using namespace fhirtools;
 class CollectionTest : public testing::Test
 {
 public:
-    const std::shared_ptr<const FhirStructureRepository> repo{DefaultFhirStructureRepository::get().defaultView()};
+    const std::shared_ptr<const FhirStructureRepository> repo{DefaultFhirStructureRepository::get()};
 };
 
 TEST_F(CollectionTest, singleOrEmpty)

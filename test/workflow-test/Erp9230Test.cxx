@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "ErpWorkflowTestFixture.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/model/ResourceFactory.hxx"
 
 #include <gtest/gtest.h>
-
-#include "ErpWorkflowTestFixture.hxx"
 
 class Erp9230Test : public ErpWorkflowTest
 {
@@ -28,16 +28,15 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     const auto jwtPharma = JwtBuilder::testBuilder().makeJwtApotheke();
     const auto telematikId = jwtPharma.stringForClaim(JWT::idNumberClaim);
 
-    auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::InfoReq);
+    auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::DispReq);
     builder.setPrescriptionId(prescriptionId->toString());
-    builder.setAbout("#about");
-    builder.setPayload("info request");
+    builder.setPayload(R"({"version":1,"supplyOptionsType":"onPremise","address":["zu hause"]})");
     builder.setRecipient(ActorRole::Pharmacists, *telematikId);
     builder.setSender(ActorRole::Insurant, kvnr);
     builder.setTimeSent(model::Timestamp::now().toXsDateTime());
     auto someReceivedTime = model::Timestamp::fromXsDate("2020-02-02", model::Timestamp::UTCTimezone);
     builder.setTimeReceived(someReceivedTime.toXsDateTime());
-
+    builder.setAccessCode("68d8e217665f2b47cd616f6ffe6b879e5b1395b86f6cc01d5e694985431bbb59");
     RequestArguments requestArguments(HttpMethod::POST, "/Communication", builder.createJsonString(),
                                       MimeType::fhirJson);
     auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
@@ -51,10 +50,9 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(requestArguments));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
 
-    auto communicationEcho = model::Communication::fromJson(
-        serverResponse.getBody(), *getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(),
-        model::Communication::messageTypeToSchemaType(model::Communication::MessageType::InfoReq));
+    auto communicationEcho =
+        model::ResourceFactory<model::Communication>::fromJson(serverResponse.getBody(), *getJsonValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationDispReq);
 
     // Before the fix this check failed:
     EXPECT_FALSE(communicationEcho.timeReceived().has_value());

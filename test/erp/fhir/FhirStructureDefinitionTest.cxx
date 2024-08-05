@@ -5,10 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <gtest/gtest.h>
-
 #include "erp/fhir/Fhir.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
+
+#include <gtest/gtest.h>
 
 using namespace fhirtools;
 
@@ -73,6 +74,8 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
     const std::string url = "http://erp.test.definitions/TestType";
     const std::string baseUrl = "http://erp.test.definitions/TestBase";
 
+    fhirtools::FhirResourceGroupConst resolver{"test"};
+
 
     auto rootElement = FhirElement::Builder{}
         .name(typeId)
@@ -87,14 +90,15 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
         .getAndReset();
 
     auto testDefinition = FhirStructureDefinition::Builder{}
-        .typeId("TestType")
-        .url(url)
-        .baseDefinition(baseUrl)
-        .kind(FhirStructureDefinition::Kind::resource)
-        .derivation(Derivation::specialization)
-        .addElement(std::move(rootElement), {})
-        .addElement(std::move(valueElement), {})
-        .getAndReset();
+                              .typeId("TestType")
+                              .url(url)
+                              .baseDefinition(baseUrl)
+                              .kind(FhirStructureDefinition::Kind::resource)
+                              .derivation(Derivation::specialization)
+                              .addElement(std::move(rootElement), {})
+                              .addElement(std::move(valueElement), {})
+                              .initGroup(resolver, "")
+                              .getAndReset();
 
     EXPECT_EQ(testDefinition.url(), url);
     EXPECT_EQ(testDefinition.kind(), Kind::resource);

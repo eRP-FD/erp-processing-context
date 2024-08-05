@@ -29,8 +29,8 @@ public:
         model::Timestamp lastModified;
         std::optional<db_model::EncryptedBlob> kvnr = std::nullopt;
         std::optional<db_model::HashedKvnr> kvnrHashed = std::nullopt;
-        std::optional<model::Timestamp> expiryDate = std::nullopt;
-        std::optional<model::Timestamp> acceptDate = std::nullopt;
+        std::optional<date::year_month_day> expiryDate = std::nullopt;
+        std::optional<date::year_month_day> acceptDate = std::nullopt;
         std::optional<model::Task::Status> status = std::nullopt;
         std::optional<BlobId> taskKeyBlobId = std::nullopt;
         std::optional<db_model::Blob> salt = std::nullopt;
@@ -42,6 +42,7 @@ public:
         std::optional<model::Timestamp> whenHandedOver = std::nullopt;
         std::optional<model::Timestamp> whenPrepared = std::nullopt;
         std::optional<db_model::HashedTelematikId> performer = std::nullopt;
+        std::optional<model::Timestamp> lastMedicationDispense = std::nullopt;
         std::optional<BlobId> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
     };
@@ -78,6 +79,14 @@ public:
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription);
+    void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                      const model::Timestamp& lastModified,
+                                      const model::Timestamp& lastMedicationDispense,
+                                      const db_model::EncryptedBlob& medicationDispense,
+                                      BlobId medicationDispenseBlobId,
+                                      const db_model::HashedTelematikId& telematicId,
+                                      const model::Timestamp& whenHandedOver,
+                                      const std::optional<model::Timestamp>& whenPrepared);
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -86,7 +95,10 @@ public:
                                              const db_model::HashedTelematikId& telematicId,
                                              const model::Timestamp& whenHandedOver,
                                              const std::optional<model::Timestamp>& whenPrepared,
-                                             const db_model::EncryptedBlob& receipt);
+                                             const db_model::EncryptedBlob& receipt,
+                                             const model::Timestamp& lastMedicationDispense);
+    void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
+                                     const model::Timestamp& lastModified);
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
                                      const model::Timestamp& lastModified);
@@ -122,6 +134,7 @@ private:
         kvnr,
         kvnr_hashed,
         last_modified,
+        last_medication_dispense,
         authored_on,
         expiry_date,
         accept_date,

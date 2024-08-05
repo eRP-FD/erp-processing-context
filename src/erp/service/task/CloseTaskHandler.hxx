@@ -10,6 +10,7 @@
 
 #include "erp/service/task/TaskHandler.hxx"
 #include "erp/util/Configuration.hxx"
+#include "erp/service/MedicationDispenseHandlerBase.hxx"
 
 namespace fhirtools
 {
@@ -19,7 +20,7 @@ class Collection;
 class ErpElement;
 
 class CloseTaskHandler
-    : public TaskHandlerBase
+    : public MedicationDispenseHandlerBase
 {
 public:
     CloseTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
@@ -27,16 +28,6 @@ public:
     void handleRequest(PcSessionContext& session) override;
 
 private:
-    static std::vector<model::MedicationDispense> medicationDispensesFromBody(PcSessionContext& session);
-    static void validateMedications(const std::vector<model::MedicationDispense>& medicationDispenses,
-                                    const PcServiceContext& session);
-    template<typename ModelT>
-    static void validateWithoutMedicationProfiles(model::NumberAsStringParserDocument&& medicationDispenseOrBundleDoc,
-                                                  std::string_view medicationsPath,
-                                                  const model::Timestamp& validationReferenceTimestamp,
-                                                  const PcSessionContext& session);
-    static void validateSameMedicationVersion(const fhirtools::Collection& medications);
-
     static std::string generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase);
 
 };

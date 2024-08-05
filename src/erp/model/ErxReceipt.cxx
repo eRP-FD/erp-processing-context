@@ -57,13 +57,8 @@ const rapidjson::Pointer prescriptionIdPointer("/identifier/value");
 ErxReceipt::ErxReceipt(const Uuid& bundleId, const std::string& selfLink, const model::PrescriptionId& prescriptionId,
                        const model::Composition& composition, const std::string& deviceIdentifier,
                        const model::Device& device, const ::std::string& prescriptionDigestIdentifier,
-                       const model::Binary& prescriptionDigest,
-                       ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
-    : BundleBase<ErxReceipt>(BundleType::document,
-                             ResourceVersion::deprecatedProfile(profileVersion)
-                                 ? resource::structure_definition::deprecated::receipt
-                                 : resource::structure_definition::receipt,
-                             bundleId)
+                       const model::Binary& prescriptionDigest)
+    : BundleBase<ErxReceipt>(BundleType::document, profileType, bundleId)
 {
     setLink(Link::Type::Self, selfLink);
     std::call_once(onceFlag, initTemplates);
@@ -71,10 +66,6 @@ ErxReceipt::ErxReceipt(const Uuid& bundleId, const std::string& selfLink, const 
         auto entry = copyValue(*prescriptionIdTemplate);
         setValue(identifierPointer, entry);
         setValue(prescriptionIdPointer, prescriptionId.toString());
-    }
-    if (ResourceVersion::deprecatedProfile(profileVersion))
-    {
-        setValue(prescriptionIdSystemPointer, resource::naming_system::deprecated::prescriptionID);
     }
     addResource("urn:uuid:" + std::string{composition.id()}, {}, {}, composition.jsonDocument());
     addResource(deviceIdentifier, {}, {}, device.jsonDocument());
@@ -113,4 +104,9 @@ model::Binary ErxReceipt::prescriptionDigest() const
     return std::move(resources.front());
 }
 
+
+std::optional<model::Timestamp> ErxReceipt::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 }// namespace model

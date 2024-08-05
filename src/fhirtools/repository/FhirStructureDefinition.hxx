@@ -10,8 +10,9 @@
 
 #include "fhirtools/repository/FhirConstraint.hxx"
 #include "fhirtools/repository/FhirElement.hxx"
-#include "erp/util/Version.hxx"
+#include "fhirtools/repository/FhirVersion.hxx"
 
+#include <filesystem>
 #include <iosfwd>
 #include <limits>
 #include <map>
@@ -22,6 +23,8 @@
 
 namespace fhirtools {
 
+class FhirResourceGroup;
+class FhirResourceGroupResolver;
 class FhirStructureRepository;
 class FhirStructureRepositoryFixer;
 
@@ -63,6 +66,10 @@ public:
     FhirStructureDefinition();
     virtual ~FhirStructureDefinition();
 
+    std::string urlAndVersion() const;
+
+    DefinitionKey definitionKey() const;
+
     const std::string& typeId() const
     {
         return mTypeId;
@@ -75,7 +82,7 @@ public:
     {
         return mUrl;
     }
-    const Version& version() const
+    const FhirVersion& version() const
     {
         return mVersion;
     }
@@ -111,6 +118,7 @@ public:
     bool isDerivedFrom(const FhirStructureRepository& repo, const FhirStructureDefinition& baseProfile) const;
     const FhirStructureDefinition* baseType(const FhirStructureRepository& repo) const;
     const FhirStructureDefinition& primitiveToSystemType(const FhirStructureRepository& repo) const;
+    const std::shared_ptr<const FhirResourceGroup>& resourceGroup() const;
 
     // immutable:
     FhirStructureDefinition(const FhirStructureDefinition&) = default;
@@ -124,11 +132,12 @@ private:
     std::string mTypeId;
     std::string mName;
     std::string mUrl;
-    Version mVersion;
+    FhirVersion mVersion = FhirVersion::notVersioned;
     std::string mBaseDefinition;
     Derivation mDerivation = Derivation::basetype;
     Kind mKind = Kind::primitiveType;
     std::vector<std::shared_ptr<const FhirElement>> mElements;
+    std::shared_ptr<const FhirResourceGroup> mResourceGroup;
 
     friend class FhirStructureRepositoryFixer;
 };
@@ -142,7 +151,11 @@ public:
 
     Builder& url(std::string url_);
 
-    Builder& version(Version version_);
+    Builder& initGroup(const FhirResourceGroupResolver& resolver, const std::filesystem::path& source);
+
+    Builder& group(std::shared_ptr<const FhirResourceGroup> group);
+
+    Builder& version(FhirVersion version_);
 
     Builder& typeId(std::string type_);
 
@@ -178,6 +191,8 @@ private:
 
     std::unique_ptr<FhirStructureDefinition> mStructureDefinition;
     std::map<size_t, FhirSlicingBuilder> mFhirSlicingBuilders;
+
+    friend class FhirStructureDefinitionParser;
 };
 
 std::ostream& operator<<(std::ostream&, const FhirStructureDefinition&);

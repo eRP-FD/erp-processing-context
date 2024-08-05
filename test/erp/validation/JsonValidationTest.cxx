@@ -12,6 +12,7 @@
 #include "erp/util/Base64.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -69,8 +70,7 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     std::optional<model::Bundle> communication;
     EXPECT_NO_THROW(communication = model::Bundle::fromJsonNoValidation(resource));
     ASSERT_TRUE(communication.has_value());
-    const auto validationResults = communication->genericValidate(
-        model::Timestamp::now(), model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01, {});
+    const auto validationResults = communication->genericValidate(model::ProfileType::fhir, {});
     validationResults.dumpToLog();
     EXPECT_EQ(validationResults.highestSeverity(), fhirtools::Severity::error);
 

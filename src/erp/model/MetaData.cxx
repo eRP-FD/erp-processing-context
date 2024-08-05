@@ -7,8 +7,9 @@
 
 #include "erp/model/MetaData.hxx"
 #include "erp/erp-serverinfo.hxx"
+#include "erp/fhir/Fhir.hxx"
+#include "erp/model/Communication.hxx"
 #include "erp/model/ResourceNames.hxx"
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/RapidjsonDocument.hxx"
 
@@ -49,7 +50,6 @@ const std::string metadata_template = R"--(
       "resource": [
         {
           "type": "Task",
-          "profile": "",
           "interaction": [
             {
               "code": "create"
@@ -64,7 +64,15 @@ const std::string metadata_template = R"--(
               "type": "token"
             },
             {
+              "name": "accept-date",
+              "type": "date"
+            },
+            {
               "name": "authored-on",
+              "type": "date"
+            },
+            {
+              "name": "expiry-date",
               "type": "date"
             },
             {
@@ -75,34 +83,36 @@ const std::string metadata_template = R"--(
           "operation": [
             {
               "name": "create",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/CreateOperationDefinition"
             },
             {
               "name": "activate",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/ActivateOperationDefinition"
             },
             {
               "name": "accept",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/AcceptOperationDefinition"
             },
             {
               "name": "reject",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/RejectOperationDefinition"
+            },
+            {
+              "name": "dispense",
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/DispenseOperationDefinition"
             },
             {
               "name": "close",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/CloseOperationDefinition"
             },
             {
               "name": "abort",
-              "definition": ""
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/AbortOperationDefinition"
             }
           ]
         },
         {
           "type": "Communication",
-          "profile": "",
-          "supportedProfile": [],
           "interaction": [
             {
               "code": "create"
@@ -130,12 +140,15 @@ const std::string metadata_template = R"--(
             {
               "name": "recipient",
               "type": "string"
+            },
+            {
+              "name": "identifier",
+              "type": "string"
             }
           ]
         },
         {
           "type": "MedicationDispense",
-          "profile": "",
           "interaction": [
             {
               "code": "read"
@@ -158,7 +171,6 @@ const std::string metadata_template = R"--(
         },
         {
           "type": "AuditEvent",
-          "profile": "",
           "interaction": [
             {
               "code": "read"
@@ -170,6 +182,10 @@ const std::string metadata_template = R"--(
               "type": "date"
             },
             {
+              "name": "entity",
+              "type": "string"
+            },
+            {
               "name": "subtype",
               "type": "token"
             }
@@ -177,22 +193,14 @@ const std::string metadata_template = R"--(
         },
         {
           "type": "Device",
-          "profile": "",
           "interaction": [
             {
               "code": "read"
             }
           ]
-        }
-      ]
-    }
-  ]
-}
-)--";
-constexpr std::string_view chargeitem_resource_template = R"--(
+        },
         {
           "type": "ChargeItem",
-          "profile": "",
           "interaction": [
             {
               "code": "create"
@@ -214,11 +222,9 @@ constexpr std::string_view chargeitem_resource_template = R"--(
               "type": "date"
             }
           ]
-        })--";
-constexpr std::string_view consent_resource_template = R"--(
+        },
         {
           "type": "Consent",
-          "profile": "",
           "interaction": [
             {
               "code": "create"
@@ -230,27 +236,22 @@ constexpr std::string_view consent_resource_template = R"--(
               "code": "delete"
             }
           ]
-        })--";
+        }
+      ]
+    }
+  ]
+}
+)--";
 
 std::once_flag onceFlag;
 struct MetaDataTemplateMark;
 RapidjsonNumberAsStringParserDocument<MetaDataTemplateMark> metaDataTemplate;
-struct ConsentTemplateMark;
-RapidjsonNumberAsStringParserDocument<ConsentTemplateMark> consentTemplate;
-struct ChargeItemTemplateMark;
-RapidjsonNumberAsStringParserDocument<ChargeItemTemplateMark> chargeItemTemplate;
 
 void initTemplates()
 {
     rapidjson::StringStream strm(metadata_template.data());
     metaDataTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strm);
     ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json MetaData template string");
-    rapidjson::StringStream strmChargeItem(chargeitem_resource_template.data());
-    chargeItemTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strmChargeItem);
-    ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json ChargeItem template string");
-    rapidjson::StringStream strmConsent(consent_resource_template.data());
-    consentTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(strmConsent);
-    ModelExpect(! metaDataTemplate->HasParseError(), "can not parse json Consent template string");
 }
 
 // definition of JSON pointers:
@@ -259,118 +260,95 @@ const rapidjson::Pointer versionPointer("/software/version");
 const rapidjson::Pointer releaseDatePointer("/software/releaseDate");
 
 const rapidjson::Pointer restResourceArrayPointer("/rest/0/resource");
-const rapidjson::Pointer restResourceTaskOperationArrayPointer("/rest/0/resource/0/operation");
-const rapidjson::Pointer restResourceCommSupportedProfileArrayPointer("/rest/0/resource/1/supportedProfile");
-const rapidjson::Pointer restResourceTaskSupportedProfilePointer("/rest/0/resource/0/profile");
 
-struct DeprecatedProfile
+std::string baseType(const fhirtools::FhirStructureRepository& view, ProfileType profileType)
 {
-    static constexpr auto resourceStructDefs = {
-        resource::structure_definition::deprecated::task,
-        resource::structure_definition::communication,
-        resource::structure_definition::deprecated::medicationDispense,
-        resource::structure_definition::deprecated::auditEvent,
-        resource::structure_definition::deprecated::device
-    };
-    static constexpr auto resourceCommStructDefs = {
-        resource::structure_definition::deprecated::communicationInfoReq,
-        resource::structure_definition::deprecated::communicationReply,
-        resource::structure_definition::deprecated::communicationDispReq,
-        resource::structure_definition::deprecated::communicationRepresentative
-    };
-    static constexpr auto taskOpStructDefs = {
-        resource::operation_definition::deprecated::create,
-        resource::operation_definition::deprecated::activate,
-        resource::operation_definition::deprecated::accept,
-        resource::operation_definition::deprecated::reject,
-        resource::operation_definition::deprecated::close,
-        resource::operation_definition::deprecated::abort
-    };
+    auto prof = profile(profileType);
+    Expect3(prof.has_value(), "no profile for: " + std::string{magic_enum::enum_name(profileType)}, std::logic_error);
+    const auto* def = view.findStructure(fhirtools::DefinitionKey{std::string{*prof}, std::nullopt});
+    Expect3(def != nullptr, "structure not found in view " + std::string{view.id()} + ": " + std::string{*prof},
+            std::logic_error);
+    const auto* typeDef = view.findTypeById(def->typeId());
+    Expect3(typeDef != nullptr, "type not found in view " + std::string{view.id()} + ": " + def->typeId(),
+            std::logic_error);
+    return typeDef->urlAndVersion();
 }
-deprecatedProfile;
 
-struct CurrentProfile
-{
-    static constexpr auto resourceStructDefs = {
-        resource::structure_definition::task,
-        resource::structure_definition::communication,
-        resource::structure_definition::medicationDispense,
-        resource::structure_definition::auditEvent,
-        resource::structure_definition::device,
-        resource::structure_definition::chargeItem,
-        resource::structure_definition::consent
-    };
-    static constexpr auto resourceCommStructDefs = {
-        resource::structure_definition::communicationInfoReq,
-        resource::structure_definition::communicationReply,
-        resource::structure_definition::communicationDispReq,
-        resource::structure_definition::communicationRepresentative,
-        resource::structure_definition::communicationChargChangeReq,
-        resource::structure_definition::communicationChargChangeReply
-    };
-    static constexpr auto taskOpStructDefs = {
-        resource::operation_definition::create,
-        resource::operation_definition::activate,
-        resource::operation_definition::accept,
-        resource::operation_definition::reject,
-        resource::operation_definition::close,
-        resource::operation_definition::abort
-    };
-}
-currentProfile;
 
 }// anonymous namespace
 
+std::map<std::string, std::list<ProfileType>> supportedProfileTypes{
+    {"Task", {ProfileType::Gem_erxTask}},
+    {"Communication", model::Communication::acceptedCommunications},
+    {"MedicationDispense", {ProfileType::Gem_erxMedicationDispense}},
+    {"AuditEvent", {ProfileType::Gem_erxAuditEvent}},
+    {"Device", {ProfileType::Gem_erxDevice}},
+    {"ChargeItem", {ProfileType::Gem_erxChargeItem}},
+    {"Consent", {ProfileType::Gem_erxConsent}},
+};
 
-MetaData::MetaData(ResourceVersion::FhirProfileBundleVersion profileBundle)
-    : Resource(ResourceBase::NoProfile,
-                         []() {
-                             std::call_once(onceFlag, initTemplates);
-                             return metaDataTemplate;
-                         }()
-                             .instance())
+
+MetaData::MetaData(const model::Timestamp& referenceTimestamp)
+    : Resource(FhirResourceBase::NoProfile,
+               []() {
+                   std::call_once(onceFlag, initTemplates);
+                   return metaDataTemplate;
+               }()
+                   .instance())
 {
-    if(model::ResourceVersion::deprecatedBundle(profileBundle))
-    {
-        fillResource(deprecatedProfile, profileBundle);
-    }
-    else
-    {
-        addResourceTemplate(*chargeItemTemplate);
-        addResourceTemplate(*consentTemplate);
-        fillResource(currentProfile, profileBundle);
-    }
+    const auto& fhirInstance = Fhir::instance();
+    static constexpr auto valueIsString = &NumberAsStringParserDocument::valueIsString;
+    static constexpr auto getStringValueFromValue = &NumberAsStringParserDocument::getStringValueFromValue;
+    using namespace std::string_literals;
     setVersion(ErpServerInfo::ReleaseVersion());
     model::Timestamp releaseDate = model::Timestamp::fromXsDateTime(std::string(ErpServerInfo::ReleaseDate()));
     setDate(releaseDate);
     setReleaseDate(releaseDate);
-}
+    auto viewList = fhirInstance.structureRepository(referenceTimestamp);
+    Expect3(! viewList.empty(), "no view for referenceTimestamp: " + referenceTimestamp.toXsDateTime(),
+            std::logic_error);
+    const auto& viewConfig = viewList.latest();
+    gsl::not_null view = viewConfig.view(std::addressof(fhirInstance.backend()));
+    auto* restResourceArray = getValue(restResourceArrayPointer);
+    Expect3(restResourceArray && restResourceArray->IsArray(), "rest resource must be array.", std::logic_error);
+    for (auto& resource : restResourceArray->GetArray())
+    {
+        Expect3(resource.IsObject(), "rest resource must be array of Object.", std::logic_error);
+        const auto typeMember = resource.FindMember("type");
+        Expect3(typeMember != resource.MemberEnd() && valueIsString(typeMember->value), "field type must be string",
+                std::logic_error);
+        const auto& typeProfiles = supportedProfileTypes.at(std::string{getStringValueFromValue(&typeMember->value)});
+        Expect3(!typeProfiles.empty(),
+                "no profile types defined for: " + std::string{getStringValueFromValue(&typeMember->value)},
+                std::logic_error);
+        if (typeProfiles.size() == 1)
+        {
+            auto key = profileWithVersion(typeProfiles.front(), *view);
+            Expect3(key.has_value(),
+                    "no profile found for "s.append(magic_enum::enum_name(typeProfiles.front()))
+                        .append("in view ")
+                        .append(view->id()),
+                    std::logic_error);
+            setKeyValue(resource, rapidjson::Pointer{"/profile"}, to_string(*key));
+        }
+        else
+        {
 
-template<class ProfileDefinition>
-void MetaData::fillResource(const ProfileDefinition& profileDefinition,
-                            ResourceVersion::FhirProfileBundleVersion profileBundle)
-{
-    for (size_t index = 0; const auto structDef : profileDefinition.resourceStructDefs)
-    {
-        addMemberToArrayEntry(restResourceArrayPointer, index++, "profile",
-                              ResourceVersion::versionizeProfile(structDef, {profileBundle}));
+            setKeyValue(resource, rapidjson::Pointer{"/profile"}, baseType(*view, typeProfiles.front()));
+            rapidjson::Value supportedProfileArray(rapidjson::kArrayType);
+            for (const auto& profileType : typeProfiles)
+            {
+                auto key = profileWithVersion(profileType, *view);
+                Expect3(key.has_value(),
+                        "no profile found for "s.append(magic_enum::enum_name(typeProfiles.front()))
+                            .append("in view ")
+                            .append(view->id()),
+                        std::logic_error);
+                addStringToArray(supportedProfileArray, to_string(*key));
+            }
+            setKeyValue(resource, rapidjson::Pointer{"/supportedProfile"}, supportedProfileArray);
+        }
     }
-    for (const auto structDef : profileDefinition.resourceCommStructDefs)
-    {
-        addToArray(restResourceCommSupportedProfileArrayPointer,
-                   ResourceVersion::versionizeProfile(structDef, {profileBundle}));
-    }
-    for (size_t index = 0; const auto structDef : profileDefinition.taskOpStructDefs)
-    {
-        addMemberToArrayEntry(restResourceTaskOperationArrayPointer, index++, "definition", structDef);
-    }
-}
-
-template<class TemplateDocument>
-void MetaData::addResourceTemplate(const TemplateDocument& templateDocument)
-{
-    auto newEntry = copyValue(templateDocument);
-    addToArray(restResourceArrayPointer, std::move(newEntry));
 }
 
 MetaData::MetaData(NumberAsStringParserDocument&& jsonTree)
@@ -409,13 +387,9 @@ void MetaData::setReleaseDate(const model::Timestamp& releaseDate)
     setValue(releaseDatePointer, releaseDate.toXsDateTime());
 }
 
-ResourceVersion::DeGematikErezeptWorkflowR4 MetaData::taskProfileVersion()
-{
-    using namespace std::string_literals;
-    auto profileName = getStringValue(restResourceTaskSupportedProfilePointer);
-    const auto* profInfo = model::ResourceVersion::profileInfoFromProfileName(profileName);
-    ModelExpect(profInfo != nullptr, "Unsupported profile: "s.append(profileName));
-    return std::get<ResourceVersion::DeGematikErezeptWorkflowR4>(profInfo->version);
-}
 
+std::optional<model::Timestamp> MetaData::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 }// namespace model

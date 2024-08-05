@@ -19,7 +19,6 @@
 struct SampleFiles {
     std::string_view xmlSample;
     std::string_view jsonSample;
-    model::ResourceVersion::FhirProfileBundleVersion fhirBundleVersion{model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01};
     std::optional<std::string_view> skipReason = {};
 };
 
@@ -123,9 +122,10 @@ TEST_P(FhirConverterTest, samplesToXMLTest)
 
 using namespace std::string_view_literals;
 
-INSTANTIATE_TEST_SUITE_P(gematikExamples , FhirConverterTest,
-        ::testing::Values(
-    // clang-format off
+INSTANTIATE_TEST_SUITE_P(
+    gematikExamples, FhirConverterTest,
+    ::testing::Values(
+        // clang-format off
     //           XML file name                        JSON file Name                         skip reason (if test shall be skipped)
     SampleFiles{"audit_event.xml"                   , "audit_event.json"},
     SampleFiles{"capability_statement_both.xml"     , "capability_statement_both.json"},
@@ -152,15 +152,14 @@ INSTANTIATE_TEST_SUITE_P(gematikExamples , FhirConverterTest,
     SampleFiles{"patient.xml"                       , "patient.json"},
     SampleFiles{"practitioner.xml"                  , "practitioner.json"},
     SampleFiles{"practitioner_role.xml"             , "practitioner_role.json"},
-    SampleFiles{"signature.xml"                     , "signature.json", model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 , "ERP-5546: Signature is not a resource."},
+    SampleFiles{"signature.xml"                     , "signature.json", "ERP-5546: Signature is not a resource."},
     SampleFiles{"task_activate_parameters.xml"      , "task_activate_parameters.json"},
     SampleFiles{"task_create_parameters.xml"        , "task_create_parameters.json"},
     SampleFiles{"task.xml"                          , "task.json"},
     SampleFiles{"task_no_secret.xml"                , "task_no_secret.json"},
     SampleFiles{"task_empty_meta_element.xml"       , "task_empty_meta_element.json"},
-    SampleFiles{"patient_empty_adress_array.xml"    , "patient_empty_adress_array.json"}
-    // clang-format on
-    ));
+    SampleFiles{"patient_empty_adress_array.xml"    , "patient_empty_adress_array.json"}// clang-format on
+        ));
 
 INSTANTIATE_TEST_SUITE_P(fhirSpecialCases , FhirConverterTest,
         ::testing::Values(

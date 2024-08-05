@@ -9,18 +9,16 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_MEDICATIONDISPENSEHANDLER_HXX
 
 #include "erp/service/ErpRequestHandler.hxx"
+#include "erp/service/MedicationDispenseHandlerBase.hxx"
 
 #include <vector>
 #include <string>
 
-class GetAllMedicationDispenseHandler: public ErpRequestHandler
+class GetAllMedicationDispenseHandler: public MedicationDispenseHandlerBase
 {
 public:
     GetAllMedicationDispenseHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     void handleRequest(PcSessionContext& session) override;
-private:
-    static model::Bundle createBundle(
-        const std::vector<model::MedicationDispense>& medicationDispenses);
 };
 
 class GetMedicationDispenseHandler: public ErpRequestHandler

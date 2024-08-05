@@ -157,8 +157,7 @@ public:
         auto acceptedExpiryDate = model::Timestamp::fromGermanDate(model::Timestamp::now().toGermanDate());
         for (const auto& task : tasks)
         {
-            ASSERT_NO_THROW((void) model::Task::fromXml(task.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+            ASSERT_NO_THROW((void) model::Task::fromXml(task.serializeToXmlString(), *StaticData::getXmlValidator()));
             ASSERT_EQ(task.status(), model::Task::Status::ready);
             EXPECT_EQ(task.kvnr(), kvnr);
             TLOG(INFO) << "GET task with expiryDate = " << task.expiryDate().toGermanDate();
@@ -504,8 +503,8 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
                                 telematikID, accessCode, std::nullopt, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(bundle.emplace(model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                                      *StaticData::getInCodeValidator(), SchemaType::fhir))) << serverResponse.getBody();
+    ASSERT_NO_THROW(bundle.emplace(model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator())))
+        << serverResponse.getBody();
     auto tasks = bundle->getResourcesByType<model::Task>();
     ASSERT_EQ(tasks.size(), 1);
     A_24179.test("Returned Task has secret");
@@ -644,19 +643,20 @@ TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecret)
     const auto prescriptionId =
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     ASSERT_NO_FATAL_FAILURE(closeTask(prescriptionId));
-    namespace RV = model::ResourceVersion;
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(prescriptionId, telematikID, accessCode, secret, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(bundle.emplace(testutils::getValidatedErxReceiptBundle<model::Bundle>(serverResponse.getBody(), SchemaType::fhir)));
+    ASSERT_NO_THROW(bundle.emplace(
+        testutils::getValidatedErxReceiptBundle<model::Bundle>(serverResponse.getBody(), model::ProfileType::fhir)));
     auto receiptBundle = bundle->getResourcesByType<model::ErxReceipt>();
     ASSERT_EQ(receiptBundle.size(), 1) << serverResponse.getBody();
     auto profileName = receiptBundle.at(0).getProfileName();
     ASSERT_TRUE(profileName.has_value());
-    auto expectedProfileName = RV::profileStr(SchemaType::Gem_erxReceiptBundle, RV::currentBundle());
-    ASSERT_TRUE(expectedProfileName.has_value());
-    EXPECT_EQ(*profileName, *expectedProfileName);
+    std::string expectedProfileName{model::resource::structure_definition::receipt};
+    expectedProfileName += '|';
+    expectedProfileName += to_string(ResourceTemplates::Versions::GEM_ERP_current());
+    EXPECT_EQ(*profileName, expectedProfileName);
 }
 
 class GetTaskByIdByPharmacyTestErp17667 : public GetTasksByPharmacyTest

@@ -67,7 +67,7 @@ Signature::Signature(const std::string_view& data, const model::Timestamp& when,
 Signature::Signature(const std::string_view& data, const Timestamp& when,
                      const std::optional<std::string_view> whoReference,
                      const std::optional<std::string_view> whoDisplay)
-    : Resource<Signature>(ResourceBase::NoProfile,
+    : Resource<Signature>(FhirResourceBase::NoProfile,
                           []() {
                               std::call_once(onceFlag, initTemplates);
                               return signatureTemplate;

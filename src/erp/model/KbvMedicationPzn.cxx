@@ -11,7 +11,7 @@
 namespace model
 {
 KbvMedicationPzn::KbvMedicationPzn(NumberAsStringParserDocument&& document)
-    : KbvMedicationBase<KbvMedicationPzn, ResourceVersion::KbvItaErp>(std::move(document))
+    : KbvMedicationBase<KbvMedicationPzn>(std::move(document))
 {
 }
 

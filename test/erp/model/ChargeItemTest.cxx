@@ -106,18 +106,6 @@ void checkCommon(model::ChargeItem& chargeItem)
 
 class ChargeItemTest : public testing::Test
 {
-public:
-    void SetUp() override
-    {
-        envVars = testutils::getNewFhirProfileEnvironment();
-    }
-
-    void TearDown() override
-    {
-        envVars.clear();
-    }
-private:
-    std::vector<EnvironmentVariableGuard> envVars;
 };
 
 TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-cognitive-complexity)
@@ -130,9 +118,7 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
     ASSERT_NO_THROW(
         sourceChargeItem = ::model::ChargeItem::fromXml(
             ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
-            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
-            false));
+            *::StaticData::getXmlValidator()));
     ASSERT_TRUE(sourceChargeItem.has_value());
 
     EXPECT_FALSE(chargeItem.prescriptionId());
@@ -181,8 +167,7 @@ TEST_F(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-
     std::optional<model::ChargeItem> optChargeItem;
     ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(
                         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-                        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir,
-                        {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
+                        *StaticData::getXmlValidator()));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -195,8 +180,7 @@ TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-c
     ASSERT_NO_THROW(
         optChargeItem = model::ChargeItem::fromJson(
             ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json"),
-            *StaticData::getJsonValidator(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-            SchemaType::fhir, {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
+            *StaticData::getJsonValidator()));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -228,11 +212,9 @@ TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-c
 TEST_F(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-complexity)
 {
     ::std::optional<::model::ChargeItem> chargeItem;
-    ASSERT_NO_THROW(
-        chargeItem = ::model::ChargeItem::fromXml(
-            ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator(), *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
-            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}, {}));
+    ASSERT_NO_THROW(chargeItem = ::model::ChargeItem::fromXml(::ResourceManager::instance().getStringResource(
+                                                                  "test/EndpointHandlerTest/charge_item_input.xml"),
+                                                              *::StaticData::getXmlValidator()));
     ASSERT_TRUE(chargeItem.has_value());
 
     ::std::optional<::model::Binary> containedBinary;
@@ -255,12 +237,9 @@ TEST_F(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-comp
     {
 
         ::std::optional<::model::ChargeItem> sourceChargeItem;
-        ASSERT_NO_THROW(sourceChargeItem = ::model::ChargeItem::fromJson(
-                            ::ResourceManager::instance().getStringResource(chargeItemJson),
-                            *::StaticData::getJsonValidator(), *::StaticData::getXmlValidator(),
-                            *::StaticData::getInCodeValidator(), ::SchemaType::fhir,
-                            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01},
-                            {}))
+        ASSERT_NO_THROW(
+            sourceChargeItem = ::model::ChargeItem::fromJson(
+                ::ResourceManager::instance().getStringResource(chargeItemJson), *::StaticData::getJsonValidator()))
             << chargeItemJson;
         ASSERT_TRUE(sourceChargeItem.has_value());
 

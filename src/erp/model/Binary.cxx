@@ -54,26 +54,18 @@ rapidjson::Pointer metaVersionIdPointer{"/meta/versionId"};
 }// anonymous namespace
 
 Binary::Binary(std::string_view id, std::string_view data, const Type type,
-               ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion,
                const std::optional<std::string_view>& metaVersionId)
     : Resource<Binary>(
-          [type, profileVersion]() -> std::string_view {
+          [type]() -> Resource::Profile {
               switch (type)
               {
                   case Type::PKCS7:
-                      return ResourceVersion::deprecatedProfile(profileVersion)
-                                 ? resource::structure_definition::deprecated::binary
-                                 : resource::structure_definition::binary;
-                      break;
+                      return ProfileType::Gem_erxBinary;
                   case Type::Digest:
-                      return ResourceVersion::deprecatedProfile(profileVersion)
-                                 ? resource::structure_definition::deprecated::digest
-                                 : resource::structure_definition::digest;
-                      break;
+                      return ProfileType::Gem_erxDigest;
               }
-
               Fail("Unhandled type value.");
-              return "";
+              return Resource::NoProfile;
           }(),
           []() {
               std::call_once(onceFlag, initTemplates);

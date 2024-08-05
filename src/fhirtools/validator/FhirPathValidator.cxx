@@ -53,15 +53,15 @@ fhirtools::ValidationResults FhirPathValidator::validate(const std::shared_ptr<c
 
 fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::shared_ptr<const Element>& element,
                                                                      const std::string& elementFullPath,
-                                                                     const std::set<std::string>& profileUrls,
+                                                                     const std::set<DefinitionKey>& profileKeys,
                                                                      const ValidatorOptions& options)
 {
     std::set<ProfiledElementTypeInfo> profiles;
     const auto& elementType = element->definitionPointer().element()->typeId();
     ValidationResults resultList;
-    for (const auto& url : profileUrls)
+    for (const auto& key : profileKeys)
     {
-        const auto* profile = element->getFhirStructureRepository()->findDefinitionByUrl(url);
+        const auto* profile = element->getFhirStructureRepository()->findStructure(key);
         if (profile)
         {
             if (profile->typeId() == elementType)
@@ -72,13 +72,13 @@ fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::
             {
                 resultList.add(Severity::error,
                                // NOLINTNEXTLINE(performance-inefficient-string-concatenation)
-                               "requested Profile does not match element type '" + elementType + "': " + url,
+                               "requested Profile does not match element type '" + elementType + "': " + to_string(key),
                                elementFullPath, profile);
             }
         }
         else
         {
-            resultList.add(Severity::error, "profile unknown: " + url, elementFullPath, nullptr);
+            resultList.add(Severity::error, "profile unknown: " + to_string(key), elementFullPath, nullptr);
         }
     }
     if (resultList.highestSeverity() >= Severity::error)
@@ -122,8 +122,7 @@ void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const 
             }
             else
             {
-                result.add(Severity::error,
-                           profileDef->url() + '|' + profileDef->version() + " no such element: " + elementId,
+                result.add(Severity::error, profileDef->urlAndVersion() + " no such element: " + elementId,
                            elementFullPath, profileDef);
             }
         }
@@ -254,7 +253,7 @@ std::set<const fhirtools::FhirStructureDefinition*> FhirPathValidator::profiles(
     std::set<const FhirStructureDefinition*> profs;
     for (const auto& url : profileUrls)
     {
-        const auto* profileDef = element.getFhirStructureRepository()->findDefinitionByUrl(url);
+        const auto* profileDef = element.getFhirStructureRepository()->findStructure(DefinitionKey{url});
         if (profileDef)
         {
             profs.emplace(profileDef);
@@ -287,8 +286,7 @@ void fhirtools::FhirPathValidator::addProfiles(const Element& element,
         else
         {
             result.add(Severity::error,
-                       "Profile must be based on " + resourceType->typeId() + ": " + metaProf->url() + '|' +
-                           metaProf->version(),
+                       "Profile must be based on " + resourceType->typeId() + ": " + metaProf->urlAndVersion(),
                        std::string{elementFullPath}, nullptr);
         }
     }

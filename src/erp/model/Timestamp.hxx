@@ -146,6 +146,8 @@ public:
      */
     explicit Timestamp (double secondsSinceEpoch);
 
+    explicit Timestamp(const std::string& timezone, const date::local_days& days);
+
     /**
      * Convert to an an XML xs:dateTime string.
      * - Time zone is added in the form "+00:00" for UTC. This can later be made configurable with a time zone parameter

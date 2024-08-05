@@ -163,10 +163,8 @@ const rapidjson::Pointer entityDescriptionPointer("/entity/0/description");
 }  // anonymous namespace
 
 
-AuditEvent::AuditEvent(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
-    : Resource<AuditEvent>(ResourceVersion::deprecatedProfile(profileVersion)
-                               ? resource::structure_definition::deprecated::auditEvent
-                               : resource::structure_definition::auditEvent,
+AuditEvent::AuditEvent()
+    : Resource<AuditEvent>(profileType,
                            []() {
                                std::call_once(onceFlag, initTemplates);
                                return AuditEventTemplate;
@@ -345,6 +343,11 @@ AuditEvent::AuditEvent(NumberAsStringParserDocument&& jsonTree)
     : Resource<AuditEvent>(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
+}
+
+std::optional<model::Timestamp> model::AuditEvent::getValidationReferenceTimestamp() const
+{
+    return model::Timestamp::now();
 }
 
 }  // namespace model

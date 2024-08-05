@@ -9,22 +9,24 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "erp/model/ProfileType.hxx"
 
 namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationFreeText : public KbvMedicationBase<KbvMedicationFreeText, ResourceVersion::KbvItaErp>
+class KbvMedicationFreeText : public KbvMedicationBase<KbvMedicationFreeText>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_FreeText;
+    static constexpr auto schemaType = ProfileType::KBV_PR_ERP_Medication_FreeText;
 
 private:
-    friend Resource<KbvMedicationFreeText, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvMedicationFreeText>;
     explicit KbvMedicationFreeText(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvMedicationFreeText>;
 }
 
 

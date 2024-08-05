@@ -33,8 +33,6 @@ public:
     };
 
     Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7,
-           ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-               model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>(),
            const std::optional<std::string_view>& metaVersionId = "1");
 
     [[nodiscard]] std::optional<std::string_view> id() const;
@@ -45,6 +43,7 @@ private:
     explicit Binary(NumberAsStringParserDocument&& jsonTree);
 };
 
+extern template class Resource<Binary>;
 }
 
 

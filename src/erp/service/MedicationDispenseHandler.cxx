@@ -6,6 +6,7 @@
  */
 
 #include "erp/service/MedicationDispenseHandler.hxx"
+#include "erp/service/MedicationDispenseHandlerBase.hxx"
 
 #include "erp/database/Database.hxx"
 #include "erp/model/Bundle.hxx"
@@ -26,7 +27,7 @@ using namespace model;
 
 GetAllMedicationDispenseHandler::GetAllMedicationDispenseHandler(
     const std::initializer_list<std::string_view>& allowedProfessionOiDs) :
-    ErpRequestHandler(Operation::GET_MedicationDispense, allowedProfessionOiDs)
+    MedicationDispenseHandlerBase(Operation::GET_MedicationDispense, allowedProfessionOiDs)
 {
 }
 
@@ -46,6 +47,7 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     // GEMREQ-start A_19406-01#getAll-2
     A_19518.start("Search parameters for MedicationDispense");
     A_22070_02.start("Search parameter PrescriptionID for multiple medication dispenses per task");
+    A_24438.start("Set whenhandedover as default sort argument.");
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
         std::vector<SearchParameter>
@@ -54,7 +56,8 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
         { "whenhandedover", "when_handed_over", SearchParameter::Type::Date },
         { "whenprepared", "when_prepared", SearchParameter::Type::Date },
         { "identifier", "prescription_id", SearchParameter::Type::PrescriptionId}
-    });
+    }, "whenhandedover");
+    A_24438.finish();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
     // GEMREQ-end A_19406-01#getAll-2
     const auto identifierSearchArgument = arguments->getSearchArgument("identifier");
@@ -69,13 +72,13 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19518.finish();
 
     // GEMREQ-start A_19406-01#getAll-4
-    auto bundle = createBundle(medicationDispenses);
+    auto bundle = MedicationDispenseHandlerBase::createBundle(medicationDispenses);
 
     // We do no longer fill the Bundle.total field, because we cannot calculate it accurately due to possibly
     // multiple medication dispenses per task. The Bundle.total is optional,
     // see https://www.hl7.org/fhir/search.html#total
 
-    const auto links = arguments->getBundleLinks(hasNextPage, getLinkBase(), "/MedicationDispense");
+    const auto links = arguments->createBundleLinks(hasNextPage, getLinkBase(), "/MedicationDispense");
     for (const auto& link : links)
     {
         bundle.setLink(link.first, link.second);
@@ -99,24 +102,6 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     }
     A_19140.finish();
 }
-
-Bundle GetAllMedicationDispenseHandler::createBundle(
-    const std::vector<MedicationDispense>& medicationDispenses)
-{
-    const std::string linkBase = getLinkBase() + "/MedicationDispense";
-    Bundle bundle(BundleType::searchset, ::model::ResourceBase::NoProfile);
-    for (const auto& medicationDispense : medicationDispenses)
-    {
-        const std::string urn = linkBase + "/" + medicationDispense.id().toString();
-        bundle.addResource(
-            urn,
-            {},
-            Bundle::SearchMode::match,
-            medicationDispense.jsonDocument());
-    }
-    return bundle;
-}
-
 
 GetMedicationDispenseHandler::GetMedicationDispenseHandler(
     const std::initializer_list<std::string_view>& allowedProfessionOiDs) :

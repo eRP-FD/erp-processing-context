@@ -21,11 +21,21 @@ class JsonValidator;
 namespace model
 {
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Communication : public Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>
+class Communication : public Resource<Communication>
 {
 public:
     static constexpr auto resourceTypeName = "Communication";
-
+    // GEMREQ-start A_19450-01#acceptedCommunications
+    static constexpr std::initializer_list<ProfileType> acceptedCommunications{
+        // see ERP-21119 - CommunicationInfoReq currently disabled:
+        //    ProfileType::Gem_erxCommunicationInfoReq,
+        ProfileType::Gem_erxCommunicationReply,
+        ProfileType::Gem_erxCommunicationDispReq,
+        ProfileType::Gem_erxCommunicationRepresentative,
+        ProfileType::Gem_erxCommunicationChargChangeReq,
+        ProfileType::Gem_erxCommunicationChargChangeReply,
+    };
+    // GEMREQ-end A_19450-01#acceptedCommunications
     enum class MessageType : int8_t
     {
         InfoReq = 0,
@@ -37,8 +47,9 @@ public:
     };
     static std::string_view messageTypeToString(MessageType messageType);
     static int8_t messageTypeToInt(MessageType messageType);
-    static SchemaType messageTypeToSchemaType(MessageType messageType);
-    static MessageType schemaTypeToMessageType(SchemaType schemaType);
+    static ProfileType messageTypeToProfileType(MessageType messageType);
+    static MessageType profileTypeToMessageType(ProfileType schemaType);
+
     static const rapidjson::Pointer resourceTypePointer;
     static const rapidjson::Pointer idPointer;
     static const rapidjson::Pointer metaProfile0Pointer;
@@ -66,6 +77,8 @@ public:
 
     std::optional<Identity> sender() const;
     void setSender(const Identity& sender);
+    void setSender(const Kvnr& sender);
+    void setSender(const TelematikId& sender);
 
     Identity recipient() const;
     void setRecipient(const Identity& recipient);
@@ -88,24 +101,24 @@ public:
 
     void verifyPayload(const JsonValidator& validator) const;
 
-    bool canValidateGeneric() const;
-    static bool canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile);
+
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+    ProfileType profileType() const;
 
 private:
-
+    static MessageType profileUrlToMessageType(std::string_view profileUrl);
     std::string_view messageTypeToProfileUrl(MessageType messageType) const;
-    MessageType profileUrlToMessageType(std::string_view profileUrl) const;
 
-    bool isDeprecatedProfile() const;
-    friend Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>;
+    friend Resource<Communication>;
     explicit Communication(NumberAsStringParserDocument&& document); // internal ctor
 
     void setSender(std::string_view sender, std::string_view namingSystem);
     void setRecipient(std::string_view recipient, std::string_view namingSystem);
     std::optional<SchemaType> payloadSchema() const;
-
-    CommunicationPayload mPayload;
 };
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<class Communication>;
 
 } // namespace model
 

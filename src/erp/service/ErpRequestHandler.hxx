@@ -51,14 +51,16 @@ public:
     static bool callerWantsJson (const ServerRequest& request);
 
 protected:
+    /// @brief extract and validate ID from URL
+    static model::PrescriptionId parseId(const ServerRequest& request, AccessLog& accessLog);
+
     void makeResponse(SessionContext& session, HttpStatus status, const model::ResourceBase* body);
     static std::string makeFullUrl(std::string_view tail);
     static std::string getLinkBase ();
 
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
-    [[nodiscard]] static TModel
-    parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType, bool validateGeneric = true);
+    [[nodiscard]] static TModel parseAndValidateRequestBody(const SessionContext& context, bool validateGeneric = true);
 
     static std::optional<std::string> getLanguageFromHeader(const Header& requestHeader);
 
@@ -67,7 +69,6 @@ protected:
     template<class TModel>
     [[nodiscard]] static model::ResourceFactory<TModel> createResourceFactory(const SessionContext& context);
 private:
-
     static void checkValidEncoding(const ContentMimeType& contentMimeType);
 
     const Operation mOperation;
@@ -82,17 +83,15 @@ public:
 };
 
 template<class TModel>
-TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, SchemaType schemaType,
-                                                      bool validateGeneric)
+TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, bool validateGeneric)
 {
     auto resourceFactory = createResourceFactory<TModel>(context);
     if (!validateGeneric)
     {
-        resourceFactory.genericValidationMode(Configuration::GenericValidationMode::disable);
+        resourceFactory.genericValidationMode(model::GenericValidationMode::disable);
     }
-    return std::move(resourceFactory).getValidated(schemaType, context.serviceContext.getXmlValidator(),
-                                          context.serviceContext.getInCodeValidator(),
-                                          model::ResourceVersion::supportedBundles());
+    auto profileType = resourceFactory.profileType();
+    return std::move(resourceFactory).getValidated(profileType);
 }
 
 

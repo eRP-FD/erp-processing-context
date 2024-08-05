@@ -95,6 +95,14 @@ public:
                               const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
                               const model::Timestamp& acceptDate,
                               const db_model::EncryptedBlob& healthCareProviderPrescription) = 0;
+    virtual void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                              const model::Timestamp& lastModified,
+                                              const model::Timestamp& lastMedicationDispense,
+                                              const db_model::EncryptedBlob& medicationDispense,
+                                              BlobId medicationDispenseBlobId,
+                                              const db_model::HashedTelematikId& telematikId,
+                                              const model::Timestamp& whenHandedOver,
+                                              const std::optional<model::Timestamp>& whenPrepared) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                      const model::Task::Status& taskStatus,
                                                      const model::Timestamp& lastModified,
@@ -103,7 +111,10 @@ public:
                                                      const db_model::HashedTelematikId& telematicId,
                                                      const model::Timestamp& whenHandedOver,
                                                      const std::optional<model::Timestamp>& whenPrepared,
-                                                     const db_model::EncryptedBlob& receipt) = 0;
+                                                     const db_model::EncryptedBlob& receipt,
+                                                     const model::Timestamp& lastMedicationDispense) = 0;
+    virtual void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
+                                                   const model::Timestamp& lastModified) = 0;
     virtual void updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
                                              const model::Timestamp& lastModified) = 0;
 

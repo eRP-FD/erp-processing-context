@@ -82,10 +82,12 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
     const model::Kvnr kvnr{*idNumberClaim};
 
     A_22121.start("Search parameters for ChargeItem");
+    A_24438.start("Set entered-date as default sort argument.");
     auto arguments = std::optional<UrlArguments>(
         ::std::in_place,
         ::std::vector<::SearchParameter>{{"entered-date", "entered_date", ::SearchParameter::Type::Date},
-                                         {"_lastUpdated", "last_modified", ::SearchParameter::Type::Date}});
+                                         {"_lastUpdated", "last_modified", ::SearchParameter::Type::Date}}, "entered-date");
+    A_24438.finish();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
     // GEMREQ-start A_22119#call-database
@@ -97,7 +99,7 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
     totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), chargeItems.size())
                              ? session.database()->countChargeInformationForInsurant(kvnr, arguments)
                              : chargeItems.size();
-    links = arguments->getBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
+    links = arguments->createBundleLinks(getLinkBase(), "/ChargeItem", totalSearchMatches);
 
     A_22123.start("Create bundle for paging");
     auto bundle = createBundle(chargeItems);
@@ -115,7 +117,7 @@ void ChargeItemGetAllHandler::handleRequest (PcSessionContext& session)
 model::Bundle ChargeItemGetAllHandler::createBundle(std::vector<model::ChargeItem>& chargeItems)
 {
     const std::string linkBase = getLinkBase() + "/ChargeItem";
-    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     for (auto& chargeItem : chargeItems)
     {
         A_22122.start("Do not add referenced supporting resources.");
@@ -156,7 +158,7 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 
     // GEMREQ-start A_22127#buildResponse
     // response bundle
-    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     auto chargeInformation = session.database()->retrieveChargeInformation(prescriptionId);
 
     Expect3(chargeInformation.prescription.has_value(), "Prescription has no data", ::std::logic_error);

@@ -305,10 +305,10 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::bindingValueSet(const std
     boost::split(parts, canonical, [](char c) {
         return c == '|';
     });
-    mFhirElement->mBinding->valueSetUrl = parts[0];
+    mFhirElement->mBinding->key.url = parts[0];
     if (parts.size() > 1)
     {
-        mFhirElement->mBinding->valueSetVersion = Version{parts[1]};
+        mFhirElement->mBinding->key.version = FhirVersion{parts[1]};
     }
     TVLOG(2) << mFhirElement->mName << ": New Binding to " << canonical;
     return *this;

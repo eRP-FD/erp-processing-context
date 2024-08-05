@@ -220,7 +220,6 @@ list(
         erp/model/PatientTest.cxx
         erp/model/PrescriptionIdTest.cxx
         erp/model/ResourceTest.cxx
-        erp/model/ResourceVersionTest.cxx
         erp/model/SignatureTest.cxx
         erp/model/SubscriptionTest.cxx
         erp/model/TaskTest.cxx
@@ -258,6 +257,9 @@ list(
         erp/service/EndpointHandlerTest/ChargeItemPatchEndpointTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPutHandlerTest.cxx
+        erp/service/EndpointHandlerTest/CommunicationGetEndpointTest.cxx
+        erp/service/EndpointHandlerTest/CreateTaskTest.cxx
+        erp/service/EndpointHandlerTest/DispenseTaskTest.cxx
         erp/service/EndpointHandlerTest/CloseTaskTest.cxx
         erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
@@ -321,9 +323,6 @@ list(
         erp/util/VersionTest.cxx
         erp/util/WorkDayTest.cxx
         erp/validation/JsonValidationTest.cxx
-        erp/validation/KbvBundleValidationTest.cxx
-        erp/validation/SampleDataTest.cxx
-        erp/validation/XmlValidatorTest.cxx
         erp/xml/SaxParserTest.cxx
         erp/xml/XmlDocumentTest.cxx
         erp/xml/XmlStringViewTest.cxx
@@ -336,8 +335,8 @@ list(
         util/ServerTestBaseAutoCleanup.cxx
         workflow-test/EndpointTestClient.cxx
         workflow-test/Erp5822Test.cxx # contains invalid KBV bundle, can only run in erp-test
-        workflow-test/Erp5899Test.cxx # contains invalid KBV bundle, can only run in erp-test
         workflow-test/Erp8090Test.cxx # contains environment changes, can only run in erp-test
+        workflow-test/C11574Test.cxx
 )
 
 if(ERP_WITH_HSM_TPM_PRODUCTION)

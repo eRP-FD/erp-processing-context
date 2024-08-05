@@ -23,7 +23,7 @@ void model::KbvBundle::additionalValidation() const
         const auto* errorMessageFromAfo =
             "Ungültige PZN: Die übergebene Pharmazentralnummer entspricht nicht den vorgeschriebenen "
             "Prüfziffer-Validierungsregeln.";
-        if (profile == SchemaType::KBV_PR_ERP_Medication_PZN)
+        if (profile == ProfileType::KBV_PR_ERP_Medication_PZN)
         {
             const auto medicationPzn = model::KbvMedicationPzn::fromJson(medication.jsonDocument());
             A_23892.start("PZN valid checksum test");
@@ -37,7 +37,7 @@ void model::KbvBundle::additionalValidation() const
             }
             A_23892.finish();
         }
-        else if (profile == SchemaType::KBV_PR_ERP_Medication_Compounding)
+        else if (profile == ProfileType::KBV_PR_ERP_Medication_Compounding)
         {
             const auto medicationCompounding = model::KbvMedicationCompounding::fromJson(medication.jsonDocument());
             A_24034.start("Validate PZN for ingredients");

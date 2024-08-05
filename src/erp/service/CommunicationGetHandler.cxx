@@ -57,7 +57,7 @@ void CommunicationGetHandlerBase::markCommunicationsAsRetrieved (
 model::Bundle CommunicationGetHandlerBase::createBundle (const std::vector<model::Communication>& communications) const
 {
     const std::string linkBase = getLinkBase() + "/Communication";
-    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     for (const auto& communication : communications)
     {
         Expect(communication.id().has_value(), "communication id has not been initialized");
@@ -97,6 +97,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
     auto* database = session.database();
 
     A_19522.start("support sent, received, recipient and sender in searching and sorting");
+    A_24438.start("Set sent as default sort argument.");
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
         std::vector<SearchParameter>
@@ -104,8 +105,10 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
             {"sent", "id", SearchParameter::Type::DateAsUuid},
             {"received",  SearchParameter::Type::Date},
             {"sender",    SearchParameter::Type::HashedIdentity},
-            {"recipient", SearchParameter::Type::HashedIdentity}
-        });
+            {"recipient", SearchParameter::Type::HashedIdentity},
+            {"identifier", "id", SearchParameter::Type::DateAsUuid},
+        }, "sent");
+    A_24438.finish();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
     A_19522.finish();
 
@@ -130,7 +133,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
 
         auto bundle = createBundle(communications);
         bundle.setTotalSearchMatches(totalSearchMatches);
-        const auto links = arguments->getBundleLinks(getLinkBase(), "/Communication", totalSearchMatches);
+        const auto links = arguments->createBundleLinks(getLinkBase(), "/Communication", totalSearchMatches);
         for (const auto& link : links)
             bundle.setLink(link.first, link.second);
 

@@ -15,7 +15,7 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvPractitioner : public Resource<KbvPractitioner, ResourceVersion::KbvItaErp>
+class KbvPractitioner : public Resource<KbvPractitioner>
 {
 public:
     static constexpr auto resourceTypeName = "Practitioner";
@@ -31,10 +31,12 @@ public:
     [[nodiscard]] std::optional<Lanr> zanr() const;
 
 private:
-    friend Resource<KbvPractitioner, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvPractitioner>;
     explicit KbvPractitioner(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<class KbvPractitioner>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVPRACTITIONER_HXX_

@@ -232,7 +232,7 @@ std::set<ProfiledElementTypeInfo> fhirtools::ReferenceFinder::profilesFromResour
     const auto& repo = *element.getFhirStructureRepository();
     for (const auto& profileUrl : element.profiles())
     {
-        const auto* profile = repo.findDefinitionByUrl(profileUrl);
+        const auto* profile = repo.findStructure(DefinitionKey{profileUrl});
         if (! profile)
         {
             mResult.validationResults.add(Severity::debug, "undefined profile: "s.append(profileUrl),
@@ -269,7 +269,7 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
         bool referenceTargetsOk = referenceTargetProfiles.empty();
         for (const auto& profileUrl : pet.element()->referenceTargetProfiles())
         {
-            const auto* profile = repo.findDefinitionByUrl(profileUrl);
+            const auto* profile = repo.findStructure(DefinitionKey{profileUrl});
             if (! profile)
             {
                 mResult.validationResults.add(Severity::debug, "profile not found: " + profileUrl,
@@ -394,7 +394,7 @@ const FhirStructureDefinition* ReferenceFinder::getTypeFromReferenceElement(cons
             std::string typeElementFullPath;
             typeElementFullPath.reserve(elementFullPath.size() + 5);
             typeElementFullPath.append(elementFullPath).append(".type");
-            type = repo.findDefinitionByUrl(typeStr);
+            type = repo.findStructure(DefinitionKey{typeStr});
             if (type)
             {
                 // http://www.hl7.org/fhir/references.html#type
@@ -449,7 +449,7 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo
     std::set<ProfiledElementTypeInfo> newProfiles;
     for (const auto& profileUrl : newProfileUrls)
     {
-        const auto* prof = repo.findDefinitionByUrl(profileUrl);
+        const auto* prof = repo.findStructure(DefinitionKey{profileUrl});
         if (! prof)
         {
             mResult.validationResults.add(Severity::debug, "profile not found: " + profileUrl,

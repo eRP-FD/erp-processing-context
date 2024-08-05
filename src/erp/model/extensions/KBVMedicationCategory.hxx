@@ -14,15 +14,15 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KBVMedicationCategory : public model::Extension
+class KBVMedicationCategory : public Extension<KBVMedicationCategory>
 {
 public:
     using Extension::Extension;
     static constexpr auto url = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category";
-
-    friend std::optional<KBVMedicationCategory> ResourceBase::getExtension<KBVMedicationCategory>(const std::string_view&) const;
 };
 
+extern template class Extension<KBVMedicationCategory>;
+extern template class Resource<KBVMedicationCategory>;
 }
 
 #endif// ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVMEDICATIONCATEGORY_H

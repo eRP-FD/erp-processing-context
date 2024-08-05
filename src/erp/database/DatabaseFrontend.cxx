@@ -28,6 +28,7 @@
 #include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/Identity.hxx"
+#include "erp/util/Expect.hxx"
 #include "erp/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
@@ -249,6 +250,34 @@ void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& k
                            task.expiryDate(), task.acceptDate(), encryptedPrescription);
 }
 
+void DatabaseFrontend::updateTaskMedicationDispense(
+    const model::Task& task, const std::vector<model::MedicationDispense>& medicationDispenses)
+{
+    ErpExpect(! medicationDispenses.empty(), HttpStatus::InternalServerError,
+              "medication dispense bundle cannot be empty at this place");
+    const auto& medicationDispense = medicationDispenses[0];
+    const auto telematikId = medicationDispense.telematikId();
+    const auto whenHandedOver = medicationDispense.whenHandedOver();
+    const auto whenPrepared = medicationDispense.whenPrepared();
+    const auto kvnr = task.kvnr();
+    ErpExpect(kvnr.has_value(), HttpStatus::InternalServerError,
+              "Cannot update medication dispense for task without kvnr.");
+    const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
+    const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
+
+    /// MedicationDispense uses same derivation master key as task:
+    auto [keyForMedicationDispense, blobId] = medicationDispenseKey(hashedKvnr);
+    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenses, keyForMedicationDispense);
+    mBackend->updateTaskMedicationDispense(task.prescriptionId(),
+                                           task.lastModifiedDate(),
+                                           value(task.lastMedicationDispense()),
+                                           encryptedMedicationDispense,
+                                           blobId,
+                                           hashedTelematikId,
+                                           whenHandedOver,
+                                           whenPrepared);
+}
+
 void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
     const model::Task& task, const std::vector<model::MedicationDispense>& medicationDispenses,
     const model::ErxReceipt& receipt)
@@ -275,18 +304,9 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
     const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
     const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
 
-    model::Bundle medicationDispenseBundle{model::BundleType::collection, model::ResourceBase::NoProfile, Uuid()};
-    for (const auto& medication : medicationDispenses)
-    {
-        medicationDispenseBundle.addResource({}, {}, {}, medication.jsonDocument());
-    }
-
     /// MedicationDispense uses same derivation master key as task:
     auto [keyForMedicationDispense, blobId] = medicationDispenseKey(hashedKvnr);
-    auto encryptedMedicationDispense =
-        mCodec.encode(medicationDispenseBundle.serializeToJsonString(),
-                      keyForMedicationDispense,
-                      Compression::DictionaryUse::Default_json);
+    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenses, keyForMedicationDispense);
     mBackend->updateTaskMedicationDispenseReceipt(task.prescriptionId(),
                                                   task.status(),
                                                   task.lastModifiedDate(),
@@ -295,8 +315,31 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
                                                   hashedTelematikId,
                                                   whenHandedOver,
                                                   whenPrepared,
-                                                  encryptReceipt);
+                                                  encryptReceipt,
+                                                  value(task.lastMedicationDispense()));
 }
+
+db_model::EncryptedBlob
+DatabaseFrontend::encryptMedicationDispense(const std::vector<model::MedicationDispense>& medicationDispenses,
+                                            const SafeString& keyForMedicationDispense)
+{
+    model::Bundle medicationDispenseBundle{model::BundleType::collection, model::FhirResourceBase::NoProfile, Uuid()};
+    for (const auto& medication : medicationDispenses)
+    {
+        medicationDispenseBundle.addResource({}, {}, {}, medication.jsonDocument());
+    }
+
+    return mCodec.encode(medicationDispenseBundle.serializeToJsonString(),
+                         keyForMedicationDispense,
+                         Compression::DictionaryUse::Default_json);
+}
+
+// GEMREQ-start A_24286#query-call-updateTaskDeleteMedicationDispense
+void DatabaseFrontend::updateTaskDeleteMedicationDispense(const model::Task& task)
+{
+    mBackend->updateTaskDeleteMedicationDispense(task.prescriptionId(), task.lastModifiedDate());
+}
+// GEMREQ-end A_24286#query-call-updateTaskDeleteMedicationDispense
 
 // GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
 void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
@@ -805,6 +848,10 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     if (dbTask.owner && key)
     {
         modelTask.setOwner(mCodec.decode(*dbTask.owner, *key));
+    }
+    if(dbTask.lastMedicationDispense)
+    {
+        modelTask.updateLastMedicationDispense(dbTask.lastMedicationDispense.value());
     }
     return modelTask;
 }

@@ -41,24 +41,8 @@ protected:
 
     static model::KbvBundle convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
                                                       const Uuid& uuid, PcServiceContext& serviceContext);
-    /// @brief extract and validate ID from URL
-    static model::PrescriptionId parseId(const ServerRequest& request, AccessLog& accessLog);
     static std::optional<std::string> getAccessCode(const ServerRequest& request);
     static void checkAccessCodeMatches(const ServerRequest& request, const model::Task& task);
-    /**
-     * Allows to unpack CAdES-BES signature.
-     * cadesBesSignatureFile - Path to a pkcs7File
-     */
-    static CadesBesSignature unpackCadesBesSignature(
-        const std::string& cadesBesSignatureFile, TslManager& tslManager);
-    static CadesBesSignature unpackCadesBesSignatureNoVerify(
-        const std::string& cadesBesSignatureFile);
-
-    static void fillMvoBdeV2(const std::optional<model::KBVMultiplePrescription>& mPExt, PcSessionContext& session);
-
-private:
-    static CadesBesSignature doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
-                                                       TslManager* tslManager);
 };
 
 

@@ -87,9 +87,10 @@ public:
         // The following communication is not related to charging information:
         chargeItemUnrelatedComm.resize(1);
         ASSERT_NO_FATAL_FAILURE(
-            chargeItemUnrelatedComm[0] = communicationPost(
-                model::Communication::MessageType::InfoReq, *closedTasks[0],
-                ActorRole::Insurant, kvnr, ActorRole::Pharmacists, telematikId, "Test info request 1"));
+            chargeItemUnrelatedComm[0] =
+                communicationPost(model::Communication::MessageType::DispReq, *closedTasks[0], ActorRole::Insurant,
+                                  kvnr, ActorRole::Pharmacists, telematikId,
+                                  R"({"version":1, "supplyOptionsType": "onPremise", "hint": "Test info request 1"})"));
         ASSERT_TRUE(chargeItemUnrelatedComm[0].has_value());
         ASSERT_TRUE(chargeItemUnrelatedComm[0]->id().has_value());
     }
@@ -98,24 +99,19 @@ public:
     void SetUp() override
     {
         ErpWorkflowTestP::SetUp();
-        envVars = testutils::getOverlappingFhirProfileEnvironment();
     }
 
     void TearDown() override
     {
-        envVars.clear();
         ErpWorkflowTestP::TearDown();
     }
+
 private:
-    std::vector<EnvironmentVariableGuard> envVars;
 };
 
 
 TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
 
     const auto kvnr = generateNewRandomKVNR();
@@ -189,9 +185,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
 
 TEST_P(ErpWorkflowPkvTestP, PkvTaskAcceptWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
 
     // invoke POST /task/$create
@@ -291,9 +284,6 @@ void checkEqualityExceptSupportingInfo(
 
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const auto kvnr = generateNewRandomKVNR();
 
@@ -395,7 +385,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
 
     // Change of marking by insurant
     EXPECT_FALSE(createdChargeItems[1]->isMarked());
-    model::Parameters::MarkingFlag markingFlag{};
+    model::PatchChargeItemParameters::MarkingFlag markingFlag{};
     markingFlag.taxOffice.value = true;
     markingFlag.insuranceProvider.value = true;
     markingFlag.subsidy.value = true;
@@ -436,7 +426,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     EXPECT_FALSE(chargeItems[0].isMarked());
 
     // Change of dispense item by pharmacy
-    const auto dispenseBundleString = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+    const auto dispenseBundleString =
+        ResourceTemplates::davDispenseItemXml({.prescriptionId = prescriptionIds.at(1).value()});
     const Uuid uuid;
     auto dispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleString);
     dispenseBundle.setId(uuid);
@@ -544,9 +535,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
 // GEMREQ-start A_22125
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdKvnrCheck)//NOLINT(readability-function-cognitive-complexity)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const auto kvnr1 = generateNewRandomKVNR();
 
@@ -593,9 +581,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdKvnrCheck)//NOLINT(readability-f
 // GEMREQ-start A_22126
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdTelematikIdCheck)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const std::string kvnr = generateNewRandomKVNR().id();
 
@@ -655,9 +640,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdTelematikIdCheck)//NOLINT(readab
 // GEMREQ-start A_22877
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const std::string kvnr1 = generateNewRandomKVNR().id();
 
@@ -682,7 +664,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cog
 
     const auto jwtInsurant1 = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr1);
     // Patch created charge item
-    model::Parameters::MarkingFlag markingFlag{};
+    model::PatchChargeItemParameters::MarkingFlag markingFlag{};
     markingFlag.taxOffice.value = true;
     std::optional<model::ChargeItem> chargeItemPatched;
     ASSERT_NO_FATAL_FAILURE(chargeItemPatched = chargeItemPatch(*createdChargeItem->id(), jwtInsurant1, markingFlag));
@@ -705,9 +687,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cog
 // GEMREQ-start A_22114
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDelete)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const std::string kvnr1 = generateNewRandomKVNR().id();
 
@@ -756,9 +735,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDelete)//NOLINT(readability-function-co
 // GEMREQ-start A_22117-01
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDeleteCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     const auto kvnr = generateNewRandomKVNR().id();
 
     // Create test data
@@ -793,9 +769,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDeleteCommunications)//NOLINT(readabili
 // GEMREQ-start A_22215
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const std::string kvnr = generateNewRandomKVNR().id();
 
@@ -833,7 +806,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
         ASSERT_TRUE(chargeItemFromBundle[0].accessCode().has_value());
         chargeItemAccessCode = chargeItemFromBundle[0].accessCode().value();
     }
-    const auto dispenseBundleString = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+    const auto dispenseBundleString = ResourceTemplates::davDispenseItemXml({.prescriptionId = prescriptionId.value()});
     auto dispenseBundle = model::Bundle::fromXmlNoValidation(dispenseBundleString);
     std::variant<model::ChargeItem, model::OperationOutcome> changedChargeItem;
     ASSERT_NO_FATAL_FAILURE(
@@ -867,9 +840,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
 
 TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     std::optional<model::PrescriptionId> prescriptionId{};
     std::string accessCode{};
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
@@ -968,9 +938,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
 // GEMREQ-start A_22158
 TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
 {
-    if(isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     const auto kvnr = generateNewRandomKVNR().id();
 
     // Create test data
@@ -1011,9 +978,6 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
 
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (isUnsupportedFlowtype(GetParam()))
-        GTEST_SKIP();
-
     model::Timestamp startTime = model::Timestamp::now();
     const auto kvnr = generateNewRandomKVNR().id();
 

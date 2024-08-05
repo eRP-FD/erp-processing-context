@@ -33,6 +33,7 @@ public:
     void setValue(const std::string& name, int64_t number);
     void setValue(const std::string& name, uint64_t number);
     void setValue(const std::string& name, double number);
+
 private:
     explicit JsonMaintainNumberPrecisionTestModel(model::NumberAsStringParserDocument&& jsonTree);
 };

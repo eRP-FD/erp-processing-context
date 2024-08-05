@@ -18,10 +18,11 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Consent : public Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>
+class Consent : public Resource<Consent>
 {
 public:
     static constexpr auto resourceTypeName = "Consent";
+    static constexpr ProfileType profileType = ProfileType::Gem_erxConsent;
     enum class Type
     {
         CHARGCONS
@@ -43,8 +44,10 @@ public:
 
     void fillId();
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
 private:
-    friend Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
+    friend Resource<Consent>;
     explicit Consent(NumberAsStringParserDocument&& jsonTree);
 
     void setId(const std::string_view& id);
@@ -52,6 +55,8 @@ private:
     void setDateTime(const model::Timestamp& dateTime);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Consent>;
 }
 
 #endif

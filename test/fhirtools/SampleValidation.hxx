@@ -3,18 +3,19 @@
 
 
 #include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/ResourceManager.hxx"
 
+#include <erp/fhir/Fhir.hxx>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <memory>
 #include <ranges>
-
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/validator/FhirPathValidator.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include <erp/fhir/Fhir.hxx>
 namespace fhirtools::test
 {
 
@@ -61,8 +62,8 @@ public:
     }
     [[nodiscard]] const FhirStructureRepository& repo()
     {
-        static auto instance = BaseT::makeRepo();
-        return *instance->defaultView();
+        static std::shared_ptr instance = BaseT::makeRepo();
+        return *instance;
     }
 
 protected:
@@ -137,14 +138,21 @@ protected:
     ResourceManager& resourceManager = ResourceManager::instance();
 
 private:
-    static std::unique_ptr<FhirStructureRepositoryBackend> makeRepo()
+    static std::shared_ptr<FhirStructureRepository> makeRepo()
     {
-        auto result = std::make_unique<FhirStructureRepositoryBackend>();
         std::list<std::filesystem::path> files = BaseT::fileList();
         std::list<std::filesystem::path> absolutfiles;
         std::ranges::transform(files, std::back_inserter(absolutfiles), &ResourceManager::getAbsoluteFilename);
-        result->load(absolutfiles);
-        return result;
+        struct RepoItems {
+            std::unique_ptr<FhirStructureRepositoryBackend> backend =
+                std::make_unique<FhirStructureRepositoryBackend>();
+            FhirResourceGroupConst resolver{"test"};
+            std::shared_ptr<FhirResourceViewGroupSet> view =
+                std::make_shared<FhirResourceViewGroupSet>("test", resolver.findGroupById("test"), backend.get());
+        };
+        auto result = std::make_shared<RepoItems>();
+        result->backend->load(absolutfiles, result->resolver);
+        return std::shared_ptr<FhirStructureRepository>{result, result->view.get()};
     }
 };
 }

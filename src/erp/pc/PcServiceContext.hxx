@@ -40,7 +40,6 @@ class BlobCache;
 class BlobDatabase;
 class PreUserPseudonymManager;
 class TelematicPseudonymManager;
-class InCodeValidator;
 class JsonValidator;
 class XmlValidator;
 template<typename>
@@ -84,7 +83,6 @@ struct Factories {
 
     std::function<std::shared_ptr<JsonValidator>()> jsonValidatorFactory;
     std::function<std::shared_ptr<XmlValidator>()> xmlValidatorFactory;
-    std::function<std::shared_ptr<InCodeValidator>()> incodeValidatorFactory;
 };
 
 
@@ -113,7 +111,6 @@ public:
     TelematicPseudonymManager& getTelematicPseudonymManager();
     const JsonValidator& getJsonValidator() const;
     const XmlValidator& getXmlValidator() const;
-    const InCodeValidator& getInCodeValidator() const;
 
     CFdSigErpManager& getCFdSigErpManager() const;
     [[nodiscard]] Certificate getCFdSigErp() const;
@@ -169,7 +166,6 @@ private:
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     const std::shared_ptr<XmlValidator> mXmlValidator;
-    const std::shared_ptr<InCodeValidator> mInCodeValidator;
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;
     std::unique_ptr<TelematicPseudonymManager> mTelematicPseudonymManager;
     /**

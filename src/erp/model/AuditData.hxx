@@ -53,7 +53,8 @@ enum class AuditEventId : std::int16_t
     Communication_delete_expired_id = 29, // deletion of expired Communications by maintenance script => Id 29 used by database script!
     GET_Tasks_by_pharmacy_with_pn3,
     GET_Tasks_by_pharmacy_with_pn3_failed,
-    MAX = GET_Tasks_by_pharmacy_with_pn3_failed
+    POST_Task_dispense,
+    MAX = POST_Task_dispense
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);
@@ -128,6 +129,8 @@ private:
     std::string mId;            // filled after storing in or if loaded from DB;
     model::Timestamp mRecorded; // filled after storing in or if loaded from DB;
 };
+
+extern template class Resource<class AuditMetaData>;
 
 }  // namespace model
 

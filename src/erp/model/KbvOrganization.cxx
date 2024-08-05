@@ -11,7 +11,7 @@
 namespace model
 {
 KbvOrganization::KbvOrganization(NumberAsStringParserDocument&& document)
-    : Resource<KbvOrganization, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<KbvOrganization>(std::move(document))
 {
 }
 

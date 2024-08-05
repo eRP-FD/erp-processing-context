@@ -71,7 +71,10 @@ FhirStructureDefinitionParser::ElementInfo::ElementInfo(FhirStructureDefinitionP
 {
 }
 
-FhirStructureDefinitionParser::FhirStructureDefinitionParser() = default;
+FhirStructureDefinitionParser::FhirStructureDefinitionParser(const FhirResourceGroupResolver& inGroupResolver)
+    : groupResolver(&inGroupResolver)
+{
+}
 
 FhirStructureDefinitionParser::~FhirStructureDefinitionParser() = default;
 
@@ -281,9 +284,11 @@ void FhirStructureDefinitionParser::endElement(const xmlChar* localname, const x
     mStack.pop_back();
 }
 
-FhirStructureDefinitionParser::ParseResult FhirStructureDefinitionParser::parse(const std::filesystem::path& filename)
+FhirStructureDefinitionParser::ParseResult
+FhirStructureDefinitionParser::parse(const std::filesystem::path& filename,
+                                     const FhirResourceGroupResolver& inGroupResolver)
 {
-    FhirStructureDefinitionParser parser;
+    FhirStructureDefinitionParser parser{inGroupResolver};
     parser.currentFile = filename;
     parser.SaxHandler::parseFile(filename);
     return std::make_tuple(std::move(parser.mStructures), std::move(parser.mCodeSystems), std::move(parser.mValueSets));
@@ -326,13 +331,14 @@ void FhirStructureDefinitionParser::handleStructureDefinitionSubTree(const xmlCh
         }
         else if (localname == "url"_xs)
         {
-            mStructureUrl = valueAttributeFrom(attributes);
-            mStructureBuilder.url(mStructureUrl);
-            TVLOG(4) << "loading FHIR Structure Definition for: " << mStructureUrl;
+            mStructureKey.url = valueAttributeFrom(attributes);
+            mStructureBuilder.url(mStructureKey.url);
         }
         else if (localname == "version"_xs)
         {
-            mStructureBuilder.version(Version{valueAttributeFrom(attributes)});
+            mStructureKey.version.emplace(Version{valueAttributeFrom(attributes)});
+            mStructureBuilder.version(*mStructureKey.version);
+            TVLOG(4) << "loading FHIR Structure Definition for: " << mStructureKey;
         }
         else if (localname == "baseDefinition"_xs)
         {
@@ -359,9 +365,14 @@ void FhirStructureDefinitionParser::handleStructureDefinitionSubTree(const xmlCh
         {
             mStructureBuilder.kind(stringToKind(valueAttributeFrom(attributes)));
         }
+        else if (localname == "snapshot"_xs)
+        {
+            enterSnapshotSubTree();
+            return;
+        }
         else
         {
-            enter(localname, uri, {{"snapshot"_xs, ElementType::snapshot}});
+            enter(localname, uri, {});
             return;
         }
     }
@@ -383,12 +394,18 @@ void FhirStructureDefinitionParser::leaveStructureDefinition()
     //    }
 }
 
+void fhirtools::FhirStructureDefinitionParser::enterSnapshotSubTree()
+{
+    mHaveSnapshot = true;
+    mStructureBuilder.initGroup(*groupResolver, currentFile);
+    mStack.emplace_back(ElementType::snapshot, "snapshot"_xs.xs_str());
+}
+
 void FhirStructureDefinitionParser::handleSnapshotSubTree(const xmlChar* localname, const xmlChar* uri,
                                                           const SaxHandler::AttributeList& attributes)
 {
     using namespace std::string_literals;
     using namespace std::string_view_literals;
-
     Expect3(localname == "element"_xs,
             "unexpected xml element '"s.append(reinterpret_cast<const char*>(localname)) + "' in " + getPath(),
             std::logic_error);
@@ -518,6 +535,7 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
 
 void FhirStructureDefinitionParser::leaveElement()
 {
+    FPExpect3(mHaveSnapshot, "Missing snapshot for: " + to_string(mStructureKey), std::logic_error);
     //     static const auto& ctype = std::use_facet<std::ctype<char>>(std::locale::classic());
     if (mElementTypes.size() == 1)
     {
@@ -530,15 +548,19 @@ void FhirStructureDefinitionParser::leaveElement()
     }
     auto element = mElementBuilder.getAndReset();
 
-    if (element->hasBinding())
+    if (element->hasBinding() && element->cardinality().max > 0)
     {
         // eld-11: Binding can only be present for coded elements, string, and uri
         // binding.empty() or type.code.empty() or type.select((code = 'code') or (code = 'Coding') or (code='CodeableConcept') or (code = 'Quantity') or (code = 'string') or (code = 'uri')).exists()
         static std::unordered_set<std::string_view> validBindingTypeIds{"code",     "Coding", "CodeableConcept",
                                                                         "Quantity", "string", "uri"};
         bool hasValidBindingType{false};
+        std::ostringstream types;
+        std::string_view sep{};
         for (const auto& elementType : mElementTypes)
         {
+            types << sep << elementType;
+            sep = ", ";
             if (validBindingTypeIds.contains(elementType))
             {
                 hasValidBindingType = true;
@@ -547,8 +569,10 @@ void FhirStructureDefinitionParser::leaveElement()
         }
         if (! hasValidBindingType)
         {
-            TLOG(WARNING) << "Element " << element->originalName() << " of " << mStructureUrl
-                          << " has defined a binding but does not contain a valid binding type";
+            TLOG(INFO) << "Element " << element->originalName() << " of " << mStructureKey
+                       << " has defined a binding (" + to_string(element->binding().key) +
+                              ") but does not contain a valid binding type: "
+                       << types.view();
         }
     }
     Expect3(element != nullptr, "element must not be null.", std::logic_error);
@@ -749,7 +773,7 @@ void fhirtools::FhirStructureDefinitionParser::handleCodeSystemSubtree(const xml
     }
     else if (localname == "version"_xs)
     {
-        mCodeSystemBuilder.version(valueAttributeFrom(attributes));
+        mCodeSystemBuilder.version(FhirVersion{valueAttributeFrom(attributes)});
     }
     else if (localname == "caseSensitive"_xs)
     {
@@ -793,7 +817,10 @@ void fhirtools::FhirStructureDefinitionParser::leaveConcept()
 
 void fhirtools::FhirStructureDefinitionParser::leaveCodeSystem()
 {
-    mCodeSystems.emplace_back(mCodeSystemBuilder.getAndReset());
+    mCodeSystemBuilder.initGroup(*groupResolver, currentFile);
+    auto newCodeSystem = mCodeSystemBuilder.getAndReset();
+    auto group = newCodeSystem.resourceGroup();
+    mCodeSystems.emplace_back(std::move(newCodeSystem));
 }
 
 void fhirtools::FhirStructureDefinitionParser::handleValueSetSubtree(const xmlChar* localname, const xmlChar* uri,
@@ -810,7 +837,7 @@ void fhirtools::FhirStructureDefinitionParser::handleValueSetSubtree(const xmlCh
     }
     else if (localname == "version"_xs)
     {
-        mValueSetBuilder.version(valueAttributeFrom(attributes));
+        mValueSetBuilder.version(FhirVersion{valueAttributeFrom(attributes)});
     }
     else if (localname == "compose"_xs)
     {
@@ -848,7 +875,7 @@ void fhirtools::FhirStructureDefinitionParser::handleComposeIncludeSubtree(const
 {
     if (localname == "system"_xs)
     {
-        mValueSetBuilder.includeCodeSystem(valueAttributeFrom(attributes));
+        mValueSetBuilder.includeCodeSystem(DefinitionKey{valueAttributeFrom(attributes)});
     }
     else if (localname == "concept"_xs)
     {
@@ -863,7 +890,7 @@ void fhirtools::FhirStructureDefinitionParser::handleComposeIncludeSubtree(const
     }
     else if (localname == "valueSet"_xs)
     {
-        mValueSetBuilder.includeValueSet(valueAttributeFrom(attributes));
+        mValueSetBuilder.includeValueSet(DefinitionKey{valueAttributeFrom(attributes)});
     }
     mStack.emplace_back(ElementType::Ignored, localname);
 }
@@ -901,7 +928,7 @@ void fhirtools::FhirStructureDefinitionParser::handleComposeExcludeSubtree(const
 {
     if (localname == "system"_xs)
     {
-        mValueSetBuilder.excludeCodeSystem(valueAttributeFrom(attributes));
+        mValueSetBuilder.excludeCodeSystem(DefinitionKey{valueAttributeFrom(attributes)});
     }
     else if (localname == "concept"_xs)
     {
@@ -914,7 +941,7 @@ void fhirtools::FhirStructureDefinitionParser::handleComposeExcludeSubtree(const
     }
     else if (localname == "valueSet"_xs)
     {
-        mValueSetBuilder.includeValueSet(valueAttributeFrom(attributes));
+        mValueSetBuilder.includeValueSet(DefinitionKey{valueAttributeFrom(attributes)});
     }
     mStack.emplace_back(ElementType::Ignored, localname);
 }
@@ -950,13 +977,14 @@ void fhirtools::FhirStructureDefinitionParser::handleExpansionContainsSubtree(
     }
     else if (localname == "system"_xs)
     {
-        mValueSetBuilder.expandSystem(valueAttributeFrom(attributes));
+        mValueSetBuilder.expandSystem(DefinitionKey{valueAttributeFrom(attributes)});
     }
     mStack.emplace_back(ElementType::Ignored, localname);
 }
 
 void fhirtools::FhirStructureDefinitionParser::leaveValueSet()
 {
+    mValueSetBuilder.initGroup(*groupResolver, currentFile);
     mValueSets.emplace_back(mValueSetBuilder.getAndReset());
 }
 

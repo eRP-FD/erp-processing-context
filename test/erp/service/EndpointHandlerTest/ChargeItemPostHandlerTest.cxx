@@ -57,9 +57,8 @@ void checkPostChargeItemHandler(std::optional<model::ChargeItem>& resultChargeIt
                                                                                     expectedStatus, expectedExcWhat));
     if (expectedStatus == HttpStatus::Created)
     {
-        ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromXml(
-                            serverResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                            SchemaType::fhir, model::ResourceVersion::supportedBundles(), false));
+        ASSERT_NO_THROW(resultChargeItem =
+                            model::ChargeItem::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
         ASSERT_TRUE(resultChargeItem);
     }
 }
@@ -71,11 +70,6 @@ class ChargeItemPostHandlerTest : public EndpointHandlerTest
 {
     void SetUp() override
     {
-        if (model::ResourceVersion::deprecatedProfile(
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-        {
-            GTEST_SKIP();
-        }
     }
 };
 
@@ -86,7 +80,8 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItem)//NOLINT(readability-function-c
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
 
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
-                                        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}}), std::nullopt};
+                                        ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId}),
+                                        std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                                                  .prescriptionId = pkvTaskId,
                                                                  .dispenseBundleBase64 = cadesBesSignature.getBase64(),
@@ -227,7 +222,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemNonQes)//NOLINT(readability-func
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
 
     CadesBesSignature cadesBesSignature{nonQesSmcbCert, nonQesSmcbPrivateKey,
-                                        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}}),
+                                        ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId}),
                                         std::nullopt, OcspHelper::stringToOcspResponse(ocspResponseData.response)};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                               .prescriptionId = pkvTaskId,
@@ -347,7 +342,6 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemNonQes)//NOLINT(readability-func
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
@@ -381,17 +375,15 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readabili
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(readability-function-cognitive-complexity)
 {
+    const std::string davDispenseItemProfile{profile(model::ProfileType::DAV_DispenseItem).value()};
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
-
-    auto& resourceManager = ResourceManager::instance();
-    auto dispenseBundleXml = resourceManager.getStringResource(
-        std::string{TEST_DATA_DIR} + "/validation/xml/v_2023_07_01/dav/AbgabedatenBundle/"
-                                     "Bundle_invalid_AbgabedatenBundle-1.1.xml");
-    dispenseBundleXml = regex_replace(dispenseBundleXml, std::regex{R"(<whenHandedOver value="[0-9-]+" />)"},
-                                      "<whenHandedOver value=\"" + model::Timestamp::now().toXsDateTime() + "\"/>");
+    auto dispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
+    dispenseBundleXml = regex_replace(
+        dispenseBundleXml,
+        std::regex{davDispenseItemProfile + '|' + to_string(ResourceTemplates::Versions::DAV_PKV_current())},
+        davDispenseItemProfile + "|1.1");
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
                                         std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
@@ -410,12 +402,11 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(re
     std::optional<model::ChargeItem> resultChargeItem;
     ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml,
                                                        inputChargeItem.prescriptionId(), referencedTask.secret(),
-                                                       HttpStatus::BadRequest, "parsing / validation error"));
+                                                       HttpStatus::BadRequest, "FHIR-Validation error"));
 }
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
@@ -441,7 +432,6 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(reada
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
@@ -460,60 +450,9 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLIN
 
     // successful retrieval:
     std::optional<model::ChargeItem> resultChargeItem;
-    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy,
-                                                       inputChargeItem.serializeToXmlString(),
-                                                       inputChargeItem.prescriptionId(), referencedTask.secret(),
-                                                       HttpStatus::BadRequest, "parsing / validation error"));
-}
-
-
-TEST_F(ChargeItemPostHandlerTest, PostChargeItemWhenHandedOverReference)
-{
-    using namespace std::chrono_literals;
-    // we have to use a day before, as the outer charge item validity is determined by the current time
-    const auto yesterday = model::Timestamp::now() - 24h;
-    const auto pkvTaskId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
-
-    CadesBesSignature cadesBesSignature{
-        CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
-        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{.whenHandedOver = yesterday}}}),
-        std::nullopt};
-    const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
-                                                                 .prescriptionId = pkvTaskId,
-                                                                 .dispenseBundleBase64 = cadesBesSignature.getBase64(),
-                                                                 .operation = OperationType::Post});
-    const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
-
-    const auto referencedTask = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr.id()}));
-
-    const auto jwtPharmacy =
-        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
-
-    // accept the handed over depending on the reference time point, as handed over > new profile valid period
-    {
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        std::optional<model::ChargeItem> resultChargeItem;
-        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy,
-                                                           chargeItemXml, inputChargeItem.prescriptionId(),
-                                                           referencedTask.secret(), HttpStatus::Created));
-    }
-    // reject the handed over depending on the reference time point, as handed over < new profile valid period
-    {
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
-        std::optional<model::ChargeItem> resultChargeItem;
-        ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy,
-                                                           chargeItemXml, inputChargeItem.prescriptionId(),
-                                                           referencedTask.secret(), HttpStatus::BadRequest));
-    }
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
+        resultChargeItem, mServiceContext, jwtPharmacy, inputChargeItem.serializeToXmlString(),
+        inputChargeItem.prescriptionId(), referencedTask.secret(), HttpStatus::BadRequest, "FHIR-Validation error"));
 }
 
 TEST_F(ChargeItemPostHandlerTest, PostNonPkvFails)

@@ -27,7 +27,7 @@ protected:
 
 TEST_F(VersionTest, compare)//NOLINT(readability-function-cognitive-complexity)
 {
-    using namespace version_literal;
+    using namespace ::version_literal;
     EXPECT_EQ(""_ver, ""_ver);
     EXPECT_EQ("1"_ver, "1"_ver);
     EXPECT_EQ("a"_ver, "a"_ver);

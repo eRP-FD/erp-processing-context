@@ -26,11 +26,11 @@ namespace model
 class ErxReceipt : public BundleBase<ErxReceipt>
 {
 public:
+    static constexpr auto profileType = ProfileType::Gem_erxReceiptBundle;
+
     ErxReceipt(const Uuid& bundleId, const std::string& selfLink, const model::PrescriptionId& prescriptionId,
                const model::Composition& composition, const std::string& deviceIdentifier, const model::Device& device,
-               const std::string& prescriptionDigestIdentifier, const ::model::Binary& prescriptionDigest,
-               model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                   ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+               const std::string& prescriptionDigestIdentifier, const ::model::Binary& prescriptionDigest);
 
     using BundleBase<ErxReceipt>::BundleBase;
     using Resource<ErxReceipt>::fromXml;
@@ -41,7 +41,14 @@ public:
     model::Composition composition() const;
     model::Device device() const;
     ::model::Binary prescriptionDigest() const;
+
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 };
+
+// NOLINTBEGIN(bugprone-exception-escape)
+extern template class BundleBase<ErxReceipt>;
+extern template class Resource<ErxReceipt>;
+// NOLINTEND(bugprone-exception-escape)
 
 } // namespace model
 

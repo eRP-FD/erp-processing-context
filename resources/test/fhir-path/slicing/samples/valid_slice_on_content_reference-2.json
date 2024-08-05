@@ -1,0 +1,22 @@
+{
+  "resourceType": "SliceOnContentReference",
+  "meta": {
+    "profile": [
+      "http://fhir-toolset/test/SliceOnContentReferenceConstraint"
+    ]
+  },
+  "contentReferenced": [
+    {
+      "sliced": [
+        {
+          "discriminator": "slice1",
+          "testValue": "Value for Slice 1"
+        },
+        {
+          "discriminator": "slice2",
+          "testValue": "Value for Slice 2"
+        }
+      ]
+    }
+  ]
+}

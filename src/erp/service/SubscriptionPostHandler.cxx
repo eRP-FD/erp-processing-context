@@ -37,7 +37,7 @@ void SubscriptionPostHandler::handleRequest(PcSessionContext& session)
 
     try
     {
-        auto subscription = parseAndValidateRequestBody<model::Subscription>(session, SchemaType::fhir);
+        auto subscription = parseAndValidateRequestBody<model::Subscription>(session);
         ErpExpect(subscription.recipientId().length(), HttpStatus::BadRequest, "Missing recipient");
         ErpExpect((subscription.status() == model::Subscription::Status::Requested), HttpStatus::BadRequest,
                   "Request status not supported");

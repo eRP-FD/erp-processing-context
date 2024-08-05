@@ -19,11 +19,11 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/util/JsonTestUtils.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <erp/compression/ZStd.hxx>
 #include <gtest/gtest.h>
-
-#include "test/util/ResourceManager.hxx"
+#include <test/util/ResourceTemplates.hxx>
 
 class DatabaseEncryptionTest : public PostgresDatabaseTest
 {
@@ -34,7 +34,6 @@ protected:
     static constexpr std::string_view binId = "someId";
     static constexpr std::string_view binData = "SOME++DATA==";
     static constexpr std::string_view erxBundleResource = "test/fhir/conversion/erx_bundle.json";
-    static constexpr std::string_view medicationDispenseResource = "test/fhir/conversion/medication_dispense.json";
 
     void cleanup() override
     {
@@ -61,8 +60,8 @@ protected:
         auto erxReceipt =
             model::ErxReceipt::fromJsonNoValidation(ResourceManager::instance().getStringResource(erxBundleResource));
         std::vector<model::MedicationDispense> medicationDispenses;
-        medicationDispenses.emplace_back(model::MedicationDispense::fromJsonNoValidation(
-            ResourceManager::instance().getStringResource(medicationDispenseResource)));
+        medicationDispenses.emplace_back(model::MedicationDispense::fromXmlNoValidation(
+            ResourceTemplates::medicationDispenseXml({.kvnr = InsurantA, .telematikId = owner})));
         db.updateTaskMedicationDispenseReceipt(task, medicationDispenses, erxReceipt);
         db.updateTaskStatusAndSecret(task);
         db.commitTransaction();
@@ -130,6 +129,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
             medication_dispense_blob_id,
             medication_dispense_bundle,
             owner,
+            last_medication_dispense,
             COUNT
         };
     };
@@ -222,6 +222,8 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
     SafeString decryptedOwner;
     ASSERT_NO_THROW(decryptedOwner = getDBCodec().decode(encryptedOwner, taskKey));
     EXPECT_EQ(decryptedOwner, owner);
+    // 20: last_medication_dispense
+    //     not encrypted
     A_19688.finish();
 }
 

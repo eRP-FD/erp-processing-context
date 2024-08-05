@@ -9,6 +9,7 @@
 #include "erp/ErpRequirements.hxx"
 #include "erp/common/MimeType.hxx"
 #include "erp/crypto/SecureRandomGenerator.hxx"
+#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Bundle.hxx"
@@ -56,8 +57,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
               HttpStatus::NotFound, "Healthcare provider prescription not found for prescription id");
     // GEMREQ-end A_19169-01#readFromDB
 
-    const auto cadesBesSignature =
-        unpackCadesBesSignatureNoVerify(std::string{*healthCareProviderPrescription->data()});
+    const auto cadesBesSignature = SignedPrescription::fromBinNoVerify(std::string{*healthCareProviderPrescription->data()});
     const auto& prescription = cadesBesSignature.payload();
     checkMultiplePrescription(session, model::KbvBundle::fromXmlNoValidation(prescription));
 
@@ -81,7 +81,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
 
     // Create response:
     const auto linkBase = makeFullUrl("/Task/" + prescriptionId.toString());
-    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, linkBase + "/$accept/");
     responseBundle.addResource(linkBase, {}, {}, task.jsonDocument());
     std::string uuid{};
@@ -201,7 +201,7 @@ void AcceptTaskHandler::checkMultiplePrescription(PcSessionContext& session, con
     if (!medicationRequests.empty())
     {
         auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
-        fillMvoBdeV2(mPExt, session);
+        session.fillMvoBdeV2(mPExt);
         if (mPExt && mPExt->isMultiplePrescription())
         {
             const auto startDate = mPExt->startDateTime();

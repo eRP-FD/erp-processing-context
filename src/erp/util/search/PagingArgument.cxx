@@ -44,9 +44,10 @@ size_t toSizeT(const std::string& numberString, const std::string& fieldName, bo
 }
 
 
-PagingArgument::PagingArgument (void)
+PagingArgument::PagingArgument ()
     : mCount(getDefaultCount()),
-      mOffset(0)
+      mOffset(0),
+      mTotalSearchMatches(0)
 {
 }
 
@@ -57,19 +58,19 @@ void PagingArgument::setCount (const std::string& countString)
 }
 
 
-bool PagingArgument::hasDefaultCount (void) const
+bool PagingArgument::hasDefaultCount () const
 {
     return mCount == getDefaultCount();
 }
 
 
-size_t PagingArgument::getCount (void) const
+size_t PagingArgument::getCount () const
 {
     return mCount;
 }
 
 
-size_t PagingArgument::getDefaultCount (void)
+size_t PagingArgument::getDefaultCount ()
 {
     A_19534.start("limit page size to 50 entries");
     return 50;
@@ -83,27 +84,27 @@ void PagingArgument::setOffset (const std::string& offsetString)
 }
 
 
-size_t PagingArgument::getOffset (void) const
+size_t PagingArgument::getOffset () const
 {
     return mOffset;
 }
 
 
-bool PagingArgument::isSet (void) const
+bool PagingArgument::isSet () const
 {
     return mCount != getDefaultCount() || mOffset>0;
 }
 
 
-bool PagingArgument::hasPreviousPage (void) const
+bool PagingArgument::hasPreviousPage () const
 {
     return mOffset > 0;
 }
 
 
-bool PagingArgument::hasNextPage (const std::size_t& totalSearchMatches) const
+bool PagingArgument::hasNextPage (const std::size_t totalSearchMatches) const
 {
-        return totalSearchMatches > mOffset + mCount;
+    return totalSearchMatches > mOffset + mCount;
 }
 
 
@@ -116,4 +117,32 @@ void PagingArgument::setEntryTimestampRange(const model::Timestamp& firstEntry, 
 std::optional<std::pair<model::Timestamp, model::Timestamp>> PagingArgument::getEntryTimestampRange() const
 {
     return mEntryTimestampRange;
+}
+
+void PagingArgument::setTotalSearchMatches(const std::size_t totalSearchMatches)
+{
+    mTotalSearchMatches = totalSearchMatches;
+}
+
+size_t PagingArgument::getTotalSearchMatches() const
+{
+    return mTotalSearchMatches;
+}
+
+size_t PagingArgument::getOffsetLastPage() const
+{
+    if (mCount == 0)
+    {
+        throw std::invalid_argument("invalid count");
+    }
+
+    size_t prevPages = mTotalSearchMatches / mCount;
+    size_t offsetLastPage = prevPages * mCount;
+
+    if (offsetLastPage == mTotalSearchMatches)
+    {
+        offsetLastPage = offsetLastPage - mCount;
+    }
+
+    return offsetLastPage;
 }

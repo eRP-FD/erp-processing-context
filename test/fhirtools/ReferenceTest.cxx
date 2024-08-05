@@ -8,6 +8,8 @@
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/internal/ReferenceContext.hxx"
@@ -113,10 +115,11 @@ protected:
     }
     static const FhirStructureRepository& repo()
     {
-        static std::unique_ptr<const FhirStructureRepositoryBackend> instance =
-            DefaultFhirStructureRepository::create(getProfileList());
-        Expect3(instance != nullptr, "Failed to load repo", std::logic_error);
-        return *instance->defaultView();
+        static FhirResourceGroupConst resolver{"test"};
+        static gsl::not_null backend = DefaultFhirStructureRepository::create(getProfileList(), resolver);
+        static auto view = std::make_shared<FhirResourceViewGroupSet>("test", resolver.findGroupById("test"),
+                                                                      std::addressof(*backend));
+        return *view;
     }
     ResourceManager& resourceManager = ResourceManager::instance();
 };
@@ -153,7 +156,7 @@ protected:
             // resolve profiles and fill Expected::profiles field:
             std::ranges::transform(
                 exp.profileUrls, std::inserter(exp.profiles, exp.profiles.end()), [&](const auto& profileUrl) {
-                    const auto* profile = repo().findDefinitionByUrl(profileUrl);
+                    const auto* profile = repo().findStructure(DefinitionKey{profileUrl});
                     Expect3(profile != nullptr, "profile not found: " + profileUrl, std::logic_error);
                     return profile;
                 });

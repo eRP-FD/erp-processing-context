@@ -87,291 +87,290 @@
     ],
     "xml-schema": [
       "@ERP_SCHEMA_DIR@hl7.fhir.r4.core/4.0.1/xml/fhir.xsd",
-      "@ERP_SCHEMA_DIR@not-profiled/parameters/ActivateTaskParameters.xsd",
-      "@ERP_SCHEMA_DIR@not-profiled/parameters/CreateTaskParameters.xsd",
       "@ERP_SCHEMA_DIR@tsl/BNA_tsl.xsd",
       "@ERP_SCHEMA_DIR@tsl/Gematik_tsl.xsd",
       "@ERP_SCHEMA_DIR@vsdm/Pruefungsnachweis.xsd"
     ],
-    "fhir-profile-old": {
-      "valid-until": "2023-12-31",
-      "erp-fhir-version": "2022.01.01",
-      "fhir-validation": {
-        "mode": "disable",
-        "levels": {
-          "unreferenced-bundled-resource": "warning",
-          "unreferenced-contained-resource": "warning",
-          "mandatory-resolvable-reference-failure": "warning"
-        }
-      },
-      "kbv.ita.erp": [
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Bundle.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Composition.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_BundleDummy.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_Compounding.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_FreeText.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_Ingredient.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Medication_PZN.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_PracticeSupply.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_ERP_Prescription.xsd"
-      ],
-      "de.gematik.erezept-workflow.r4": [
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/bundle/MedicationDispenseBundle.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationDispReq.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationInfoReq.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationChargChangeReq.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationChargChangeReply.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationReply.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/communication/Gem_erxCommunicationRepresentative.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/medicationdispense/Gem_erxMedicationDispense.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/chargeitem/Gem_erxChargeItem.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/consent/Gem_erxConsent.xsd"
-      ],
-      "fhir": {
-        "structure-files": [
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0131.xml",
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0203.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.1.1",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.0.3",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-arge-ik-klassifikation.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-ask.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-aufnahmeart.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-deuev-anlage-6-vorsatzworte.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-deuev-anlage-7-namenszusaetze.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-deuev-anlage-8-laenderkennzeichen.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-dimdi-alpha-id.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-dimdi-alpha-id-se.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-dimdi-atc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-dimdi-icd-10-gm.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-dimdi-ops.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-edqm-doseform.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-gender-amtlich-de.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-identifier-type-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-ifa-pzn.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Codesystem-iso-3166-2-de-laendercodes.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-administrative-gender.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-diagnosis-role.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-identifier-type-v2.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-iso-3166.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-loinc-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-marital-status.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-supplement-observation-category.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/CodeSystem-versicherungsart-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-destatis-ags.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gender-amtlich-de.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-besondere-personengruppe.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-dmp-kennzeichen.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-einlesedatum-karte.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-generation-egk.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-kostenerstattung.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-onlinepruefung-egk.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-ruhender-leistungsanspruch.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-versichertenart.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-version-vsdm.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-wop.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-gkv-zuzahlungsstatus.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-humanname-namenszusatz.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-icd-10-gm-ausrufezeichen.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-icd-10-gm-diagnosesicherheit.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-icd-10-gm-manifestationscode.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-icd-10-gm-primaercode.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-normgroesse.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Extension-seitenlokalisation.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Observation-pflegegrad.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-address-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-chargeitem-ebm.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-alpha-id.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-alpha-id-se.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-ask.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-atc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-icd10gm.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-ops.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coding-pzn.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-condition-de-icd10.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coverage-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coverage-de-gkv.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-coverage-de-sel.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-humanname-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-bsnr.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-efn.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-iknr.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-kvid10.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-kzva.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-lanr.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-pid.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-pkv.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-pseudo-kvid.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-vknr.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-identifier-zanr.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE_Atemfrequenz.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE-Koerpertemperatur.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE-Kopfumfang.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE_Puls.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE_Sauerstoffsaettigung.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/Profile-observation-VitalSignDE.StructureDefinition.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/UcumVitalsCommonDE.ValueSet.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.30--20180713131246.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.31--20180713132208.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.32--20180713132315.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.33--20180713132759.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.34--20180713132843.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.35--20181214170712.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.36--20181001183306.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.37--20190517134631.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.38--20180713162205.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.39--20180713132816.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.40--20180713132721.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.58--20180713162142.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-1.2.276.0.76.11.59--20180713162125.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-alpha-id.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-ask.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-atc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-Aufnahmeart.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-dimdi-icd10-gm.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-gender-amtlich-de.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-identifier-type-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-ifa-pzn.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-iso-3166-2-de-laendercodes.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-kbv-s-icd-diagnosesicherheit.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-ops-pflegegrad.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-versicherungsart-de-basis.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-VitalSignDE-Koerpergewicht-Snomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/ValueSet-VitalSignDE-Koerpergroesse-Snomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/VitalSignDE_Body_Height_Loinc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/VitalSignDE_Body_Length_UCUM.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/VitalSignDE_Body_Weight_Loinc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-0.9.13/VitalSignDE_Body_Weight_UCUM.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseApgarScoreIdentifierGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseApgarScoreValueGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseBodyHeightSnomedGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_CS_Base_Body_Temperature_German.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_CS_Base_Body_Temp_Unit_German.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseBodyWeightLoincGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseBodyWeightMethodSnomedGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseBodyWeightSnomedGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseDiagnosisSeverityGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseHeadCircumferenceBodySiteSnomedGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseHeadCircumferenceSnomedGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_CS_Base_Heart_Rate_German.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseidentifiertype.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBasePractitionerFunctionGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVCSBaseStageLifeGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVEXBaseAdditionalComment.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVEXBaseStageLife.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVEXBaseTerminologyGerman.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_PR_Base_Heart_Rate.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBaseObservationApgarScore.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_PR_Base_Observation_Blood_Pressure_New.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBaseObservationBodyHeight.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_PR_Base_Observation_Body_Temperature.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBaseObservationBodyWeight.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBaseObservationHeadCircumference.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_PR_Base_Observation_Respiratory_Rate.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBaseOrganization.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBasePatient.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_PR_Base_Peripheral_Oxygen_Saturation.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVPRBasePractitioner.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseApgarScoreIdentifierLoinc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseApgarScoreIdentifierSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseApgarScoreValue.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyHeightLoinc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyHeightSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_VS_Base_Body_Temperature_Snomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_VS_Base_Body_Temp_Unit.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyWeightLoinc.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyWeightMethodSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyWeightSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseBodyWeightUnit.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseDiagnoseSnomedCT.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBASEGemRSAnlage8.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseHeadCircumferenceBodySiteSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseHeadCircumferenceSnomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBV_VS_Base_Heart_Rate_Snomed.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseIHEXDSAuthorSpecialityRestricted.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBasePractitionerSpecialityAddendum.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBasePractitionerSpeciality.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.1.3/KBVVSBaseStageLife.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.0.2",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de"
-        ]
-      }
-    },
-    "fhir-profile": {
-      "valid-from": "2023-07-01",
-      "render-from": "2023-07-01",
-      "erp-fhir-version": "2023.07.01",
-      "fhir-validation": {
+    "fhir": {
+      "validation": {
         "levels": {
           "unreferenced-bundled-resource": "error",
           "unreferenced-contained-resource": "error",
           "mandatory-resolvable-reference-failure": "error"
         }
       },
-      "fhir": {
-        "structure-files": [
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0131.xml",
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0203.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
-          "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.1",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.2.0",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.3.2/package",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.1",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
-          "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de"
-        ]
-      }
+      "structure-files": [
+        "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0131.xml",
+        "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0203.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.1",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.2.0",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.3.2/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.3.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de"
+      ],
+      "synthesize-codesystems": [
+        {"url": "http://loinc.org"                                    , "version": null},
+        {"url": "urn:ietf:bcp:47"                                     , "version": null},
+        {"url": "http://unitsofmeasure.org"                           , "version": null},
+        {"url": "http://standardterms.edqm.eu"                        , "version": null},
+        {"url": "urn:oid:1.2.276.0.76.5.514"                          , "version": null},
+        {"url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11"              , "version": null},
+        {"url": "urn:oid:1.2.276.0.76.5.492"                          , "version": null},
+        {"url": "urn:iso:std:iso:3166"                                , "version": null},
+        {"url": "https://fhir.kbv.de/CodeSystem/Role_Care_Team"       , "version": "1.3.0"},
+        {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_Role_Care", "version": "1.3.0"}
+      ],
+      "synthesize-valuesets": [
+        {"url": "http://loinc.org/vs/LL379-9", "version": "4.0.1" }
+      ],
+      "resource-groups": [
+        {
+          "id": "missing-codesystems",
+          "match": [
+            {"url": "http://loinc.org"                      , "version": null},
+            {"url": "urn:ietf:bcp:47"                       , "version": null},
+            {"url": "urn:ietf:bcp:47"                       , "version": null},
+            {"url": "http://unitsofmeasure.org"             , "version": null},
+            {"url": "http://standardterms.edqm.eu"          , "version": null},
+            {"url": "urn:oid:1.2.276.0.76.5.514"            , "version": null},
+            {"url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11", "version": null},
+            {"url": "urn:oid:1.2.276.0.76.5.492"            , "version": null},
+            {"url": "urn:iso:std:iso:3166"                  , "version": null}
+          ]
+        },
+        {
+          "id": "missing-valuesets",
+          "match": [
+            {"url": "http://loinc.org/vs/LL379-9", "version": "4.0.1" }
+          ]
+        },
+        {
+          "id": "error-codesystems",
+          "match": [
+            {"url": "https://fhir.kbv.de/CodeSystem/Role_Care_Team"       , "version": "1.3.0"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_Role_Care", "version": "1.3.0"}
+          ]
+        },
+        {
+          "id": "hl7_fhir_r4_core_4_0_1",
+          "include": ["missing-codesystems", "missing-valuesets"],
+          "match": [
+            { "file": ".*/CodeSystem-v2-0131\\.xml"},
+            { "file": ".*/CodeSystem-v2-0203\\.xml"},
+            { "file": ".*/hl7.org/.*"}
+          ]
+        },
+        {
+          "id": "KBV_schluesseltabellen_sliced",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_ARZTNRFACHGRUPPE" , "version": "1.03" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_BAR2_ARZTNRFACHGRUPPE"   , "version": "1.03" }
+          ]
+        },
+        {
+          "id": "KBV_schluesseltabellen_common",
+          "include": ["KBV_schluesseltabellen_sliced"],
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_WBO"              , "version": "1.16" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT"     , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT", "version": "1.00" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION", "version": "1.00" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"               , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"      , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"       , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"    , "version": "1.02" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"        , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN" , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS", "version": "1.02" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_BMP_DOSIEREINHEIT"       , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT"  , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_SEITENLOKALISATION"  , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP"                 , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART"        , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE"         , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PERSONENGRUPPE"      , "version": "1.02" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PKV_TARIFF"          , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN"   , "version": "1.01" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS"  , "version": "1.02" }
+          ]
+        },
+        {
+          "id": "DARREICHUNGSFORM_1_13",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM", "version": "1.13" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"  , "version": "1.13" }
+          ]
+        },
+        {
+          "id": "DARREICHUNGSFORM_1_14",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM", "version": "1.14" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"  , "version": "1.14" }
+          ]
+        },
+        {
+          "id": "DMP_1_05",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP", "version": "1.05" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP"  , "version": "1.05" }
+          ]
+        },
+        {
+          "id": "DMP_1_06",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP", "version": "1.06" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP"  , "version": "1.06" }
+          ]
+        },
+        {
+          "id": "DE_BASIS_ART_DECOR",
+          "match": [
+            { "url": "http://art-decor.org/fhir/ValueSet/1.2.276.0.76.11.58--20180713162142", "version": "2018-07-13T16:21:42"},
+            { "url": "http://art-decor.org/fhir/ValueSet/1.2.276.0.76.11.59--20180713162125", "version": "2018-07-13T16:21:25"}
+          ]
+        },
+        {
+          "id": "DE_BASIS_IHE_D",
+          "include": ["DE_BASIS_ART_DECOR"],
+          "match": [
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorRole"                , "version": "2018-07-13T13:12:46"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorSpeciality"          , "version": "2018-07-13T13:22:08"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSclassCode"                 , "version": "2018-07-13T13:23:15"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSconfidentialityCode"       , "version": "2018-07-13T13:27:59"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSeventCodeList"             , "version": "2018-07-13T13:28:43"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeDE"              , "version": "2018-12-14T17:07:12"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCode", "version": "2018-10-01T18:33:06"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCode"       , "version": "2019-05-17T13:46:31"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDStypeCode"                  , "version": "2018-07-13T16:22:05"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDScontentTypeCode"           , "version": "2018-07-13T13:28:16"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDScodeList"                  , "version": "2018-07-13T13:27:21"}
+          ]
+        },
+        {
+          "id": "KBV_2023_07_01",
+          "include": ["hl7_fhir_r4_core_4_0_1", "KBV_schluesseltabellen_sliced", "DE_BASIS_IHE_D", "error-codesystems"],
+          "match": [
+            { "file": ".*/KBV.Basis-1.3.0/package/.*" },
+            { "file": ".*/profiles/kbv.ita.for-1.1.0/package/.*" },
+            { "file": ".*/profiles/kbv.ita.erp-1.1.2/.*" },
+            { "url": "http://fhir.de/CodeSystem/.*"         , "version": "1.3.2" },
+            { "url": "http://fhir.de/StructureDefinition/.*", "version": "1.3.2" },
+            { "url": "http://fhir.de/ValueSet/.*"           , "version": "1.3.2" },
+            { "url": "urn:iso:std:iso:3166-2:de"            , "version": "1.3.2" }
+          ]
+        },
+        {
+          "id": "WORKFLOW_1_2_0",
+          "include": ["KBV_2023_07_01"],
+          "match": [
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_.*"                     , "version": "1.2" },
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_VS_DocumentType"           , "version": "1.2" },
+            { "url": "https://gematik.de/fhir/erp/ValueSet/GEM_ERP_VS_.*"                       , "version": "1.2" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_.*"            , "version": "1.2" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PAR_OUT_OP_Accept", "version": "1.2" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*"            , "version": "1.2" }
+          ]
+        },
+        {
+          "id": "WORKFLOW_1_3_1",
+          "include": ["KBV_2023_07_01"],
+          "match": [
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_.*"                     , "version": "1.3" },
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_VS_DocumentType"           , "version": "1.3" },
+            { "url": "https://gematik.de/fhir/erp/ValueSet/GEM_ERP_VS_.*"                       , "version": "1.3" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_.*"            , "version": "1.3" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PAR_OUT_OP_Accept", "version": "1.3" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*"            , "version": "1.3" }
+          ]
+        },
+        {
+          "id": "PATIENTENRECHNUNG_1_0_0",
+          "include": ["KBV_2023_07_01"],
+          "match": [
+            { "url": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType", "version": "1.0" },
+            { "url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_.*", "version": "1.0" },
+            { "url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_.*", "version": "1.0" },
+            { "url": "https://gematik.de/fhir/erpchrg/ValueSet/GEM_ERPCHRG_VS_ConsentType"  , "version": "1.0" }
+          ]
+        },
+        {
+          "id": "ABGABEDATENBASIS_1_3_1",
+          "include": ["KBV_2023_07_01"],
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-.*"          , "version": "1.3" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-.*" , "version": "1.3" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-.*", "version": "1.3" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-.*"  , "version": "1.3" },
+            { "url": "http://fhir.abda.de/StructureDefinition/DAV-PR-ERP-AbgabedatenMeta"       , "version": "1.3" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-.*"            , "version": "1.3" }
+          ]
+        },
+        {
+          "id": "ABGABEDATENPKV_1_2_0",
+          "include": ["ABGABEDATENBASIS_1_3_1"],
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-.*"         , "version": "1.2" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-.*", "version": "1.2" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-.*", "version": "1.2" },
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-.*"           , "version": "1.2" }
+          ]
+        }
+      ],
+      "resource-views": [
+        {
+          "id": "2024-07-01",
+          "env-name": "ERP_DARREICHUNGSFORM_1_13",
+          "valid-until": "2024-09-30",
+          "groups": [
+            "KBV_2023_07_01",
+            "WORKFLOW_1_2_0",
+            "ABGABEDATENPKV_1_2_0",
+            "PATIENTENRECHNUNG_1_0_0",
+            "KBV_schluesseltabellen_common",
+            "DMP_1_05",
+            "DARREICHUNGSFORM_1_13"
+          ]
+        },
+        {
+          "id": "2024-10-01",
+          "env-name": "ERP_2024_10_01",
+          "valid-from": "2024-10-01",
+          "groups": [
+            "KBV_2023_07_01",
+            "WORKFLOW_1_2_0",
+            "ABGABEDATENPKV_1_2_0",
+            "PATIENTENRECHNUNG_1_0_0",
+            "KBV_schluesseltabellen_common",
+            "DMP_1_06",
+            "DARREICHUNGSFORM_1_14"
+          ]
+        },
+        {
+          "id": "2024-11-01",
+          "env-name": "ERP_2024_11_01",
+          "valid-from": "2024-11-01",
+          "groups": [
+            "KBV_2023_07_01",
+            "WORKFLOW_1_3_1",
+            "ABGABEDATENPKV_1_2_0",
+            "PATIENTENRECHNUNG_1_0_0",
+            "KBV_schluesseltabellen_common",
+            "DMP_1_06",
+            "DARREICHUNGSFORM_1_14"
+          ]
+        }
+      ]
     },
-    "fhir-profile-patch": {
-      "valid-from": "2024-01-01",
-      "replace": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.1",
-      "replace-with": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2"
-    },
-    "fhir-resource-tags": [
-      {
-        "tag": "darreichungsform_1_12",
-        "version": "1.12",
-        "urls": [
-          "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"
-        ]
-      },
-      {
-        "tag": "darreichungsform_1_13",
-        "version": "1.13",
-        "urls": [
-          "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"
-        ]
-      }
-    ],
-    "fhir-resource-views": [
-      {
-        "env-name": "ERP_DARREICHUNGSFORM_1_12",
-        "valid-until": "2024-06-30",
-        "tags": [
-          "darreichungsform_1_12"
-        ]
-      },
-      {
-        "env-name": "ERP_DARREICHUNGSFORM_1_13",
-        "valid-from": "2024-07-01",
-        "tags": [
-          "darreichungsform_1_13"
-        ]
-      }
-    ],
     "redis": {
       "database": "0",
       "user": "",

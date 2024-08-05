@@ -79,7 +79,7 @@ OperationOutcome::Issue::Type OperationOutcome::Issue::stringToType(std::string 
 
 
 OperationOutcome::OperationOutcome(Issue&& primaryIssue)
-    : Resource<OperationOutcome, ResourceVersion::Fhir>(Resource::NoProfile,
+    : Resource<OperationOutcome>(Resource::NoProfile,
                                  []() {
                                      std::call_once(onceFlag, initTemplates);
                                      return operationOutcomeTemplate;
@@ -91,7 +91,7 @@ OperationOutcome::OperationOutcome(Issue&& primaryIssue)
 
 
 OperationOutcome::OperationOutcome(NumberAsStringParserDocument&& jsonTree)
-    : Resource<OperationOutcome, ResourceVersion::Fhir>(std::move(jsonTree))
+    : Resource<OperationOutcome>(std::move(jsonTree))
 {
     std::call_once(onceFlag, initTemplates);
 }
@@ -206,6 +206,11 @@ bool operator==(const OperationOutcome::Issue& lhs, const OperationOutcome::Issu
            lhs.detailsText == rhs.detailsText &&
            lhs.diagnostics == rhs.diagnostics &&
            lhs.expression == rhs.expression;
+}
+
+std::optional<model::Timestamp> OperationOutcome::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
 }
 
 

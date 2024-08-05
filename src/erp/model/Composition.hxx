@@ -36,14 +36,10 @@ class Composition : public Resource<Composition>
 {
 public:
     static constexpr auto resourceTypeName = "Composition";
-    Composition(
-        const std::string_view& telematicId,
-        const model::Timestamp& start,
-        const model::Timestamp& end,
-        const std::string_view& author,
-        const std::string_view& prescriptionDigestIdentifier,
-        ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
+    static constexpr auto profileType = ProfileType::Gem_erxCompositionElement;
+
+    Composition(const std::string_view& telematicId, const model::Timestamp& start, const model::Timestamp& end,
+                const std::string_view& author, const std::string_view& prescriptionDigestIdentifier);
 
     [[nodiscard]] std::string_view id() const;
     [[nodiscard]] std::optional<std::string_view> telematikId() const;
@@ -64,6 +60,8 @@ private:
     explicit Composition(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Composition>;
 }
 
 

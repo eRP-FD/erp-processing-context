@@ -70,6 +70,16 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing key for task");
     databaseHandle->updateTaskStatusAndSecret(task, *taskAndKey->key);
 
+    // GEMREQ-start A_24286#delete-MedicationDispense
+    A_24286.start("Delete MedicationDispense");
+    if(task.lastMedicationDispense().has_value())
+    {
+        task.deleteLastMedicationDispense();
+        databaseHandle->updateTaskDeleteMedicationDispense(task);
+    }
+    A_24286.finish();
+    // GEMREQ-end A_24286#delete-MedicationDispense
+
     A_19514.start("HttpStatus 204 for successful POST");
     makeResponse(session, HttpStatus::NoContent, nullptr/*body*/);
     A_19514.finish();

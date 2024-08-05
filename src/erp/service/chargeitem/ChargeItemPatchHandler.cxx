@@ -43,8 +43,7 @@ void ChargeItemPatchHandler::handleRequest(PcSessionContext& session)
 
 // GEMREQ-start A_22878
     A_22878.start("Validate 'Parameters' resource against generic FHIR profile and check validity of content");
-    const auto parametersResource =
-            parseAndValidateRequestBody<model::Parameters>(session, SchemaType::PatchChargeItemParameters);
+    const auto parametersResource = parseAndValidateRequestBody<model::PatchChargeItemParameters>(session);
     std::optional<const model::ChargeItemMarkingFlags> markingFlags;
     try
     {

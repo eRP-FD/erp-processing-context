@@ -43,10 +43,6 @@ TEST_F(A_22231_BetaebungsmittelAblehnen, category_01_direkteZuweisung)//NOLINT(r
 
 TEST_F(A_22231_BetaebungsmittelAblehnen, category_02_apothekenpflichtigeArzneimittelPkv)
 {
-    if (serverUsesOldProfile())
-    {
-        GTEST_SKIP_("PKV not testable with old profiles");
-    }
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv));
     ASSERT_TRUE(task.has_value());

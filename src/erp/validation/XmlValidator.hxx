@@ -8,7 +8,6 @@
 #ifndef ERP_PROCESSING_CONTEXT_XMLVALIDATOR_HXX
 #define ERP_PROCESSING_CONTEXT_XMLVALIDATOR_HXX
 
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/model/Timestamp.hxx"
 #include "erp/validation/SchemaType.hxx"
 

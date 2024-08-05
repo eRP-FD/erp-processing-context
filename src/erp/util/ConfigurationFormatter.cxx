@@ -60,8 +60,8 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
         }
         processConfOption(document, erpEnvVariables, confOption, flags, value, defaultValue, modified);
     }
-
-    for (const auto& [confOption, value, defaultValue] : config.fhirResourceViewConfiguration().variables())
+    const auto viewConfig = config.fhirResourceViewConfiguration();
+    for (const auto& [confOption, value, defaultValue] : viewConfig.variables())
     {
         KeyData keyData{.environmentVariable = confOption.environmentVariable,
                         .jsonPath = confOption.jsonPath,

@@ -43,12 +43,6 @@ public:
     static constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard calls{"ERP_TOKEN_ULIMIT_CALLS", "5"};
     EnvironmentVariableGuard timespan{"ERP_TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
-
-    const model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVersion{
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()};
-    const std::string_view csFlowtype = (gematikVersion < model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
-                            ? model::resource::code_system::deprecated::flowType
-                            : model::resource::code_system::flowType;
 };
 
 class VauRequestHandlerTestForceMockDB : public VauRequestHandlerTest
@@ -621,7 +615,8 @@ TEST_F(VauRequestHandlerTest, UnsupportedAcceptHeaderERP4620)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--(/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--(/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -637,7 +632,8 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirJson)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -654,7 +650,8 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirXml)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -671,7 +668,8 @@ TEST_F(VauRequestHandlerTest, InvalidFormatRequestParameter)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     auto client = createClient();
     auto encryptedRequest =
@@ -687,7 +685,8 @@ TEST_F(VauRequestHandlerTest, InvalidAcceptHeaderERP4620)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     const std::string header =
         "POST /Task/$create HTTP/1.1\r\nContent-Type: application/json\r\nAccept:ungültig\r\nContent-Length: "
@@ -715,7 +714,8 @@ TEST_F(VauRequestHandlerTest, EmptyAcceptHeaderERP4620)
 {
     const std::string body =
         R"--(<Parameters xmlns="http://hl7.org/fhir"><parameter><name value="workflowType"/>
-    <valueCoding><system value=")--" + std::string(csFlowtype) + R"--("/><code value="160"/>
+    <valueCoding><system value=")--" +
+        std::string(model::resource::code_system::flowType) + R"--("/><code value="160"/>
     </valueCoding></parameter></Parameters>)--";
     const std::string header =
         "POST /Task/$create HTTP/1.1\r\nContent-Type: application/json\r\nAccept:\r\nContent-Length: "

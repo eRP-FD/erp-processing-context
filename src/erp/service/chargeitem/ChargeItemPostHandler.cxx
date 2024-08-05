@@ -92,7 +92,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     std::optional<model::ChargeItemMarkingFlags> markingFlags{};
     try
     {
-        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session, SchemaType::Gem_erxChargeItem);
+        chargeItemOptional = parseAndValidateRequestBody<model::ChargeItem>(session);
         markingFlags = chargeItemOptional->markingFlags();
     }
     catch (const model::ModelException& exc)
@@ -166,7 +166,9 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     chargeItem.setEnteredDate(model::Timestamp::now());
     A_22143.finish();
 
+    A_24471.start("ChargeItem-ID = Rezept-ID");
     chargeItem.setId(prescriptionId);
+    A_24471.finish();
 
     // GEMREQ-start A_22614-02#setAccessCode
     A_22614_02.start("create access code for pharmacy");

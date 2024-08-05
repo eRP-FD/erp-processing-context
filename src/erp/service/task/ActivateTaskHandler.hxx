@@ -20,6 +20,7 @@ namespace model
 {
 enum class KbvStatusKennzeichen;
 class MedicationRequest;
+class KbvMedicationRequest;
 class KbvBundle;
 class KBVMultiplePrescription;
 template<typename>
@@ -33,9 +34,8 @@ public:
     void handleRequest(PcSessionContext& session) override;
 
 private:
-    static std::tuple<HttpStatus, model::KbvBundle>
-    prescriptionBundleFromXml(PcServiceContext& serviceContext, std::string_view prescription,
-                              const model::PrescriptionId& prescriptionId);
+    static std::tuple<HttpStatus, model::KbvBundle> prescriptionBundleFromXml(PcServiceContext& serviceContext,
+                                                                              std::string_view prescription);
     static void checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,
                                           const model::PrescriptionType prescriptionType,
                                           std::optional<model::KbvStatusKennzeichen> legalBasisCode,
@@ -46,12 +46,10 @@ private:
     static bool checkPractitioner(const model::KbvBundle& bundle, PcSessionContext& session);
     static HttpStatus checkExtensions(const model::ResourceFactory<model::KbvBundle>& factory,
                                       Configuration::OnUnknownExtension onUnknownExtension,
-                                      Configuration::GenericValidationMode genericValidationMode,
                                       const fhirtools::FhirStructureRepository& fhirStructureRepo,
                                       const fhirtools::ValidatorOptions& valOpts);
     void setMvoExpiryAcceptDates(model::Task& task, const std::optional<date::year_month_day>& mvoEndDate,
                                  const date::year_month_day& signingDay) const;
-    static fhirtools::ValidatorOptions validationOptions(model::ResourceVersion::FhirProfileBundleVersion);
 };
 
 

@@ -22,10 +22,11 @@ namespace model
 // Reduced version of OperationOutcome resource, contains only functionality currently needed;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class OperationOutcome : public Resource<OperationOutcome, ResourceVersion::Fhir>
+class OperationOutcome : public Resource<OperationOutcome>
 {
 public:
     static constexpr auto resourceTypeName = "OperationOutcome";
+    static constexpr auto profileType = ProfileType::OperationOutcome;
 
     class Issue
     {
@@ -91,15 +92,22 @@ public:
 
     static Issue::Type httpCodeToOutcomeIssueType(HttpStatus httpCode);
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
+
 private:
-    friend Resource<OperationOutcome, ResourceVersion::Fhir>;
+    friend Resource<OperationOutcome>;
     explicit OperationOutcome(NumberAsStringParserDocument&& jsonTree);
 };
 
 
 bool operator==(const OperationOutcome::Issue& lhs, const OperationOutcome::Issue& rhs);
 
-}
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<OperationOutcome>;
+
+
+}// namespace model
 
 
 #endif

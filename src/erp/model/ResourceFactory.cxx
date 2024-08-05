@@ -11,7 +11,6 @@
 #include "erp/util/DurationConsumer.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
-#include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
@@ -20,32 +19,9 @@
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
 
-namespace
-{
-std::vector<std::string>
-supportedProfiles(SchemaType schemaType,
-                  const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles)
-{
-    std::vector<std::string> result;
-    if (schemaType != SchemaType::fhir)
-    {
-        for (const auto& profileBundle : supportedBundles)
-        {
-            auto profStr = model::ResourceVersion::profileStr(schemaType, profileBundle);
-            if (profStr)
-            {
-                result.emplace_back(*profStr);
-            }
-        }
-    }
-    return result;
-}
-
-}// namespace
-
-
-model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml)
+model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml, Options options)
     : mXmlDoc{std::move(xml)}
+    , mOptions{options}
 {
 }
 
@@ -101,47 +77,33 @@ std::string_view model::ResourceFactoryBase::xmlDocument() const
     return std::visit(XmlDocument{*this}, mXmlDoc);
 }
 
-std::optional<model::ResourceVersion::FhirProfileBundleVersion> model::ResourceFactoryBase::fhirProfileBundleVersion(
-    SchemaType schemaType, const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles) const
+
+void model::ResourceFactoryBase::validate(
+    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) const
 {
-    auto fromContent = resource().fhirProfileBundleVersion(supportedBundles);
-    if (fromContent)
+    try
     {
-        return fromContent;
+        validateNoAdditional(profileType, repoView);
+        if (options().additionalValidation)
+        {
+            resource().additionalValidation();
+        }
     }
-    if (schemaType == SchemaType::fhir)
+    catch (const ErpException&)
     {
-        // fallback to an arbitrary supported profileBundle when validating SchemaType::fhir
-        return *supportedBundles.begin();
+        throw;
     }
-    else if (schemaType == SchemaType::PatchChargeItemParameters &&
-             supportedBundles.contains(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
+    catch (const std::runtime_error& er)
     {
-        // PatchChargeItemParameters is not profiled, but only valid on new profile bundle
-        return ResourceVersion::FhirProfileBundleVersion::v_2023_07_01;
+        TVLOG(1) << "runtime_error: " << er.what();
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", er.what());
     }
-    return std::nullopt;
 }
 
-
-void model::ResourceFactoryBase::validateInCode(SchemaType schemaType, const XmlValidator& xmlValidator,
-                                                const InCodeValidator& inCodeValidator) const
-{
-    inCodeValidator.validate(resource(), schemaType, xmlValidator);
-}
-
-void model::ResourceFactoryBase::validateLegacyXSD(SchemaType schemaType, const XmlValidator& xmlValidator) const
-{
-    Expect3(schemaType != SchemaType::fhir, "redundant call to validateLegacyXSD using SchemaType::fhir",
-            std::logic_error);
-    auto schemaValidationContext = xmlValidator.getSchemaValidationContext(schemaType);
-    Expect3(schemaValidationContext != nullptr, "failed to get schemaValidationContext", std::logic_error);
-    fhirtools::SaxHandler{}.validateStringView(xmlDocument(), *schemaValidationContext);
-}
-
-fhirtools::ValidationResults model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureRepository& repo,
-                                                                         const fhirtools::ValidatorOptions& options,
-                                                                         const std::set<std::string>& profiles) const
+fhirtools::ValidationResults
+model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureRepository& repo,
+                                            const fhirtools::ValidatorOptions& options,
+                                            const std::set<fhirtools::DefinitionKey>& profiles) const
 {
     std::string resourceTypeName;
     resourceTypeName = resource().getResourceType();
@@ -183,59 +145,46 @@ std::optional<model::Timestamp> model::ResourceFactoryBase::getValidationReferen
     return resource().getValidationReferenceTimestamp();
 }
 
-template<typename SchemaVersionT>
-model::ResourceFactorySchemaVersionBase<SchemaVersionT>::ResourceFactorySchemaVersionBase(XmlDocCache xmlDoc,
-                                                                                          Options&& opt)
-    : ResourceFactoryBase{xmlDoc}
-    , mOptions{std::move(opt)}
+gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+model::ResourceFactoryBase::getValidationView() const
 {
+    return resource().getValidationView();
 }
 
-
-template<typename SchemaVersionT>
-std::optional<SchemaVersionT> model::ResourceFactorySchemaVersionBase<SchemaVersionT>::getSchemaVersion() const
+const model::ResourceFactoryBase::Options& model::ResourceFactoryBase::options() const
 {
-    return resource().template getSchemaVersion<SchemaVersionT>();
+    return mOptions;
 }
 
-
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::genericValidationMode(
-    Configuration::GenericValidationMode newMode)
+void model::ResourceFactoryBase::genericValidationMode(GenericValidationMode newMode)
 {
     mOptions.genericValidationMode = newMode;
 }
 
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validatorOptions(fhirtools::ValidatorOptions newOpts)
+void model::ResourceFactoryBase::validatorOptions(fhirtools::ValidatorOptions newOpts)
 {
     mOptions.validatorOptions = newOpts;
 }
 
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::enableAdditionalValidation(bool enable)
+void model::ResourceFactoryBase::enableAdditionalValidation(bool enable)
 {
     mOptions.additionalValidation = enable;
 }
 
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidateGeneric(
-    std::optional<ResourceVersion::FhirProfileBundleVersion> version, const std::vector<std::string>& supportedProfiles,
+void model::ResourceFactoryBase::conditionalValidateGeneric(
+    const std::set<fhirtools::DefinitionKey>& profiles,
+    const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView,
     const fhirtools::ValidatorOptions& validatorOptions,
     const std::optional<ErpException>& validationErpException) const
 {
-    using enum Configuration::GenericValidationMode;
-    Configuration::GenericValidationMode genericValidationMode{require_success};
+    auto genericValidationMode{GenericValidationMode::require_success};
     if (mOptions.genericValidationMode)
     {
         genericValidationMode = *mOptions.genericValidationMode;
     }
-    else if (version.has_value())
-    {
-        genericValidationMode = Configuration::instance().genericValidationMode(*version);
-    }
     switch (genericValidationMode)
     {
+        using enum GenericValidationMode;
         case disable:
             if (validationErpException)
             {
@@ -252,26 +201,13 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidat
         case require_success:
             break;
     }
-    if (! version.has_value())
-    {
-
-        std::ostringstream msg;
-        msg << "unsupported or unknown profile version";
-        if (! supportedProfiles.empty())
-        {
-            msg << R"( expected one of: [")" << String::join(supportedProfiles, R"(", ")") << R"("])";
-        }
-        ModelFail(std::move(msg).str());
-    }
-
     fhirtools::ValidationResults validationResult;
     if (validationErpException && validationErpException->diagnostics())
     {
         validationResult.add(fhirtools::Severity::error, *validationErpException->diagnostics(), {}, nullptr);
     }
-    const auto repo = Fhir::instance().structureRepository(
-        getValidationReferenceTimestamp().value_or(model::Timestamp::now()), *version);
-    validationResult.merge(ResourceFactoryBase::validateGeneric(*repo, validatorOptions, {}));
+    const gsl::not_null useRepoView = repoView ? repoView : getValidationView().get();
+    validationResult.merge(ResourceFactoryBase::validateGeneric(*useRepoView, validatorOptions, profiles));
     auto highestSeverity = validationResult.highestSeverity();
 #ifdef ENABLE_DEBUG_LOG
     if (highestSeverity >= fhirtools::Severity::error)
@@ -286,70 +222,27 @@ void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::conditionalValidat
                           : HttpStatus::BadRequest;
         ErpFailWithDiagnostics(status, validationErpException->what(), validationResult.summary());
     }
-    else if (highestSeverity >= fhirtools::Severity::error && genericValidationMode == require_success)
+    else if (highestSeverity >= fhirtools::Severity::error &&
+             genericValidationMode == GenericValidationMode::require_success)
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
     }
 }
 
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validateEnforcedSchemaVersion() const
+
+void model::ResourceFactoryBase::validateNoAdditional(
+    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) const
 {
     using namespace std::string_literals;
-    if (mOptions.enforcedVersion)
-    {
-        const auto schemaVersion = getSchemaVersion();
-        ModelExpect(schemaVersion.has_value(),
-                    "could not detect schema version but required "s.append(ResourceVersion::v_str(*schemaVersion)));
-        ModelExpect(! mOptions.enforcedVersion || mOptions.enforcedVersion == schemaVersion,
-                    "profile version mismatch for "s.append(resource().getProfileName().value_or("<unknown>"))
-                        .append(", expected=")
-                        .append(ResourceVersion::v_str(mOptions.enforcedVersion.value_or(SchemaVersionType{})))
-                        .append(" found=")
-                        .append(ResourceVersion::v_str(*schemaVersion)));
-    }
-}
-
-
-template<typename SchemaVersionT>
-void model::ResourceFactorySchemaVersionBase<SchemaVersionT>::validateNoAdditional(
-    SchemaType schemaType, const XmlValidator& xmlValidator, const InCodeValidator& inCodeValidator,
-    const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles) const
-{
-    Expect3(! supportedBundles.empty(), "supportedBundles must not be empty", std::logic_error);
     const auto& config = Configuration::instance();
-    auto fhirProfBundleVer = ResourceFactoryBase::fhirProfileBundleVersion(schemaType, supportedBundles);
-    auto validatorOptions = mOptions.validatorOptions.value_or(
-        fhirProfBundleVer ? config.defaultValidatorOptions(*fhirProfBundleVer, schemaType)
-                          : fhirtools::ValidatorOptions{});
-
-    validateEnforcedSchemaVersion();
-    const auto profs = supportedProfiles(schemaType, supportedBundles);
-
-    if (fhirProfBundleVer == ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 && schemaType != SchemaType::fhir)
+    auto validatorOptions = mOptions.validatorOptions.value_or(config.defaultValidatorOptions(profileType));
+    const auto prof = profile(profileType);
+    Expect3(profileType == ProfileType::fhir || prof.has_value(),
+            "Missing profile in view: "s.append(magic_enum::enum_name(profileType)), std::logic_error);
+    std::set<fhirtools::DefinitionKey> profs;
+    if (prof)
     {
-        try
-        {
-            validateLegacyXSD(schemaType, xmlValidator);
-            validateInCode(schemaType, xmlValidator, inCodeValidator);
-        }
-        catch (const ErpException& erpException)
-        {
-            if (erpException.status() == HttpStatus::BadRequest)
-            {
-                conditionalValidateGeneric(fhirProfBundleVer, profs, validatorOptions, erpException);
-            }
-            throw;
-        }
+        profs.emplace(*prof);
     }
-    conditionalValidateGeneric(fhirProfBundleVer, profs, validatorOptions, std::nullopt);
+    conditionalValidateGeneric(profs, repoView, validatorOptions, std::nullopt);
 }
-
-
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::DeGematikErezeptWorkflowR4>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::KbvItaErp>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::AbgabedatenPkv>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::Fhir>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::WorkflowOrPatientenRechnungProfile>;
-template class model::ResourceFactorySchemaVersionBase<model::ResourceVersion::NotProfiled>;

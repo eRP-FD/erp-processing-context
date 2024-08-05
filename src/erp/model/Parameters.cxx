@@ -35,17 +35,18 @@ const rapidjson::Pointer workFlowSystemPointer{ElementName::path(elements::param
 }
 
 // GEMREQ-start A_22878#MarkingFlag
-Parameters::MarkingFlag::MarkingFlag()
-: insuranceProvider{},
-  subsidy{},
-  taxOffice{}
+PatchChargeItemParameters::MarkingFlag::MarkingFlag()
+    : insuranceProvider{}
+    , subsidy{}
+    , taxOffice{}
 {
     insuranceProvider.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('insuranceProvider')";
     subsidy.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('subsidy')";
     taxOffice.url = "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('taxOffice')";
 }
 
-std::optional<std::reference_wrapper<Parameters::MarkingFlag::Element>> Parameters::MarkingFlag::findByUrl(const std::string_view& url)
+std::optional<std::reference_wrapper<PatchChargeItemParameters::MarkingFlag::Element>>
+PatchChargeItemParameters::MarkingFlag::findByUrl(const std::string_view& url)
 {
     if (insuranceProvider.url == url)
     {
@@ -66,7 +67,7 @@ std::optional<std::reference_wrapper<Parameters::MarkingFlag::Element>> Paramete
 }
 // GEMREQ-end A_22878#MarkingFlag
 
-std::string Parameters::MarkingFlag::toExtensionJson() const
+std::string PatchChargeItemParameters::MarkingFlag::toExtensionJson() const
 {
     std::string result = R"({"url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag","extension": [)";
 
@@ -101,14 +102,16 @@ std::string Parameters::MarkingFlag::toExtensionJson() const
     return result;
 }
 
-size_t Parameters::count() const
+template<typename ParametersT>
+size_t Parameters<ParametersT>::count() const
 {
-    return valueSize(parameterArrayPointer);
+    return ResourceBase::valueSize(parameterArrayPointer);
 }
 
-const rapidjson::Value* Parameters::findResourceParameter(std::string_view name) const
+template<typename ParametersT>
+const rapidjson::Value* Parameters<ParametersT>::findResourceParameter(std::string_view name) const
 {
-    const auto result = findMemberInArray(parameterArrayPointer, namePointer, name, resourcePointer);
+    const auto result = ResourceBase::findMemberInArray(parameterArrayPointer, namePointer, name, resourcePointer);
     if (!result)
     {
         return nullptr;
@@ -116,18 +119,20 @@ const rapidjson::Value* Parameters::findResourceParameter(std::string_view name)
     return std::get<0>(result.value());
 }
 
-bool Parameters::hasParameter(std::string_view name) const
+template<typename ParametersT>
+bool Parameters<ParametersT>::hasParameter(std::string_view name) const
 {
-    const auto* result = findMemberInArray(parameterArrayPointer, namePointer, name);
+    const auto* result = ResourceBase::findMemberInArray(parameterArrayPointer, namePointer, name);
     return result != nullptr;
 }
 
-std::optional<std::string_view> Parameters::getWorkflowSystem() const
+template<typename ParametersT>
+std::optional<std::string_view> Parameters<ParametersT>::getWorkflowSystem() const
 {
-    return getOptionalStringValue(workFlowSystemPointer);
+    return ResourceBase::getOptionalStringValue(workFlowSystemPointer);
 }
 
-std::optional<model::PrescriptionType> Parameters::getPrescriptionType() const
+std::optional<model::PrescriptionType> CreateTaskParameters::getPrescriptionType() const
 {
     const auto stringValue = getStringValue(workFlowTypePointer);
     const uint8_t numeric = static_cast<uint8_t>(std::stoi(std::string{stringValue}));
@@ -135,7 +140,7 @@ std::optional<model::PrescriptionType> Parameters::getPrescriptionType() const
 }
 
 // GEMREQ-start A_22878#getChargeItemMarkingFlag
-model::ChargeItemMarkingFlags Parameters::getChargeItemMarkingFlags() const
+model::ChargeItemMarkingFlags PatchChargeItemParameters::getChargeItemMarkingFlags() const
 {
     const auto resourceType = getStringValue(resourceTypePointer);
     ModelExpect(resourceType == "Parameters", "Invalid resource type");
@@ -167,9 +172,8 @@ model::ChargeItemMarkingFlags Parameters::getChargeItemMarkingFlags() const
 // GEMREQ-end A_22878#getChargeItemMarkingFlag
 
 // GEMREQ-start A_22878#updateMarkingFlagFromPartArray
-void Parameters::updateMarkingFlagFromPartArray( //NOLINT(readability-function-cognitive-complexity)
-    const NumberAsStringParserDocument::ConstArray& partArray,
-    MarkingFlag& result) const
+void PatchChargeItemParameters::updateMarkingFlagFromPartArray(//NOLINT(readability-function-cognitive-complexity)
+    const NumberAsStringParserDocument::ConstArray& partArray, MarkingFlag& result) const
 {
     ModelExpect(partArray.Size() == 4,
                 "'Array element " + Resource::pointerToString(partArrayPointer) + " must contain exactly four sub-elements");
@@ -227,4 +231,24 @@ void Parameters::updateMarkingFlagFromPartArray( //NOLINT(readability-function-c
 }
 // GEMREQ-end A_22878#updateMarkingFlagFromPartArray
 
+
+template class Parameters<CreateTaskParameters>;
+template class Parameters<ActivateTaskParameters>;
+template class Parameters<PatchChargeItemParameters>;
+
+
+std::optional<model::Timestamp> CreateTaskParameters::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
+
+std::optional<model::Timestamp> ActivateTaskParameters::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
+
+std::optional<model::Timestamp> PatchChargeItemParameters::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 } // namespace model

@@ -1,6 +1,7 @@
 
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
@@ -22,7 +23,7 @@ public:
         std::ranges::transform(c, std::back_inserter(files), [&](const std::filesystem::path& filename) {
             return ResourceManager::getAbsoluteFilename(filename);
         });
-        repo.load(files);
+        repo.load(files, FhirResourceGroupConst{"test"});
     }
     FhirStructureRepositoryBackend repo;
 };
@@ -62,7 +63,7 @@ TEST(SlicingRepoValidationTest, invalid_duplicate_fixed)//NOLINT
     auto profiles = DefaultFhirStructureRepository::defaultProfileFiles();
     profiles.merge(
         {ResourceManager::getAbsoluteFilename("test/fhir-path/slicing/profiles/invalid_duplicate_fixed.xml")});
-    ASSERT_THROW(repo.load(profiles), std::logic_error);
+    ASSERT_THROW(repo.load(profiles, FhirResourceGroupConst{"test"}), std::logic_error);
 }
 
 TEST(SlicingRepoValidationTest, invalid_duplicate_pattern)//NOLINT
@@ -72,7 +73,7 @@ TEST(SlicingRepoValidationTest, invalid_duplicate_pattern)//NOLINT
     auto profiles = DefaultFhirStructureRepository::defaultProfileFiles();
     profiles.merge(
         {ResourceManager::getAbsoluteFilename("test/fhir-path/slicing/profiles/invalid_duplicate_pattern.xml")});
-    ASSERT_THROW(repo.load(profiles), std::logic_error);
+    ASSERT_THROW(repo.load(profiles, FhirResourceGroupConst{"test"}), std::logic_error);
 }
 
 TEST_P(SlicingSampleValidationTest, run)//NOLINT
@@ -172,3 +173,84 @@ INSTANTIATE_TEST_SUITE_P( samples, SlicingSampleValidationTest, ::testing::Value
 
 ));
 // clang-format on
+
+class SliceOnContentReferenceTest : public fhirtools::test::SampleValidationTest<SliceOnContentReferenceTest>
+{
+public:
+    static std::list<std::filesystem::path> fileList()
+    {
+        return {
+            "test/fhir-path/profiles/minifhirtypes.xml",
+            "test/fhir-path/slicing/profiles/slice_on_content_reference.xml",
+        };
+    };
+};
+
+TEST_P(SliceOnContentReferenceTest, run)
+{
+    ASSERT_NO_FATAL_FAILURE(run());
+}
+
+INSTANTIATE_TEST_SUITE_P(Samples, SliceOnContentReferenceTest,
+                         ::testing::ValuesIn<std::initializer_list<Sample>>({
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/valid_slice_on_content_reference-1.json",
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/valid_slice_on_content_reference-2.json",
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/valid_slice_on_content_reference-sub-slice.json",
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/invalid_slice_on_content_reference-no-slice1.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced",
+                                     },
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced[*]:slice1",
+                                     },
+                                 },
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/invalid_slice_on_content_reference-wrong_testValue.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, R"(value must match fixed value: "Value for Slice 2" (but is "No not this Value!"))"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced[1].testValue",
+                                     },
+                                 },
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/invalid_slice_on_content_reference-extra-slice.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "element doesn't match any slice in closed slicing"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced[2]",
+                                     },
+                                 },
+                             },
+                             {
+                                 "SliceOnContentReference",
+                                 "test/fhir-path/slicing/samples/invalid_slice_on_content_reference-duplicate-slice.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "At most 1 elements expected, but got 2"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced",
+                                     },
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "At most 1 elements expected, but got 2"),
+                                         "SliceOnContentReference.contentReferenced[0].sliced[*]:slice1",
+                                     },
+                                 },
+                             },
+                         }));

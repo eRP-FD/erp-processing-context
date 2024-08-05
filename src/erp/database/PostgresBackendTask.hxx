@@ -48,12 +48,26 @@ public:
                       const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) const;
 
+    void updateTaskMedicationDispense(
+        pqxx::work& transaction,
+        const model::PrescriptionId& taskId,
+        const model::Timestamp& lastModified,
+        const model::Timestamp& lastMedicationDispense,
+        const db_model::EncryptedBlob& medicationDispense,
+        BlobId medicationDispenseBlobId,
+        const db_model::HashedTelematikId& telematikId,
+        const model::Timestamp& whenHandedOver,
+        const std::optional<model::Timestamp>& whenPrepared) const;
+
     void updateTaskMedicationDispenseReceipt(
         pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
         BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
         const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
-        const db_model::EncryptedBlob& receipt) const;
+        const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense) const;
+
+    void updateTaskDeleteMedicationDispense(
+        pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Timestamp& lastModified) const;
 
     void updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus, const model::Timestamp& lastModified) const;
@@ -93,6 +107,7 @@ public:
         std::optional<pqxx::row::size_type> ownerIndex = 11;
         std::optional<pqxx::row::size_type> healthcareProviderPrescriptionIndex = {};
         std::optional<pqxx::row::size_type> receiptIndex = {};
+        std::optional<pqxx::row::size_type> lastMedicationDispenseIndex = {};
     };
 
     [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow, const TaskQueryIndexes& indexes,
@@ -105,8 +120,10 @@ private:
         QueryDefinition createTask;
         QueryDefinition updateTask;
         QueryDefinition updateTask_secret;
+        QueryDefinition updateTask_medicationDispense;
         QueryDefinition updateTask_medicationDispenseReceipt;
         QueryDefinition updateTask_activateTask;
+        QueryDefinition updateTask_deleteMedicationDispense;
         QueryDefinition updateTask_deletePersonalData;
         QueryDefinition updateTask_storeChargeInformation;
         QueryDefinition retrieveTaskById;

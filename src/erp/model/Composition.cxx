@@ -99,11 +99,8 @@ const rapidjson::Pointer section0Entry0ReferencePointer("/section/0/entry/0/refe
 
 Composition::Composition(const std::string_view& telematicId, const model::Timestamp& start,
                          const model::Timestamp& end, const std::string_view& author,
-                         const std::string_view& prescriptionDigestIdentifier,
-                         ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
-    : Resource<Composition>(ResourceVersion::deprecatedProfile(profileVersion)
-                                ? resource::structure_definition::deprecated::composition
-                                : resource::structure_definition::composition,
+                         const std::string_view& prescriptionDigestIdentifier)
+    : Resource<Composition>(profileType,
                             []() {
                                 std::call_once(onceFlag, initTemplates);
                                 return compositionTemplate;
@@ -117,12 +114,6 @@ Composition::Composition(const std::string_view& telematicId, const model::Times
     setValue(eventPeriodEndPointer, end.toXsDateTime());
     setValue(authorPointer, author);
     setValue(section0Entry0ReferencePointer, prescriptionDigestIdentifier);
-    if (ResourceVersion::deprecatedProfile(profileVersion))
-    {
-        setValue(telematikIdSystemPointer, resource::naming_system::deprecated::telematicID);
-        setValue(beneficiaryExtensionUrlPointer, resource::structure_definition::deprecated::beneficiary);
-        setValue(receiptCodingSystemPointer, resource::code_system::deprecated::documentType);
-    }
 }
 
 

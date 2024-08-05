@@ -1,0 +1,320 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="SliceOnContentReference"/>
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://fhir-toolset/test/SliceOnContentReference"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceOnContentReference"/>
+        <url value="http://fhir-toolset/test/SliceOnContentReference"/>
+        <version value="0.1"/>
+        <name value="SliceOnContentReference"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="SliceOnContentReference"/>
+        <snapshot>
+          <element id="SliceOnContentReference">
+            <path value="SliceOnContentReference"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceOnContentReference.id">
+            <path value="SliceOnContentReference.id"/>
+            <representation value="xmlAttr"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.meta">
+            <path value="SliceOnContentReference.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced">
+            <path value="SliceOnContentReference.contentReferenced"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="BackboneElement"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.discriminator">
+            <path value="SliceOnContentReference.contentReferenced.discriminator"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.discriminator"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.testValue">
+            <path value="SliceOnContentReference.contentReferenced.testValue"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.testValue"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <contentReference value="http://fhir-toolset/test/SliceOnContentReference#SliceOnContentReference.contentReferenced"/>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-toolset/test/SliceOnContentReference"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceOnContentReference"/>
+        <url value="http://fhir-toolset/test/SliceOnContentReferenceConstraint"/>
+        <version value="0.1"/>
+        <name value="SliceOnContentReference"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="SliceOnContentReference"/>
+        <baseDefinition value="http://fhir-toolset/test/SliceOnContentReference"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="SliceOnContentReference">
+            <path value="SliceOnContentReference"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceOnContentReference.id">
+            <path value="SliceOnContentReference.id"/>
+            <representation value="xmlAttr"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.id"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.meta">
+            <path value="SliceOnContentReference.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced">
+            <path value="SliceOnContentReference.contentReferenced"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="BackboneElement"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.discriminator">
+            <path value="SliceOnContentReference.contentReferenced.discriminator"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.discriminator"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.testValue">
+            <path value="SliceOnContentReference.contentReferenced.testValue"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.testValue"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <sliceName value="slice_on_content_reference"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="discriminator"/>
+              </discriminator>
+              <ordered value="false"/>
+              <rules value="closed"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <contentReference value="http://fhir-toolset/test/SliceOnContentReference#SliceOnContentReference.contentReferenced"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice1">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <sliceName value="slice1"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <contentReference value="http://fhir-toolset/test/SliceOnContentReference#SliceOnContentReference.contentReferenced"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice1.discriminator">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <sliceName value="slice1"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+            <fixedString value="slice1"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice1.testValue">
+            <path value="SliceOnContentReference.contentReferenced.sliced.testValue"/>
+            <sliceName value="slice1"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced.testValue"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+            <fixedString value="Value for Slice 1"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice2">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <sliceName value="slice2"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <contentReference value="http://fhir-toolset/test/SliceOnContentReference#SliceOnContentReference.contentReferenced"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice2.discriminator">
+            <path value="SliceOnContentReference.contentReferenced.sliced"/>
+            <sliceName value="slice2"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+            <fixedString value="slice2"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice2.testValue">
+            <path value="SliceOnContentReference.contentReferenced.sliced.testValue"/>
+            <sliceName value="slice2"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced.testValue"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+            <fixedString value="Value for Slice 2"/>
+          </element>
+          <element id="SliceOnContentReference.contentReferenced.sliced:slice2.sliced">
+            <path value="SliceOnContentReference.contentReferenced.sliced.sliced"/>
+            <sliceName value="slice_on_content_reference"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SliceOnContentReference.contentReferenced.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <contentReference value="http://fhir-toolset/test/SliceOnContentReference#SliceOnContentReference.contentReferenced"/>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

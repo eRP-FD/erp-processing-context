@@ -103,8 +103,7 @@ std::optional<fhirtools::FhirSlicing> fhirtools::FhirStructureRepositoryFixer::f
     const FhirStructureDefinition& profile, const std::string_view baseElementName, const std::string_view rest) const
 {
     auto baseElement = profile.findElement(baseElementName);
-    FPExpect3(baseElement,
-              ("Missing elemnent in " + profile.url() + '|' + profile.version() + ": ").append(baseElementName),
+    FPExpect3(baseElement, ("Missing elemnent in " + profile.urlAndVersion() + ": ").append(baseElementName),
               std::logic_error);
     auto baseElementTypeId = baseElement->typeId();
     if (baseElementTypeId.empty())
@@ -115,8 +114,8 @@ std::optional<fhirtools::FhirSlicing> fhirtools::FhirStructureRepositoryFixer::f
     }
     const auto* baseElementType = mRepo.findTypeById(baseElement->typeId());
     FPExpect3(baseElementType,
-              ("Unknown type for element " + profile.url() + '|' + profile.version() + '@').append(baseElementName) +
-                  ": " + baseElement->typeId(),
+              ("Unknown type for element " + profile.urlAndVersion() + '@').append(baseElementName) + ": " +
+                  baseElement->typeId(),
               std::logic_error);
     auto element = baseElementType->findElement(rest);
     if (element)

@@ -40,16 +40,9 @@ void Iknr::setId(std::string_view id)
     mValue = id;
 }
 
-std::string_view Iknr::namingSystem(bool deprecated) const
+std::string_view Iknr::namingSystem() const
 {
-    if (deprecated)
-    {
-        return resource::naming_system::deprecated::argeIknr;
-    }
-    else
-    {
-        return resource::naming_system::argeIknr;
-    }
+    return resource::naming_system::argeIknr;
 }
 
 std::string Iknr::id() &&

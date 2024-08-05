@@ -135,8 +135,7 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
 
 std::string PostgresDatabaseCommunicationTest::taskFile() const
 {
-    const std::string gematikVersion{
-        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVersion{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
 
     switch (GetParam())
     {
@@ -450,11 +449,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 // GEMREQ-start A_22157
 TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!usePostgres() ||
-        (GetParam() != model::PrescriptionType::apothekenpflichtigeArzneimittelPkv &&
-         GetParam() != model::PrescriptionType::direkteZuweisungPkv) ||
-        (model::ResourceVersion::deprecatedProfile(
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())))
+    if (! usePostgres() || ! IsPkv(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -534,11 +529,7 @@ TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOL
 // GEMREQ-start A_22117-01
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!usePostgres() ||
-        (GetParam() != model::PrescriptionType::apothekenpflichtigeArzneimittelPkv &&
-         GetParam() != model::PrescriptionType::direkteZuweisungPkv) ||
-        (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())))
+    if (! usePostgres() || ! IsPkv(GetParam()))
     {
         GTEST_SKIP();
     }

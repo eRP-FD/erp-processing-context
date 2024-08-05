@@ -222,6 +222,19 @@ TEST_F(TimestampTest, fromXsDate_success)
     EXPECT_EQ(Timestamp::fromXsDate("2022-01-29", Timestamp::UTCTimezone), expectedDateTime);
 }
 
+TEST_F(TimestampTest, constructFromLocalDaysWithTimeZone)
+{
+    using namespace date::literals;
+    // date -d "2024-02-28T00:00:00Z" +%s
+    EXPECT_EQ(Timestamp(Timestamp::UTCTimezone, date::local_days{2024_y/02/28_d}).toChronoTimePoint(), Timestamp::timepoint_t{1709078400s});
+    // date -d "2024-02-28T00:00:00MEZ" +%s
+    EXPECT_EQ(Timestamp(Timestamp::GermanTimezone, date::local_days{2024_y/02/28_d}).toChronoTimePoint(), Timestamp::timepoint_t{1709074800s});
+    // date -d "2024-05-28T00:00:00Z" +%s
+    EXPECT_EQ(Timestamp(Timestamp::UTCTimezone, date::local_days{2024_y/05/28_d}).toChronoTimePoint(), Timestamp::timepoint_t{1716854400s});
+    // date -d "2024-05-28T00:00:00MESZ" +%s
+    EXPECT_EQ(Timestamp(Timestamp::GermanTimezone, date::local_days{2024_y/05/28_d}).toChronoTimePoint(), Timestamp::timepoint_t{1716847200s});
+}
+
 TEST_F(TimestampTest, fromDtmDateTime_success)
 {
     const auto expectedDateTime = Timestamp(sys_days{August / 6 / 2019} + 5h + 4min + 3s);

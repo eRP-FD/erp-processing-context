@@ -7,6 +7,7 @@
 
 #include "erp/service/CommunicationGetHandler.hxx"
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/crypto/Certificate.hxx"
 #include "erp/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
@@ -71,7 +72,7 @@ public:
         // Verify the returned bundle.
         if (expectedHttpStatus == HttpStatus::OK)
         {
-            model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+            model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
             if (expectedMimeType == std::string(ContentMimeType::fhirJsonUtf8))
             {
                 bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
@@ -102,13 +103,9 @@ public:
                 {
                     const auto& communication = communications.at(index);
                     const auto messageType = communication.messageType();
-                    auto currentGematik = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-                    bool allowGenericValidation = model::Communication::canValidateGeneric(messageType, currentGematik);
-                    EXPECT_NO_THROW((void)model::Communication::fromXml(
-                        communication.serializeToXmlString(), *StaticData::getXmlValidator(),
-                        *StaticData::getInCodeValidator(),
-                        model::Communication::messageTypeToSchemaType(messageType),
-                        model::ResourceVersion::supportedBundles(), allowGenericValidation));
+                    EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(
+                                        communication.serializeToXmlString(), *StaticData::getXmlValidator(), {})
+                                        .getValidated(model::Communication::messageTypeToProfileType(messageType)));
                     EXPECT_EQ(communication.id().value().toString(), expectedCommunicationIds[index].toString());
                 }
             }
@@ -137,7 +134,7 @@ public:
         verifyGenericInnerResponse(innerResponse, HttpStatus::OK, expectedMimeType);
 
         // Verify the returned bundle.
-        model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+        model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
         if (expectedMimeType == std::string(ContentMimeType::fhirJsonUtf8))
         {
             bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
@@ -186,9 +183,9 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    EXPECT_NO_THROW((void)model::Communication::fromXml(
-        communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-        model::Communication::messageTypeToSchemaType(communication.messageType())));
+    EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication.serializeToXmlString(),
+                                                                                 *StaticData::getXmlValidator(), {})
+                        .getValidated(model::Communication::messageTypeToProfileType(communication.messageType())));
 
     ASSERT_EQ(communication.id(), givenCommunication.id());
 }
@@ -234,9 +231,9 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
-    EXPECT_NO_THROW((void)model::Communication::fromXml(
-        communication.serializeToXmlString(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-        model::Communication::messageTypeToSchemaType(communication.messageType())));
+    EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication.serializeToXmlString(),
+                                                                                 *StaticData::getXmlValidator(), {})
+                        .getValidated(model::Communication::messageTypeToProfileType(communication.messageType())));
 
     ASSERT_EQ(communication.id(), givenCommunication1.id());
 }
@@ -284,12 +281,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
     const auto communication1 = model::Communication::fromJson(bundle.getResource(0));
     const auto communication2 = model::Communication::fromJson(bundle.getResource(1));
 
-    EXPECT_NO_THROW((void)model::Communication::fromXml(communication1.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(),
-                                                  SchemaType::Gem_erxCommunicationRepresentative));
-    EXPECT_NO_THROW((void)model::Communication::fromXml(communication2.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(),
-                                                  SchemaType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication1.serializeToXmlString(),
+                                                                                 *StaticData::getXmlValidator(), {})
+                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
+    EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication2.serializeToXmlString(),
+                                                                                 *StaticData::getXmlValidator(), {})
+                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
 
     ASSERT_TRUE(communication1.id() == givenCommunication1.id() || communication1.id() == givenCommunication3.id());
     ASSERT_TRUE(communication2.id() == givenCommunication1.id() || communication2.id() == givenCommunication3.id());
@@ -327,7 +324,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySent)
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication2.id().value()});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())), "/Communication?sent=eq2022-01-23T12:34:00+00:00");
+    EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())), "/Communication?sent=eq2022-01-23T12:34:00+00:00&_sort=sent");
 }
 
 
@@ -355,7 +352,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceived)
         const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication1.id().value()});
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eq2022-01-23");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eq2022-01-23&_sort=sent");
     }
 
     {
@@ -367,7 +364,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceived)
         const auto bundle = expectGetCommunicationResponse(outerResponse, {});
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eq2022-01-22");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eq2022-01-22&_sort=sent");
     }
 }
 
@@ -415,7 +412,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentAndReceived
         expectGetCommunicationResponse(outerResponse, {givenCommunication1.id().value(), givenCommunication2.id().value()}, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=ge2022-01-01&received=le2022-01-04");
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=ge2022-01-01&received=le2022-01-04&_sort=sent");
 }
 
 
@@ -504,7 +501,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySender)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "&_sort=sent");
 }
 
 
@@ -517,21 +514,29 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipient)
     const std::string pharmacyA = "3-SMC-B-Testkarte-883110000129068";
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
-    const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
+    const auto givenCommunication1 =
+        addCommunicationToDatabase({givenTask.prescriptionId(),
+                                    model::Communication::MessageType::DispReq,
+                                    {ActorRole::Insurant, kvnrInsurant},
+                                    {ActorRole::Pharmacists, pharmacyA},
+                                    {},
+                                    DispReqMessage,
+                                    model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"),
+                                    model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyA}, {ActorRole::Insurant, kvnrInsurant},
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
-    const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
-        model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
+    const auto givenCommunication3 =
+        addCommunicationToDatabase({givenTask.prescriptionId(),
+                                    model::Communication::MessageType::DispReq,
+                                    {ActorRole::Insurant, kvnrInsurant},
+                                    {ActorRole::Pharmacists, pharmacyB},
+                                    {},
+                                    InfoReqMessage,
+                                    model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"),
+                                    model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
         {ActorRole::Pharmacists, pharmacyB}, {ActorRole::Insurant, kvnrInsurant},
@@ -549,7 +554,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipient)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication1.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?recipient=") + pharmacyA);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?recipient=") + pharmacyA + "&_sort=sent");
 }
 
 
@@ -586,7 +591,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenderAndRecipi
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication1.id().value()});
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=")+InsurantF+"&recipient="+InsurantG);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=")+InsurantF+"&recipient="+InsurantG+"&_sort=sent");
 }
 
 
@@ -631,7 +636,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&_sort=sent");
 }
 
 
@@ -676,7 +681,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&_sort=sent");
 }
 
 
@@ -721,7 +726,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&recipient=" + kvnrInsurant + "%2c" + InsurantA);
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&recipient=" + kvnrInsurant + "%2c" + InsurantA + "&_sort=sent");
 }
 
 
@@ -766,7 +771,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
     const auto bundle = expectGetCommunicationResponse(outerResponse, { *givenCommunication2.id(), *givenCommunication4.id() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&sent=ge2022-01-01");
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?sender=") + pharmacyA + "%2c" + pharmacyB + "&sent=ge2022-01-01&_sort=sent");
 }
 
 
@@ -802,7 +807,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipientAndRec
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
     EXPECT_EQ(UrlHelper::unescapeUrl(extractPathAndArguments(selfLink.value())),
-            std::string("/Communication?recipient=")+InsurantH+"&received=sa2022-01-03T12:34:56+00:00");
+            std::string("/Communication?recipient=")+InsurantH+"&received=sa2022-01-03T12:34:56+00:00&_sort=sent");
 }
 
 
@@ -833,7 +838,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_keyWithoutValueIsIgnore
     const auto bundle = expectGetCommunicationResponse(outerResponse, {givenCommunication1.id().value(), givenCommunication2.id().value() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication"));
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?_sort=sent"));
 }
 
 
@@ -865,7 +870,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_ignoredValueCanContainS
         expectGetCommunicationResponse(outerResponse, {givenCommunication1.id().value(), givenCommunication2.id().value() }, false);
     const auto selfLink = bundle->getLink(model::Link::Type::Self);
     EXPECT_TRUE(selfLink.has_value());
-    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication"));
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), std::string("/Communication?_sort=sent"));
 }
 
 
@@ -1062,18 +1067,24 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
 
     const auto task = addTaskToDatabase({ model::Task::Status::ready, kvnrInsurant });
 
-    model::Communication infoReqByRepresentative1ToPharmacy1 = addCommunicationToDatabase({
-        task.prescriptionId(), model::Communication::MessageType::InfoReq,
-            {ActorRole::Insurant, kvnrRepresentative1}, {ActorRole::Pharmacists, pharmacy1},
-            "", InfoReqMessage });
+    model::Communication infoReqByRepresentative1ToPharmacy1 =
+        addCommunicationToDatabase({task.prescriptionId(),
+                                    model::Communication::MessageType::DispReq,
+                                    {ActorRole::Insurant, kvnrRepresentative1},
+                                    {ActorRole::Pharmacists, pharmacy1},
+                                    "",
+                                    DispReqMessage});
     model::Communication replyByPharmacy1ToRepresentative1 = addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::Reply,
             {ActorRole::Pharmacists, pharmacy1}, {ActorRole::Insurant, kvnrRepresentative1},
             "", ReplyMessage });
-    model::Communication infoReqByRepresentative2ToPharmacy2 = addCommunicationToDatabase({
-        task.prescriptionId(), model::Communication::MessageType::InfoReq,
-            {ActorRole::Insurant, kvnrRepresentative2}, {ActorRole::Pharmacists, pharmacy2},
-            "", InfoReqMessage });
+    model::Communication infoReqByRepresentative2ToPharmacy2 =
+        addCommunicationToDatabase({task.prescriptionId(),
+                                    model::Communication::MessageType::DispReq,
+                                    {ActorRole::Insurant, kvnrRepresentative2},
+                                    {ActorRole::Pharmacists, pharmacy2},
+                                    "",
+                                    DispReqMessage});
     model::Communication replyByPharmacy2ToRepresentative2 = addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::Reply,
             {ActorRole::Pharmacists, pharmacy2}, {ActorRole::Insurant, kvnrRepresentative2},
@@ -1097,7 +1108,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
             outerResponse, { infoReqByRepresentative1ToPharmacy1.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + kvnrRepresentative1);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + kvnrRepresentative1 + "&_sort=sent");
     }
     // Search for "sender=<Pharmacy>&received=NULL". Expected result: all unread messages for the sender.
     {
@@ -1109,7 +1120,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
             outerResponse, { replyByPharmacy1ToRepresentative1.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirJsonUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + pharmacy1);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + pharmacy1 + "&_sort=sent");
     }
 
     // Search for "recipient=<Insurant>&received=NULL". Expected result: all unread messages for the sender.
@@ -1122,7 +1133,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
             outerResponse, { replyByPharmacy2ToRepresentative2.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + kvnrRepresentative2);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + kvnrRepresentative2 + "&_sort=sent");
     }
     // Search for "recipient=<Pharmacy>&received=NULL". Expected result: all unread messages for the sender.
     {
@@ -1134,7 +1145,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
         outerResponse, { infoReqByRepresentative2ToPharmacy2.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirJsonUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + pharmacy2);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + pharmacy2 + "&_sort=sent");
     }
 
     // Search for "received=NULL". Expected result: all unread messages for the sender (in AccessToken) of the query.
@@ -1147,7 +1158,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
             outerResponse, { dispReqByRepresentative3ToPharmacy3.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&_sort=sent");
     }
     {
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrRepresentative4) };
@@ -1158,7 +1169,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
             outerResponse, { dispReqByRepresentative4ToPharmacy4.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirJsonUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&_sort=sent");
     }
 }
 
@@ -1211,7 +1222,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLI
             outerResponse, { }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&sender=" + kvnrRepresentative1);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&sender=" + kvnrRepresentative1 + "&_sort=sent");
     }
 
     // Search for "recipient=<Insurant>&sent=NULL". Expected result: no "unsent" messages.
@@ -1224,7 +1235,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLI
             outerResponse, { }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&recipient=" + kvnrRepresentative2);
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&recipient=" + kvnrRepresentative2 + "&_sort=sent");
     }
 
     // Search for "sent=NULL". Expected result: no "unsent" messages.
@@ -1237,7 +1248,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLI
             outerResponse, { }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=eqNULL&_sort=sent");
     }
 
     // Search for "sent=neNULL". Expected result: all messages sent or received by pharmacy3
@@ -1250,7 +1261,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLI
             outerResponse, { dispReqByRepresentative3ToPharmacy3.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
-        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=neNULL");
+        EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?sent=neNULL&_sort=sent");
     }
 
     // Search for "sent=gtNULL". Expected result: BadRequest.
@@ -1347,9 +1358,9 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_success)
 
     // Verify the returned Communication object.
     std::optional<model::Communication> communication;
-    ASSERT_NO_THROW(communication = model::Communication::fromJson(
-                        innerResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationRepresentative));
+    ASSERT_NO_THROW(communication = model::ResourceFactory<model::Communication>::fromJson(
+                                        innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+                                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
 
     ASSERT_EQ(communication->id(), givenCommunication1.id());
 }
@@ -1466,7 +1477,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
         auto nextLink = bundle->getLink(model::Link::Type::Next);
         EXPECT_TRUE(nextLink.has_value());
         auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
-        EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=10&__offset=10");
+        EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_sort=sent&_count=10&__offset=10");
 
         // Get next request
         ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
@@ -1487,7 +1498,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
        auto nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_TRUE(nextLink.has_value());
        auto nextPathAndArguments = extractPathAndArguments(nextLink.value());
-       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=9&__offset=9");
+       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_sort=sent&_count=9&__offset=9");
 
        // Get next request
        ClientRequest nextRrequest(createGetHeader(nextPathAndArguments, jwtPharmacy), "");
@@ -1508,7 +1519,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
        auto nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_TRUE(nextLink.has_value());
        auto nextPathAndArguments =  extractPathAndArguments(nextLink.value());
-       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_count=4&__offset=4");
+       EXPECT_EQ(UrlHelper::unescapeUrl(nextPathAndArguments), "/Communication?sent=le2021-09-25T11:34:56+00:00&_sort=sent&_count=4&__offset=4");
 
        // Get next request
        for (size_t idxPatient = 0; idxPatient < 3; ++idxPatient)
@@ -1527,4 +1538,49 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
        nextLink = bundle->getLink(model::Link::Type::Next);
        EXPECT_FALSE(nextLink.has_value());
    }
+}
+
+
+TEST_F(CommunicationGetHandlerTest, getAllCommunications_DefaultSort)
+{
+    const auto givenTask = addTaskToDatabase({ model::Task::Status::draft, InsurantF });
+    A_24438.test("Add communications with decreasing sent date order");
+    const auto givenCommunicationIds = addCommunicationsToDatabase({//             v 1:sent v    ^2:received^
+                                                                    {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+                                                                     {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+                                                                     std::string(givenTask.accessCode()),
+                                                                     RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-04", model::Timestamp::UTCTimezone), model::Timestamp::fromXsDate("2022-01-04", model::Timestamp::UTCTimezone)},
+                                                                    {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+                                                                     {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
+                                                                     std::string(givenTask.accessCode()),
+                                                                     RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)},
+                                                                    {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+                                                                     {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantG},
+                                                                     std::string(givenTask.accessCode()),
+                                                                     RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-02", model::Timestamp::UTCTimezone), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)},
+                                                                    {givenTask.prescriptionId(), model::Communication::MessageType::Representative,
+                                                                     {ActorRole::Insurant, InsurantF}, {ActorRole::Representative, InsurantH},
+                                                                     std::string(givenTask.accessCode()),
+                                                                     RepresentativeMessageByInsurant, model::Timestamp::fromXsDate("2022-01-01", model::Timestamp::UTCTimezone), model::Timestamp::fromXsDate("2022-01-04", model::Timestamp::UTCTimezone)}
+    });
+    A_24438.finish();
+
+    // Send the request for _sort=sent,-received"
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantF) };
+    auto outerResponse = createClient().send(encryptRequest(ClientRequest(//?_sort=-received&ignored&_sort=sent
+                                                                createGetHeader(std::string("/Communication"), jwtInsurant), ""), jwtInsurant));
+
+    A_24438.test("Ensure communications order by increasing sent date");
+    const auto bundle = expectGetCommunicationResponse(outerResponse,
+                                                       {
+                                                           givenCommunicationIds[3],
+                                                           givenCommunicationIds[2],
+                                                           givenCommunicationIds[1],
+                                                           givenCommunicationIds[0]
+                                                       });
+    A_24438.finish();
+    const auto selfLink = bundle->getLink(model::Link::Type::Self);
+    EXPECT_TRUE(selfLink.has_value());
+    // No explcit sort argument was given. Communications are therefore sorted by 'sent' - see CommunicationGetHandler.
+    EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?_sort=sent");
 }

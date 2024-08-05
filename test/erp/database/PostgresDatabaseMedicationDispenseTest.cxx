@@ -29,14 +29,6 @@ using namespace model;
 
 std::set<int64_t> PostgresDatabaseMedicationDispenseTest::sTaskPrescriptionIdsToBeDeleted;
 
-PostgresDatabaseMedicationDispenseTest::PostgresDatabaseMedicationDispenseTest() :
-    PostgresDatabaseTest()
-{
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
-    mNsPrescriptionId = isDeprecated ? model::resource::naming_system::deprecated::prescriptionID : model::resource::naming_system::prescriptionID;
-}
-
 void PostgresDatabaseMedicationDispenseTest::cleanup()
 {
     if (usePostgres())
@@ -538,7 +530,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
     {
         const auto& prescriptionId = prescriptionIdsByPatients[kvnrPatient.id()].at(0);
         ServerRequest::QueryParametersType queryParameters{
-            {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
+            {"identifier", std::string(model::resource::naming_system::prescriptionID) + "|" + prescriptionId}};
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto [medicationDispenses, _] =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
@@ -771,7 +763,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         for (const auto& prescriptionId : prescriptionIds)
         {
             ServerRequest::QueryParametersType queryParameters{
-                {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
+                {"identifier", std::string(model::resource::naming_system::prescriptionID) + "|" + prescriptionId}};
             UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
             const auto [medicationDispenses, _] =
                 database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
@@ -963,7 +955,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         for (const auto& prescriptionId : prescriptionIds)
         {
             ServerRequest::QueryParametersType queryParameters{
-                {"identifier", std::string(mNsPrescriptionId) + "|" + prescriptionId}};
+                {"identifier", std::string(model::resource::naming_system::prescriptionID) + "|" + prescriptionId}};
             UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
             const auto [medicationDispenses, _] =
                 database().retrieveAllMedicationDispenses(model::Kvnr{InsurantA}, searchArgs);

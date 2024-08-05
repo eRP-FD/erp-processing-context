@@ -6,9 +6,16 @@
  */
 
 #include "Fhir.hxx"
+#include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Configuration.hxx"
+#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 
+#include <fhirtools/repository/FhirResourceViewVerifier.hxx>
 #include <algorithm>
+
 
 const Fhir& Fhir::instance()
 {
@@ -18,52 +25,67 @@ const Fhir& Fhir::instance()
 
 Fhir::Fhir()
     : mConverter()
-    , mStructureRepository()
+    , mBackend()
 {
-    if (Configuration::instance().getOptionalStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD))
-    {
-        loadVersion(ConfigurationKey::ERP_FHIR_VERSION_OLD, ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD);
-    }
-    loadVersion(ConfigurationKey::ERP_FHIR_VERSION, ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+    load(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+    validateViews();
 }
 
-void Fhir::loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKey)
+void Fhir::load(ConfigurationKey structureKey)
 {
-    auto versionAsString = Configuration::instance().getStringValue(versionKey);
-    auto version = model::ResourceVersion::str_vBundled(versionAsString);
-    auto filesAsString = Configuration::instance().getArray(structureKey);
+    const auto& config = Configuration::instance();
+    auto filesAsString = config.getArray(structureKey);
     std::list<std::filesystem::path> files;
     std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
         return std::filesystem::path{str};
     });
-    TLOG(INFO) << "Loading FHIR structure repository for " << magic_enum::enum_name(version);
-    mStructureRepository[version].load(files);
-
-    if (model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01 == version)
+    TLOG(INFO) << "Loading FHIR structure repository.";
+    auto resolver = config.fhirResourceGroupConfiguration();
+    for (const auto& [url, version] : config.synthesizeCodesystem())
     {
-        const auto patchVersion = model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01_patch;
-        auto patchReplace =
-            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE);
-        auto patchReplaceWith =
-            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE_WITH);
-        auto patchValidFrom =
-            Configuration::instance().getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM);
-        Expect3(patchReplace && patchReplaceWith && patchValidFrom,
-                "please check fhir package configuration or remove hard-coded kbv 1.1.2 patch if obsolete.",
-                std::logic_error);
-        TLOG(INFO) << "Loading PATCHED FHIR structure repository for " << magic_enum::enum_name(patchVersion);
-        bool replaced = false;
-        for (auto& file : files)
+        mBackend.synthesizeCodeSystem(url, version, resolver);
+    }
+    for (const auto& [url, version] : config.synthesizeValuesets())
+    {
+        mBackend.synthesizeValueSet(url, version, resolver);
+    }
+    mBackend.load(files, resolver);
+}
+
+fhirtools::FhirResourceViewConfiguration::ViewList
+Fhir::structureRepository(const model::Timestamp& referenceTimestamp) const
+{
+    const auto& config = Configuration::instance();
+
+    auto viewConfig = config.fhirResourceViewConfiguration();
+    fhirtools::FhirResourceViewConfiguration::ViewList viewList;
+    const auto& referenceDate = fhirtools::Date{referenceTimestamp.toGermanDate()};
+    viewList = viewConfig.getViewInfo(referenceDate);
+    Expect(! viewList.empty(), "invalid reference date: " + referenceDate.toString(false));
+    return viewList;
+}
+
+
+void Fhir::validateViews() const
+{
+    const auto& config = Configuration::instance();
+    auto viewConfig = config.fhirResourceViewConfiguration();
+    for (const auto& viewConf : viewConfig.allViews())
+    {
+        auto view = viewConf->view(&mBackend);
+        fhirtools::FhirResourceViewVerifier verifier{mBackend, view.get().get()};
+        verifier.verify();
+        for (const auto profileType : magic_enum::enum_values<model::ProfileType>())
         {
-            if (std::filesystem::equivalent(file, std::filesystem::path{*patchReplace}))
+            if (profileType != model::ProfileType::fhir)
             {
-                LOG(INFO) << "FHIR profile patch replacing " << file.string() << " with " << *patchReplaceWith;
-                file = std::filesystem::path{*patchReplaceWith};
-                replaced = true;
+                const auto key = profileWithVersion(profileType, *view);
+                Expect3(key.has_value(),
+                        "could not resolve " + std::string{magic_enum::enum_name(profileType)} +
+                            " in view: " + std::string{view->id()},
+                        std::logic_error);
+                TVLOG(2) << view->id() << " found profile: " << *key;
             }
         }
-        Expect(replaced, "patch not applied, check configuration! FHIR_PROFILE_PATCH_REPLACE=" + *patchReplace +
-                             " FHIR_PROFILE_PATCH_REPLACE_WITH=" + *patchReplaceWith);
-        mStructureRepository[patchVersion].load(files);
     }
 }

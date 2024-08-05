@@ -88,7 +88,7 @@ bool fhirtools::ProfileSolver::fail(const ProfileValidator::MapKey& mapKeys)
 {
     for (auto&& solver : mSolvers)
     {
-        if (! solver.fail(mapKeys))
+        if (solver.fail(mapKeys))
         {
             mFailed = true;
         }

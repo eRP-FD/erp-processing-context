@@ -35,7 +35,6 @@ CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<s
           Configuration::instance().getIntValue(ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES)))
 {
 }
-
 // GEMREQ-start A_19450-01#deserialize
 void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 {
@@ -49,12 +48,11 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
     try
     {
-        // as a first step validate using the FHIR schema, which is good enough for the XML->JSON converter
-        auto communication = parseAndValidateRequestBody<Communication>(session, SchemaType::fhir, false);
-// GEMREQ-end A_19450-01#deserialize
+        auto communication = parseAndValidateRequestBody<model::Communication>(session);
+        // GEMREQ-end A_19450-01#deserialize
+        auto messageType = communication.messageType();
         PrescriptionId prescriptionId = communication.prescriptionId();
 
-        Communication::MessageType messageType = communication.messageType();
 
         const Identity recipient{communication.recipient()};
 
@@ -71,12 +69,6 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         communication.setSender(sender);
         A_19448_01.finish();
 
-        // secondly validate against the communication profile, which can only be determined
-        // by looking into the resource, which must therefore already be parsed
-        A_19447_04.start("validate against the fhir profile schema");
-        validateAgainstFhirProfile(messageType, communication, session.serviceContext.getXmlValidator(),
-                                   session.serviceContext.getInCodeValidator());
-        A_19447_04.finish();
         // ERP-12846: ensure current keys are loaded before starting DB-Transaction
         auto utcToday = date::floor<date::days>(session.sessionTime().toChronoTimePoint());
         session.serviceContext.getTelematicPseudonymManager().ensureKeysUptodateForDay(utcToday);
@@ -237,81 +229,6 @@ void CommunicationPostHandler::checkForChargeItemReference(const PrescriptionId&
         }
         A_22734.finish();
     }
-}
-
-void CommunicationPostHandler::validateAgainstFhirProfile(
-    model::Communication::MessageType messageType,
-    const model::Communication& communication,
-    const XmlValidator& xmlValidator,
-    const InCodeValidator& inCodeValidator) const
-{
-    switch (messageType)
-    {
-        using enum model::Communication::MessageType;
-        case InfoReq:
-            validateInfoRequest(communication, xmlValidator, inCodeValidator);
-            return;
-        case Reply:
-        case DispReq:
-        case Representative:
-        case ChargChangeReq:
-        case ChargChangeReply:
-            (void) Communication::fromXml(communication.serializeToXmlString(), xmlValidator, inCodeValidator,
-                                          Communication::messageTypeToSchemaType(messageType),
-                                          model::ResourceVersion::supportedBundles(),
-                                          communication.canValidateGeneric());
-            return;
-    }
-    Fail2("Invalid Communication::MessageType: " + std::to_string(static_cast<uintmax_t>(mMaxMessageCount)),
-          std::logic_error);
-}
-
-void CommunicationPostHandler::validateInfoRequest(const model::Communication& communication,
-                                                   const XmlValidator& xmlValidator,
-                                                   const InCodeValidator& inCodeValidator) const
-{
-    using namespace std::string_literals;
-    namespace rv = model::ResourceVersion;
-    static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
-    static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
-    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
-    // ensure that all past bundles are included
-    auto supportedBundles = rv::supportedBundles();
-    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        supportedBundles.insert(rv::FhirProfileBundleVersion::v_2022_01_01);
-    }
-    const auto extractMedication = fhirtools::FhirPathParser::parse(repo.get(), "about.resolve()");
-    Expect3(extractMedication, "Failed to parse extractMedication expression.", std::logic_error);
-    model::NumberAsStringParserDocument doc;
-    doc.CopyFrom(communication.jsonDocument(), doc.GetAllocator());
-    auto communicationElement =
-        std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, "Communication", std::addressof(doc));
-    auto medications = extractMedication->eval({communicationElement});
-    for (const auto& medicationElement : medications)
-    {
-        const auto& medicationErpElement = dynamic_cast<const ErpElement*>(medicationElement.get());
-        Expect3(medicationErpElement != nullptr,
-                "unexpected type for medicationElement: "s.append(util::demangle(typeid(medicationErpElement).name())),
-                std::logic_error);
-        //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement->erpValue());
-        model::KbvMedicationGeneric::validateMedication(*medicationErpElement, xmlValidator, inCodeValidator,
-                                                        supportedBundles, false);
-        const std::string idValue = idPtr.Get(*medicationValue)->GetString();
-        const std::string resourceTypeValue = resourceTypePtr.Get(*medicationValue)->GetString();
-        medicationValue->SetObject();
-        idPtr.Set(*medicationValue, idValue, doc.GetAllocator());
-        resourceTypePtr.Set(*medicationValue, resourceTypeValue, doc.GetAllocator());
-    }
-    using CommunicationFactory = model::ResourceFactory<Communication>;
-    CommunicationFactory::Options options;
-    if (! communication.canValidateGeneric())
-    {
-        options.genericValidationMode = Configuration::GenericValidationMode::disable;
-    };
-    (void) model::ResourceFactory<Communication>::fromJson(std::move(doc), options)
-        .getValidated(SchemaType::Gem_erxCommunicationInfoReq, xmlValidator, inCodeValidator);
 }
 
 model::Identity CommunicationPostHandler::validateSender(

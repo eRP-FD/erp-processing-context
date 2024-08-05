@@ -227,9 +227,7 @@ Timestamp Timestamp::fromXsDate(const std::string& date, const std::string& time
     ModelExpect(!stream.fail(), "invalid date format");
     ModelExpect(stream.tellg() == 10, "did not read the whole date");
 
-    auto localTime = date::make_zoned(timezone, localDays);
-
-    return Timestamp(localTime.get_sys_time());
+    return Timestamp(timezone, localDays);
 }
 
 Timestamp Timestamp::fromGermanDate(const std::string& date)
@@ -358,6 +356,11 @@ Timestamp::Timestamp(const int64_t secondsSinceEpoch)
 Timestamp::Timestamp(const double secondsSinceEpoch)
     : Timestamp(Timestamp::timepoint_t(
           std::chrono::milliseconds{static_cast<int64_t>(secondsSinceEpoch * 1000)}))
+{
+}
+
+Timestamp::Timestamp(const std::string& timezone, const date::local_days& days)
+   : mDateAndTime{date::make_zoned(timezone, days).get_sys_time()}
 {
 }
 

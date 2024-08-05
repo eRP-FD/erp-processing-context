@@ -50,11 +50,7 @@ Kvnr::Kvnr(const char* kvnr, Type type)
 Kvnr::Kvnr(std::string_view kvnr, std::string_view namingSystem)
     : mValue{kvnr}
 {
-    // We cannot use the pkv naming system in case we are rendering for 2022 profiles.
-    // Even though the pkv profiles are only valid starting with 2023 profiles,
-    // this helps for compatibility with our tests
-    if (namingSystem == resource::naming_system::gkvKvid10 ||
-        namingSystem == resource::naming_system::deprecated::gkvKvid10)
+    if (namingSystem == resource::naming_system::gkvKvid10)
     {
         mType = Type::gkv;
     }
@@ -64,7 +60,7 @@ Kvnr::Kvnr(std::string_view kvnr, std::string_view namingSystem)
     }
     else
     {
-        ModelFail("Unknown naming system for kvnr: " + std::string{namingSystem});
+        mType = Type::unspecified;
     }
 }
 
@@ -78,20 +74,17 @@ void Kvnr::setId(std::string_view id)
     mValue = id;
 }
 
-std::string_view Kvnr::namingSystem(bool deprecated) const
+std::string_view Kvnr::namingSystem() const
 {
-    if (! deprecated && mType == Type::pkv)
+    switch (mType)
     {
-        return resource::naming_system::pkvKvid10;
+        case Type::pkv:
+            return resource::naming_system::pkvKvid10;
+        case Type::gkv:
+        case Type::unspecified:// not super important - see ERP-19763
+            return resource::naming_system::gkvKvid10;
     }
-    else if (deprecated)
-    {
-        return resource::naming_system::deprecated::gkvKvid10;
-    }
-    else
-    {
-        return resource::naming_system::gkvKvid10;
-    }
+    Fail2("Invalid value for mType: " + std::to_string(static_cast<uintmax_t>(mType)), std::logic_error);
 }
 
 std::string Kvnr::id() &&

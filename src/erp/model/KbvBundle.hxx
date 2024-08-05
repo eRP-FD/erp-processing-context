@@ -14,19 +14,24 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvBundle : public BundleBase<KbvBundle, ResourceVersion::KbvItaErp>
+class KbvBundle : public BundleBase<KbvBundle>
 {
 public:
-    using BundleBase<KbvBundle, ResourceVersion::KbvItaErp>::BundleBase;
-    using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromXml;
-    using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromJson;
-    using Resource<KbvBundle, ResourceVersion::KbvItaErp>::fromJsonNoValidation;
+    static constexpr ProfileType profileType = ProfileType::KBV_PR_ERP_Bundle;
+
+    using BundleBase::BundleBase;
+    using Resource::fromJson;
+    using Resource::fromJsonNoValidation;
+    using Resource::fromXml;
 
     void additionalValidation() const override;
 
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 
+extern template class BundleBase<KbvBundle>;
+extern template class Resource<KbvBundle>;
 }
+
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVBUNDLE_HXX

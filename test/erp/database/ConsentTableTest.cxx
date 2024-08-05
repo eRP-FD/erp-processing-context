@@ -17,17 +17,12 @@ public:
         (void)db.clearConsent(kvnr1);
         (void)db.clearConsent(kvnr2);
         db.commitTransaction();
-        envGuards = testutils::getNewFhirProfileEnvironment();
     }
 
     void TearDown() override
     {
-        envGuards.clear();
         DatabaseTestFixture::TearDown();
     }
-
-private:
-    std::vector<EnvironmentVariableGuard> envGuards;
 };
 
 TEST_F(ConsentTableTest, createAndGet)

@@ -62,6 +62,14 @@ public:
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) override;
+    void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                      const model::Timestamp& lastModified,
+                                      const model::Timestamp& lastMedicationDispense,
+                                      const db_model::EncryptedBlob& medicationDispense,
+                                      BlobId medicationDispenseBlobId,
+                                      const db_model::HashedTelematikId& telematikId,
+                                      const model::Timestamp& whenHandedOver,
+                                      const std::optional<model::Timestamp>& whenPrepared) override;
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -70,7 +78,10 @@ public:
                                              const db_model::HashedTelematikId& telematikId,
                                              const model::Timestamp& whenHandedOver,
                                              const std::optional<model::Timestamp>& whenPrepared,
-                                             const db_model::EncryptedBlob& receipt) override;
+                                             const db_model::EncryptedBlob& receipt,
+                                             const model::Timestamp& lastMedicationDispense) override;
+    void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
+                                            const model::Timestamp& lastModified) override;
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
                                      const model::Timestamp& lastModified) override;

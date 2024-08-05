@@ -8,9 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTILS
 #define ERP_PROCESSING_CONTEXT_TEST_UTILS
 
-#include "erp/model/ResourceVersion.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "erp/model/ProfileType.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/model/DateTime.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
@@ -40,31 +40,25 @@ static void waitFor(T predicate)
     ASSERT_TRUE(predicate());
 }
 
-std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment();
-std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment();
-std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment();
-std::vector<EnvironmentVariableGuard> getPatchedFhirProfileEnvironment();
-using NewFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getNewFhirProfileEnvironment>;
-using OldFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOldFhirProfileEnvironment>;
-using OverlappingFhirProfileEnvironmentGuard  = GuardWithEnvFrom<getOverlappingFhirProfileEnvironment>;
-
-std::string profile(SchemaType,
-                    model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
-std::string_view gkvKvid10(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
-std::string_view
-prescriptionIdNamespace(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
-std::string_view
-telematikIdNamespace(model::ResourceVersion::FhirProfileBundleVersion = model::ResourceVersion::currentBundle());
-
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
 
-template <typename BundleT = model::ErxReceipt>
-[[nodiscard]] BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc,
-                                                         SchemaType schemaType = SchemaType::Gem_erxReceiptBundle);
+template<typename BundleT = model::ErxReceipt>
+[[nodiscard]] BundleT
+getValidatedErxReceiptBundle(std::string_view xmlDoc,
+                             model::ProfileType profileType = model::ProfileType::Gem_erxReceiptBundle);
 
-extern template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
-extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
+extern template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+
+class ShiftFhirResourceViewsGuard {
+public:
+    ShiftFhirResourceViewsGuard(const std::string& viewId, const fhirtools::Date& startDate);
+    ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate);
+
+private:
+    std::vector<EnvironmentVariableGuard> envGuards;
+};
 
 
 } // namespace testutils

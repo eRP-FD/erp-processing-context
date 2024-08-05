@@ -24,6 +24,7 @@
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
+#include "erp/service/task/DispenseTaskHandler.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
@@ -110,7 +111,12 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                     oids{oid_versicherter, oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut,
                                      oid_krankenhaus, oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
     A_19026.finish();
-
+    // ... 6.1.2.7 C_11574
+    A_24279.start("Register the allowed professionOIDs");
+    handlerManager.onPostDo("/Task/{id}/$dispense",
+            std::make_unique<DispenseTaskHandler>(
+                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
+    A_24279.finish();
 
     // For GET /MedicationDispense see gemSpec_FD_eRp_V1.1.1, 6.2.1
     // GEMREQ-start A_19405

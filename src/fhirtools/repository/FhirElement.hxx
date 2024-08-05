@@ -9,6 +9,11 @@
 #define FHIR_TOOLS_FHIRELEMENT_HXX
 
 #include "erp/util/Version.hxx"
+#include "fhirtools/model/DecimalType.hxx"
+#include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/repository/FhirConstraint.hxx"
+#include "fhirtools/repository/FhirSlicing.hxx"
+#include "fhirtools/repository/FhirVersion.hxx"
 
 #include <iosfwd>
 #include <memory>
@@ -16,10 +21,6 @@
 #include <set>
 #include <variant>
 #include <vector>
-
-#include "fhirtools/model/DecimalType.hxx"
-#include "fhirtools/repository/FhirConstraint.hxx"
-#include "fhirtools/repository/FhirSlicing.hxx"
 
 namespace fhirtools {
 class FhirStructureDefinition;
@@ -65,8 +66,7 @@ public:
     {
         Binding() noexcept = default;
         BindingStrength strength{};
-        std::string valueSetUrl;
-        std::optional<Version> valueSetVersion;
+        DefinitionKey key{"unset-binding", std::nullopt};
     };
 
     FhirElement();

@@ -140,6 +140,10 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 31,
           "textTemplate": "{agentName} konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen. (Offline-Check wurde nicht akzeptiert)"
+        },
+        {
+          "eventId": 32,
+          "textTemplate": "{agentName} hat das Rezept mit der ID {prescriptionId} beliefert."
         }
       ]
     },
@@ -266,6 +270,10 @@ constexpr std::string_view auditEventTextTemplates = R"--(
         {
           "eventId": 31,
           "textTemplate": "{agentName} was not able to retrieve your e-prescriptions due to an error with your health card. (Offline-Check was not accepted)"
+        },
+        {
+          "eventId": 32,
+          "textTemplate": "{agentName} dispensed a prescription {prescriptionId}."
         }
       ]
     }

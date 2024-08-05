@@ -12,6 +12,7 @@
 // (This must match the configuration in our Conanfile, but since iOS does not use Conan, we define
 // it here as well)
 #ifndef gsl_CONFIG_CONTRACT_VIOLATION_THROWS
+//NOLINTNEXTLINE(modernize-macro-to-enum) must be macro as it is used by GSL-Lite
 #define gsl_CONFIG_CONTRACT_VIOLATION_THROWS
 #endif
 

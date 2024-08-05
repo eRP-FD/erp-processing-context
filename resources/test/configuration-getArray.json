@@ -1,12 +1,10 @@
 {
   "erp" : {
-    "fhir-profile": {
-      "fhir": {
-        "structure-files": [
-          "value1",
-          "value2"
-        ]
-      }
+    "fhir": {
+      "structure-files": [
+        "value1",
+        "value2"
+      ]
     }
   }
 }

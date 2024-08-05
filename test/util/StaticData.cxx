@@ -71,7 +71,6 @@ Factories StaticData::makeMockFactories()
     };
 
     factories.tpmFactory = TpmMock::createFactory();
-    factories.incodeValidatorFactory = StaticData::getInCodeValidator;
     factories.xmlValidatorFactory = StaticData::getXmlValidator;
     factories.jsonValidatorFactory = StaticData::getJsonValidator;
 

@@ -12,6 +12,7 @@
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
@@ -22,13 +23,15 @@
 
 TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "status":"completed",
@@ -37,7 +40,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -45,7 +49,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -60,21 +65,20 @@ TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(
-                     json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
@@ -83,7 +87,8 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
             "value":"456"
         },
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -93,7 +98,8 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -101,7 +107,8 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -116,21 +123,20 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyIdentifiers)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(
-                     json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
@@ -144,7 +150,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -152,7 +159,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -167,22 +175,20 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier1)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
@@ -196,7 +202,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -204,7 +211,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -219,22 +227,20 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier2)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
@@ -249,7 +255,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -257,7 +264,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -272,27 +280,26 @@ TEST(MedicationDispenseTest, WrongSchemaWrongIdentifier3)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -304,7 +311,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -319,27 +327,26 @@ TEST(MedicationDispenseTest, WrongSchemaMissingSubject)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -357,7 +364,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -372,27 +380,26 @@ TEST(MedicationDispenseTest, WrongSchemaWrongSubject)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -402,7 +409,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -415,27 +423,26 @@ TEST(MedicationDispenseTest, WrongSchemaMissingPerformer)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -445,7 +452,8 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -469,7 +477,8 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -484,27 +493,26 @@ TEST(MedicationDispenseTest, WrongSchemaTooManyPerformers)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -514,7 +522,8 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -537,28 +546,27 @@ TEST(MedicationDispenseTest, WrongSchemaWrongPerformer)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
 {
 
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -568,7 +576,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -576,7 +585,8 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -590,27 +600,26 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
 }
 )";
 
-    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator(),
-                                                            *StaticData::getXmlValidator(),
-                                                            *StaticData::getInCodeValidator(),
-                                                            SchemaType::Gem_erxMedicationDispense),
-                 ErpException);
+    EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
 TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_literals;
     const std::string json = R"(
 {
     "resourceType":"MedicationDispense",
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                             '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                             R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -620,7 +629,8 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                             R"(",
             "value":"X123456788"
         }
     },
@@ -628,7 +638,8 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                             std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -643,9 +654,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
 }
 )";
     std::optional<model::MedicationDispense> medicationDispense1;
-    EXPECT_NO_THROW(medicationDispense1 = model::MedicationDispense::fromJson(
-                        json, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxMedicationDispense));
+    EXPECT_NO_THROW(medicationDispense1 = model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()));
     auto& medicationDispense = *medicationDispense1;
 
     const model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.715.74");
@@ -674,6 +683,7 @@ TEST(MedicationDispenseTest, CorrectSchema)//NOLINT(readability-function-cogniti
 
 TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_literals;
     static constexpr auto copyToOriginalFormat = &model::NumberAsStringParserDocumentConverter::copyToOriginalFormat;
     using model::resource::ElementName;
     namespace elements = model::resource::elements;
@@ -687,12 +697,14 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     "id": "160.000.000.004.715.74",
     "meta":{
         "profile":[
-            ")" + testutils::profile(SchemaType::Gem_erxMedicationDispense) + R"("
+            ")"s.append(model::resource::structure_definition::medicationDispense) +
+                                '|' + to_string(ResourceTemplates::Versions::GEM_ERP_current()) + R"("
         ]
     },
     "identifier":[
         {
-            "system":")" + std::string{testutils::prescriptionIdNamespace()} + R"(",
+            "system":")" + std::string{model::resource::naming_system::prescriptionID} +
+                                R"(",
             "value":"160.000.000.004.715.74"
         }
     ],
@@ -702,7 +714,8 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     },
     "subject":{
         "identifier":{
-            "system": ")" + std::string{testutils::gkvKvid10()} + R"(",
+            "system": ")" + std::string{model::resource::naming_system::gkvKvid10} +
+                                R"(",
             "value":"X123456788"
         }
     },
@@ -710,7 +723,8 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
         {
             "actor":{
                 "identifier":{
-                    "system":")" + std::string{testutils::telematikIdNamespace()}  + R"(",
+                    "system":")" +
+                                std::string{model::resource::naming_system::telematicID} + R"(",
                     "value":"1111"
                 }
             }
@@ -728,9 +742,7 @@ TEST(MedicationDispenseTest, ERP_6610_optionalTime)//NOLINT(readability-function
     auto validate = [&] {
         StaticData::getJsonValidator()->validate(copyToOriginalFormat(md), SchemaType::fhir);
         auto xmlStr = Fhir::instance().converter().jsonToXmlString(md);
-        (void) model::MedicationDispense::fromXml(xmlStr, *StaticData::getXmlValidator(),
-                                                  *StaticData::getInCodeValidator(),
-                                                  SchemaType::Gem_erxMedicationDispense);
+        (void) model::MedicationDispense::fromXml(xmlStr, *StaticData::getXmlValidator());
     };
 
 

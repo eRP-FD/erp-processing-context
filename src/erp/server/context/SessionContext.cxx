@@ -5,8 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 
 SessionContext::SessionContext(
     PcServiceContext& serviceContext,
@@ -57,4 +59,16 @@ void SessionContext::addOuterResponseHeaderField(std::string_view key, std::stri
 const Header::keyValueMap_t& SessionContext::getOuterResponseHeaderFields() const
 {
     return mOuterResponseHeaderFields;
+}
+
+
+void SessionContext::fillMvoBdeV2(const std::optional<model::KBVMultiplePrescription>& mPExt)
+{
+    if (mPExt && mPExt->isMultiplePrescription() && mPExt->numerator().has_value())
+    {
+        A_23090_02.start(
+            "\"mvonr\": $mvo-nummer: Der Wert Nummer des Rezepts der Mehrfachverordnung, Datentyp Integer");
+        addOuterResponseHeaderField(Header::MvoNumber, std::to_string(*mPExt->numerator()));
+        A_23090_02.finish();
+    }
 }

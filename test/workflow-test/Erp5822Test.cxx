@@ -36,11 +36,10 @@ public:
                                 std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
         ASSERT_TRUE(task.has_value());
         std::optional<Communication> infoReq;
-        ASSERT_NO_FATAL_FAILURE(infoReq = communicationPost(model::Communication::MessageType::InfoReq,
-                        *task,
-                        ActorRole::Insurant, kvnr,
-                        ActorRole::Pharmacists, telematikIdApotheke,
-                        "Hallo Apotheker"));
+        ASSERT_NO_FATAL_FAILURE(infoReq = communicationPost(model::Communication::MessageType::DispReq, *task,
+                                                            ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
+                                                            telematikIdApotheke,
+                                                            R"({"version": 1, "supplyOptionsType": "onPremise"})"));
         ASSERT_TRUE(infoReq.has_value());
         std::optional<Communication> reply;
         ASSERT_NO_FATAL_FAILURE(reply = communicationPost(model::Communication::MessageType::Reply,

@@ -3,13 +3,9 @@
 
 | Package                                        | Version    | Download-Link                                                                 |
 |------------------------------------------------|------------|-------------------------------------------------------------------------------|
-| kbv.ita.erp                                    | 1.0.2      | https://simplifier.net/packages/kbv.ita.erp/1.0.2                             |
-| kbv.ita.erp                                    | 1.1.1      | https://simplifier.net/packages/kbv.ita.erp/1.1.1                              |
-| kbv.ita.for                                    | 1.0.3      | https://simplifier.net/packages/kbv.ita.for/1.0.3                             |
+| kbv.ita.erp                                    | 1.1.2      | https://simplifier.net/packages/kbv.ita.erp/1.1.2                              |
 | kbv.ita.for                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.for/1.1.0                              |
-| de.basisprofil.r4                              | 0.9.13     | https://simplifier.net/packages/de.basisprofil.r4/0.9.13                      |
 | de.basisprofil.r4                              | 1.3.2      | https://simplifier.net/packages/de.basisprofil.r4/1.3.2                      |
-| de.gematik.erezept-workflow.r4                 | 1.1.1      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.1.1          |
 | de.gematik.erezept-workflow.r4                 | 1.2.0      | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.2.0          |
 | de.abda.erezeptabgabedatenbasis                | 1.3.1      | https://simplifier.net/packages/de.abda.erezeptabgabedatenbasis/1.3.0         |
 | de.abda.erezeptabgabedatenpkv                  | 1.2.0      | https://simplifier.net/packages/de.abda.erezeptabgabedatenpkv/1.2.0           |
@@ -33,7 +29,7 @@
 | KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.zip |
 | KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.zip |
 | KBV_CS_SFHIR_ITA_WOP_V1.00.xml                | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ITA_WOP_V1.00.zip                |
-| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.10.xml   | 1.12     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.12.zip   |
+| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.zip   |
 | KBV_CS_SFHIR_KBV_DMP_V1.05.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.05.zip                |
 | KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.xml        | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.zip        |
 | KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml     | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.zip     |
@@ -42,7 +38,7 @@
 | KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.zip |
 | KBV_VS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.zip |
 | KBV_VS_SFHIR_ITA_WOP_V1.00.xml                | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ITA_WOP_V1.00.zip                |
-| KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.12.xml   | 1.10     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.12.zip   |
+| KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.zip   |
 | KBV_VS_SFHIR_KBV_DMP_V1.05.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.05.zip                |
 | KBV_VS_SFHIR_KBV_NORMGROESSE_V1.00.xml        | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.zip        |
 | KBV_VS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml     | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.zip     |

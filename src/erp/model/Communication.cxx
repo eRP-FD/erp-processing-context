@@ -5,14 +5,16 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/fhir/Fhir.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "erp/util/Expect.hxx"
-#include "erp/util/UrlHelper.hxx"
 #include "erp/util/String.hxx"
+#include "erp/util/UrlHelper.hxx"
 
 #include <rapidjson/writer.h>
 #include <map>
+#include <ranges>
 #include <regex>
 
 using namespace model;
@@ -56,13 +58,6 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToProfil
     { Communication::MessageType::Representative,   structure_definition::communicationRepresentative   }
 };
 
-const std::map<Communication::MessageType, std::string_view> MessageTypeToProfileUrlDeprecated = {
-    { Communication::MessageType::InfoReq,          structure_definition::deprecated::communicationInfoReq          },
-    { Communication::MessageType::Reply,            structure_definition::deprecated::communicationReply            },
-    { Communication::MessageType::DispReq,          structure_definition::deprecated::communicationDispReq          },
-    { Communication::MessageType::Representative,   structure_definition::deprecated::communicationRepresentative   }
-};
-
 const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageType = {
     {structure_definition::communicationInfoReq,          Communication::MessageType::InfoReq          },
     {structure_definition::communicationChargChangeReq,   Communication::MessageType::ChargChangeReq   },
@@ -70,13 +65,6 @@ const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessage
     {structure_definition::communicationReply,            Communication::MessageType::Reply            },
     {structure_definition::communicationDispReq,          Communication::MessageType::DispReq          },
     {structure_definition::communicationRepresentative,   Communication::MessageType::Representative   }
-};
-
-const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageTypeDeprecated = {
-    {structure_definition::deprecated::communicationInfoReq,          Communication::MessageType::InfoReq          },
-    {structure_definition::deprecated::communicationReply,            Communication::MessageType::Reply            },
-    {structure_definition::deprecated::communicationDispReq,          Communication::MessageType::DispReq          },
-    {structure_definition::deprecated::communicationRepresentative,   Communication::MessageType::Representative   }
 };
 
 std::string retrievePrescriptionIdFromReference(
@@ -161,19 +149,13 @@ std::optional<std::string> retrieveAccessCodeFromTaskReference(std::string_view 
 
 
 Communication::Communication(NumberAsStringParserDocument&& document)
-    : Resource<Communication, ResourceVersion::WorkflowOrPatientenRechnungProfile>(std::move(document))
-    , mPayload(getValue(payloadPointer))
+    : Resource(std::move(document))
 {
 }
 
 int8_t model::Communication::messageTypeToInt(Communication::MessageType messageType)
 {
     return magic_enum::enum_integer(messageType);
-}
-
-bool Communication::isDeprecatedProfile() const
-{
-    return ResourceVersion::deprecatedProfile(value(getSchemaVersion()));
 }
 
 std::string_view Communication::messageTypeToString(MessageType messageType)
@@ -185,142 +167,103 @@ std::string_view Communication::messageTypeToString(MessageType messageType)
 
 std::string_view Communication::messageTypeToProfileUrl(MessageType messageType) const
 {
-    const std::map<Communication::MessageType, std::string_view>& messageTypeMap =
-        isDeprecatedProfile() ? MessageTypeToProfileUrlDeprecated : MessageTypeToProfileUrl;
-    const auto& it = messageTypeMap.find(messageType);
-    ModelExpect(it != messageTypeMap.end(),
+    const auto& it = MessageTypeToProfileUrl.find(messageType);
+    ModelExpect(it != MessageTypeToProfileUrl.end(),
                 "Message type enumerator value " + std::to_string(static_cast<int>(messageType)) + " is out of range");
     return it->second;
 }
 
-Communication::MessageType Communication::profileUrlToMessageType(std::string_view profileUrl) const
+Communication::MessageType Communication::profileUrlToMessageType(std::string_view profileUrl)
 {
     const auto parts = String::split(profileUrl, '|');
     ModelExpect(!parts.empty(), "error processing profileUrl: " + std::string(profileUrl));
-    const std::map<std::string_view, Communication::MessageType>& profileMap =
-        isDeprecatedProfile() ? ProfileUrlToMessageTypeDeprecated : ProfileUrlToMessageType;
-    const auto& it = profileMap.find(parts[0]);
-    ModelExpect(it != profileMap.end(), "Could not retrieve message type from " + std::string(profileUrl));
+    const auto& it = ProfileUrlToMessageType.find(parts[0]);
+    ModelExpect(it != ProfileUrlToMessageType.end(), "Could not retrieve message type from " + std::string(profileUrl));
     return it->second;
 }
 
-SchemaType Communication::messageTypeToSchemaType(MessageType messageType)
+ProfileType Communication::messageTypeToProfileType(MessageType messageType)
 {
     switch (messageType)
     {
     case model::Communication::MessageType::InfoReq:
-        return SchemaType::Gem_erxCommunicationInfoReq;
+            return ProfileType::Gem_erxCommunicationInfoReq;
     case model::Communication::MessageType::ChargChangeReq:
-        return SchemaType::Gem_erxCommunicationChargChangeReq;
+            return ProfileType::Gem_erxCommunicationChargChangeReq;
     case model::Communication::MessageType::ChargChangeReply:
-        return SchemaType::Gem_erxCommunicationChargChangeReply;
+            return ProfileType::Gem_erxCommunicationChargChangeReply;
     case model::Communication::MessageType::Reply:
-        return SchemaType::Gem_erxCommunicationReply;
+            return ProfileType::Gem_erxCommunicationReply;
     case model::Communication::MessageType::DispReq:
-        return SchemaType::Gem_erxCommunicationDispReq;
+            return ProfileType::Gem_erxCommunicationDispReq;
     case model::Communication::MessageType::Representative:
-        return SchemaType::Gem_erxCommunicationRepresentative;
+            return ProfileType::Gem_erxCommunicationRepresentative;
     }
     ModelFail("Converting Communication::messageType to SchemaType failed");
 }
 
-Communication::MessageType Communication::schemaTypeToMessageType(SchemaType schemaType)
+Communication::MessageType Communication::profileTypeToMessageType(ProfileType profileType)
 {
-    switch (schemaType)
+    switch (profileType)
     {
-        case SchemaType::Gem_erxCommunicationInfoReq:
+    case ProfileType::Gem_erxCommunicationInfoReq:
             return model::Communication::MessageType::InfoReq;
-        case SchemaType::Gem_erxCommunicationChargChangeReq:
+    case ProfileType::Gem_erxCommunicationChargChangeReq:
             return  model::Communication::MessageType::ChargChangeReq;
-        case SchemaType::Gem_erxCommunicationChargChangeReply:
+    case ProfileType::Gem_erxCommunicationChargChangeReply:
             return model::Communication::MessageType::ChargChangeReply;
-        case SchemaType::Gem_erxCommunicationReply:
+    case ProfileType::Gem_erxCommunicationReply:
             return model::Communication::MessageType::Reply;
-        case SchemaType::Gem_erxCommunicationDispReq:
+    case ProfileType::Gem_erxCommunicationDispReq:
             return model::Communication::MessageType::DispReq;
-        case SchemaType::Gem_erxCommunicationRepresentative:
+    case ProfileType::Gem_erxCommunicationRepresentative:
             return model::Communication::MessageType::Representative;
-        case SchemaType::ActivateTaskParameters:
-        case SchemaType::CreateTaskParameters:
-        case SchemaType::Gem_erxAuditEvent:
-        case SchemaType::Gem_erxBinary:
-        case SchemaType::fhir:
-        case SchemaType::Gem_erxCompositionElement:
-        case SchemaType::Gem_erxDevice:
-        case SchemaType::KBV_PR_ERP_Bundle:
-        case SchemaType::KBV_PR_ERP_Composition:
-        case SchemaType::KBV_PR_ERP_Medication_BundleDummy:
-        case SchemaType::KBV_PR_ERP_Medication_Compounding:
-        case SchemaType::KBV_PR_ERP_Medication_FreeText:
-        case SchemaType::KBV_PR_ERP_Medication_Ingredient:
-        case SchemaType::KBV_PR_ERP_Medication_PZN:
-        case SchemaType::KBV_PR_ERP_PracticeSupply:
-        case SchemaType::KBV_PR_ERP_Prescription:
-        case SchemaType::KBV_PR_FOR_Coverage:
-        case SchemaType::KBV_PR_FOR_HumanName:
-        case SchemaType::KBV_PR_FOR_Organization:
-        case SchemaType::KBV_PR_FOR_Patient:
-        case SchemaType::KBV_PR_FOR_Practitioner:
-        case SchemaType::KBV_PR_FOR_PractitionerRole:
-        case SchemaType::Gem_erxMedicationDispense:
-        case SchemaType::MedicationDispenseBundle:
-        case SchemaType::Gem_erxOrganizationElement:
-        case SchemaType::Gem_erxReceiptBundle:
-        case SchemaType::Gem_erxTask:
-        case SchemaType::BNA_tsl:
-        case SchemaType::Gematik_tsl:
-        case SchemaType::Gem_erxChargeItem:
-        case SchemaType::Gem_erxConsent:
-        case SchemaType::PatchChargeItemParameters:
-        case SchemaType::DAV_DispenseItem:
-        case SchemaType::Pruefungsnachweis:
-        case SchemaType::CommunicationDispReqPayload:
-        case SchemaType::CommunicationReplyPayload:
-            ModelFail("Not a Communication Schema");
+    case ProfileType::ActivateTaskParameters:
+    case ProfileType::CreateTaskParameters:
+    case ProfileType::Gem_erxAuditEvent:
+    case ProfileType::Gem_erxBinary:
+    case ProfileType::fhir:
+    case ProfileType::Gem_erxCompositionElement:
+    case ProfileType::Gem_erxDevice:
+    case ProfileType::Gem_erxDigest:
+    case ProfileType::KBV_PR_ERP_Bundle:
+    case ProfileType::KBV_PR_ERP_Composition:
+    case ProfileType::KBV_PR_ERP_Medication_Compounding:
+    case ProfileType::KBV_PR_ERP_Medication_FreeText:
+    case ProfileType::KBV_PR_ERP_Medication_Ingredient:
+    case ProfileType::KBV_PR_ERP_Medication_PZN:
+    case ProfileType::KBV_PR_ERP_PracticeSupply:
+    case ProfileType::KBV_PR_ERP_Prescription:
+    case ProfileType::KBV_PR_FOR_Coverage:
+    case ProfileType::KBV_PR_FOR_Organization:
+    case ProfileType::KBV_PR_FOR_Patient:
+    case ProfileType::KBV_PR_FOR_Practitioner:
+    case ProfileType::KBV_PR_FOR_PractitionerRole:
+    case ProfileType::Gem_erxMedicationDispense:
+    case ProfileType::MedicationDispenseBundle:
+    case ProfileType::Gem_erxReceiptBundle:
+    case ProfileType::Gem_erxTask:
+    case ProfileType::Gem_erxChargeItem:
+    case ProfileType::Gem_erxConsent:
+    case ProfileType::PatchChargeItemParameters:
+    case ProfileType::DAV_DispenseItem:
+    case ProfileType::Subscription:
+    case ProfileType::OperationOutcome:
+            ModelFail("Not a Communication Profile");
     }
-    Fail2("Communication::schemaTypeToMessageType: Unknown SchemaType: "
-        + std::to_string(static_cast<intmax_t>(schemaType)), std::logic_error);
+    Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +
+              std::to_string(static_cast<intmax_t>(profileType)),
+          std::logic_error);
 }
+
 
 Communication::MessageType Communication::messageType() const
 {
-    const auto profileName = getStringValue(metaProfile0Pointer);
-    const auto* info = ResourceVersion::profileInfoFromProfileName(profileName);
-    if (info) {
-        try {
-            return schemaTypeToMessageType(info->schemaType);
-        }
-        catch (const ModelException&) {}
-    }
-    std::ostringstream msg;
-    msg << "invalid profile expected one of: [";
-    std::string sep;
-    if (ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        auto allVersions = ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01);
-        auto gemVer = get<ResourceVersion::DeGematikErezeptWorkflowR4>(allVersions);
-        msg << '"' << model::resource::structure_definition::deprecated::communicationInfoReq << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationReply << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationDispReq << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::deprecated::communicationRepresentative << '|' << v_str(gemVer);
-        msg << '"';
-        sep = ", ";
-    }
-    if (ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        auto allVersions = ResourceVersion::profileVersionFromBundle(ResourceVersion::FhirProfileBundleVersion::v_2023_07_01);
-        auto gemVer = get<ResourceVersion::DeGematikErezeptWorkflowR4>(allVersions);
-        auto gemChargVer = get<ResourceVersion::DeGematikErezeptPatientenrechnungR4>(allVersions);
-        msg << sep << '"' << model::resource::structure_definition::communicationInfoReq << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::communicationReply << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::communicationDispReq << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::communicationRepresentative << '|' << v_str(gemVer);
-        msg << R"(", ")" << model::resource::structure_definition::communicationChargChangeReq << '|' << v_str(gemChargVer);
-        msg << R"(", ")" << model::resource::structure_definition::communicationChargChangeReply << '|' << v_str(gemChargVer);
-        msg << '"';
-    }
-    msg << "]";
-    ModelFail(std::move(msg).str());
+    auto profileName = getProfileName();
+    ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "Profile missing in Communication message.");
+    auto profileType = findProfileType(*profileName);
+    ErpExpect(profileType.has_value(), HttpStatus::BadRequest, std::string{"Unknown profile: "} += *profileName);
+    return profileTypeToMessageType(*profileType);
 }
 
 std::string_view Communication::messageTypeAsString() const
@@ -353,8 +296,7 @@ std::optional<Identity> Communication::sender() const
     const auto senderSystem = getOptionalStringValue(senderIdentifierSystemPointer);
     if (!senderValue || !senderSystem)
         return {};
-    if (*senderSystem == resource::naming_system::telematicID ||
-        *senderSystem == resource::naming_system::deprecated::telematicID)
+    if (*senderSystem == resource::naming_system::telematicID)
     {
         return TelematikId{*senderValue};
     }
@@ -369,20 +311,22 @@ bool Communication::isReply() const
 
 void Communication::setSender(const Identity& sender)
 {
-    if (std::holds_alternative<Kvnr>(sender))
-    {
-        ModelExpect(messageType() != MessageType::ChargChangeReply, "ChargChangeReply cannot be sent by insurant");
-        const auto& kvnr = std::get<Kvnr>(sender);
-        setSender(kvnr.id(), kvnr.namingSystem(isDeprecatedProfile()));
-    }
-    else
-    {
-        ModelExpect(isReply(), "Requests cannot be sent from telematik-id");
-        const auto& telematikId = std::get<TelematikId>(sender);
-        auto nsTelematikId =
-            isDeprecatedProfile() ? naming_system::deprecated::telematicID : naming_system::telematicID;
-        setSender(telematikId.id(), nsTelematikId);
-    }
+    const auto setter = [this](const auto& id) {
+        setSender(id);
+    };
+    std::visit(setter, sender);
+}
+
+void model::Communication::setSender(const Kvnr& kvnr)
+{
+    ModelExpect(messageType() != MessageType::ChargChangeReply, "ChargChangeReply cannot be sent by insurant");
+    setSender(kvnr.id(), kvnr.namingSystem());
+}
+
+void model::Communication::setSender(const TelematikId& telematikId)
+{
+    ModelExpect(isReply(), "Requests cannot be sent from telematik-id");
+    setSender(telematikId.id(), naming_system::telematicID);
 }
 
 void Communication::setSender(std::string_view sender, std::string_view namingSystem)
@@ -395,8 +339,7 @@ Identity Communication::recipient() const
 {
     const auto recipientValue = getStringValue(recipient0IdentifierValuePointer);
     const auto recipientSystem = getStringValue(recipient0IdentifierSystemPointer);
-    if (recipientSystem == resource::naming_system::telematicID ||
-        recipientSystem == resource::naming_system::deprecated::telematicID)
+    if (recipientSystem == resource::naming_system::telematicID)
     {
         return TelematikId{recipientValue};
     }
@@ -409,15 +352,13 @@ void Communication::setRecipient(const Identity& recipient)
     {
         ModelExpect(isReply() || messageType() == MessageType::Representative, "Insurant cannot be recipient for requests");
         const auto& kvnr = std::get<Kvnr>(recipient);
-        setRecipient(kvnr.id(), kvnr.namingSystem(isDeprecatedProfile()));
+        setRecipient(kvnr.id(), kvnr.namingSystem());
     }
     else
     {
         ModelExpect(! isReply(), "Recipient cannot be telematik-id for replies");
         const auto& telematikId = std::get<TelematikId>(recipient);
-        auto nsTelematikId =
-            isDeprecatedProfile() ? naming_system::deprecated::telematicID : naming_system::telematicID;
-        setRecipient(telematikId.id(), nsTelematikId);
+        setRecipient(telematikId.id(), naming_system::telematicID);
     }
 }
 
@@ -494,11 +435,13 @@ std::optional<std::string_view> Communication::contentString() const
 // GEMREQ-start A_19450-01
 void Communication::verifyPayload(const JsonValidator& validator) const
 {
-    mPayload.verifyLength();
+    CommunicationPayload payload{getValue(payloadPointer)};
+
+    payload.verifyLength();
     const auto schema = payloadSchema();
     if (schema.has_value())
     {
-        mPayload.validateJsonSchema(validator, *schema);
+        payload.validateJsonSchema(validator, *schema);
     }
 }
 // GEMREQ-end A_19450-01
@@ -506,11 +449,6 @@ void Communication::verifyPayload(const JsonValidator& validator) const
 
 std::optional<SchemaType> Communication::payloadSchema() const
 {
-    // resources of 2022 profiles are excluded from payload validation
-    if (isDeprecatedProfile())
-    {
-        return std::nullopt;
-    }
     using enum MessageType;
     switch (messageType())
     {
@@ -527,24 +465,36 @@ std::optional<SchemaType> Communication::payloadSchema() const
     Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType())), std::logic_error);
 }
 
-bool Communication::canValidateGeneric(MessageType messageType, ResourceVersion::WorkflowOrPatientenRechnungProfile profile)
+std::optional<model::Timestamp> model::Communication::getValidationReferenceTimestamp() const
 {
-    switch (messageType)
-    {
-        using enum model::Communication::MessageType;
-        case DispReq:
-        case Representative:
-            return true;
-        case InfoReq:
-        case Reply:
-        case ChargChangeReq:
-        case ChargChangeReply:
-            return ! ResourceVersion::deprecatedProfile(profile);
-    }
-    Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType)), std::logic_error);
+    return Timestamp::now();
 }
 
-bool model::Communication::canValidateGeneric() const
+// GEMREQ-start A_19450-01#profileCheck
+ProfileType model::Communication::profileType() const
 {
-    return canValidateGeneric(messageType(), value(getSchemaVersion()));
+    static const std::set<ProfileType> acceptedCommunicationSet{acceptedCommunications};
+    auto profileName = getProfileName();
+    ErpExpect(profileName.has_value(), HttpStatus::BadRequest, "Profile missing in Communication message.");
+    auto profileType = findProfileType(*profileName);
+    if (! profileType.has_value() || ! acceptedCommunicationSet.contains(*profileType))
+    {
+        const auto& fhirInstance = Fhir::instance();
+        const auto& backend = std::addressof(fhirInstance.backend());
+        const auto& viewList = fhirInstance.structureRepository(model::Timestamp::now());
+        std::list<std::string> profileUrls;
+        std::ranges::transform(acceptedCommunications, back_inserter(profileUrls), [](ProfileType pt) {
+            return std::string{value(profile(pt))};
+        });
+        std::string_view sep;
+        std::ostringstream supportlist;
+        for (const auto& key : viewList.supportedVersions(backend, profileUrls))
+        {
+            supportlist << sep << key;
+            sep = ", ";
+        }
+        ModelFail("invalid profile " + std::string{*profileName} + " must be one of: " + std::move(supportlist).str());
+    }
+    return *profileType;
 }
+// GEMREQ-end A_19450-01#profileCheck

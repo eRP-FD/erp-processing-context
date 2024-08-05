@@ -14,17 +14,21 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class AbgabedatenPkvBundle final : public BundleBase<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>
+class AbgabedatenPkvBundle final : public BundleBase<AbgabedatenPkvBundle>
 {
 public:
-    using BundleBase<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>::BundleBase;
-    using Resource<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>::fromXml;
-    using Resource<AbgabedatenPkvBundle, ResourceVersion::AbgabedatenPkv>::fromJson;
+    static constexpr auto resourceTypeName = "Bundle";
+    static constexpr auto profileType = ProfileType::DAV_DispenseItem;
+
+    using BundleBase<AbgabedatenPkvBundle>::BundleBase;
+    using Resource<AbgabedatenPkvBundle>::fromXml;
+    using Resource<AbgabedatenPkvBundle>::fromJson;
 
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
-
-    static constexpr auto resourceTypeName = "Bundle";
 };
+
+extern template class BundleBase<AbgabedatenPkvBundle>;
+extern template class Resource<AbgabedatenPkvBundle>;
 
 } // namespace model
 

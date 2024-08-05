@@ -54,12 +54,15 @@ public:
     void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) override;
     void activateTask(const model::Task& task, const SafeString& key,
                       const model::Binary& healthCareProviderPrescription) override;
+    void updateTaskMedicationDispense(const model::Task& task,
+                                      const std::vector<model::MedicationDispense>& medicationDispenses) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task,
                                              const std::vector<model::MedicationDispense>& medicationDispenses,
                                              const model::ErxReceipt& receipt) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
                                              const std::vector<model::MedicationDispense>& medicationDispenses,
                                              const model::ErxReceipt& receipt) override;
+    void updateTaskDeleteMedicationDispense(const model::Task& task) override;
     void updateTaskClearPersonalData(const model::Task& task) override;
 
     [[nodiscard]] std::string storeAuditEventData(model::AuditData& auditData) override;
@@ -161,7 +164,9 @@ private:
     [[nodiscard]]
     std::tuple<SafeString, BlobId> communicationKeyAndId(const std::string_view& identity,
                                                                        const db_model::HashedId& identityHashed);
-
+    [[nodiscard]] db_model::EncryptedBlob
+    encryptMedicationDispense(const std::vector<model::MedicationDispense>& medicationDispenses,
+                              const SafeString& keyForMedicationDispense);
     [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr);
     [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
     chargeItemKey(const ::model::PrescriptionId& prescriptionId) const;

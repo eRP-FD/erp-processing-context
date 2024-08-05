@@ -42,14 +42,13 @@ model::Bundle GetAllAuditEventsHandler::createBundle (
 {
     const std::string linkBase = getLinkBase() + "/AuditEvent";
     const auto language = getLanguageFromHeader(request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage));
-    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     for (const auto& data : auditData)
     {
         if(data.isValidEventId())
         {
             const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
-                data, language, serviceContext.auditEventTextTemplates(), request.getAccessToken(),
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+                data, language, serviceContext.auditEventTextTemplates(), request.getAccessToken());
             bundle.addResource(
                 linkBase + "/" + std::string(auditEvent.id()),
                 {},
@@ -83,14 +82,18 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
                 return val;
             }
         };
+    A_24438.start("Set date as default sort argument.");
     auto arguments = std::optional<UrlArguments>(
         std::in_place,
         std::vector<SearchParameter>
         {
             { "date", "id", SearchParameter::Type::DateAsUuid },
-            { "subtype", "action", SearchParameter::Type::String, std::move(searchToDbValue) }
-        });
+            { "subtype", "action", SearchParameter::Type::String, std::move(searchToDbValue) },
+            { "entity", "prescription_id", SearchParameter::Type::PrescriptionId },
+        }, "date");
+    A_24438.finish();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
+    const auto entitySearchArgument = arguments->getSearchArgument("entity");
     // add a hidden argument to limit the query up to today
     std::vector<std::optional<model::TimePeriod>> timePeriods;
     timePeriods.emplace_back(model::TimePeriod::fromFhirSearchDate(session.sessionTime().toGermanDate()));
@@ -120,12 +123,22 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
         hasNextPage = auditEvents.size() >= arguments->pagingArgument().getCount();
         linkMode = UrlArguments::LinkMode::id;
     }
-    const auto links = arguments->getBundleLinks(hasNextPage, getLinkBase(), "/AuditEvent", linkMode);
+    const auto links = arguments->createBundleLinks(hasNextPage, getLinkBase(), "/AuditEvent", linkMode);
     for (const auto& link : links)
     {
-        bundle.setLink(link.first, link.second);
+        if (link.first != model::Link::Last)
+        {
+            bundle.setLink(link.first, link.second);
+        }
     }
     A_19397.finish();
+
+    if (entitySearchArgument.has_value() && entitySearchArgument->valuesCount() == 1)
+    {
+        auto prescriptionId = entitySearchArgument->valueAsPrescriptionId(0);
+        session.auditDataCollector().setPrescriptionId(prescriptionId);
+        session.accessLog.prescriptionId(prescriptionId);
+    }
 
     makeResponse(session, HttpStatus::OK, &bundle);
 }
@@ -170,9 +183,9 @@ void GetAuditEventHandler::handleRequest (PcSessionContext& session)
     }
 
     model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(
-        auditData, getLanguageFromHeader(session.request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage)),
-        session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken(),
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+        auditData,
+        getLanguageFromHeader(session.request.header()).value_or(std::string(AuditEventTextTemplates::defaultLanguage)),
+        session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken());
 
     makeResponse(session, HttpStatus::OK, &auditEvent);
 }

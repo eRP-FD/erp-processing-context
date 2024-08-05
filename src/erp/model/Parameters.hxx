@@ -20,7 +20,8 @@
 namespace model
 {
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Parameters : public Resource<Parameters, ResourceVersion::NotProfiled>
+template<typename ParametersT>
+class Parameters : public Resource<ParametersT>
 {
 public:
     static constexpr auto resourceTypeName = "Parameters";
@@ -29,9 +30,42 @@ public:
     const rapidjson::Value* findResourceParameter(std::string_view name) const;
     bool hasParameter(std::string_view name) const;
 
-    // Available in Task/$create request parameter
-    std::optional<model::PrescriptionType> getPrescriptionType() const;
     std::optional<std::string_view> getWorkflowSystem() const;
+
+
+private:
+    friend class Resource<ParametersT>;
+    using Resource<ParametersT>::Resource;
+};
+
+class CreateTaskParameters : public Parameters<CreateTaskParameters>
+{
+public:
+    static constexpr auto profileType = ProfileType::CreateTaskParameters;
+    using Parameters::Parameters;
+    friend class Resource;
+
+    std::optional<model::PrescriptionType> getPrescriptionType() const;
+
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+};
+
+class ActivateTaskParameters : public Parameters<ActivateTaskParameters>
+{
+public:
+    static constexpr auto profileType = ProfileType::ActivateTaskParameters;
+    using Parameters::Parameters;
+    friend class Resource;
+
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+};
+
+class PatchChargeItemParameters : public Parameters<PatchChargeItemParameters>
+{
+public:
+    static constexpr auto profileType = ProfileType::PatchChargeItemParameters;
+    using Parameters::Parameters;
+    friend class Resource;
 
     struct MarkingFlag
     {
@@ -55,16 +89,22 @@ public:
     // Available in PATCH ChargeItem
     model::ChargeItemMarkingFlags getChargeItemMarkingFlags() const;
 
-private:
-    friend class Resource;
-    using Resource::Resource;
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
+private:
     void updateMarkingFlagFromPartArray(
         const NumberAsStringParserDocument::ConstArray& partArray,
         MarkingFlag& result) const;
 };
 
-
+// NOLINTBEGIN(bugprone-exception-escape)
+extern template class Resource<CreateTaskParameters>;
+extern template class Parameters<CreateTaskParameters>;
+extern template class Resource<class ActivateTaskParameters>;
+extern template class Parameters<ActivateTaskParameters>;
+extern template class Resource<PatchChargeItemParameters>;
+extern template class Parameters<PatchChargeItemParameters>;
+// NOLINTEND(bugprone-exception-escape)
 }
 
 #endif //ERP_PROCESSING_CONTEXT_PARAMETER_HXX

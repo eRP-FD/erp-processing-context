@@ -37,7 +37,7 @@ public:
 
     /** Moves stored value */
     std::string id() &&;
-    std::string_view namingSystem(bool deprecated) const;
+    std::string_view namingSystem() const;
 
     void setId(std::string_view id);
 

@@ -66,7 +66,6 @@ public:
     {
         mockDatabase.reset();
         const auto& origTask = model::Task::fromJsonNoValidation(taskJson);
-        bool deprecatedKbv = model::ResourceVersion::deprecatedProfile(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
 
         ActivateTaskHandler handler({});
         ServerRequest request{serverRequest(taskJson, kbvBundleXml, args.signingTime)};
@@ -107,8 +106,7 @@ public:
         }
 
         std::optional<model::Task> task;
-        ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                                    *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
         ASSERT_TRUE(task.has_value());
         EXPECT_EQ(task->prescriptionId(), origTask.prescriptionId());
         EXPECT_EQ(task->status(), model::Task::Status::ready);
@@ -133,10 +131,7 @@ public:
 
         if (args.flowTypeDisplayName.has_value())
         {
-            auto sdPrescriptionType = deprecatedKbv
-                                          ? model::resource::structure_definition::deprecated::prescriptionType
-                                          : model::resource::structure_definition::prescriptionType;
-            auto ext = task->getExtension(sdPrescriptionType);
+            auto ext = task->getExtension(model::resource::structure_definition::prescriptionType);
             ASSERT_TRUE(ext.has_value());
             auto flowTypeDisplay = ext->valueCodingDisplay();
             ASSERT_TRUE(flowTypeDisplay.has_value());
@@ -159,10 +154,8 @@ public:
         auto performerTypeCodingCode = getOptionalStringValue(*performerTypeCoding, codePtr);
         auto performerTypeCodingDisplay = getOptionalStringValue(*performerTypeCoding, displayPtr);
         ASSERT_TRUE(performerTypeCodingSystem.has_value());
-        if (deprecatedKbv)
-            ASSERT_EQ(std::string{*performerTypeCodingSystem}, "urn:ietf:rfc:3986");
-        else
-            ASSERT_EQ(std::string{*performerTypeCodingSystem}, "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType");
+        ASSERT_EQ(std::string{*performerTypeCodingSystem},
+                  "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType");
         ASSERT_TRUE(performerTypeCodingCode.has_value());
         ASSERT_EQ(std::string{*performerTypeCodingCode}, "urn:oid:1.2.276.0.76.4.54");
         ASSERT_TRUE(performerTypeCodingDisplay.has_value());
@@ -172,17 +165,6 @@ public:
 
 class ActivateTaskTestPkv : public ActivateTaskTest
 {
-protected:
-    void SetUp() override
-    {
-        ActivateTaskTest::SetUp();
-        auto currentVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
-        if (currentVersion < model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
-        {
-            GTEST_SKIP_(
-                std::string("PKV not testable with ").append(model::ResourceVersion::v_str(currentVersion)).c_str());
-        }
-    }
 };
 
 TEST_F(ActivateTaskTest, ActivateTask)
@@ -384,19 +366,16 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
     A_23936.test("Test invalid Patient.Coding.Code");
     const auto* kvnr = "123456";
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
-    bool deprecated = model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
     auto signingTime = model::Timestamp::now();
-    std::string_view kvkNs = deprecated ? "http://fhir.de/NamingSystem/gkv/kvk-versichertennummer" : "http://fhir.de/sid/gkv/kvk-versichertennummer";
-    const auto kbvBundleXml =
-        ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
-                                         .authoredOn = signingTime,
-                                         .kvnr = kvnr,
-                                         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-                                         .coverageInsuranceType = "SEL",
-                                         .forceInsuranceType = "kvk",
-                                         .forceKvid10Ns = kvkNs,
-                                         .patientIdentifierSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_identifier_type"});
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId,
+         .authoredOn = signingTime,
+         .kvnr = kvnr,
+         .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+         .coverageInsuranceType = "SEL",
+         .forceInsuranceType = "kvk",
+         .forceKvid10Ns = "http://fhir.de/sid/gkv/kvk-versichertennummer",
+         .patientIdentifierSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_identifier_type"});
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = prescriptionId});
     std::exception_ptr exception;
@@ -477,7 +456,7 @@ TEST_F(ActivateTaskTest, AuthoredOnSignatureDateEquality)
 
     for (const auto& testData : testSet)
     {
-        const auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>(testData.authoredDate);
+        const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(testData.authoredDate);
         const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
                                                              .authoredOn = testData.authoredDate,
                                                              .kvnr = kvnr,
@@ -498,7 +477,7 @@ TEST_F(ActivateTaskTest, ThreeMonthExpiry)
         .prescriptionId = prescriptionId,
         .timestamp = authoredOn
     });
-    const auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>(authoredOn);
+    const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     auto bundle = ResourceTemplates::kbvBundleXml(
         {.prescriptionId = prescriptionId, .authoredOn = authoredOn, .kvnr = kvnr, .kbvVersion = kbvVersion});
 
@@ -516,7 +495,7 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
     const auto* kvnr = "Y229270213";
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 429);
-    const auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>(timestamp);
+    const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(timestamp);
     auto bundle = ResourceTemplates::kbvBundleXml(
         {.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr, .kbvVersion = kbvVersion});
     // intent is only used for medication request and immediately after status, where we want to insert the extension
@@ -535,241 +514,36 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
 
 TEST_F(ActivateTaskTest, authoredOnReference)
 {
-    namespace rv = model::ResourceVersion;
-    if (! rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2023_07_01) ||
-        ! rv::supportedBundles().contains(rv::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("Only relevant starting with overlapping period");
-    }
+    auto now = std::chrono::system_clock::now();
+    auto today{date::floor<date::days>(now)};
+    auto yesterday{today - date::days{1}};
+
+    testutils::ShiftFhirResourceViewsGuard viewGuard{"2024-10-01", fhirtools::Date{today, fhirtools::Date::Precision::day}};
+
     using namespace std::chrono_literals;
     const auto* kvnr = "X234567891";
-    const auto yesterday = model::Timestamp::now() - 24h;
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
 
-    // authoredOn is after overlapping period, kbv 2023 -> accept
+    // authoredOn is in DARREICHUNGSFORM 1.13 period (yesterday)
     {
         const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = taskId, .authoredOn = yesterday, .kbvVersion = rv::KbvItaErp::v1_1_0});
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        ASSERT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = yesterday}));
-    }
-
-    // authoredOn is after overlapping period, kbv 2022 -> reject old resource
-    {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = taskId, .authoredOn = yesterday, .kbvVersion = rv::KbvItaErp::v1_0_2});
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                      (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
+            {.prescriptionId = taskId, .authoredOn = model::Timestamp{yesterday}, .darreichungsfrom = "IID"});
         ASSERT_NO_FATAL_FAILURE(
             checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
-                              {.expectedStatus = HttpStatus::BadRequest, .signingTime = yesterday}));
+                              {.expectedStatus = HttpStatus::BadRequest, .signingTime = model::Timestamp{yesterday}}));
     }
 
-    // authoredOn is during overlapping period, kbv 2023 profile -> accept
+    // authoredOn is in DARREICHUNGSFORM 1.14 period (yesterday)
     {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = taskId, .authoredOn = yesterday, .kbvVersion = rv::KbvItaErp::v1_1_0});
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                      (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
+        const auto kbvBundleXml =
+            ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .authoredOn = model::Timestamp{today}, .darreichungsfrom = "IID"});
         ASSERT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = yesterday}));
-    }
-    // authoredOn is during overlapping period, kbv 2022 profile -> accept
-    {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = taskId, .authoredOn = yesterday, .kbvVersion = rv::KbvItaErp::v1_0_2});
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                      (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
-        ASSERT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = yesterday}));
+            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = model::Timestamp{today}}));
     }
 }
-
-
-class ActivateTaskValidationModeTest
-    : public ActivateTaskTest
-    , public ::testing::WithParamInterface<Configuration::GenericValidationMode>
-{};
-
-TEST_P(ActivateTaskValidationModeTest, OnUnexpectedKbvExtension)
-{
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
-    {
-        GTEST_SKIP_("Skipping test because the kbv profile has closed slicing");
-    }
-    EnvironmentVariableGuard validationModeGuard{"ERP_SERVICE_GENERIC_VALIDATION_MODE",
-                                                 std::string{magic_enum::enum_name(GetParam())}};
-    EnvironmentVariableGuard validationModeGuardOld{"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE",
-                                                 std::string{magic_enum::enum_name(GetParam())}};
-    A_22927.test("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
-    const auto authoredOn = model::Timestamp::now();
-    const auto* kvnr = "X234567891";
-    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
-    const std::string_view extraExtension =
-        R"--(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Illegal_extension">
-          <valueCoding>
-            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
-            <code value="00"/>
-          </valueCoding>
-        </extension>)--";
-
-    const auto task = ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = authoredOn});
-    const auto bundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = prescriptionId, .authoredOn = authoredOn, .kvnr = kvnr, .metaExtension = extraExtension});
-
-    {
-        EnvironmentVariableGuard onUnknownExtensionGuard{
-            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "ignore"};
-        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {.signingTime = authoredOn}));
-    }
-    {
-        EnvironmentVariableGuard onUnknownExtensionGuard{
-            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
-        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {HttpStatus::Accepted, authoredOn}));
-    }
-    {
-        EnvironmentVariableGuard onUnknownExtensionGuard{
-            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "reject"};
-        EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, kvnr, {HttpStatus::BadRequest, authoredOn}));
-    }
-}
-
-
-TEST_P(ActivateTaskValidationModeTest, genericValidation)
-{
-    using namespace std::string_literals;
-    using enum Configuration::GenericValidationMode;
-    bool usesNewProfile = model::ResourceVersion::currentBundle() ==
-                          model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01;
-    if (usesNewProfile && GetParam() != require_success)
-    {
-        // new profiles are always require_success, therefore we cannot test any other modes
-        GTEST_SKIP();
-    }
-    const auto message =
-        usesNewProfile
-            ? "FHIR-Validation error"s
-            : "missing valueCoding.code in extension https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis"s;
-
-    auto time = model::Timestamp::now();
-    const auto* kvnr = "X234567891";
-    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
-    const std::string_view extraExtension =
-        R"--(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Illegal_extension">
-          <valueCoding>
-            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"/>
-            <code value="00"/>
-          </valueCoding>
-        </extension>)--";
-    EnvironmentVariableGuard onUnknownExtensionGuard{
-        ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, "report"};
-    EnvironmentVariableGuard validationModeGuardOld{
-        ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, std::string{magic_enum::enum_name(GetParam())}};
-    const auto task = ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = time});
-    const auto invalidExtensionBundle = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = prescriptionId, .authoredOn = time, .kvnr = kvnr, .metaExtension = extraExtension});
-
-    auto genericFailBundleDuplicateUrl = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = prescriptionId, .authoredOn = time, .kvnr = kvnr});
-    // for generic fail, duplicate the fullUrl for two entries
-    std::string::size_type fullUrlEndPos = 0u;
-    for (int i = 0; i < 2; ++i)
-    {
-        auto fullUrlStartPos = genericFailBundleDuplicateUrl.find("<fullUrl value=", fullUrlEndPos);
-        fullUrlEndPos = genericFailBundleDuplicateUrl.find("/>", fullUrlStartPos);
-        ASSERT_NE(fullUrlStartPos, std::string::npos);
-        ASSERT_NE(fullUrlEndPos, std::string::npos);
-        ASSERT_GT(fullUrlEndPos, fullUrlStartPos);
-        fullUrlEndPos += 2;
-        genericFailBundleDuplicateUrl.replace(fullUrlStartPos, fullUrlEndPos - fullUrlStartPos, "<fullUrl value=\"http://erp-test.net/duplicateUrl\"/>");
-    }
-    auto badBundle = genericFailBundleDuplicateUrl;
-    {
-        const auto codeStartPos = genericFailBundleDuplicateUrl.find("<code");
-        const auto codeEndPos = genericFailBundleDuplicateUrl.find('>', codeStartPos);
-        ASSERT_NE(codeStartPos, std::string::npos);
-        ASSERT_NE(codeEndPos, std::string::npos);
-        ASSERT_GT(codeEndPos, codeStartPos);
-        badBundle.erase(codeStartPos, codeEndPos - codeStartPos + 1);
-    }
-    auto goodBundle = ResourceTemplates::kbvBundleXml({.authoredOn = time, .kvnr = kvnr});
-
-    bool requireGenericSuccess = GetParam() == Configuration::GenericValidationMode::require_success;
-    EXPECT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, goodBundle, kvnr, {.signingTime = time}));
-    auto expectGeneric = requireGenericSuccess ? (HttpStatus::BadRequest) : (HttpStatus::OK);
-    EXPECT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, genericFailBundleDuplicateUrl, kvnr, {expectGeneric, time}));
-    EXPECT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, invalidExtensionBundle, kvnr, {HttpStatus::Accepted, time}));
-
-    // this can only fail if the generic validator requires success for new profile versions
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 ||
-        requireGenericSuccess)
-    {
-        EXPECT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, task, badBundle, kvnr, {HttpStatus::BadRequest, time}));
-    }
-    try
-    {
-        mockDatabase.reset();
-        ActivateTaskHandler handler({});
-        ServerRequest request{serverRequest(task, badBundle, time)};
-        ServerResponse serverResponse;
-        AccessLog accessLog;
-        SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
-        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-        handler.handleRequest(sessionContext);
-        // for new profiles, there is no xsd validation, and if generic validation is disabled,
-        // nothing can throw
-        if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 ||
-            requireGenericSuccess)
-        {
-            ADD_FAILURE() << "handler.handleRequest should throw.";
-        }
-    }
-    catch (const ErpException& erpException)
-    {
-        ASSERT_EQ(erpException.status(), HttpStatus::BadRequest);
-        EXPECT_EQ(erpException.what(), message);
-        switch (GetParam())
-        {
-
-            case Configuration::GenericValidationMode::disable:
-                EXPECT_FALSE(erpException.diagnostics().has_value());
-                break;
-            case Configuration::GenericValidationMode::detail_only:
-            case Configuration::GenericValidationMode::ignore_errors:
-            case Configuration::GenericValidationMode::require_success: {
-                ASSERT_TRUE(erpException.diagnostics().has_value());
-                std::vector<std::string> diagnosticsMessages = String::split(erpException.diagnostics().value(), ";");
-                // as the errors may vary between profile versions, be happy if there are "enough" errors
-                // specific errors can be tested separately by the validator tests
-                EXPECT_GT(diagnosticsMessages.size(), 5);
-            }
-        }
-    }
-}
-
-
-INSTANTIATE_TEST_SUITE_P(AllModes, ActivateTaskValidationModeTest,
-                         ::testing::ValuesIn(magic_enum::enum_values<Configuration::GenericValidationMode>()),
-                         [](auto info) { return std::string{magic_enum::enum_name(info.param)};});
-
 
 TEST_F(ActivateTaskTest, ERP_12708_kbv_bundle_RepeatedErrorMessages)
 {
@@ -777,7 +551,6 @@ TEST_F(ActivateTaskTest, ERP_12708_kbv_bundle_RepeatedErrorMessages)
         R"(Bundle.entry[1].resource{Patient}.identifier[0]: error: )"
         R"(element doesn't match any slice in closed slicing)"
         R"( (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0); )"};
-    EnvironmentVariableGuard validFromGuard{ConfigurationKey::FHIR_PROFILE_VALID_FROM, "2022-11-01"};
     ResourceManager& resourceManager = ResourceManager::instance();
     const auto& kbvBundle =
         resourceManager.getStringResource("test/EndpointHandlerTest/ERP-12708-kbv_bundle-RepeatedErrorMessages.xml");
@@ -805,8 +578,7 @@ TEST_F(ActivateTaskTest, ERP_12708_kbv_bundle_RepeatedErrorMessages)
 TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
 {
     std::string_view kvnr{"X123456788"};
-    auto kbvBundle = ResourceTemplates::kbvBundleXml(
-        {.authoredOn = model::Timestamp::now(), .kvnr = kvnr, .kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0});
+    auto kbvBundle = ResourceTemplates::kbvBundleXml({.authoredOn = model::Timestamp::now(), .kvnr = kvnr});
     kbvBundle = String::replaceAll(kbvBundle, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
                                    "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle");
     auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
@@ -823,8 +595,8 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
         // see ERP-13187:
-        EXPECT_EQ(ex.diagnostics().value(), "Unable to determine profile type from name: "
-                                            "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0");
+        EXPECT_EQ(ex.diagnostics().value(), "Bundle: error: Unknown profile: "
+                                            "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0; ");
     }
     catch (...)
     {
@@ -832,43 +604,11 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     }
 }
 
-TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2022)
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
 {
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2022 profiles");
-    }
     std::string_view kvnr{"X123456788"};
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .kvnr = kvnr});
-    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
-        {.kbvVersion = model::ResourceVersion::KbvItaErp::v1_0_2, .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
-                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
-    ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
-                                      "date does not match YYYY-MM-DD in extension Zeitraum");
-}
-
-TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2023)
-{
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2023 profiles");
-    }
-    std::string_view kvnr{"X123456788"};
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .kvnr = kvnr});
-    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
-        {.kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0, .redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
+    auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
@@ -888,43 +628,11 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd_2023)
         "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
 }
 
-TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2022)
+TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
 {
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2022 profiles");
-    }
     std::string_view kvnr{"X123456788"};
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .kvnr = kvnr});
-    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = model::ResourceVersion::KbvItaErp::v1_0_2,
-                                                         .redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
-                          {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
-    ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
-                                      "date does not match YYYY-MM-DD in extension Zeitraum");
-}
-
-TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2023)
-{
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2023 profiles");
-    }
-    std::string_view kvnr{"X123456788"};
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .kvnr = kvnr});
-    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = model::ResourceVersion::KbvItaErp::v1_1_0,
-                                                         .redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
+    auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
+    auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
@@ -946,16 +654,8 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart_2023)
 
 TEST_F(ActivateTaskTest, ERP20812_acceptUpperCase_ID)
 {
-     if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2023 profiles");
-    }
-   std::string_view kvnr{"X234567891"};
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .kvnr = kvnr});
+    std::string_view kvnr{"X234567891"};
+    auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
     auto mvoStart = model::Timestamp::now().toGermanDate();
     //auto signingTime = model::Timestamp::now();
     auto kbvBundle = ResourceTemplates::kbvBundleMvoXml(
@@ -1033,13 +733,11 @@ TEST_F(ActivateTaskTest, validWithoutIK)
 TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
 {
     A_24030.test("Invalid IKNR in coverage extension");
-    const bool isDeprecated = model::ResourceVersion::deprecatedProfile(
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
     const model::Kvnr kvnr{"B123457897"};
     const model::Iknr iknr{"109911214"};
     const auto extensionCoverage =
         R"(<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Alternative_IK"><valueIdentifier><system value=")" +
-        std::string{iknr.namingSystem(isDeprecated)} + R"(" /><value value=")" + iknr.id() +
+        std::string{iknr.namingSystem()} + R"(" /><value value=")" + iknr.id() +
         R"(" /></valueIdentifier></extension>)";
     auto signingTime = model::Timestamp::now();
     const auto taskId =
@@ -1141,10 +839,6 @@ TEST_F(ActivateTaskTest, failInvalidPZNChecksum)
 
 TEST_F(ActivateTaskTest, failInvalidPZNFormat)
 {
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
-    {
-        GTEST_SKIP();
-    }
     const model::Kvnr kvnr{"B123457897"};
     const model::Pzn shortPZN{"2750891"};
     auto signingTime = model::Timestamp::now();
@@ -1168,11 +862,6 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
 
 TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
 {
-    if (! model::ResourceVersion::supportedBundles().contains(
-        model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2023 profiles");
-    }
     auto kbvBundleXml = ResourceManager::instance().getStringResource(
         "test/issues/ERP-17605/Bundle_invalid_MedicationCompounding_missing_ingredient_array.xml");
     const auto taskId =
@@ -1194,133 +883,102 @@ TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
         "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.1.0); ");
 }
 
-class ActivateTaskTestNoLyo : public ActivateTaskTest
+struct ActivateTaskTestDarreichungsformValidityParam
 {
-protected:
-    ActivateTaskTestNoLyo()
-        : envGuardUntil{"ERP_DARREICHUNGSFORM_1_12_VALID_UNTIL",
-                        (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone)}
-        , envGuardFrom{"ERP_DARREICHUNGSFORM_1_13_VALID_FROM",
-                       (model::Timestamp::now() + date::days{2}).toXsDate(model::Timestamp::GermanTimezone)}
-    {
-    }
-    EnvironmentVariableGuard envGuardUntil;
-    EnvironmentVariableGuard envGuardFrom;
+    std::string darreichungsfrom;
+    std::string becomesValidInView;
+    std::string previousVersion;
 };
 
-TEST_F(ActivateTaskTestNoLyo, DarreichungsformNoLYO)
+class ActivateTaskTestDarreichungsformValidity
+    : public ActivateTaskTest,
+      public ::testing::WithParamInterface<ActivateTaskTestDarreichungsformValidityParam>
 {
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
-    {
-        GTEST_SKIP_("old profiles");
-    }
+};
+
+TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
+{
+    using namespace fhirtools::version_literal;
+    const auto& fhirInstance = Fhir::instance();
+    const auto* backend = std::addressof(fhirInstance.backend());
+    const auto now = model::Timestamp::now();
+    const auto today = date::floor<date::days>(now.toChronoTimePoint());
+    const auto tomorrow = today + date::days{1};
+    testutils::ShiftFhirResourceViewsGuard shiftView{GetParam().becomesValidInView, tomorrow};
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = "LYO"});
+        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = GetParam().darreichungsfrom});
 
     std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
-                                              {.expectedStatus = HttpStatus::BadRequest,
-                                               .signingTime = model::Timestamp::now(),
-                                               .outExceptionPtr = exception}));
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
+        mServiceContext, taskJson, kbvBundleXml, "X234567891",
+        {.expectedStatus = HttpStatus::BadRequest, .signingTime = now, .outExceptionPtr = exception}));
+    const gsl::not_null repoView = Fhir::instance().structureRepository(now).latest().view(backend);
+    const auto* valueSet = repoView->findValueSet(
+        fhirtools::DefinitionKey{"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", std::nullopt});
+    ASSERT_NE(valueSet, nullptr);
+    ASSERT_EQ(valueSet->getVersion(), fhirtools::FhirVersion{GetParam().previousVersion});
+    ASSERT_FALSE(valueSet->containsCode(GetParam().darreichungsfrom,
+                                        "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+    // Bonbons and bubble gum should be there, right?
+    ASSERT_TRUE(valueSet->containsCode("BON", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+    ASSERT_TRUE(valueSet->containsCode("KGU", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
-        "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code LYO is not part of CodeSystem "
-        "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
-        "http://hl7.org/fhir/StructureDefinition/Coding|4.0.1); Bundle.entry[4].resource{Medication}.form.coding[0]: "
-        "error: Code LYO is not part of CodeSystem https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/CodeableConcept|4.0.1); "
-        "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code LYO is not part of CodeSystem "
-        "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0); ");
+        "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code " + GetParam().darreichungsfrom +
+            " is not part of CodeSystem "
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
+            "http://hl7.org/fhir/StructureDefinition/Coding|4.0.1); "
+            "Bundle.entry[4].resource{Medication}.form.coding[0]: "
+            "error: Code " +
+            GetParam().darreichungsfrom +
+            " is not part of CodeSystem "
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM "
+            "(from profile: http://hl7.org/fhir/StructureDefinition/CodeableConcept|4.0.1); "
+            "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code " +
+            GetParam().darreichungsfrom +
+            " is not part of CodeSystem "
+            "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0); "
+            "Bundle.entry[4].resource{Medication}.form.coding[0]: "
+            "error: Code " +
+            GetParam().darreichungsfrom +
+            " with system https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM not allowed "
+            "for "
+            "ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM|" + GetParam().previousVersion + ", allowed are " +
+            valueSet->codesToString() +
+            " (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:kbvDarreichungsform|1.1.0); ");
 }
 
-class ActivateTaskTestWithLyo : public ActivateTaskTest
+TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformValid)
 {
-protected:
-    ActivateTaskTestWithLyo()
-        : yesterday((model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone))
-        , today((model::Timestamp::now()).toXsDate(model::Timestamp::GermanTimezone))
-        , envGuardUntil({"ERP_DARREICHUNGSFORM_1_12_VALID_UNTIL", yesterday})
-        , envGuardFrom({"ERP_DARREICHUNGSFORM_1_13_VALID_FROM", today})
-    {
-    }
-    std::string yesterday;
-    std::string today;
-    EnvironmentVariableGuard envGuardUntil;
-    EnvironmentVariableGuard envGuardFrom;
-};
+    auto today = date::floor<date::days>(std::chrono::system_clock::now());
+    testutils::ShiftFhirResourceViewsGuard shiftView{GetParam().becomesValidInView, today};
 
-TEST_F(ActivateTaskTestWithLyo, DarreichungsformWithLYO)
-{
-    GTEST_SKIP_("ERP-20082");
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01)
-    {
-        GTEST_SKIP_("old profiles");
-    }
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = "LYO"});
+        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = GetParam().darreichungsfrom});
 
     ASSERT_NO_FATAL_FAILURE(
         checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
                           {.expectedStatus = HttpStatus::OK, .signingTime = model::Timestamp::now()}));
 }
 
-
-class ActivateTaskTestPkvP : public ActivateTaskTest, public ::testing::WithParamInterface<model::PrescriptionType>
-{
-};
-
-TEST_P(ActivateTaskTestPkvP, RejectOldFhirForWf20x)
-{
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("This test is only relevant for 2022 profiles");
-    }
-    std::string_view kvnr{"X123456788"};
-    auto prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 333);
-    auto kbvBundle = ResourceTemplates::kbvBundlePkvXml({.prescriptionId = prescriptionId,
-                                                         .kvnr = model::Kvnr(kvnr),
-                                                         .kbvVersion = model::ResourceVersion::KbvItaErp::v1_0_2});
-    auto task =
-        ResourceTemplates::taskJson({.gematikVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1,
-                                     .taskType = ResourceTemplates::TaskType::Draft,
-                                     .prescriptionId = prescriptionId,
-                                     .kvnr = kvnr});
-    std::exception_ptr exception;
-    ASSERT_NO_FATAL_FAILURE(
-        checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
-                          {.expectedStatus = HttpStatus::BadRequest,
-                           .signingTime = model::Timestamp::fromXsDate("2021-06-08", model::Timestamp::UTCTimezone),
-                           .insertTask = true,
-                           .outExceptionPtr = exception}));
-    try
-    {
-        ASSERT_TRUE(exception);
-        std::rethrow_exception(exception);
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(std::string(ex.what()), "unsupported fhir version for PKV workflow 200/209: "
-                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2");
-    }
-    catch (...)
-    {
-        ADD_FAILURE() << "Unexpected Exception";
-    }
-}
-
-INSTANTIATE_TEST_SUITE_P(prefix, ActivateTaskTestPkvP,
-                         ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                           model::PrescriptionType::direkteZuweisungPkv));
+INSTANTIATE_TEST_SUITE_P(darreichnungsformen, ActivateTaskTestDarreichungsformValidity,
+                         ::testing::ValuesIn(std::list<ActivateTaskTestDarreichungsformValidityParam>{
+                             {.darreichungsfrom = "IID", .becomesValidInView = "2024-10-01", .previousVersion = "1.13"},
+                             {.darreichungsfrom = "LIV", .becomesValidInView = "2024-10-01", .previousVersion = "1.13"},
+                         }),
+                         [](const auto& p) {
+                             return p.param.darreichungsfrom;
+                         });
 
 namespace
 {
@@ -1358,29 +1016,17 @@ TEST_P(ProzessParameterFlowtype, samples)
     auto signingTime = model::Timestamp::fromGermanDate(std::string{params.signingTime});
     auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
     auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
-    if (model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01)
-    {
-        // in case of new profiles we have to adjust the validity time to the authoredOn/signing time
-        envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                             signingTime.toXsDate(model::Timestamp::GermanTimezone));
-    }
-
-    auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
 
     if (prescriptionId.isPkv())
     {
-        if (kbvVersion == model::ResourceVersion::KbvItaErp::v1_0_2)
-        {
-            GTEST_SKIP();
-        }
         acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
     }
 
     // Create Task
     const auto taskJson = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = signingTime});
-    std::string kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = prescriptionId, .authoredOn = signingTime, .kvnr = kvnr, .kbvVersion = kbvVersion});
+    std::string kbvBundleXml =
+        ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = signingTime, .kvnr = kvnr});
     std::string_view flowTypeDisplayName;
     switch (prescriptionId.type())
     {
@@ -1437,7 +1083,6 @@ class ActivateTaskTestPatchTest : public ActivateTaskTest,
 
 TEST_P(ActivateTaskTestPatchTest, ValidateAfterPatch)
 {
-    auto envGuard = testutils::getNewFhirProfileEnvironment();
     auto kbvBundleXml = ResourceManager::instance().getStringResource(
         "test/validation/xml/v_2023_07_01/kbv/bundle_1_1_2/" + GetParam().testling);
 
@@ -1454,26 +1099,6 @@ TEST_P(ActivateTaskTestPatchTest, ValidateAfterPatch)
                       {.expectedStatus = HttpStatus::BadRequest, .insertTask = true, .outExceptionPtr = exceptionPtr});
 
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(std::rethrow_exception(exceptionPtr), GetParam().expectedError);
-}
-
-TEST_P(ActivateTaskTestPatchTest, ValidateBeforePatch)
-{
-    auto envGuard = testutils::getNewFhirProfileEnvironment();
-    auto kbvBundleXml = ResourceManager::instance().getStringResource(
-        "test/validation/xml/v_2023_07_01/kbv/bundle_1_1_2/" + GetParam().testling);
-
-    const auto today = (model::Timestamp::now()).toXsDate(model::Timestamp::GermanTimezone);
-
-    kbvBundleXml = String::replaceAll(kbvBundleXml, "<authoredOn value=\"2022-05-20\" />",
-                                      "<authoredOn value=\"" + today + "\" />");
-
-    auto signingTime = model::Timestamp::fromGermanDate(today);
-    const auto taskJson =
-        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft,
-                                     .prescriptionId = model::PrescriptionId::fromString("160.100.000.000.004.30"),
-                                     .timestamp = signingTime});
-    checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "K220635158",
-                      {.expectedStatus = HttpStatus::OK, .insertTask = true});
 }
 
 INSTANTIATE_TEST_SUITE_P(

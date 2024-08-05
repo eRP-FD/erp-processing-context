@@ -9,12 +9,17 @@
 #define ERP_PROCESSING_CONTEXT_FHIR_HXX
 
 #include "erp/fhir/FhirConverter.hxx"
-#include "erp/model/ResourceVersion.hxx"
-#include "fhirtools/repository/FhirKbvKeyTablesView.hxx"
+#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/util/XmlHelper.hxx"
 
+#include <list>
 #include <string_view>
+
+namespace model
+{
+class Timestamp;
+}
 
 class FhirConverter;
 
@@ -27,25 +32,22 @@ public:
     {
         return mConverter;
     }
-    std::shared_ptr<fhirtools::FhirStructureRepository>
-    structureRepository(const model::Timestamp& referenceTimestamp,
-                        model::ResourceVersion::FhirProfileBundleVersion version =
-                            model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>()) const
+
+    fhirtools::FhirResourceViewConfiguration::ViewList
+    structureRepository(const model::Timestamp& referenceTimestamp) const;
+
+    const fhirtools::FhirStructureRepositoryBackend& backend() const
     {
-        Expect(mStructureRepository.contains(version),
-               "version not configured: " + std::string{model::ResourceVersion::v_str(version)});
-        return std::make_shared<fhirtools::FhirKbvKeyTablesView>(
-            &mStructureRepository.at(version), Configuration::instance().fhirResourceViewConfiguration(),
-            fhirtools::Date{referenceTimestamp.toGermanDate()});
+        return mBackend;
     }
 
 private:
     Fhir();
-    void loadVersion(ConfigurationKey versionKey, ConfigurationKey structureKey);
+    void load(ConfigurationKey structureKey);
+    void validateViews() const;
 
     FhirConverter mConverter;
-    std::unordered_map<model::ResourceVersion::FhirProfileBundleVersion, fhirtools::FhirStructureRepositoryBackend>
-        mStructureRepository;
+    fhirtools::FhirStructureRepositoryBackend mBackend;
 };
 
 

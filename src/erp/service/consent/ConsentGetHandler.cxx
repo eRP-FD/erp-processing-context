@@ -29,7 +29,7 @@ void ConsentGetHandler::handleRequest (PcSessionContext& session)
     const auto consent = session.database()->retrieveConsent(kvnr);
     A_22160.finish();
 
-    model::Bundle bundle(model::BundleType::searchset, model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::searchset, model::FhirResourceBase::NoProfile);
     if(consent.has_value())
     {
         Expect3(consent.value().id().has_value(), "Consent id must be set", std::logic_error);

@@ -46,9 +46,9 @@ enum class BundleType
                          //  persistence.
 };
 
-template <class DerivedBundle, typename SchemaVersionType = ResourceVersion::DeGematikErezeptWorkflowR4>
+template<class DerivedBundle>
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class BundleBase : public Resource<DerivedBundle, SchemaVersionType>
+class BundleBase : public Resource<DerivedBundle>
 {
 public:
     static constexpr auto resourceTypeName = "Bundle";
@@ -60,17 +60,17 @@ public:
         outcome
     };
 
-    using Resource<DerivedBundle, SchemaVersionType>::Resource;
-    using Resource<DerivedBundle, SchemaVersionType>::setValue;
-    using Resource<DerivedBundle, SchemaVersionType>::setKeyValue;
-    using Resource<DerivedBundle, SchemaVersionType>::addToArray;
-    using Resource<DerivedBundle, SchemaVersionType>::getValueMember;
-    using Resource<DerivedBundle, SchemaVersionType>::getValue;
-    using Resource<DerivedBundle, SchemaVersionType>::getStringValue;
-    using Resource<DerivedBundle, SchemaVersionType>::findStringInArray;
+    using Resource<DerivedBundle>::Resource;
+    using Resource<DerivedBundle>::setValue;
+    using Resource<DerivedBundle>::setKeyValue;
+    using Resource<DerivedBundle>::addToArray;
+    using Resource<DerivedBundle>::getValueMember;
+    using Resource<DerivedBundle>::getValue;
+    using Resource<DerivedBundle>::getStringValue;
+    using Resource<DerivedBundle>::findStringInArray;
 
-    BundleBase(BundleType type, ResourceBase::Profile profile);
-    BundleBase(BundleType type, ResourceBase::Profile profile, const Uuid& bundleId);
+    BundleBase(BundleType type, FhirResourceBase::Profile profile);
+    BundleBase(BundleType type, FhirResourceBase::Profile profile, const Uuid& bundleId);
 
     void setId(const Uuid& bundleId);
 
@@ -120,14 +120,14 @@ public:
     void setTotalSearchMatches(std::size_t totalSearchMatches);
 
 private:
-    friend Resource<Bundle>;
+    friend Resource<class Bundle>;
 };
 
 
-template <class DerivedBundle, typename SchemaVersionType>
+template<class DerivedBundle>
 template<typename TResource>
 // NOLINTNEXTLINE(bugprone-exception-escape)
-std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResourcesByType (const std::string_view type) const
+std::vector<TResource> BundleBase<DerivedBundle>::getResourcesByType(const std::string_view type) const
 {
     std::vector<TResource> resources;
 
@@ -150,23 +150,21 @@ std::vector<TResource> BundleBase<DerivedBundle, SchemaVersionType>::getResource
 }
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Bundle final : public BundleBase<Bundle, ResourceVersion::NotProfiled>
+class Bundle final : public BundleBase<Bundle>
 {
 public:
-    static constexpr auto resourceTypeName = "Bundle";
+    static constexpr auto profileType = ProfileType::fhir;
 
     using BundleBase::BundleBase;
     using BundleBase::fromXml;
     using BundleBase::fromJson;
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 };
 
 // NOLINTBEGIN(bugprone-exception-escape)
-extern template class BundleBase<ErxReceipt>;
-extern template class BundleBase<KbvBundle, ResourceVersion::KbvItaErp>;
-extern template class BundleBase<Bundle, ResourceVersion::NotProfiled>;
-extern template class BundleBase<MedicationDispenseBundle>;
-extern template class BundleBase<Bundle, ResourceVersion::AbgabedatenPkv>;
+extern template class BundleBase<Bundle>;
+extern template class Resource<Bundle>;
 // NOLINTEND(bugprone-exception-escape)
 
 } // end of namespace model

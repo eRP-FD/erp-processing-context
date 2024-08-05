@@ -23,6 +23,7 @@ class AuditEvent : public Resource<AuditEvent>
 {
 public:
     static constexpr auto resourceTypeName = "AuditEvent";
+    static constexpr auto profileType = ProfileType::Gem_erxAuditEvent;
 
     // Type is fixed to "rest";
     enum class SubType
@@ -63,8 +64,7 @@ public:
     static const std::unordered_map<AgentType, std::pair<std::string_view,std::string_view>> AgentTypeStrings;
     static const std::unordered_map<std::string_view, AgentType> AgentTypeNamesReverse;
 
-    explicit AuditEvent(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
+    AuditEvent();
 
     void setId(const std::string_view& id);
     void setLanguage(const std::string_view& language);
@@ -103,11 +103,15 @@ public:
     [[nodiscard]] std::string_view entityName() const;
     [[nodiscard]] std::string_view entityDescription() const;
 
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
+
 private:
     friend Resource<AuditEvent>;
     explicit AuditEvent(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<AuditEvent>;
 }
 
 #endif

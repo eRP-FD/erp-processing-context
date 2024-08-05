@@ -24,7 +24,7 @@ void ConsentPostHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     A_22351.start("FHIR validation of input Consent resource");
-    auto consent = parseAndValidateRequestBody<model::Consent>(session, SchemaType::Gem_erxConsent, false);
+    auto consent = parseAndValidateRequestBody<model::Consent>(session);
     A_22351.finish();
     ErpExpect(consent.isChargingConsent(), HttpStatus::BadRequest, "Invalid consent type");
 

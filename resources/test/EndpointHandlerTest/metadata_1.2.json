@@ -24,7 +24,6 @@
       "resource": [
         {
           "type": "Task",
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task|1.2",
           "interaction": [
             {
               "code": "create"
@@ -39,7 +38,15 @@
               "type": "token"
             },
             {
+              "name": "accept-date",
+              "type": "date"
+            },
+            {
               "name": "authored-on",
+              "type": "date"
+            },
+            {
+              "name": "expiry-date",
               "type": "date"
             },
             {
@@ -65,6 +72,10 @@
               "definition": "https://gematik.de/fhir/erp/OperationDefinition/RejectOperationDefinition"
             },
             {
+              "name": "dispense",
+              "definition": "https://gematik.de/fhir/erp/OperationDefinition/DispenseOperationDefinition"
+            },
+            {
               "name": "close",
               "definition": "https://gematik.de/fhir/erp/OperationDefinition/CloseOperationDefinition"
             },
@@ -72,19 +83,11 @@
               "name": "abort",
               "definition": "https://gematik.de/fhir/erp/OperationDefinition/AbortOperationDefinition"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task|1.2"
         },
         {
           "type": "Communication",
-          "profile": "http://hl7.org/fhir/StructureDefinition/Communication|4.0.1",
-          "supportedProfile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq|1.2",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.2",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.2",
-            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq|1.0",
-            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply|1.0"
-          ],
           "interaction": [
             {
               "code": "create"
@@ -112,12 +115,23 @@
             {
               "name": "recipient",
               "type": "string"
+            },
+            {
+              "name": "identifier",
+              "type": "string"
             }
+          ],
+          "profile": "http://hl7.org/fhir/StructureDefinition/Communication|4.0.1",
+          "supportedProfile": [
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.2",
+            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq|1.0",
+            "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply|1.0"
           ]
         },
         {
           "type": "MedicationDispense",
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2",
           "interaction": [
             {
               "code": "read"
@@ -136,11 +150,11 @@
               "name": "performer",
               "type": "string"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2"
         },
         {
           "type": "AuditEvent",
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.2",
           "interaction": [
             {
               "code": "read"
@@ -152,23 +166,27 @@
               "type": "date"
             },
             {
+              "name": "entity",
+              "type": "string"
+            },
+            {
               "name": "subtype",
               "type": "token"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.2"
         },
         {
           "type": "Device",
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.2",
           "interaction": [
             {
               "code": "read"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.2"
         },
         {
           "type": "ChargeItem",
-          "profile": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.0",
           "interaction": [
             {
               "code": "create"
@@ -189,11 +207,11 @@
               "name": "_lastUpdated",
               "type": "date"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.0"
         },
         {
           "type": "Consent",
-          "profile": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0",
           "interaction": [
             {
               "code": "create"
@@ -204,7 +222,8 @@
             {
               "code": "delete"
             }
-          ]
+          ],
+          "profile": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0"
         }
       ]
     }

@@ -16,10 +16,10 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationPzn : public KbvMedicationBase<KbvMedicationPzn, ResourceVersion::KbvItaErp>
+class KbvMedicationPzn : public KbvMedicationBase<KbvMedicationPzn>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_PZN;
+    static constexpr auto profileType = ProfileType::KBV_PR_ERP_Medication_PZN;
 
     [[nodiscard]] std::optional<std::string_view> amountNumeratorValueAsString() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
@@ -27,10 +27,13 @@ public:
     [[nodiscard]] Pzn pzn() const;
 
 private:
-    friend Resource<KbvMedicationPzn, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvMedicationPzn>;
     explicit KbvMedicationPzn(NumberAsStringParserDocument&& document);
 };
 
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvMedicationPzn>;
 }
 
 

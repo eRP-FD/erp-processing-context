@@ -17,11 +17,11 @@
 
 namespace model
 {
-
+template<typename>
 class Parameters;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class ChargeItemMarkingFlags : public model::Extension
+class ChargeItemMarkingFlags : public model::Extension<ChargeItemMarkingFlags>
 {
 public:
     using Extension::Extension;
@@ -34,22 +34,23 @@ public:
 
     static bool isMarked(const MarkingContainer& markings);
 
-    friend std::optional<ChargeItemMarkingFlags>
-    ResourceBase::getExtension<ChargeItemMarkingFlags>(const std::string_view&) const;
+    template<typename T>
     friend class Parameters;
 };
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class ChargeItemMarkingFlag : public model::Extension
+class ChargeItemMarkingFlag : public model::Extension<ChargeItemMarkingFlag>
 {
 public:
     using Extension::Extension;
     ChargeItemMarkingFlag(const std::string_view url, bool value);
-
-    friend std::optional<ChargeItemMarkingFlag>
-    ResourceBase::getExtension<ChargeItemMarkingFlag>(const std::string_view&) const;
 };
 
+extern template class Extension<ChargeItemMarkingFlags>;
+extern template class Extension<ChargeItemMarkingFlag>;
+extern template class Resource<ChargeItemMarkingFlags>;
+extern template class Resource<ChargeItemMarkingFlag>;
 }
+
 
 #endif

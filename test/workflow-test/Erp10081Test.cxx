@@ -6,9 +6,8 @@
  */
 
 #include "erp/ErpRequirements.hxx"
-#include "erp/model/ResourceVersion.hxx"
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <gtest/gtest.h>
 
@@ -18,11 +17,6 @@ class Erp10081Test : public ErpWorkflowTestP
 
 TEST_P(Erp10081Test, ChargeItemFlowType)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     const std::string kvnr = generateNewRandomKVNR().id();
     std::optional<model::PrescriptionId> prescriptionId;
     std::optional<model::KbvBundle> kbvBundle;

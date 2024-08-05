@@ -10,10 +10,10 @@
 
 #include "erp/model/Kvnr.hxx"
 #include "erp/model/PrescriptionId.hxx"
+#include "erp/model/ProfileType.hxx"
 #include "erp/model/Resource.hxx"
 #include "erp/model/TelematikId.hxx"
 #include "erp/model/Timestamp.hxx"
-#include "erp/validation/SchemaType.hxx"
 
 #include <rapidjson/document.h>
 #include <optional>
@@ -29,14 +29,16 @@ class MedicationDispenseId;
 class MedicationDispense : public Resource<MedicationDispense>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::Gem_erxMedicationDispense;
+    static constexpr auto profileType = ProfileType::Gem_erxMedicationDispense;
+    using Resource::Resource;
 
-    [[nodiscard]] model::PrescriptionId prescriptionId() const;
+    [[nodiscard]] PrescriptionId prescriptionId() const;
     [[nodiscard]] Kvnr kvnr() const;
     [[nodiscard]] TelematikId telematikId() const;
-    [[nodiscard]] model::Timestamp whenHandedOver() const;
+    [[nodiscard]] Timestamp whenHandedOver() const;
     [[nodiscard]] std::optional<model::Timestamp> whenPrepared() const;
     [[nodiscard]] MedicationDispenseId id() const;
+    [[nodiscard]] std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
     void setId(const MedicationDispenseId& id);
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);
@@ -52,6 +54,8 @@ private:
     explicit MedicationDispense(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<MedicationDispense>;
 }
 
 

@@ -21,7 +21,9 @@ public:
     {
         Self,
         Prev,
-        Next
+        Next,
+        First,
+        Last
     };
 };
 

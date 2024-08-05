@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 
 #include "erp/ErpConstants.hxx"
-#include "erp/model/ResourceVersion.hxx"
+#include "erp/model/ProfileType.hxx"
 #include "erp/util/Environment.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/SafeString.hxx"
@@ -27,7 +27,10 @@ class XmlValidator;
 
 namespace fhirtools {
 class ValidatorOptions;
+class FhirResourceGroup;
 class FhirResourceViewConfiguration;
+class FhirResourceGroupConfiguration;
+class FhirVersion;
 }
 
 
@@ -56,7 +59,6 @@ enum class ConfigurationKey
     SERVER_CERTIFICATE,
     SERVER_PRIVATE_KEY,
     SERVER_PROXY_CERTIFICATE,
-    SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
     SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD,
     SERVICE_TASK_ACTIVATE_HOLIDAYS,
     SERVICE_TASK_ACTIVATE_EASTER_CSV,
@@ -98,21 +100,7 @@ enum class ConfigurationKey
     TSL_REFRESH_INTERVAL,
     TSL_DOWNLOAD_CIPHERS,
     XML_SCHEMA_MISC,
-    FHIR_PROFILE_OLD_VALID_UNTIL,
-    FHIR_PROFILE_OLD_XML_SCHEMA_KBV,
-    FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK,
-    FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
-    FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
-    FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
-    FHIR_STRUCTURE_DEFINITIONS_OLD,
-    ERP_FHIR_VERSION_OLD,
     FHIR_STRUCTURE_DEFINITIONS,
-    ERP_FHIR_VERSION,
-    FHIR_PROFILE_VALID_FROM,
-    FHIR_PROFILE_RENDER_FROM,
-    FHIR_PROFILE_PATCH_VALID_FROM,
-    FHIR_PROFILE_PATCH_REPLACE,
-    FHIR_PROFILE_PATCH_REPLACE_WITH,
     FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
     FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
     FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
@@ -209,12 +197,13 @@ class ConfigurationBase
 public:
     constexpr static std::string_view ServerHostEnvVar = "ERP_SERVER_HOST";
     constexpr static std::string_view ServerPortEnvVar = "ERP_SERVER_PORT";
-    constexpr static std::string_view fhirResourceTags = "/erp/fhir-resource-tags";
-    constexpr static std::string_view fhirResourceViews = "/erp/fhir-resource-views";
+    constexpr static std::string_view fhirResourceGroups = "/erp/fhir/resource-groups";
+    constexpr static std::string_view fhirResourceViews = "/erp/fhir/resource-views";
+    constexpr static std::string_view synthesizeCodesystemPath = "/erp/fhir/synthesize-codesystems";
+    constexpr static std::string_view synthesizeValuesetPath = "/erp/fhir/synthesize-valuesets";
 
     const std::string& serverHost() const;
     uint16_t serverPort() const;
-    [[nodiscard]] const fhirtools::FhirResourceViewConfiguration& fhirResourceViewConfiguration() const;
 
 protected:
     explicit ConfigurationBase(const std::vector<KeyData>& allKeyNames);
@@ -246,6 +235,9 @@ protected:
     std::vector<std::string> getOptionalArrayFromJson(KeyData key) const;
 
     const rapidjson::Value* getJsonValue(KeyData key) const;
+
+    [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>>
+    resourceList(const std::string& jsonPath) const;
 
 
 private:
@@ -475,10 +467,9 @@ class Configuration : public ConfigurationTemplate<ConfigurationKey, Configurati
 public:
     enum class OnUnknownExtension
     {
-        ignore, report, reject
-    };
-    enum class GenericValidationMode {
-        disable, detail_only, ignore_errors, require_success
+        ignore,
+        report,
+        reject
     };
     enum class NonLiteralAuthorRefMode
     {
@@ -508,14 +499,16 @@ public:
 
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
     [[nodiscard]] NonLiteralAuthorRefMode kbvValidationNonLiteralAuthorRef() const;
-    [[nodiscard]] GenericValidationMode genericValidationMode(model::ResourceVersion::FhirProfileBundleVersion) const;
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
-    fhirtools::ValidatorOptions
-    defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion, SchemaType) const;
+    fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType) const;
     AnrChecksumValidationMode anrChecksumValidationMode() const;
     [[nodiscard]] PrescriptionDigestRefType prescriptionDigestRefType() const;
     [[nodiscard]] DeviceRefType closeTaskDeviceRefType() const;
     [[nodiscard]] MvoIdValidationMode mvoIdValidationMode() const;
+    [[nodiscard]] fhirtools::FhirResourceGroupConfiguration fhirResourceGroupConfiguration() const;
+    [[nodiscard]] fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration() const;
+    [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeCodesystem() const;
+    [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeValuesets() const;
 };
 
 

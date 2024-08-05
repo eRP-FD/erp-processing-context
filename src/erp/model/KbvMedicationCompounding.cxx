@@ -20,7 +20,7 @@ const rapidjson::Pointer itemCodeableConceptCodePointer("/itemCodeableConcept/co
 } // namespace
 
 KbvMedicationCompounding::KbvMedicationCompounding(NumberAsStringParserDocument&& document)
-    : KbvMedicationBase<KbvMedicationCompounding, ResourceVersion::KbvItaErp>(std::move(document))
+    : KbvMedicationBase<KbvMedicationCompounding>(std::move(document))
 {
 }
 

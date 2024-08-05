@@ -1,9 +1,0 @@
-<?xml version="1.1" encoding="utf-8"?>
-<Parameters xmlns="http://hl7.org/fhir">
-    <parameter>
-        <name value="param"/>
-        <valueInteger value="1">
-            <extension url="http://erp-test.net/missing/content"/>
-        </valueInteger>
-    </parameter>
-</Parameters>

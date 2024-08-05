@@ -23,6 +23,7 @@ enum class Operation
     POST_Task_id_reject,
     POST_Task_id_close,
     POST_Task_id_abort,
+    POST_Task_id_dispense,
     GET_MedicationDispense,
     GET_MedicationDispense_id,
     GET_Communication,

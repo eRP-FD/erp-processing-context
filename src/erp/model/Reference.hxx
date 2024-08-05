@@ -29,6 +29,8 @@ private:
     explicit Reference(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Reference>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_REFERENCE_HXX

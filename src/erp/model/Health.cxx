@@ -111,14 +111,13 @@ const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 }
 
 Health::Health()
-    : ResourceBase(ResourceBase::NoProfile,
-                   []() {
-                       RapidjsonNumberAsStringParserDocument<struct HealthMark> hT;
-                       rapidjson::StringStream ss(health_template.data());
-                       hT->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(ss);
-                       Expect3(! hT->HasParseError(), "error parsing json template for health model", std::logic_error);
-                       return hT;
-                   }()
+    : ResourceBase([]() {
+        RapidjsonNumberAsStringParserDocument<struct HealthMark> hT;
+        rapidjson::StringStream ss(health_template.data());
+        hT->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(ss);
+        Expect3(! hT->HasParseError(), "error parsing json template for health model", std::logic_error);
+        return hT;
+    }()
                        .instance())
 {
     setValue(startupPointer, startupTimestamp);
@@ -221,6 +220,7 @@ void Health::setHealthCheckError(const std::string_view& errorMessage)
 {
     setValue(healthCheckErrorPointer, errorMessage);
 }
+
 
 void Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
                                     const rapidjson::Pointer& messagePointer, std::optional<std::string_view> message)

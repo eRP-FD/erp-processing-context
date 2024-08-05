@@ -8,13 +8,16 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_FHIR_TOOLS_REPOSITORY_FHIRCODESYSTEM_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_FHIR_TOOLS_REPOSITORY_FHIRCODESYSTEM_HXX
 
-#include "erp/util/Version.hxx"
+#include "fhirtools/repository/FhirVersion.hxx"
 
+#include <filesystem>
 #include <memory>
 #include <vector>
 
 namespace fhirtools
 {
+class FhirResourceGroup;
+class FhirResourceGroupResolver;
 
 /// @brief A FHIR CodeSystem. http://hl7.org/fhir/codesystem.html
 /// CodeSystems are only relevant during parsing phase, and for finalization of the ValueSets.
@@ -40,7 +43,8 @@ public:
 
     [[nodiscard]] const std::string& getUrl() const;
     [[nodiscard]] const std::string& getName() const;
-    [[nodiscard]] const Version& getVersion() const;
+    [[nodiscard]] const FhirVersion& getVersion() const;
+    [[nodiscard]] std::shared_ptr<const FhirResourceGroup> resourceGroup() const;
     [[nodiscard]] bool isCaseSensitive() const;
     [[nodiscard]] const std::vector<Code>& getCodes() const;
     [[nodiscard]] bool isEmpty() const;
@@ -60,12 +64,13 @@ private:
 
     std::string mUrl;
     std::string mName;
-    Version mVersion;
+    FhirVersion mVersion = FhirVersion::notVersioned;
     bool mCaseSensitive{false};
     std::vector<Code> mCodes;
     ContentType mContentType{};
     std::string mSupplements;
     bool mSynthesized{false};
+    std::shared_ptr<const FhirResourceGroup> mGroup;
 };
 
 class FhirCodeSystem::Builder
@@ -75,7 +80,8 @@ public:
     explicit Builder(const FhirCodeSystem& codeSystem);
     Builder& url(const std::string& url);
     Builder& name(const std::string& name);
-    Builder& version(const std::string& version);
+    Builder& version(FhirVersion version);
+    Builder& initGroup(const FhirResourceGroupResolver& resolver, const std::filesystem::path& source);
     Builder& caseSensitive(const std::string& caseSensitive);
     Builder& popConcept();
     Builder& code(const std::string& code);

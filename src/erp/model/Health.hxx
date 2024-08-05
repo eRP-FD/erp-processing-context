@@ -8,7 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_HEALTH_HXX
 #define ERP_PROCESSING_CONTEXT_HEALTH_HXX
 
-#include "erp/model/Resource.hxx"
+#include "erp/model/ResourceBase.hxx"
+
 #include <map>
 
 namespace model

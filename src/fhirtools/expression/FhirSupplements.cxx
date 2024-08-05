@@ -138,8 +138,9 @@ Collection ConformsTo::eval(const Collection& collection) const
     }
     const auto element = collection.single();
     const auto profile = mArg->eval(collection).single()->asString();
-    const auto result = FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(),
-                                                                {profile}, {.validateMetaProfiles = false});
+    const auto result =
+        FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(),
+                                                {DefinitionKey{profile}}, {.validateMetaProfiles = false});
     return {makeBoolElement(result.highestSeverity() < Severity::error)};
 }
 

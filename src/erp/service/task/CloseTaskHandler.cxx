@@ -8,7 +8,7 @@
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/ErpRequirements.hxx"
 #include "erp/common/MimeType.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
+#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
@@ -29,6 +29,7 @@
 #include "erp/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/server/request/ServerRequest.hxx"
+#include "erp/service/MedicationDispenseHandlerBase.hxx"
 #include "erp/util/Base64.hxx"
 #include "erp/util/Demangle.hxx"
 #include "erp/util/Expect.hxx"
@@ -70,7 +71,7 @@ struct DigestIdentifier {
 
 
 CloseTaskHandler::CloseTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
-    : TaskHandlerBase(Operation::POST_Task_id_close, allowedProfessionOiDs)
+    : MedicationDispenseHandlerBase(Operation::POST_Task_id_close, allowedProfessionOiDs)
 {
 }
 
@@ -114,36 +115,21 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
-    auto medicationDispenses = medicationDispensesFromBody(session);
-    for (size_t i = 0, end = medicationDispenses.size(); i < end; ++i)
+    std::vector<model::MedicationDispense> medicationDispenses;
+    if(session.request.getBody().empty())
     {
-        auto& medicationDispense = medicationDispenses[i];
-        A_19248_02.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
-
-        // See https://simplifier.net/erezept-workflow/GemerxMedicationDispense/~details
-        // The logical id of the resource, as used in the URL for the resource. Once assigned, this value never changes.
-        // The only time that a resource does not have an id is when it is being submitted to the server using a create operation.
-        // As medication dispenses are queried by "GET /MedicationDispense/{Id}" where Id equals the TaskId (= prescriptionId)
-        // the Id of the medication dispense resource is set to the prescriptionId.
-        // Check for correct MedicationDispense.identifier
-        try
-        {
-            ErpExpect(medicationDispense.prescriptionId() == prescriptionId, HttpStatus::BadRequest,
-                      "Prescription ID in MedicationDispense does not match the one in the task");
-        }
-        catch (const model::ModelException& exc)
-        {
-            TVLOG(1) << "ModelException: " << exc.what();
-            ErpFail(HttpStatus::BadRequest, "Invalid Prescription ID in MedicationDispense (wrong content)");
-        }
-        medicationDispense.setId({prescriptionId, i});
-
-        ErpExpect(medicationDispense.kvnr() == *kvnr, HttpStatus::BadRequest,
-                  "KVNR in MedicationDispense does not match the one in the task");
-
-        ErpExpect(medicationDispense.telematikId() == *telematikIdFromAccessToken, HttpStatus::BadRequest,
-                  "Telematik-ID in MedicationDispense does not match the one in the access token.");
-        A_19248_02.finish();
+        A_24287.start("Aufruf ohne MedicationDispense im Request Body");
+        model::MedicationDispenseId medicationDispenseId(prescriptionId, 0);
+        auto medicationDispense = databaseHandle->retrieveMedicationDispense(kvnr.value(), medicationDispenseId);
+        ErpExpect(medicationDispense.has_value(), HttpStatus::Forbidden, "Medication dispense does not exist.");
+        A_24287.finish();
+        medicationDispenses.push_back(std::move(medicationDispense.value()));
+    }
+    else
+    {
+        medicationDispenses = medicationDispensesFromBody(session);
+        checkMedicationDispenses(medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
+        task.updateLastMedicationDispense();
     }
 
     A_19233_05.start(
@@ -166,10 +152,9 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
               "No matching prescription found.");
 
-    const auto cadesBesSignature =
-    unpackCadesBesSignatureNoVerify(std::string{*prescription->data()});
+    const auto cadesBesSignature = SignedPrescription::fromBinNoVerify(std::string{*prescription->data()});
     const auto kbvBundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
-    fillMvoBdeV2(kbvBundle.getExtension<model::KBVMultiplePrescription>(), session);
+    session.fillMvoBdeV2(kbvBundle.getExtension<model::KBVMultiplePrescription>());
 
     const std::string digest = cadesBesSignature.getMessageDigest();
     const auto base64Digest = ::Base64::encode(digest);
@@ -179,9 +164,8 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     {
         metaVersionId.reset();
     }
-    const auto prescriptionDigestResource = ::model::Binary{
-        digestIdentifier.id, base64Digest, ::model::Binary::Type::Digest,
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>(), metaVersionId};
+    const auto prescriptionDigestResource =
+        ::model::Binary{digestIdentifier.id, base64Digest, ::model::Binary::Type::Digest, metaVersionId};
 
     const auto taskUrl = linkBase + "/Task/" + prescriptionId.toString();
     model::ErxReceipt responseReceipt(Uuid(*task.receiptUuid()), taskUrl + "/$close/", prescriptionId,
@@ -229,154 +213,6 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         .setInsurantKvnr(*kvnr)
         .setAction(model::AuditEvent::Action::update)
         .setPrescriptionId(prescriptionId);
-}
-
-std::vector<model::MedicationDispense> CloseTaskHandler::medicationDispensesFromBody(PcSessionContext& session)
-{
-    try
-    {
-        A_22069.start("Detect input resource type: Bundle or MedicationDispense");
-        auto unspec = createResourceFactory<model::UnspecifiedResource>(session);
-        const auto resourceType = unspec.getResourceType();
-        ErpExpect(resourceType == model::Bundle::resourceTypeName ||
-                    resourceType == model::MedicationDispense::resourceTypeName,
-                HttpStatus::BadRequest, "Unsupported resource type in request body: " + std::string(resourceType));
-        A_22069.finish();
-
-        if (resourceType == model::Bundle::resourceTypeName)
-        {
-            auto bundle = for_resource<model::MedicationDispenseBundle>(std::move(unspec)).getNoValidation();
-            const auto referenceTimestamp = bundle.getValidationReferenceTimestamp();
-            auto ret = bundle.getResourcesByType<model::MedicationDispense>();
-            ErpExpect(referenceTimestamp.has_value(), HttpStatus::BadRequest,
-                      "Unable to determine whenHandedOver from MedicationDispenseBundle");
-            validateWithoutMedicationProfiles<model::MedicationDispenseBundle>(
-                std::move(bundle).jsonDocument(), "entry.resource.medicationReference.resolve()", *referenceTimestamp,
-                session);
-            validateMedications(ret, session.serviceContext);
-            return ret;
-        }
-        else
-        {
-            std::vector<model::MedicationDispense> ret;
-            const auto& dispense =
-                    ret.emplace_back(for_resource<model::MedicationDispense>(std::move(unspec)).getNoValidation());
-            const auto referenceTimestamp = ret[0].whenHandedOver();
-            model::NumberAsStringParserDocument doc;
-            doc.CopyFrom(dispense.jsonDocument(), doc.GetAllocator());
-            validateWithoutMedicationProfiles<model::MedicationDispense>(
-                std::move(doc), "medicationReference.resolve()", referenceTimestamp, session);
-            validateMedications(ret, session.serviceContext);
-            return ret;
-        }
-    }
-    catch(const model::ModelException& e)
-    {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Error during request parsing.", e.what());
-    }
-}
-
-void CloseTaskHandler::validateMedications(const std::vector<model::MedicationDispense>& medicationDispenses,
-                                           const PcServiceContext& service)
-{
-    using namespace std::string_literals;
-    namespace rv = model::ResourceVersion;
-    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
-    auto extractMedication = fhirtools::FhirPathParser::parse(repo.get(), "medicationReference.resolve()");
-    Expect3(extractMedication, "Failed parsing extractMedication", std::logic_error);
-    // ensure that all past bundles are included
-    auto supportedBundles = rv::supportedBundles();
-    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        supportedBundles.insert(rv::FhirProfileBundleVersion::v_2022_01_01);
-    }
-
-    for (const auto& md : medicationDispenses)
-    {
-        auto elem = std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, "MedicationDispense",
-                                                 std::addressof(md.jsonDocument()));
-        auto medication = extractMedication->eval(fhirtools::Collection{elem});
-        ErpExpect(! medication.empty(), HttpStatus::BadRequest, "Failed to extract Medication");
-        ErpExpect(medication.size() == 1, HttpStatus::BadRequest,
-                  "medicationReference references more than one Medication");
-        auto medicationElement = std::dynamic_pointer_cast<const ErpElement>(medication[0]);
-        if (medicationElement == nullptr)
-        {
-            const auto& medication0 = *medication[0];
-            Fail2("Expression returned non-ErpElement: "s.append(util::demangle(typeid(medication0).name())),
-                  std::logic_error);
-        }
-        model::KbvMedicationGeneric::validateMedication(*medicationElement, service.getXmlValidator(),
-                                                        service.getInCodeValidator(), supportedBundles, true);
-    }
-}
-
-template<typename ModelT>
-void CloseTaskHandler::validateWithoutMedicationProfiles(
-    model::NumberAsStringParserDocument&& medicationDispenseOrBundleDoc, std::string_view medicationsPath,
-    const model::Timestamp& validationReferenceTimestamp, const PcSessionContext& session)
-{
-    using namespace std::string_literals;
-    namespace resource = model::resource;
-    namespace elements = resource::elements;
-    namespace rv = model::ResourceVersion;
-    using Factory = model::ResourceFactory<ModelT>;
-    static rapidjson::Pointer idPtr{resource::ElementName::path(elements::id)};
-    static rapidjson::Pointer resourceTypePtr{resource::ElementName::path(elements::resourceType)};
-    const auto repo = Fhir::instance().structureRepository(model::Timestamp::now());
-    auto extractMedications = fhirtools::FhirPathParser::parse(repo.get(), medicationsPath);
-    Expect3(extractMedications != nullptr, "Failed parsing: "s.append(medicationsPath), std::logic_error);
-    auto rootElement = std::make_shared<ErpElement>(repo, std::weak_ptr<const ErpElement>{}, ModelT::resourceTypeName,
-                                            std::addressof(medicationDispenseOrBundleDoc));
-    auto medications = extractMedications->eval(fhirtools::Collection{rootElement});
-    validateSameMedicationVersion(medications);
-    TVLOG(3) << "patching " << medications.size()  << " medications";
-    for (const auto& medicationElement : medications)
-    {
-        // for each medication, clear the medication except the reference and the resourceType
-        // so the MedicationDispense(Bundle) can still validate, and  the generic validator
-        // wont try to validate anything (e.g. invalid values for value sets)
-
-        const auto& medicationErpElement = dynamic_cast<const ErpElement&>(*medicationElement);
-        //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        auto* medicationValue = const_cast<rapidjson::Value*>(medicationErpElement.erpValue());
-        const std::string idValue = idPtr.Get(*medicationValue)->GetString();
-        const std::string resourceTypeValue = resourceTypePtr.Get(*medicationValue)->GetString();
-        medicationValue->SetObject();
-        idPtr.Set(*medicationValue, idValue, medicationDispenseOrBundleDoc.GetAllocator());
-        resourceTypePtr.Set(*medicationValue, resourceTypeValue, medicationDispenseOrBundleDoc.GetAllocator());
-    }
-    typename Factory::Options factoryOptions{};
-    const auto supportedBundles = rv::supportedBundles(validationReferenceTimestamp);
-    if (supportedBundles.contains(rv::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        // ERP-13560 Ablehnen von FHIR 2022 Medication Dispense ab dem 1.7.2023 in Close Task
-        factoryOptions.enforcedVersion =
-            rv::ProfileBundle<rv::FhirProfileBundleVersion::v_2023_07_01, typename ModelT::SchemaVersionType>::version;
-    }
-    auto medicationDispenseOrBundle = Factory::fromJson(std::move(medicationDispenseOrBundleDoc), factoryOptions);
-    (void) std::move(medicationDispenseOrBundle)
-        .getValidated(ModelT::schemaType, session.serviceContext.getXmlValidator(),
-                      session.serviceContext.getInCodeValidator(), supportedBundles);
-}
-
-void CloseTaskHandler::validateSameMedicationVersion(const fhirtools::Collection& medications)
-{
-    A_23384.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
-    using namespace std::string_literals;
-    if (!medications.empty())
-    {
-        auto firstProfiles = medications[0]->profiles();
-        ErpExpect(!firstProfiles.empty(), HttpStatus::BadRequest, "Missing meta.profile in Medication.");
-        for (const auto& medicationElement: medications)
-        {
-            auto hasFirstProfile = std::ranges::any_of(medicationElement->profiles(),
-                    [firstProfiles](std::string_view p){ return p == firstProfiles[0];});
-            ErpExpectWithDiagnostics(hasFirstProfile, HttpStatus::BadRequest,
-                    "All Medications must have the same profile.", "expected: "s.append(firstProfiles[0]));
-        }
-    }
-    A_23384.finish();
 }
 
 std::string CloseTaskHandler::generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase)

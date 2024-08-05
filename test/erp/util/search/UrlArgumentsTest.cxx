@@ -119,17 +119,21 @@ TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cogn
     arguments.addHiddenSearchArgument(
         SearchArgument{SearchArgument::Prefix::LE, "id", "date", SearchParameter::Type::DateAsUuid, timePeriods, {""}});
 
-    const auto links = arguments.getBundleLinks("base", "/Resource", 50);
+    const auto links = arguments.createBundleLinks("base", "/Resource", 50);
 
-    EXPECT_EQ(links.size(), 3);
+    EXPECT_EQ(links.size(), 5);
 
     ASSERT_EQ(links.count(model::Link::Self), 1);
     ASSERT_EQ(links.count(model::Link::Prev), 1);
     ASSERT_EQ(links.count(model::Link::Next), 1);
+    ASSERT_EQ(links.count(model::Link::First), 1);
+    ASSERT_EQ(links.count(model::Link::Last), 1);
 
     EXPECT_EQ(links.find(model::Link::Self)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=13");
     EXPECT_EQ(links.find(model::Link::Prev)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=10");
     EXPECT_EQ(links.find(model::Link::Next)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=16");
+    EXPECT_EQ(links.find(model::Link::First)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=0");
+    EXPECT_EQ(links.find(model::Link::Last)->second, "base/Resource?date=eq2013&name=somebody&_count=3&__offset=48");
 }
 
 
@@ -161,12 +165,13 @@ TEST_F(UrlArgumentsTest, parseWithIdBundleLinks)//NOLINT(readability-function-co
 
     {
         arguments.setResultDateRange(earlierTimestamp, laterTimestamp);
-        const auto links = arguments.getBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
+        const auto links = arguments.createBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
 
-        EXPECT_EQ(links.size(), 3);
+        EXPECT_EQ(links.size(), 4);
         ASSERT_EQ(links.count(model::Link::Self), 1);
         ASSERT_EQ(links.count(model::Link::Prev), 1);
         ASSERT_EQ(links.count(model::Link::Next), 1);
+        ASSERT_EQ(links.count(model::Link::First), 1);
 
         // self link returns the span of dates we found
         EXPECT_EQ(links.find(model::Link::Self)->second, "base/Resource?date=eq2013&name=somebody&_count=3&_id=ge" +
@@ -178,12 +183,15 @@ TEST_F(UrlArgumentsTest, parseWithIdBundleLinks)//NOLINT(readability-function-co
         // next page expects newer dates
         EXPECT_EQ(links.find(model::Link::Next)->second,
                   "base/Resource?date=eq2013&name=somebody&_count=3&_id=gt" + laterTimestamp.toDatabaseSUuid());
+        // first page expects no _id value
+        EXPECT_EQ(links.find(model::Link::First)->second,
+                  "base/Resource?date=eq2013&name=somebody&_count=3");
     }
 
     // reverse the result list
     {
         arguments.setResultDateRange(laterTimestamp, earlierTimestamp);
-        const auto links = arguments.getBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
+        const auto links = arguments.createBundleLinks(true, "base", "/Resource", UrlArguments::LinkMode::id);
         EXPECT_EQ(links.find(model::Link::Self)->second, "base/Resource?date=eq2013&name=somebody&_count=3&_id=le" +
                                                              laterTimestamp.toDatabaseSUuid() + "&_id=ge" +
                                                              earlierTimestamp.toDatabaseSUuid());

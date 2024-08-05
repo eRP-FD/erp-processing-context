@@ -19,21 +19,7 @@
 class AuditEventCreatorTest : public testing::Test
 {
 public:
-    void SetUp() override
-    {
-    };
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 gematikVersion =
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    const std::string_view nsGkvKvid10 = model::ResourceVersion::deprecatedProfile(gematikVersion)
-                               ? model::resource::naming_system::deprecated::gkvKvid10
-                               : model::resource::naming_system::gkvKvid10;
-    const std::string_view nsPkvKvid10 = model::resource::naming_system::pkvKvid10;
-    const std::string_view nsPrescriptionId = model::ResourceVersion::deprecatedProfile(gematikVersion)
-                                                  ? model::resource::naming_system::deprecated::prescriptionID
-                                                  : model::resource::naming_system::prescriptionID;
-    const std::string_view nsTelematikId = model::ResourceVersion::deprecatedProfile(gematikVersion)
-                                               ? model::resource::naming_system::deprecated::telematicID
-                                               : model::resource::naming_system::telematicID;
+    void SetUp() override{};
 };
 
 TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function-cognitive-complexity)
@@ -58,8 +44,7 @@ TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(std::string(kvnr)));
     const auto* language = "de";
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -72,7 +57,7 @@ TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem.value(), nsGkvKvid10);
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::gkvKvid10);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue, kvnr);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -80,7 +65,7 @@ TEST_F(AuditEventCreatorTest, createRepresentative)//NOLINT(readability-function
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
-    EXPECT_EQ(entityWhatIdentifierSystem.value(), nsPrescriptionId);
+    EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
@@ -109,7 +94,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberEn)
 
     AuditEventTextTemplates textResources{};
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
-    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt, gematikVersion);
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt);
 
     const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
                                 " retrieved your dispensable e-prescriptions using your health card.</div>";
@@ -136,7 +121,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPnwPzNumberDe)
 
     AuditEventTextTemplates textResources{};
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
-    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt);
 
     const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
                                 " hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen.</div>";
@@ -164,7 +149,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithInvalidPnw)
     AuditEventTextTemplates textResources{};
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
     {
-        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt);
         const std::string textDiv =
             "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
             " konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen."
@@ -172,7 +157,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithInvalidPnw)
         EXPECT_EQ(auditEvent.textDiv(), textDiv);
     }
     {
-        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt, gematikVersion);
+        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "en", textResources, *jwt);
         const std::string textDiv =
             "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
             " was not able to retrieve your e-prescriptions due to an error with your health card."
@@ -201,7 +186,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPn3)
 
     AuditEventTextTemplates textResources{};
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
-    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+    const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt);
 
     const std::string textDiv = "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
                                 " hat mit Ihrer eGK die Liste der offenen E-Rezepte abgerufen. (Offline-Check wurde akzeptiert)</div>";
@@ -229,7 +214,7 @@ TEST_F(AuditEventCreatorTest, createPharmacyGetAllTasksWithPn3Failed)
     AuditEventTextTemplates textResources{};
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
     {
-        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt, gematikVersion);
+        const auto auditEvent = AuditEventCreator::fromAuditData(auditData, "de", textResources, *jwt);
         const std::string textDiv =
             "<div xmlns=\"http://www.w3.org/1999/xhtml\">" + std::string(agentName) +
             " konnte aufgrund eines Fehlerfalls nicht die Liste der offenen E-Rezepte mit Ihrer eGK abrufen."
@@ -259,8 +244,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr.id()));
     const auto* language = "en";
     const auto agentName = jwt->displayName().value();
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -273,7 +257,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem, nsGkvKvid10);
+    EXPECT_EQ(agentWhoSystem, model::resource::naming_system::gkvKvid10);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), insurantKvnr);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -281,7 +265,7 @@ TEST_F(AuditEventCreatorTest, createPatient)//NOLINT(readability-function-cognit
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
-    EXPECT_EQ(entityWhatIdentifierSystem.value(), nsPrescriptionId);
+    EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
@@ -308,8 +292,7 @@ TEST_F(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-fu
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
     const auto agentName = jwt->displayName().value();
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -322,7 +305,7 @@ TEST_F(AuditEventCreatorTest, createGetMultipleResources)//NOLINT(readability-fu
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem.value(), nsGkvKvid10);
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::gkvKvid10);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), insurantKvnr);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -356,8 +339,7 @@ TEST_F(AuditEventCreatorTest, createExpiredTaskDeletion)//NOLINT(readability-fun
     AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -376,7 +358,7 @@ TEST_F(AuditEventCreatorTest, createExpiredTaskDeletion)//NOLINT(readability-fun
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
-    EXPECT_EQ(entityWhatIdentifierSystem.value(), nsPrescriptionId);
+    EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
@@ -402,8 +384,7 @@ TEST_F(AuditEventCreatorTest, createExpiredCommunicationDeletion)
     const AuditEventTextTemplates textResources;
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
-    const model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    const model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -450,8 +431,7 @@ TEST_F(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function
 
     AuditEventTextTemplates textResources;
     const auto* language = "de";
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -465,7 +445,7 @@ TEST_F(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem.value(), nsTelematikId);
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::telematicID);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), telematikId);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -473,7 +453,7 @@ TEST_F(AuditEventCreatorTest, createPostChargeItem)//NOLINT(readability-function
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
-    EXPECT_EQ(entityWhatIdentifierSystem.value(), nsPrescriptionId);
+    EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
@@ -503,8 +483,7 @@ TEST_F(AuditEventCreatorTest, createPutChargeItem)//NOLINT(readability-function-
 
     AuditEventTextTemplates textResources;
     const auto* language = "en";
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -518,7 +497,7 @@ TEST_F(AuditEventCreatorTest, createPutChargeItem)//NOLINT(readability-function-
 
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem, nsTelematikId);
+    EXPECT_EQ(agentWhoSystem, model::resource::naming_system::telematicID);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), telematikId);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -526,7 +505,7 @@ TEST_F(AuditEventCreatorTest, createPutChargeItem)//NOLINT(readability-function-
     EXPECT_EQ(auditEvent.sourceObserverReference(), "Device/" + std::to_string(deviceId));
     const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
     EXPECT_TRUE(entityWhatIdentifierSystem.has_value());
-    EXPECT_EQ(entityWhatIdentifierSystem.value(), nsPrescriptionId);
+    EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
     EXPECT_TRUE(entityWhatIdentifierValue.has_value());
     EXPECT_EQ(entityWhatIdentifierValue.value(), prescriptionId.toString());
     EXPECT_EQ(auditEvent.entityDescription(), prescriptionId.toString());
@@ -553,8 +532,7 @@ TEST_F(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
     const auto agentName = jwt->displayName().value();
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -567,7 +545,7 @@ TEST_F(AuditEventCreatorTest, createDeleteConsent)//NOLINT(readability-function-
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem.value(), model::ResourceVersion::deprecatedProfile(gematikVersion) ? nsGkvKvid10 : nsPkvKvid10);
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::pkvKvid10);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), insurantKvnr);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -600,8 +578,7 @@ TEST_F(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-co
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "de";
     const auto agentName = jwt->displayName().value();
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), language);
@@ -614,7 +591,7 @@ TEST_F(AuditEventCreatorTest, createPostConsent)//NOLINT(readability-function-co
     EXPECT_EQ(auditEvent.outcome(), model::AuditEvent::Outcome::success);
     const auto[agentWhoSystem, agentWhoValue] = auditEvent.agentWho();
     EXPECT_TRUE(agentWhoSystem.has_value());
-    EXPECT_EQ(agentWhoSystem.value(), model::ResourceVersion::deprecatedProfile(gematikVersion) ? nsGkvKvid10 : nsPkvKvid10);
+    EXPECT_EQ(agentWhoSystem.value(), model::resource::naming_system::pkvKvid10);
     EXPECT_TRUE(agentWhoValue.has_value());
     EXPECT_EQ(agentWhoValue.value(), insurantKvnr);
     EXPECT_EQ(auditEvent.agentName(), agentName);
@@ -651,8 +628,7 @@ TEST_F(AuditEventCreatorTest, createWithUnsupportedLanguage)//NOLINT(readability
     const auto jwt = std::make_unique<JWT>(JwtBuilder::testBuilder().makeJwtVersicherter(insurantKvnr));
     const auto* language = "fr";  // not supported, will use default language "en";
     const auto agentName = jwt->displayName().value();
-    model::AuditEvent auditEvent =
-        AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt, gematikVersion);
+    model::AuditEvent auditEvent = AuditEventCreator::fromAuditData(auditData, language, textResources, *jwt);
 
     EXPECT_EQ(auditEvent.id(), auditDataId);
     EXPECT_EQ(auditEvent.language(), "en");

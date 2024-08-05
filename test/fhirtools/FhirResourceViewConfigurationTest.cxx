@@ -5,26 +5,31 @@
  */
 
 
+#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "MockFhirResourceGroup.hxx"
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
+#include <rapidjson/prettywriter.h>
 #include <rapidjson/rapidjson.h>
+#include <rapidjson/stringbuffer.h>
+#include <test/util/ResourceManager.hxx>
 
-struct Tag {
-    std::string tag;
-    std::string version;
-    std::initializer_list<std::string> urls;
-};
+namespace
+{
 struct View {
     std::string envName;
     std::string validFrom;
     std::string validUntil;
-    std::initializer_list<std::string> tags;
+    std::initializer_list<std::string> groups;
 };
 
+}
 class FhirResourceViewConfigurationTest : public testing::Test
 {
 public:
@@ -33,37 +38,21 @@ public:
         mDocument.SetObject();
     }
 
-    gsl::not_null<const rapidjson::Value*> tagConfig(std::initializer_list<Tag> tags);
+    static std::list<std::string> ids(const fhirtools::FhirResourceViewConfiguration::ViewList& views)
+    {
+        std::list<std::string> result;
+        std::ranges::transform(views, std::back_inserter(result),
+                               &fhirtools::FhirResourceViewConfiguration::ViewConfig::mId);
+        result.sort();
+        return result;
+    }
+
     gsl::not_null<const rapidjson::Value*> viewConfig(std::initializer_list<View> views);
 
 protected:
     rapidjson::Document mDocument;
 };
 
-gsl::not_null<const rapidjson::Value*> FhirResourceViewConfigurationTest::tagConfig(std::initializer_list<Tag> tags)
-{
-    int idx = 0;
-    for (const auto& tag : tags)
-    {
-        const std::string base{"/fhir-resource-tags/" + std::to_string(idx) + "/"};
-        rapidjson::Pointer ptTag{base + "tag"};
-        ptTag.Set(mDocument, tag.tag);
-        rapidjson::Pointer ptVersion{base + "version"};
-        ptVersion.Set(mDocument, tag.version);
-        const std::string baseUrls{base + "urls/"};
-        int idxUrls = 0;
-        for (const auto& url : tag.urls)
-        {
-            rapidjson::Pointer ptUrl{baseUrls + std::to_string(idxUrls)};
-            ptUrl.Set(mDocument, url);
-            ++idxUrls;
-        }
-        ++idx;
-    }
-
-    const rapidjson::Pointer ptTags{"/fhir-resource-tags"};
-    return ptTags.Get(mDocument);
-}
 
 gsl::not_null<const rapidjson::Value*> FhirResourceViewConfigurationTest::viewConfig(std::initializer_list<View> views)
 {
@@ -73,6 +62,8 @@ gsl::not_null<const rapidjson::Value*> FhirResourceViewConfigurationTest::viewCo
         const std::string base{"/fhir-resource-views/" + std::to_string(idx) + "/"};
         rapidjson::Pointer ptEnv{base + "env-name"};
         ptEnv.Set(mDocument, view.envName);
+        rapidjson::Pointer ptId{base + "id"};
+        ptId.Set(mDocument, view.envName);
         if (! view.validFrom.empty())
         {
             rapidjson::Pointer ptValidFrom{base + "valid-from"};
@@ -84,96 +75,235 @@ gsl::not_null<const rapidjson::Value*> FhirResourceViewConfigurationTest::viewCo
             ptValidUntil.Set(mDocument, view.validUntil);
         }
         int idxTags = 0;
-        for (const auto& tag : view.tags)
+        for (const auto& group : view.groups)
         {
-            rapidjson::Pointer ptTag{base + "tags/" + std::to_string(idxTags)};
-            ptTag.Set(mDocument, tag);
+            rapidjson::Pointer ptTag{base + "groups/" + std::to_string(idxTags)};
+            ptTag.Set(mDocument, group);
             ++idxTags;
         }
         ++idx;
     }
-
     const rapidjson::Pointer ptViews{"/fhir-resource-views"};
     return ptViews.Get(mDocument);
 }
 
-TEST_F(FhirResourceViewConfigurationTest, DarreichungsformViews)
+TEST_F(FhirResourceViewConfigurationTest, ViewsSelection)
 {
-    const auto tagCfg = tagConfig({{"darreichungsform_1_12",
-                                    "1.12",
-                                    {"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                     "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"}},
-                                   {"darreichungsform_1_13",
-                                    "1.13",
-                                    {"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                     "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"}}});
-    const auto viewCfg = viewConfig({{"ERP_DARREICHUNGSFORM_1_12", "", "2024-06-30", {"darreichungsform_1_12"}},
-                                     {"ERP_DARREICHUNGSFORM_1_13", "2024-07-01", "", {"darreichungsform_1_13"}}});
+    using strings = std::list<std::string>;
+    MockResourceGroupResolver res;
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_12")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_13")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_14")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
 
-    std::optional<fhirtools::FhirResourceViewConfiguration> cfg;
-    ASSERT_NO_FATAL_FAILURE(cfg.emplace(tagCfg, viewCfg));
+    const auto viewCfgValue =
+        viewConfig({{"ERP_DARREICHUNGSFORM_1_12", "", "2024-06-30", {"darreichungsform_1_12"}},
+                    {"BEGIN_OVERLAPP", "", "2024-05-31", {"darreichungsform_1_13"}},
+                    {"ERP_DARREICHUNGSFORM_1_13", "2024-07-01", "2024-09-30", {"darreichungsform_1_13"}},
+                    {"MID_OVERLAPP", "2024-09-15", "2024-10-31", {"darreichungsform_1_13"}},
+                    {"ERP_DARREICHUNGSFORM_1_14", "2024-10-01", "", {"darreichungsform_1_14"}},
+                    {"END_OVERLAPP", "2024-11-15", "", {"darreichungsform_1_14"}}});
 
-    EXPECT_EQ(cfg->getValidVersion("https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                   fhirtools::Date{"2024-01-12"}),
-              "1.12");
-    EXPECT_EQ(cfg->getValidVersion("https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM",
-                                   fhirtools::Date{"2024-01-12"}),
-              "1.12");
-    EXPECT_FALSE(cfg->getValidVersion("https://fhir.kbv.de/ValueSet/XXX", fhirtools::Date{"2025-01-12"}));
-
-    EXPECT_EQ(cfg->getValidVersion("https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                   fhirtools::Date{"2025-01-12"}),
-              "1.13");
-    EXPECT_EQ(cfg->getValidVersion("https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM",
-                                   fhirtools::Date{"2025-01-12"}),
-              "1.13");
-    EXPECT_FALSE(cfg->getValidVersion("https://fhir.kbv.de/ValueSet/XXX", fhirtools::Date{"2024-01-12"}));
+    std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"1969-01-01"})),
+              (strings{"BEGIN_OVERLAPP", "ERP_DARREICHUNGSFORM_1_12"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-06-30"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_12"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-07-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-09-15"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-09-30"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-10-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-10-31"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-14"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-15"})),
+              (strings{"END_OVERLAPP", "ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"9999-12-31"})),
+              (strings{"END_OVERLAPP", "ERP_DARREICHUNGSFORM_1_14"}));
 }
 
-struct OverlapParam {
-    std::string validFrom1;
-    std::string validUntil1;
-    std::string validFrom2;
-    std::string validUntil2;
-};
-class FhirResourceViewConfigurationTestOverlap : public FhirResourceViewConfigurationTest,
-                                                 public ::testing::WithParamInterface<OverlapParam>
+TEST_F(FhirResourceViewConfigurationTest, ViewList)
 {
-};
+    using namespace fhirtools::version_literal;
+    using ViewList = fhirtools::FhirResourceViewConfiguration::ViewList;
+    using ViewConfig = fhirtools::FhirResourceViewConfiguration::ViewConfig;
+    using Date = fhirtools::Date;
+    using K = fhirtools::DefinitionKey;
 
-TEST_P(FhirResourceViewConfigurationTestOverlap, ViewsOverlapping)
-{
-    const auto tagCfg = tagConfig({{"darreichungsform_1_12",
-                                    "1.12",
-                                    {"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                     "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"}},
-                                   {"darreichungsform_1_13",
-                                    "1.13",
-                                    {"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",
-                                     "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"}}});
-    const auto viewCfg = viewConfig(
-        {{"ERP_DARREICHUNGSFORM_1_12", GetParam().validFrom1, GetParam().validUntil1, {"darreichungsform_1_12"}},
-         {"ERP_DARREICHUNGSFORM_1_13", GetParam().validFrom2, GetParam().validUntil2, {"darreichungsform_1_13"}}});
+    fhirtools::FhirResourceGroupConst groupResBase{"groupBase"};
+    fhirtools::FhirResourceGroupConst groupResA{"groupA"};
+    fhirtools::FhirResourceGroupConst groupResB{"groupB"};
+    const std::string codeSystemUrl{"http://erp-test.de/versiontest/CodeSystem"};
+    const std::string structUrl{"http://erp-test.de/versiontest/StructureDefinition"};
 
-    std::optional<fhirtools::FhirResourceViewConfiguration> cfg;
-    try
+    ::testing::NiceMock<MockResourceGroupResolver> res;
     {
-        cfg.emplace(tagCfg, viewCfg);
-        FAIL() << "Expected exception on view validity overlap.";
+        groupResBase.findGroup("http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver, {});
+        groupResA.findGroup(structUrl, "alpha"_ver, {});
+        groupResB.findGroup(structUrl, "beta"_ver, {});
+        groupResA.findGroup(codeSystemUrl, "A"_ver, {});
+        groupResB.findGroup(codeSystemUrl, "B"_ver, {});
+
+        auto groupBase = groupResBase.findGroupById("groupBase");
+        auto groupA = groupResA.findGroupById("groupA");
+        auto groupB = groupResB.findGroupById("groupB");
+        std::map<std::string, std::shared_ptr<const fhirtools::FhirResourceGroup>> allGroups {
+            {"groupBase", groupBase},
+            {"groupA", groupA},
+            {"groupB", groupB},
+        };
+        using ::testing::Return;
+        using ::testing::_;
+        using ::testing::Eq;
+        using ::testing::StrEq;
+        ON_CALL(res, findGroup(_, Eq("0.1"_ver), _)).WillByDefault(Return(groupBase));
+        ON_CALL(res, findGroup(_, Eq("0.2"_ver), _)).WillByDefault(Return(groupBase));
+        ON_CALL(res, findGroup(_, Eq("alpha"_ver), _)).WillByDefault(Return(groupA));
+        ON_CALL(res, findGroup(_, Eq("beta"_ver), _)).WillByDefault(Return(groupB));
+        ON_CALL(res, findGroup(_, Eq("A"_ver), _)).WillByDefault(Return(groupA));
+        ON_CALL(res, findGroup(_, Eq("B"_ver), _)).WillByDefault(Return(groupB));
+
+        ON_CALL(res, findGroupById("groupBase")).WillByDefault(Return(groupBase));
+        ON_CALL(res, findGroupById("groupA")).WillByDefault(Return(groupA));
+        ON_CALL(res, findGroupById("groupB")).WillByDefault(Return(groupB));
+
+        ON_CALL(res, allGroups).WillByDefault(Return(allGroups));
     }
-    catch (const std::runtime_error& re)
+    fhirtools::FhirStructureRepositoryBackend backend;
+    backend.load({ResourceManager::getAbsoluteFilename("test/fhir-path/samples/version_samples.xml")}, res);
+
+    const auto viewCfgValue = viewConfig({
+        {"viewA", "2024-05-01", "2024-08-01", {"groupA", "groupBase"}},
+        {"viewB", "2024-07-01", "2024-10-01", {"groupB", "groupBase"}},
+    });
+    std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue));
+    std::optional<ViewList> viewListViewA;
+    ASSERT_NO_THROW(viewListViewA.emplace(viewsConfiguration->getViewInfo(Date{"2024-06-01"})));
+    EXPECT_EQ(viewListViewA->size(), 1);
     {
-        EXPECT_EQ(std::string{re.what()}, "fhir-resource-views must not overlap in validity. overlapping: "
-                                          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM|1.12 and "
-                                          "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM|1.13");
+        auto versions = viewListViewA->supportedVersions(&backend, {structUrl});
+        EXPECT_EQ(versions, (std::list{K{structUrl, "alpha"_ver}}));
     }
+    {
+        const auto match = viewListViewA->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        ASSERT_NE(codeSystem, nullptr);
+        EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
+    }
+    {
+        const auto match = viewListViewA->match(&backend, structUrl, "alpha"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        ASSERT_NE(codeSystem, nullptr);
+        EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
+    }
+    {
+        const auto match = viewListViewA->match(&backend, structUrl, "beta"_ver);
+        EXPECT_EQ(match, nullptr);
+    }
+    {
+        const ViewConfig* latest = nullptr;
+        ASSERT_NO_THROW(latest = std::addressof(viewListViewA->latest()));
+        ASSERT_NE(latest, nullptr);
+        EXPECT_EQ(latest->mId, "viewA");
+        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
+        ASSERT_NO_THROW(repoView = latest->view(&backend));
+        ASSERT_NE(repoView, nullptr);
+        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        ASSERT_NE(codeSystem, nullptr);
+        EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
+    }
+
+    std::optional<ViewList> viewListViewB;
+    ASSERT_NO_THROW(viewListViewB.emplace(viewsConfiguration->getViewInfo(Date{"2024-09-01"})));
+    EXPECT_EQ(viewListViewB->size(), 1);
+    {
+        auto versions = viewListViewB->supportedVersions(&backend, {structUrl});
+        EXPECT_EQ(versions, (std::list{K{structUrl, "beta"_ver}}));
+    }
+    {
+        const auto match = viewListViewB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+    {
+        const auto match = viewListViewB->match(&backend, structUrl, "alpha"_ver);
+        ASSERT_EQ(match, nullptr);
+    }
+    {
+        const auto match = viewListViewB->match(&backend, structUrl, "beta"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+    {
+        const ViewConfig* latest = nullptr;
+        ASSERT_NO_THROW(latest = std::addressof(viewListViewB->latest()));
+        ASSERT_NE(latest, nullptr);
+        EXPECT_EQ(latest->mId, "viewB");
+        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
+        ASSERT_NO_THROW(repoView = latest->view(&backend));
+        ASSERT_NE(repoView, nullptr);
+        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+
+    std::optional<ViewList> viewListViewAandB;
+    ASSERT_NO_THROW(viewListViewAandB.emplace(viewsConfiguration->getViewInfo(Date{"2024-07-15"})));
+    EXPECT_EQ(viewListViewAandB->size(), 2);
+    {
+        auto versions = viewListViewAandB->supportedVersions(&backend, {structUrl});
+        EXPECT_EQ(versions, (std::list{K{structUrl, "alpha"_ver}, K{structUrl, "beta"_ver}}));
+    }
+    {
+        const auto match = viewListViewAandB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        // Base is in both views so we expect to get the latest which is viewB
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+    {
+        const auto match = viewListViewAandB->match(&backend, structUrl, "alpha"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
+    }
+    {
+        const auto match = viewListViewAandB->match(&backend, structUrl, "beta"_ver);
+        ASSERT_NE(match, nullptr);
+        const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+    {
+        const ViewConfig* latest = nullptr;
+        ASSERT_NO_THROW(latest = std::addressof(viewListViewAandB->latest()));
+        ASSERT_NE(latest, nullptr);
+        EXPECT_EQ(latest->mId, "viewB");
+        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
+        ASSERT_NO_THROW(repoView = latest->view(&backend));
+        ASSERT_NE(repoView, nullptr);
+        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
+    }
+
+    std::optional<ViewList> viewListEmpty;
+    ASSERT_NO_THROW(viewListEmpty.emplace(viewsConfiguration->getViewInfo(Date{"2024-12-01"})));
+    EXPECT_TRUE(viewListEmpty->empty());
 }
 
-INSTANTIATE_TEST_SUITE_P(overlap, FhirResourceViewConfigurationTestOverlap,
-                         testing::Values(OverlapParam{"", "2024-01-12", "2024-01-12", ""}, OverlapParam{"", "", "", ""},
-                                         OverlapParam{"", "2024-01-11", "", ""},
-                                         OverlapParam{"2023-01-12", "2024-01-12", "2024-01-12", ""},
-                                         OverlapParam{"2023-01-12", "2024-01-12", "2024-01-12", "2025-01-12"}));
 
 struct InconsistentParam {
     std::string validFrom;
@@ -186,23 +316,25 @@ class FhirResourceViewConfigurationTestInconsistent : public FhirResourceViewCon
 
 TEST_P(FhirResourceViewConfigurationTestInconsistent, ViewInconsistent)
 {
-    const auto tagCfg = tagConfig({
-        {"darreichungsform_1_12", "1.12", {"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"}},
-    });
-    const auto viewCfg = viewConfig(
+    MockResourceGroupResolver res;
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_12")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+
+    const auto viewCfgValue = viewConfig(
         {{"ERP_DARREICHUNGSFORM_1_12", GetParam().validFrom, GetParam().validUntil, {"darreichungsform_1_12"}}});
 
-    std::optional<fhirtools::FhirResourceViewConfiguration> cfg;
+    std::optional<fhirtools::FhirResourceViewConfiguration> viewCfg;
     try
     {
-        cfg.emplace(tagCfg, viewCfg);
+        viewCfg.emplace(res, viewCfgValue);
         FAIL() << "Expected exception on view inconsistency.";
     }
     catch (const std::runtime_error& re)
     {
         EXPECT_EQ(std::string{re.what()},
-                  (std::ostringstream{} << "inconsistent view: " << "Start: " << GetParam().validFrom
-                                        << " End: " << GetParam().validUntil << " Version: 1.12")
+                  (std::ostringstream{} << "inconsistent view: "
+                                        << "ERP_DARREICHUNGSFORM_1_12 Start: " << GetParam().validFrom
+                                        << " End: " << GetParam().validUntil)
                       .str());
     }
     std::cout << fhirtools::Date{};

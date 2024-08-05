@@ -30,11 +30,6 @@ class PostgresBackendChargeItemTest : public PostgresDatabaseTest
 public:
     void SetUp() override
     {
-        if (model::ResourceVersion::deprecatedProfile(
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-        {
-            GTEST_SKIP();
-        }
         ASSERT_NO_FATAL_FAILURE(PostgresDatabaseTest::SetUp());
     }
 
@@ -219,8 +214,9 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     database().commitTransaction();
 
     const auto markingFlag = ::String::replaceAll(
-        chargeInformationForUpdate.chargeItem.markingFlags()->serializeToJsonString(), "false", "true");
-    chargeInformationForUpdate.chargeItem.setMarkingFlags(::model::Extension::fromJsonNoValidation(markingFlag));
+        chargeInformationForUpdate.chargeItem.markingFlags().value().serializeToJsonString(), "false", "true");
+    chargeInformationForUpdate.chargeItem.setMarkingFlags(
+        ::model::ChargeItemMarkingFlags::fromJsonNoValidation(markingFlag));
 
     const auto dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
     auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);

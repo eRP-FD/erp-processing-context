@@ -9,8 +9,8 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
+#include "erp/model/ProfileType.hxx"
 #include "erp/model/Pzn.hxx"
-#include "erp/validation/SchemaType.hxx"
 
 #include <vector>
 
@@ -18,18 +18,21 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationCompounding : public KbvMedicationBase<KbvMedicationCompounding, ResourceVersion::KbvItaErp>
+class KbvMedicationCompounding : public KbvMedicationBase<KbvMedicationCompounding>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_Compounding;
+    static constexpr auto profileType = ProfileType::KBV_PR_ERP_Medication_Compounding;
     const rapidjson::Value* ingredientArray() const;
     std::vector<Pzn> ingredientPzns() const;
 
 private:
-    friend Resource<KbvMedicationCompounding, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvMedicationCompounding>;
     explicit KbvMedicationCompounding(NumberAsStringParserDocument&& document);
 };
 
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvMedicationCompounding>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONCOMPOUNDING_HXX

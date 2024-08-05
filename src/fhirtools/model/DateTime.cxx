@@ -203,6 +203,11 @@ Date::Date(const date::year_month_day& ymd, Precision precision)
 {
 }
 
+Date::operator date::year_month_day() const
+{
+    return {mYear, mMonth, mDay};
+}
+
 std::string Date::toString(bool full) const
 {
     switch (mPrecision)

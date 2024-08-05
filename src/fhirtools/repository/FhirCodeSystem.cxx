@@ -7,11 +7,11 @@
 
 #include "fhirtools/repository/FhirCodeSystem.hxx"
 #include "erp/util/Version.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/repository/FhirResourceGroup.hxx"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-
-#include "fhirtools/FPExpect.hxx"
 
 namespace fhirtools
 {
@@ -24,10 +24,16 @@ const std::string& FhirCodeSystem::getName() const
 {
     return mName;
 }
-const Version& FhirCodeSystem::getVersion() const
+const FhirVersion& FhirCodeSystem::getVersion() const
 {
     return mVersion;
 }
+
+std::shared_ptr<const FhirResourceGroup> fhirtools::FhirCodeSystem::resourceGroup() const
+{
+    return mGroup;
+}
+
 bool FhirCodeSystem::isCaseSensitive() const
 {
     return mCaseSensitive;
@@ -198,11 +204,19 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::name(const std::string& name)
     mCodeSystem->mName = name;
     return *this;
 }
-FhirCodeSystem::Builder& FhirCodeSystem::Builder::version(const std::string& version)
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::version(FhirVersion version)
 {
-    mCodeSystem->mVersion = Version{version};
+    mCodeSystem->mVersion = std::move(version);
     return *this;
 }
+
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::initGroup(const FhirResourceGroupResolver& resolver,
+                                                            const std::filesystem::path& source)
+{
+    mCodeSystem->mGroup = resolver.findGroup(mCodeSystem->getUrl(), mCodeSystem->getVersion(), source);
+    return *this;
+}
+
 FhirCodeSystem::Builder& FhirCodeSystem::Builder::caseSensitive(const std::string& caseSensitive)
 {
     if (caseSensitive == "true")
@@ -259,6 +273,8 @@ FhirCodeSystem FhirCodeSystem::Builder::getAndReset()
     FhirCodeSystem prev{std::move(*mCodeSystem)};
     mCodeSystem = std::make_unique<FhirCodeSystem>();
     mConceptStack.clear();
+    FPExpect3(prev.mGroup, "group not set for: " + prev.getUrl() + '|' + to_string(prev.getVersion()),
+              std::logic_error);
     return prev;
 }
 FhirCodeSystem::Builder& FhirCodeSystem::Builder::popConcept()

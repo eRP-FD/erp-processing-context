@@ -19,7 +19,7 @@ namespace model
 class CommunicationPayload
 {
 public:
-    static const std::size_t maxPayloadSize = 10240;
+    static constexpr std::size_t maxPayloadSize = 10240;
 
     explicit CommunicationPayload(const rapidjson::Value* payloadValue);
 

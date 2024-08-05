@@ -36,7 +36,6 @@
 #include "erp/util/TLog.hxx"
 #include "erp/util/TerminationHandler.hxx"
 #include "erp/util/health/HealthCheck.hxx"
-#include "erp/validation/InCodeValidator.hxx"
 #include "erp/validation/JsonValidator.hxx"
 #include "erp/validation/XmlValidator.hxx"
 
@@ -364,10 +363,6 @@ Factories ErpMain::createProductionFactories()
         auto xmlValidator = std::make_shared<XmlValidator>();
         configureXmlValidator(*xmlValidator);
         return xmlValidator;
-    };
-
-    factories.incodeValidatorFactory = [] {
-        return std::make_shared<InCodeValidator>();
     };
 
     return factories;

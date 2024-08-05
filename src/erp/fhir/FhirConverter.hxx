@@ -8,7 +8,6 @@
 #ifndef ERP_PROCESSING_CONTEXT_FHIR_FHIRCONVERTER_HXX
 #define ERP_PROCESSING_CONTEXT_FHIR_FHIRCONVERTER_HXX
 
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/xml/XmlMemory.hxx"
 

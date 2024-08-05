@@ -57,8 +57,7 @@ public:
         const SafeString& p);
 
 
-    ClientResponse parseResponse (
-        const ClientResponse& response);
+    ClientResponse parseResponse(const ClientResponse& response) const;
 
 private:
     shared_EVP_PKEY mEphemeralKeyPair;

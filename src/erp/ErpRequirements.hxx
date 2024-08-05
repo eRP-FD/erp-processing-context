@@ -43,6 +43,7 @@ static Requirement A_19439_02 ("E-Rezept-Fachdienst - Authentifizierung Authenti
 static Requirement A_19395    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest AuditEvent");
 static Requirement A_19405    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest MedicationDispense");
 static Requirement A_19446_01 ("E-Rezept-Fachdienst - Rollenpruefung Versicherter oder Apotheker liest Rezept");
+static Requirement A_24279    ("E-Rezept-Fachdienst - Rollenpruefung Abgebender stellt Dispensierinformationen bereit");
 // PKV related Rollenprüfung:
 static Requirement A_22113    ("E-Rezept-Fachdienst - Abrechnungsinformation löschen - Rollenprüfung");
 static Requirement A_22118    ("E-Rezept-Fachdienst - Abrechnungsinformationen lesen - Rollenprüfung Versicherter oder Apotheker");
@@ -173,6 +174,11 @@ static Requirement A_24174    ("E-Rezept-Fachdienst - Task akzeptieren - Telemat
 // PKV related:
 static Requirement A_22110    ("E-Rezept-Fachdienst – Task akzeptieren – Flowtype 200 - Einwilligung ermitteln");
 
+// Requirements for endpoint POST /Task/$dispense
+static Requirement A_24280    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Prüfung Secret");
+static Requirement A_24281    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Schemaprüfung und Speicherung MedicationDispense");
+static Requirement A_24298    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Prüfung Status");
+
 // Requirements for endpoint POST /Task/$close
 static Requirement A_19231_02 ("E-Rezept-Fachdienst - Task schliessen - Prüfung Secret");
 static Requirement A_19248_02 ("E-Rezept-Fachdienst - Task schliessen - Schemaprüfung und Speicherung MedicationDispense");
@@ -182,6 +188,7 @@ static Requirement A_19233_05 ("E-Rezept-Fachdienst - Task schliessen - Quittung
 static Requirement A_22069    ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
 static Requirement A_22070_02 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
 static Requirement A_23384    ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
+static Requirement A_24287    ("E-Rezept-Fachdienst - Task schließen - Aufruf ohne MedicationDispense");
 
 // Requirements for endpoint POST /Task/$abort
 static Requirement A_19145    ("E-Rezept-Fachdienst - Statusprüfung Apotheker löscht Rezept");
@@ -197,6 +204,7 @@ static Requirement A_19121    ("E-Rezept-Fachdienst - Finaler Status cancelled")
 static Requirement A_19171_03 ("E-Rezept-Fachdienst - Task zurückweisen - Prüfung Secret");
 static Requirement A_19172_01 ("E-Rezept-Fachdienst - Task zurückweisen - Secret löschen und Status setzen");
 static Requirement A_24175    ("E-Rezept-Fachdienst - Task zurückweisen - Telematik-ID der abgebenden LEI löschen");
+static Requirement A_24286    ("E-Rezept-Fachdienst - Task zurückweisen - Dispensierinformationen löschen");
 
 // Requirements for endpoint /AuditEvent and /AuditEvent/<id>
 static Requirement A_19402   ("E-Rezept-Fachdienst - unzulässige Operationen AuditEvent");
@@ -230,6 +238,7 @@ static Requirement A_22141   ("E-Rezept-Fachdienst – Abrechnungsinformation be
 static Requirement A_22143   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem befüllen");
 static Requirement A_22614_02("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Generierung AccessCode");
 static Requirement A_23704   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – kein AccessCode und Quittung");
+static Requirement A_24471   ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – ChargeItem-ID=Rezept-ID");
 // PUT /ChargeItem
 static Requirement A_22215   ("E-Rezept-Fachdienst – Abrechnungsinformation ändern – Prüfung Einwilligung");
 static Requirement A_22146   ("E-Rezept-Fachdienst – Abrechnungsinformationen ändern – Apotheke - Prüfung Telematik-ID");
@@ -332,5 +341,8 @@ static Requirement A_25206    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke -
 static Requirement A_25207    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - AcceptPN3 false");
 static Requirement A_25208    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - URL kvnr");
 static Requirement A_25209    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - PN3 - AcceptPN3 true - Filter Status, KVNR und Workflowtype");
+
+// Default sort for GET handlers
+static Requirement A_24438    ("E-Rezept-Fachdienst - Handhabung der Rückgabe von mehreren FHIR-Objekten - Sortieren von Einträgen");
 
 #endif

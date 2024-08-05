@@ -5,10 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/model/CommunicationTest.hxx"
 #include "erp/ErpRequirements.hxx"
+#include "erp/fhir/Fhir.hxx"
+#include "erp/model/ResourceFactory.hxx"
 #include "erp/model/ResourceNames.hxx"
 #include "test_config.h"
+#include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -25,19 +27,20 @@ CommunicationTest::CommunicationTest() :
 
 TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
-    std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq, profileVersion)
-        .setPrescriptionId("160.123.456.789.123.58")
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setRecipient(ActorRole::Pharmacists, "PharmacyA")
-        .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
+    std::string bodyRequest =
+        CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+            .setPrescriptionId("160.123.456.789.123.58")
+            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+            .setRecipient(ActorRole::Pharmacists, "PharmacyA")
+            .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.")
+            .createJsonString();
     std::optional<Communication> communication1;
-
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationInfoReq));
+    const auto& fhirInstance = Fhir::instance();
+    const auto* backend = std::addressof(fhirInstance.backend());
+    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+    ASSERT_NO_THROW(communication1 = model::ResourceFactory<Communication>::fromJson(
+                                         bodyRequest, *StaticData::getJsonValidator(), {})
+                                         .getValidated(ProfileType::Gem_erxCommunicationInfoReq, repoView));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
@@ -51,21 +54,20 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
     ASSERT_EQ(Communication::sentPointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
-    auto sdCommunicationInfoReq = isDeprecated ? structure_definition::deprecated::communicationInfoReq
-                                               : structure_definition::communicationInfoReq;
-
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
-              ::model::ResourceVersion::versionizeProfile(sdCommunicationInfoReq));
+              std::string{model::resource::structure_definition::communicationInfoReq} + '|' +
+                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
-    auto nsTelematikId = isDeprecated ? naming_system::deprecated::telematicID : naming_system::telematicID;
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), nsTelematikId);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
+              naming_system::telematicID);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyA");
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::InfoReq);
+    EXPECT_ANY_THROW(communication.profileType()); // InfoReq currently not allowed
     EXPECT_EQ(communication.messageTypeAsString(), "InfoReq");
 
-    EXPECT_EQ(communication.messageTypeAsProfileUrl(), sdCommunicationInfoReq);
+    EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationInfoReq);
 
     EXPECT_EQ(communication.id().has_value(), false);
     EXPECT_EQ(communication.prescriptionId().toString(), "160.123.456.789.123.58");
@@ -78,132 +80,50 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
     EXPECT_NO_THROW((void)communication.serializeToXmlString());
 }
 
-TEST_F(CommunicationTest, 2022resourcesWithoutVersion)//NOLINT(readability-function-cognitive-complexity)
-{
-    // this test ensures 2022 communication resources will be accepted also without a versioning in meta.profile
-    if (! ResourceVersion::supportedBundles().contains(ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
-    {
-        GTEST_SKIP_("Only relevant for 2022 profiles");
-    }
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
-    const auto profileVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1;
-    const auto* accessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
-    const auto* prescriptionId = "160.123.456.789.123.58";
-    const auto* payload = "Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.";
-    const auto profilePtr = rapidjson::Pointer{"/meta/profile/0"};
-    {
-        std::string dispReqJson = CommunicationJsonStringBuilder(Communication::MessageType::DispReq, profileVersion)
-                                      .setPrescriptionId(prescriptionId)
-                                      .setAccessCode(accessCode)
-                                      .setRecipient(ActorRole::Pharmacists, "PharmacyA")
-                                      .setPayload(payload)
-                                      .createJsonString();
-
-        auto dispReqModel = Communication::fromJsonNoValidation(dispReqJson).jsonDocument();
-        dispReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationDispReq);
-        EXPECT_NO_THROW((void)Communication::fromJson(dispReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
-                                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                                SchemaType::Gem_erxCommunicationDispReq,
-                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
-    }
-
-    {
-        std::string representativeJson =
-            CommunicationJsonStringBuilder(Communication::MessageType::Representative, profileVersion)
-                .setPrescriptionId(prescriptionId)
-                .setAccessCode(accessCode)
-                .setRecipient(ActorRole::Insurant, InsurantA)
-                .setPayload(payload)
-                .createJsonString();
-
-        auto representativeModel = Communication::fromJsonNoValidation(representativeJson).jsonDocument();
-        representativeModel.setValue(profilePtr,
-                                     model::resource::structure_definition::deprecated::communicationRepresentative);
-        EXPECT_NO_THROW((void)Communication::fromJson(representativeModel.serializeToJsonString(),
-                                                *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                                                *StaticData::getInCodeValidator(),
-                                                SchemaType::Gem_erxCommunicationRepresentative,
-                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
-    }
-
-    {
-        std::string infoReqJson = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq, profileVersion)
-                                      .setPrescriptionId(prescriptionId)
-                                      .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-                                      .setRecipient(ActorRole::Pharmacists, "PharmacyA")
-                                      .setPayload(payload)
-                                      .createJsonString();
-
-        auto infoReqModel = Communication::fromJsonNoValidation(infoReqJson).jsonDocument();
-        infoReqModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationInfoReq);
-        EXPECT_NO_THROW((void)Communication::fromJson(infoReqModel.serializeToJsonString(), *StaticData::getJsonValidator(),
-                                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                                SchemaType::Gem_erxCommunicationInfoReq,
-                                                {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
-    }
-
-    {
-        std::string replyJson = CommunicationJsonStringBuilder(Communication::MessageType::Reply, profileVersion)
-                                    .setPrescriptionId(prescriptionId)
-                                    .setRecipient(ActorRole::Insurant, InsurantA)
-                                    .setPayload(payload)
-                                    .createJsonString();
-
-        auto replyModel = Communication::fromJsonNoValidation(replyJson).jsonDocument();
-        replyModel.setValue(profilePtr, model::resource::structure_definition::deprecated::communicationReply);
-        EXPECT_NO_THROW((void)Communication::fromJson(replyModel.serializeToJsonString(), *StaticData::getJsonValidator(),
-                                               *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                                               SchemaType::Gem_erxCommunicationReply,
-                                               {model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01}));
-    }
-}
-
 TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
-    std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-        .setPrescriptionId("160.123.456.789.123.58")
-        .setRecipient(ActorRole::Insurant, InsurantA)
-        .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
+    std::string bodyRequest =
+        CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+            .setPrescriptionId("160.123.456.789.123.58")
+            .setSender(ActorRole::Pharmacists, "SMC-B-0815-4711")
+            .setRecipient(ActorRole::Insurant, InsurantA)
+            .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.")
+            .createJsonString();
 
     std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(
-                        bodyRequest, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                        *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationReply,
-                        model::ResourceVersion::supportedBundles(),
-                        false));
+    ASSERT_NO_THROW(communication1 =
+                        ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
+                            .getValidated(ProfileType::Gem_erxCommunicationReply));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_NE(Communication::metaProfile0Pointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_NE(Communication::basedOn0ReferencePointer.Get(communication.jsonDocument()), nullptr);
-    ASSERT_EQ(Communication::senderIdentifierSystemPointer.Get(communication.jsonDocument()), nullptr);
-    ASSERT_EQ(Communication::senderIdentifierValuePointer.Get(communication.jsonDocument()), nullptr);
+    ASSERT_NE(Communication::senderIdentifierSystemPointer.Get(communication.jsonDocument()), nullptr);
+    ASSERT_NE(Communication::senderIdentifierValuePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_NE(Communication::recipient0IdentifierSystemPointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_NE(Communication::recipient0IdentifierValuePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::sentPointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::receivedPointer.Get(communication.jsonDocument()), nullptr);
 
-    auto sdCommunicationReply = isDeprecated ? structure_definition::deprecated::communicationReply
-                                               : structure_definition::communicationReply;
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
-              ::model::ResourceVersion::versionizeProfile(sdCommunicationReply));
+              std::string{model::resource::structure_definition::communicationReply} + '|' +
+                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), nsGkvKvid10Id);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
+              naming_system::gkvKvid10);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::Reply);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationReply);
     EXPECT_EQ(communication.messageTypeAsString(), "Reply");
-    EXPECT_EQ(communication.messageTypeAsProfileUrl(), sdCommunicationReply);
+    EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationReply);
 
     EXPECT_EQ(communication.id().has_value(), false);
     EXPECT_EQ(communication.prescriptionId().toString(), "160.123.456.789.123.58");
-    EXPECT_EQ(communication.sender().has_value(), false);
+    EXPECT_TRUE(communication.sender().has_value());
     EXPECT_EQ(model::getIdentityString(communication.recipient()), InsurantA);
     EXPECT_EQ(communication.timeSent().has_value(), false);
     EXPECT_EQ(communication.timeReceived().has_value(), false);
@@ -214,8 +134,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cogn
 
 TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
+    auto profileVersion = ResourceTemplates::Versions::GEM_ERP_current();
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq, profileVersion)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -223,14 +142,11 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
         .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.").createJsonString();
 
     std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationDispReq));
+    ASSERT_NO_THROW(communication1 =
+                        ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
+                            .getValidated(ProfileType::Gem_erxCommunicationDispReq));
     auto& communication = *communication1;
 
-    auto sdCommunicationDispReq = isDeprecated ? structure_definition::deprecated::communicationDispReq
-                                               : structure_definition::communicationDispReq;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -245,17 +161,18 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
-              ::model::ResourceVersion::versionizeProfile(sdCommunicationDispReq));
+              std::string{model::resource::structure_definition::communicationDispReq} + '|' +
+                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
 
-
-    auto nsTelematikId = isDeprecated ? naming_system::deprecated::telematicID : naming_system::telematicID;
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), nsTelematikId);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
+              naming_system::telematicID);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyA");
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::DispReq);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationDispReq);
     EXPECT_EQ(communication.messageTypeAsString(), "DispReq");
-    EXPECT_EQ(communication.messageTypeAsProfileUrl(), sdCommunicationDispReq);
+    EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationDispReq);
 
     EXPECT_EQ(communication.id().has_value(), false);
     EXPECT_EQ(communication.prescriptionId().toString(), "160.123.456.789.123.58");
@@ -272,8 +189,7 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
 
 TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
+    auto profileVersion = ResourceTemplates::Versions::GEM_ERP_current();
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative, profileVersion)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -281,14 +197,10 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-func
         .setPayload("Kannst Du das Medikament fuer mich holen?").createJsonString();
 
     std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyRequest, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationRepresentative));
+    ASSERT_NO_THROW(communication1 =
+                        ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
+                            .getValidated(ProfileType::Gem_erxCommunicationRepresentative));
     auto& communication = *communication1;
-
-    auto sdCommunicationRepresentative = isDeprecated ? structure_definition::deprecated::communicationRepresentative
-                                               : structure_definition::communicationRepresentative;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
     ASSERT_EQ(Communication::idPointer.Get(communication.jsonDocument()), nullptr);
@@ -303,16 +215,18 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-func
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
-              ::model::ResourceVersion::versionizeProfile(sdCommunicationRepresentative));
+              std::string{model::resource::structure_definition::communicationRepresentative} + '|' +
+                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
 
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), nsGkvKvid10Id);
+    EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
+              naming_system::gkvKvid10);
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::Representative);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationRepresentative);
     EXPECT_EQ(communication.messageTypeAsString(), "Representative");
-    EXPECT_EQ(communication.messageTypeAsProfileUrl(), sdCommunicationRepresentative);
+    EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationRepresentative);
 
     EXPECT_EQ(communication.id().has_value(), false);
     EXPECT_EQ(communication.prescriptionId().toString(), "160.123.456.789.123.58");
@@ -364,7 +278,6 @@ TEST_F(CommunicationTest, InfoReqSetId)//NOLINT(readability-function-cognitive-c
 
 TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated = model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
@@ -386,10 +299,8 @@ TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cogniti
     EXPECT_NE(Communication::senderIdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::senderIdentifierSystemPointer.Get(document)->IsString(), true);
-    if (isDeprecated)
-        EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), naming_system::deprecated::gkvKvid10);
-    else
-        EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), naming_system::gkvKvid10);
+    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::gkvKvid10);
     EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), "X234567891");
 
@@ -404,8 +315,6 @@ TEST_F(CommunicationTest, InfoReqSetSender)//NOLINT(readability-function-cogniti
 
 TEST_F(CommunicationTest, InfoReqSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
@@ -425,9 +334,8 @@ TEST_F(CommunicationTest, InfoReqSetRecipient)//NOLINT(readability-function-cogn
     EXPECT_NE(Communication::recipient0IdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::recipient0IdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsTelematikId = isDeprecated ? naming_system::deprecated::telematicID : naming_system::telematicID;
     EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()),
-              nsTelematikId);
+              naming_system::telematicID);
     EXPECT_EQ(Communication::recipient0IdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::recipient0IdentifierValuePointer.Get(document)->GetString()), "PharmacyA");
 
@@ -540,8 +448,6 @@ TEST_F(CommunicationTest, ReplySetId)//NOLINT(readability-function-cognitive-com
 
 TEST_F(CommunicationTest, ReplySetSender)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
         .setRecipient(ActorRole::Insurant, InsurantA)
@@ -562,8 +468,8 @@ TEST_F(CommunicationTest, ReplySetSender)//NOLINT(readability-function-cognitive
     EXPECT_NE(Communication::senderIdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::senderIdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsTelematikId = isDeprecated ? naming_system::deprecated::telematicID : naming_system::telematicID;
-    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), nsTelematikId);
+    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::telematicID);
     EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), "123456789");
 
@@ -578,8 +484,6 @@ TEST_F(CommunicationTest, ReplySetSender)//NOLINT(readability-function-cognitive
 
 TEST_F(CommunicationTest, ReplySetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId("160.123.456.789.123.58")
         .setPayload("Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten.").createJsonString();
@@ -600,8 +504,8 @@ TEST_F(CommunicationTest, ReplySetRecipient)//NOLINT(readability-function-cognit
     EXPECT_NE(Communication::recipient0IdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::recipient0IdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()), nsGkvKvid10Id);
+    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::gkvKvid10);
     EXPECT_EQ(Communication::recipient0IdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::recipient0IdentifierValuePointer.Get(document)->GetString()), kvnrInsurantC.id());
 
@@ -714,8 +618,6 @@ TEST_F(CommunicationTest, DispReqSetId)//NOLINT(readability-function-cognitive-c
 
 TEST_F(CommunicationTest, DispReqSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -738,8 +640,8 @@ TEST_F(CommunicationTest, DispReqSetSender)//NOLINT(readability-function-cogniti
     EXPECT_NE(Communication::senderIdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::senderIdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), nsGkvKvid10Id);
+    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::gkvKvid10);
     EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), InsurantA);
 
@@ -755,8 +657,6 @@ TEST_F(CommunicationTest, DispReqSetSender)//NOLINT(readability-function-cogniti
 
 TEST_F(CommunicationTest, DispReqSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -777,8 +677,8 @@ TEST_F(CommunicationTest, DispReqSetRecipient)//NOLINT(readability-function-cogn
     EXPECT_NE(Communication::recipient0IdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::recipient0IdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsTelematikId = isDeprecated ? naming_system::deprecated::telematicID : naming_system::telematicID;
-    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()), nsTelematikId);
+    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::telematicID);
     EXPECT_EQ(Communication::recipient0IdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::recipient0IdentifierValuePointer.Get(document)->GetString()), pharmacyA.id());
 
@@ -893,8 +793,6 @@ TEST_F(CommunicationTest, RepresentativeSetId)//NOLINT(readability-function-cogn
 
 TEST_F(CommunicationTest, RepresentativeSetSender)//NOLINT(readability-function-cognitive-complexity)
 {
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -917,8 +815,8 @@ TEST_F(CommunicationTest, RepresentativeSetSender)//NOLINT(readability-function-
     EXPECT_NE(Communication::senderIdentifierValuePointer.Get(document), nullptr);
 
     EXPECT_EQ(Communication::senderIdentifierSystemPointer.Get(document)->IsString(), true);
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()), nsGkvKvid10Id);
+    EXPECT_EQ(std::string(Communication::senderIdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::gkvKvid10);
     EXPECT_EQ(Communication::senderIdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::senderIdentifierValuePointer.Get(document)->GetString()), InsurantB);
 
@@ -934,8 +832,7 @@ TEST_F(CommunicationTest, RepresentativeSetSender)//NOLINT(readability-function-
 
 TEST_F(CommunicationTest, RepresentativeSetRecipient)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
+    auto profileVersion = ResourceTemplates::Versions::GEM_ERP_current();
     std::string bodyRequest = CommunicationJsonStringBuilder(Communication::MessageType::Representative, profileVersion)
         .setPrescriptionId("160.123.456.789.123.58")
         .setAccessCode("777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea")
@@ -957,8 +854,8 @@ TEST_F(CommunicationTest, RepresentativeSetRecipient)//NOLINT(readability-functi
 
     EXPECT_EQ(Communication::recipient0IdentifierSystemPointer.Get(document)->IsString(), true);
 
-    auto nsGkvKvid10Id = isDeprecated ? naming_system::deprecated::gkvKvid10 : naming_system::gkvKvid10;
-    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()), nsGkvKvid10Id);
+    EXPECT_EQ(std::string(Communication::recipient0IdentifierSystemPointer.Get(document)->GetString()),
+              naming_system::gkvKvid10);
     EXPECT_EQ(Communication::recipient0IdentifierValuePointer.Get(document)->IsString(), true);
     EXPECT_EQ(std::string(Communication::recipient0IdentifierValuePointer.Get(document)->GetString()), InsurantB);
 
@@ -1038,10 +935,6 @@ TEST_F(CommunicationTest, RepresentativeSetTimeReceived)//NOLINT(readability-fun
 
 TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    if (model::ResourceVersion::deprecatedProfile(profileVersion))
-        GTEST_SKIP_("disabled for deprecated Version");
-
     std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                            .setPrescriptionId("160.123.456.789.123.58")
                            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
@@ -1049,12 +942,12 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
                            .setPayload("Some change request payload")
                            .createJsonString();
 
-    const auto chargChangeReqComm = Communication::fromJson(
-        std::move(body), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::fhir,
-        model::ResourceVersion::supportedBundles(), false);
+    const auto chargChangeReqComm =
+        ResourceFactory<Communication>::fromJson(std::move(body), *StaticData::getJsonValidator(), {})
+            .getValidated(ProfileType::Gem_erxCommunicationChargChangeReq);
 
     EXPECT_EQ(chargChangeReqComm.messageType(), Communication::MessageType::ChargChangeReq);
+    EXPECT_EQ(chargChangeReqComm.profileType(), model::ProfileType::Gem_erxCommunicationChargChangeReq);
     EXPECT_EQ(chargChangeReqComm.messageTypeAsString(), "ChargChangeReq");
     EXPECT_EQ(chargChangeReqComm.messageTypeAsProfileUrl(), structure_definition::communicationChargChangeReq);
     EXPECT_FALSE(chargChangeReqComm.id().has_value());
@@ -1080,7 +973,52 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::telematicID);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyX");
     EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
-              model::ResourceVersion::versionizeProfile(structure_definition::communicationChargChangeReq));
+              std::string{model::resource::structure_definition::communicationChargChangeReq} + '|' +
+                  to_string(ResourceTemplates::Versions::GEM_ERPCHRG_current()));
+}
+
+TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
+{
+    std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
+    .setPrescriptionId("160.123.456.789.123.58")
+    .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
+    .setSender(ActorRole::Pharmacists, "PharmacyX")
+    .setRecipient(ActorRole::Insurant, InsurantA)
+    .setPayload("Some change request payload")
+    .createJsonString();
+
+    const auto chargChangeReplyComm =
+    ResourceFactory<Communication>::fromJson(std::move(body), *StaticData::getJsonValidator(), {})
+    .getValidated(ProfileType::Gem_erxCommunicationChargChangeReply);
+
+    EXPECT_EQ(chargChangeReplyComm.messageType(), Communication::MessageType::ChargChangeReply);
+    EXPECT_EQ(chargChangeReplyComm.profileType(), model::ProfileType::Gem_erxCommunicationChargChangeReply);
+    EXPECT_EQ(chargChangeReplyComm.messageTypeAsString(), "ChargChangeReply");
+    EXPECT_EQ(chargChangeReplyComm.messageTypeAsProfileUrl(), structure_definition::communicationChargChangeReply);
+    EXPECT_FALSE(chargChangeReplyComm.id().has_value());
+    EXPECT_EQ(chargChangeReplyComm.prescriptionId().toString(), "160.123.456.789.123.58");
+    ASSERT_TRUE(chargChangeReplyComm.sender().has_value());
+    EXPECT_EQ(model::getIdentityString(chargChangeReplyComm.sender().value()), "PharmacyX");
+    EXPECT_EQ(model::getIdentityString(chargChangeReplyComm.recipient()), InsurantA);
+    EXPECT_FALSE(chargChangeReplyComm.timeSent().has_value());
+    EXPECT_FALSE(chargChangeReplyComm.timeReceived().has_value());
+
+    const auto& json = chargChangeReplyComm.jsonDocument();
+    EXPECT_NE(Communication::resourceTypePointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::idPointer.Get(json), nullptr);
+    EXPECT_NE(Communication::metaProfile0Pointer.Get(json), nullptr);
+    EXPECT_NE(Communication::basedOn0ReferencePointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::sentPointer.Get(json), nullptr);
+    EXPECT_EQ(Communication::receivedPointer.Get(json), nullptr);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::basedOn0ReferencePointer), "ChargeItem/160.123.456.789.123.58");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierSystemPointer), naming_system::telematicID);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierValuePointer), "PharmacyX");
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::gkvKvid10);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
+              std::string{model::resource::structure_definition::communicationChargChangeReply} + '|' +
+    to_string(ResourceTemplates::Versions::GEM_ERPCHRG_current()));
 }
 
 namespace
@@ -1097,11 +1035,34 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
                        bool withDiagnostics = true)
 {
     auto builder = CommunicationJsonStringBuilder(messageType);
-    std::string body = builder.setPayload(std::string{payload}).createJsonString();
+    builder.setPayload(std::string{payload})
+        .setPrescriptionId(
+            PrescriptionId::fromDatabaseId(PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711).toString());
+    switch (messageType)
+    {
+        using enum Communication::MessageType;
+        case InfoReq:
+        case DispReq:
+            builder.setAbout("#5e164c7d-8dc4-4e46-9b25-163f05bd203f");
+            [[fallthrough]];
+        case ChargChangeReq:
+            builder.setSender(ActorRole::Insurant, "X555000111")
+                .setRecipient(ActorRole::Pharmacists, "SMC-B-0815-4711");
+            break;
+        case Representative:
+            builder.setSender(ActorRole::Insurant, "X666000111").setRecipient(ActorRole::Insurant, "X555000111");
+            break;
+        case Reply:
+        case ChargChangeReply:
+            builder.setSender(ActorRole::Pharmacists, "SMC-B-0815-4711")
+                .setRecipient(ActorRole::Insurant, "X555000111");
+    }
+
+    std::string body = builder.createJsonString();
     auto jsonValidator = StaticData::getJsonValidator();
-    const auto comm = Communication::fromJson(std::move(body), *jsonValidator, *StaticData::getXmlValidator(),
-                                              *StaticData::getInCodeValidator(), SchemaType::fhir,
-                                              model::ResourceVersion::supportedBundles(), false);
+    const auto comm = ResourceFactory<Communication>::fromJson(
+                          std::move(body), *jsonValidator, {.genericValidationMode = GenericValidationMode::disable})
+                          .getValidated(Communication::messageTypeToProfileType(messageType));
     try
     {
         comm.verifyPayload(*jsonValidator);
@@ -1133,11 +1094,6 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
 
 TEST_F(CommunicationTest, verifyPayloadDispReq)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    if (model::ResourceVersion::deprecatedProfile(profileVersion))
-    {
-        GTEST_SKIP_("Does not apply to 2022 profiles");
-    }
     const auto msgType = Communication::MessageType::DispReq;
     A_23878.test("Validierung DispReq payload");
 
@@ -1222,11 +1178,6 @@ TEST_F(CommunicationTest, verifyPayloadDispReq)
 
 TEST_F(CommunicationTest, verifyPayloadReply)
 {
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    if (model::ResourceVersion::deprecatedProfile(profileVersion))
-    {
-        GTEST_SKIP_("Does not apply to 2022 profiles");
-    }
     A_23879.test("Validierung DispReq payload");
     const auto msgType = Communication::MessageType::Reply;
 
@@ -1344,20 +1295,10 @@ TEST_F(CommunicationTest, verifyPayloadReply)
 TEST_F(CommunicationTest, verifyPayloadNoJson)
 {
     using enum model::Communication::MessageType;
-    auto profileVersion = model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>();
-    bool isDeprecated = model::ResourceVersion::deprecatedProfile(profileVersion);
     std::string_view payload = "not-a-json";
     std::vector<model::Communication::MessageType> messageTypes;
-    if (isDeprecated)
-    {
-        // 2022 profiles must allow any payload, without chargeChange
-        messageTypes = {InfoReq, Representative, DispReq, Reply};
-    }
-    else
-    {
-        // 2023 profiles must all, without DispReq & Reply
-        messageTypes = {InfoReq, Representative, ChargChangeReply, ChargChangeReq};
-    }
+    // 2023 profiles must all, without DispReq & Reply
+    messageTypes = {InfoReq, Representative, ChargChangeReply, ChargChangeReq};
 
     for (const auto& msgType : messageTypes)
     {

@@ -7,6 +7,7 @@
 
 #include "erp/util/search/UrlArguments.hxx"
 
+#include "erp/ErpRequirements.hxx"
 #include "erp/hsm/KeyDerivation.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/ByteHelper.hxx"
@@ -24,6 +25,8 @@ std::string formatTimestamp(SearchParameter::Type type, const model::Timestamp& 
 {
     switch (type)
     {
+        case SearchParameter::Type::SQLDate:
+            return timestamp.toGermanDate();
         case SearchParameter::Type::Date:
             return timestamp.toXsDateTimeWithoutFractionalSeconds();
         case SearchParameter::Type::DateAsUuid:
@@ -39,11 +42,12 @@ std::string formatTimestamp(SearchParameter::Type type, const model::Timestamp& 
 
 } // namespace
 
-UrlArguments::UrlArguments (std::vector<SearchParameter>&& searchParameters)
+UrlArguments::UrlArguments (std::vector<SearchParameter>&& searchParameters, const std::string& defaultSortArgument /* = {} */)
     : mSupportedParameters(std::move(searchParameters)),
       mSearchArguments(),
       mSortArguments(),
-      mPagingArgument()
+      mPagingArgument(),
+      mDefaultSortArgument{defaultSortArgument}
 {
 }
 
@@ -106,6 +110,12 @@ void UrlArguments::parse(const std::vector<std::pair<std::string, std::string>>&
         }
     }
     ErpExpect(! (hasOffset && hasId), HttpStatus::BadRequest, "Cannot combine _id and __offset paging arguments");
+    A_24438.start("Use default sort key if available and no sort arguments are provided.");
+    if (mSortArguments.empty() && mDefaultSortArgument.has_value())
+    {
+        addSortArguments(std::string{mDefaultSortArgument.value()});
+    }
+    A_24438.finish();
 }
 
 
@@ -136,6 +146,7 @@ void UrlArguments::addSearchArguments (const std::string& name,
 
     switch (parameterType.value())
     {
+        case SearchParameter::Type::SQLDate:
         case SearchParameter::Type::Date:
         case SearchParameter::Type::DateAsUuid:
             addDateSearchArguments(name, rawValues, *parameterDbName, *parameterType);
@@ -254,38 +265,24 @@ void UrlArguments::addPrescriptionIdSearchArguments(const std::string& name, con
 {
     if (rawValues.empty())
         return;
-
-    // Always support the old naming system version, but only support the new version
-    // when also the new profiles are accepted, i.e. at the overlapping period
-    std::unordered_set<std::string_view> supportedNamingSystems{
-        model::resource::naming_system::deprecated::prescriptionID};
-    if (model::ResourceVersion::isProfileSupported(model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0))
-    {
-        supportedNamingSystems.insert(model::resource::naming_system::prescriptionID);
-    }
-
     std::vector<model::PrescriptionId> dbValues;
     std::vector<std::string> originalValues;
     const std::vector<std::string> strlstRawValues = splitCheckedArgs(rawValues);
     for (const auto& rawValue : strlstRawValues)
     {
         std::string value;
-        for (const auto& namingSystem : supportedNamingSystems)
+        if (String::starts_with(rawValue, std::string(model::resource::naming_system::prescriptionID) + '|'))
         {
-            if (String::starts_with(rawValue, std::string(namingSystem) + '|'))
+            value = rawValue.substr(model::resource::naming_system::prescriptionID.size() + 1);
+            try
             {
-                value = rawValue.substr(namingSystem.size() + 1);
-                try
-                {
-                    auto prescriptionId = model::PrescriptionId::fromString(value);
-                    dbValues.emplace_back(prescriptionId);
-                    originalValues.emplace_back(rawValue);
-                }
-                catch (const model::ModelException& exception)
-                {
-                    ErpFailWithDiagnostics(HttpStatus::BadRequest, "bad search parameter", rawValue);
-                }
-                break;
+                auto prescriptionId = model::PrescriptionId::fromString(value);
+                dbValues.emplace_back(prescriptionId);
+                originalValues.emplace_back(rawValue);
+            }
+            catch (const model::ModelException& exception)
+            {
+                ErpFailWithDiagnostics(HttpStatus::BadRequest, "bad search parameter", rawValue);
             }
         }
         ErpExpectWithDiagnostics(!value.empty(), HttpStatus::BadRequest, "bad search parameter", rawValue);
@@ -434,8 +431,22 @@ void UrlArguments::appendLinkPagingArgumentsWithOffset(std::ostream& os, const m
             appendLinkSeparator(os);
             os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
                << '=' << mPagingArgument.getOffset() + mPagingArgument.getCount();
+            break;
         }
-        break;
+
+        case model::Link::First: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
+            << "=0";
+            break;
+        }
+
+        case model::Link::Last: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount() << '&' << PagingArgument::offsetKey
+            << '=' << mPagingArgument.getOffsetLastPage();
+            break;
+        }
     }
 }
 
@@ -477,20 +488,31 @@ void UrlArguments::appendLinkPagingArgumentsWithId(std::ostream& os, const model
                << formatTimestamp(SearchParameter::Type::DateAsUuid, mPagingArgument.getEntryTimestampRange()->second);
         }
         break;
+
+        case model::Link::First: {
+            appendLinkSeparator(os);
+            os << PagingArgument::countKey << "=" << mPagingArgument.getCount();
+        }
+        break;
+
+        case model::Link::Last:
+            // do nothing: The requirement A_24443 does not require a last link for pagination with an ID.
+        break;
     }
 }
 
 
-std::unordered_map<model::Link::Type, std::string> UrlArguments::getBundleLinks (
+std::unordered_map<model::Link::Type, std::string> UrlArguments::createBundleLinks (
     const std::string& linkBase,
     const std::string& pathHead,
-    const std::size_t& totalSearchMatches) const
+    const std::size_t& totalSearchMatches)
 {
-    return getBundleLinks(mPagingArgument.hasNextPage(totalSearchMatches), linkBase, pathHead);
+    mPagingArgument.setTotalSearchMatches(totalSearchMatches);
+    return createBundleLinks(mPagingArgument.hasNextPage(totalSearchMatches), linkBase, pathHead);
 }
 
 std::unordered_map<model::Link::Type, std::string>
-UrlArguments::getBundleLinks(bool hasNextPage, const std::string& linkBase, const std::string& pathHead, LinkMode linkMode) const
+UrlArguments::createBundleLinks(bool hasNextPage, const std::string& linkBase, const std::string& pathHead, LinkMode linkMode) const
 {
     std::unordered_map<model::Link::Type, std::string> links;
 
@@ -507,6 +529,15 @@ UrlArguments::getBundleLinks(bool hasNextPage, const std::string& linkBase, cons
     {
         links.emplace(model::Link::Type::Next,
                       linkBase + pathHead + getLinkPathArguments(model::Link::Type::Next, linkMode));
+    }
+
+    links.emplace(model::Link::Type::First,
+                 linkBase + pathHead + getLinkPathArguments(model::Link::Type::First, linkMode));
+
+    if (linkMode == LinkMode::offset)
+    {
+        links.emplace(model::Link::Type::Last,
+                    linkBase + pathHead + getLinkPathArguments(model::Link::Type::Last, linkMode));
     }
 
     return links;
@@ -628,6 +659,7 @@ void UrlArguments::appendComparison(std::ostream& os, const SearchArgument& argu
 {
     switch (argument.type)
     {
+        case SearchParameter::Type::SQLDate:
         case SearchParameter::Type::Date:
         case SearchParameter::Type::DateAsUuid:
             appendDateComparison(os, argument, connection);

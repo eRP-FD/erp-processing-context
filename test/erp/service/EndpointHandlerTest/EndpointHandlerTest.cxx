@@ -19,6 +19,7 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/server/request/ServerRequest.hxx"
 #include "erp/server/response/ServerResponse.hxx"
+#include "erp/service/AuditEventCreator.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/DeviceHandler.hxx"
 #include "erp/service/MetaDataHandler.hxx"
@@ -105,8 +106,7 @@ TEST_F(EndpointHandlerTest, GetTaskById)//NOLINT(readability-function-cognitive-
     auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
-    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
     ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
     ASSERT_TRUE(rapidjson::Pointer("/link/0/relation").Get(document)->IsString());
 
@@ -146,8 +146,7 @@ TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)//NOLINT(readability-func
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
 
-    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
 
     ASSERT_THROW((void)tasks[0].accessCode(), model::ModelException);
 
@@ -185,11 +184,15 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)//NOLINT(readability-
     ASSERT_EQ(prescriptions.size(), 1);
 
     fhirtools::ValidatorOptions kbvValidatorOptions{.allowNonLiteralAuthorReference = true};
+    std::optional<model::ResourceFactory<model::KbvBundle>> kbvBundleFactory;
+
+    ASSERT_NO_THROW(kbvBundleFactory.emplace(model::ResourceFactory<model::KbvBundle>::fromXml(
+        prescriptions[0].serializeToXmlString(), *StaticData::getXmlValidator(),
+        {.validatorOptions = kbvValidatorOptions})));
+    ASSERT_TRUE(prescriptions[0].getSignature().has_value());
     std::optional<model::KbvBundle> kbvBundle;
-    ASSERT_NO_THROW(kbvBundle.emplace(model::ResourceFactory<model::KbvBundle>::
-            fromXml(prescriptions[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                    {.validatorOptions = kbvValidatorOptions })
-            .getValidated(SchemaType::KBV_PR_ERP_Bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator())));
+    ASSERT_NO_THROW(
+        kbvBundle.emplace(std::move(*kbvBundleFactory).getValidated(model::ProfileType::KBV_PR_ERP_Bundle)));
     ASSERT_TRUE(prescriptions[0].getSignature().has_value());
     auto signature = prescriptions[0].getSignature().value();
     ASSERT_TRUE(signature.when().has_value());
@@ -248,8 +251,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)//NOLINT(readability-functio
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readability-function-cognitive-complexity)
@@ -283,8 +285,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readabilit
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readability-function-cognitive-complexity)
@@ -323,8 +324,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readabi
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
-    ASSERT_NO_THROW((void)model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator(),
-                                               *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+    ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
 }
 
 TEST_F(EndpointHandlerTest, GetTaskByIdWrongAccessCodeHeader)
@@ -483,8 +483,7 @@ TEST_F(EndpointHandlerTest, GetAllTasks)//NOLINT(readability-function-cognitive-
     ASSERT_FALSE(tasks.empty());
     for (const auto& item : tasks)
     {
-        ASSERT_NO_THROW((void)model::Task::fromXml(item.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                   *StaticData::getInCodeValidator(), SchemaType::Gem_erxTask));
+        ASSERT_NO_THROW((void) model::Task::fromXml(item.serializeToXmlString(), *StaticData::getXmlValidator()));
     }
 }
 
@@ -568,7 +567,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)//NOLINT(readability-function-cog
         ASSERT_TRUE(bundle.getLink(model::Link::Self).has_value());
         ASSERT_TRUE(bundle.getLink(model::Link::Next).has_value());
         std::string val(bundle.getLink(model::Link::Next).value());
-        ASSERT_EQ(val, "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+        ASSERT_EQ(val, "https://gematik.erppre.de:443/Task?_sort=authored-on&_count=50&__offset=50");
         ASSERT_FALSE(bundle.getLink(model::Link::Prev).has_value());
 
 
@@ -591,9 +590,9 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)//NOLINT(readability-function-cog
         ASSERT_EQ(bundle2.getResourceCount(), 50);
         ASSERT_TRUE(bundle2.getLink(model::Link::Self).has_value());
         ASSERT_TRUE(bundle2.getLink(model::Link::Next).has_value());
-        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=100");
+        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_sort=authored-on&_count=50&__offset=100");
         ASSERT_TRUE(bundle2.getLink(model::Link::Prev).has_value());
-        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=0");
+        ASSERT_EQ(std::string(bundle2.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_sort=authored-on&_count=50&__offset=0");
 
 
         // Page 3 with 12 entries expected
@@ -617,7 +616,7 @@ TEST_F(EndpointHandlerTest, GetAllTasksErp6560)//NOLINT(readability-function-cog
         ASSERT_FALSE(bundle3.getLink(model::Link::Next).has_value());
         //ASSERT_EQ(std::string(bundle3.getLink(model::Link::Next).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=150");
         ASSERT_TRUE(bundle3.getLink(model::Link::Prev).has_value());
-        ASSERT_EQ(std::string(bundle3.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_count=50&__offset=50");
+        ASSERT_EQ(std::string(bundle3.getLink(model::Link::Prev).value()), "https://gematik.erppre.de:443/Task?_sort=authored-on&_count=50&__offset=50");
     }
 }
 
@@ -628,15 +627,12 @@ TEST_F(EndpointHandlerTest, CreateTask)//NOLINT(readability-function-cognitive-c
     Header requestHeader{ HttpMethod::POST, "/Task/$create", 0, {{Header::ContentType,ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown};
     ServerRequest serverRequest{ std::move(requestHeader) };
 
-    const auto gematikVersion{model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()};
-    const auto csFlowtype = (gematikVersion < model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
-        ? model::resource::code_system::deprecated::flowType
-        : model::resource::code_system::flowType;
     std::string parameters = R"--(<Parameters xmlns="http://hl7.org/fhir">
   <parameter>
     <name value="workflowType"/>
     <valueCoding>
-      <system value=")--" + std::string(csFlowtype) + R"--("/>
+      <system value=")--" + std::string(model::resource::code_system::flowType) +
+                             R"--("/>
       <code value="160"/>
     </valueCoding>
   </parameter>
@@ -653,10 +649,8 @@ TEST_F(EndpointHandlerTest, CreateTask)//NOLINT(readability-function-cognitive-c
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
 
     std::optional<model::Task> retrievedTask;
-    ASSERT_NO_THROW(retrievedTask.emplace(model::Task::fromXml(serverResponse.getBody(),
-                                                               *StaticData::getXmlValidator(),
-                                                               *StaticData::getInCodeValidator(),
-                                                               SchemaType::Gem_erxTask)));
+    ASSERT_NO_THROW(
+        retrievedTask.emplace(model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator())));
     EXPECT_GT(retrievedTask->prescriptionId().toDatabaseId(), 0);
     EXPECT_EQ(retrievedTask->status(), model::Task::Status::draft);
     EXPECT_FALSE(retrievedTask->kvnr().has_value());
@@ -709,16 +703,14 @@ INSTANTIATE_TEST_SUITE_P(invalid, EndpointHandlerSampleTest,
 
 TEST_F(EndpointHandlerTest, GetAllAuditEvents)
 {
-    const std::string gematikVersionStr{
-        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     const std::string auditEventFileName = "audit_event_" + gematikVersionStr + ".json";
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446685", auditEventFileName));
 }
 
 TEST_F(EndpointHandlerTest, GetAllAuditEvents_delete_task)
 {
-    const std::string gematikVersionStr{
-        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     const std::string auditEventFileName = "audit_event_delete_task_" + gematikVersionStr + ".json";
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446697", auditEventFileName));
 }
@@ -745,11 +737,10 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitiv
 
     auto auditEvent = model::AuditEvent::fromJsonNoValidation(serverResponse.getBody());
 
-    ASSERT_NO_THROW((void)model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                     *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
+    ASSERT_NO_THROW(
+        (void) model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator()));
 
-    const std::string gematikVersionStr{
-        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     const std::string auditEventFileName = dataPath + "/audit_event_" + gematikVersionStr + ".json";
     auto expectedAuditEvent =
         model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(auditEventFileName));
@@ -928,12 +919,9 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
+    LOG(INFO) << serverResponse.getBody();
     std::optional<model::MetaData> metaData;
-    ASSERT_NO_THROW(
-        metaData = model::MetaData::fromXml(
-            serverResponse.getBody(),
-            *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-            SchemaType::fhir, model::ResourceVersion::supportedBundles(), true));
+    ASSERT_NO_THROW(metaData = model::MetaData::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion());
     EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
     EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
@@ -944,8 +932,7 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    std::string gematikVer{model::ResourceVersion::v_str(
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVer{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     auto expectedMetaData =
             model::MetaData::fromXmlNoValidation(FileHelper::readFileAsString(dataPath + "/metadata_" + gematikVer + ".xml"));
     expectedMetaData.setVersion(version);
@@ -970,11 +957,7 @@ TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     std::optional<model::MetaData> metaData;
-    ASSERT_NO_THROW(
-        metaData = model::MetaData::fromJson(
-            serverResponse.getBody(),
-            *StaticData::getJsonValidator(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-            SchemaType::fhir, model::ResourceVersion::supportedBundles(), true));
+    ASSERT_NO_THROW(metaData = model::MetaData::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator()));
 
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion());
     EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
@@ -986,8 +969,7 @@ TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    std::string gematikVer{model::ResourceVersion::v_str(
-        model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    const std::string gematikVer{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     auto expectedMetaData =
         model::MetaData::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/metadata_" + gematikVer + ".json"));
     expectedMetaData.setVersion(version);
@@ -1015,10 +997,7 @@ TEST_F(EndpointHandlerTest, DeviceXml)//NOLINT(readability-function-cognitive-co
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     std::optional<model::Device> device;
-    ASSERT_NO_THROW(device = model::Device::fromXml(serverResponse.getBody(),
-                                                    *StaticData::getXmlValidator(),
-                                                    *StaticData::getInCodeValidator(),
-                                                    SchemaType::fhir));
+    ASSERT_NO_THROW(device = model::Device::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
 
     EXPECT_EQ(device->status(), model::Device::Status::active);
     EXPECT_EQ(device->version(), ErpServerInfo::ReleaseVersion());
@@ -1084,9 +1063,8 @@ void checkPostConsentHandler(
 
     if(expectedStatus == HttpStatus::Created)
     {
-        ASSERT_NO_THROW(resultConsent = model::Consent::fromJson(
-            serverResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-            *StaticData::getInCodeValidator(), SchemaType::fhir));
+        ASSERT_NO_THROW(resultConsent =
+                            model::Consent::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator()));
         ASSERT_TRUE(resultConsent);
     }
 }
@@ -1095,11 +1073,6 @@ void checkPostConsentHandler(
 
 TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
     const char* const origKvnr1 = "X500000056";
     auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr1));
@@ -1179,11 +1152,6 @@ void checkDeleteConsentHandler(
 
 TEST_F(EndpointHandlerTest, DeleteConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     // Kvnr from static Consent object in mock database
     const char* const kvnr = "X500000056";
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(kvnr));
@@ -1237,21 +1205,17 @@ void checkGetConsentHandler(
 
     if(expectedStatus == HttpStatus::OK)
     {
-        using BundleFactory = model::ResourceFactory<model::Bundle>;
         std::optional<model::Bundle> consentBundle;
-        ASSERT_NO_THROW(consentBundle =
-                BundleFactory::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())
-                .getValidated(SchemaType::fhir, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                     {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}));
+        ASSERT_NO_THROW(
+            consentBundle.emplace(model::Bundle::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())));
         ASSERT_TRUE(consentBundle);
         ASSERT_LE(consentBundle->getResourceCount(), 1);
         if(consentBundle->getResourceCount() == 1)
         {
             auto consents = consentBundle->getResourcesByType<model::Consent>("Consent");
             ASSERT_EQ(consents.size(), 1);
-            ASSERT_NO_THROW(resultConsent = model::Consent::fromJson(
-                consents.front().serializeToJsonString(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                *StaticData::getInCodeValidator(), SchemaType::fhir));
+            ASSERT_NO_THROW(resultConsent = model::Consent::fromJson(consents.front().serializeToJsonString(),
+                                                                     *StaticData::getJsonValidator()));
         }
     }
 }
@@ -1260,11 +1224,6 @@ void checkGetConsentHandler(
 
 TEST_F(EndpointHandlerTest, GetConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
     const char* const origKvnr = "X500000056";
     const char* const origDateTimeStr = "2021-06-01T07:13:00+05:00";
@@ -1286,7 +1245,6 @@ TEST_F(EndpointHandlerTest, GetConsent)//NOLINT(readability-function-cognitive-c
     EXPECT_NO_FATAL_FAILURE(checkGetConsentHandler(
         resultConsent, mServiceContext, JwtBuilder::testBuilder().makeJwtVersicherter("X999999992"), HttpStatus::OK));
     EXPECT_FALSE(resultConsent);
-
 }
 
 namespace {
@@ -1336,10 +1294,8 @@ void checkGetChargeItemByIdHandler(
             const auto& chargeItem = chargeItems[0];
 
             std::optional<model::ChargeItem> checkedChargeItem;
-            ASSERT_NO_THROW(checkedChargeItem = model::ChargeItem::fromXml(
-                                chargeItem.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                *StaticData::getInCodeValidator(), SchemaType::fhir,
-                                model::ResourceVersion::supportedBundles(), false));
+            ASSERT_NO_THROW(checkedChargeItem = model::ChargeItem::fromXml(chargeItem.serializeToXmlString(),
+                                                                           *StaticData::getXmlValidator()));
             EXPECT_FALSE(checkedChargeItem->containedBinary());
 
             const auto bundleItems = chargeItemBundle.getResourcesByType<model::Bundle>("Bundle");
@@ -1363,12 +1319,9 @@ void checkGetChargeItemByIdHandler(
                 chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
             const model::Bundle& receipt = bundleItems[2];
-            using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
             std::optional<model::ErxReceipt> checkedReceipt;
-            ASSERT_NO_THROW(checkedReceipt =
-                    ErxReceiptFactory::fromXml(receipt.serializeToXmlString(), *StaticData::getXmlValidator())
-                    .getValidated(SchemaType::Gem_erxReceiptBundle, *StaticData::getXmlValidator(),
-                         *StaticData::getInCodeValidator()));
+            ASSERT_NO_THROW(checkedReceipt.emplace(
+                model::ErxReceipt::fromXml(receipt.serializeToXmlString(), *StaticData::getXmlValidator())));
 
             ASSERT_TRUE(
                 chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
@@ -1389,12 +1342,12 @@ void checkGetChargeItemByIdHandler(
                 CadesBesSignature cms(certs, signatureData);
                 constexpr fhirtools::ValidatorOptions kbvValidatorOptions{.allowNonLiteralAuthorReference = true};
                 using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
+                std::optional<KbvBundleFactory> kbvBundleFactory;
+                ASSERT_NO_THROW(kbvBundleFactory.emplace(KbvBundleFactory::fromXml(
+                    cms.payload(), *StaticData::getXmlValidator(), {.validatorOptions = kbvValidatorOptions})));
                 std::optional<model::KbvBundle> kbvBundleFromSignature;
-                ASSERT_NO_THROW(kbvBundleFromSignature =
-                        KbvBundleFactory::fromXml( cms.payload(), *StaticData::getXmlValidator(),
-                                                   {.validatorOptions = kbvValidatorOptions})
-                        .getValidated(SchemaType::KBV_PR_ERP_Bundle, *StaticData::getXmlValidator(),
-                             *StaticData::getInCodeValidator()));
+                ASSERT_NO_THROW(kbvBundleFromSignature.emplace(
+                    std::move(*kbvBundleFactory).getValidated(model::ProfileType::KBV_PR_ERP_Bundle)));
                 EXPECT_FALSE(kbvBundleFromSignature->getSignature().has_value());
             }
             {
@@ -1404,12 +1357,9 @@ void checkGetChargeItemByIdHandler(
                 std::string signatureData;
                 ASSERT_NO_THROW(signatureData = signature->data().value().data());
                 CadesBesSignature cms(certs, signatureData);
-                using ErxReceiptFactory = model::ResourceFactory<model::ErxReceipt>;
                 std::optional<model::ErxReceipt> receiptFromSignature;
-                ASSERT_NO_THROW(receiptFromSignature =
-                        ErxReceiptFactory::fromXml(cms.payload(), *StaticData::getXmlValidator())
-                        .getValidated(SchemaType::Gem_erxReceiptBundle, *StaticData::getXmlValidator(),
-                             *StaticData::getInCodeValidator()));
+                ASSERT_NO_THROW(receiptFromSignature.emplace(
+                    model::ErxReceipt::fromXml(cms.payload(), *StaticData::getXmlValidator())));
                 EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
             }
 
@@ -1456,12 +1406,7 @@ TEST_F(EndpointHandlerTest, GetChargeItemById)//NOLINT(readability-function-cogn
 {
     const char* const kvnr = "X500000056";
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-// GEMREQ-end A_22126#start
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
+    // GEMREQ-end A_22126#start
 
     A_22127.test("Check response for insurant");
     EXPECT_NO_FATAL_FAILURE(
@@ -1506,12 +1451,6 @@ TEST_F(EndpointHandlerTest, GetChargeItemById_OldCertificate)
     // ERP-17321 GET ChargeItem/<id> validiert fälschlicherweise das Signaturzertifikat - B_FD-800
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50023);
 
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     EXPECT_NO_FATAL_FAILURE(
         checkGetChargeItemByIdHandler(mServiceContext,
                                       JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757")),
@@ -1552,11 +1491,6 @@ void checkDeleteChargeItemHandler(
 // GEMREQ-start A_22114
 TEST_F(EndpointHandlerTest, DeleteChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     const char* const kvnr = "X500000056";
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
@@ -1623,11 +1557,8 @@ void checkPatchChargeItemHandler(
     // GEMREQ-end checkPatchChargeItemHandler
     if (expectedStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromJson(
-                            serverResponse.getBody(), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-                            *StaticData::getInCodeValidator(), SchemaType::fhir,
-                            model::ResourceVersion::supportedBundles(),
-                            false));
+        ASSERT_NO_THROW(resultChargeItem =
+                            model::ChargeItem::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator()));
         ASSERT_TRUE(resultChargeItem);
         EXPECT_EQ(resultChargeItem->id(), id);
         EXPECT_EQ(resultChargeItem->prescriptionId(), id);
@@ -1640,12 +1571,6 @@ void checkPatchChargeItemHandler(
 // GEMREQ-start A_22877
 TEST_F(EndpointHandlerTest, PatchChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(
         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
         50020);
@@ -1688,7 +1613,7 @@ namespace
 {
 std::vector<std::string> makeTestParameters(const fs::path& basePath, const std::string& startsWith)
 {
-    std::vector<std::string> params;
+    std::vector<std::string> params{};
     for (const auto& dirEntry : fs::directory_iterator(basePath))
     {
         if (dirEntry.is_regular_file() && String::starts_with(dirEntry.path().filename().string(), startsWith))
@@ -1707,12 +1632,6 @@ class EndpointHandlerTestPatchChargeItemInvalidParameters : public EndpointHandl
 // GEMREQ-start A_22878
 TEST_P(EndpointHandlerTestPatchChargeItemInvalidParameters, InvalidParameters)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(
         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
         50020);
@@ -1755,4 +1674,173 @@ TEST_F(EndpointHandlerTest, GetAuditEventWithInvalidEventId)//NOLINT(readability
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_FATAL_FAILURE(callHandlerWithResponseStatusCheck(sessionContext, handler, HttpStatus::InternalServerError));
+}
+
+TEST_F(EndpointHandlerTest, GetAllTasks_DefaultSortAbsent)
+{
+    GetAllTasksHandler handler({});
+
+    rapidjson::Document jwtDocument;
+    std::string jwtClaims = R"({
+             "professionOID": "1.2.276.0.76.4.49",
+             "sub":           "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk",
+             "idNummer":      "X123456788"
+        })";
+
+    jwtDocument.Parse(jwtClaims);
+    auto jwt = JwtBuilder(MockCryptography::getIdpPrivateKey()).getJWT(jwtDocument);
+
+    Header requestHeader{ HttpMethod::GET, "/Task", 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{ std::move(requestHeader) };
+    A_24438.test("Set explicit sort order by decreasing authored-on date");
+    serverRequest.setQueryParameters({{"_sort", "-authored-on"}});
+    A_24438.finish();
+    serverRequest.setAccessToken(std::move(jwt));
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    int h = 13;
+    int m = 0;
+    for (int i = 0; i < 32; ++i)
+    {
+        m += 3;
+        if (m >= 60) {
+            m = 0;
+            h++;
+        }
+        std::ostringstream stream;
+        stream << "2024-06-19T";
+        stream << std::setfill('0') << std::setw(2) << h;
+        stream << ":";
+        stream << std::setfill('0') << std::setw(2) << m;
+        stream << ":00.000+01:00";
+        model::Timestamp lastUpdate = model::Timestamp::fromXsDateTime(stream.str());
+        addTaskToDatabase(sessionContext, model::Task::Status::ready, "access-code", "X123456788", lastUpdate);//model::Timestamp::fromXsDateTime(xsDateTimeStr));
+    }
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+    std::string bodyActual;
+    ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+    rapidjson::Document document;
+    ASSERT_NO_THROW(document.Parse(bodyActual));
+    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+    ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+    auto bundle =
+        model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+    auto tasks = bundle.getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(bundle.getResourceCount(), 32 + 3); // + 3 from the default set
+    A_24438.test("Ensure tasks order by decreasing authored-on date");
+    ASSERT_TRUE(std::ranges::is_sorted(tasks, std::greater{}, &model::Task::authoredOn));
+    A_24438.finish();
+}
+
+TEST_F(EndpointHandlerTest, GetAllTasks_DefaultSort_Success)
+{
+    GetAllTasksHandler handler({});
+
+    rapidjson::Document jwtDocument;
+    std::string jwtClaims = R"({
+             "professionOID": "1.2.276.0.76.4.49",
+             "sub":           "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk",
+             "idNummer":      "X123456788"
+        })";
+
+    jwtDocument.Parse(jwtClaims);
+    auto jwt = JwtBuilder(MockCryptography::getIdpPrivateKey()).getJWT(jwtDocument);
+
+    Header requestHeader{ HttpMethod::GET, "/Task", 0, {}, HttpStatus::Unknown};
+    ServerRequest serverRequest{ std::move(requestHeader) };
+    serverRequest.setAccessToken(std::move(jwt));
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    int h = 13;
+    int m = 0;
+    for (int i = 0; i < 32; ++i)
+    {
+        m += 3;
+        if (m >= 60) {
+            m = 0;
+            h++;
+        }
+        std::ostringstream stream;
+        stream << "2024-06-19T";
+        stream << std::setfill('0') << std::setw(2) << h;
+        stream << ":";
+        stream << std::setfill('0') << std::setw(2) << m;
+        stream << ":00.000+01:00";
+        model::Timestamp lastUpdate = model::Timestamp::fromXsDateTime(stream.str());
+        addTaskToDatabase(sessionContext, model::Task::Status::ready, "access-code", "X123456788", lastUpdate);//model::Timestamp::fromXsDateTime(xsDateTimeStr));
+    }
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+    std::string bodyActual;
+    ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
+
+    rapidjson::Document document;
+    ASSERT_NO_THROW(document.Parse(bodyActual));
+    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
+    ASSERT_EQ(std::string(rapidjson::Pointer("/resourceType").Get(document)->GetString()), "Bundle");
+
+    auto bundle =
+        model::Bundle::fromJson(model::NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(document));
+    auto tasks = bundle.getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(bundle.getResourceCount(), 32 + 3); // + 3 from the default set
+    A_24438.test("Ensure tasks order by increasing authored-on date");
+    ASSERT_TRUE(std::ranges::is_sorted(tasks, std::less{}, &model::Task::authoredOn));
+    A_24438.finish();
+}
+
+
+TEST_F(EndpointHandlerTest, GetAllAuditEvents_DefaultSort)
+{
+    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+
+    const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
+
+    const std::string auditEventFileName = dataPath + "/audit_event_" + gematikVersionStr + ".json";
+    auto auditEvent = model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(auditEventFileName));
+
+    // Add audit events with most recent to oldest date.
+    auditEvent.setId(model::Timestamp::fromXsDateTime("2024-05-28T13:34:12+01:00").toDatabaseSUuid());
+    mockDatabase->insertAuditEvent(auditEvent, model::AuditEventId::POST_Task_activate);
+
+    auditEvent.setId(model::Timestamp::fromXsDateTime("2024-05-28T13:34:11+01:00").toDatabaseSUuid());
+    mockDatabase->insertAuditEvent(auditEvent, model::AuditEventId::POST_Task_activate);
+
+    auditEvent.setId(model::Timestamp::fromXsDateTime("2024-05-28T13:34:10+02:00").toDatabaseSUuid());
+    mockDatabase->insertAuditEvent(auditEvent, model::AuditEventId::POST_Task_activate);
+
+    auditEvent.setId(model::Timestamp::fromXsDateTime("2024-05-28T13:34:09+01:00").toDatabaseSUuid());
+    mockDatabase->insertAuditEvent(auditEvent, model::AuditEventId::POST_Task_activate);
+
+    GetAllAuditEventsHandler handler({});
+
+    Header requestHeader{ HttpMethod::GET, "/AuditEvent/", 0, { {Header::AcceptLanguage, "de"} }, HttpStatus::Unknown};
+    auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter("X122446685");
+    ServerRequest serverRequest{ std::move(requestHeader) };
+    serverRequest.setAccessToken(std::move(jwt));
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    const auto auditEventBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
+    ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
+        model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle.jsonDocument()),
+        SchemaType::fhir));
+    auto auditEvents = auditEventBundle.getResourcesByType<model::AuditEvent>("AuditEvent");
+    ASSERT_EQ(auditEvents.size(), 4 + 1); // 4 added by this test, 1 by the MockDatabase.
+    A_24438.test("Ensure audit events are received from oldest to most recent date.");
+    ASSERT_TRUE(std::ranges::is_sorted(auditEvents, std::less{}, &model::AuditEvent::recorded));
+    A_24438.finish();
 }

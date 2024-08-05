@@ -171,7 +171,7 @@ ProfileSetValidator::createSolverDataValue(const FhirStructureRepository& repo, 
     }
     std::ostringstream errorMessage;
     errorMessage << "Cannot match profile to Element '" << rootPointer().element()->name();
-    errorMessage << "': " << profile->url() + '|' + profile->version();
+    errorMessage << "': " << profile->urlAndVersion();
     if (contextMessageGetter)
     {
         errorMessage << " (" << contextMessageGetter() << ')';
@@ -195,7 +195,7 @@ std::shared_ptr<ProfileSetValidator> ProfileSetValidator::subField(const FhirStr
                                                                    const std::string& name)
 {
     auto rootList = rootPointer().subDefinitions(repo, name);
-    FPExpect(! rootList.empty(), rootPointer().profile()->url() + '|' + rootPointer().profile()->version() +
+    FPExpect(! rootList.empty(), rootPointer().profile()->urlAndVersion() +
                                      " field resolution failed: " + rootPointer().element()->name() + '.' + name);
     auto result = std::shared_ptr<ProfileSetValidator>(new ProfileSetValidator{this, rootList.back()});
     auto subField = rootPointer().subField(name);

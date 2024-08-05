@@ -6,18 +6,18 @@
  */
 
 #include "fhirtools/util/SaxHandler.hxx"
+#include "VaListHelper.hxx"
+#include "erp/util/ExceptionWrapper.hxx"
 #include "erp/util/String.hxx"
 #include "erp/xml/XmlMemory.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/util/Gsl.hxx"
 
 #include <libxml/parserInternals.h>
 #include <libxml/xmlschemas.h>
 #include <fstream>
 #include <map>
 #include <utility>
-
-#include "VaListHelper.hxx"
-#include "fhirtools/FPExpect.hxx"
-#include "fhirtools/util/Gsl.hxx"
 
 #if defined(_MSC_VER)
 #include <BaseTsd.h>
@@ -378,5 +378,10 @@ void SaxHandler::endElement(const xmlChar* localname, const xmlChar* prefix, con
 
 void SaxHandler::error(const std::string& msg)
 {
+    if (! mExceptionPtr)
+    {
+        mExceptionPtr =
+            std::make_exception_ptr(ExceptionWrapper<model::ModelException>::create({__FILE__, __LINE__}, msg));
+    }
     TVLOG(1) << msg;
 }

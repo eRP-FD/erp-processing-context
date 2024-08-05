@@ -10,10 +10,6 @@ class ChargeItemGetEndpointTest : public EndpointHandlerTest {
 
     void SetUp() override
     {
-        if (deprecatedBundle(model::ResourceVersion::currentBundle()))
-        {
-            GTEST_SKIP();
-        }
         EndpointHandlerTest::SetUp();
     }
 };
@@ -49,10 +45,9 @@ TEST_F(ChargeItemGetEndpointTest, GetByIdNonPkvFails)
 TEST_F(ChargeItemGetEndpointTest, SignatureWho)
 {
     using namespace std::string_literals;
-    const auto& repo =
-        Fhir::instance().structureRepository(model::Timestamp::now(), model::ResourceVersion::currentBundle());
-    const auto parse = [&repo](std::string_view expr) {
-        return fhirtools::FhirPathParser::parse(repo.get(), expr);
+    gsl::not_null defaultView = Fhir::instance().backend().defaultView();
+    const auto parse = [&defaultView](std::string_view expr) {
+        return fhirtools::FhirPathParser::parse(defaultView.get().get(), expr);
     };
     using BundleFactory = model::ResourceFactory<model::Bundle>;
     BundleFactory::Options factoryOptions{.validatorOptions = fhirtools::ValidatorOptions{
@@ -76,12 +71,10 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
     std::optional<model::Bundle> bundle;
     ASSERT_NO_THROW(auto bundleFactory = BundleFactory::fromJson(serverResponse.getBody(),
                                                                  *StaticData::getJsonValidator(), factoryOptions);
-                    bundle.emplace(std::move(bundleFactory)
-                                       .getValidated(SchemaType::fhir, *StaticData::getXmlValidator(),
-                                                     *StaticData::getInCodeValidator()));)
+                    bundle.emplace(std::move(bundleFactory).getValidated(model::ProfileType::fhir));)
         << serverResponse.getBody();
     fhirtools::Collection bundleCollection = {std::make_shared<ErpElement>(
-        repo, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle->jsonDocument()))};
+        defaultView, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle->jsonDocument()))};
     const auto supportingInformationExpr = parse("Bundle.entry.resource.ofType(ChargeItem).supportingInformation");
     const auto supportingInformation = supportingInformationExpr->eval(bundleCollection);
     ASSERT_EQ(supportingInformation.size(), 3);

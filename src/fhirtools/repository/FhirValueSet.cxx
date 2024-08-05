@@ -6,11 +6,11 @@
  */
 
 #include "FhirValueSet.hxx"
-
-#include <boost/algorithm/string/case_conv.hpp>
-
+#include "FhirResourceGroup.hxx"
 #include "FhirStructureRepository.hxx"
 #include "fhirtools/FPExpect.hxx"
+
+#include <boost/algorithm/string/case_conv.hpp>
 
 namespace fhirtools
 {
@@ -58,7 +58,7 @@ const std::vector<FhirValueSet::Expansion>& FhirValueSet::getExpands() const
 {
     return mExpands;
 }
-const Version& FhirValueSet::getVersion() const
+const FhirVersion& FhirValueSet::getVersion() const
 {
     return mVersion;
 }
@@ -75,13 +75,26 @@ bool FhirValueSet::containsCode(const std::string& code, const std::string& code
 
 void FhirValueSet::finalize(FhirStructureRepositoryBackend* repo)// NOLINT(misc-no-recursion)
 {
+    using namespace std::string_literals;
+    Expect3(! mFinalized, "ValueSet finalized more than once!", std::logic_error);
+    FPExpect3(mGroup, "Missing group in ValueSet: " + mUrl + '|' + to_string(mVersion), std::logic_error);
     finalizeIncludes(repo);
     finalizeExcludes(repo);
+    std::set<DefinitionKey> unresolvedCodeSystems;
     for (const auto& expand : mExpands)
     {
-        const auto* codeSystem = repo->findCodeSystem(expand.codeSystemUrl, {});
+        auto codeSystemKey = mGroup->find(expand.codeSystemKey).first;
+        const auto* codeSystem = codeSystemKey.version.has_value()
+                                     ? repo->findCodeSystem(codeSystemKey.url, *codeSystemKey.version)
+                                     : nullptr;
         bool caseSensitive = codeSystem == nullptr || codeSystem->isCaseSensitive();
-        mCodes.insert(Code{.code = expand.code, .caseSensitive = caseSensitive, .codeSystem = expand.codeSystemUrl});
+        mCodes.insert(
+            Code{.code = expand.code, .caseSensitive = caseSensitive, .codeSystem = expand.codeSystemKey.url});
+        if (! codeSystem && unresolvedCodeSystems.insert(expand.codeSystemKey).second)
+        {
+            addError("Unresolved CodeSystem " + to_string(expand.codeSystemKey));
+            mHasErrors = true;
+        }
     }
     if (mCodes.empty())
     {
@@ -96,26 +109,35 @@ void FhirValueSet::finalize(FhirStructureRepositoryBackend* repo)// NOLINT(misc-
 // NOLINTNEXTLINE(misc-no-recursion)
 void FhirValueSet::finalizeIncludes(FhirStructureRepositoryBackend* repo)
 {
+    using namespace std::string_literals;
     for (const auto& include : mIncludes)
     {
-        const auto* codeSystem = include.codeSystemUrl ? repo->findCodeSystem(*include.codeSystemUrl, {}) : nullptr;
+        const FhirCodeSystem* codeSystem = nullptr;
+        if (include.codeSystemKey)
+        {
+            auto codeSystemKey = mGroup->find(*include.codeSystemKey).first;
+            codeSystem = codeSystemKey.version.has_value()
+                             ? repo->findCodeSystem(codeSystemKey.url, *codeSystemKey.version)
+                             : nullptr;
+        }
         FPExpect(! codeSystem || include.valueSets.empty(),
                  mName + ": Not Implemented case: ValueSet.compose.include with both CodeSystem and ValueSets");
         bool caseSensitive = codeSystem == nullptr || codeSystem->isCaseSensitive();
         finalizeIncludeValueSets(repo, include.valueSets);
-        finalizeIncludeCodes(include.codes, caseSensitive, include.codeSystemUrl.value_or(""));
-        finalizeIncludeFilters(include.filters, include.codeSystemUrl.value_or(""), codeSystem, caseSensitive);
+        finalizeIncludeCodes(include.codes, caseSensitive, include.codeSystemKey ? include.codeSystemKey->url : "");
+        finalizeIncludeFilters(include.filters, include.codeSystemKey ? include.codeSystemKey->url : "", codeSystem,
+                               caseSensitive);
         if (codeSystem && include.codes.empty() && include.filters.empty())
         {
             for (const auto& code : codeSystem->getCodes())
             {
                 mCodes.insert(
-                    Code{.code = code.code, .caseSensitive = caseSensitive, .codeSystem = *include.codeSystemUrl});
+                    Code{.code = code.code, .caseSensitive = caseSensitive, .codeSystem = include.codeSystemKey->url});
             }
             if (codeSystem->isSynthesized())
             {
-                addError("CodeSystem " + *include.codeSystemUrl +
-                         " was synthesized with supplements but may be incomplete and will not be used for validation");
+                addError("CodeSystem " + to_string(*include.codeSystemKey) +
+                         " was synthesized and may be incomplete and will not be used for validation");
                 mCanValidate = false;
             }
         }
@@ -124,15 +146,25 @@ void FhirValueSet::finalizeIncludes(FhirStructureRepositoryBackend* repo)
 
 void FhirValueSet::finalizeExcludes(FhirStructureRepositoryBackend* repo)
 {
+    using namespace std::string_literals;
     for (auto& exclude : mExcludes)
     {
         FPExpect(exclude.valueSets.empty(), mName + ": Not implemented: ValueSet.compose.exclude.ValueSet");
-        FPExpect(exclude.codeSystemUrl, mName + ": ValueSet.compose.exclude.CodeSystem missing");
-        const auto* codeSystem = exclude.codeSystemUrl ? repo->findCodeSystem(*exclude.codeSystemUrl, {}) : nullptr;
+        FPExpect(exclude.codeSystemKey, mName + ": ValueSet.compose.exclude.CodeSystem missing");
+        auto codeSystemKey = mGroup->find(*exclude.codeSystemKey).first;
+        const FhirCodeSystem* codeSystem = nullptr;
+        if (codeSystemKey.version.has_value())
+        {
+            codeSystem = repo->findCodeSystem(codeSystemKey.url, *codeSystemKey.version);
+        }
+        else
+        {
+            LOG(INFO) << "CodeSystem not found in group(" << mGroup->id() << "): " << exclude.codeSystemKey->url;
+        }
         bool caseSensitive = codeSystem == nullptr || codeSystem->isCaseSensitive();
         for (const auto& code : exclude.codes)
         {
-            mCodes.erase(Code{.code = code, .caseSensitive = caseSensitive, .codeSystem = *exclude.codeSystemUrl});
+            mCodes.erase(Code{.code = code, .caseSensitive = caseSensitive, .codeSystem = exclude.codeSystemKey->url});
         }
     }
 }
@@ -191,18 +223,36 @@ void FhirValueSet::finalizeIncludeCodes(const std::set<std::string>& codes, bool
     }
 }
 // NOLINTNEXTLINE(misc-no-recursion)
-void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepositoryBackend* repo, const std::set<std::string>& valueSets)
+void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepositoryBackend* repo,
+                                            const std::set<DefinitionKey>& valueSets)
 {
-    for (const auto& valueSetUrl : valueSets)
+    using namespace std::string_literals;
+    for (auto valueSetKey : valueSets)
     {
-        auto* valueSet = repo->findValueSet(valueSetUrl, {});
-        if (valueSet)
+        valueSetKey = mGroup->find(valueSetKey).first;
+        if (! valueSetKey.version)
+        {
+            std::ostringstream msg;
+            msg << "ValueSet included by " << mUrl << '|' << mVersion << " not found in group(" << mGroup->id()
+                << "): " << valueSetKey.url;
+            LOG(INFO) << msg.view();
+            addError(msg.str());
+        }
+        else if (auto* valueSet = repo->findValueSet(valueSetKey.url, *valueSetKey.version))
         {
             if (! valueSet->finalized())
             {
                 valueSet->finalize(repo);
             }
             addError(valueSet->getWarnings());
+            if (valueSet->hasErrors())
+            {
+                mHasErrors = true;
+            }
+            if (! valueSet->canValidate())
+            {
+                mCanValidate = false;
+            }
             for (const auto& code : valueSet->getCodes())
             {
                 mCodes.insert(code);
@@ -210,7 +260,7 @@ void FhirValueSet::finalizeIncludeValueSets(FhirStructureRepositoryBackend* repo
         }
         else
         {
-            addError("included ValueSet not found: " + valueSetUrl);
+            addError("included ValueSet not found: " + to_string(valueSetKey));
         }
     }
 }
@@ -223,6 +273,11 @@ bool FhirValueSet::finalized() const
 bool FhirValueSet::canValidate() const
 {
     return mFinalized && mCanValidate;
+}
+
+bool fhirtools::FhirValueSet::hasErrors() const
+{
+    return mHasErrors;
 }
 
 std::string FhirValueSet::getWarnings() const
@@ -256,6 +311,10 @@ std::string FhirValueSet::codesToString() const
     return oss.str();
 }
 
+std::shared_ptr<const FhirResourceGroup> fhirtools::FhirValueSet::resourceGroup() const
+{
+    return mGroup;
+}
 
 FhirValueSet::Builder::Builder()
     : mFhirValueSet(std::make_unique<FhirValueSet>())
@@ -271,9 +330,15 @@ FhirValueSet::Builder& FhirValueSet::Builder::name(const std::string& name)
     mFhirValueSet->mName = name;
     return *this;
 }
-FhirValueSet::Builder& FhirValueSet::Builder::version(const std::string& version)
+FhirValueSet::Builder& FhirValueSet::Builder::version(FhirVersion version)
 {
-    mFhirValueSet->mVersion = Version{version};
+    mFhirValueSet->mVersion = std::move(version);
+    return *this;
+}
+FhirValueSet::Builder& FhirValueSet::Builder::initGroup(const FhirResourceGroupResolver& resolver,
+                                                        const std::filesystem::path& source)
+{
+    mFhirValueSet->mGroup = resolver.findGroup(mFhirValueSet->mUrl, mFhirValueSet->mVersion, source);
     return *this;
 }
 FhirValueSet::Builder& FhirValueSet::Builder::include()
@@ -281,14 +346,14 @@ FhirValueSet::Builder& FhirValueSet::Builder::include()
     mFhirValueSet->mIncludes.emplace_back(FhirValueSet::IncludeOrExclude{});
     return *this;
 }
-FhirValueSet::Builder& FhirValueSet::Builder::includeCodeSystem(const std::string& system)
+FhirValueSet::Builder& FhirValueSet::Builder::includeCodeSystem(DefinitionKey system)
 {
-    mFhirValueSet->mIncludes.back().codeSystemUrl = system;
+    mFhirValueSet->mIncludes.back().codeSystemKey = std::move(system);
     return *this;
 }
-FhirValueSet::Builder& FhirValueSet::Builder::includeValueSet(const std::string& valueSet)
+FhirValueSet::Builder& FhirValueSet::Builder::includeValueSet(DefinitionKey valueSet)
 {
-    mFhirValueSet->mIncludes.back().valueSets.insert(valueSet);
+    mFhirValueSet->mIncludes.back().valueSets.emplace(std::move(valueSet));
     return *this;
 }
 FhirValueSet::Builder& FhirValueSet::Builder::includeFilter()
@@ -340,9 +405,9 @@ FhirValueSet::Builder& FhirValueSet::Builder::exclude()
     mFhirValueSet->mExcludes.emplace_back(FhirValueSet::IncludeOrExclude{});
     return *this;
 }
-FhirValueSet::Builder& FhirValueSet::Builder::excludeCodeSystem(const std::string& system)
+FhirValueSet::Builder& FhirValueSet::Builder::excludeCodeSystem(DefinitionKey system)
 {
-    mFhirValueSet->mExcludes.back().codeSystemUrl = system;
+    mFhirValueSet->mExcludes.back().codeSystemKey = std::move(system);
     return *this;
 }
 FhirValueSet::Builder& FhirValueSet::Builder::excludeCode(const std::string& code)
@@ -364,15 +429,16 @@ FhirValueSet::Builder& FhirValueSet::Builder::expandCode(const std::string& code
     mFhirValueSet->mExpands.back().code = code;
     return *this;
 }
-FhirValueSet::Builder& FhirValueSet::Builder::expandSystem(const std::string& system)
+FhirValueSet::Builder& FhirValueSet::Builder::expandSystem(DefinitionKey system)
 {
-    mFhirValueSet->mExpands.back().codeSystemUrl = system;
+    mFhirValueSet->mExpands.back().codeSystemKey = std::move(system);
     return *this;
 }
 FhirValueSet FhirValueSet::Builder::getAndReset()
 {
     FhirValueSet prev{std::move(*mFhirValueSet)};
     mFhirValueSet = std::make_unique<FhirValueSet>();
+    Expect(prev.mGroup, "Missing group in ValueSet:" + prev.getUrl() + '|' + to_string(prev.getVersion()));
     return prev;
 }
 

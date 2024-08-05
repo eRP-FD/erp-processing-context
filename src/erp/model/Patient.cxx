@@ -5,6 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Reference.hxx"
 #include "erp/model/ResourceNames.hxx"
@@ -26,7 +27,7 @@ rapidjson::Pointer postalCodePointer("/address/0/postalCode");
 }
 
 Patient::Patient(NumberAsStringParserDocument&& document)
-    : Resource<Patient, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<Patient>(std::move(document))
 {
 }
 

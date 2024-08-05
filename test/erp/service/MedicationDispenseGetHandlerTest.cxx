@@ -237,7 +237,7 @@ protected:
             }
             else
             {
-                Bundle responseBundle(BundleType::searchset, ::model::ResourceBase::NoProfile);
+                Bundle responseBundle(BundleType::searchset, ::model::FhirResourceBase::NoProfile);
                 ASSERT_NO_FATAL_FAILURE(responseBundle = Bundle::fromJsonNoValidation(innerResponse.getBody()));
                 for (size_t idxResource = 0; idxResource < responseBundle.getResourceCount(); ++idxResource)
                 {
@@ -922,8 +922,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetById)
 
 TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
 {
+    using namespace std::string_literals;
     A_22070_02.test("One Task, Multiple Medication Dispenses");
-    // ?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
+    // ?identifier=https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId|<PrescriptionID>
     model::Kvnr kvnrPatient{InsurantA};
     model::TelematikId pharmacy{"3-SMC-B-Testkarte-883110000120312"};
 
@@ -950,7 +951,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskFilterById)
     {
         std::vector<model::MedicationDispense> medicationDispenses;
         sendRequest(client, kvnrPatient, {}, medicationDispenses,
-                    {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}});
+                    {{"identifier="s.append(model::resource::naming_system::prescriptionID) + "|" + prescriptionId}});
         EXPECT_EQ(medicationDispenses.size(), GetParam());
         checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
     }
@@ -1002,6 +1003,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
 
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 {
+    using namespace std::string_literals;
     A_22070_02.test("Several Tasks, Multiple Medication Dispenses");
     model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
     model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
@@ -1034,8 +1036,9 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
         for (const std::string& prescriptionId : prescriptionIds)
         {
             std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses,
-                        {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId}});
+            sendRequest(
+                client, model::Kvnr{kvnrPatient}, {}, medicationDispenses,
+                {{"identifier="s.append(model::resource::naming_system::prescriptionID) + "|" + prescriptionId}});
             EXPECT_EQ(medicationDispenses.size(), GetParam());
             checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
         }
@@ -1044,6 +1047,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterById)
 
 TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
 {
+    using namespace std::string_literals;
     A_22070_02.test("One Task, Multiple Medication Dispenses, invalid PrescrptionID");
     model::TelematikId pharmacyA{"3-SMC-B-Testkarte-883110000120312"};
     model::TelematikId pharmacyB{"3-SMC-B-Testkarte-883110000120313"};
@@ -1073,9 +1077,60 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksFilterByIdUnknownId)
     PrescriptionId prescriptionId = PrescriptionId::fromString("160.000.000.004.711.86");
 
     std::vector<MedicationDispense> medicationDispenses;
-    sendRequest(client, kvnrPatient, {}, medicationDispenses,
-                {{"identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|" + prescriptionId.toString()}});
+    sendRequest(
+        client, kvnrPatient, {}, medicationDispenses,
+        {{"identifier="s.append(model::resource::naming_system::prescriptionID) + "|" + prescriptionId.toString()}});
     EXPECT_EQ(medicationDispenses.size(), 0);
+}
+
+
+
+TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetAllNoFilter_DefaultSort)
+{
+    // Insert tasks into database
+    //---------------------------
+
+    auto pharmacyA = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
+    auto pharmacyB = model::TelematikId{"3-SMC-B-Testkarte-883110000120313"};
+
+    std::vector<std::tuple<model::Kvnr, model::TelematikId, std::optional<model::Timestamp>>> patientsPharmaciesMedicationWhenPrepared = {
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyB, std::nullopt},
+        {model::Kvnr{InsurantB}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantA}, pharmacyA, std::nullopt},
+        {model::Kvnr{InsurantC}, pharmacyB, std::nullopt}
+    };
+
+    std::set<std::string> patients;
+    std::set<std::string> pharmacies;
+    std::map<std::string, Task> tasksByPrescriptionIds;
+    std::map<std::string, std::vector<MedicationDispense>> medicationDispensesByPrescriptionIds;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPatients;
+    std::map<std::string, std::vector<std::string>> prescriptionIdsByPharmacies;
+    std::map<std::string, std::string> medicationDispensesInputXmlStrings;
+
+    insertTasks(patientsPharmaciesMedicationWhenPrepared, patients, pharmacies,
+                tasksByPrescriptionIds, medicationDispensesByPrescriptionIds,
+                prescriptionIdsByPatients, prescriptionIdsByPharmacies,
+                medicationDispensesInputXmlStrings);
+
+    // GET Medication Dispenses
+    //-------------------------
+
+    // Create a client
+    auto client = createClient();
+
+    for (const std::string& kvnrPatient : patients)
+    {
+        std::vector<std::string>& prescriptionIds = prescriptionIdsByPatients.find(kvnrPatient)->second;
+        std::vector<MedicationDispense> medicationDispenses;
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses);
+        EXPECT_EQ(medicationDispenses.size(), prescriptionIds.size() * GetParam());
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        A_24438.test("Ensure medication dispense items order by increasing whenHandedOver");
+        ASSERT_TRUE(std::ranges::is_sorted(medicationDispenses, std::less{}, &model::MedicationDispense::whenHandedOver));
+        A_24438.finish();
+    }
 }
 
 

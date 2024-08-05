@@ -37,7 +37,7 @@ public:
                                                     const std::string& elementFullPath, const ValidatorOptions& = {});
     [[nodiscard]] static ValidationResults validateWithProfiles(const std::shared_ptr<const Element>& element,
                                                                 const std::string& elementFullPath,
-                                                                const std::set<std::string>& profileUrls,
+                                                                const std::set<DefinitionKey>& profileKeys,
                                                                 const ValidatorOptions& = {});
 
     // internal use

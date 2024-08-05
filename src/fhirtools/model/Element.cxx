@@ -255,7 +255,17 @@ Element::Type Element::GetElementType(const FhirStructureRepository* fhirStructu
     const auto& element = definitionPointer.element();
     if (element && ! definitionPointer.profile()->isSystemType())
     {
-        const auto* typeStructure = fhirStructureRepository->findTypeById(element->typeId());
+        const FhirStructureDefinition* typeStructure = nullptr;
+        if (element->contentReference().empty())
+        {
+            typeStructure = fhirStructureRepository->findTypeById(element->typeId());
+        }
+        else
+        {
+            auto res = fhirStructureRepository->resolveContentReference(*definitionPointer.profile()->resourceGroup(),
+                                                                        *element);
+            typeStructure = std::addressof(std::move(res).elementType);
+        }
         if (element && typeStructure->kind() == FhirStructureDefinition::Kind::primitiveType)
         {
             auto value = typeStructure->findElement(element->typeId() + ".value");
@@ -273,8 +283,7 @@ Element::Type Element::GetElementType(const FhirStructureRepository* fhirStructu
                                       const FhirStructureDefinition* structureDefinition, const std::string& elementId)
 {
     auto fhirElement = structureDefinition->findElement(elementId);
-    FPExpect(fhirElement != nullptr,
-             structureDefinition->url() + '|' + structureDefinition->version() + " no such element: " + elementId);
+    FPExpect(fhirElement != nullptr, structureDefinition->urlAndVersion() + " no such element: " + elementId);
     return GetElementType(fhirStructureRepository, ProfiledElementTypeInfo{structureDefinition, fhirElement});
 }
 
@@ -466,7 +475,8 @@ Element::IdentityAndResult Element::referenceTargetIdentity(IdentityAndResult re
     const size_t slashPos = reference.identity.pathOrId.find('/');
     if (slashPos != std::string::npos)
     {
-        const auto& resourceTypes = mFhirStructureRepository->findCodeSystem(constants::resourceTypesUrl, std::nullopt);
+        const auto& resourceTypes =
+            mFhirStructureRepository->findCodeSystem(DefinitionKey{constants::resourceTypesUrl});
         const std::string_view resourceType{reference.identity.pathOrId.begin(),
                                             reference.identity.pathOrId.begin() +
                                                 gsl::narrow<std::string_view::difference_type>(slashPos)};

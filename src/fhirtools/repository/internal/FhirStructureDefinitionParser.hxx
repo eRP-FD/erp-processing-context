@@ -8,17 +8,20 @@
 #ifndef FHIR_PATH_FHIRSTRUCTUREDEFINITIONPARSER_HXX
 #define FHIR_PATH_FHIRSTRUCTUREDEFINITIONPARSER_HXX
 
+#include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/repository/FhirCodeSystem.hxx"
+#include "fhirtools/repository/FhirResourceGroup.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
+
 #include <deque>
 #include <filesystem>
 #include <initializer_list>
 #include <list>
 #include <optional>
 #include <tuple>
-
-#include "fhirtools/repository/FhirCodeSystem.hxx"
-#include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/FhirValueSet.hxx"
-#include "fhirtools/util/SaxHandler.hxx"
 
 
 class XmlStringView;
@@ -43,13 +46,13 @@ public:
     using ParseResult =
         std::tuple<std::list<FhirStructureDefinition>, std::list<FhirCodeSystem>, std::list<FhirValueSet>>;
 
-    static ParseResult parse(const std::filesystem::path& fileName);
+    static ParseResult parse(const std::filesystem::path& fileName, const FhirResourceGroupResolver& inGroupResolver);
 
 private:
     enum class ElementType : uint8_t;
     class ElementInfo;
 
-    FhirStructureDefinitionParser();
+    FhirStructureDefinitionParser(const FhirResourceGroupResolver& inGroupResolver);
 
     // SaxParser callbacks:
     void startDocument() override;
@@ -69,6 +72,7 @@ private:
                                           const AttributeList& attributes);
     void leaveStructureDefinition();
 
+    void enterSnapshotSubTree();
     void handleSnapshotSubTree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
 
     void handleElementSubTree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
@@ -118,7 +122,8 @@ private:
     std::list<FhirCodeSystem> mCodeSystems;
     std::list<FhirValueSet> mValueSets;
     FhirStructureDefinition::Builder mStructureBuilder;
-    std::string mStructureUrl;
+    bool mHaveSnapshot = false;
+    DefinitionKey mStructureKey = {"unset-structrure", std::nullopt};
     std::string mStructureType;
     FhirElement::Builder mElementBuilder;
     FhirConstraint::Builder mConstraintBuilder;
@@ -130,6 +135,7 @@ private:
     bool mExperimental = false;
     std::deque<ElementInfo> mStack;
     std::filesystem::path currentFile;
+    gsl::not_null<const FhirResourceGroupResolver*> groupResolver;
 };
 }
 #endif// FHIR_PATH_FHIRSTRUCTUREDEFINITIONPARSER_HXX

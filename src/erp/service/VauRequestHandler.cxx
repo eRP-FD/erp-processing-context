@@ -612,6 +612,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19405.start("Check if professionOID claim is allowed for this endpoint");
     A_19446_01.start("Check if professionOID claim is allowed for this endpoint");
     A_22362.start("Check if professionOID claim is allowed for this endpoint");
+    A_24279.start("Check if professionOID claim is allowed for this endpoint");
     if (! handler->allowedForProfessionOID(professionOIDClaim))
     {
         TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
@@ -630,6 +631,7 @@ bool VauRequestHandler::checkProfessionOID(
         A_19405.finish();
         A_19446_01.finish();
         A_22362.finish();
+        A_24279.finish();
         log.location(fileAndLine);
         log.error("endpoint is forbidden for professionOID");
         return false;

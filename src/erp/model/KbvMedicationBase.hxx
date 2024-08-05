@@ -15,14 +15,13 @@
 
 class ErpElement;
 class XmlValidator;
-class InCodeValidator;
 
 namespace model
 {
 
-template<class TDerivedMedication, typename SchemaVersionType>
+template<class TDerivedMedication>
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationBase : public Resource<TDerivedMedication, SchemaVersionType>
+class KbvMedicationBase : public Resource<TDerivedMedication>
 {
 public:
     explicit KbvMedicationBase(NumberAsStringParserDocument&& document);
@@ -36,37 +35,30 @@ public:
     }
 
 private:
-    friend Resource<KbvMedicationBase, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvMedicationBase>;
 };
 
-template<class TDerivedMedication, typename SchemaVersionType>
-KbvMedicationBase<TDerivedMedication, SchemaVersionType>::KbvMedicationBase(NumberAsStringParserDocument&& document)
-    : Resource<TDerivedMedication, SchemaVersionType>(std::move(document))
+template<class TDerivedMedication>
+KbvMedicationBase<TDerivedMedication>::KbvMedicationBase(NumberAsStringParserDocument&& document)
+    : Resource<TDerivedMedication>(std::move(document))
 {
 }
 
-class KbvMedicationGeneric : public KbvMedicationBase<KbvMedicationGeneric, ResourceVersion::KbvItaErp>
+class KbvMedicationGeneric : public KbvMedicationBase<KbvMedicationGeneric>
 {
 public:
     KbvMedicationGeneric(NumberAsStringParserDocument&& document)
-        : KbvMedicationBase<KbvMedicationGeneric, ResourceVersion::KbvItaErp>(std::move(document))
+        : KbvMedicationBase<KbvMedicationGeneric>(std::move(document))
     {
     }
 
-    static void validateMedication(const ErpElement& medicationElement, const XmlValidator& xmlValidator,
-                                   const InCodeValidator& inCodeValidator,
-                                   const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles,
-                                   bool allowDummyValidation);
-
 private:
-    template<typename MedicationModelT>
-    static void validateMedication(NumberAsStringParserDocument&& medicationDoc, const XmlValidator& xmlValidator,
-                                   const InCodeValidator& inCodeValidator,
-                                   const std::set<model::ResourceVersion::FhirProfileBundleVersion>& supportedBundles);
-
-    friend KbvMedicationBase<KbvMedicationGeneric, ResourceVersion::KbvItaErp>;
+    friend KbvMedicationBase<KbvMedicationGeneric>;
 };
 
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvMedicationGeneric>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX

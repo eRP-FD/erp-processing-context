@@ -29,16 +29,12 @@
         "mode": "require_success"
       },
       "fhir": {
-        "structure-files": [
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-flowType-supplements.xml"
-        ]
+        "structure-files": []
       }
     },
     "fhir-profile": {
       "fhir": {
-        "structure-files": [
-          "@ERP_FHIR_RESOURCE_DIR@CodeSystem-flowType-supplements.xml"
-        ]
+        "structure-files": []
       }
     },
     "report": {
@@ -58,21 +54,7 @@
     "use-postgres": "false",
     "use-redis-mock": "true",
     "use-idp-updater-mock": "true",
-    "additional-xml-schema": [
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/auditevent/Gem_erxAuditEvent.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/binary/Gem_erxBinary.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/composition/Gem_erxCompositionElement.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/device/Gem_erxDevice.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/organization/Gem_erxOrganizationElement.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/receipt/Gem_erxReceiptBundle.xsd",
-        "@ERP_SCHEMA_DIR@de.gematik.erezept-workflow.r4/1.1.1/xml/task/Gem_erxTask.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Coverage.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_HumanName.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Organization.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Patient.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_Practitioner.xsd",
-        "@ERP_SCHEMA_DIR@kbv.ita.erp/1.0.2/xml/KBV_PR_FOR_PractitionerRole.xsd"
-      ],
+    "additional-xml-schema": [],
     "client": {
       "enableAuthentication": "true",
       "certificate": "-----BEGIN CERTIFICATE-----\nMIIDkTCCAnkCFCOnltB0u6JRe7YLPXNALVAqMuXNMA0GCSqGSIb3DQEBCwUAMIGE\nMQswCQYDVQQGEwJERTELMAkGA1UECAwCSEgxEDAOBgNVBAcMB0hhbWJ1cmcxDDAK\nBgNVBAoMA0lCTTEdMBsGA1UECwwUR2VzdW5kaGVpdHNwbGF0dGZvcm0xKTAnBgNV\nBAMMIGVSUCBUZXN0IENsaWVudCBmb3IgdW5pdCB0ZXN0aW5nMB4XDTIxMDUxNzEx\nNDMwMFoXDTMxMDUxNTExNDMwMFowgYQxCzAJBgNVBAYTAkRFMQswCQYDVQQIDAJI\nSDEQMA4GA1UEBwwHSGFtYnVyZzEMMAoGA1UECgwDSUJNMR0wGwYDVQQLDBRHZXN1\nbmRoZWl0c3BsYXR0Zm9ybTEpMCcGA1UEAwwgZVJQIFRlc3QgQ2xpZW50IGZvciB1\nbml0IHRlc3RpbmcwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDnjafA\npLjHvv/u153DqkdT9q64fgvTRaP2YglqT0LbEbkL6OqfmAxOJDvPzxBPe+dVGE9c\nqEy6qubhFbyXrBIEr2fx0qVkutj/UU+B4ihrZIvVoYNm9FrYoZJFR0WrNi6plJGQ\n8x93l04US7kIM3sjYs2tJ3vqrUYnlzS8yAfLP6rPfdW75B6wJw21J12K28eM1b0K\nqTGV+Lw0cFS64AxWbGQKnxofO80sbtpvz/GBpshEuIQTj3W3qtt4z/MV2fVAq1Kz\nBb0IPNc6gKZ2kPs2SGafyw/3CCVa3Nx7uQanzYeuua1pd8zIseN5KMJRy9+V1tM9\nOjoJioWG0eMCFfpDAgMBAAEwDQYJKoZIhvcNAQELBQADggEBADZipJQ4Fueb+uC+\n+nb+VmOvfJKa4IAldrHqXdCBD54wK8PJdBkykKpGQFMSLBcPzrf+1kLasDqZTAV+\nddN4uAfVF9XHjYf7AYxbFZDiZlbDR11Usj2/v5SefCYuZWM06qSshw9gxUlAcxrV\nUpE/m15K8QYzn4qKbrQk7u0kslHciEwSBC/E3w5SPFe7NaWx12NQYSjKzn+g7wrP\nfOP0aIaYuhlozyCqrUwnAi/ha3qfrhPNBuXlf/TyEoTSZEDudfRomflLwXd1jdLT\nbhSa/RTsqOEgSnJN1dmrKf9cQLr4QgB5w0lCC3kSAdY9+hjCBmk7Rv0DHKfnbC+R\nHWOT0g8=\n-----END CERTIFICATE-----\n",
@@ -80,8 +62,8 @@
     },
     "resource-manager-path": "@ERP_RUNTIME_RESOURCE_DIR@",
     "vsdm-keys": [
-      "{\"betreiberkennung\":\"A\",\"version\":\"1\",\"cleartext_key\":\"FIYBBFNNWh99R+YbKqWMnQa/e2J1Qr2paQn+0gT3fWE=\"}",
-      "{\"betreiberkennung\":\"A\",\"version\":\"2\",\"cleartext_key\":\"1tHH57rVLW9VmUmOg//emiVswVSrgTV43A8fFUD/r/I=\"}"
+      "{\"betreiberkennung\":\"A\",\"version\":\"1\",\"exp\":\"2025-31-12\", \"hmac_empty_string\": \"8dc5840595d86b3d5aac5faf16a590de26a7a29a075cd70d17386c7d7e81f065\", \"cleartext_key\":\"FIYBBFNNWh99R+YbKqWMnQa/e2J1Qr2paQn+0gT3fWE=\"}",
+      "{\"betreiberkennung\":\"A\",\"version\":\"2\",\"exp\":\"2025-31-12\", \"hmac_empty_string\": \"4c46a20b002f98ced91fe8596624705574dc4c81b1d115531ed70fd037b71664\", \"cleartext_key\":\"1tHH57rVLW9VmUmOg//emiVswVSrgTV43A8fFUD/r/I=\"}"
     ]
   },
   "mock": {

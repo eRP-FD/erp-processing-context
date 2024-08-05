@@ -17,10 +17,11 @@ namespace model
 class Timestamp;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Subscription : public Resource<Subscription, ResourceVersion::NotProfiled>
+class Subscription : public Resource<Subscription>
 {
 public:
     static constexpr auto resourceTypeName = "Subscription";
+    static constexpr auto profileType = ProfileType::Subscription;
 
     enum class Status : std::uint32_t
     {
@@ -60,6 +61,8 @@ public:
 
     std::optional<std::string_view> reason() const;
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
 private:
     friend class Resource;
     explicit Subscription(NumberAsStringParserDocument&& jsonTree);
@@ -67,6 +70,8 @@ private:
     std::string mRecipient;
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Subscription>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SUBSCRIPTION_HXX

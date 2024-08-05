@@ -20,11 +20,6 @@ class ChargeItemPutHandlerTest : public EndpointHandlerTest
 {
     void SetUp() override
     {
-        if (model::ResourceVersion::deprecatedProfile(
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-        {
-            GTEST_SKIP();
-        }
     }
 
 public:
@@ -88,17 +83,13 @@ void checkPutChargeItemHandler(std::optional<model::ChargeItem>& resultChargeIte
     {
         if (contentType.getMimeType() == MimeType::fhirJson)
         {
-            ASSERT_NO_THROW(resultChargeItem = model::ChargeItem::fromJson(
-                                serverResponse.getBody(), *StaticData::getJsonValidator(),
-                                *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::fhir,
-                                model::ResourceVersion::supportedBundles(), false));
+            ASSERT_NO_THROW(resultChargeItem =
+                                model::ChargeItem::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator()));
         }
         else
         {
             ASSERT_NO_THROW(resultChargeItem =
-                                model::ChargeItem::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(),
-                                                           *StaticData::getInCodeValidator(), SchemaType::fhir,
-                                                           model::ResourceVersion::supportedBundles(), false));
+                                model::ChargeItem::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
         }
         ASSERT_TRUE(resultChargeItem);
     }
@@ -179,16 +170,11 @@ void checkUnchangedChargeItemFieldsCommon(PcServiceContext& serviceContext, cons
 
 TEST_F(ChargeItemPutHandlerTest, PutChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
 
-    const auto newDispenseBundleXml = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+    const auto newDispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
     auto newDispenseBundle = model::Bundle::fromXmlNoValidation(newDispenseBundleXml);
     // set new ID to check update
     newDispenseBundle.setId(Uuid());
@@ -276,12 +262,6 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem)//NOLINT(readability-function-cog
 
 TEST_F(ChargeItemPutHandlerTest, PutChargeItemInvalidChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
@@ -308,12 +288,6 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItemInvalidChargeItem)//NOLINT(readabi
 TEST_F(ChargeItemPutHandlerTest,
        PutChargeItemInvalidChargeItemVersion)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-    auto guard = EnvironmentVariableGuard(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE, "disable");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
 
@@ -331,59 +305,9 @@ TEST_F(ChargeItemPutHandlerTest,
     // expected reject
     ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
                                                       inputChargeItem, pkvTaskId, HttpStatus::BadRequest,
-                                                      "parsing / validation error"));
+                                                      "FHIR-Validation error"));
 }
 
-
-TEST_F(ChargeItemPutHandlerTest, whenHandedOverReference)
-{
-    using namespace std::chrono_literals;
-    // we have to use a day before, as the outer charge item validity is determined by the current time
-    const auto yesterday = model::Timestamp::now() - 24h;
-    const auto pkvTaskId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
-
-    CadesBesSignature cadesBesSignature{
-        CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
-        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{.whenHandedOver = yesterday}}}),
-        std::nullopt};
-    const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
-                                                                 .prescriptionId = pkvTaskId,
-                                                                 .dispenseBundleBase64 = cadesBesSignature.getBase64(),
-                                                                 .operation = OperationType::Put});
-    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
-    inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
-
-    const auto referencedTask = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
-        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr.id()}));
-    const ContentMimeType contentType = ContentMimeType::fhirXmlUtf8;
-
-    const auto jwtPharmacy =
-        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
-
-    // accept the handed over depending on the reference time point, as handed over > new profile valid period
-    {
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                     (yesterday - 24h).toXsDate(model::Timestamp::GermanTimezone));
-        std::optional<model::ChargeItem> resultChargeItem;
-        ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
-                                                          inputChargeItem, pkvTaskId, HttpStatus::OK));
-
-    }
-    // reject the handed over depending on the reference time point, as handed over < new profile valid period
-    {
-        EnvironmentVariableGuard newProfileValidFrom(ConfigurationKey::FHIR_PROFILE_VALID_FROM,
-                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
-        EnvironmentVariableGuard oldProfileValidUntil(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL,
-                                                     (yesterday + 24h).toXsDate(model::Timestamp::GermanTimezone));
-        std::optional<model::ChargeItem> resultChargeItem;
-        ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
-                                                          inputChargeItem, pkvTaskId, HttpStatus::BadRequest));
-    }
-}
 
 TEST_F(ChargeItemPutHandlerTest, PutNonPkvFails)
 {

@@ -56,14 +56,14 @@ Lanr::Type Lanr::getType() const
     return mType;
 }
 
-std::string_view Lanr::namingSystem(bool deprecated) const
+std::string_view Lanr::namingSystem() const
 {
     switch (mType)
     {
         case Type::lanr:
             return resource::naming_system::kbvAnr;
         case Type::zanr:
-            return deprecated ? resource::naming_system::deprecated::kbvZanr : resource::naming_system::kbvZanr;
+            return resource::naming_system::kbvZanr;
         case Type::unspecified:
             break;
     }

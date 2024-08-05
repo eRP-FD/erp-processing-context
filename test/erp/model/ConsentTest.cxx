@@ -41,12 +41,6 @@ TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity
 
 TEST_F(ConsentTest, Construct)
 {
-    if (!model::ResourceVersion::supportedBundles()
-            .contains(model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01))
-    {
-        // constructor of BaseResource uses versionizeProfile, which fails when 2023-07-01 is not supported.
-        GTEST_SKIP();
-    }
     const auto consentType = model::Consent::Type::CHARGCONS;
     const model::Kvnr kvnr{"X123456788"};
     const model::Timestamp dateTime = model::Timestamp::now();
@@ -63,10 +57,7 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
 
     std::optional<model::Consent> optConsent;
-    ASSERT_NO_THROW(optConsent = model::Consent::fromJson(
-        jsonString, *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-        *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent,
-            {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}));
+    ASSERT_NO_THROW(optConsent = model::Consent::fromJson(jsonString, *StaticData::getJsonValidator()));
 
     auto& consent = optConsent.value();
 
@@ -95,8 +86,7 @@ TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-com
 {
     auto consent = model::Consent::fromXml(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml"),
-        *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(), SchemaType::Gem_erxConsent,
-                                    {model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01});
+        *StaticData::getXmlValidator());
 
     EXPECT_FALSE(consent.id().has_value());
     const model::Kvnr kvnr{"X123456788"};

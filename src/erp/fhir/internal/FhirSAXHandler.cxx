@@ -612,7 +612,7 @@ FhirSaxHandler::getTypeAndElement(const FhirStructureDefinition& baseType,
     {
         const auto& contentReference = element->contentReference();
         Expect3(not contentReference.empty(), "Cannot determin type of: " + element->name(), std::logic_error);
-        const auto ref = mStructureRepo.resolveContentReference(*element);
+        const auto ref = mStructureRepo.resolveContentReference(*baseType.resourceGroup(), *element);
         return {ref.baseType, ref.element};
     }
     Expect3(elementType != nullptr, "Could not resolve type: " + element->typeId(), std::logic_error);

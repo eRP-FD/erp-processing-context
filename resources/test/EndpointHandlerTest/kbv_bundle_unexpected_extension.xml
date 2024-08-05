@@ -3,10 +3,10 @@
   <id value="8938aff5-720a-414a-b574-114bd8d1e11c"/>
   <meta>
     <lastUpdated value="2021-06-08T13:44:53.012475+02:00"/>
-    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.0.2"/>
+    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0"/>
   </meta>
   <identifier>
-    <system value="https://gematik.de/fhir/NamingSystem/PrescriptionID"/>
+    <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId"/>
     <value value="160.000.000.004.713.80"/>
   </identifier>
   <type value="document"/>
@@ -17,7 +17,7 @@
       <Composition>
         <id value="1560e505-3862-4162-9f8f-9a88157e0905"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.0.2"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Composition|1.1.0"/>
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Legal_basis">
           <valueCoding>
@@ -88,7 +88,7 @@
       <Patient>
         <id value="16fa9dd1-a702-4627-8405-cd22f01a09c7"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.0.3"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0"/>
         </meta>
         <identifier>
           <type>
@@ -97,7 +97,7 @@
               <code value="GKV"/>
             </coding>
           </type>
-          <system value="http://fhir.de/NamingSystem/gkv/kvid-10"/>
+          <system value="http://fhir.de/sid/gkv/kvid-10"/>
           <value value="X234567891"/>
         </identifier>
         <name>
@@ -130,7 +130,7 @@
       <Practitioner>
         <id value="6e6c209e-1b86-43e0-9794-f54ec147fc49"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner|1.0.3"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner|1.1.0"/>
         </meta>
         <identifier>
           <type>
@@ -144,7 +144,11 @@
         </identifier>
         <name>
           <use value="official"/>
-          <family value="G&#xF5;dofsk&#xFD;-Witzigmann"/>
+          <family value="G&#xF5;dofsk&#xFD;-Witzigmann">
+            <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
+              <valueString value="G&#xF5;dofsk&#xFD;-Witzigmann"/>
+            </extension>
+          </family>
           <given value="Tina Freifrau"/>
           <prefix value="Dr. med.">
             <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier">
@@ -155,14 +159,18 @@
         <qualification>
           <code>
             <coding>
-              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"/>
-              <code value="00"/>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Berufsbezeichnung"/>
+              <code value="Berufsbezeichnung"/>
             </coding>
+            <text value="&#xC4;rztin/Arzt"/>
           </code>
         </qualification>
         <qualification>
           <code>
-            <text value="&#xC4;rztin/Arzt"/>
+            <coding>
+              <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"/>
+              <code value="00"/>
+            </coding>
           </code>
         </qualification>
       </Practitioner>
@@ -174,7 +182,7 @@
       <Organization>
         <id value="71146e2d-f1df-45b3-aa45-3bcb44d20928"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.0.3"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.1.0"/>
         </meta>
         <identifier>
           <type>
@@ -184,7 +192,7 @@
             </coding>
           </type>
           <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_BSNR"/>
-          <value value="value"/>
+          <value value="123456789"/>
         </identifier>
         <name value="Praxis Dr. Aphrodite Mondw&#xFC;rfelTEST-ONLY"/>
         <telecom>
@@ -195,7 +203,10 @@
           <type value="both"/>
           <line value="Kirchspielsweg 6">
             <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-streetName">
-              <valueString value="Kirchspielsweg 6"/>
+              <valueString value="Kirchspielsweg"/>
+            </extension>
+            <extension url="http://hl7.org/fhir/StructureDefinition/iso21090-ADXP-houseNumber">
+              <valueString value="6"/>
             </extension>
           </line>
           <city value="Heide"/>
@@ -211,7 +222,7 @@
       <Medication>
         <id value="4980b470-e8e5-44bf-a53a-47ade2561cdb"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.0.2"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0"/>
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
           <valueCoding>
@@ -224,6 +235,16 @@
         </extension>
         <extension url="http://fhir.de/StructureDefinition/normgroesse">
           <valueCode value="N3"/>
+        </extension>
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type">
+          <valueCodeableConcept>
+            <coding>
+              <system value="http://snomed.info/sct"/>
+              <version value="http://snomed.info/sct/900000000000207008/version/20220331"/>
+              <code value="763158003"/>
+              <display value="Medicinal product (product)"/>
+            </coding>
+          </valueCodeableConcept>
         </extension>
         <code>
           <coding>
@@ -240,7 +261,9 @@
         </form>
         <amount>
           <numerator>
-            <value value="70"/>
+            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize">
+              <valueString value="40"/>
+            </extension>
             <unit value="St"/>
           </numerator>
           <denominator>
@@ -256,7 +279,7 @@
       <Coverage>
         <id value="312e170e-de2f-47bf-8ee3-e8c3a353f6bd"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.0.3"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Coverage|1.1.0"/>
         </meta>
         <extension url="http://fhir.de/StructureDefinition/gkv/versichertenart">
           <valueCoding>
@@ -294,7 +317,7 @@
         </beneficiary>
         <payor>
           <identifier>
-            <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
+            <system value="http://fhir.de/sid/arge-ik/iknr"/>
             <value value="109500969"/>
           </identifier>
           <display value="Test GKV-SV"/>
@@ -308,7 +331,7 @@
       <MedicationRequest>
         <id value="005cd690-7473-4bf4-a502-30a32f2e7623"/>
         <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.0.2"/>
+          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.1.0"/>
         </meta>
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee">
           <valueBoolean value="false"/>
@@ -321,9 +344,9 @@
             <valueBoolean value="false"/>
           </extension>
         </extension>
-        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_StatusCoPayment">
+        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_StatusCoPayment">
           <valueCoding>
-            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_StatusCoPayment"/>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"/>
             <code value="0"/>
           </valueCoding>
         </extension>

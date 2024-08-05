@@ -1,0 +1,253 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="minifhirtypes"/>
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/string"/>
+    <resource>
+      <StructureDefinition>
+        <id value="string"/>
+        <url value="http://fhir-tools.test/minifhirtypes/string"/>
+        <version value="4.0.1"/>
+        <name value="string"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="true"/>
+        <type value="string"/>
+        <snapshot>
+          <element id="string">
+            <path value="string"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="string"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="string.value">
+            <path value="string.value"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="string.value"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/BackboneElement"/>
+    <resource>
+      <StructureDefinition>
+        <id value="BackboneElement"/>
+        <url value="http://fhir-tools.test/minifhirtypes/BackboneElement"/>
+        <version value="4.0.1"/>
+        <name value="BackboneElement"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="BackboneElement"/>
+        <snapshot>
+          <element id="BackboneElement">
+            <path value="BackboneElement"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="BackboneElement"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Meta"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Meta"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Meta"/>
+        <version value="4.0.1"/>
+        <name value="Meta"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="Meta"/>
+        <snapshot>
+          <element id="Meta">
+            <path value="Meta"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Meta"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Meta.source">
+            <path value="Meta.source"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Meta.source"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Meta.profile">
+            <path value="Meta.profile"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Meta.profile"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Extension"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Extension"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Extension"/>
+        <version value="4.0.1"/>
+        <name value="Extension"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="Extension"/>
+        <snapshot>
+          <element id="Extension">
+            <path value="Extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Extension.url">
+            <path value="Extension.url"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Extension.url"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Resource"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Resource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="Resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

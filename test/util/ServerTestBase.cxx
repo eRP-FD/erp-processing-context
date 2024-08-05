@@ -11,6 +11,7 @@
 #include "erp/common/Constants.hxx"
 #include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/fhir/Fhir.hxx"
 #include "erp/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Composition.hxx"
@@ -300,32 +301,27 @@ ClientResponse ServerTestBase::verifyOuterResponse (const ClientResponse& outerR
 
 void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) const
 {
-    auto fhirBundleVersion = model::ResourceVersion::current<model::ResourceVersion::FhirProfileBundleVersion>();
-    // Enable the output validation for the "after transition phase" case, because otherwise old profiles may occur.
-    // Old profiles cannot be validated generically due to inconsistencies.
-    if (! model::ResourceVersion::supportedBundles().contains(
-            model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01))
+    const auto& fhirInstance = Fhir::instance();
+    const auto& backend = std::addressof(fhirInstance.backend());
+    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+    std::optional<model::UnspecifiedResource> resourceForValidation;
+    if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
     {
-        std::optional<model::UnspecifiedResource> resourceForValidation;
-        if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
+        resourceForValidation = model::UnspecifiedResource::fromXmlNoValidation(innerResponse.getBody());
+    }
+    else if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirJsonUtf8})
+    {
+        resourceForValidation = model::UnspecifiedResource::fromJsonNoValidation(innerResponse.getBody());
+    }
+    if (resourceForValidation)
+    {
+        fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
+        auto validationResult = resourceForValidation->genericValidate(model::ProfileType::fhir, options, repoView);
+        auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
+        for (const auto& item : filteredValidationErrors)
         {
-            resourceForValidation = model::UnspecifiedResource::fromXmlNoValidation(innerResponse.getBody());
-        }
-        else if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirJsonUtf8})
-        {
-            resourceForValidation = model::UnspecifiedResource::fromJsonNoValidation(innerResponse.getBody());
-        }
-        if (resourceForValidation)
-        {
-            fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-            auto validationResult =
-                resourceForValidation->genericValidate(model::Timestamp::now(), fhirBundleVersion, options);
-            auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
-            for (const auto& item : filteredValidationErrors)
-            {
-                ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
-                                                                       << innerResponse.getBody();
-            }
+            ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
+                                                                   << innerResponse.getBody();
         }
     }
 }
@@ -474,10 +470,9 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
         {.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
     static const fhirtools::ValidatorOptions validatorOptions{.allowNonLiteralAuthorReference = true};
     const auto prescriptionBundle =
-            ResourceFactory<KbvBundle>::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
-                                                {.validatorOptions = validatorOptions})
-            .getValidated(SchemaType::KBV_PR_ERP_Bundle, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                 model::ResourceVersion::supportedBundles());
+        ResourceFactory<KbvBundle>::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
+                                            {.validatorOptions = validatorOptions})
+            .getValidated(ProfileType::KBV_PR_ERP_Bundle);
     const std::vector<Patient> patients = prescriptionBundle.getResourcesByType<Patient>("Patient");
 
     ASSERT_FALSE(patients.empty());
@@ -537,6 +532,7 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     task.setReceiptUuid();
     task.setStatus(Task::Status::completed);
     task.updateLastUpdate();
+    task.updateLastMedicationDispense();
 
 
     std::vector<model::MedicationDispense> medicationDispenses;
@@ -580,11 +576,8 @@ MedicationDispense ServerTestBase::createMedicationDispense(
 {
     const auto medicationDispenseString = ResourceTemplates::medicationDispenseXml({});
 
-    MedicationDispense medicationDispense = MedicationDispense::fromXml(
-            medicationDispenseString,
-            *StaticData::getXmlValidator(),
-            *StaticData::getInCodeValidator(),
-            SchemaType::Gem_erxMedicationDispense);
+    MedicationDispense medicationDispense =
+        MedicationDispense::fromXml(medicationDispenseString, *StaticData::getXmlValidator());
 
     PrescriptionId prescriptionId = task.prescriptionId();
     const auto kvnrPatient = task.kvnr().value();

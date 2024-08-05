@@ -37,8 +37,7 @@ public:
         ASSERT_NE(testDef, nullptr);
         rootElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, testDef, "Test", &testResource);
     }
-    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
-        DefaultFhirStructureRepository::getWithTest().defaultView();
+    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
     const FhirStructureRepository& repo = *mRepo;
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;

@@ -7,6 +7,7 @@
 
 #include "FhirStructureDefinition.hxx"
 #include "fhirtools/FPExpect.hxx"
+#include "fhirtools/repository/FhirResourceGroup.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
@@ -48,11 +49,21 @@ namespace fhirtools::derivation_string
 FhirStructureDefinition::FhirStructureDefinition() = default;
 FhirStructureDefinition::~FhirStructureDefinition() = default;
 
+std::string fhirtools::FhirStructureDefinition::urlAndVersion() const
+{
+    return (std::ostringstream() << mUrl << '|' << mVersion).str();
+}
+
+fhirtools::DefinitionKey fhirtools::FhirStructureDefinition::definitionKey() const
+{
+    return {mUrl, mVersion};
+}
 
 void FhirStructureDefinition::validate()
 {
+    Expect(mResourceGroup, "Missing group in FhirStructureDefinition:" + urlAndVersion());
     Expect(not mUrl.empty(), "Missing url in FhirStructureDefinition.");
-    Expect(not mTypeId.empty(), "Missing type in FhirStructureDefinition: " + mUrl);
+    Expect(not mTypeId.empty(), "Missing type in FhirStructureDefinition: " + urlAndVersion());
 }
 
 const std::string& fhirtools::to_string(FhirStructureDefinition::Derivation derivation)
@@ -97,8 +108,10 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const FhirStructureDefini
 {
     std::ostream xout(out.rdbuf());
 
-    xout << R"({ "typeId": ")" << structure.typeId();
+    xout << R"({ "groupId": ")" << structure.resourceGroup()->id();
+    xout << R"(", "typeId": ")" << structure.typeId();
     xout << R"(", "url": ")" << structure.url();
+    xout << R"(", "version": ")" << structure.version();
     xout << R"(", "baseDefinition": ")" << structure.baseDefinition();
     xout << R"(", "derivation": ")" << structure.derivation();
     xout << R"(", "kind": ")" << structure.kind();
@@ -106,7 +119,15 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const FhirStructureDefini
     std::string_view seperator;
     for (const auto& element : structure.elements())
     {
-        xout << seperator << element;
+        xout << seperator;
+        if (element)
+        {
+            xout << *element;
+        }
+        else
+        {
+            xout << "null";
+        }
         seperator = ", ";
     }
     xout << "] }";
@@ -242,7 +263,10 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
     }
     else
     {
-        parent = repo.findDefinitionByUrl(baseDefinition());
+        auto parentKey = mResourceGroup->find(DefinitionKey{baseDefinition()}).first;
+        FPExpect3(parentKey.version.has_value(), "basetype for " + urlAndVersion() + " not found: " + baseDefinition(),
+                  std::logic_error);
+        parent = repo.findStructure(parentKey);
         Expect3(parent != nullptr, "base definition not found for '" + url() + "': " + baseDefinition(),
                 std::logic_error);
     }
@@ -252,13 +276,13 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
 bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureRepository& repo,
                                             const fhirtools::FhirStructureDefinition& baseProfile) const
 {
-    return isDerivedFrom(repo, baseProfile.url() + '|' + baseProfile.version());
+    return isDerivedFrom(repo, baseProfile.urlAndVersion());
 }
 
 //NOLINTNEXTLINE [misc-no-recursion]
 bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepository& repo, const std::string_view& baseUrl) const
 {
-    if (url() == baseUrl || url() + '|' + version() == baseUrl)
+    if (url() == baseUrl || urlAndVersion() == baseUrl)
     {
         return true;
     }
@@ -295,6 +319,12 @@ const FhirStructureDefinition& FhirStructureDefinition::primitiveToSystemType(co
     return *valueType;
 }
 
+const std::shared_ptr<const fhirtools::FhirResourceGroup>& fhirtools::FhirStructureDefinition::resourceGroup() const
+{
+    return mResourceGroup;
+}
+
+
 class FhirStructureDefinition::Builder::FhirSlicingBuilder : public FhirSlicing::Builder
 {
 public:
@@ -314,8 +344,22 @@ FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::url(std::str
     return *this;
 }
 
+FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::initGroup(const FhirResourceGroupResolver& resolver,
+                                                                              const std::filesystem::path& source)
+{
+    mStructureDefinition->mResourceGroup =
+        resolver.findGroup(mStructureDefinition->mUrl, mStructureDefinition->mVersion, source);
+    return *this;
+}
 
-FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::version(Version version_)
+FhirStructureDefinition::Builder&
+fhirtools::FhirStructureDefinition::Builder::group(std::shared_ptr<const FhirResourceGroup> group)
+{
+    mStructureDefinition->mResourceGroup = std::move(group);
+    return *this;
+}
+
+FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::version(FhirVersion version_)
 {
     mStructureDefinition->mVersion = std::move(version_);
     return *this;
@@ -394,6 +438,8 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         bool added = false;
         for (const auto& type : withTypes)
         {
+            FPExpect3(type.find_first_of("#.") == std::string::npos, "contentReference not supported with placeholder",
+                      std::logic_error);
             Expect3(not type.empty(), "Empty type id: " + elementName, std::logic_error);
             std::string infix = type;
             infix[0] = ctype.toupper(infix[0]);
@@ -462,7 +508,12 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         if (element->name().find(':') != std::string::npos &&
             ! element->name().starts_with("http://hl7.org/fhirpath/System."))
         {
-            return addSliceElement(element, {element->typeId()});
+            if (element->contentReference().empty())
+            {
+                FPExpect(!element->typeId().empty(), "element has neither type nor contentReference.");
+                return addSliceElement(element, {element->typeId()});
+            }
+            return addSliceElement(element, {element->contentReference()});
         }
     }
 
@@ -505,7 +556,9 @@ bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<con
         {
             continue;
         }
-        if (suffix.empty() && std::ranges::find(withTypes, element->typeId()) == withTypes.end())
+        if (suffix.empty() && std::ranges::none_of(withTypes, [&](const std::string& t) {
+                return t == element->typeId() || t == element->contentReference();
+            }))
         {
             continue;
         }
@@ -513,7 +566,7 @@ bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<con
 
         FhirElement::Builder sliceElementBuilder{*sliceElement};
         sliceElementBuilder.originalName(sliceElement->name());
-        if (! suffix.empty())
+        if (! suffix.empty() || element->typeId().empty())
         {
             if (slicingBuilder.addElement(sliceElementBuilder.getAndReset(), withTypes, *mStructureDefinition))
             {

@@ -45,6 +45,7 @@ public:
 
     [[nodiscard]] std::optional<model::Timestamp> timeSent() const;
     void setTimeSent(const model::Timestamp& timestamp = model::Timestamp::now());
+
 private:
     explicit JsonCanonicalizationTestModel(model::NumberAsStringParserDocument&& document); // internal ctor
 };

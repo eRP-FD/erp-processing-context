@@ -16,7 +16,6 @@ class Erp10941Test : public ErpWorkflowTest
 
 TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
 {
-    auto envGuards = testutils::getNewFhirProfileEnvironment();
     const std::string kvnr = generateNewRandomKVNR().id();
     std::optional<model::PrescriptionId> prescriptionId;
     std::optional<model::KbvBundle> kbvBundle;

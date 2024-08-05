@@ -62,7 +62,6 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mKeyDerivation(*mHsmPool)
     , mJsonValidator(factories.jsonValidatorFactory())
     , mXmlValidator(factories.xmlValidatorFactory())
-    , mInCodeValidator(factories.incodeValidatorFactory())
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
     , mTelematicPseudonymManager(TelematicPseudonymManager::create(this))
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
@@ -161,11 +160,6 @@ KeyDerivation& PcServiceContext::getKeyDerivation()
 const XmlValidator& PcServiceContext::getXmlValidator() const
 {
     return *mXmlValidator;
-}
-
-const InCodeValidator& PcServiceContext::getInCodeValidator() const
-{
-    return *mInCodeValidator;
 }
 
 CFdSigErpManager& PcServiceContext::getCFdSigErpManager() const

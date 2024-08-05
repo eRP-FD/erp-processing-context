@@ -1,0 +1,20 @@
+{
+  "resourceType": "Resource",
+  "id": "e48d2627-3e02-4824-9876-89e51b8c9d55",
+  "meta": {
+    "profile": [
+      "http://fhir-tools.test/IndirectAlternativeProfile"
+    ]
+  },
+  "contained": [
+    {
+        "resourceType": "Resource",
+        "id": "59a1f93a-1467-4ed3-99dd-959eeb86e478",
+        "extension": [
+        {
+          "url": "http://fhir-tools.test/IndirectAlternativeProfile1/Extension"
+        }
+      ]
+    }
+  ]
+}

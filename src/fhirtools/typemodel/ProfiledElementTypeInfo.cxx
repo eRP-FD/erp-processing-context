@@ -114,7 +114,7 @@ std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const
         const FhirStructureDefinition* subType = nullptr;
         if (typeId.empty())
         {
-            auto resolv = repo.resolveContentReference(*subElementDef->element());
+            auto resolv = repo.resolveContentReference(*mProfile->resourceGroup(), *subElementDef->element());
             static_assert(std::is_reference_v<decltype(resolv.baseType)>);
             result.emplace_back(&resolv.baseType, resolv.element);
         }
@@ -193,13 +193,11 @@ void ProfiledElementTypeInfo::typecast(const FhirStructureRepository& repo, cons
 {
     Expect3(structDef != nullptr, "defPtr must not be null", std::logic_error);
     Expect3(structDef->isDerivedFrom(repo, *profile()),
-            "target type must be derived from source-type: " + to_string(*this) + " -> " + structDef->url() + '|' +
-                structDef->version(),
+            "target type must be derived from source-type: " + to_string(*this) + " -> " + structDef->urlAndVersion(),
             std::logic_error);
     Expect3(mElement->isRoot(), "typecast not supported for non-root: " + to_string(*this), std::logic_error);
     Expect3(structDef->derivation() != FhirStructureDefinition::Derivation::constraint,
-            "typecast to constraint not allowed: " + to_string(*this) + " -> " + structDef->url() + '|' +
-                structDef->version(),
+            "typecast to constraint not allowed: " + to_string(*this) + " -> " + structDef->urlAndVersion(),
             std::logic_error);
     mElement = FhirElement::Builder{*structDef->rootElement()}
                    .isArray(mElement->isArray())

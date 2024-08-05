@@ -31,6 +31,13 @@ public:
     enum class Type
     {
         /**
+         * See Date description further below, for details. This type is introduced to handle searches
+         * where the search value must match the postgresql Date format (YYYY, YYYY-mm, YYYY-mm-dd).
+         * Date cannot be used since it appends a time during the render phase.
+         */
+        SQLDate,
+
+        /**
          * For Date values the prefixes eq, ne, gt, ge, lt, le, sa, eb are supported while ap is not.
          * Target values (values in the database) are treated as time points, not as implicit ranges.
          * Therefore gt and sa are treated as equivalent. Also lt and eb are treated as equivalent.

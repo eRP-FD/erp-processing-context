@@ -14,21 +14,63 @@
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestUtils.hxx"
 #include "erp/util/Uuid.hxx"
+#include "erp/fhir/Fhir.hxx"
 
 #include <boost/algorithm/string.hpp>
 
 namespace ResourceTemplates
 {
 
+std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
+    Versions::GEM_ERP_1_2,
+    Versions::GEM_ERP_1_3,
+};
+std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
+    Versions::KBV_ERP_1_1_0,
+};
+
+std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
+    Versions::GEM_ERPCHRG_1_0,
+};
+
+std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
+    Versions::DAV_PKV_1_2,
+};
+
+Versions::GEM_ERP::GEM_ERP(const fhirtools::FhirVersion& ver)
+    : FhirVersion{ver}
+{
+}
+
+Versions::GEM_ERPCHRG Versions::GEM_ERPCHRG_current(const model::Timestamp& reference [[maybe_unused]])
+{
+    return GEM_ERPCHRG_1_0;
+}
+
+Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[maybe_unused]])
+{
+    return KBV_ERP_1_1_0;
+}
+
+Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
+{
+    const auto& fhirInstance = Fhir::instance();
+    auto view = fhirInstance.structureRepository(reference).latest().view(&fhirInstance.backend());
+    const auto* def = view->findStructure(fhirtools::DefinitionKey{std::string{model::resource::structure_definition::task}, std::nullopt});
+    return GEM_ERP{def->version()};
+}
+
+Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Timestamp& reference [[maybe_unused]])
+{
+    return DAV_PKV_1_2;
+}
+
 std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    auto kbvVersion =
-        bundleOptions.kbvVersion.value_or(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>());
-    const std::string kbvVersionStr{v_str(kbvVersion)};
-    bool deprecatedKbv = kbvVersion == model::ResourceVersion::KbvItaErp::v1_0_2;
-    std::string kvid10Ns = deprecatedKbv ? std::string{model::resource::naming_system::deprecated::gkvKvid10}
-                                         : std::string{model::resource::naming_system::gkvKvid10};
+    const std::string kbvVersionStr{to_string(
+        bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)))};
+    std::string kvid10Ns{model::resource::naming_system::gkvKvid10};
     std::string templateFileName = "test/EndpointHandlerTest/kbv_bundle_template_" + kbvVersionStr + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     const auto& prescriptionId = bundleOptions.prescriptionId;
@@ -65,8 +107,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     }
     else
     {
-        std::string argeIknrNs = deprecatedKbv ? std::string{model::resource::naming_system::deprecated::argeIknr}
-                                            : std::string{model::resource::naming_system::argeIknr};
+        const std::string argeIknrNs{model::resource::naming_system::argeIknr};
         boost::replace_all(bundle, "###PAYOR_IDENTIFIER###",
             "<identifier>\n###COVERAGE_PAYOR_EXTENSION###"
             "            <system value=\"" + argeIknrNs +  "\"/>\n"
@@ -96,7 +137,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
             break;
     }
     boost::replace_all(bundle, "###LANR_TYPE###", anrType);
-    boost::replace_all(bundle, "###LANR_SYSTEM###", bundleOptions.lanr.namingSystem(deprecatedKbv));
+    boost::replace_all(bundle, "###LANR_SYSTEM###", bundleOptions.lanr.namingSystem());
     boost::replace_all(bundle, "###LANR_CODE_SYSTEM###", anrCodeSystem);
     boost::replace_all(bundle, "###QUALIFICATION_TYPE###", qualificationType);
     boost::replace_all(bundle, "###PZN###", bundleOptions.pzn.id());
@@ -107,12 +148,9 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
 std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    auto kbvVersion =
-        bundleOptions.kbvVersion.value_or(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>());
-    const std::string kbvVersionStr{v_str(kbvVersion)};
-    bool deprecatedKbv = kbvVersion == model::ResourceVersion::KbvItaErp::v1_0_2;
-    std::string kvid10Ns = deprecatedKbv ? std::string{model::resource::naming_system::deprecated::gkvKvid10}
-                                         : std::string{model::resource::naming_system::gkvKvid10};
+    const std::string kbvVersionStr{to_string(
+        bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)))};
+    std::string kvid10Ns{model::resource::naming_system::gkvKvid10};
     std::string templateFileName =
         "test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung_template_" + kbvVersionStr + ".xml";
 
@@ -143,7 +181,7 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
 std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    const std::string kbvVersionStr{v_str(bundleOptions.kbvVersion)};
+    const std::string kbvVersionStr{to_string(bundleOptions.kbvVersion)};
     std::string templateFileName = "test/EndpointHandlerTest/kbv_pkv_bundle_template_" + kbvVersionStr + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", bundleOptions.prescriptionId.toString());
@@ -154,16 +192,9 @@ std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
 
 std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& bundleOptions)
 {
-    std::optional<std::string> profileStr;
-    model::ResourceBase::Profile profile = model::ResourceBase::NoProfile;
-    // there is no profile in the deprecated fhir bundle
-    if (! deprecatedBundle(bundleOptions.bundleFhirBundleVersion))
-    {
-        profileStr.emplace(
-            testutils::profile(SchemaType::MedicationDispenseBundle, bundleOptions.bundleFhirBundleVersion));
-        profile = *profileStr;
-    }
-    model::MedicationDispenseBundle bundle{model::BundleType::collection, profile};
+    const fhirtools::DefinitionKey profileKey{
+        std::string{profile(model::ProfileType::MedicationDispenseBundle).value()}, bundleOptions.gematikVersion};
+    model::MedicationDispenseBundle bundle{model::BundleType::collection, profileKey};
     bundle.setIdentifier(bundleOptions.prescriptionId);
     for (size_t idx = 0; const auto& medicationDispenseOpt : bundleOptions.medicationDispenses)
     {
@@ -192,15 +223,11 @@ std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& b
 
 std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDispenseOptions)
 {
-    namespace rv = model::ResourceVersion;
     auto& resourceManager = ResourceManager::instance();
-    const std::string gematikVersion{v_str(medicationDispenseOptions.gematikVersion)};
+    const std::string gematikVersion{to_string(medicationDispenseOptions.gematikVersion)};
     std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_template_" + gematikVersion + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
-    auto fhirBundleVersion = rv::fhirProfileBundleFromSchemaVersion(medicationDispenseOptions.gematikVersion);
     auto medicationOptions = medicationDispenseOptions.medication;
-    medicationOptions.version =
-            medicationOptions.version.value_or(get<rv::KbvItaErp>(rv::profileVersionFromBundle(fhirBundleVersion)));
     struct toString {
         std::string operator()(const model::PrescriptionId& prescriptionId) const
         {
@@ -208,7 +235,11 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
         }
         std::string operator()(const model::Timestamp& timestamp) const
         {
-            return timestamp.toXsDateTime();
+            if(Versions::GEM_ERP_current() != Versions::GEM_ERP_1_3)
+            {
+                return timestamp.toXsDateTime();
+            }
+            return timestamp.toGermanDate();
         }
         std::string operator()(const std::string& str)
         {
@@ -233,19 +264,19 @@ std::string medicationXml(const MedicationOptions& medicationOptions)
 {
     using namespace std::string_literals;
     auto& resourceManager = ResourceManager::instance();
-    auto version =
-        medicationOptions.version.value_or(model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>());
+    auto version = medicationOptions.version.value_or(Versions::KBV_ERP_current(model::Timestamp::now()));
     std::ostringstream templateFileName;
-    templateFileName << medicationOptions.templatePrefix << v_str(version) << ".xml";
+    templateFileName << medicationOptions.templatePrefix << version << ".xml";
     auto medication = resourceManager.getStringResource(templateFileName.view());
     boost::replace_all(medication, "###MEDICATION_ID###", medicationOptions.id);
+    boost::replace_all(medication, "###DARREICHUNGSFORM###", medicationOptions.darreichungsform);
     return medication;
 }
 
 std::string taskJson(const TaskOptions& taskOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    const std::string gematikVersion{v_str(taskOptions.gematikVersion)};
+    const std::string gematikVersion{to_string(taskOptions.gematikVersion)};
     std::string templateFileName;
     switch (taskOptions.taskType)
     {
@@ -273,13 +304,9 @@ std::string taskJson(const TaskOptions& taskOptions)
     boost::replace_all(task, "###PRESCRIPTION_UUID###", taskOptions.prescriptionId.deriveUuid(model::uuidFeaturePrescription));
     boost::replace_all(task, "###EXPIRY_DATE###", taskOptions.expirydate.toGermanDate());
 
-    if(taskOptions.gematikVersion >= model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_2_0)
-    {
-        const auto prescriptionNs = taskOptions.prescriptionId.isPkv() ?
-            model::resource::naming_system::pkvKvid10 :
-            model::resource::naming_system::gkvKvid10;
-        boost::replace_all(task, "###KVNR_NAMING_SYSTEM###", std::string(prescriptionNs));
-    }
+    const auto prescriptionNs = taskOptions.prescriptionId.isPkv() ? model::resource::naming_system::pkvKvid10
+                                                                   : model::resource::naming_system::gkvKvid10;
+    boost::replace_all(task, "###KVNR_NAMING_SYSTEM###", std::string(prescriptionNs));
 
     return task;
 }
@@ -308,6 +335,18 @@ std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions)
                        Uuid{prescriptionId.deriveUuid(model::uuidFeaturePrescription)}.toUrn());
 
     return chargeItem;
+}
+std::string davDispenseItemXml(const DavDispenseItemOptions& dispenseItemOptions)
+{
+    auto& resourceManager = ResourceManager::instance();
+    Expect3(dispenseItemOptions.davPkvVersion != fhirtools::FhirVersion::notVersioned,
+            "dispense item must have a version", std::logic_error);
+    std::string dispenseItem = resourceManager.getStringResource("test/EndpointHandlerTest/DAV_DispenseItem_template_" +
+                                                                 to_string(dispenseItemOptions.davPkvVersion) + ".xml");
+
+    boost::replace_all(dispenseItem, "##PRESCRIPTION_ID##", dispenseItemOptions.prescriptionId.toString());
+
+    return dispenseItem;
 }
 
 }// namespace ResourceTemplates

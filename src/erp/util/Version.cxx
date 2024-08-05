@@ -29,11 +29,6 @@ std::strong_ordering operator<=>(const Version& lhs, const Version& rhs)
     return lhs.split() <=> rhs.split();
 }
 
-bool operator==(const Version& lhs, const Version& rhs)
-{
-    return lhs.split() == rhs.split();
-}
-
 Version::Version() = default;
 
 std::list<std::list<std::list<Version::VersionElement>>> Version::split() const

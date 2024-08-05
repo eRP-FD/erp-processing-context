@@ -20,6 +20,7 @@ namespace {
     constexpr std::string_view operationName_POST_Task_id_reject       = "POST /Task/<id>/$reject";
     constexpr std::string_view operationName_POST_Task_id_close        = "POST /Task/<id>/$close";
     constexpr std::string_view operationName_POST_Task_id_abort        = "POST /Task/<id>/$abort";
+    constexpr std::string_view operationName_POST_Task_id_dispense     = "POST /Task/<id>/$dispense";
     constexpr std::string_view operationName_GET_MedicationDispense    = "GET /MedicationDispense";
     constexpr std::string_view operationName_GET_MedicationDispense_id = "GET /MedicationDispense/<id>";
     constexpr std::string_view operationName_GET_Communication         = "GET /Communication";
@@ -58,6 +59,7 @@ const std::string_view& toString (Operation operation)
         case Operation::POST_Task_id_reject:       return operationName_POST_Task_id_reject;
         case Operation::POST_Task_id_close:        return operationName_POST_Task_id_close;
         case Operation::POST_Task_id_abort:        return operationName_POST_Task_id_abort;
+        case Operation::POST_Task_id_dispense:     return operationName_POST_Task_id_dispense;
         case Operation::GET_MedicationDispense:    return operationName_GET_MedicationDispense;
         case Operation::GET_MedicationDispense_id: return operationName_GET_MedicationDispense_id;
         case Operation::GET_Communication:         return operationName_GET_Communication;

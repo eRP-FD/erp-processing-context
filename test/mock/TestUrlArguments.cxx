@@ -471,6 +471,7 @@ TestUrlArguments::Communications TestUrlArguments::applySearch (Communications&&
         {
             if (matches("sender", communication.sender)
                 && matches("recipient", communication.recipient)
+                && matches("identifier", std::make_optional(model::Timestamp::fromDatabaseSUuid(communication.id)))
                 && matches("sent", std::make_optional(model::Timestamp::fromDatabaseSUuid(communication.id)))
                 && matches("received", communication.received))
             {
@@ -553,7 +554,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&&
             if (matches("status", std::optional<model::Task::Status>{theTask.status})
                 && matches("authored-on", std::optional<model::Timestamp>{theTask.authoredOn})
                 && matches("modified", std::optional<model::Timestamp>{theTask.lastModified})
-                && matches("expires", std::optional<model::Timestamp>{theTask.expiryDate}))
+                && matches("expires", std::optional<model::Timestamp>{theTask.expiryDate})
+                && matches("accept-date", std::optional<model::Timestamp>{theTask.acceptDate}))
             {
                 tasks.emplace_back(std::move(theTask));
             }
@@ -624,6 +626,8 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArgum
         for (auto& auditEvent : auditEvents)
         {
             if (matches("date", std::optional<model::Timestamp>{auditEvent.recorded})
+                && matches("entity", std::make_optional(std::string{model::resource::naming_system::prescriptionID} +
+                                                        "|" + auditEvent.prescriptionId->toString()))
                 && matches("subtype", std::optional<std::string_view>(std::string(1, static_cast<char>(auditEvent.action)))))
             {
                 resultAuditEvents.emplace_back(std::move(auditEvent));
@@ -699,9 +703,8 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applySearch(MedicationDi
             if (matches("whenhandedover", std::make_optional(medicationDispense.whenHandedOver)) &&
                 matches("whenprepared", medicationDispense.whenPrepared) &&
                 matches("performer", std::make_optional(medicationDispense.performer)) &&
-                matches("identifier",
-                        std::optional<std::string>{"https://gematik.de/fhir/NamingSystem/PrescriptionID|" +
-                                                   medicationDispense.prescriptionId.toString()}))
+                matches("identifier", std::make_optional(std::string{model::resource::naming_system::prescriptionID} +
+                                                         "|" + medicationDispense.prescriptionId.toString())))
             {
                 medicationDispenses.emplace_back(std::move(medicationDispense));
             }

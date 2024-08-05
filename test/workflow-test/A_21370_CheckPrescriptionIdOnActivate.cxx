@@ -39,10 +39,6 @@ public:
 
 TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
 {
-    if (serverUsesOldProfile() && model::IsPkv(GetParam()))
-    {
-        GTEST_SKIP_("PKV not testable with old profiles");
-    }
     using namespace std::string_view_literals;
     const auto correctWorkflow = GetParam();
     std::string kvnr;

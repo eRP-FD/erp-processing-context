@@ -5,8 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "erp/fhir/Fhir.hxx"
 #include "erp/util/Configuration.hxx"
+#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
@@ -30,6 +33,7 @@ public:
     static constexpr std::string_view erxTaskUrl{"https://gematik.de/fhir/StructureDefinition/ErxTask"};
     static constexpr std::string_view gemErpPrTaskUrl{
         "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"};
+    static inline FhirVersion gemErpPrTaskVersion{Version{"1.3"}};
 };
 
 
@@ -44,7 +48,7 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
 
     FhirStructureRepositoryBackend repo;
 
-    EXPECT_NO_THROW(repo.load(fileList));
+    EXPECT_NO_THROW(repo.load(fileList, fhirtools::FhirResourceGroupConst{"test"}));
     const auto* const hl7task = repo.findTypeById("Task");
     ASSERT_NO_FATAL_FAILURE(checkTaskFields(hl7task));
 
@@ -59,8 +63,6 @@ TEST_F(FhirStructureRepositoryTest, loadResources)//NOLINT(readability-function-
     EXPECT_TRUE(repo.findTypeById("Organization"));
     EXPECT_TRUE(repo.findTypeById("Device"));
     EXPECT_TRUE(repo.findTypeById("Meta"));
-
-    EXPECT_FALSE(repo.findDefinitionByUrl(std::string{erxTaskUrl}));
 }
 
 TEST_F(FhirStructureRepositoryTest, missingBase)
@@ -75,35 +77,10 @@ TEST_F(FhirStructureRepositoryTest, missingBase)
 
     FhirStructureRepositoryBackend repo;
 
-    EXPECT_ANY_THROW(repo.load(fileList));
+    EXPECT_ANY_THROW(repo.load(fileList, FhirResourceGroupConst{"test"}));
 }
 
-TEST_F(FhirStructureRepositoryTest, loadFromConfigurationOldProfiles)
+TEST_F(FhirStructureRepositoryTest, loadConfig)
 {
-    auto strings = Configuration::instance().getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD);
-    std::list<std::filesystem::path> fileList;
-    for (const auto& item : strings)
-    {
-        fileList.emplace_back(item);
-    }
-
-    FhirStructureRepositoryBackend repo;
-    EXPECT_NO_THROW(repo.load(fileList));
-    const auto* const erxTask = repo.findDefinitionByUrl(std::string{erxTaskUrl});
-    ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
-}
-
-TEST_F(FhirStructureRepositoryTest, loadFromConfigurationNewProfiles)
-{
-    auto strings = Configuration::instance().getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
-    std::list<std::filesystem::path> fileList;
-    for (const auto& item : strings)
-    {
-        fileList.emplace_back(item);
-    }
-
-    FhirStructureRepositoryBackend repo;
-    EXPECT_NO_THROW(repo.load(fileList));
-    const auto* const erxTask = repo.findDefinitionByUrl(std::string{gemErpPrTaskUrl});
-    ASSERT_NO_FATAL_FAILURE(checkTaskFields(erxTask));
+    ASSERT_NO_THROW(Fhir::instance());
 }

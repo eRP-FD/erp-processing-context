@@ -56,6 +56,7 @@ std::string SearchArgument::valuesAsString() const
 {
     switch (type)
     {
+    case Type::SQLDate:
     case Type::Date:
     case Type::DateAsUuid:
         return dateValuesAsString();
@@ -76,6 +77,7 @@ size_t SearchArgument::valuesCount() const
 {
     switch (type)
     {
+    case Type::SQLDate:
     case Type::Date:
     case Type::DateAsUuid:
         return std::get<std::vector<std::optional<model::TimePeriod>>>(values).size();
@@ -97,6 +99,7 @@ std::string SearchArgument::valueAsString (size_t idx) const
 
     switch (type)
     {
+        case Type::SQLDate:
         case Type::Date:
         case Type::DateAsUuid:
             return dateValueAsString(idx);
@@ -125,7 +128,7 @@ std::optional<model::TimePeriod> SearchArgument::valueAsTimePeriod (size_t idx) 
 {
     checkValueIndex(idx);
 
-    ErpExpect(type == Type::Date || type == Type::DateAsUuid, HttpStatus::InternalServerError, "value is not a date");
+    ErpExpect(type == Type::Date || type == Type::DateAsUuid || type == Type::SQLDate, HttpStatus::InternalServerError, "value is not a date");
     return std::get<std::vector<std::optional<model::TimePeriod>>>(values)[idx];
 }
 

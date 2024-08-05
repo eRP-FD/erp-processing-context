@@ -26,7 +26,7 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
     A_19257_01.start("validate against schema");
-    const auto parameters = parseAndValidateRequestBody<model::Parameters>(session, SchemaType::CreateTaskParameters);
+    const auto parameters = parseAndValidateRequestBody<model::CreateTaskParameters>(session);
     A_19257_01.finish();
 
     A_19112.start("extract and check workFlowType parameter for the prescription type of the task");
@@ -34,16 +34,15 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     ErpExpect(parameters.hasParameter("workflowType"), HttpStatus::BadRequest, "workflowType Parameter not given");
     bool supportedWorkflow = false;
     ErpExpect(parameters.getWorkflowSystem().has_value(), HttpStatus::BadRequest, "missing workflow system");
-    for (const auto bundle : model::ResourceVersion::supportedBundles())
+    if (parameters.getWorkflowSystem().value() == model::resource::code_system::flowType)
     {
-        if ((bundle == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01 &&
-             parameters.getWorkflowSystem().value() == model::resource::code_system::deprecated::flowType) ||
-            parameters.getWorkflowSystem().value() == model::resource::code_system::flowType)
-        {
-            supportedWorkflow = true;
-        }
+        supportedWorkflow = true;
     }
-    ErpExpect(supportedWorkflow == true, HttpStatus::BadRequest, "unknown flowType system given" + std::string{parameters.getWorkflowSystem().value()});
+    ErpExpectWithDiagnostics(supportedWorkflow == true, HttpStatus::BadRequest, "unknown flowType system given",
+                             std::string{"expected "}
+                                 .append(model::resource::code_system::flowType)
+                                 .append("but got: ")
+                                 .append(parameters.getWorkflowSystem().value()));
 
     auto prescriptionType = [&parameters] {
         try

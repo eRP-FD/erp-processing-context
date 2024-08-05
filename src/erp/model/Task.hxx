@@ -28,6 +28,7 @@ class Task : public Resource<Task>
 {
 public:
     static constexpr auto resourceTypeName = "Task";
+    static constexpr auto profileType = ProfileType::Gem_erxTask;
 
     // we support a subset of https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/80166
     // as defined in table TAB_SYSLERP_006 of gemSysL_eRp
@@ -45,14 +46,11 @@ public:
     static Status fromNumericalStatus(int8_t status);
 
     // For creation of a new task
-    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode,
-                  model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion = ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode);
 
     // For creation from database entry
     explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType, model::Timestamp lastModified,
-                  model::Timestamp authoredOn, Status status,
-                  ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
+                  model::Timestamp authoredOn, Status status);
 
     [[nodiscard]] Status status() const;
     [[nodiscard]] std::optional<Kvnr> kvnr() const;
@@ -63,6 +61,7 @@ public:
     [[nodiscard]] std::string_view accessCode() const;
     [[nodiscard]] model::Timestamp expiryDate() const;
     [[nodiscard]] model::Timestamp acceptDate() const;
+    [[nodiscard]] std::optional<model::Timestamp> lastMedicationDispense() const;
     [[nodiscard]] std::optional<std::string_view> secret() const;
     [[nodiscard]] std::optional<std::string_view> healthCarePrescriptionUuid() const;
     [[nodiscard]] std::optional<std::string_view> patientConfirmationUuid() const;
@@ -80,6 +79,9 @@ public:
     void setAcceptDate(const model::Timestamp& acceptDate);
     void setAcceptDate(const model::Timestamp& baseTime, const std::optional<KbvStatusKennzeichen>& legalBasisCode,
                        int entlassRezeptValidityWorkingDays);
+    void updateLastMedicationDispense(
+        const std::optional<model::Timestamp>& lastMedicationDispense = std::make_optional(model::Timestamp::now()));
+    void removeLastMedicationDispenseConditional();
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
     void setOwner(std::string_view owner);
@@ -87,8 +89,11 @@ public:
     void deleteAccessCode();
     void deleteSecret();
     void deleteOwner();
+    void deleteLastMedicationDispense();
 
     void updateLastUpdate(const model::Timestamp& timestamp = model::Timestamp::now());
+
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
 private:
     friend Resource<Task>;
@@ -97,11 +102,14 @@ private:
     [[nodiscard]] std::optional<std::string_view> uuidFromArray(const rapidjson::Pointer& array, std::string_view code) const;
     void addUuidToArray(const rapidjson::Pointer& array, std::string_view code, std::string_view uuid);
     void dateToExtensionArray(std::string_view url, const model::Timestamp& expiryDate);
+    void instantToExtensionArray(std::string_view url, const std::optional<model::Timestamp>& expiryDate);
     [[nodiscard]] model::Timestamp dateFromExtensionArray(std::string_view url) const;
 
     void setAcceptDateDependentPrescriptionType(const model::Timestamp& baseTime);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Task>;
 }
 
 #endif //ERP_PROCESSING_CONTEXT_TASK_HXX

@@ -38,11 +38,10 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_TRUE(task.has_value());
     ASSERT_EQ(task->kvnr(), kvnrInsurant);
     std::optional<model::Communication> infoReq1;
-    ASSERT_NO_FATAL_FAILURE(infoReq1 = communicationPost(
-        model::Communication::MessageType::InfoReq, task.value(),
-        ActorRole::Insurant, kvnrInsurant,
-        ActorRole::Pharmacists, pharmacy1,
-        "Ist das Medikament bei Ihnen vorrätig?"));
+    ASSERT_NO_FATAL_FAILURE(
+        infoReq1 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
+                                     kvnrInsurant, ActorRole::Pharmacists, pharmacy1,
+                                     R"({"version":1,"supplyOptionsType":"onPremise","address":["zu hause"]})"));
     ASSERT_TRUE(infoReq1.has_value());
     std::optional<model::Communication> reply1;
     ASSERT_NO_FATAL_FAILURE(reply1 = communicationPost(
@@ -52,11 +51,10 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
         R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Nein"})"));
     ASSERT_TRUE(reply1.has_value());
     std::optional<model::Communication> infoReq2;
-    ASSERT_NO_FATAL_FAILURE(infoReq2 = communicationPost(
-        model::Communication::MessageType::InfoReq, task.value(),
-        ActorRole::Insurant, kvnrInsurant,
-        ActorRole::Pharmacists, pharmacy2,
-        "Ist das Medikament bei Ihnen vorrätig?"));
+    ASSERT_NO_FATAL_FAILURE(
+        infoReq2 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
+                                     kvnrInsurant, ActorRole::Pharmacists, pharmacy2,
+                                     R"({"version":1,"supplyOptionsType":"onPremise","address":["zu hause"]})"));
     ASSERT_TRUE(infoReq2.has_value());
     std::optional<model::Communication> reply2;
     ASSERT_NO_FATAL_FAILURE(reply2 = communicationPost(

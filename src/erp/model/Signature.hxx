@@ -50,6 +50,8 @@ private:
     explicit Signature(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Signature>;
 }
 
 

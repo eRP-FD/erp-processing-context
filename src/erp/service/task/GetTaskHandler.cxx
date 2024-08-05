@@ -244,12 +244,17 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     A_19115_01.finish();
     const model::Kvnr kvnr{*kvnrClaim};
 
+    A_24438.start("Set authored-on as default sort argument.");
     auto arguments =
         std::optional<UrlArguments>(std::in_place, std::vector<SearchParameter>{
                                                        {"status", "status", SearchParameter::Type::TaskStatus},
                                                        {"authored-on", "authored_on", SearchParameter::Type::Date},
                                                        {"modified", "last_modified", SearchParameter::Type::Date},
-                                                   });
+                                                       {"expiry-date", "expiry_date", SearchParameter::Type::SQLDate},
+                                                       {"accept-date", "accept_date", SearchParameter::Type::SQLDate},
+                                                   }, "authored-on");
+    A_24438.finish();
+
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
     auto* databaseHandle = session.database();
@@ -258,12 +263,12 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     A_19115_01.finish();
     // GEMREQ-end A_19115-01
 
-    model::Bundle responseBundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+    model::Bundle responseBundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     std::size_t totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size())
                                          ? databaseHandle->countAllTasksForPatient(kvnr, arguments)
                                          : resultSet.size();
 
-    const auto links = arguments->getBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
+    const auto links = arguments->createBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
     for (const auto& link : links)
     {
         responseBundle.setLink(link.first, link.second);
@@ -272,8 +277,9 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     {
         A_19129_01.start("create response bundle for patient");
 
-        for (const auto& task : resultSet)
+        for (auto& task : resultSet)
         {
+            task.removeLastMedicationDispenseConditional();
             // in C_10499 the response bundle has changed to only contain tasks, no patient confirmation
             // and no receipt any longer
             responseBundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()), {},
@@ -400,11 +406,12 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     A_23452_02.finish();
     A_25209.finish();
 
-    model::Bundle responseBundle{model::BundleType::searchset, model::ResourceBase::NoProfile};
+    model::Bundle responseBundle{model::BundleType::searchset, model::FhirResourceBase::NoProfile};
     responseBundle.setTotalSearchMatches(tasks.size());
 
-    for (const auto& task : tasks)
+    for (auto& task : tasks)
     {
+        task.removeLastMedicationDispenseConditional();
         responseBundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()), {},
                                    model::Bundle::SearchMode::match, task.jsonDocument());
     }
@@ -515,8 +522,9 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     // GEMREQ-end A_21360-01#handleRequestFromPatient_deleteAccessCode
 
     A_21375_02.start("create response bundle for patient");
-    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, makeFullUrl("/Task/") + task.value().prescriptionId().toString());
+    task->removeLastMedicationDispenseConditional();
     addToPatientBundle(responseBundle, task.value(), patientConfirmation, {});
     A_21375_02.finish();
 
@@ -530,9 +538,9 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         {
             const auto language = getLanguageFromHeader(session.request.header())
                                       .value_or(std::string(AuditEventTextTemplates::defaultLanguage));
-            const auto auditEvent = AuditEventCreator::fromAuditData(
-                auditData, language, session.serviceContext.auditEventTextTemplates(), session.request.getAccessToken(),
-                model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+            const auto auditEvent =
+                AuditEventCreator::fromAuditData(auditData, language, session.serviceContext.auditEventTextTemplates(),
+                                                 session.request.getAccessToken());
 
             responseBundle.addResource(Uuid{auditEvent.id()}.toUrn(), {}, {}, auditEvent.jsonDocument());
         }
@@ -595,7 +603,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
 
     A_19226_01.start("create response bundle for pharmacist");
     const auto selfLink = makeFullUrl("/Task/" + task.value().prescriptionId().toString());
-    model::Bundle responseBundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle responseBundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, selfLink);
 
     if (task->status() == model::Task::Status::completed && receipt.has_value())
@@ -606,6 +614,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     {
         receipt.reset();
     }
+    task->removeLastMedicationDispenseConditional();
     responseBundle.addResource(selfLink, {}, {}, task->jsonDocument());
     // GEMREQ-start A_24179#addToBundle
     if (prescriptionBinary)

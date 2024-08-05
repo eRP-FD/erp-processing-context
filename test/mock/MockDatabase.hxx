@@ -80,6 +80,14 @@ public:
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription) override;
 
+    void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                      const model::Timestamp& lastModified,
+                                      const model::Timestamp& lastMedicationDispense,
+                                      const db_model::EncryptedBlob& medicationDispense,
+                                      BlobId medicationDispenseBlobId,
+                                      const db_model::HashedTelematikId& telematikId,
+                                      const model::Timestamp& whenHandedOver,
+                                      const std::optional<model::Timestamp>& whenPrepared) override;
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -88,7 +96,10 @@ public:
                                              const db_model::HashedTelematikId& telematicId,
                                              const model::Timestamp& whenHandedOver,
                                              const std::optional<model::Timestamp>& whenPrepared,
-                                             const db_model::EncryptedBlob& receipt) override;
+                                             const db_model::EncryptedBlob& receipt,
+                                             const model::Timestamp& lastMedicationDispense) override;
+    void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
+                                            const model::Timestamp& lastModified) override;
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
                                      const model::Timestamp& lastModified) override;
@@ -231,6 +242,8 @@ public:
                 const std::optional<std::string>& healthCareProviderPrescription = std::nullopt,
                 const std::optional<std::string>& receipt = std::nullopt);
 
+    void insertAuditEvent(const model::AuditEvent& auditEvent,
+                          model::AuditEventId id);
 
 private:
     [[nodiscard]]
@@ -242,9 +255,6 @@ private:
     SafeString getMedicationDispenseKey(const db_model::HashedKvnr& kvnr, BlobId blobId);
 
     SafeString getAuditEventKey(const db_model::HashedKvnr& kvnr, BlobId& blobId);
-
-    void insertAuditEvent(const model::AuditEvent& auditEvent,
-                          model::AuditEventId id);
 
     std::mutex mutex;
 

@@ -23,10 +23,11 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class ChargeItem : public Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>
+class ChargeItem : public Resource<ChargeItem>
 {
 public:
     static constexpr auto resourceTypeName = "ChargeItem";
+    static constexpr auto profileType = ProfileType::Gem_erxChargeItem;
 
     enum class SupportingInfoType : int8_t
     {
@@ -63,7 +64,7 @@ public:
     void setSubjectKvnr(const Kvnr& kvnr);
     void setEntererTelematikId(std::string_view telematicId);
     void setEnteredDate(const model::Timestamp& entered);
-    void setMarkingFlags(const ::model::Extension& markingFlags);
+    void setMarkingFlags(const ChargeItemMarkingFlags& markingFlags);
     void setAccessCode(std::string_view accessCode);
     // The references are derived from the prescription ID using PrescriptionId::deriveUuid
     void setSupportingInfoReference(SupportingInfoType supportingInfoType);
@@ -78,8 +79,10 @@ public:
     void deleteContainedBinary(bool withSupportingReference = true);
     void deleteMarkingFlag();
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
 private:
-    friend Resource<ChargeItem, ResourceVersion::DeGematikErezeptPatientenrechnungR4>;
+    friend Resource<ChargeItem>;
     explicit ChargeItem(NumberAsStringParserDocument&& jsonTree);
     std::string supportingInfoTypeToReference(SupportingInfoType supportingInfoType) const;
 };
@@ -94,6 +97,8 @@ struct ChargeInformation {
     ::std::optional<::model::Bundle> receipt;
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<ChargeItem>;
 }
 
 #endif// ERP_PROCESSING_CONTEXT_MODEL_CHARGEITEM_HXX

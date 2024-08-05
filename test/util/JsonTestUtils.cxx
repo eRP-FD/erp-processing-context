@@ -58,13 +58,6 @@ std::string canonicalJson(const std::string& json)
     return result;
 }
 
-const std::map<ActorRole, std::string_view> ActorRoleToResourceIdDeprecated = {
-    { ActorRole::Insurant,       naming_system::deprecated::gkvKvid10   },
-    { ActorRole::Representative, naming_system::deprecated::gkvKvid10   },
-    { ActorRole::Doctor,         naming_system::deprecated::telematicID },
-    { ActorRole::Pharmacists,    naming_system::deprecated::telematicID }
-};
-
 const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
     { ActorRole::Insurant,       naming_system::gkvKvid10   },
     { ActorRole::Representative, naming_system::gkvKvid10   },
@@ -72,24 +65,22 @@ const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
     { ActorRole::Pharmacists,    naming_system::telematicID }
 };
 
-const std::string_view& actorRoleToResourceId(ActorRole actorRole,
-                                              ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+const std::string_view& actorRoleToResourceId(ActorRole actorRole)
 {
-    if (ResourceVersion::deprecatedProfile(profileVersion))
-        return ActorRoleToResourceIdDeprecated.find(actorRole)->second;
     return ActorRoleToResourceId.find(actorRole)->second;
 }
 
-CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::MessageType messageType, model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion) :
-    mMessageType(messageType),
-    mPrescriptionId(),
-    mAccessCode(),
-    mSender(),
-    mRecipient(),
-    mTimeSent(),
-    mTimeReceived(),
-    mPayload(),
-    mProfileVersion(profileVersion)
+CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::MessageType messageType,
+                                                               std::optional<fhirtools::FhirVersion> profileVersion)
+    : mMessageType(messageType)
+    , mPrescriptionId()
+    , mAccessCode()
+    , mSender()
+    , mRecipient()
+    , mTimeSent()
+    , mTimeReceived()
+    , mPayload()
+    , mProfileVersion(std::move(profileVersion))
 {
 }
 
@@ -154,12 +145,10 @@ CommunicationJsonStringBuilder::setMedicationOptions(ResourceTemplates::Medicati
 
 std::string CommunicationJsonStringBuilder::createJsonString() const
 {
-    const auto fhirBundleVersion = ResourceVersion::fhirProfileBundleFromSchemaVersion(mProfileVersion);
-    const auto profileVersions = ResourceVersion::profileVersionFromBundle(fhirBundleVersion);
-    const SchemaType schemaType = model::Communication::messageTypeToSchemaType(mMessageType);
+    const ProfileType profileType = model::Communication::messageTypeToProfileType(mMessageType);
 
     static constexpr const char* fmtSpecProfile = R"(
-            "meta": {"profile": ["%1%"]})";
+            "meta": {"profile": ["%1%|%2%"]})";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             "basedOn": [{"reference": "Task/%1%"}])";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -176,37 +165,10 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             "sent": "%1%")";
     static constexpr const char* fmtSpecReceived = R"(
             "received": "%1%")";
-    static constexpr const char* fmtSpecPayloadContentStringDeprecated = R"--(
-            "payload": [
-              {
-                "extension": [
-                  {
-                    "url": "https://gematik.de/fhir/StructureDefinition/InsuranceProvider",
-                    "valueIdentifier": {
-                      "system": "http://fhir.de/NamingSystem/arge-ik/iknr",
-                      "value": "104212059"
-                    }
-                  },
-                  {
-                    "url": "https://gematik.de/fhir/StructureDefinition/SubstitutionAllowedType",
-                    "valueBoolean": true
-                  },
-                  {
-                    "url": "https://gematik.de/fhir/StructureDefinition/PrescriptionType",
-                    "valueCoding": {
-                      "system": "https://gematik.de/fhir/CodeSystem/Flowtype",
-                      "code": "160",
-                      "display": "Muster 16 (Apothekenpflichtige Arzneimittel)"
-                    }
-                  }
-                ],
-                "contentString": "%1%"
-              }
-            ])--";
     static constexpr const char* fmtSpecPayloadContentString = R"--(
             "payload": [
               {
-                "contentString": "%1%"
+                "contentString": %1%
               }
             ])--";
     static constexpr const char* fmtSpecPayloadInfoReqContentString = R"--(
@@ -256,15 +218,19 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
                         ]
                     }
                 ],
-                "contentString": "%1%"
+                "contentString": %1%
               }
             ])--";
     std::string body = R"({"resourceType": "Communication",)";
 
     const bool isChargeItemRelated =
         mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
-
-    body += boost::str(boost::format(fmtSpecProfile) % ::testutils::profile(schemaType, fhirBundleVersion));
+    const auto defaulVersion =
+        isChargeItemRelated
+            ? static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERPCHRG_current())
+            : static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERP_current());
+    body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
+                       mProfileVersion.value_or(defaulVersion));
 
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += "," + boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
@@ -274,23 +240,20 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     if (mAbout.has_value())
         body += "," + boost::str(boost::format(fmtSpecAbout) % mAbout.value());
     if (mSender.has_value())
-        body += "," + boost::str(boost::format(fmtSpecSender)
-            % actorRoleToResourceId(std::get<0>(mSender.value()), mProfileVersion)
-            % std::get<1>(mSender.value()));
+        body += "," + boost::str(boost::format(fmtSpecSender) % actorRoleToResourceId(std::get<0>(mSender.value())) %
+                                 std::get<1>(mSender.value()));
     if (mRecipient.has_value())
-        body += "," + boost::str(boost::format(fmtSpecRecipient)
-            % actorRoleToResourceId(std::get<0>(mRecipient.value()), mProfileVersion)
-            % std::get<1>(mRecipient.value()));
+        body +=
+            "," + boost::str(boost::format(fmtSpecRecipient) % actorRoleToResourceId(std::get<0>(mRecipient.value())) %
+                             std::get<1>(mRecipient.value()));
     if (mTimeSent.has_value())
         body += "," + boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
     if (mTimeReceived.has_value())
         body += "," + boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
     {
-        auto payload = String::replaceAll(mPayload.value(), "\"", "\\\"");
-        if (ResourceVersion::deprecatedProfile(mProfileVersion))
-            body += "," + boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % payload);
-        else if (mMessageType == Communication::MessageType::InfoReq)
+        auto payload = std::quoted(mPayload.value());
+        if (mMessageType == Communication::MessageType::InfoReq)
             body += "," + boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
         else
             body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % payload);
@@ -309,7 +272,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             {
                 id = id.substr(1);
             }
-            medicationOptions.version = get<ResourceVersion::KbvItaErp>(profileVersions);
+            medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
             medicationOptions.id = id;
         }
         body += R"(, "contained": [)" +
@@ -325,12 +288,10 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 
 std::string CommunicationJsonStringBuilder::createXmlString() const
 {
-    const auto fhirBundleVersion = ResourceVersion::fhirProfileBundleFromSchemaVersion(mProfileVersion);
-    const auto profileVersions = ResourceVersion::profileVersionFromBundle(fhirBundleVersion);
-    const SchemaType schemaType = model::Communication::messageTypeToSchemaType(mMessageType);
+    const ProfileType profileType = model::Communication::messageTypeToProfileType(mMessageType);
 
     static constexpr const char* fmtSpecProfile = R"(
-            <meta> <profile value="%1%" /></meta>)";
+            <meta> <profile value="%1%|%2%" /></meta>)";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             <basedOn> <reference value="Task/%1%"/> </basedOn>)";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -347,26 +308,6 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
             <sent value="%1%"/>)";
     static constexpr const char* fmtSpecReceived = R"(
             <received value="%1%"/>)";
-    static constexpr const char* fmtSpecPayloadContentStringDeprecated = R"--(
-            <payload>
-              <extension url="https://gematik.de/fhir/StructureDefinition/InsuranceProvider">
-                <valueIdentifier>
-                  <system value="http://fhir.de/NamingSystem/arge-ik/iknr"/>
-                  <value value="104212059"/>
-                </valueIdentifier>
-              </extension>
-              <extension url="https://gematik.de/fhir/StructureDefinition/SubstitutionAllowedType">
-                <valueBoolean value="true"/>
-              </extension>
-              <extension url="https://gematik.de/fhir/StructureDefinition/PrescriptionType">
-                <valueCoding>
-                  <system value="https://gematik.de/fhir/CodeSystem/Flowtype"/>
-                  <code value="160"/>
-                  <display value="Muster 16 (Apothekenpflichtige Arzneimittel)"/>
-                </valueCoding>
-              </extension>
-              <contentString value="%1%"/>
-            </payload>)--";
     static constexpr const char* fmtSpecPayloadContentString = R"--(
             <payload>
               <contentString value="%1%" />
@@ -412,8 +353,13 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
 
     const bool isChargeItemRelated =
         mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
+    const auto defaulVersion =
+        isChargeItemRelated
+            ? static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERPCHRG_current())
+            : static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERP_current());
 
-    body += boost::str(boost::format(fmtSpecProfile) % ::testutils::profile(schemaType, fhirBundleVersion));
+    body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
+                       to_string(mProfileVersion.value_or(defaulVersion)));
 
     if (mAbout)
     {
@@ -429,7 +375,7 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
             {
                 id = id.substr(1);
             }
-            medicationOptions.version = get<ResourceVersion::KbvItaErp>(profileVersions);
+            medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
             medicationOptions.id = id;
         }
         body += "<contained>" + ResourceTemplates::medicationXml(medicationOptions) + "</contained>";
@@ -441,14 +387,12 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
     body += R"(<status value="unknown"/>)";
     if (mAbout.has_value())
         body += boost::str(boost::format(fmtSpecAbout) % mAbout.value());
-    if (mSender.has_value())
-        body += boost::str(boost::format(fmtSpecSender)
-            % actorRoleToResourceId(std::get<0>(mSender.value()), mProfileVersion)
-            % std::get<1>(mSender.value()));
     if (mRecipient.has_value())
-        body += boost::str(boost::format(fmtSpecRecipient)
-            % actorRoleToResourceId(std::get<0>(mRecipient.value()), mProfileVersion)
-            % std::get<1>(mRecipient.value()));
+        body += boost::str(boost::format(fmtSpecRecipient) % actorRoleToResourceId(std::get<0>(mRecipient.value())) %
+                           std::get<1>(mRecipient.value()));
+    if (mSender.has_value())
+        body += boost::str(boost::format(fmtSpecSender) % actorRoleToResourceId(std::get<0>(mSender.value())) %
+                           std::get<1>(mSender.value()));
     if (mTimeSent.has_value())
         body += boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
     if (mTimeReceived.has_value())
@@ -456,9 +400,7 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
     if (mPayload.has_value())
     {
         auto payload = String::replaceAll(mPayload.value(), "\"", "&quot;");
-        if (ResourceVersion::deprecatedProfile(mProfileVersion))
-            body += boost::str(boost::format(fmtSpecPayloadContentStringDeprecated) % payload);
-        else if (mMessageType == Communication::MessageType::InfoReq)
+        if (mMessageType == Communication::MessageType::InfoReq)
             body += boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
         else
             body += boost::str(boost::format(fmtSpecPayloadContentString) % payload);

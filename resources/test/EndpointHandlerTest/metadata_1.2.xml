@@ -32,7 +32,15 @@
         <type value="token"/>
       </searchParam>
       <searchParam>
+        <name value="accept-date"/>
+        <type value="date"/>
+      </searchParam>
+      <searchParam>
         <name value="authored-on"/>
+        <type value="date"/>
+      </searchParam>
+      <searchParam>
+        <name value="expiry-date"/>
         <type value="date"/>
       </searchParam>
       <searchParam>
@@ -56,6 +64,10 @@
         <definition value="https://gematik.de/fhir/erp/OperationDefinition/RejectOperationDefinition"/>
       </operation>
       <operation>
+        <name value="dispense"/>
+        <definition value="https://gematik.de/fhir/erp/OperationDefinition/DispenseOperationDefinition"/>
+      </operation>
+      <operation>
         <name value="close"/>
         <definition value="https://gematik.de/fhir/erp/OperationDefinition/CloseOperationDefinition"/>
       </operation>
@@ -67,7 +79,6 @@
     <resource>
       <type value="Communication"/>
       <profile value="http://hl7.org/fhir/StructureDefinition/Communication|4.0.1"/>
-      <supportedProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq|1.2"/>
       <supportedProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2"/>
       <supportedProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.2"/>
       <supportedProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.2"/>
@@ -96,6 +107,10 @@
       </searchParam>
       <searchParam>
         <name value="recipient"/>
+        <type value="string"/>
+      </searchParam>
+      <searchParam>
+        <name value="identifier"/>
         <type value="string"/>
       </searchParam>
     </resource>
@@ -127,6 +142,10 @@
       <searchParam>
         <name value="date"/>
         <type value="date"/>
+      </searchParam>
+      <searchParam>
+        <name value="entity"/>
+        <type value="string"/>
       </searchParam>
       <searchParam>
         <name value="subtype"/>

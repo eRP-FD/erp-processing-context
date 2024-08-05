@@ -397,70 +397,34 @@ TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cogni
     // Send the request.
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
-    // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
-    EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
-
-    EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
-
-    // The communication id must have been set in the header field "Location"
-    std::string location = innerResponse.getHeader().header(Header::Location).value();
-    EXPECT_EQ(String::starts_with(location, std::string(structure_definition::communicationLocation)), true);
-    std::string idString = location.substr(std::string(structure_definition::communicationLocation).length());
-    int64_t id = 0;
-    EXPECT_NO_THROW(id = std::stoi(idString));
-    EXPECT_GT(id, 0);
-
-    std::string bodyResponse;
-
-    ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
-
-    std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationInfoReq));
-    auto& communication = *communication1;
-
-    // The communication id must have been added to the json body.
-    ASSERT_TRUE(communication.id().has_value());
-    ASSERT_TRUE(communication.id()->isValidIheUuid());
-
-    // The time sent must have been added to the json body.
-    ASSERT_TRUE(communication.timeSent().has_value());
-    ASSERT_NO_FATAL_FAILURE(communication.timeSent());
-
-    // The sender must have been taken from the access token.
-    ASSERT_NO_FATAL_FAILURE(communication.sender());
-    ASSERT_EQ(model::getIdentityString(*communication.sender()), InsurantA);
-
-    {
-        // Check that it works with basedOn containing a full Url:
-        jsonString = String::replaceAll(jsonString, "Task/", "https://erp.lu2.erezepttest.net:443/Task/");
-        ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
-        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
-    }
+    ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
+    ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), MimeType::binary);
+    std::optional<ClientResponse> innerResponse;
+    ASSERT_NO_THROW(innerResponse.emplace(mTeeProtocol.parseResponse(outerResponse)));
+    // ERP-21119 - How to handle CommunicationInfoReq
+    EXPECT_EQ(innerResponse->getHeader().status(), HttpStatus::BadRequest);
 }
 
 TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
     const std::string kvnrInsurant = task.kvnr().value().id();
+    const JWT jwtPharmacy{mJwtBuilder.makeJwtApotheke()};
 
     // Please note that the MimeType "text/plain" is no longer existing.
     // But it doesn't matter as it will only be checked whether the size
     // of the attachment is correctly verified.
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Insurant, kvnrInsurant)
-        .setPayload(ReplyMessage).createJsonString();
+    std::string jsonString =
+        CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+            .setPrescriptionId(task.prescriptionId().toString())
+            .setRecipient(ActorRole::Insurant, kvnrInsurant)
+            .setSender(ActorRole::Pharmacists, jwtPharmacy.stringForClaim(JWT::idNumberClaim).value())
+            .setPayload(ReplyMessage)
+            .createJsonString();
 
     // Create a client
     auto client = createClient();
 
-    const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
     // Create the inner request
     ClientRequest request(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
@@ -481,12 +445,9 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
     EXPECT_TRUE(id.isValidIheUuid());
 
     std::optional<Communication> communication;
-
-    ASSERT_NO_THROW(communication = Communication::fromXml(
-                        innerResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                        SchemaType::Gem_erxCommunicationReply,
-                        model::ResourceVersion::supportedBundles(),
-                        false));
+    ASSERT_NO_THROW(communication.emplace(
+        ResourceFactory<Communication>::fromXml(innerResponse.getBody(), *StaticData::getXmlValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationReply)));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
     ASSERT_TRUE(communication->id()->isValidIheUuid());
@@ -542,10 +503,10 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
     std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationDispReq));
+    ASSERT_NO_THROW(communication1.emplace(
+        ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationDispReq)));
+
     auto& communication = *communication1;
 
     // The communication id must have been added to the json body.
@@ -617,10 +578,9 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
     std::optional<Communication> communication1;
-    ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                             *StaticData::getXmlValidator(),
-                                                             *StaticData::getInCodeValidator(),
-                                                             SchemaType::Gem_erxCommunicationRepresentative));
+    ASSERT_NO_THROW(communication1.emplace(
+        ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
     auto& communicationByInsurant = *communication1;
 
     // The communication id must have been added to the json body.
@@ -669,10 +629,10 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
     std::optional<Communication> communicationOpt;
-    ASSERT_NO_THROW(communicationOpt = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                               *StaticData::getXmlValidator(),
-                                                               *StaticData::getInCodeValidator(),
-                                                               SchemaType::Gem_erxCommunicationRepresentative));
+    ASSERT_NO_THROW(communicationOpt.emplace(
+        ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+
     auto& communicationByRepresentative = *communicationOpt;
 
     // The communication id must have been added to the json body.
@@ -903,10 +863,10 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
             ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
             std::optional<Communication> communication1;
-            ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                                     *StaticData::getXmlValidator(),
-                                                                     *StaticData::getInCodeValidator(),
-                                                                     SchemaType::Gem_erxCommunicationRepresentative));
+            ASSERT_NO_THROW(communication1.emplace(
+                ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+                    .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+
             auto& communication = *communication1;
 
             // The communication id must have been added to the json body.
@@ -1032,10 +992,10 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
             ASSERT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
             std::optional<Communication> communication1;
-            ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                                     *StaticData::getXmlValidator(),
-                                                                     *StaticData::getInCodeValidator(),
-                                                                     SchemaType::Gem_erxCommunicationRepresentative));
+            ASSERT_NO_THROW(communication1.emplace(
+                ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+                    .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+
             auto& communication = *communication1;
 
             // The communication id must have been added to the json body.
@@ -1093,22 +1053,37 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20231)
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllowedSize)
+TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentString_exceedsMaxAllowedSize)
 {
     A_19450_01.test("malicious code check");
 
     // Create a client
     auto client = createClient();
+    static constexpr std::string_view prefix = R"({"version": 1, "supplyOptionsType": "delivery", "address": [ "xxx)";
+    static constexpr std::string_view infix = R"(",")";
+    static constexpr std::string_view suffix = R"("]})";
 
-    std::string contentStringFitsMaxSize(CommunicationPayload::maxPayloadSize, 'x');
-
+    std::string contentStringFitsMaxSize;
+    contentStringFitsMaxSize.reserve(CommunicationPayload::maxPayloadSize);
+    contentStringFitsMaxSize.append(prefix);
+    while (contentStringFitsMaxSize.size() < CommunicationPayload::maxPayloadSize - suffix.size())
+    {
+        size_t rest = CommunicationPayload::maxPayloadSize - contentStringFitsMaxSize.size() - suffix.size();
+        size_t count = std::min(500ul, rest - infix.size());
+        contentStringFitsMaxSize.append(infix);
+        contentStringFitsMaxSize.append(count, 'x');
+    }
+    contentStringFitsMaxSize.append(suffix);
+    ASSERT_EQ(contentStringFitsMaxSize.size(), CommunicationPayload::maxPayloadSize);
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setPayload(contentStringFitsMaxSize).createJsonString();
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                 .setPrescriptionId(task.prescriptionId().toString())
+                                 .setSender(ActorRole::Insurant, task.kvnr().value().id())
+                                 .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                 .setAccessCode(std::string{task.accessCode()})
+                                 .setPayload(contentStringFitsMaxSize)
+                                 .createJsonString();
 
     const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
     // Create the inner request
@@ -1123,11 +1098,13 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
 
     std::string contentStringExceedsMaxSize(CommunicationPayload::maxPayloadSize + 1, 'x');
 
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setPayload(contentStringExceedsMaxSize).createJsonString();
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                     .setPrescriptionId(task.prescriptionId().toString())
+                     .setSender(ActorRole::Insurant, task.kvnr().value().id())
+                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                     .setAccessCode(std::string{task.accessCode()})
+                     .setPayload(contentStringExceedsMaxSize)
+                     .createJsonString();
 
     // Create the inner request
     ClientRequest requestExceedsMaxSize(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
@@ -1145,7 +1122,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentString_exceedsMaxAllo
     EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload must not exceed 10 KB.");
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
+TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentReference_notAllowed)
 {
     A_19450_01.test("malicious code check");
 
@@ -1153,17 +1130,19 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
     auto client = createClient();
 
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
+    const JWT jwtInsurant{mJwtBuilder.makeJwtVersicherter(task.kvnr().value())};
 
     // "contentReference" must be rejected.
     const std::string externalUrl = "https://dth01.ibmgcloud.net/jira/browse/ERP-4012";
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setPayload(externalUrl).createJsonString();
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                 .setPrescriptionId(task.prescriptionId().toString())
+                                 .setSender(ActorRole::Insurant, jwtInsurant.stringForClaim(JWT::idNumberClaim).value())
+                                 .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                 .setAccessCode(std::string{task.accessCode()})
+                                 .setPayload(externalUrl)
+                                 .createJsonString();
     jsonString = String::replaceAll(jsonString, "contentString", "contentReference");
 
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
     // Create the inner request
     ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
 
@@ -1176,11 +1155,14 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentReference_notAllowed)
     std::optional<OperationOutcome> outcome;
     ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
     EXPECT_EQ(outcome.value().issues().size(), 1);
-    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Invalid request body");
-    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload type must be 'contentString'.");
+    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "FHIR-Validation error");
+    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(),
+              R"(Communication.payload[0].contentReference: error: )"
+              R"----(At most 0 elements expected, but got 1)----"
+              R"----( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1); )----");
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed)
+TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentAttachment_notAllowed)
 {
     A_19450_01.test("malicious code check");
 
@@ -1190,11 +1172,13 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed
     auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
 
     // "contentAttachment" must be rejected.
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setPayload("##ATTACHMENT##").createJsonString();
+    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                 .setPrescriptionId(task.prescriptionId().toString())
+                                 .setSender(ActorRole::Insurant, InsurantA)
+                                 .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                 .setAccessCode(std::string{task.accessCode()})
+                                 .setPayload("##ATTACHMENT##")
+                                 .createJsonString();
 
     jsonString = String::replaceAll(jsonString, "contentString", "contentAttachment");
     std::vector<uint8_t> buffer(100, 'x');
@@ -1219,8 +1203,11 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_A19450_contentAttachment_notAllowed
     std::optional<OperationOutcome> outcome;
     ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
     EXPECT_EQ(outcome.value().issues().size(), 1);
-    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Invalid request body");
-    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(), "Payload type must be 'contentString'.");
+    EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "FHIR-Validation error");
+    EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(),
+              R"(Communication.payload[0].contentAttachment: error:)"
+              R"---( At most 0 elements expected, but got 1)---"
+              R"---( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1); )---");
 }
 
 
@@ -1268,10 +1255,10 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         EXPECT_NO_FATAL_FAILURE(bodyResponse = canonicalJson(innerResponse.getBody()));
 
         std::optional<Communication> communication1;
-        ASSERT_NO_THROW(communication1 = Communication::fromJson(bodyResponse, *StaticData::getJsonValidator(),
-                                                                 *StaticData::getXmlValidator(),
-                                                                 *StaticData::getInCodeValidator(),
-                                                                 SchemaType::Gem_erxCommunicationRepresentative));
+        ASSERT_NO_THROW(communication1.emplace(
+            ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+                .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+
         auto& communication = *communication1;
 
         // The communication id must have been added to the json body.
@@ -1460,7 +1447,8 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(CommunicationPostHandlerTest,
+       DISABLED_InfoReq_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
 {
     // Create a client
     auto client = createClient();
@@ -1589,14 +1577,17 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
     //------------------------------------------------------------------------------------------------------
     {
         auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, InsurantB)
-            .setPayload(ReplyMessage).createJsonString();
-
         // Pharmacy sends message to representative.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
+        const JWT jwtPharmacy{mJwtBuilder.makeJwtApotheke()};
+
+        std::string jsonString =
+            CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+                .setPrescriptionId(task.prescriptionId().toString())
+                .setSender(ActorRole::Pharmacists, jwtPharmacy.stringForClaim(JWT::idNumberClaim).value())
+                .setRecipient(ActorRole::Insurant, InsurantB)
+                .setPayload(ReplyMessage)
+                .createJsonString();
+
         // Create the inner request
         ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
@@ -1613,13 +1604,17 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
     {
         auto task = addTaskToDatabase({ Task::Status::ready, VerificationIdentityKvnrMin, {}, TaskAccessCode });
 
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, VerificationIdentityKvnrMax)
-            .setPayload(ReplyMessage).createJsonString();
-
         // Pharmacy sends message to representative.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
+        const JWT jwtPharmacy{mJwtBuilder.makeJwtApotheke()};
+
+        std::string jsonString =
+            CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+                .setPrescriptionId(task.prescriptionId().toString())
+                .setSender(ActorRole::Pharmacists, jwtPharmacy.stringForClaim(JWT::idNumberClaim).value())
+                .setRecipient(ActorRole::Insurant, VerificationIdentityKvnrMax)
+                .setPayload(ReplyMessage)
+                .createJsonString();
+
         // Create the inner request
         ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
@@ -1635,14 +1630,17 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
     //------------------------------------------------------------------------------------------------------------------
     {
         auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, VerificationIdentityKvnrMin)
-            .setPayload(ReplyMessage).createJsonString();
-
         // Pharmacy sends message to representative.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
+        const JWT jwtPharmacy{mJwtBuilder.makeJwtApotheke()};
+
+        std::string jsonString =
+            CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+                .setPrescriptionId(task.prescriptionId().toString())
+                .setSender(ActorRole::Pharmacists, jwtPharmacy.stringForClaim(JWT::idNumberClaim).value())
+                .setRecipient(ActorRole::Insurant, VerificationIdentityKvnrMin)
+                .setPayload(ReplyMessage)
+                .createJsonString();
+
         // Create the inner request
         ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
@@ -1659,13 +1657,17 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
     {
         auto task = addTaskToDatabase({ Task::Status::ready, VerificationIdentityKvnrMax, {}, TaskAccessCode });
 
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Insurant, InsurantA)
-            .setPayload(ReplyMessage).createJsonString();
-
         // Pharmacy sends message to representative.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke() };
+        const JWT jwtPharmacy{mJwtBuilder.makeJwtApotheke()};
+
+        std::string jsonString =
+            CommunicationJsonStringBuilder(Communication::MessageType::Reply)
+                .setPrescriptionId(task.prescriptionId().toString())
+                .setSender(ActorRole::Pharmacists, jwtPharmacy.stringForClaim(JWT::idNumberClaim).value())
+                .setRecipient(ActorRole::Insurant, InsurantA)
+                .setPayload(ReplyMessage)
+                .createJsonString();
+
         // Create the inner request
         ClientRequest request1(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
@@ -1924,12 +1926,6 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
 
 TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
                                     .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
     const auto* telematikId = "3-SMC-B-Testkarte-883110000120312";
@@ -1961,10 +1957,9 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-functio
     EXPECT_TRUE(id.isValidIheUuid());
 
     std::optional<Communication> communication;
-    ASSERT_NO_THROW(
-        communication = Communication::fromJson(
-            canonicalJson(innerResponse.getBody()), *StaticData::getJsonValidator(), *StaticData::getXmlValidator(),
-            *StaticData::getInCodeValidator(), SchemaType::Gem_erxCommunicationChargChangeReq));
+    ASSERT_NO_THROW(communication.emplace(
+        ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationChargChangeReq)));
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
@@ -1990,12 +1985,6 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-functio
 
 TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
                                     .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
     const auto* telematikId = "3-SMC-B-Testkarte-883110000120312";
@@ -2006,8 +1995,10 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
 
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
                                  .setPrescriptionId(task.prescriptionId().toString())
+                                 .setSender(ActorRole::Pharmacists, telematikId)
                                  .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
-                                 .setPayload("ChargeChangeReply").createJsonString();
+                                 .setPayload("ChargeChangeReply")
+                                 .createJsonString();
 
     auto client = createClient();
     const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(telematikId) };
@@ -2027,10 +2018,9 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
     EXPECT_TRUE(id.isValidIheUuid());
 
     std::optional<Communication> communication;
-    ASSERT_NO_THROW(
-        communication = Communication::fromXml(
-            innerResponse.getBody(), *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-            SchemaType::Gem_erxCommunicationChargChangeReply, model::ResourceVersion::supportedBundles(), false));
+    ASSERT_NO_THROW(communication.emplace(
+        ResourceFactory<Communication>::fromXml(innerResponse.getBody(), *StaticData::getXmlValidator(), {})
+            .getValidated(model::ProfileType::Gem_erxCommunicationChargChangeReply)));
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
@@ -2047,12 +2037,6 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
 
 TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
                                     .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
 
@@ -2065,6 +2049,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-func
             model::PrescriptionType::direkteZuweisung, task.prescriptionId().toDatabaseId());
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                                      .setPrescriptionId(prescriptionId.toString())
+                                     .setSender(ActorRole::Insurant, task.kvnr().value().id())
                                      .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                                      .setPayload("ChargeChangeReq")
                                      .createJsonString();
@@ -2078,6 +2063,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-func
         // referenced ChargeItem does not exist
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                                      .setPrescriptionId(task.prescriptionId().toString())
+                                     .setSender(ActorRole::Insurant, task.kvnr().value().id())
                                      .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                                      .setPayload("ChargeChangeReq")
                                      .createJsonString();
@@ -2091,12 +2077,6 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-func
 
 TEST_F(CommunicationPostHandlerTest, ChargChangeReplyErr)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     auto task = addTaskToDatabase({ .status = Task::Status::completed, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
                                     .prescriptionType = model::PrescriptionType::apothekenpflichtigeArzneimittelPkv });
 

@@ -18,6 +18,7 @@
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/util/Configuration.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/FileHelper.hxx"
@@ -328,8 +329,14 @@ void MockDatabase::insertTask(const model::Task& task,
     }
     if (task.status() > model::Task::Status::draft)
     {
-        newRow.expiryDate = tryOptional(task, &model::Task::expiryDate);
-        newRow.acceptDate = tryOptional(task, &model::Task::acceptDate);
+        auto expiryDate = tryOptional(task, &model::Task::expiryDate);
+        newRow.expiryDate = expiryDate
+                                ?std::make_optional(date::year_month_day{expiryDate->localDay(model::Timestamp::GermanTimezone)})
+                                :std::nullopt;
+        auto acceptDate = tryOptional(task, &model::Task::acceptDate);
+        newRow.acceptDate = acceptDate
+                                ?std::make_optional(date::year_month_day{acceptDate->localDay(model::Timestamp::GermanTimezone)})
+                                :std::nullopt;
     }
     newRow.status = task.status();
     newRow.taskKeyBlobId = derivationData.blobId;
@@ -349,6 +356,7 @@ void MockDatabase::insertTask(const model::Task& task,
         newRow.whenHandedOver = medicationDispenseModel.whenHandedOver();
         newRow.whenPrepared = medicationDispenseModel.whenPrepared();
         newRow.performer = mDerivation.hashTelematikId(medicationDispenseModel.telematikId());
+        newRow.lastMedicationDispense = model::Timestamp::now();
     }
     newRow.healthcareProviderPrescription = optionalEncrypt(taskKey, healthCareProviderPrescription);
 
@@ -398,8 +406,7 @@ void MockDatabase::fillWithStaticData ()
 {
     auto& resourceManager = ResourceManager::instance();
     const auto& kbvBundle = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml());
-    std::string gematikVersionStr{
-        v_str(model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>())};
+    std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
     const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
 
     const char* const kvnr = "X123456788";
@@ -432,6 +439,10 @@ void MockDatabase::fillWithStaticData ()
     auto task7 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId7}));
 
+    const auto taskId8 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4718);
+    auto task8 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = taskId8}));
+
     const auto taskId169 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 4711);
     const auto task169 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId169, .kvnr = kvnr}));
@@ -447,8 +458,19 @@ void MockDatabase::fillWithStaticData ()
     const auto healthCarePrescriptionUuid5 = task5.healthCarePrescriptionUuid().value();
     const auto healthCarePrescriptionBundle5 = model::Binary(healthCarePrescriptionUuid5, kbvBundle5).serializeToJsonString();
 
-    const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml({.prescriptionId = taskId1});
-    const auto medicationDispense1Content = model::MedicationDispense::fromXmlNoValidation(medicationDispenseXml).serializeToJsonString();
+    const auto& kbvBundle8 = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml({.prescriptionId = taskId8}));
+    const auto healthCarePrescriptionUuid8 = task8.healthCarePrescriptionUuid().value();
+    const auto healthCarePrescriptionBundle8 = model::Binary(healthCarePrescriptionUuid8, kbvBundle8).serializeToJsonString();
+
+    const auto medicationDispense1Xml = ResourceTemplates::medicationDispenseXml({.prescriptionId = taskId1});
+    auto medicationDispense1 = model::MedicationDispense::fromXmlNoValidation(medicationDispense1Xml);
+    medicationDispense1.setId(model::MedicationDispenseId{taskId1, 0});
+    const auto medicationDispense1Content = medicationDispense1.serializeToJsonString();
+
+    const auto medicationDispense8Xml = ResourceTemplates::medicationDispenseXml({.prescriptionId = taskId8});
+    auto medicationDispense8 = model::MedicationDispense::fromXmlNoValidation(medicationDispense8Xml);
+    medicationDispense8.setId(model::MedicationDispenseId{taskId8, 0});
+    const auto medicationDispense8Content = medicationDispense8.serializeToJsonString();
 
     insertTask(task1, medicationDispense1Content);
     insertTask(task2);
@@ -457,6 +479,7 @@ void MockDatabase::fillWithStaticData ()
     insertTask(task5, std::nullopt, healthCarePrescriptionBundle5);
     insertTask(task6);
     insertTask(task7);
+    insertTask(task8, medicationDispense8Content, healthCarePrescriptionBundle8);
     insertTask(task169);
     insertTask(task169Draft);
 
@@ -716,6 +739,20 @@ void MockDatabase::updateTaskStatusAndSecret(const model::PrescriptionId& taskId
     return mTasks.at(taskId.type()).updateTaskStatusAndSecret(taskId, taskStatus, lastModifiedDate, taskSecret, owner);
 }
 
+void MockDatabase::updateTaskMedicationDispense(const model::PrescriptionId& taskId,
+                                                const model::Timestamp& lastModified,
+                                                const model::Timestamp& lastMedicationDispense,
+                                                const db_model::EncryptedBlob& medicationDispense,
+                                                BlobId medicationDispenseBlobId,
+                                                const db_model::HashedTelematikId& telematikId,
+                                                const model::Timestamp& whenHandedOver,
+                                                const std::optional<model::Timestamp>& whenPrepared)
+{
+    mTasks.at(taskId.type())
+        .updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense, medicationDispenseBlobId, telematikId,
+                                      whenHandedOver, whenPrepared);
+}
+
 void MockDatabase::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                                        const model::Task::Status& taskStatus,
                                                        const model::Timestamp& lastModified,
@@ -724,12 +761,18 @@ void MockDatabase::updateTaskMedicationDispenseReceipt(const model::Prescription
                                                        const db_model::HashedTelematikId& telematicId,
                                                        const model::Timestamp& whenHandedOver,
                                                        const std::optional<model::Timestamp>& whenPrepared,
-                                                       const db_model::EncryptedBlob& taskReceipt)
+                                                       const db_model::EncryptedBlob& taskReceipt,
+                                                       const model::Timestamp& lastMedicationDispense)
 {
     mTasks.at(taskId.type())
         .updateTaskMedicationDispenseReceipt(taskId, taskStatus, lastModified, medicationDispense,
                                              medicationDispenseBlobId, telematicId, whenHandedOver, whenPrepared,
-                                             taskReceipt);
+                                             taskReceipt, lastMedicationDispense);
+}
+
+void MockDatabase::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId, const model::Timestamp& lastModified)
+{
+    mTasks.at(taskId.type()).updateTaskDeleteMedicationDispense(taskId, lastModified);
 }
 
 void MockDatabase::updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,

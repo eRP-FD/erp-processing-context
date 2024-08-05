@@ -235,8 +235,7 @@ void ClientTeeProtocol::setIv (SafeString&& iv)
 /**
  * This method is still a bit quick and dirty. But then again, it is test-only code.
  */
-ClientResponse ClientTeeProtocol::parseResponse (
-    const ClientResponse& response)
+ClientResponse ClientTeeProtocol::parseResponse(const ClientResponse& response) const
 {
     Expect(response.getHeader().header(Header::ContentType) == "application/octet-stream",
            "response has wrong content type");

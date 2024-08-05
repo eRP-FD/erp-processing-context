@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/string"/>
+    <resource>
+      <StructureDefinition>
+        <id value="string"/>
+        <url value="http://hl7.org/fhir/StructureDefinition/string"/>
+        <version value="0.1"/>
+        <name value="string"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="true"/>
+        <type value="string"/>
+        <snapshot>
+          <element id="string">
+            <path value="string"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="string"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="string.value">
+            <path value="string.value"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="string.value"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/uri"/>
+    <resource>
+      <StructureDefinition>
+        <id value="uri"/>
+        <url value="http://hl7.org/fhir/StructureDefinition/uri"/>
+        <version value="0.1"/>
+        <name value="uri"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="true"/>
+        <type value="uri"/>
+        <snapshot>
+          <element id="uri">
+            <path value="uri"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="uri"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="uri.value">
+            <path value="uri.value"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="uri.value"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/ValueSet"/>
+    <resource>
+      <ValueSet>
+        <url value="http://erp-test.de/versiontest/ValueSet"/>
+        <version value="0.1"/>
+        <name value="ValueSet"/>
+        <status value="draft"/>
+        <compose>
+          <include>
+            <system value="http://erp-test.de/versiontest/CodeSystem"/>
+          </include>
+        </compose>
+      </ValueSet>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/ValueSet"/>
+    <resource>
+      <ValueSet>
+        <url value="http://erp-test.de/versiontest/ValueSet"/>
+        <version value="0.2"/>
+        <name value="ValueSet"/>
+        <status value="draft"/>
+        <compose>
+          <include>
+            <system value="http://erp-test.de/versiontest/CodeSystem"/>
+          </include>
+        </compose>
+      </ValueSet>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/CodeSystem"/>
+    <resource>
+      <CodeSystem>
+        <id value="CodeSystem"/>
+        <url value="http://erp-test.de/versiontest/CodeSystem"/>
+        <version value="A"/>
+        <name value="CodeSystem"/>
+        <status value="draft"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="Test1"/>
+          <display value="Test1 concept"/>
+        </concept>
+        <concept>
+          <code value="Test2"/>
+          <display value="Test2 concept"/>
+        </concept>
+        <concept>
+          <code value="ObsoleteTest"/>
+          <display value="ObsoleteTest - will be removed in version B"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/CodeSystem"/>
+    <resource>
+      <CodeSystem>
+        <id value="CodeSystem"/>
+        <url value="http://erp-test.de/versiontest/CodeSystem"/>
+        <version value="B"/>
+        <name value="CodeSystem"/>
+        <status value="draft"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="Test1"/>
+          <display value="Test1 concept"/>
+        </concept>
+        <concept>
+          <code value="Test2"/>
+          <display value="Test2 concept"/>
+        </concept>
+        <concept>
+          <code value="Test3"/>
+          <display value="Test3 concept - new in version B of this code system"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/StructureDefinition"/>
+    <resource>
+      <StructureDefinition>
+        <id value="StructureDefinition"/>
+        <url value="http://erp-test.de/versiontest/StructureDefinition"/>
+        <version value="alpha"/>
+        <name value="StructureDefinition"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="StructureDefinitionA"/>
+        <snapshot>
+          <element id="StructureDefinitionA">
+            <path value="StructureDefinitionA"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="StructureDefinitionA"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="StructureDefinitionA.field">
+            <path value="StructureDefinitionA.field"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="StructureDefinitionA.field"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <binding>
+              <valueSet value="http://erp-test.de/versiontest/ValueSet"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://erp-test.de/versiontest/StructureDefinition"/>
+    <resource>
+      <StructureDefinition>
+        <id value="StructureDefinition"/>
+        <url value="http://erp-test.de/versiontest/StructureDefinition"/>
+        <version value="beta"/>
+        <name value="StructureDefinition"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="StructureDefinitionB"/>
+        <snapshot>
+          <element id="StructureDefinitionB">
+            <path value="StructureDefinitionB"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="StructureDefinitionB"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="StructureDefinitionB.field">
+            <path value="StructureDefinitionB.field"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="StructureDefinitionB.field"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+            <binding>
+              <valueSet value="http://erp-test.de/versiontest/ValueSet"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

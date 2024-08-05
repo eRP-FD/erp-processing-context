@@ -24,6 +24,7 @@ class Device : public Resource<Device>
 {
 public:
     static constexpr auto resourceTypeName = "Device";
+    static constexpr auto profileType = ProfileType::Gem_erxDevice;
 
     static constexpr uint16_t Id = 1;
     static constexpr std::string_view Name = "E-Rezept Fachdienst";
@@ -43,8 +44,7 @@ public:
         sms,
         other
     };
-    explicit Device(ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-                      model::ResourceVersion::current<ResourceVersion::DeGematikErezeptWorkflowR4>());
+    Device();
 
     [[nodiscard]] std::string_view id() const;
     [[nodiscard]] Status status() const;
@@ -62,11 +62,16 @@ public:
 
     static std::string createReferenceUrl(const std::string& linkBase);
 
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
+
 private:
     friend Resource<Device>;
     explicit Device(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<Device>;
 }
 
 

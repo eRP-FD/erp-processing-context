@@ -17,7 +17,7 @@ namespace model
 {
 
 KbvMedicationRequest::KbvMedicationRequest(NumberAsStringParserDocument&& document)
-    : Resource<KbvMedicationRequest, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<KbvMedicationRequest>(std::move(document))
 {
 }
 
@@ -73,7 +73,7 @@ model::Timestamp KbvMedicationRequest::authoredOn() const
 }
 
 Dosage::Dosage(NumberAsStringParserDocument&& document)
-    : Resource<Dosage, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<Dosage>(std::move(document))
 {
 }
 
@@ -83,5 +83,10 @@ std::optional<std::string_view> Dosage::text() const
     return getOptionalStringValue(textPointer);
 }
 
+
+std::optional<model::Timestamp> KbvMedicationRequest::getValidationReferenceTimestamp() const
+{
+    return authoredOn();
+}
 
 }

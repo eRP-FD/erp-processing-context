@@ -51,12 +51,22 @@ public:
         const std::string& accessCode,
         const std::string& insurant)
     {
+        return addTaskToDatabase(sessionContext, taskStatus, accessCode, insurant, model::Timestamp{.0});
+    }
+
+    model::Task addTaskToDatabase(
+        SessionContext& sessionContext,
+        model::Task::Status taskStatus,
+        const std::string& accessCode,
+        const std::string& insurant,
+        const model::Timestamp lastUpdate)
+    {
         auto* database = sessionContext.database();
         model::Task task{ model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode };
         task.setAcceptDate(model::Timestamp{ .0 });
         task.setExpiryDate(model::Timestamp{ .0 });
         task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::gkv});
-        task.updateLastUpdate(model::Timestamp{ .0 });
+        task.updateLastUpdate(lastUpdate);
         task.setStatus(taskStatus);
         model::PrescriptionId prescriptionId = database->storeTask(task);
         task.setPrescriptionId(prescriptionId);
@@ -102,8 +112,8 @@ public:
         ASSERT_EQ(auditEvents.size(), 1);
 
         auto& auditEvent = auditEvents.front();
-        ASSERT_NO_THROW((void)model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator(),
-                                                         *StaticData::getInCodeValidator(), SchemaType::Gem_erxAuditEvent));
+        ASSERT_NO_THROW(
+            (void) model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator()));
 
         auto expectedAuditEvent = model::AuditEvent::fromJsonNoValidation(
             FileHelper::readFileAsString(dataPath + "/" + expectedResultFilename));

@@ -15,14 +15,16 @@ namespace model
 
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvPracticeSupply : public Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>
+class KbvPracticeSupply : public Resource<KbvPracticeSupply>
 {
 public:
     static constexpr auto resourceTypeName = "SupplyRequest";
 private:
-    friend Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvPracticeSupply>;
     explicit KbvPracticeSupply(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvPracticeSupply>;
 }
 #endif//ERP_PROCESSING_CONTEXT_MODEL_KBVPRACTICESUPPLY_HXX

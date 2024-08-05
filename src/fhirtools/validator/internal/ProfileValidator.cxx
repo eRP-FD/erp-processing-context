@@ -116,20 +116,20 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         result.emplace(std::move(key), std::move(validator));
         return result;
     }
-    std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
-    for (const auto& url : subField->element()->profiles())
-    {
-        const auto* prof = repo.findDefinitionByUrl(url);
-        Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
-        ProfiledElementTypeInfo defPtr{prof};
-        MapKey key{defPtr};
-        ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
-        profilesKeys.emplace(key, validator.mData);
-        TVLOG(4) << "adding sub-validator profile: " << url;
-        result.emplace(std::move(key), std::move(validator));
-    }
     for (const auto& defPtr : mDefPtr.subDefinitions(repo, name))
     {
+        std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
+        for (const auto& url : defPtr.element()->profiles())
+        {
+            const auto* prof = repo.findStructure(DefinitionKey{url});
+            Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
+            ProfiledElementTypeInfo defPtr{prof};
+            MapKey key{defPtr};
+            ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
+            profilesKeys.emplace(key, validator.mData);
+            TVLOG(4) << "adding sub-validator profile: " << url;
+            result.emplace(std::move(key), std::move(validator));
+        }
         MapKey key{defPtr};
         ProfileValidator validator{key, {mData}, defPtr, {}, mSetValidator};
         if (! profilesKeys.empty())
@@ -185,7 +185,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                     std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
                     for (const auto& url : ptr.element()->profiles())
                     {
-                        const auto* prof = element.getFhirStructureRepository()->findDefinitionByUrl(url);
+                        const auto* prof = element.getFhirStructureRepository()->findStructure(DefinitionKey{url});
                         Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
                         ProfiledElementTypeInfo defPtr{prof};
                         MapKey key{defPtr};
@@ -357,7 +357,7 @@ void ProfileValidator::checkCoding(const Element& element, std::string_view elem
         if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
         {
             const auto* codeSystem =
-                element.getFhirStructureRepository()->findCodeSystem(systemSubElement[0]->asString(), {});
+                element.getFhirStructureRepository()->findCodeSystem(DefinitionKey{systemSubElement[0]->asString()});
             if (codeSystem)
             {
                 if (! codeSystem->isEmpty() && ! codeSystem->isSynthesized())
@@ -398,8 +398,7 @@ void ProfileValidator::checkBinding(const Element& element, std::string_view ele
         {
             return;
         }
-        if (const auto* bindingValueSet =
-                element.getFhirStructureRepository()->findValueSet(binding.valueSetUrl, binding.valueSetVersion))
+        if (const auto* bindingValueSet = element.getFhirStructureRepository()->findValueSet(binding.key))
         {
             const auto& warning = bindingValueSet->getWarnings();
             if (! warning.empty())
@@ -418,7 +417,7 @@ void ProfileValidator::checkBinding(const Element& element, std::string_view ele
         }
         else
         {
-            mData->add(Severity::warning, "Unresolved ValueSet binding: " + binding.valueSetUrl,
+            mData->add(Severity::warning, "Unresolved ValueSet binding: " + to_string(binding.key),
                        std::string{elementFullPath}, mDefPtr.profile());
         }
     }
@@ -442,7 +441,8 @@ void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& elem
             if (! bindingValueSet->containsCode(element.asString()))
             {
                 mData->add(severity,
-                           "Value " + element.asString() + " not allowed for ValueSet binding, allowed are " +
+                           "Value " + element.asString() + " not allowed for ValueSet " + bindingValueSet->getUrl() +
+                               '|' + to_string(bindingValueSet->getVersion()) + ", allowed are " +
                                bindingValueSet->codesToString(),
                            std::string{elementFullPath}, mDefPtr.profile());
             }
@@ -477,7 +477,8 @@ void fhirtools::ProfileValidator::checkCodingBinding(const Element& codingElemen
         {
             mData->add(errorSeverity,
                        "Code " + codeSubElement[0]->asString() + " with system " + systemSubElement[0]->asString() +
-                           " not allowed for ValueSet binding, allowed are " + fhirValueSet->codesToString(),
+                           " not allowed for ValueSet " + fhirValueSet->getUrl() + '|' +
+                           to_string(fhirValueSet->getVersion()) + ", allowed are " + fhirValueSet->codesToString(),
                        std::string{elementFullPath}, mDefPtr.profile());
         }
     }

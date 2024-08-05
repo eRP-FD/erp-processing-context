@@ -119,7 +119,7 @@ void MedicationDispense::setPrescriptionId(const PrescriptionId& prescriptionId)
 void MedicationDispense::setKvnr(const model::Kvnr& kvnr)
 {
     setValue(kvnrValuePointer, kvnr.id());
-    setValue(kvnrSystemPointer, kvnr.namingSystem(deprecatedProfile(value(getSchemaVersion()))));
+    setValue(kvnrSystemPointer, kvnr.namingSystem());
 }
 
 void MedicationDispense::setTelematicId(const model::TelematikId& telematikId)
@@ -137,5 +137,9 @@ void MedicationDispense::setWhenPrepared(const model::Timestamp& whenPrepared)
     setValue(whenPreparedPointer, whenPrepared.toXsDateTime());
 }
 
+std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() const
+{
+    return whenHandedOver();
+}
 
 } // namespace model

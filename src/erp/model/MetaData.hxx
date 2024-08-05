@@ -9,7 +9,6 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_METADATA_HXX
 
 #include "erp/model/Resource.hxx"
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
@@ -21,12 +20,13 @@ namespace model
 // Reduced version of Device resource, contains only functionality currently needed;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class MetaData : public Resource<MetaData, ResourceVersion::NotProfiled>
+class MetaData : public Resource<MetaData>
 {
 public:
     static constexpr auto resourceTypeName = "CapabilityStatement";
+    static constexpr auto profileType = ProfileType::fhir;
 
-    explicit MetaData(ResourceVersion::FhirProfileBundleVersion profileBundle);
+    explicit MetaData(const model::Timestamp& referenceTime = model::Timestamp::now());
 
     [[nodiscard]] model::Timestamp date() const;
     [[nodiscard]] std::string_view version() const;
@@ -36,20 +36,18 @@ public:
     void setVersion(const std::string_view& version);
     void setReleaseDate(const model::Timestamp& releaseDate);
 
-    ResourceVersion::DeGematikErezeptWorkflowR4 taskProfileVersion();
+    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
 private:
     friend class Resource;
     explicit MetaData(NumberAsStringParserDocument&& jsonTree);
 
-    template<class ProfileDefinition>
-    void fillResource(const ProfileDefinition& profileDefinition,
-                      ResourceVersion::FhirProfileBundleVersion profileBundle);
-
     template<class TemplateDocument>
     void addResourceTemplate(const TemplateDocument& templateDocument);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<MetaData>;
 }
 
 

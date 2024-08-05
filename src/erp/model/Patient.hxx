@@ -9,13 +9,14 @@
 #define ERP_PROCESSING_CONTEXT_PATIENT_HXX
 
 #include "erp/model/Resource.hxx"
-#include "erp/model/Kvnr.hxx"
 
 namespace model
 {
+class Kvnr;
+class Reference;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class Patient : public Resource<Patient, ResourceVersion::KbvItaErp>
+class Patient : public Resource<Patient>
 {
 public:
     static constexpr auto resourceTypeName = "Patient";
@@ -38,11 +39,13 @@ public:
     [[nodiscard]] bool hasIdentifier() const;
 
 private:
-    friend Resource<Patient, ResourceVersion::KbvItaErp>;
+    friend Resource<Patient>;
     explicit Patient (NumberAsStringParserDocument&& document);
 
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<class Patient>;
 }
 
 #endif //ERP_PROCESSING_CONTEXT_PATIENT_HXX

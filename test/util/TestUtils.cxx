@@ -9,6 +9,7 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/ResourceFactory.hxx"
 #include "erp/model/Timestamp.hxx"
+#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -19,94 +20,6 @@
 
 namespace testutils
 {
-
-std::vector<EnvironmentVariableGuard> getNewFhirProfileEnvironment()
-{
-    using namespace std::chrono_literals;
-    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-    const auto dbYesterday = (model::Timestamp::now() - date::days{2}).toXsDate(model::Timestamp::GermanTimezone);
-    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-
-    std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, dbYesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
-    return envVars;
-}
-
-
-std::vector<EnvironmentVariableGuard> getOldFhirProfileEnvironment()
-{
-    using namespace std::chrono_literals;
-    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-    const auto today = (model::Timestamp::now()).toXsDate(model::Timestamp::GermanTimezone);
-
-    std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, today);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, tomorrow);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, tomorrow);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
-    return envVars;
-}
-
-std::vector<EnvironmentVariableGuard> getOverlappingFhirProfileEnvironment()
-{
-    using namespace std::chrono_literals;
-    const auto tomorrow = (model::Timestamp::now() + date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-    std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, tomorrow);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, tomorrow);
-    return envVars;
-}
-
-std::vector<EnvironmentVariableGuard> getPatchedFhirProfileEnvironment()
-{
-    using namespace std::chrono_literals;
-    const auto yesterday = (model::Timestamp::now() - date::days{1}).toXsDate(model::Timestamp::GermanTimezone);
-    const auto dbYesterday = (model::Timestamp::now() - date::days{2}).toXsDate(model::Timestamp::GermanTimezone);
-
-    std::vector<EnvironmentVariableGuard> envVars;
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL, dbYesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_RENDER_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_VALID_FROM, yesterday);
-    envVars.emplace_back(ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM, yesterday);
-    return envVars;
-}
-
-std::string profile(SchemaType schemaType, model::ResourceVersion::FhirProfileBundleVersion version)
-{
-    using namespace std::string_literals;
-    auto profStr = model::ResourceVersion::profileStr(schemaType, version);
-    Expect3(profStr.has_value(),
-            "cannot derive profile for: "s.append(magic_enum::enum_name(schemaType)).append("|").append(v_str(version)),
-            std::logic_error);
-    return *profStr;
-}
-
-std::string_view gkvKvid10(model::ResourceVersion::FhirProfileBundleVersion version)
-{
-    return deprecatedBundle(version)
-        ?model::resource::naming_system::deprecated::gkvKvid10
-        :model::resource::naming_system::gkvKvid10;
-}
-
-std::string_view prescriptionIdNamespace(model::ResourceVersion::FhirProfileBundleVersion version)
-{
-    return deprecatedBundle(version)
-        ?model::resource::naming_system::deprecated::prescriptionID
-        :model::resource::naming_system::prescriptionID;
-}
-
-std::string_view telematikIdNamespace(model::ResourceVersion::FhirProfileBundleVersion version)
-{
-    return deprecatedBundle(version)
-        ?model::resource::naming_system::deprecated::telematicID
-        :model::resource::naming_system::telematicID;
-}
 
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options)
@@ -166,8 +79,8 @@ std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::Val
     return filteredValidationErrors;
 }
 
-template <typename BundleT>
-BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType)
+template<typename BundleT>
+BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType)
 {
     const auto& config = Configuration::instance();
     using BundleFactory = typename model::ResourceFactory<BundleT>;
@@ -182,22 +95,48 @@ BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaT
                         .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning,
                     },
             });
-            if constexpr (std::is_same_v<BundleT, model::ErxReceipt>)
-            {
-                opt.fallbackVersion = model::ResourceVersion::DeGematikErezeptWorkflowR4::v1_1_1;
-            }
             break;
         case Configuration::PrescriptionDigestRefType::uuid:
             break;
     }
 
-    return BundleFactory::fromXml(xmlDoc, *StaticData::getXmlValidator(), opt)
-        .getValidated(schemaType, *StaticData::getXmlValidator(), *StaticData::getInCodeValidator(),
-                      model::ResourceVersion::supportedBundles());
+    return BundleFactory::fromXml(xmlDoc, *StaticData::getXmlValidator(), opt).getValidated(profileType);
 }
 
 
-template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
-template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, SchemaType schemaType);
+template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+
+ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& viewId, const fhirtools::Date& startDate)
+{
+    date::local_days epoch{date::days::zero()};
+    const auto& config = Configuration::instance();
+    const auto& allViews = config.fhirResourceViewConfiguration().allViews();
+    auto refView = std::ranges::find(allViews, viewId, &fhirtools::FhirResourceViewConfiguration::ViewConfig::mId);
+    Expect3(refView != allViews.end(), "no such view: " + viewId, std::logic_error);
+    date::year_month_day refStart{(*refView)->mStart.value_or(epoch)};
+    auto shift = date::sys_days{date::year_month_day{startDate}} - date::sys_days{refStart};
+    for (const auto& viewInfo: allViews)
+    {
+        if (viewInfo->mStart)
+        {
+            date::year_month_day viewStart{*(viewInfo)->mStart};
+            auto shiftedStart = date::year_month_day{date::sys_days{viewStart} + shift};
+            envGuards.emplace_back(viewInfo->mEnvName + "_VALID_FROM", date::format("%Y-%m-%d", shiftedStart));
+        }
+        if (viewInfo->mEnd)
+        {
+            date::year_month_day viewEnd{*viewInfo->mEnd};
+            auto shiftedEnd = date::year_month_day{date::sys_days{viewEnd} + shift};
+            envGuards.emplace_back(viewInfo->mEnvName + "_VALID_UNTIL", date::format("%Y-%m-%d", shiftedEnd));
+        }
+    }
+}
+
+ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate)
+    : ShiftFhirResourceViewsGuard{viewId, fhirtools::Date{date::year_month_day{startDate}, fhirtools::Date::Precision::day}}
+{
+
+}
 
 } // namespace testutils

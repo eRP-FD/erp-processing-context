@@ -55,7 +55,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "20";
+    static constexpr const char* expectedSchemaVersion = "21";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -84,12 +84,15 @@ public:
     virtual void updateTaskStatusAndSecret(const model::Task& task, const SafeString& key) = 0;
     virtual void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) = 0;
     virtual void activateTask(const model::Task& task, const SafeString& key, const model::Binary& healthCareProviderPrescription) = 0;
+    virtual void updateTaskMedicationDispense(const model::Task& task,
+                                              const std::vector<model::MedicationDispense>& medicationDispenses) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::Task& task,
                                                      const std::vector<model::MedicationDispense>& medicationDispenses,
                                                      const model::ErxReceipt& receipt) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
                                                      const std::vector<model::MedicationDispense>& medicationDispenses,
                                                      const model::ErxReceipt& receipt) = 0;
+    virtual void updateTaskDeleteMedicationDispense(const model::Task& task) = 0;
     virtual void updateTaskClearPersonalData(const model::Task& task) = 0;
 
     virtual std::string storeAuditEventData(model::AuditData& auditData) = 0;

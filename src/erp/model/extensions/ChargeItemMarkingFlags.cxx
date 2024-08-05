@@ -52,9 +52,9 @@ bool ChargeItemMarkingFlags::isMarked(const MarkingContainer& markings)
 
 
 ChargeItemMarkingFlag::ChargeItemMarkingFlag(const std::string_view url, bool value)
-    : model::Extension(NoProfile)
+    : Extension(NoProfile)
 {
     setValue(rapidjson::Pointer{ElementName::path(resource::elements::url)}, url);
     setValue(rapidjson::Pointer{ElementName::path(resource::elements::valueBoolean)}, rapidjson::Value(value));
 }
-} // namespace model
+}// namespace model

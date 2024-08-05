@@ -289,6 +289,27 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskRejectForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 
+TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskDispenseSuccess)
+{
+    A_24279.test("Valid professionOID claim in JWT");
+    const std::string endpoint = "/Task/" + taskIdNotFound + "/$dispense";
+    testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskDispenseForbidden)
+{
+    A_24279.test("Invalid professionOID claim in JWT");
+    const std::string endpoint = "/Task/" + taskId + "/$dispense";
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+}
+
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskCloseSuccess)
 {
     A_19230.test("Valid professionOID claim in JWT");

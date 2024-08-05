@@ -15,13 +15,20 @@
 #include "test/util/ResourceTemplates.hxx"
 
 
-class MyTestExtension : public model::Extension
+class MyTestExtension : public model::UnspecifiedExtension
 {
 public:
-    using Extension::Extension;
+    using UnspecifiedExtension::UnspecifiedExtension;
+    MyTestExtension(UnspecifiedExtension&& unspec)
+        : UnspecifiedExtension{std::move(unspec)}
+    {
+    }
+    MyTestExtension& operator=(UnspecifiedExtension&& unspec)
+    {
+        UnspecifiedExtension::operator=(std::move(unspec));
+        return *this;
+    }
     static constexpr auto url = "MyTestExtension";
-
-    friend std::optional<MyTestExtension> ResourceBase::getExtension<MyTestExtension>(const std::string_view&) const;
 };
 
 TEST(ExtensionTest, extensionWithValue)
@@ -32,7 +39,7 @@ TEST(ExtensionTest, extensionWithValue)
         "valueBoolean": true
     })";
 
-    auto ext = model::Extension::fromJsonNoValidation(extension);
+    auto ext = model::UnspecifiedExtension::fromJsonNoValidation(extension);
     std::optional<bool> valueBoolean;
     ASSERT_NO_THROW(valueBoolean = ext.valueBoolean());
     ASSERT_TRUE(valueBoolean.has_value());
@@ -46,7 +53,7 @@ TEST(ExtensionTest, extensionNoValue)
         "url": "MyTestExtension"
     })";
 
-    auto ext = model::Extension::fromJsonNoValidation(extension);
+    auto ext = model::UnspecifiedExtension::fromJsonNoValidation(extension);
     std::optional<bool> valueBoolean;
     ASSERT_NO_THROW(valueBoolean = ext.valueBoolean());
     ASSERT_FALSE(valueBoolean.has_value());

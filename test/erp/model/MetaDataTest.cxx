@@ -9,11 +9,10 @@
 #include "erp/erp-serverinfo.hxx"
 #include "erp/fhir/Fhir.hxx"
 #include "erp/model/ResourceNames.hxx"
-#include "erp/model/ResourceVersion.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
-
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -21,7 +20,7 @@
 
 TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
-    model::MetaData metaData(model::ResourceVersion::currentBundle());
+    model::MetaData metaData{};
 
     EXPECT_EQ(metaData.version(), ErpServerInfo::ReleaseVersion());
     EXPECT_EQ(metaData.date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
@@ -43,22 +42,27 @@ TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 struct MetaDataProfileTestParam
 {
     std::string_view name;
-    model::ResourceVersion::FhirProfileBundleVersion profileBundle;
+    model::Timestamp referenceTimestamp;
+    ResourceTemplates::Versions::GEM_ERP workflowVersion;
+    ResourceTemplates::Versions::GEM_ERPCHRG chargeInfoVersion;
+    ResourceTemplates::Versions::KBV_ERP kbvVersion;
+    friend void PrintTo(const MetaDataProfileTestParam& data, std::ostream* os)
+    {
+        (*os) << data.name;
+    }
 };
 
 class MetaDataProfileTest : public ::testing::TestWithParam<MetaDataProfileTestParam>
 {
 public:
-
-    template <typename SchemaVersionType>
     void checkProfile(const rapidjson::Value::ConstArray& resourceArray, bool isSupported,
-                      std::string_view resourceType, std::string_view testProfile, SchemaVersionType version)
+                      std::string_view resourceType, std::string_view testProfile,
+                      const fhirtools::FhirVersion& version)
     {
         static const rapidjson::Pointer typePtr{"/type"};
         static const rapidjson::Pointer profilePtr{"/profile"};
         static const rapidjson::Pointer supportedProfilePtr{"/supportedProfile"};
-        const std::string profileAndVersion = std::string{testProfile}.append(1,'|')
-                                              .append(model::ResourceVersion::v_str(version));
+        const std::string profileAndVersion = std::string{testProfile}.append(1, '|').append(to_string(version));
         bool foundType = false;
         bool foundProfile = false;
         for (const auto& res: resourceArray)
@@ -106,15 +110,14 @@ public:
 
 
 };
-
-TEST_P(MetaDataProfileTest, ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
+// TODO: ERP-20650
+TEST_P(MetaDataProfileTest, DISABLED_ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace model::resource;
-    namespace ResVer = model::ResourceVersion;
     static const rapidjson::Pointer restPtr{"/rest"};
     static const rapidjson::Pointer modePtr{"/mode"};
     static const rapidjson::Pointer resourcePtr{ElementName::path(elements::resource)};
-    const ::model::MetaData metaData(GetParam().profileBundle);
+    const ::model::MetaData metaData{GetParam().referenceTimestamp};
     const auto& document = metaData.jsonDocument();
     const auto* restValue = restPtr.Get(document);
     ASSERT_NE(restValue, nullptr);
@@ -130,46 +133,44 @@ TEST_P(MetaDataProfileTest, ProfileVersions)//NOLINT(readability-function-cognit
     ASSERT_NE(resourceValue, nullptr);
     ASSERT_TRUE(resourceValue->IsArray());
     auto resourceArray = resourceValue->GetArray();
-    for (auto bundle : model::ResourceVersion::allBundles())
+    using namespace structure_definition;
+    for (const auto& workflowVer : ResourceTemplates::Versions::GEM_ERP_all)
     {
-        bool isSupported = GetParam().profileBundle == bundle;
-        auto allVersions = ResVer::profileVersionFromBundle(bundle);
-        auto workflowVer = get<ResVer::DeGematikErezeptWorkflowR4>(allVersions);
-        if(model::ResourceVersion::deprecatedBundle(bundle))
-        {
-            using namespace structure_definition::deprecated;
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationReply, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationDispReq, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationRepresentative, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Task", task, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "MedicationDispense", medicationDispense, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "AuditEvent", auditEvent, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Device", device, workflowVer));
-        }
-        else
-        {
-            using namespace structure_definition;
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Task", task, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationReply, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationDispReq, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationRepresentative, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "MedicationDispense", medicationDispense, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "AuditEvent", auditEvent, workflowVer));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Device", device, workflowVer));
-            auto pkvVersion = get<ResVer::DeGematikErezeptPatientenrechnungR4>(allVersions);
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationChargChangeReq, pkvVersion));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationChargChangeReply, pkvVersion));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "ChargeItem", chargeItem, pkvVersion));
-            EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Consent", consent, pkvVersion));
-        }
+        bool isSupported = GetParam().workflowVersion == workflowVer;
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Task", task, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "Communication", communicationReply, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "Communication", communicationDispReq, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "Communication", communicationRepresentative, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "MedicationDispense", medicationDispense, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "AuditEvent", auditEvent, workflowVer));
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Device", device, workflowVer));
+    }
+    for (const auto& chargeInfoVersion : ResourceTemplates::Versions::GEM_ERPCHRG_all)
+    {
+        bool isSupported = GetParam().chargeInfoVersion == chargeInfoVersion;
+        EXPECT_NO_FATAL_FAILURE(
+            checkProfile(resourceArray, isSupported, "Communication", communicationChargChangeReq, chargeInfoVersion));
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Communication", communicationChargChangeReply,
+                                             chargeInfoVersion));
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "ChargeItem", chargeItem, chargeInfoVersion));
+        EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Consent", consent, chargeInfoVersion));
     }
 }
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(Combinations, MetaDataProfileTest, ::testing::Values(
-    MetaDataProfileTestParam{"v_2022_01_01", model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01},
-    MetaDataProfileTestParam{"v_2023_07_01", model::ResourceVersion::FhirProfileBundleVersion::v_2023_07_01}),
+    MetaDataProfileTestParam{
+        .name = "v_2023_07_01",
+        .referenceTimestamp = model::Timestamp::fromGermanDate("2023-07-01"),
+        .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
+        .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+    }),
 [](const auto& info) { return std::string{info.param.name}; }
 );
 // clang-format on

@@ -21,11 +21,6 @@ int main(int argc, char** argv)
 {
     using enum ConfigurationKey;
     using namespace std::string_view_literals;
-    static constexpr auto erp_profiles = "--erp_profiles="sv;
-    static constexpr auto old_profiles = "2022-01-01"sv;
-    static constexpr auto new_profiles = "2023-07-01"sv;
-    static constexpr auto patched_profiles = "2024-01-01"sv;
-    static constexpr auto all_profiles = "all"sv;
 
     static constexpr auto erp_instance = "--erp_instance="sv;
     static constexpr size_t instance_offset = 2;
@@ -37,16 +32,11 @@ int main(int argc, char** argv)
     GLogConfiguration::init_logging(argv[0]);
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
-    std::string_view supportedProfiles = patched_profiles;
     std::optional<size_t> instance;
     for (int i = 0; i < argc; ++i)
     {
         std::string_view arg{argv[i]};
-        if (arg.starts_with(erp_profiles))
-        {
-            supportedProfiles = arg.substr(erp_profiles.size());
-        }
-        else if (arg.starts_with(erp_instance))
+        if (arg.starts_with(erp_instance))
         {
             instance = std::stoull(std::string{arg.substr(erp_instance.size())});
         }
@@ -62,30 +52,7 @@ int main(int argc, char** argv)
         env.emplace_back(ADMIN_SERVER_PORT, std::to_string(9999 + offset));
         env.emplace_back("TEST_USE_POSTGRES", "off");
     }
-    if (supportedProfiles == old_profiles)
-    {
-        std::ranges::move(testutils::getOldFhirProfileEnvironment(), std::inserter(env, env.end()));
-    }
-    else if (supportedProfiles == new_profiles)
-    {
-        std::ranges::move(testutils::getNewFhirProfileEnvironment(), std::inserter(env, env.end()));
-    }
-    else if (supportedProfiles == all_profiles)
-    {
-        std::ranges::move(testutils::getOverlappingFhirProfileEnvironment(), std::inserter(env, env.end()));
-    }
-    else if (supportedProfiles == patched_profiles)
-    {
-        std::ranges::move(testutils::getPatchedFhirProfileEnvironment(), std::inserter(env, env.end()));
-    }
-    else
-    {
-        std::clog << "missing or invalid argument to " << erp_profiles << '\n';
-        std::clog << "    possible values are: ";
-        std::clog << old_profiles << ", " << new_profiles << ", " << all_profiles << ", " << patched_profiles
-                  << std::endl;
-        return EXIT_FAILURE;
-    }
+
     ::testing::InitGoogleTest(&argc, argv);
 
     TestClient::setFactory(&EndpointTestClient::factory);

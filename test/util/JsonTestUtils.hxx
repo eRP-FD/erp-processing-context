@@ -9,7 +9,7 @@
 #define EPR_PROCESSINIG_CONTEXT_JSONTESTUTILS_HXX
 
 #include "erp/model/Communication.hxx"
-#include "erp/model/ResourceVersion.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <rapidjson/document.h>
 #include <string>
@@ -37,10 +37,8 @@ const std::string_view& actorRoleToResourceId(ActorRole actorRole);
 class CommunicationJsonStringBuilder
 {
 public:
-    explicit CommunicationJsonStringBuilder(
-        model::Communication::MessageType messageType,
-        model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion =
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>());
+    explicit CommunicationJsonStringBuilder(model::Communication::MessageType messageType,
+                                            std::optional<fhirtools::FhirVersion> profileVersion = std::nullopt);
     std::string createJsonString() const;
     std::string createXmlString() const;
     CommunicationJsonStringBuilder& setPrescriptionId(const std::string& prescriptionId);
@@ -75,7 +73,7 @@ private:
     std::optional<std::string>                        mPayload;           // e.g. "Hello, do you ..."
     std::optional<std::string>                        mAbout;
     std::unique_ptr<ResourceTemplates::MedicationOptions> mMedicationOptions;
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 mProfileVersion;
+    std::optional<fhirtools::FhirVersion> mProfileVersion;
 };
 
 #endif // EPR_PROCESSINIG_CONTEXT_JSONTESTUTILS_HXX

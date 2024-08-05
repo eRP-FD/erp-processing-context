@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="ActivateOperation"/>
+  <url value="https://gematik.de/fhir/erp/OperationDefinition/ActivateOperationDefinition"/>
+  <version value="1.3"/>
+  <name value="Activate"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2024-05-21"/>
+  <description value="This operation activates the created Task for the prescription. The input parameter must contain the qualified signed Bundle of the prescription. The prescription server validates the prescription, updates the task ressource and starts the workflow."/>
+  <affectsState value="true"/>
+  <code value="activate"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="false"/>
+  <instance value="true"/>
+  <outputProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"/>
+  <parameter>
+    <name value="ePrescription"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The qualified signed prescription element to activate the ePrescription workflow."/>
+    <type value="Binary"/>
+  </parameter>
+  <parameter>
+    <name value="return"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="Return the updated and activated Task."/>
+    <type value="canonical"/>
+    <targetProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"/>
+  </parameter>
+</OperationDefinition>

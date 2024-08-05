@@ -6,39 +6,30 @@
  */
 
 #include "erp/service/AuditEventCreator.hxx"
-#include "erp/service/Operation.hxx"
-#include "erp/service/ErpRequestHandler.hxx"
-
-#include "erp/model/ResourceNames.hxx"
 #include "erp/crypto/Jwt.hxx"
-
-#include "erp/util/String.hxx"
-
+#include "erp/model/AuditData.hxx"
+#include "erp/model/AuditEvent.hxx"
+#include "erp/model/ResourceNames.hxx"
+#include "erp/service/AuditEventTextTemplates.hxx"
+#include "erp/service/ErpRequestHandler.hxx"
+#include "erp/service/Operation.hxx"
 #include "erp/util/Expect.hxx"
+#include "erp/util/String.hxx"
 
 namespace
 {
 
-std::tuple<std::string, std::string, std::string> evalAgentData(
-    const model::AuditData& auditData,
-    const JWT& accessToken,
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+std::tuple<std::string, std::string, std::string> evalAgentData(const model::AuditData& auditData,
+                                                                const JWT& accessToken)
 {
     std::string whoIdentifierSystem;
     std::string whoIdentifierValue;
     std::string agentName;
 
-    const bool isDeprecatedVersion = model::ResourceVersion::deprecatedProfile(profileVersion);
-
-    const auto nsGkvKvid = isDeprecatedVersion ? model::resource::naming_system::deprecated::gkvKvid10
-                                               : model::resource::naming_system::gkvKvid10;
-    const auto nsTelematikId = isDeprecatedVersion ? model::resource::naming_system::deprecated::telematicID
-                                                   : model::resource::naming_system::telematicID;
-
     if(model::isEventCausedByPatient(auditData.eventId()))
     {
         // if we dont know if it is PKV or GKV, use GKV, cf. ERP-11991
-        whoIdentifierSystem = auditData.insurantKvnr().namingSystem(isDeprecatedVersion);
+        whoIdentifierSystem = auditData.insurantKvnr().namingSystem();
         whoIdentifierValue = auditData.insurantKvnr().id();
         auto displayName = accessToken.displayName();
         Expect3(displayName.has_value(), "Could not determine display name", std::logic_error);
@@ -46,7 +37,9 @@ std::tuple<std::string, std::string, std::string> evalAgentData(
     }
     else
     {
-        whoIdentifierSystem = model::isEventCausedByRepresentative(auditData.eventId()) ? nsGkvKvid : nsTelematikId;
+        whoIdentifierSystem = model::isEventCausedByRepresentative(auditData.eventId())
+                                  ? model::resource::naming_system::gkvKvid10
+                                  : model::resource::naming_system::telematicID;
         Expect3(auditData.metaData().agentWho().has_value(), "Missing agent identifier in audit data",
                 std::logic_error);
         whoIdentifierValue = auditData.metaData().agentWho().value();
@@ -79,14 +72,10 @@ std::string replaceTextTemplateVariables(
 }  // anonymous namespace
 
 
-model::AuditEvent AuditEventCreator::fromAuditData(
-    const model::AuditData& auditData,
-    const std::string& language,
-    const AuditEventTextTemplates& textResources,
-    const JWT& accessToken,
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 profileVersion)
+model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& auditData, const std::string& language,
+                                                   const AuditEventTextTemplates& textResources, const JWT& accessToken)
 {
-    model::AuditEvent auditEvent(profileVersion);
+    model::AuditEvent auditEvent;
 
     auditEvent.setId(auditData.id());
     auditEvent.setRecorded(auditData.recorded());
@@ -99,7 +88,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     std::string agentName = "E-Rezept Fachdienst"; // default value for audit events created by maintenance script;
     if(!isEventCausedByMaintenanceScript(auditData.eventId()))
     {
-        const auto [whoIdentifierSystem, whoIdentifierValue, whoAgentName] = evalAgentData(auditData, accessToken, profileVersion);
+        const auto [whoIdentifierSystem, whoIdentifierValue, whoAgentName] = evalAgentData(auditData, accessToken);
         auditEvent.setAgentWho(whoIdentifierSystem, whoIdentifierValue);
         agentName = whoAgentName;
     }
@@ -110,11 +99,8 @@ model::AuditEvent AuditEventCreator::fromAuditData(
     std::string resourceIdStr;
     if (auditData.prescriptionId().has_value())
     {
-        const bool isDeprecatedVersion = model::ResourceVersion::deprecatedProfile(profileVersion);
-        const auto nsPrescriptionId = isDeprecatedVersion ? model::resource::naming_system::deprecated::prescriptionID
-                                                : model::resource::naming_system::prescriptionID;
         resourceIdStr = auditData.prescriptionId()->toString();
-        auditEvent.setEntityWhatIdentifier(nsPrescriptionId, resourceIdStr);
+        auditEvent.setEntityWhatIdentifier(model::resource::naming_system::prescriptionID, resourceIdStr);
         auditEvent.setEntityDescription(resourceIdStr);
     }
     else

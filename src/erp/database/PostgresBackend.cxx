@@ -476,6 +476,22 @@ void PostgresBackend::activateTask (
                       acceptDate, healthCareProviderPrescription);
 }
 
+void PostgresBackend::updateTaskMedicationDispense(
+    const model::PrescriptionId& taskId,
+    const model::Timestamp& lastModified,
+    const model::Timestamp& lastMedicationDispense,
+    const db_model::EncryptedBlob& medicationDispense,
+    BlobId medicationDispenseBlobId,
+    const db_model::HashedTelematikId& telematikId,
+    const model::Timestamp& whenHandedOver,
+    const std::optional<model::Timestamp>& whenPrepared)
+{
+    checkCommonPreconditions();
+    getTaskBackend(taskId.type())
+        .updateTaskMedicationDispense(*mTransaction, taskId, lastModified, lastMedicationDispense, medicationDispense,
+                                      medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared);
+}
+
 void PostgresBackend::updateTaskMedicationDispenseReceipt(
     const model::PrescriptionId& taskId,
     const model::Task::Status& taskStatus,
@@ -485,13 +501,21 @@ void PostgresBackend::updateTaskMedicationDispenseReceipt(
     const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver,
     const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::EncryptedBlob& receipt)
+    const db_model::EncryptedBlob& receipt,
+    const model::Timestamp& lastMedicationDispense)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispenseReceipt(*mTransaction, taskId, taskStatus, lastModified, medicationDispense,
                                              medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
-                                             receipt);
+                                             receipt, lastMedicationDispense);
+}
+
+void PostgresBackend::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
+                                                         const model::Timestamp& lastModified)
+{
+    checkCommonPreconditions();
+    getTaskBackend(taskId.type()).updateTaskDeleteMedicationDispense(*mTransaction, taskId, lastModified);
 }
 
 // GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData

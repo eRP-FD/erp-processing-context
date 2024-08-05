@@ -116,4 +116,9 @@ std::optional<std::string_view> Subscription::reason() const
     return getOptionalStringValue(reasonPointer);
 }
 
+
+std::optional<model::Timestamp> Subscription::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 }

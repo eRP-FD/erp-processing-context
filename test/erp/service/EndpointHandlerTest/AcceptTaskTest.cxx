@@ -50,10 +50,7 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
-    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(),
-                                                          *StaticData::getXmlValidator(),
-                                                          *StaticData::getInCodeValidator(),
-                                                          SchemaType::fhir));
+    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
     ASSERT_NO_THROW(resultBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
     ASSERT_EQ(resultBundle->getResourceCount(), numOfExpectedResources);
 
@@ -169,12 +166,6 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
     const char* const pkvKvnr = "X500000056";
@@ -198,12 +189,6 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-co
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
     const char* const pkvKvnr = "X500000017";
@@ -219,12 +204,6 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent)
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
     const char* const pkvKvnr = "X500000029";
 
@@ -248,12 +227,6 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent209)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
-
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50003);
     const char* const pkvKvnr = "X500000031";
 

@@ -15,7 +15,7 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvCoverage : public Resource<KbvCoverage, ResourceVersion::KbvItaErp>
+class KbvCoverage : public Resource<KbvCoverage>
 {
 public:
     static constexpr auto resourceTypeName = "Coverage";
@@ -27,10 +27,12 @@ public:
     [[nodiscard]] const rapidjson::Value* payorIdentifier() const;
 
 private:
-    friend Resource<KbvCoverage, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvCoverage>;
     explicit KbvCoverage(NumberAsStringParserDocument&& jsonTree);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvCoverage>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVCOVERAGE_HXX_

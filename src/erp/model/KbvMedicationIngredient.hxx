@@ -9,26 +9,29 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONINGREDIENT_HXX
 
 #include "erp/model/KbvMedicationBase.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "erp/model/ProfileType.hxx"
 
 namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationIngredient : public KbvMedicationBase<KbvMedicationIngredient, ResourceVersion::KbvItaErp>
+class KbvMedicationIngredient : public KbvMedicationBase<KbvMedicationIngredient>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::KBV_PR_ERP_Medication_Ingredient;
+    static constexpr auto profileType = ProfileType::KBV_PR_ERP_Medication_Ingredient;
 
     [[nodiscard]] std::optional<std::string_view> amountNumeratorValueAsString() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorCode() const;
     [[nodiscard]] std::optional<std::string_view> ingredientStrengthNumeratorValueAsString() const;
 private:
-    friend Resource<KbvMedicationIngredient, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvMedicationIngredient>;
     explicit KbvMedicationIngredient(NumberAsStringParserDocument&& document);
 };
 
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvMedicationIngredient>;
 }
 
 

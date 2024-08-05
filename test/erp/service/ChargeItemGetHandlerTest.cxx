@@ -34,13 +34,9 @@ public:
 
     void SetUp() override
     {
-        if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-        {
-            GTEST_SKIP();
-        }
         ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
     }
+
 protected:
 
     void insertChargeItem(// NOLINT(readability-function-cognitive-complexity)
@@ -82,9 +78,6 @@ protected:
             auto signedDispenseItem =
                 ::model::Binary{dispenseItem.getIdentifier().toString(),
                                 ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
-
-            auto kbvVersion = model::ResourceVersion::current<model::ResourceVersion::KbvItaErp>();
-            const std::string kbvVersionStr{v_str(kbvVersion)};
 
             auto prescriptionXML = ResourceTemplates::kbvBundlePkvXml({*prescriptionId, model::Kvnr(insurant)});
             auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
@@ -640,10 +633,10 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
             EXPECT_TRUE(nextLink.has_value());
             argument = extractPathAndArguments(nextLink.value());
             EXPECT_EQ(argument,
-                      "/ChargeItem?entered-date=gt2021-09-25T11%3a34%3a56%2b00%3a00&_count=" + std::to_string(paging.first) +
+                      "/ChargeItem?entered-date=gt2021-09-25T11%3a34%3a56%2b00%3a00&_sort=entered-date&_count=" + std::to_string(paging.first) +
                           "&__offset="+ std::to_string(((idx+1) * paging.first) + paging.second));
             EXPECT_EQ(UrlHelper::unescapeUrl(argument),
-                      "/ChargeItem?entered-date=gt2021-09-25T11:34:56+00:00&_count=" + std::to_string(paging.first) +
+                      "/ChargeItem?entered-date=gt2021-09-25T11:34:56+00:00&_sort=entered-date&_count=" + std::to_string(paging.first) +
                           "&__offset="+ std::to_string(((idx+1) * paging.first) + paging.second));
         }
         bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
@@ -660,7 +653,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
     {
         int hasLinkCount = (totalSearch - paging.second)  / paging.first;
         hasLinkCount -= ((totalSearch - paging.second) % paging.first) == 0 ? 1 : 0;
-        std::string argument = { "/ChargeItem?entered-date=le2021-11-25T12%3a34%3a56%2B01%3a00&_count=" +
+        std::string argument = { "/ChargeItem?entered-date=le2021-11-25T12%3a34%3a56%2B01%3a00&_sort=entered-date&_count=" +
                                 std::to_string(paging.first) + "&__offset=" + std::to_string(paging.second)};
         std::optional<model::Bundle> bundle = {};
         std::optional<std::string> nextLink = {};
@@ -672,10 +665,10 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_PagingLinks) // NOLINT(readabi
             EXPECT_TRUE(nextLink.has_value());
             argument = extractPathAndArguments(nextLink.value());
             EXPECT_EQ(argument,
-                      "/ChargeItem?entered-date=le2021-11-25T11%3a34%3a56%2b00%3a00&_count=" + std::to_string(paging.first) +
+                      "/ChargeItem?entered-date=le2021-11-25T11%3a34%3a56%2b00%3a00&_sort=entered-date&_count=" + std::to_string(paging.first) +
                           "&__offset="+ std::to_string(((idx+1) * paging.first) + paging.second));
             EXPECT_EQ(UrlHelper::unescapeUrl(argument),
-                      "/ChargeItem?entered-date=le2021-11-25T11:34:56+00:00&_count=" + std::to_string(paging.first) +
+                      "/ChargeItem?entered-date=le2021-11-25T11:34:56+00:00&_sort=entered-date&_count=" + std::to_string(paging.first) +
                           "&__offset=" + std::to_string(((idx + 1) * paging.first) + paging.second));
         }
         bundle = sendGetRequest(client, jwt, totalSearchMatches, argument);
@@ -918,6 +911,52 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
         sendGetRequest(client, jwt, argument, chargeItemBundle, HttpStatus::Forbidden);
         EXPECT_FALSE(chargeItemBundle.has_value());
     }
+
+    deleteChargeItems(prescriptionIDs);
+}
+
+
+TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_DefaultSort) // NOLINT(readability-function-cognitive-complexity)
+{
+    static const std::string pharmacyA = "606358757";
+    static const std::string pharmacyB = "606358758";
+
+    static const std::vector<std::tuple<std::string, std::string, std::optional<model::Timestamp>>> patientsPharmaciesChargeItems = {
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:00+01:00")},
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-01-01T17:13:30+01:00")},
+        {InsurantA, pharmacyB, model::Timestamp::fromXsDateTime("2021-02-02T17:13:00+01:00")},
+        {InsurantB, pharmacyA, model::Timestamp::fromXsDateTime("2021-03-03T17:13:00+01:00")},
+        {InsurantA, pharmacyA, model::Timestamp::fromXsDateTime("2021-04-04T17:13:00+01:00")},
+        {InsurantC, pharmacyB, model::Timestamp::fromXsDateTime("2021-05-05T17:13:00+01:00")}
+    };
+
+    std::vector<std::string> prescriptionIDs;
+    insertChargeItem(patientsPharmaciesChargeItems, prescriptionIDs, ::MockDatabase::mockAccessCode);
+
+    auto client = createClient();
+
+    std::size_t totalSearchMatches = 0;
+
+    using namespace std::chrono_literals;
+
+    std::vector<model::ChargeItem> chargeItems;
+    std::string path = "/ChargeItem";
+    HttpStatus expectedHttpStatus = HttpStatus::OK;
+    JWT jwt = mJwtBuilder.makeJwtVersicherter(InsurantA);
+    const std::optional<model::Bundle> result = sendGetRequest(client, jwt, totalSearchMatches, path, expectedHttpStatus);
+    if(result.has_value())
+    {
+        for (size_t index = 0; index < result->getResourceCount(); ++index)
+        {
+            ASSERT_NO_FATAL_FAILURE(
+                chargeItems.emplace_back(model::ChargeItem::fromJson(result->getResource(index))));
+        }
+    }
+    EXPECT_EQ(chargeItems.size(), 4);
+
+    A_24438.test("Ensure charge items order by increasing enteredDate");
+    ASSERT_TRUE(std::ranges::is_sorted(chargeItems, std::less{}, &model::ChargeItem::enteredDate));
+    A_24438.finish();
 
     deleteChargeItems(prescriptionIDs);
 }

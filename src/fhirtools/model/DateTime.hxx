@@ -74,8 +74,11 @@ public:
     explicit Date(const std::string& dateStr);
     explicit Date(const date::year_month_day& ymd, Precision precision);
 
+    explicit operator date::year_month_day() const;
+
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const Date& date1);
+
 
     Date() = default;
     Date(const Date&) = default;

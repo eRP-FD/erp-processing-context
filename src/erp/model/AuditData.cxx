@@ -60,6 +60,7 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::POST_Task_activate:
         case model::AuditEventId::POST_Task_accept:
         case model::AuditEventId::POST_Task_reject:
+        case model::AuditEventId::POST_Task_dispense:
         case model::AuditEventId::POST_Task_close:
         case model::AuditEventId::POST_Task_abort_doctor:
         case model::AuditEventId::POST_Task_abort_insurant:

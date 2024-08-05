@@ -103,7 +103,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.14.0"
+                                    def erp_release_version = "1.15.0"
                                     def result = sh(returnStatus: true, script: "cd /media/erp && scripts/ci-build.sh "+
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'")
@@ -196,57 +196,47 @@ pipeline {
                                     projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
                             }
                         }
-                        stage ("after transition (2023 profiles)") {
+                        stage ("Run Tests (erp-test) Testzeitraum 2") {
                             steps {
                                 sh """
+                                    YESTERDAY_DATE=\$(date -d "yesterday" +%Y-%m-%d)
+                                    CURRENT_DATE=\$(date +%Y-%m-%d)
+                                    TOMORROW_DATE=\$(date -d "tomorrow" +%Y-%m-%d)
+                                    # Set environments for resource-views
+                                    ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
+                                    ERP_2024_10_01_VALID_FROM=\$CURRENT_DATE
+                                    ERP_2024_11_01_VALID_FROM=\$TOMORROW_DATE
+                                    set |grep ERP_
                                     # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="2023-07-01" --erp_instance=0 --gtest_output=xml:erp-test-2023.xml
+                                    ./erp-test --erp_instance=1 --gtest_output=xml:erp-test-2.xml
                                 """
                             }
                             post {
                                 always {
-                                    junit "jenkins-build-debug/bin/erp-test-2023.xml"
+                                    junit "jenkins-build-debug/bin/erp-test-2.xml"
                                 }
                             }
                         }
-                        stage ("patched with KBV.ITA.ERP 1.1.2 (2023 profiles)") {
+                        stage ("Run Tests (erp-test) Testzeitraum 3") {
                             steps {
                                 sh """
+                                    YESTERDAY_DATE=\$(date -d "yesterday" +%Y-%m-%d)
+                                    CURRENT_DATE=\$(date +%Y-%m-%d)
+                                    TOMORROW_DATE=\$(date -d "tomorrow" +%Y-%m-%d)
+                                    # Set environments for resource-views
+                                    ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
+                                    ERP_2024_10_01_VALID_FROM=\$YESTERDAY_DATE
+                                    ERP_2024_11_01_VALID_FROM=\$CURRENT_DATE
+                                    set |grep ERP_
                                     # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="2024-01-01" --erp_instance=3 --gtest_output=xml:erp-test-2023-kbv-1.1.2.xml
+                                    ./erp-test --erp_instance=2 --gtest_output=xml:erp-test-3.xml
                                 """
                             }
                             post {
                                 always {
-                                    junit "jenkins-build-debug/bin/erp-test-2023-kbv-1.1.2.xml"
-                                }
-                            }
-                        }
-                        stage ("before transition (2022 profiles)") {
-                            steps {
-                                sh """
-                                    cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="2022-01-01" --erp_instance=1 --gtest_output=xml:erp-test-2022.xml
-                                """
-                            }
-                            post {
-                                always {
-                                    junit "jenkins-build-debug/bin/erp-test-2022.xml"
-                                }
-                            }
-                        }
-                        stage ("in transition (2022+2023 profiles)") {
-                            steps {
-                                sh """
-                                    cd jenkins-build-debug/bin
-                                    ./erp-test --erp_profiles="all" --erp_instance=2 --gtest_output=xml:erp-test-all.xml
-                                """
-                            }
-                            post {
-                                always {
-                                    junit "jenkins-build-debug/bin/erp-test-all.xml"
+                                    junit "jenkins-build-debug/bin/erp-test-3.xml"
                                 }
                             }
                         }
@@ -311,7 +301,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.14.0"
+                                def release_version = "1.15.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -351,7 +341,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.14.0"
+                                def release_version = "1.15.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -462,6 +452,9 @@ pipeline {
     }
 
     post {
+        cleanup {
+            cleanWs()
+        }
         failure {
             script {
                 if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME.startsWith("release/")) {

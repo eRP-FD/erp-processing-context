@@ -25,7 +25,7 @@ public:
 
     // inject a invalid/missing JWT
     std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
-                                const JWT&) override
+                                const JWT&) const override
     {
         std::string jwt;
         switch (mOde)

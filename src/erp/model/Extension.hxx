@@ -16,13 +16,14 @@ namespace model
 {
 class Timestamp;
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
-class Extension : public model::Resource<Extension>
+template<typename ExtensionT>
+ // NOLINTNEXTLINE(bugprone-exception-escape)
+class Extension : public model::Resource<ExtensionT>
 {
 public:
     static constexpr auto resourceTypeName = "Extension";
 
-    using Resource::Resource;
+    using Resource<ExtensionT>::Resource;
     [[nodiscard]] std::optional<bool> valueBoolean() const;
 
     [[nodiscard]] std::optional<std::string_view> valueCode() const;
@@ -50,9 +51,21 @@ public:
     [[nodiscard]] std::optional<std::string_view> valueIdentifierTypeCode() const;
     [[nodiscard]] std::optional<std::string_view> valueIdentifierUse() const;
 
-    friend std::optional<Extension> ResourceBase::getExtension<Extension>(const std::string_view&) const;
+
+    using ResourceBase::getOptionalDoubleValue;
+    using ResourceBase::getOptionalStringValue;
+    using ResourceBase::getValue;
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+class UnspecifiedExtension : public Extension<UnspecifiedExtension>
+{
+public:
+    using Extension::Extension;
+};
+
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<UnspecifiedExtension>;
 }
 
 

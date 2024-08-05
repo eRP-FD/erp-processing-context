@@ -21,7 +21,7 @@ const rapidjson::Pointer valueRelPointer("/value");
 }// namespace
 
 KbvPractitioner::KbvPractitioner(NumberAsStringParserDocument&& document)
-    : Resource<KbvPractitioner, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<KbvPractitioner>(std::move(document))
 {
 }
 
@@ -100,11 +100,6 @@ std::optional<Lanr> KbvPractitioner::zanr() const
 {
     auto zanrString =
         findStringInArray(identifierArrayPointer, systemRelPointer, resource::naming_system::kbvZanr, valueRelPointer);
-    if (! zanrString)
-    {
-        zanrString = findStringInArray(identifierArrayPointer, systemRelPointer,
-                                       resource::naming_system::deprecated::kbvZanr, valueRelPointer);
-    }
     if (! zanrString)
     {
         return std::nullopt;

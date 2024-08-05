@@ -10,7 +10,7 @@
 namespace model
 {
 KbvPracticeSupply::KbvPracticeSupply(NumberAsStringParserDocument&& document)
-    : Resource<KbvPracticeSupply, ResourceVersion::KbvItaErp>(std::move(document))
+    : Resource<KbvPracticeSupply>(std::move(document))
 {
 }
 }

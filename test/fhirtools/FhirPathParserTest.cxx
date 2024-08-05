@@ -39,8 +39,7 @@ public:
         ASSERT_EQ(result[0]->type(), Element::Type::Boolean);
         ASSERT_EQ(result[0]->asBool(), expected) << result;
     }
-    std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> mRepo =
-        DefaultFhirStructureRepository::getWithTest().defaultView();
+    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
     const FhirStructureRepository& repo = *mRepo;
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;

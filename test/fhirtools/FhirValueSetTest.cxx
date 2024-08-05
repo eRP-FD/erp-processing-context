@@ -5,20 +5,19 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/FhirValueSet.hxx"
+#include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 
 #include <gtest/gtest.h>
-
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 
 
 using namespace fhirtools;
 
 class FhirValueSetTest : public ::testing::Test
 {
-public:
-    const FhirStructureRepositoryBackend& repo = DefaultFhirStructureRepository::get();
+protected:
 };
 
 TEST_F(FhirValueSetTest, OperatorSpaceship)
@@ -50,14 +49,16 @@ TEST_F(FhirValueSetTest, OperatorSpaceshipCaseInSensitive)
 
 TEST(FhirValueSetTestContains, run)
 {
+    using namespace fhirtools::version_literal;
     FhirStructureRepositoryBackend repo;
     FhirValueSet::Builder builder;
     builder.url("test");
     builder.name("test");
-    builder.version("test");
+    builder.version("test"_ver);
     builder.newExpand();
-    builder.expandSystem("CodeSystem");
+    builder.expandSystem(DefinitionKey{"CodeSystem"});
     builder.expandCode("Value");
+    builder.initGroup(FhirResourceGroupConst{"test"}, {});
     auto valueSet = builder.getAndReset();
     valueSet.finalize(&repo);
     ASSERT_TRUE(valueSet.finalized());

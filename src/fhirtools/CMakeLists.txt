@@ -46,15 +46,21 @@ target_sources(fhirtools
         parser/ErrorListener.cxx
         parser/FhirPathFixer.cxx
         parser/FhirPathParser.cxx
+        repository/DefinitionKey.cxx
         repository/FhirCodeSystem.cxx
         repository/FhirConstraint.cxx
         repository/FhirElement.cxx
-        repository/FhirKbvKeyTablesView.cxx
+        repository/FhirResourceGroup.cxx
+        repository/FhirResourceGroupConfiguration.cxx
+        repository/FhirResourceGroupConst.cxx
         repository/FhirResourceViewConfiguration.cxx
-        repository/FhirValueSet.cxx
+        repository/FhirResourceViewGroupSet.cxx
+        repository/FhirResourceViewVerifier.cxx
         repository/FhirSlicing.cxx
         repository/FhirStructureDefinition.cxx
         repository/FhirStructureRepository.cxx
+        repository/FhirValueSet.cxx
+        repository/FhirVersion.cxx
         repository/internal/FhirStructureDefinitionParser.cxx
         repository/internal/FhirStructureRepositoryFixer.cxx
         util/SaxHandler.cxx

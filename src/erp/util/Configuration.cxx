@@ -15,6 +15,7 @@
 #include "erp/util/InvalidConfigurationException.hxx"
 #include "erp/util/String.hxx"
 #include "erp/validation/XmlValidator.hxx"
+#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
 #include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
@@ -204,17 +205,6 @@ namespace {
     }
 }
 
-const fhirtools::FhirResourceViewConfiguration& ConfigurationBase::fhirResourceViewConfiguration() const
-{
-    static const auto* tags =
-        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceTags, .flags = 0, .description = ""});
-    static const auto* views =
-        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceViews, .flags = 0, .description = ""});
-
-    static fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration(tags, views);
-    return fhirResourceViewConfiguration;
-}
-
 
 ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
     : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, std::filesystem::current_path()))
@@ -237,8 +227,10 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
         lookupKey(pathPrefix, jsonPath);
     }
 
-    lookupKey("", fhirResourceTags.data());
+    lookupKey("", fhirResourceGroups.data());
     lookupKey("", fhirResourceViews.data());
+    lookupKey("", synthesizeCodesystemPath.data());
+    lookupKey("", synthesizeValuesetPath.data());
 }
 
 const std::string& ConfigurationBase::serverHost() const
@@ -289,7 +281,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVER_CERTIFICATE                             , {"ERP_SERVER_CERTIFICATE"                             , "/erp/server/certificate", Flags::categoryEnvironment, "TLS-Server Certificate used for https endpoints"}},
     {ConfigurationKey::SERVER_PRIVATE_KEY                             , {"ERP_SERVER_PRIVATE_KEY"                             , "/erp/server/certificateKey", Flags::categoryEnvironment|Flags::credential, "Private key for ERP_SERVER_CERTIFICATE"}},
     {ConfigurationKey::SERVER_PROXY_CERTIFICATE                       , {"ERP_SERVER_PROXY_CERTIFICATE"                       , "/erp/server/proxy/certificate", Flags::categoryEnvironment, "Certificate to verify Client-Certificate for connections on tee-server"}},
-    {ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE    , {"ERP_SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE"    , "/erp/fhir-profile-old/fhir-validation/mode", Flags::categoryFunctionalStatic, "Configures when to run the Generic-FHIR-Validator and what to do with the results (disable, detail_only, ignore_errors, require_success)"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD, {"ERP_SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD", "/erp/service/task/activate/entlassRezeptValidityInWorkDays", Flags::categoryFunctional, "Validity duration for Entlassrezepte in days. Including the day of issuing."}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_HOLIDAYS                 , {"ERP_SERVICE_TASK_ACTIVATE_HOLIDAYS"                 , "/erp/service/task/activate/holidays", Flags::categoryFunctionalStatic|Flags::array, "Dates that shall not count as workday, i.e. public holidays. The holidays by name are enum values of holidays, that have no fixed dates."}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_EASTER_CSV               , {"ERP_SERVICE_TASK_ACTIVATE_EASTER_CSV"               , "/erp/service/task/activate/easterCsv", Flags::categoryFunctionalStatic, "Path to a csv file that contains all easter dates. The dates have the format \"mm-dd\""}},
@@ -351,24 +342,10 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL                   , {"ERP_FHIR_PROFILE_OLD_VALID_UNTIL"                   , "/erp/fhir-profile-old/valid-until", Flags::categoryFunctionalStatic, "The system allows to maintain two sets of profiled resource schemas. The \"old profile set\" is optional, but if used all OLD* parameters must be set. The schemas of the \"old profile set\" are valid until this timestamp. There must be no gap between this and ERP_FHIR_PROFILE_VALID_FROM"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV                , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_KBV"                , "/erp/fhir-profile-old/kbv.ita.erp", Flags::array|Flags::categoryFunctionalStatic, "XSD validation schemas for old kbv profiles"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK            , {"ERP_FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK"            , "/erp/fhir-profile-old/de.gematik.erezept-workflow.r4", Flags::categoryFunctionalStatic|Flags::array, "XSD validation schemas for old gematik profiles"}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS_OLD                 , {"ERP_FHIR_STRUCTURE_DEFINITIONS_OLD"                 , "/erp/fhir-profile-old/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of old profiles"}},
-    {ConfigurationKey::ERP_FHIR_VERSION_OLD                           , {"ERP_FHIR_VERSION_OLD"                               , "/erp/fhir-profile-old/erp-fhir-version", Flags::categoryFunctionalStatic, "Identifier for old profile set bundle"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in old profiles. Allowed values: debug, info, warning, error"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile-old/fhir-validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in old profiles. Allowed values: debug, info, warning, error"}},
-    {ConfigurationKey::FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_OLD_PROFILE_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile-old/fhir-validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in old profiles. Allowed values: debug, info, warning, error"}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir-profile/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
-    {ConfigurationKey::ERP_FHIR_VERSION                               , {"ERP_FHIR_VERSION"                                   , "/erp/fhir-profile/erp-fhir-version", Flags::categoryFunctionalStatic, "Identifier for new profile set bundle"}},
-    {ConfigurationKey::FHIR_PROFILE_VALID_FROM                        , {"ERP_FHIR_PROFILE_VALID_FROM"                        , "/erp/fhir-profile/valid-from", Flags::categoryFunctionalStatic, "Start date for accepting resources of new profiles. Ignored when no old profile is set."}},
-    {ConfigurationKey::FHIR_PROFILE_RENDER_FROM                       , {"ERP_FHIR_PROFILE_RENDER_FROM"                       , "/erp/fhir-profile/render-from", Flags::categoryFunctionalStatic, "Date used to determine when to output resources as new profiles. Ignored when no old profile is set."}},
-    {ConfigurationKey::FHIR_PROFILE_PATCH_VALID_FROM                  , {"ERP_FHIR_PROFILE_PATCH_VALID_FROM"                  , "/erp/fhir-profile-patch/valid-from", Flags::categoryFunctionalStatic, "KBV_STICHTAG for KBV.ITA.ERP patch 1.1.2"}},
-    {ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE                     , {"ERP_FHIR_PROFILE_PATCH_REPLACE"                     , "/erp/fhir-profile-patch/replace", Flags::categoryFunctionalStatic, "Path to the KBV.ITA.ERP 1.1.1 package as in FHIR_STRUCTURE_DEFINITIONS"}},
-    {ConfigurationKey::FHIR_PROFILE_PATCH_REPLACE_WITH                , {"ERP_FHIR_PROFILE_PATCH_REPLACE_WITH"                , "/erp/fhir-profile-patch/replace-with", Flags::categoryFunctionalStatic, "Path to the KBV.ITA.ERP 1.1.2 patch"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir-profile/fhir-validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
-    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir-profile/fhir-validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds", Flags::categoryEnvironment, "Blob and VSDM++ Key Cache refresh time. Blobs and VSDM Keys are re-read from database in the given interval."}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device", Flags::categoryEnvironment, "Comma separated list of the HSM devices. Format: \"<port>@<IP address>,<port>@<IP address>,...\""}},
     {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count", Flags::categoryEnvironment, "Maximum number of parallel connections to HSM"}},
@@ -567,22 +544,10 @@ std::vector<std::string> getArrayHelper(const JsonArray& jsonArray)
 
 std::vector<std::string> ConfigurationBase::getArrayInternal(KeyData key) const
 {
-    auto arr = getOptionalArrayInternal(key);
-    if (arr.empty())
-    {
-        throw createMissingKeyException(key, {__FILE__, __LINE__});
-    }
-    return arr;
-}
-
-std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key) const
-{
-    std::vector<std::string> result;
     const auto& value = Environment::get(std::string{key.environmentVariable});
     if (value)
     {
-        result = String::split(value.value(), ';');
-        return result;
+        return String::split(value.value(), ';');
     }
 
     const auto* jsonValue = getJsonValue(key);
@@ -591,7 +556,24 @@ std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key
         Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
         return getArrayHelper(jsonValue->GetArray());
     }
-    return result;
+    throw createMissingKeyException(key, {__FILE__, __LINE__});
+}
+
+std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key) const
+{
+    const auto& value = Environment::get(std::string{key.environmentVariable});
+    if (value)
+    {
+        return String::split(value.value(), ';');
+    }
+
+    const auto* jsonValue = getJsonValue(key);
+    if (jsonValue != nullptr)
+    {
+        Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
+        return getArrayHelper(jsonValue->GetArray());
+    }
+    return {};
 }
 
 std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInternal(KeyData key) const
@@ -655,6 +637,39 @@ const rapidjson::Value* ConfigurationBase::getJsonValue(KeyData key) const
     return nullptr;
 }
 
+std::list<std::pair<std::string, fhirtools::FhirVersion>>
+ConfigurationBase::resourceList(const std::string& jsonPath) const
+{
+    std::list<std::pair<std::string, fhirtools::FhirVersion>> result;
+    const auto* resourceArray =
+        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = jsonPath, .flags = 0, .description = ""});
+    Expect3(resourceArray != nullptr, "missing configuration value: " + jsonPath, std::logic_error);
+    Expect3(resourceArray->IsArray(), "configuration value must be Array: " + jsonPath, std::logic_error);
+    for (const auto& entry : resourceArray->GetArray())
+    {
+        Expect3(entry.IsObject(), "configuration value must be Array of Objects: " + jsonPath, std::logic_error);
+        const auto& url = entry.FindMember("url");
+        Expect3(url != entry.MemberEnd(), "missing url in: " + jsonPath, std::logic_error);
+        Expect3(url->value.IsString(), "url must be String: " + jsonPath, std::logic_error);
+        const auto& version = entry.FindMember("version");
+        Expect3(version != entry.MemberEnd(), "missing version in: " + jsonPath, std::logic_error);
+        if (version->value.IsString())
+        {
+            result.emplace_back(url->value.GetString(), version->value.GetString());
+        }
+        else if (version->value.IsNull())
+        {
+            result.emplace_back(url->value.GetString(), fhirtools::FhirVersion::notVersioned);
+        }
+        else
+        {
+            Fail2("version must be String or null: " + jsonPath, std::logic_error);
+        }
+    }
+    return result;
+}
+
+
 std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const KeyData key) const
 {
     const char* value = Environment::getCharacterPointer(key.environmentVariable.data());
@@ -672,97 +687,10 @@ std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const K
     return SafeString(jsonValue->GetString());
 }
 
-static bool allDefined(const std::optional<model::Timestamp>& oldValidUntil,
-                       const std::optional<std::string>& oldErpFhirVersion, const std::vector<std::string>& oldKbvSchemas,
-                       const std::vector<std::string>& oldGematikSchemas,
-                       const std::optional<model::Timestamp>& profileRenderFrom,
-                       const std::optional<model::Timestamp>& profileValidFrom)
-{
-    return oldValidUntil && profileRenderFrom && oldErpFhirVersion && ! oldKbvSchemas.empty() &&
-           ! oldGematikSchemas.empty() && profileValidFrom;
-}
-
-static bool noneDefined(const std::optional<model::Timestamp>& oldValidUntil,
-                        const std::optional<std::string>& oldErpFhirVersion, const std::vector<std::string>& oldKbvSchemas,
-                        const std::vector<std::string>& oldGematikSchemas,
-                        const std::optional<model::Timestamp>& profileRenderFrom,
-                        const std::optional<model::Timestamp>& profileValidFrom)
-{
-    const auto now = model::Timestamp::now();
-    return (! oldValidUntil || *oldValidUntil <= now) && (! profileRenderFrom || *profileRenderFrom <= now) &&
-           ! oldErpFhirVersion && oldKbvSchemas.empty() && oldGematikSchemas.empty() &&
-           (! profileValidFrom || *profileValidFrom <= now);
-}
-
-static void ensureCorrectOldProfileConfiguration(const std::optional<model::Timestamp>& oldValidUntil,
-                                                 const std::optional<std::string>& oldErpFhirVersion,
-                                                 const std::vector<std::string>& oldKbvSchemas,
-                                                 const std::vector<std::string>& oldGematikSchemas,
-                                                 const std::optional<model::Timestamp>& profileRenderFrom,
-                                                 const std::optional<model::Timestamp>& profileValidFrom)
-{
-    Expect(allDefined(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
-                      profileRenderFrom, profileValidFrom) ||
-               noneDefined(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
-                           profileRenderFrom, profileValidFrom),
-           "configuration for next schema incomplete, all values must be defined: FHIR_PROFILE_OLD_VALID_UNTIL, "
-           "FHIR_PROFILE_OLD_XML_SCHEMA_KBV_VERSION, FHIR_PROFILE_OLD_XML_SCHEMA_KBV, "
-           "FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK_VERSION, "
-           "FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK, FHIR_PROFILE_VALID_FROM, FHIR_PROFILE_RENDER_FROM");
-
-    if (oldValidUntil && profileValidFrom)
-    {
-        using namespace std::chrono_literals;
-        Expect(oldValidUntil->localDay() + date::days{1} >= profileValidFrom->localDay(),
-               "The two configured profiles have a validity gap in between");
-    }
-}
-
 void configureXmlValidator(XmlValidator& xmlValidator)
 {
     const auto& configuration = Configuration::instance();
-
     xmlValidator.loadSchemas(configuration.getArray(ConfigurationKey::XML_SCHEMA_MISC));
-
-    // This is the new profile, or the only profile if only one is supported
-    const auto& profileValidFromStr =
-        configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_VALID_FROM);
-    std::optional<model::Timestamp> profileValidfrom =
-        profileValidFromStr
-            ? std::make_optional(model::Timestamp::fromXsDate(*profileValidFromStr, model::Timestamp::GermanTimezone))
-            : std::nullopt;
-    const auto& profileRenderFromStr =
-        configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_RENDER_FROM);
-    const auto& profileRenderFrom =
-        profileRenderFromStr
-            ? std::make_optional(model::Timestamp::fromXsDate(*profileRenderFromStr, model::Timestamp::GermanTimezone))
-            : std::nullopt;
-    const auto& erpFhirVersion = configuration.getStringValue(ConfigurationKey::ERP_FHIR_VERSION);
-
-    // this is the optional old profile, that is still valid for some grace-period.
-    const auto& oldValidUntilStr = configuration.getOptionalStringValue(ConfigurationKey::FHIR_PROFILE_OLD_VALID_UNTIL);
-    const auto& oldValidUntil =
-        oldValidUntilStr
-            ? std::make_optional(model::Timestamp::fromXsDate(*oldValidUntilStr, model::Timestamp::GermanTimezone))
-            : std::nullopt;
-    const auto& oldKbvSchemas = configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_KBV);
-    const auto& oldErpFhirVersion = configuration.getOptionalStringValue(ConfigurationKey::ERP_FHIR_VERSION_OLD);
-    const auto& oldGematikSchemas =
-        configuration.getOptionalArray(ConfigurationKey::FHIR_PROFILE_OLD_XML_SCHEMA_GEMATIK);
-
-    ensureCorrectOldProfileConfiguration(oldValidUntil, oldErpFhirVersion, oldKbvSchemas, oldGematikSchemas,
-                                         profileRenderFrom, profileValidfrom);
-
-    // check that the configured versions do actually exist
-    (void)model::ResourceVersion::str_vBundled(erpFhirVersion);
-
-
-    if (oldValidUntilStr && oldErpFhirVersion)
-    {
-        (void)model::ResourceVersion::str_vBundled(*oldErpFhirVersion);
-        xmlValidator.loadSchemas(oldKbvSchemas);
-        xmlValidator.loadSchemas(oldGematikSchemas);
-    }
 }
 
 static std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
@@ -795,38 +723,36 @@ std::optional<uint16_t> getEnrolementServerPort (
     return activeForPcPort == pcPort ? std::optional<uint16_t>(enrolmentPort) : std::nullopt;
 }
 
-fhirtools::ValidatorOptions
-Configuration::defaultValidatorOptions(model::ResourceVersion::FhirProfileBundleVersion bundleVersion,
-                                       SchemaType schemaType) const
+fhirtools::ValidatorOptions Configuration::defaultValidatorOptions(model::ProfileType profileType) const
 {
     using enum ConfigurationKey;
     using Severity = fhirtools::Severity;
     const auto& config = Configuration::instance();
     fhirtools::ValidatorOptions options;
-    switch (bundleVersion)
-    {
-        using enum model::ResourceVersion::FhirProfileBundleVersion;
-        case v_2022_01_01:
-            options.levels.mandatoryResolvableReferenceFailure =
-                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
-            options.levels.unreferencedBundledResource =
-                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
-            options.levels.unreferencedContainedResource =
-                config.get<Severity>(FHIR_PROFILE_OLD_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
-            break;
-        case v_2023_07_01:
-        case v_2023_07_01_patch:
-            options.levels.mandatoryResolvableReferenceFailure =
-                config.get<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
-            options.levels.unreferencedBundledResource =
-                config.get<Severity>( FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
-            options.levels.unreferencedContainedResource =
-                config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
-            break;
-    }
-    if (schemaType == SchemaType::KBV_PR_ERP_Bundle)
+    options.levels.mandatoryResolvableReferenceFailure =
+        config.get<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+    options.levels.unreferencedBundledResource =
+        config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+    options.levels.unreferencedContainedResource =
+        config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle)
     {
         options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAuthorRefMode::allow;
+        switch (config.kbvValidationOnUnknownExtension())
+        {
+            using enum Configuration::OnUnknownExtension;
+            using ReportUnknownExtensionsMode = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode;
+            case ignore:
+                options.reportUnknownExtensions = ReportUnknownExtensionsMode::disable;
+                break;
+            case report:
+            case reject:
+                // unknown extensions in closed slicing will be reported as error
+                // open slices will be unslicedWarning
+                options.reportUnknownExtensions = ReportUnknownExtensionsMode::onlyOpenSlicing;
+                break;
+        }
+        return options;
     }
     return options;
 }
@@ -842,11 +768,7 @@ void Configuration::check() const
     (void) kbvValidationOnUnknownExtension();
     (void) kbvValidationNonLiteralAuthorRef();
     (void) anrChecksumValidationMode();
-    for (auto bundleVer: magic_enum::enum_values<model::ResourceVersion::FhirProfileBundleVersion>())
-    {
-        (void)genericValidationMode(bundleVer);
-        (void)defaultValidatorOptions(bundleVer, SchemaType::fhir);
-    }
+    (void) defaultValidatorOptions(model::ProfileType::fhir);
     (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
                                             fhirtools::Severity::error);
     (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
@@ -857,6 +779,8 @@ void Configuration::check() const
 
     (void) prescriptionDigestRefType();
     (void) closeTaskDeviceRefType();
+    (void) synthesizeCodesystem();
+    (void) synthesizeValuesets();
 }
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
@@ -869,23 +793,6 @@ Configuration::NonLiteralAuthorRefMode Configuration::kbvValidationNonLiteralAut
 {
     return getOptional<NonLiteralAuthorRefMode>(
         ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, NonLiteralAuthorRefMode::allow);
-}
-
-
-Configuration::GenericValidationMode
-Configuration::genericValidationMode(model::ResourceVersion::FhirProfileBundleVersion bundleVersion) const
-{
-    switch (bundleVersion)
-    {
-        using enum model::ResourceVersion::FhirProfileBundleVersion;
-        case v_2022_01_01:
-            return getOptional<GenericValidationMode>(ConfigurationKey::SERVICE_OLD_PROFILE_GENERIC_VALIDATION_MODE,
-                                                    GenericValidationMode::ignore_errors);
-        case v_2023_07_01:
-        case v_2023_07_01_patch:
-            return GenericValidationMode::require_success;
-    }
-    Fail2("unknown FhirProfileBundleVersion: " + std::to_string(static_cast<intmax_t>(bundleVersion)), std::logic_error);
 }
 
 Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMode() const
@@ -906,6 +813,32 @@ Configuration::DeviceRefType Configuration::closeTaskDeviceRefType() const
 Configuration::MvoIdValidationMode Configuration::mvoIdValidationMode() const
 {
     return get<MvoIdValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE);
+}
+
+fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration() const
+{
+    static const auto* groups =
+        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceGroups, .flags = 0, .description = ""});
+    return fhirtools::FhirResourceGroupConfiguration(groups);
+}
+
+
+fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration() const
+{
+    static const auto* views =
+        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = fhirResourceViews, .flags = 0, .description = ""});
+
+    return fhirtools::FhirResourceViewConfiguration{fhirResourceGroupConfiguration(), views};
+}
+
+std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem() const
+{
+    return resourceList(std::string{synthesizeCodesystemPath});
+}
+
+std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets() const
+{
+    return resourceList(std::string{synthesizeValuesetPath});
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const

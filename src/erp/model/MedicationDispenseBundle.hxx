@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEBUNDLE_HXX
 
 #include "erp/model/Bundle.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "erp/model/ProfileType.hxx"
 
 namespace model
 {
@@ -18,15 +18,21 @@ namespace model
 class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle>
 {
 public:
-    static constexpr SchemaType schemaType = SchemaType::MedicationDispenseBundle;
+    static constexpr auto profileType = ProfileType::MedicationDispenseBundle;
 
     using BundleBase<MedicationDispenseBundle>::BundleBase;
     using Resource<MedicationDispenseBundle>::fromXml;
     using Resource<MedicationDispenseBundle>::fromJson;
 
+    void prepare() override;
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 
+
+// NOLINTBEGIN(bugprone-exception-escape)
+extern template class BundleBase<MedicationDispenseBundle>;
+extern template class Resource<MedicationDispenseBundle>;
+// NOLINTEND(bugprone-exception-escape)
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEBUNDLE_HXX

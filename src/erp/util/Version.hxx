@@ -23,21 +23,30 @@ public:
     {
     }
 
+    bool operator==(const Version& lhs) const = default;
+
 private:
     class VersionElement;
     std::list<std::list<std::list<VersionElement>>> split() const;
 
     friend std::strong_ordering operator<=>(const Version& lhs, const Version& rhs);
-    friend bool operator==(const Version& lhs, const Version& rhs);
 };
 
 namespace version_literal
 {
-inline Version operator""_ver(const char* ver, size_t len)
+inline Version operator""_ver(const char* ver, size_t)
 {
-    return Version{std::string{ver, len}};
+    return Version{ver};
 }
 }
 
+template<>
+struct std::hash<Version> {
+    static constexpr std::hash<std::string> h{};
+    std::size_t operator()(const Version& ver) const
+    {
+        return h(ver);
+    }
+};
 
 #endif// ERP_PROCESSING_CONTEXT_UTIL_VERSION_HXX

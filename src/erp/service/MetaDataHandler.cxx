@@ -20,6 +20,6 @@ void MetaDataHandler::handleRequest (PcSessionContext& session)
 {
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
-    const model::MetaData metaData(model::ResourceVersion::currentBundle());
+    const model::MetaData metaData{};
     makeResponse(session, HttpStatus::OK, &metaData);
 }

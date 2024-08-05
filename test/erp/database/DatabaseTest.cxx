@@ -99,11 +99,6 @@ public:
 
 TEST_P(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     // create tasks with chargeitems:
     for (const auto& insurant : insurantIds)
     {
@@ -180,11 +175,6 @@ TEST_P(DatabaseTest, chargeItem_basic)//NOLINT(readability-function-cognitive-co
 
 TEST_P(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (model::ResourceVersion::deprecatedProfile(
-            model::ResourceVersion::current<model::ResourceVersion::DeGematikErezeptWorkflowR4>()))
-    {
-        GTEST_SKIP();
-    }
     using namespace std::string_literals;
     const auto& insurant0 = data(insurantIds)[0];
     for (const auto& insurant : insurantIds)

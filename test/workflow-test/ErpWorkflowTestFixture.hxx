@@ -198,6 +198,7 @@ public:
 
     RequestArguments mActivateTaskRequestArgs;
     RequestArguments mAcceptTaskRequestArgs;
+    RequestArguments mDispenseTaskRequestArgs;
     RequestArguments mCloseTaskRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
@@ -238,6 +239,10 @@ public:
         const std::string& accessCode, HttpStatus expectedInnerStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         const std::optional<std::string>& expectedIssueText = {});
+
+    std::optional<model::Bundle> taskDispense(const model::PrescriptionId& prescriptionId,
+        const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
+        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {}, size_t numMedicationDispenses = 1);
 
     std::optional<model::ErxReceipt> taskClose(const model::PrescriptionId& prescriptionId,
         const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
@@ -321,7 +326,7 @@ public:
         const std::string& language,
         const std::string& searchArguments = "");
 
-    std::optional<model::MetaData> metaDataGet(const ContentMimeType& acceptContentType);
+    std::optional<model::MetaData> metaDataGet(const ContentMimeType& acceptContentType) const;
     std::optional<model::Device> deviceGet(const ContentMimeType& acceptContentType);
 
     std::optional<model::Consent> consentPost(
@@ -383,12 +388,11 @@ public:
         const HttpStatus expectedStatus = HttpStatus::NoContent,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    std::optional<model::ChargeItem> chargeItemPatch(
-        const model::PrescriptionId& id,
-        const JWT& jwt,
-        const model::Parameters::MarkingFlag& markingFlag,
-        const HttpStatus expectedStatus = HttpStatus::OK,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
+    std::optional<model::ChargeItem>
+    chargeItemPatch(const model::PrescriptionId& id, const JWT& jwt,
+                    const model::PatchChargeItemParameters::MarkingFlag& markingFlag,
+                    const HttpStatus expectedStatus = HttpStatus::OK,
+                    const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     std::optional<model::Task> createClosedTask(
         std::optional<model::PrescriptionId>& createdId,
@@ -419,6 +423,12 @@ public:
         const std::string& accessCode,
         const std::string& qesBundle,
         bool withConsent = false);
+
+    void checkTaskDispense(
+        const model::PrescriptionId& prescriptionId,
+        const std::string& kvnr,
+        const std::string& secret,
+        size_t numMedicationDispenses = 1);
 
     void checkTaskClose(
         const model::PrescriptionId& prescriptionId,
@@ -488,8 +498,6 @@ public:
 
     void resetClient();
 
-    bool serverUsesOldProfile();
-
     std::string kbvBundleXml(ResourceTemplates::KbvBundleOptions opts);
     std::string kbvBundleMvoXml(ResourceTemplates::KbvBundleMvoOptions opts);
 
@@ -497,35 +505,29 @@ public:
 protected:
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
-                                           const std::string& whenHandedOver,
-                                           model::ResourceVersion::FhirProfileBundleVersion bundleVersion = model::ResourceVersion::currentBundle());
+                                           const std::string& whenHandedOver);
     virtual std::string medicationDispenseBundle(const std::string& kvnr,
                                                  const std::string& prescriptionIdForMedicationDispense,
-                                                 const std::string& whenHandedOver, size_t numMedicationDispenses,
-                                                 model::ResourceVersion::FhirProfileBundleVersion bundleVersion = model::ResourceVersion::currentBundle());
+                                                 const std::string& whenHandedOver, size_t numMedicationDispenses);
 
     static std::string patchVersionsInBundle(const std::string& bundle);
 
     // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
     bool runsInCloudEnv() const;
     bool runsInErpTest() const;
-
-    model::ResourceVersion::DeGematikErezeptWorkflowR4 serverGematikProfileVersion();
-
-    static bool isUnsupportedFlowtype(const model::PrescriptionType workflowType);
+    ResourceTemplates::Versions::GEM_ERP serverGematikProfileVersion() const;
 
 private:
-    void sendInternal(
-        std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args,
-        const std::function<void(std::string&)>& manipEncryptedInnerRequest = {},
-        const std::function<void(Header&)>& manipInnerRequestHeader = {});
+    void sendInternal(std::tuple<ClientResponse, ClientResponse>& result, const RequestArguments& args,
+                      const std::function<void(std::string&)>& manipEncryptedInnerRequest = {},
+                      const std::function<void(Header&)>& manipInnerRequestHeader = {}) const;
     void validateInternal(const ClientResponse& innerResponse);
     void verifyBdeV2Headers(const Header& outerResponseHeader, const ClientResponse& innerResponse,
                             const RequestArguments& args) const;
     virtual std::string creatTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
-                                        const JWT& jwt);
-    virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate, const ClientRequest& request,
-                                                   const JWT& jwt);
+                                        const JWT& jwt) const;
+    virtual std::string creatUnvalidatedTeeRequest(const Certificate& serverPublicKeyCertificate,
+                                                   const ClientRequest& request, const JWT& jwt) const;
 
     void taskCreateInternal(std::optional<model::Task>& task, HttpStatus expectedOuterStatus,
                             HttpStatus expectedInnerStatus,
@@ -542,6 +544,18 @@ private:
         const std::string& accessCode, HttpStatus expectedInnerStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
         const std::optional<std::string>& expectedIssueText);
+
+    void taskDispenseInternal(std::optional<model::Bundle>& receipt,
+        const model::PrescriptionId& prescriptionId,
+        const std::string& secret,
+        const std::string& kvnr,
+        const std::string& prescriptionIdForMedicationDispense, // for test, normally equals prescriptionId;
+        HttpStatus expectedInnerStatus,
+        const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
+        const std::optional<std::string>& expectedErrorText,
+        const std::optional<std::string>& expectedDiagnostics,
+        const std::string& whenHandedOver,
+        size_t numMedicationDispenses);
 
     void taskCloseInternal(std::optional<model::ErxReceipt>& receipt,
         const model::PrescriptionId& prescriptionId,
@@ -602,9 +616,7 @@ private:
         const std::string& language,
         const std::string& searchArguments);
 
-    void metaDataGetInternal(
-        std::optional<model::MetaData>& metaData,
-        const ContentMimeType& acceptContentType);
+    void metaDataGetInternal(std::optional<model::MetaData>& metaData, const ContentMimeType& acceptContentType) const;
 
     void deviceGetInternal(
         std::optional<model::Device>& device,
@@ -664,13 +676,10 @@ private:
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
-    void chargeItemPatchInternal(
-        std::optional<model::ChargeItem>& result,
-        const model::PrescriptionId& id,
-        const JWT& jwt,
-        const model::Parameters::MarkingFlag& markingFlag,
-        const HttpStatus expectedStatus,
-        const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
+    void chargeItemPatchInternal(std::optional<model::ChargeItem>& result, const model::PrescriptionId& id,
+                                 const JWT& jwt, const model::PatchChargeItemParameters::MarkingFlag& markingFlag,
+                                 const HttpStatus expectedStatus,
+                                 const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     void createClosedTaskInternal(
         std::optional<model::Task>& task,
@@ -693,8 +702,7 @@ private:
     std::string toExpectedLeips(const RequestArguments& args) const;
 
 public:
-
-    ClientTeeProtocol teeProtocol;
+    mutable ClientTeeProtocol teeProtocol;
 
     virtual JWT jwtVersicherter() const { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }
     virtual JWT jwtArzt() const { return JwtBuilder::testBuilder().makeJwtArzt(); }
@@ -702,7 +710,7 @@ public:
 
     JWT defaultJwt() const { return jwtVersicherter(); }
 
-    std::string getAuthorizationBearerValueForJwt(const JWT& jwt);
+    static std::string getAuthorizationBearerValueForJwt(const JWT& jwt);
 
     std::string dataPath{std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest"};
 

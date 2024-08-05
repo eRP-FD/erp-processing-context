@@ -14,7 +14,7 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KBVMultiplePrescription : public model::Extension
+class KBVMultiplePrescription : public Extension<KBVMultiplePrescription>
 {
 public:
     class Kennzeichen;
@@ -33,44 +33,46 @@ public:
 
     [[nodiscard]] std::optional<model::Timestamp> startDateTime() const;
     [[nodiscard]] std::optional<model::Timestamp> endDateTime() const;
-
-    friend std::optional<KBVMultiplePrescription> ResourceBase::getExtension<KBVMultiplePrescription>(const std::string_view&) const;
 };
 
-class KBVMultiplePrescription::Kennzeichen : public model::Extension
+class KBVMultiplePrescription::Kennzeichen : public model::Extension<Kennzeichen>
 {
 public:
     using Extension::Extension;
     static constexpr auto url = "Kennzeichen";
-
-    friend std::optional<Kennzeichen> ResourceBase::getExtension<Kennzeichen>(const std::string_view&) const;
 };
 
-class KBVMultiplePrescription::Nummerierung : public model::Extension
+class KBVMultiplePrescription::Nummerierung : public model::Extension<Nummerierung>
 {
 public:
     using Extension::Extension;
     static constexpr auto url = "Nummerierung";
-
-    friend std::optional<Nummerierung> ResourceBase::getExtension<Nummerierung>(const std::string_view&) const;
 };
 
-class KBVMultiplePrescription::Zeitraum : public model::Extension
+class KBVMultiplePrescription::Zeitraum : public model::Extension<Zeitraum>
 {
 public:
     using Extension::Extension;
     static constexpr auto url = "Zeitraum";
-
-    friend std::optional<Zeitraum> ResourceBase::getExtension<Zeitraum>(const std::string_view&) const;
 };
 
-class KBVMultiplePrescription::ID : public model::Extension
+class KBVMultiplePrescription::ID : public model::Extension<ID>
 {
 public:
     using Extension::Extension;
     static constexpr auto url = "ID";
 };
 
+extern template class Extension<KBVMultiplePrescription>;
+extern template class Extension<KBVMultiplePrescription::Kennzeichen>;
+extern template class Extension<KBVMultiplePrescription::Nummerierung>;
+extern template class Extension<KBVMultiplePrescription::Zeitraum>;
+extern template class Extension<KBVMultiplePrescription::ID>;
+extern template class Resource<KBVMultiplePrescription>;
+extern template class Resource<KBVMultiplePrescription::Kennzeichen>;
+extern template class Resource<KBVMultiplePrescription::Nummerierung>;
+extern template class Resource<KBVMultiplePrescription::Zeitraum>;
+extern template class Resource<KBVMultiplePrescription::ID>;
 }
 
 #endif// ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVMULTIPLEPRESCRIPTION_H

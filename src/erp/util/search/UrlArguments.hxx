@@ -39,7 +39,7 @@ class KeyDerivation;
 class UrlArguments
 {
 public:
-    explicit UrlArguments (std::vector<SearchParameter>&& searchParameters);
+    UrlArguments (std::vector<SearchParameter>&& searchParameters, const std::string& defaultSortArgument = {});
 
     void parse(const ServerRequest& request, const KeyDerivation& keyDerivation);
     void parse(const std::vector<std::pair<std::string, std::string>>& queryParameters, const KeyDerivation& keyDerivation);
@@ -57,12 +57,12 @@ public:
      */
     std::string getLinkPathArguments(const model::Link::Type linkType, LinkMode linkMode = LinkMode::offset) const;
 
-    std::unordered_map<model::Link::Type, std::string> getBundleLinks (
+    std::unordered_map<model::Link::Type, std::string> createBundleLinks (
         const std::string& linkBase,
         const std::string& pathHead,
-        const std::size_t& totalSearchMatches) const;
+        const std::size_t& totalSearchMatches);
 
-    std::unordered_map<model::Link::Type, std::string> getBundleLinks(bool hasNextPage, const std::string& linkBase,
+    std::unordered_map<model::Link::Type, std::string> createBundleLinks(bool hasNextPage, const std::string& linkBase,
                                                                       const std::string& pathHead,
                                                                       LinkMode linkMode = LinkMode::offset) const;
 
@@ -102,7 +102,7 @@ public:
 
     /**
      * Add a search argument that is used to limit the result, but
-     * not passed back when requesting links via `getBundleLinks()`
+     * not passed back when requesting links via `createBundleLinks()`
      */
     void addHiddenSearchArgument(SearchArgument arg);
 
@@ -113,6 +113,7 @@ private:
     std::vector<SortArgument> mSortArguments;
     PagingArgument mPagingArgument;
     bool mReverseIncludeAuditEventArgument = false;
+    std::optional<std::string> mDefaultSortArgument;
     friend class TestUrlArguments;
 
     /**

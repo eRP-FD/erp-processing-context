@@ -144,7 +144,7 @@ size_t FhirJsonToXmlConverter::convertMember(xmlNode& targetNode, const std::str
     }
     const auto& contentReference = fhirElementInfo->contentReference();
     Expect3(not contentReference.empty(), "Cannot determine type of: " + fhirElementInfo->name(), std::logic_error);
-    auto ref = mStructureRepository.resolveContentReference(*fhirElementInfo);
+    auto ref = mStructureRepository.resolveContentReference(*fhirParentType.resourceGroup(), *fhirElementInfo);
     (void)convertMemberWithType(targetNode, memberName, ref.baseType, ref.elementType, ref.element, ref.elementIndex,
                                 jsonMember, subObjectOfPrimary);
     return skipElement(fhirParentType, fhirElementIndex);

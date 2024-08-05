@@ -25,7 +25,7 @@ TEST(ParameterTest, CanGetData)
       </parameter>
     </Parameters>)";
 
-    const auto parameter = model::Parameters::fromXmlNoValidation(xml);
+    const auto parameter = model::PatchChargeItemParameters::fromXmlNoValidation(xml);
     ASSERT_EQ(parameter.count(), 1);
     const auto& erxBinary = parameter.findResourceParameter("ErxBinary");
     ASSERT_TRUE(erxBinary);
@@ -86,7 +86,7 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
       ]
     })^";
 
-    const auto parameter = model::Parameters::fromJsonNoValidation(json);
+    const auto parameter = model::PatchChargeItemParameters::fromJsonNoValidation(json);
     ASSERT_EQ(parameter.count(), 2);
 
     std::optional<model::ChargeItemMarkingFlags> chargeItemMarkingFlag{};

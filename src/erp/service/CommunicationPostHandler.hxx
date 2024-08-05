@@ -24,15 +24,8 @@ class CommunicationPostHandler : public ErpRequestHandler
 public:
     CommunicationPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     void handleRequest(PcSessionContext& session) override;
-private:
-    void validateAgainstFhirProfile(
-        model::Communication::MessageType messageType,
-        const model::Communication& communication,
-        const XmlValidator& xmlValidator,
-        const InCodeValidator& inCodeValidator) const;
-    void validateInfoRequest(const model::Communication& communication, const XmlValidator& xmlValidator,
-                             const InCodeValidator& inCodeValidator) const;
 
+private:
     model::Identity validateSender(
         model::Communication::MessageType messageType,
         const std::string& professionOid,
@@ -57,6 +50,8 @@ private:
     void checkForChargeItemReference(const model::PrescriptionId& prescriptionId,
                                      const model::Communication::MessageType& messageType,
                                      const Database* databaseHandle) const;
+
+    static model::Communication getValidatedCommunication(PcSessionContext& session);
 };
 
 

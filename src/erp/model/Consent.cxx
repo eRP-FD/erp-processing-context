@@ -118,13 +118,12 @@ std::pair<Consent::Type, std::string> Consent::splitIdString(const std::string_v
 
 
 Consent::Consent(const Kvnr& kvnr, const model::Timestamp& dateTime)
-    : Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(resource::structure_definition::consent,
-                                                                              []() {
-                                                                                  std::call_once(onceFlag,
-                                                                                                 initTemplates);
-                                                                                  return ConsentTemplate;
-                                                                              }()
-                                                                                  .instance())
+    : Resource(profileType,
+               []() {
+                   std::call_once(onceFlag, initTemplates);
+                   return ConsentTemplate;
+               }()
+                   .instance())
 {
     setPatientKvnr(kvnr);
     setDateTime(dateTime);
@@ -132,7 +131,7 @@ Consent::Consent(const Kvnr& kvnr, const model::Timestamp& dateTime)
 }
 
 Consent::Consent(NumberAsStringParserDocument&& jsonTree)
-    : Resource<Consent, ResourceVersion::DeGematikErezeptPatientenrechnungR4>(std::move(jsonTree))
+    : Resource(std::move(jsonTree))
 {
 }
 
@@ -198,4 +197,9 @@ void Consent::setDateTime(const model::Timestamp& dateTime)
     setValue(dateTimePointer, dateTime.toXsDateTime());
 }
 
+
+std::optional<model::Timestamp> Consent::getValidationReferenceTimestamp() const
+{
+    return Timestamp::now();
+}
 } // namespace model

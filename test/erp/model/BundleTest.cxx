@@ -6,11 +6,11 @@
  */
 
 #include "erp/model/Bundle.hxx"
+#include "erp/model/Kvnr.hxx"
 #include "erp/model/Patient.hxx"
-
-#include "test_config.h"
 #include "erp/util/FileHelper.hxx"
 #include "erp/util/Uuid.hxx"
+#include "test_config.h"
 
 #include <gtest/gtest.h>
 
@@ -21,7 +21,7 @@ class BundleTest : public testing::Test
 
 TEST_F(BundleTest, selfLink)
 {
-    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     bundle.setLink(model::Link::Type::Self, "this is the self link");
 
     ASSERT_TRUE(bundle.getLink(model::Link::Type::Self).has_value());
@@ -32,7 +32,7 @@ TEST_F(BundleTest, selfLink)
 TEST_F(BundleTest, id)
 {
     const Uuid id;
-    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile, id);
+    model::Bundle bundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile, id);
 
     ASSERT_EQ(bundle.getId(), id);
 }
@@ -40,7 +40,7 @@ TEST_F(BundleTest, id)
 
 TEST_F(BundleTest, getResourceType)
 {
-    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
 
     ASSERT_EQ(bundle.getResourceType(), "Bundle");
 }
@@ -48,7 +48,7 @@ TEST_F(BundleTest, getResourceType)
 
 TEST_F(BundleTest, serializeToJsonString)
 {
-    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     bundle.setLink(model::Link::Type::Self, "self");
 
     const auto json = bundle.serializeToJsonString();
@@ -78,7 +78,7 @@ TEST_F(BundleTest, toJsonString)
 
 TEST_F(BundleTest, getResourceSize)//NOLINT(readability-function-cognitive-complexity)
 {
-    model::Bundle bundle(model::BundleType::collection, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
 
     ASSERT_EQ(bundle.getResourceCount(), 0u);
 
@@ -131,7 +131,7 @@ TEST_F(BundleTest, getSignatureWhen)
 
 TEST_F(BundleTest, searchSetTotal0)
 {
-    model::Bundle bundle(model::BundleType::searchset, ::model::ResourceBase::NoProfile);
+    model::Bundle bundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     const auto& document = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(bundle.jsonDocument());
     const rapidjson::Pointer totalPointer("/total");
     ASSERT_TRUE(totalPointer.Get(document));

@@ -38,7 +38,7 @@ public:
 
     /** Moves stored value */
     std::string id() &&;
-    std::string_view namingSystem(bool deprecated) const;
+    std::string_view namingSystem() const;
 
     /** get the type of Kvnr */
     Type getType() const;

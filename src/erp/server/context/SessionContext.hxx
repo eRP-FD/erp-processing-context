@@ -16,8 +16,13 @@
 #include <boost/core/noncopyable.hpp>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
+
+namespace model {
+class KBVMultiplePrescription;
+}
 
 class ServerRequest;
 class ServerResponse;
@@ -49,6 +54,8 @@ public:
 
     void addOuterResponseHeaderField(std::string_view key, std::string_view value);
     const Header::keyValueMap_t& getOuterResponseHeaderFields() const;
+
+    void fillMvoBdeV2(const std::optional<model::KBVMultiplePrescription>& mPExt);
 
 private:
     std::unique_ptr<AuditDataCollector> mAuditDataCollector;

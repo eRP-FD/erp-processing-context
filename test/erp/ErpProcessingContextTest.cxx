@@ -131,6 +131,15 @@ TEST_F(ErpProcessingContextTest, PostTaskReject_ProfessionOIDs)
     });
 }
 
+TEST_F(ErpProcessingContextTest, PostTaskDispense_ProfessionOIDs)
+{
+    A_24279.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$dispense", {
+            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+    });
+}
+
 TEST_F(ErpProcessingContextTest, PostTaskClose_ProfessionOIDs)
 {
     A_19230.test("Unit test of allowedForProfessionOID() function");

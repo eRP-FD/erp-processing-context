@@ -49,9 +49,7 @@ int main(int argc, char* argv[])
             }
             rapidjson::Pointer resourceTypePtr{
                 model::resource::ElementName::path(model::resource::elements::resourceType)};
-            (void)std::move(*factory).getValidated(SchemaType::fhir, *StaticData::getXmlValidator(),
-                                                   *StaticData::getInCodeValidator(),
-                                                   model::ResourceVersion::allBundles());
+            (void) std::move(*factory).getValidated(SchemaType::fhir, model::ResourceVersion::allBundles());
         }
     }
     catch (const ErpException& erpException)

@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_OUTERRESPONSEERRORDATA_HXX
 
 #include "erp/common/HttpStatus.hxx"
-#include "erp/model/Resource.hxx"
+#include "erp/model/ResourceBase.hxx"
 
 namespace model
 {

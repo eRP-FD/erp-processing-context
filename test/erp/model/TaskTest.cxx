@@ -148,16 +148,14 @@ TEST_F(TaskTest, SetStatus)//NOLINT(readability-function-cognitive-complexity)
 TEST_F(TaskTest, SetKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
-    bool isDeprecated =
-        model::ResourceVersion::currentBundle() == model::ResourceVersion::FhirProfileBundleVersion::v_2022_01_01;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_EQ(rapidjson::Pointer(p_kvnr.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_FALSE(task.kvnr().has_value());
 
-    auto nsGkvKvid10Id = isDeprecated ? model::resource::naming_system::deprecated::gkvKvid10 : model::resource::naming_system::gkvKvid10;
     task.setKvnr(model::Kvnr{"X123456788"s, model::Kvnr::Type::gkv});
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr.data())), "X123456788");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())), nsGkvKvid10Id);
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem.data())),
+              model::resource::naming_system::gkvKvid10);
     ASSERT_EQ(task.kvnr(), "X123456788");
 }
 
@@ -331,10 +329,6 @@ TEST_F(TaskTest, SetAndDeleteSecret)//NOLINT(readability-function-cognitive-comp
 TEST_F(TaskTest, SetAndDeleteOwner)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-    auto nsTelematikId = deprecatedBundle(model::ResourceVersion::currentBundle())
-        ? model::resource::naming_system::deprecated::telematicID
-        : model::resource::naming_system::telematicID;
-
 
     ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierSystem.data()).Get(task.jsonDocument()), nullptr);
     ASSERT_EQ(rapidjson::Pointer(p_ownerIdentifierValue.data()).Get(task.jsonDocument()), nullptr);
@@ -342,7 +336,8 @@ TEST_F(TaskTest, SetAndDeleteOwner)//NOLINT(readability-function-cognitive-compl
 
     const std::string_view owner = "Owner";
     task.setOwner(owner);
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_ownerIdentifierSystem.data())), nsTelematikId);
+    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_ownerIdentifierSystem.data())),
+              model::resource::naming_system::telematicID);
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_ownerIdentifierValue.data())), owner);
     ASSERT_EQ(task.owner(), owner);
 

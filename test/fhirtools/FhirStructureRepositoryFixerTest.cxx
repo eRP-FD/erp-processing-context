@@ -5,19 +5,23 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirVersion.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
-TEST(FhirStructureRepositoryTest, BackboneNotSliced)
+TEST(FhirStructureRepositoryFixerTest, BackboneNotSliced)
 {
     using namespace fhirtools;
+    using namespace fhirtools::version_literal;
     const auto& slicedBaseFile =
         ResourceManager::getAbsoluteFilename("test/fhir-path/FhirStructureRepositoryFixer/BackboneNotSliced.xml");
     FhirStructureRepositoryBackend repo;
-    repo.load({slicedBaseFile});
-    const FhirStructureDefinition* backboneNotSliced = repo.findDefinitionByUrl("http://erp.test/BackboneNotSliced");
+    repo.load({slicedBaseFile}, fhirtools::FhirResourceGroupConst{"test"});
+    const FhirStructureDefinition* backboneNotSliced =
+        repo.findDefinition("http://erp.test/BackboneNotSliced", "4.0.1"_ver);
     ASSERT_NE(backboneNotSliced, nullptr);
     auto backboneNotSlicedSliced = backboneNotSliced->findElement(".sliced");
     ASSERT_NE(backboneNotSlicedSliced, nullptr);
@@ -28,15 +32,16 @@ TEST(FhirStructureRepositoryTest, BackboneNotSliced)
     EXPECT_EQ(slicing->discriminators().front().path(), "discriminator");
 }
 
-TEST(FhirStructureRepositoryTest, NotSlicedFromElementType)
+TEST(FhirStructureRepositoryFixerTest, NotSlicedFromElementType)
 {
     using namespace fhirtools;
+    using namespace fhirtools::version_literal;
     const auto& slicedBaseFile = ResourceManager::getAbsoluteFilename(
         "test/fhir-path/FhirStructureRepositoryFixer/NotSlicedFromElementType.xml");
     FhirStructureRepositoryBackend repo;
-    repo.load({slicedBaseFile});
+    repo.load({slicedBaseFile}, fhirtools::FhirResourceGroupConst{"test"});
     const FhirStructureDefinition* backboneNotSliced =
-        repo.findDefinitionByUrl("http://erp.test/NotSlicedFromElementType");
+        repo.findDefinition("http://erp.test/NotSlicedFromElementType", "4.0.1"_ver);
     ASSERT_NE(backboneNotSliced, nullptr);
     auto backboneNotSlicedSliced = backboneNotSliced->findElement(".subElement.sliced");
     ASSERT_NE(backboneNotSlicedSliced, nullptr);

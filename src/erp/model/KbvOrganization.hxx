@@ -14,7 +14,7 @@ namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvOrganization : public Resource<KbvOrganization, ResourceVersion::KbvItaErp>
+class KbvOrganization : public Resource<KbvOrganization>
 {
 public:
     static constexpr auto resourceTypeName = "Organization";
@@ -26,10 +26,12 @@ public:
     [[nodiscard]] std::optional<model::UnspecifiedResource> address() const;
 
 private:
-    friend Resource<KbvOrganization, ResourceVersion::KbvItaErp>;
+    friend Resource<KbvOrganization>;
     explicit KbvOrganization(NumberAsStringParserDocument&& document);
 };
 
+// NOLINTNEXTLINE(bugprone-exception-escape)
+extern template class Resource<KbvOrganization>;
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVORGANIZATION_HXX_

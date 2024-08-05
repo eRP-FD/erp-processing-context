@@ -78,6 +78,7 @@ void TaskAbortHandlerTest::checkCreatedData(
             EXPECT_TRUE(taskWithSecret->secret().has_value());
             EXPECT_TRUE(taskWithSecret->owner().has_value());
             EXPECT_TRUE(receipt.has_value());
+            EXPECT_TRUE(taskWithSecret->lastMedicationDispense().has_value());
         }
     }
 
@@ -116,6 +117,7 @@ void TaskAbortHandlerTest::checkResultingData(
     EXPECT_FALSE(taskAndKey1->task.kvnr().has_value());
     EXPECT_FALSE(taskAndKey1->task.secret().has_value());
     EXPECT_FALSE(taskAndKey1->task.owner().has_value());
+    EXPECT_FALSE(taskAndKey1->task.lastMedicationDispense().has_value());
     ASSERT_ANY_THROW((void)taskAndKey1->task.accessCode());
     EXPECT_FALSE(taskAndKey1->task.healthCarePrescriptionUuid().has_value());
     EXPECT_FALSE(taskAndKey1->task.patientConfirmationUuid().has_value());

@@ -7,15 +7,13 @@
 
 #include "erp/fhir/FhirCanonicalizer.hxx"
 #include "erp/fhir/Fhir.hxx"
-
 #include "erp/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/ResourceNames.hxx"
+#include "erp/model/Timestamp.hxx"
 #include "erp/util/Expect.hxx"
 #include "erp/util/String.hxx"
 
-
 #include <rapidjson/pointer.h>
-
 #include <regex>
 #include <set>
 
@@ -63,8 +61,7 @@ void FhirCanonicalizer::serializeResource( // NOLINT(misc-no-recursion)
     ModelExpect(resourceTypeValue != nullptr, "resourceType not set.");
 
     std::string resourceTypeId{NumberAsStringParserDocument::getStringValueFromValue(resourceTypeValue)};
-    const FhirStructureDefinition* objectStructDef =
-        Fhir::instance().structureRepository(model::Timestamp::now())->findTypeById(resourceTypeId);
+    const FhirStructureDefinition* objectStructDef = Fhir::instance().backend().findTypeById(resourceTypeId);
     ModelExpect(objectStructDef != nullptr, "Unknown resource type: "s.append(resourceTypeId));
 
     serializeObject(immersionDepth, buffer, nullptr, nullptr, *objectStructDef, name, object);
@@ -109,7 +106,7 @@ void FhirCanonicalizer::serializeObject( // NOLINT(misc-no-recursion)
             auto element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
             ModelExpect(element != nullptr, "Element " + elementPath + " does not belong to FHIR structure definition " + objectStructDef.typeId());
             const FhirStructureDefinition* elementStructDef =
-                Fhir::instance().structureRepository(model::Timestamp::now())->findTypeById(element->typeId());
+                Fhir::instance().backend().findTypeById(element->typeId());
             ModelExpect(elementStructDef != nullptr, "Element " + element->typeId() + " is not a valid resource type");
 
             const FhirStructureDefinition* elementBackboneStructDef = nullptr;
@@ -305,7 +302,7 @@ bool FhirCanonicalizer::elementHasToBeRemoved(
             auto element = backboneStructDef == nullptr ? objectStructDef.findElement(elementPath) : backboneStructDef->findElement(elementPath);
             ModelExpect(element != nullptr, "Element " + elementPath + " does not belong to FHIR structure definition " + objectStructDef.typeId());
             const FhirStructureDefinition* elementStructDef =
-                Fhir::instance().structureRepository(model::Timestamp::now())->findTypeById(element->typeId());
+                Fhir::instance().backend().findTypeById(element->typeId());
             ModelExpect(elementStructDef != nullptr, "Element " + element->typeId() + " is not a valid resource type");
             if (elemToBeRemoved->second == elementStructDef->typeId())
             {

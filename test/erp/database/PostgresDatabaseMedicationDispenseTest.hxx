@@ -22,7 +22,6 @@ struct PostgresDatabaseMedicationDispenseTestParams
 class PostgresDatabaseMedicationDispenseTest : public PostgresDatabaseTest, public testing::WithParamInterface<PostgresDatabaseMedicationDispenseTestParams>
 {
 public:
-    PostgresDatabaseMedicationDispenseTest();
     void cleanup() override;
 protected:
     void insertTasks(
@@ -44,7 +43,7 @@ protected:
         const std::string& fileExtension,
         const std::string& marker = std::string()) const;
     bool writeTestOutputFileEnabled = false;
-    std::string_view mNsPrescriptionId;
+
 private:
     model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType = GetParam().type);
     std::vector<model::MedicationDispense> closeTask(
