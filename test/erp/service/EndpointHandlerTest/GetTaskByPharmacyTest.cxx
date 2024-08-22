@@ -138,7 +138,7 @@ public:
         }
         else
         {
-            serverRequest.setQueryParameters({{"pnw", pnw}});
+            serverRequest.setQueryParameters({{"pnw", pnw}, {"_count", "10"}});
         }
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
@@ -189,6 +189,17 @@ public:
         auto& vsdmBlobDb = mServiceContext.getVsdmKeyBlobDatabase();
         vsdmBlobDb.deleteBlob(keyPackage.operatorId(), keyPackage.version());
         EndpointHandlerTest::TearDown();
+    }
+
+    void validateLink(const model::Bundle &bundle, const model::Link::Type type, const std::string &expectPath)
+    {
+        const auto link = bundle.getLink(type);
+        EXPECT_TRUE(link.has_value());
+        const auto url = link.value();
+        const auto pathStart = url.find("/Task");
+        ASSERT_NE(pathStart, std::string::npos);
+        const auto linkedPath = std::string(url.substr(pathStart));
+        EXPECT_EQ(linkedPath, expectPath);
     }
 
     void insertTask(model::PrescriptionType prescriptionType,
@@ -740,4 +751,52 @@ TEST_F(GetTaskByIdByPharmacyTestErp17667, erp17667TaskStatusDataRace)
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     handler.handleRequest(sessionContext);
+}
+
+TEST_F(GetTasksByPharmacyTest, Paging)
+{
+    const auto expiry = model::Timestamp::now() +48h;
+    const int64_t databaseId = 202830;
+    for (int64_t i = 0; i < 30; i++)
+    {
+        insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+            ResourceTemplates::TaskType::Ready,
+            databaseId + i, expiry
+        );
+    }
+    {
+        insertTask(model::PrescriptionType::direkteZuweisung,
+            ResourceTemplates::TaskType::Ready,
+            databaseId + 30, expiry
+        );
+        insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+            ResourceTemplates::TaskType::InProgress,
+            databaseId + 31, expiry
+        );
+        insertTask(model::PrescriptionType::direkteZuweisung,
+            ResourceTemplates::TaskType::InProgress,
+            databaseId + 32, expiry
+        );
+        insertTask(model::PrescriptionType::direkteZuweisung,
+            ResourceTemplates::TaskType::Completed,
+            databaseId + 33, expiry
+        );
+    }
+
+    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pnw = createEncodedPnw(pz);
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+
+    model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    EXPECT_EQ(taskBundle.getBundleType(), model::BundleType::searchset);
+    const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
+    EXPECT_EQ(tasks.size(), 10);
+
+    const auto today = model::Timestamp::now().toGermanDate();
+    const auto self = "/Task?pnw=" + UrlHelper::escapeUrl(pnw) + "&_sort=authored-on";
+    validateLink(taskBundle, model::Link::Type::Self, self + "&_count=10&__offset=0");
+    validateLink(taskBundle, model::Link::Type::Next, self + "&_count=10&__offset=10");
+    validateLink(taskBundle, model::Link::Type::Last, self + "&_count=10&__offset=30");
 }

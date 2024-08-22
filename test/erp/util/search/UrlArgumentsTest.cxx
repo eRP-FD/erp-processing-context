@@ -119,6 +119,9 @@ TEST_F(UrlArgumentsTest, parseWithBundleLinks)//NOLINT(readability-function-cogn
     arguments.addHiddenSearchArgument(
         SearchArgument{SearchArgument::Prefix::LE, "id", "date", SearchParameter::Type::DateAsUuid, timePeriods, {""}});
 
+    const auto linksNoTotal = arguments.createBundleLinks(true, "base", "/Resource");
+    EXPECT_EQ(linksNoTotal.count(model::Link::Last), 0);
+
     const auto links = arguments.createBundleLinks("base", "/Resource", 50);
 
     EXPECT_EQ(links.size(), 5);

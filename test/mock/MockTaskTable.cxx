@@ -82,6 +82,13 @@ uint64_t MockTaskTable::countAllTasksForPatient(const db_model::HashedKvnr& kvnr
     return allTasks.size();
 }
 
+uint64_t MockTaskTable::countAll160Tasks(const db_model::HashedKvnr& kvnr,
+                                                const std::optional<UrlArguments>& search) const
+{
+    auto allTasks = retrieveAllTasksForPatient(kvnr, search, true/*onlyFlowtype160*/, true/*applyOnlySearch*/, false);
+    return allTasks.size();
+}
+
 std::tuple<model::PrescriptionId, model::Timestamp> MockTaskTable::createTask(model::PrescriptionType prescriptionType,
                                                                               model::Task::Status taskStatus,
                                                                               const model::Timestamp& lastUpdated,

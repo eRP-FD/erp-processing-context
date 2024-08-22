@@ -62,10 +62,14 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     // GEMREQ-end A_19406-01#getAll-2
     const auto identifierSearchArgument = arguments->getSearchArgument("identifier");
 
+    A_24443.start("No pagination");
+    arguments->disablePagingArgument();
+    A_24443.finish();
+
     // GEMREQ-start A_19406-01#getAll-3
     A_19406_01.start("Filter MedicationDispense on KVNR of the insured");
     auto* databaseHandle = session.database();
-    const auto [medicationDispenses, hasNextPage] = databaseHandle->retrieveAllMedicationDispenses(kvnr, arguments);
+    const auto medicationDispenses = databaseHandle->retrieveAllMedicationDispenses(kvnr, arguments);
     A_19406_01.finish();
     // GEMREQ-end A_19406-01#getAll-3
     A_22070_02.finish();
@@ -73,16 +77,6 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
 
     // GEMREQ-start A_19406-01#getAll-4
     auto bundle = MedicationDispenseHandlerBase::createBundle(medicationDispenses);
-
-    // We do no longer fill the Bundle.total field, because we cannot calculate it accurately due to possibly
-    // multiple medication dispenses per task. The Bundle.total is optional,
-    // see https://www.hl7.org/fhir/search.html#total
-
-    const auto links = arguments->createBundleLinks(hasNextPage, getLinkBase(), "/MedicationDispense");
-    for (const auto& link : links)
-    {
-        bundle.setLink(link.first, link.second);
-    }
 
     makeResponse(session, HttpStatus::OK, &bundle);
     // GEMREQ-end A_19406-01#getAll-4

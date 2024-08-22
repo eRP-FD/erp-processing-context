@@ -151,7 +151,6 @@ protected:
         std::vector<MedicationDispense>& medicationDispensesResponse,
         std::optional<std::vector<std::string>>&& filters = {},
         std::optional<std::vector<std::string>>&& sortings = {},
-        std::optional<std::pair<size_t, size_t>>&& paging = {},
         HttpStatus expectedHttpStatus = HttpStatus::OK)
     {
         std::string path = "/MedicationDispense";
@@ -195,19 +194,6 @@ protected:
                 }
                 ++idx;
             }
-        }
-        if (paging.has_value())
-        {
-            if (path.find('?') == std::string::npos)
-            {
-                path += "?";
-            }
-            else
-            {
-                path += "&";
-            }
-            path += "_count=" + std::to_string(std::get<0>(*paging));
-            path += "&__offset=" + std::to_string(std::get<1>(*paging));
         }
 
         // Please note that each call to "makeJwtVersicherter" creates a jwt with a different signature.
@@ -714,56 +700,40 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
         std::string kvnrPatient = InsurantA;
         const std::string& pharmacy = pharmacyA.id();
 
-        size_t expectedCountAll = 0;
+        size_t expectedCount = 0;
 
         for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
         {
             if ((std::get<0>(patientAndPharmacy) == kvnrPatient)
                 && (std::get<1>(patientAndPharmacy) == pharmacy))
             {
-                ++expectedCountAll;
+                ++expectedCount;
             }
         }
+        expectedCount *= GetParam();
 
-        expectedCountAll *= GetParam();
-        // Paging.
-        ASSERT_TRUE(expectedCountAll > 50);
-
-        size_t expectedCount = 50 * GetParam();
-        size_t receivedCount = 0;
-
-        while (receivedCount < expectedCountAll)
+        Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
+        std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
+        Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
+        std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
+        std::vector<std::string> filters = {
+            "performer=" + pharmacy,
+            "whenhandedover=gt" + whenHandedOver,
+            "whenprepared=gt" + whenPrepared };
+        std::vector<std::string> sortings = { "-whenhandedover" };
+        std::vector<MedicationDispense> medicationDispenses;
+        sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters), std::move(sortings));
+        // ASSERT to avoid endless loop if less than expected count is returned.
+        ASSERT_EQ(medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
+        if (!medicationDispenses.empty())
         {
-            Timestamp timeWhenHandedOverFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenHandedOver = timeWhenHandedOverFilter.toXsDate(Timestamp::GermanTimezone);
-            Timestamp timeWhenPreparedFilter = Timestamp::now() + std::chrono::hours(-24);
-            std::string whenPrepared = timeWhenPreparedFilter.toXsDate(Timestamp::GermanTimezone);
-            std::vector<std::string> filters = {
-                "performer=" + pharmacy,
-                "whenhandedover=gt" + whenHandedOver,
-                "whenprepared=gt" + whenPrepared };
-            std::vector<std::string> sortings = { "-whenhandedover" };
-            std::optional<std::pair<size_t, size_t>> paging;
-            if (receivedCount > 0)
+            for (size_t idx = 0; idx < medicationDispenses.size()-1; ++idx)
             {
-                paging = {50, receivedCount/GetParam()};
+                const auto& medicationDispenseThis = medicationDispenses[idx];
+                const auto& medicationDispenseNext = medicationDispenses[idx+1];
+                ASSERT_GE(medicationDispenseThis.whenHandedOver(), medicationDispenseNext.whenHandedOver());
             }
-            std::vector<MedicationDispense> medicationDispenses;
-            sendRequest(client, model::Kvnr{kvnrPatient}, {}, medicationDispenses, std::move(filters), std::move(sortings), std::move(paging));
-            // ASSERT to avoid endless loop if less than expected count is returned.
-            ASSERT_EQ(medicationDispenses.size(), expectedCount);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationDispenses);
-            if (!medicationDispenses.empty())
-            {
-                for (size_t idx = 0; idx < medicationDispenses.size()-1; ++idx)
-                {
-                    const auto& medicationDispenseThis = medicationDispenses[idx];
-                    const auto& medicationDispenseNext = medicationDispenses[idx+1];
-                    ASSERT_GE(medicationDispenseThis.whenHandedOver(), medicationDispenseNext.whenHandedOver());
-                }
-            }
-            receivedCount += medicationDispenses.size();
-            expectedCount = std::min(expectedCountAll - receivedCount, 50*GetParam());
         }
     }
 
@@ -997,7 +967,7 @@ TEST_P(MedicationDispenseGetHandlerTest, SeveralTasksGetByIdUnknownId)
     std::vector<std::string> filters = { "performer=" + pharmacyA.id() };
     std::vector<MedicationDispense> medicationDispenses;
     sendRequest(client, kvnrPatient, prescriptionId.toString(), medicationDispenses,
-                std::move(filters), {}, {}, HttpStatus::NotFound);
+                std::move(filters), {}, HttpStatus::NotFound);
     EXPECT_EQ(medicationDispenses.size(), 0);
 }
 

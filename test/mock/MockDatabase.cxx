@@ -139,13 +139,23 @@ uint64_t MockDatabase::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
     return count;
 }
 
-std::tuple<std::vector<db_model::MedicationDispense>, bool>
+uint64_t MockDatabase::countAll160Tasks(const db_model::HashedKvnr& kvnr,
+                                               const std::optional<UrlArguments>& search)
+{
+    uint64_t count = 0;
+    for (const auto& table: mTasks)
+    {
+        count += table.second.countAll160Tasks(kvnr, search);
+    }
+    return count;
+}
+
+std::vector<db_model::MedicationDispense>
 MockDatabase::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                              const std::optional<model::PrescriptionId>& prescriptionId,
                                              const std::optional<UrlArguments>& search)
 {
     std::vector<TestUrlArguments::SearchMedicationDispense> medicationDispenses;
-    bool hasNextPage = false;
     if (prescriptionId.has_value())
     {
         medicationDispenses =
@@ -163,11 +173,6 @@ MockDatabase::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
             TestUrlArguments tua(search.value());
             medicationDispenses = tua.applySearch(std::move(medicationDispenses));
             medicationDispenses = tua.apply(std::move(medicationDispenses));
-            hasNextPage = medicationDispenses.size() > search->pagingArgument().getCount();
-            if (hasNextPage)
-            {
-                medicationDispenses.pop_back();
-            }
         }
     }
     std::vector<db_model::MedicationDispense> resultDispenses;
@@ -176,7 +181,7 @@ MockDatabase::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
     {
         resultDispenses.emplace_back(std::move(md));
     }
-    return {resultDispenses, hasNextPage};
+    return resultDispenses;
 }
 
 std::optional<Uuid> MockDatabase::insertCommunication(

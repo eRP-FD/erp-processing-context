@@ -243,3 +243,74 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
     EXPECT_EQ(taskCount(), 4);
     EXPECT_EQ(taskCount(ready), 3);
 }
+
+TEST_F(PostgresDatabaseTest, predefinedExpiryDate_notOverwritten)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    // part of GetAllTasksHandler::urlArgumentsForTasks
+    UrlArguments arguments (
+        {
+            {"status", "status", SearchParameter::Type::TaskStatus},
+            {"expiry-date", "expiry_date", SearchParameter::Type::SQLDate},
+            {"authored-on", "authored_on", SearchParameter::Type::Date}
+        });
+
+    // in GetAllTasksHandler::handleRequestFromPharmacist expiry-date is set to "ge2024-08-19"
+    // and with query parameter from URL an additional expiry-date is set
+    auto request = ServerRequest(Header());
+    request.setQueryParameters({
+        {"status", "ready"},
+        {"expiry-date", "ge2024-08-19"},
+        {"expiry-date", "ge2022-01-01"}
+        });
+
+    // both parameter are parsed in GetAllTasksHandler::handleRequestFromPharmacist
+    HsmPool mHsmPool{
+        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
+    KeyDerivation mKeyDerivation{mHsmPool};
+    arguments.parse(request, mKeyDerivation);
+
+    // and last PostgresBackendTask::retrieveAllTasksWithAccessCode will call
+    EXPECT_EQ(
+        arguments.getSqlWhereExpression(getConnection(), ""),
+        "(status = 1) AND (expiry_date >= '2024-08-19') AND (expiry_date >= '2022-01-01')");
+}
+
+TEST_F(PostgresDatabaseTest, disablePagingArgument)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    // part of GetAllMedicationDispenseHandler::handleRequest
+    UrlArguments arguments (
+        {
+            {"performer", "performer", SearchParameter::Type::HashedIdentity },
+            {"whenhandedover", "when_handed_over", SearchParameter::Type::Date }
+        });
+    arguments.disablePagingArgument();
+
+    // query parameter from URL setting paging arguments
+    auto request = ServerRequest(Header());
+    request.setQueryParameters({
+        {"_count", "10"},
+        {"__offset", "12"}
+        });
+
+    // both parameter are parsed
+    HsmPool mHsmPool{
+        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
+    KeyDerivation mKeyDerivation{mHsmPool};
+    arguments.parse(request, mKeyDerivation);
+
+    // and last PostgresBackend::retrieveAllMedicationDispenses will call
+    EXPECT_EQ(
+        arguments.getSqlExpression(getConnection(), "", true), "");
+}

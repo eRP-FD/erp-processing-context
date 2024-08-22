@@ -112,7 +112,7 @@ void MockDatabaseProxy::markCommunicationsAsRetrieved(const std::vector<Uuid>& c
     return mDatabase.markCommunicationsAsRetrieved(communicationIds, retrieved, recipient);
 }
 
-std::tuple<std::vector<db_model::MedicationDispense>, bool>
+std::vector<db_model::MedicationDispense>
 MockDatabaseProxy::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
                                                   const std::optional<model::PrescriptionId>& prescriptionId,
                                                   const std::optional<UrlArguments>& search)
@@ -141,6 +141,13 @@ uint64_t MockDatabaseProxy::countAllTasksForPatient(const db_model::HashedKvnr& 
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     return mDatabase.countAllTasksForPatient(kvnr, search);
+}
+
+uint64_t MockDatabaseProxy::countAll160Tasks(const db_model::HashedKvnr& kvnr,
+                                                    const std::optional<UrlArguments>& search)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.countAll160Tasks(kvnr, search);
 }
 
 std::vector<db_model::AuditData>

@@ -227,49 +227,6 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
     }
 }
 
-TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsNextPageLink)//NOLINT(readability-function-cognitive-complexity)
-{
-    auto kvnr = generateNewRandomKVNR().id();
-    std::vector<model::PrescriptionId> tasks;
-    for (size_t i = 0; i < 11; ++i)
-    {
-        tasks.emplace_back(createClosedTask(kvnr));
-    }
-    const auto* const firstNextLink = "_count=5&__offset=5";
-    const auto* secondNextLink = "_count=5&__offset=10";
-
-    const auto* firstPrevLink = "_count=5&__offset=0";
-    const auto* secondPrevLink = "_count=5&__offset=5";
-
-    {
-        auto meds = medicationDispenseGetAll("_count=5", JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
-        ASSERT_FALSE(meds->getLink(model::Link::Prev).has_value());
-        ASSERT_TRUE(meds->getLink(model::Link::Next).has_value());
-        const auto nextLink = meds->getLink(model::Link::Next).value();
-        ASSERT_TRUE(String::ends_with(nextLink, firstNextLink));
-        ASSERT_EQ(meds->getResourceCount(), 5 * GetParam().numMedicationDispenses);
-    }
-
-    {
-        auto meds = medicationDispenseGetAll(firstNextLink, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
-        ASSERT_TRUE(meds->getLink(model::Link::Prev).has_value());
-        const auto prevLink = meds->getLink(model::Link::Prev).value();
-        ASSERT_TRUE(String::ends_with(prevLink, firstPrevLink));
-        ASSERT_TRUE(meds->getLink(model::Link::Next).has_value());
-        const auto nextLink = meds->getLink(model::Link::Next).value();
-        ASSERT_TRUE(String::ends_with(nextLink, secondNextLink));
-        ASSERT_EQ(meds->getResourceCount(), 5 * GetParam().numMedicationDispenses);
-    }
-
-    {
-        auto meds = medicationDispenseGetAll(secondNextLink, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
-        ASSERT_TRUE(meds->getLink(model::Link::Prev).has_value());
-        const auto prevLink = meds->getLink(model::Link::Prev).value();
-        ASSERT_TRUE(String::ends_with(prevLink, secondPrevLink));
-        ASSERT_FALSE(meds->getLink(model::Link::Next).has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
-    }
-}
 
 INSTANTIATE_TEST_SUITE_P(MultipleMedicationDispensesTestPInst, MultipleMedicationDispensesTestP,
                          testing::Values(Params{model::PrescriptionType::apothekenpflichigeArzneimittel, 1},

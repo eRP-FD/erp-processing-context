@@ -189,7 +189,7 @@ void FhirResourceViewConfiguration::check() const
 }
 
 std::optional<date::local_days> fhirtools::FhirResourceViewConfiguration::retrieveDateAndEnvVars(
-    const std::string_view envName, const rapidjson::Pointer& pt, const rapidjson::Value& configItem)
+    const std::string& envName, const rapidjson::Pointer& pt, const rapidjson::Value& configItem)
 {
     const auto* configValue = pt.Get(configItem);
     FPExpect((! configValue) || configValue->IsString(),

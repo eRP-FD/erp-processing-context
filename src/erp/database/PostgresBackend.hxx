@@ -115,9 +115,10 @@ public:
     retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
                                       const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]]
-    std::tuple<std::vector<db_model::MedicationDispense>, bool> retrieveAllMedicationDispenses(
+    std::vector<db_model::MedicationDispense> retrieveAllMedicationDispenses(
         const db_model::HashedKvnr& kvnr,
         const std::optional<model::PrescriptionId>& prescriptionId,
         const std::optional<UrlArguments>& search) override;

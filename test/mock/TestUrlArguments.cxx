@@ -453,10 +453,9 @@ TestUrlArguments::Tasks TestUrlArguments::apply(TestUrlArguments::Tasks&& tasks)
 TestUrlArguments::MedicationDispenses TestUrlArguments::apply(MedicationDispenses&& initialMedicationDispenses) const
 {
     return
-        applyPaging(
-            applySort(
-                applySearch(
-                    std::move(initialMedicationDispenses))));
+        applySort(
+            applySearch(
+                std::move(initialMedicationDispenses)));
 }
 
 
@@ -554,7 +553,7 @@ TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&&
             if (matches("status", std::optional<model::Task::Status>{theTask.status})
                 && matches("authored-on", std::optional<model::Timestamp>{theTask.authoredOn})
                 && matches("modified", std::optional<model::Timestamp>{theTask.lastModified})
-                && matches("expires", std::optional<model::Timestamp>{theTask.expiryDate})
+                && matches("expiry-date", std::optional<model::Timestamp>{theTask.expiryDate})
                 && matches("accept-date", std::optional<model::Timestamp>{theTask.acceptDate}))
             {
                 tasks.emplace_back(std::move(theTask));
@@ -746,45 +745,6 @@ TestUrlArguments::MedicationDispenses TestUrlArguments::applySort(MedicationDisp
     }
     else
         return std::move(medicationDispenses);
-}
-
-
-TestUrlArguments::MedicationDispenses TestUrlArguments::applyPaging(MedicationDispenses&& medicationDispenses) const
-{
-    const auto countArg = mUrlArguments.mPagingArgument.getCount() + 1;
-    const ptrdiff_t offset = gsl::narrow<ptrdiff_t>(mUrlArguments.mPagingArgument.getOffset());
-
-    // find unique prescriptionIds, paging is based on prescription IDs, not the medication dispenses
-    std::unordered_set<std::string> prescriptionIds;
-    for (const auto& item : medicationDispenses)
-    {
-        prescriptionIds.insert(item.prescriptionId.toString());
-    }
-
-    const ptrdiff_t remaining = gsl::narrow<ptrdiff_t>(prescriptionIds.size()) - offset;
-    size_t count = 0;
-    if (remaining > 0)
-        count = std::min(size_t(remaining), countArg);
-
-    MedicationDispenses page;
-    page.reserve(count);
-
-    auto pit = prescriptionIds.begin();
-    std::advance(pit, offset);
-    prescriptionIds.erase(prescriptionIds.begin(), pit);
-    pit = prescriptionIds.begin();
-    std::advance(pit, count);
-    prescriptionIds.erase(pit, prescriptionIds.end());
-
-    for (auto&& item : medicationDispenses)
-    {
-        if (prescriptionIds.find(item.prescriptionId.toString()) != prescriptionIds.end())
-        {
-            page.emplace_back(std::move(item));
-        }
-    }
-
-    return page;
 }
 
 TestUrlArguments::ChargeItemContainer TestUrlArguments::applyPaging(ChargeItemContainer&& chargeItems) const

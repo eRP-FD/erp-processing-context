@@ -71,13 +71,13 @@ std::optional<DatabaseConnectionInfo> DatabaseFrontend::getConnectionInfo() cons
     return mBackend->getConnectionInfo();
 }
 
-std::tuple<std::vector<model::MedicationDispense>, bool>
+std::vector<model::MedicationDispense>
 DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
                                                  const std::optional<UrlArguments>& search)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
 
-    const auto [encryptedResult, hasNextPage] =
+    const auto encryptedResult =
         mBackend->retrieveAllMedicationDispenses(hashedKvnr, {}, search);
 
     std::vector<model::MedicationDispense> resultSet;
@@ -116,7 +116,7 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
             Fail2("unable to detect resource type of stored medication dispense", std::logic_error);
         }
     }
-    return {std::move(resultSet), hasNextPage};
+    return resultSet;
 }
 
 std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
@@ -124,9 +124,8 @@ std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(c
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
 
-    const auto encryptedResultTuple =
+    const auto& encryptedResult =
         mBackend->retrieveAllMedicationDispenses(hashedKvnr, id.getPrescriptionId(), {});
-    const auto& encryptedResult = std::get<std::vector<db_model::MedicationDispense>>(encryptedResultTuple);
 
     Expect(encryptedResult.size() <= 1,
            "invalid number of results of Medication Dispenses: " + std::to_string(encryptedResult.size()));
@@ -544,6 +543,11 @@ std::vector<model::Task> DatabaseFrontend::retrieveAll160TasksWithAccessCode(con
 uint64_t DatabaseFrontend::countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     return mBackend->countAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
+}
+
+uint64_t DatabaseFrontend::countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+{
+    return mBackend->countAll160Tasks(mDerivation.hashKvnr(kvnr), search);
 }
 
 std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communication)

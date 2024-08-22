@@ -144,17 +144,6 @@ ProofInformation proofInformationFromPnw(const SessionContext& context, const st
     return parseProofInformation(context, *ungzippedPnw);
 }
 
-UrlArguments getTaskStatusReadyNotExpiredUrlArgumentsFilter(const KeyDerivation& keyDerivation)
-{
-    ServerRequest dummyRequest{Header{}};
-    dummyRequest.setQueryParameters({{"status", "ready"},{"expires","gt" + model::Timestamp::now().toGermanDate()}});
-
-    UrlArguments result{{{"status", SearchParameter::Type::TaskStatus},{"expires", "expiry_date", SearchParameter::Type::Date}}};
-    result.parse(dummyRequest, keyDerivation);
-
-    return result;
-}
-
 void validateProof(const SessionContext& context, const ProofContent& proofContent)
 {
     A_23451_01.start("Validate the timestamp");
@@ -244,17 +233,7 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     A_19115_01.finish();
     const model::Kvnr kvnr{*kvnrClaim};
 
-    A_24438.start("Set authored-on as default sort argument.");
-    auto arguments =
-        std::optional<UrlArguments>(std::in_place, std::vector<SearchParameter>{
-                                                       {"status", "status", SearchParameter::Type::TaskStatus},
-                                                       {"authored-on", "authored_on", SearchParameter::Type::Date},
-                                                       {"modified", "last_modified", SearchParameter::Type::Date},
-                                                       {"expiry-date", "expiry_date", SearchParameter::Type::SQLDate},
-                                                       {"accept-date", "accept_date", SearchParameter::Type::SQLDate},
-                                                   }, "authored-on");
-    A_24438.finish();
-
+    auto arguments = urlArgumentsForTasks();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
     auto* databaseHandle = session.database();
@@ -399,15 +378,41 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     A_25209.start("Read tasks according to KVNR and with status 'ready'");
     A_23452_02.start("Read tasks according to KVNR and with status 'ready'");
     // GEMREQ-start A_23452-02#retrieveAllTasksForPatient
-    const auto statusReadyFilter = getTaskStatusReadyNotExpiredUrlArgumentsFilter(session.serviceContext.getKeyDerivation());
+    std::vector<std::pair<std::string, std::string>> queryParameters
+        {{"status", "ready"},{"expiry-date", "ge" + model::Timestamp::now().toGermanDate()}};
+    for (const auto& pair : session.request.getQueryParameters())
+    {
+        if (pair.first != "pnw" || pair.first != "PNW")
+        {
+            queryParameters.emplace_back(pair.first, pair.second);
+        }
+    }
+
+    auto arguments = urlArgumentsForTasks();
+    arguments->parse(queryParameters, session.serviceContext.getKeyDerivation());
+
     auto* database = session.database();
-    auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, statusReadyFilter);
+    auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, arguments);
     // GEMREQ-end A_23452-02#retrieveAllTasksForPatient
     A_23452_02.finish();
     A_25209.finish();
 
     model::Bundle responseBundle{model::BundleType::searchset, model::FhirResourceBase::NoProfile};
-    responseBundle.setTotalSearchMatches(tasks.size());
+    std::size_t totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), tasks.size())
+                                         ? database->countAll160Tasks(kvnr, arguments)
+                                         : tasks.size();
+
+    auto argumentsResp = urlArgumentsForTasks({
+        {"pnw", "pnw", SearchParameter::Type::String},
+        {"PNW", "PNW", SearchParameter::Type::String}
+    });
+    argumentsResp->parse(session.request.getQueryParameters(), session.serviceContext.getKeyDerivation());
+    const auto links = argumentsResp->createBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
+    for (const auto& link : links)
+    {
+        responseBundle.setLink(link.first, link.second);
+    }
+    responseBundle.setTotalSearchMatches(totalSearchMatches);
 
     for (auto& task : tasks)
     {
@@ -417,6 +422,27 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     }
 
     return responseBundle;
+}
+
+std::optional<UrlArguments> GetAllTasksHandler::urlArgumentsForTasks(
+    const std::vector<SearchParameter>& searchParamsAddon)
+{
+    std::vector<SearchParameter> searchParams {
+        {"status", "status", SearchParameter::Type::TaskStatus},
+        {"authored-on", "authored_on", SearchParameter::Type::Date},
+        {"modified", "last_modified", SearchParameter::Type::Date},
+        {"expiry-date", "expiry_date", SearchParameter::Type::SQLDate},
+        {"accept-date", "accept_date", SearchParameter::Type::SQLDate}
+    };
+    for (const auto& searchParameter : searchParamsAddon)
+    {
+        searchParams.push_back(searchParameter);
+    }
+
+    A_24438.start("Set authored-on as default sort argument.");
+    std::optional<UrlArguments> arguments = UrlArguments(std::move(searchParams), "authored-on");
+    A_24438.finish();
+    return arguments;
 }
 
 GetTaskHandler::GetTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOIDs)

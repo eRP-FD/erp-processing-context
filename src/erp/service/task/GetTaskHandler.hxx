@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_TASK_GETTASKHANDLER_HXX
 
 #include "erp/service/task/TaskHandler.hxx"
+#include "erp/util/search/SearchParameter.hxx"
 
 
 class GetAllTasksHandler : public TaskHandlerBase
@@ -22,6 +23,9 @@ private:
 
     void handleRequestFromPharmacist(PcSessionContext& session);
     model::Bundle handleRequestFromPharmacist(PcSessionContext& session, const model::Kvnr& kvnr);
+
+    std::optional<UrlArguments> urlArgumentsForTasks(
+        const std::vector<SearchParameter>& searchParamsAddon = {});
 };
 
 

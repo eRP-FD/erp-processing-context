@@ -80,7 +80,6 @@ private:
     AuditDataContainer applyPaging (AuditDataContainer&& auditEvents) const;
 
     MedicationDispenses applySort(MedicationDispenses&& tasks) const;
-    MedicationDispenses applyPaging(MedicationDispenses&& tasks) const;
 };
 
 extern template bool

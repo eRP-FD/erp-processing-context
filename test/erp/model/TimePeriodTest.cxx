@@ -190,3 +190,14 @@ TEST_F(TimePeriodTest, fromFhirSearchDate_optionalTimeZone)//NOLINT(readability-
         EXPECT_EQ(period.end(), periodTz.end());
     }
 }
+
+TEST_F(TimePeriodTest, fromDatabaseUuid_success)
+{
+    {
+        //const TimePeriod period = TimePeriod::fromDatabaseUuid("01ebc91d-3b36-a2b8-590e-7045e1630593");
+        const auto *const dbUuid = "01ebc91d-3b2d-d0e8-0000-000000000000";
+        const TimePeriod period = TimePeriod::fromDatabaseUuid(dbUuid);
+        const auto converted = period.begin().toDatabaseSUuid();
+        EXPECT_EQ(dbUuid, converted);
+    }
+}

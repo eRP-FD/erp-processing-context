@@ -273,6 +273,8 @@ std::optional<std::string_view> BundleBase<DerivedBundle>::getLink(const Link::T
         case Link::Type::Self: return findStringInArray(linkPointer, relationPointer, valueLinkRelationSelf, urlPointer);
         case Link::Type::Prev: return findStringInArray(linkPointer, relationPointer, valueLinkRelationPrev, urlPointer);
         case Link::Type::Next: return findStringInArray(linkPointer, relationPointer, valueLinkRelationNext, urlPointer);
+        case Link::Type::First: return findStringInArray(linkPointer, relationPointer, valueLinkRelationFirst, urlPointer);
+        case Link::Type::Last: return findStringInArray(linkPointer, relationPointer, valueLinkRelationLast, urlPointer);
         default:             return {};
     }
 }

@@ -150,6 +150,8 @@ namespace
 
     QUERY(countAllTasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task_view WHERE kvnr_hashed = $1)--")
 
+    QUERY(countAll160TasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task WHERE kvnr_hashed = $1)--")
+
     QUERY(storeConsent, R"--(
         INSERT INTO erp.consent (kvnr_hashed, date_time) VALUES ($1, $2)
     )--")
@@ -334,7 +336,7 @@ std::optional<DatabaseConnectionInfo> PostgresBackend::getConnectionInfo() const
 }
 
 
-std::tuple<std::vector<db_model::MedicationDispense>, bool>
+std::vector<db_model::MedicationDispense>
 PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnrHashed,
                                                 const std::optional<model::PrescriptionId>& prescriptionId,
                                                 const std::optional<UrlArguments>& search)
@@ -380,15 +382,7 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
                                db_model::Blob{res[3].as<db_model::postgres_bytea>()});
     }
 
-    bool hasNextPage = search.has_value() && resultSet.size() > search->pagingArgument().getCount();
-    if (hasNextPage)
-    {
-        // We are retrieving paging.count() + 1 items to determine if there is another page.
-        // Therefore, remove the +1 item from the result again.
-        resultSet.pop_back();
-    }
-
-    return std::make_tuple(std::move(resultSet), hasNextPage);
+    return resultSet;
 }
 
 CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource)
@@ -738,6 +732,15 @@ uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kv
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
                                                                         "PostgreSQL:countAllTasksForPatient");
     return PostgresBackendHelper::executeCountQuery(*mTransaction, countAllTasksByKvnr.query, kvnr, search, "tasks");
+}
+
+uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr,
+                                                  const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                        "PostgreSQL:countAll160TasksByKvnr");
+    return PostgresBackendHelper::executeCountQuery(*mTransaction, countAll160TasksByKvnr.query, kvnr, search, "tasks");
 }
 
 std::optional<Uuid> PostgresBackend::insertCommunication(const model::PrescriptionId& prescriptionId,

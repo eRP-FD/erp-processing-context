@@ -117,9 +117,10 @@ public:
                                                                 const std::optional<UrlArguments>& search) = 0;
     virtual std::vector<model::Task> retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>
-    [[nodiscard]] virtual std::tuple<std::vector<model::MedicationDispense>, bool>
+    [[nodiscard]] virtual std::vector<model::MedicationDispense>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     [[nodiscard]] virtual std::optional<model::MedicationDispense>
     retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) = 0;

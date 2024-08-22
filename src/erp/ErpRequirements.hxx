@@ -219,6 +219,7 @@ static Requirement A_19406_01("E-Rezept-Fachdienst - MedicationDispense abrufen 
 static Requirement A_19518   ("E-Rezept-Fachdienst - Suchparameter für MedicationDispense");
 static Requirement A_19140   ("Logische Operation - Dispensierinformationen durch Versicherten abrufen");
 static Requirement A_19141   ("Logische Operation - Dispensierinformation für ein einzelnes E-Rezept abrufen");
+static Requirement A_24443   ("E-Rezept-Fachdienst - Handhabung der Rückgabe von mehreren FHIR-Objekten - Paginierung");
 
 // Requirements for endpoint /ChargeItem and /ChargeItem/<id>
 static Requirement A_22111   ("E-Rezept-Fachdienst - ChargeItem - unzulässige Operationen");

@@ -29,8 +29,8 @@ class FhirStructureRepository;
 class FhirStructureRepositoryBackend;
 
 struct KeyData {
-    std::string_view environmentVariable;
-    std::string_view jsonPath;
+    std::string environmentVariable;
+    std::string jsonPath;
 };
 
 class FhirResourceViewConfiguration
@@ -82,7 +82,7 @@ private:
     friend std::ostream& operator<<(std::ostream& os, const ViewConfig& view);
 
     void check() const;
-    std::optional<date::local_days> retrieveDateAndEnvVars(const std::string_view envName, const rapidjson::Pointer& pt,
+    std::optional<date::local_days> retrieveDateAndEnvVars(const std::string& envName, const rapidjson::Pointer& pt,
                                                            const rapidjson::Value& configItem);
 
     std::multimap<date::local_days, std::shared_ptr<ViewConfigInternal>> mResourceViews;

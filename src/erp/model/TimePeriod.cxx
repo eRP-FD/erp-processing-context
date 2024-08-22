@@ -112,7 +112,7 @@ TimePeriod TimePeriod::fromDatabaseUuid(const std::string& uuid)
 {
     const auto timestamp = model::Timestamp::fromDatabaseSUuid(uuid);
     // the database suuid is always a dateTime timstamp
-    return TimePeriod(timestamp, addOneSecond(timestamp));
+    return TimePeriod(timestamp, model::Timestamp(timestamp.toChronoTimePoint() + std::chrono::microseconds(1)));
 }
 
 

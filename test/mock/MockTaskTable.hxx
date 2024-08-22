@@ -116,6 +116,8 @@ public:
                                                             bool applyOnlySearch, bool withAccessCode) const;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) const;
+    uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
+                                     const std::optional<UrlArguments>& search) const;
 
     std::vector<TestUrlArguments::SearchMedicationDispense>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,

@@ -89,8 +89,10 @@ public:
     retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
     countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t
+    countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] std::tuple<std::vector<model::MedicationDispense>, bool>
+    [[nodiscard]] std::vector<model::MedicationDispense>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
                                    const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::optional<model::MedicationDispense>

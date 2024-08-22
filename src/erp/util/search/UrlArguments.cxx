@@ -534,7 +534,7 @@ UrlArguments::createBundleLinks(bool hasNextPage, const std::string& linkBase, c
     links.emplace(model::Link::Type::First,
                  linkBase + pathHead + getLinkPathArguments(model::Link::Type::First, linkMode));
 
-    if (linkMode == LinkMode::offset)
+    if (linkMode == LinkMode::offset && mPagingArgument.getTotalSearchMatches() > 0)
     {
         links.emplace(model::Link::Type::Last,
                     linkBase + pathHead + getLinkPathArguments(model::Link::Type::Last, linkMode));
@@ -576,13 +576,16 @@ std::string UrlArguments::getSqlExpression(const pqxx::connection& connection, c
             queryTail += "\n" + indentation + order;
     }
 
-    const std::string paging = getSqlPagingExpression(oneAdditionalItemPerPage);
-    if ( ! paging.empty())
+    if ( ! mPagingArgument_disabled)
     {
-        if (indentation.empty())
-            queryTail += " " + paging;
-        else
-            queryTail += "\n" + indentation + paging;
+        const std::string paging = getSqlPagingExpression(oneAdditionalItemPerPage);
+        if ( ! paging.empty())
+        {
+            if (indentation.empty())
+                queryTail += " " + paging;
+            else
+                queryTail += "\n" + indentation + paging;
+        }
     }
 
     return queryTail;
@@ -962,6 +965,11 @@ bool UrlArguments::hasReverseIncludeAuditEventArgument() const
 const PagingArgument& UrlArguments::pagingArgument() const
 {
     return mPagingArgument;
+}
+
+void UrlArguments::disablePagingArgument()
+{
+    mPagingArgument_disabled = true;
 }
 
 std::optional<SearchArgument> UrlArguments::getSearchArgument(const std::string_view& name) const

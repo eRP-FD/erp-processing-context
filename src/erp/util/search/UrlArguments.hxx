@@ -98,6 +98,7 @@ public:
     bool hasReverseIncludeAuditEventArgument() const;
 
     const PagingArgument& pagingArgument() const;
+    void disablePagingArgument();
     [[nodiscard]] std::optional<SearchArgument> getSearchArgument(const std::string_view& name) const;
 
     /**
@@ -112,6 +113,7 @@ private:
     std::vector<SearchArgument> mHiddenSearchArguments;
     std::vector<SortArgument> mSortArguments;
     PagingArgument mPagingArgument;
+    bool mPagingArgument_disabled = false;
     bool mReverseIncludeAuditEventArgument = false;
     std::optional<std::string> mDefaultSortArgument;
     friend class TestUrlArguments;
