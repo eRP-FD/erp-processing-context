@@ -40,6 +40,7 @@ void MedicationDispenseBundle::prepare()
         ModelExpect(! viewList.empty(), "Invalid reference timestamp: " + referenceTimestamp->toXsDateTime());
         std::shared_ptr<const fhirtools::FhirStructureRepository> repoView;
         repoView = viewList.match(std::addressof(fhirInstance.backend()), key.url, *key.version);
+        ErpExpect(repoView != nullptr, HttpStatus::BadRequest, "Invalid meta.profile: " + std::string(*profileName));
 
         setProfile(value(model::profileWithVersion(ProfileType::MedicationDispenseBundle, *repoView)));
     }

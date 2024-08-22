@@ -623,6 +623,58 @@ TEST_F(CloseTaskTest, EmptyBody_WithMedicationDispense)//NOLINT(readability-func
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
 }
 
+TEST_F(CloseTaskTest, ErpExceptionWithOldProfile)//NOLINT(readability-function-cognitive-complexity)
+{
+    using namespace std::string_literals;
+
+    CloseTaskHandler handler({});
+    const auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
+    const Header requestHeader{HttpMethod::POST,
+                         "/Task/" + prescriptionId.toString() + "/$close/",
+                         0,
+                         {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                         HttpStatus::Unknown};
+
+    const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                       .telematikId = telematikId};
+    const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(dispenseOptions);
+    const auto medicationDispenseBundleXml =
+        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
+
+    /* ERP-22297: remove meta/profile */
+    const std::string medicationDispenseBundleProfile{profile(model::ProfileType::MedicationDispenseBundle).value()};
+    std::string medicationDispenseBundleXmlNoProfile = regex_replace(medicationDispenseBundleXml,
+        std::regex{"<meta><profile value=\"" +
+        medicationDispenseBundleProfile + "\\|" + to_string(ResourceTemplates::Versions::GEM_ERP_current()) +
+        "\"/></meta>"}, "");
+    EXPECT_TRUE(medicationDispenseBundleXmlNoProfile.find("<meta><profile value="
+        "\"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle") == std::string::npos);
+
+    /* ERP-22706: MedicationDispense with old meta/profile */
+    const std::string medicationDispenseProfile{profile(model::ProfileType::Gem_erxMedicationDispense).value()};
+    std::string medicationDispenseBundleXmlOldProfile = String::replaceAll(medicationDispenseBundleXmlNoProfile,
+        medicationDispenseProfile + "|" + to_string(ResourceTemplates::Versions::GEM_ERP_current()),
+        medicationDispenseProfile + "|1.0");
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwtPharmacy);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+
+    for (const auto& payload : {medicationDispenseBundleXmlOldProfile})
+    {
+        mockDatabase.reset();
+        serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+        serverRequest.setBody(payload);
+        ServerResponse serverResponse;
+        AccessLog accessLog;
+        SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+        ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+        ASSERT_THROW(handler.handleRequest(sessionContext), ErpException);
+    }
+}
+
 TEST(CloseTaskConfigTest, defaultValues)
 {
     std::vector<EnvironmentVariableGuard> unsetEnv;
