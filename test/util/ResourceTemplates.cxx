@@ -311,7 +311,7 @@ std::string taskJson(const TaskOptions& taskOptions)
     return task;
 }
 
-std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions)
+std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions, std::string path /* = "" */)
 {
     auto& resourceManager = ResourceManager::instance();
     std::string templateFileName;
@@ -321,7 +321,14 @@ std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions)
             templateFileName = "test/EndpointHandlerTest/charge_item_POST_template.xml";
             break;
         case ChargeItemOptions::OperationType::Put:
-            templateFileName = "test/EndpointHandlerTest/charge_item_PUT_template.xml";
+            if (path.empty())
+            {
+                templateFileName = "test/EndpointHandlerTest/charge_item_PUT_template.xml";
+            }
+            else
+            {
+                templateFileName = "test/EndpointHandlerTest/" + path;
+            }
             break;
     }
     const auto& prescriptionId = chargeItemOptions.prescriptionId;

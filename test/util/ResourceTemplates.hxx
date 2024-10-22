@@ -167,7 +167,7 @@ struct ChargeItemOptions
     } operation;
 };
 
-std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions);
+std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions, std::string path = "");
 
 // ensure we get a warning, when we leave somethin uninitialized when using designated init:
 //NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init)

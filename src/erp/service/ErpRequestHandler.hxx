@@ -91,7 +91,7 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& cont
         resourceFactory.genericValidationMode(model::GenericValidationMode::disable);
     }
     auto profileType = resourceFactory.profileType();
-    return std::move(resourceFactory).getValidated(profileType);
+    return std::move(resourceFactory).getValidated(profileType, nullptr);
 }
 
 

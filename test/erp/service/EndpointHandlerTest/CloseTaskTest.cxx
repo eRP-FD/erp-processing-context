@@ -688,3 +688,53 @@ TEST(CloseTaskConfigTest, defaultValues)
     ASSERT_TRUE(metaVersionId.has_value());
     EXPECT_EQ(*metaVersionId, "1");
 }
+
+TEST_F(CloseTaskTest, CloseTask_FutureLastModified)//NOLINT(readability-function-cognitive-complexity)
+{
+    const auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4799);
+
+    // Create a task with lastModified later than now() in order to simulate a clock skew.
+    {
+        const auto lastModified = model::Timestamp::now() + std::chrono::minutes(5);
+
+        const auto taskX = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = prescriptionId,
+             .timestamp = lastModified}));
+
+        const auto& kbvBundleX = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId}));
+        const auto healthCarePrescriptionUuidX = taskX.healthCarePrescriptionUuid().value();
+        const auto healthCarePrescriptionBundleX = model::Binary(healthCarePrescriptionUuidX, kbvBundleX).serializeToJsonString();
+
+        mockDatabase->insertTask(taskX, std::nullopt, healthCarePrescriptionBundleX);
+    }
+
+    CloseTaskHandler handler({});
+
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+
+    const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                       .telematikId = telematikId};
+    const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(dispenseOptions);
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwtPharmacy);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+    serverRequest.setBody(medicationDispenseXml);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
+        handler.handleRequest(sessionContext), HttpStatus::InternalServerError,
+        "in-progress date later than completed time.");
+
+    mockDatabase.reset();
+}

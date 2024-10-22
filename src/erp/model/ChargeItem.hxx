@@ -81,6 +81,8 @@ public:
 
     std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
+    void prepare() override;
+
 private:
     friend Resource<ChargeItem>;
     explicit ChargeItem(NumberAsStringParserDocument&& jsonTree);

@@ -336,3 +336,31 @@ TEST_F(ChargeItemPutHandlerTest, PutNonPkvFails)
         ADD_FAILURE() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
     }
 }
+
+TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(readability-function-cognitive-complexity)
+{
+    const auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
+    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+
+    const auto newDispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
+    auto newDispenseBundle = model::Bundle::fromXmlNoValidation(newDispenseBundleXml);
+    // set new ID to check update
+    newDispenseBundle.setId(Uuid());
+    CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
+                                        newDispenseBundle.serializeToXmlString(), std::nullopt};
+    const auto chargeItemXml = ResourceTemplates::chargeItemXml(
+        {.kvnr = pkvKvnr,
+         .prescriptionId = pkvTaskId,
+         .dispenseBundleBase64 = cadesBesSignature.getBase64(),
+         .operation = OperationType::Put}, "charge_item_with_profile_PUT_template.xml");
+    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+    inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
+    const auto jwtPharmacy =
+        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
+
+    const ContentMimeType contentType = ContentMimeType::fhirXmlUtf8;
+    std::optional<model::ChargeItem> resultChargeItem;
+    ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
+                                                      inputChargeItem, pkvTaskId, HttpStatus::OK));
+}

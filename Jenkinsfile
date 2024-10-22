@@ -317,7 +317,7 @@ pipeline {
                                 image.push()
 
                                 // SBOM generation
-                                sh "syft --file erp-processing-context-syft-bom.xml --output cyclonedx-xml de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}"
+                                sh "syft --file erp-processing-context-syft-bom.xml --output cyclonedx-xml@1.4 de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}"
                                 archiveArtifacts allowEmptyArchive: true, artifacts: '*bom.xml', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
                             }
                         }
@@ -355,7 +355,7 @@ pipeline {
                                 image.push()
 
                                 // SBOM generation
-                                sh "syft --file blob-db-initialization-syft-bom.xml --output cyclonedx-xml de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}"
+                                sh "syft --file blob-db-initialization-syft-bom.xml --output cyclonedx-xml@1.4 de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}"
                                 archiveArtifacts allowEmptyArchive: true, artifacts: '*bom.xml', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
                             }
                         }

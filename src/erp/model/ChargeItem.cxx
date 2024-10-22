@@ -397,4 +397,17 @@ std::optional<model::Timestamp> ChargeItem::getValidationReferenceTimestamp() co
     return Timestamp::now();
 }
 
+void ChargeItem::prepare()
+{
+    if (valueSize(containedBinaryArrayPointer) <= 1)
+    {
+        const rapidjson::Pointer containedBinaryArrayMetaPointer(ElementName::path(elements::contained, 0, elements::meta));
+        removeElement(containedBinaryArrayMetaPointer);
+    }
+    else
+    {
+        TVLOG(2) << "Unexpected contained array size in charge item.";
+    }
+}
+
 }// namespace model

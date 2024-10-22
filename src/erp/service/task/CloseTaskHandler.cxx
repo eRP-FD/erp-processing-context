@@ -136,6 +136,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
     const auto inProgressDate = task.lastModifiedDate();
     const auto completedTimestamp = model::Timestamp::now();
+    ErpExpect(inProgressDate < completedTimestamp, HttpStatus::InternalServerError, "in-progress date later than completed time.");
     const auto linkBase = getLinkBase();
     const auto& configuration = Configuration::instance();
     const auto authorIdentifier = generateCloseTaskDeviceRef(configuration.closeTaskDeviceRefType(), linkBase);
