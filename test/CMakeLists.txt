@@ -23,6 +23,7 @@ set(ERP_TEST_UTIL_SOURCES
         util/TestConfiguration.cxx
         util/TestUtils.cxx
         util/ResourceManager.cxx
+        util/ResourceTemplates.cxx
         )
 
 add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
@@ -101,7 +102,6 @@ set(ERP_TEST_LIB_SOURCES
         util/CryptoHelper.cxx
         util/EnvironmentVariableGuard.hxx
         util/JwtBuilder.cxx
-        util/ResourceTemplates.cxx
         util/StaticData.cxx
 )
 
@@ -169,6 +169,7 @@ list(
         erp/database/DatabaseCodecTest.cxx
         erp/database/DatabaseEncryptionTest.cxx
         erp/database/DatabaseTest.cxx
+        erp/database/ErpDatabaseModelTest.cxx
         erp/database/PostgresBackendTest.cxx
         erp/database/PostgresDatabaseCommunicationTest.cxx
         erp/database/PostgresDatabaseMedicationDispenseTest.cxx
@@ -185,6 +186,7 @@ list(
         erp/fhir/FhirStructureDefinitionParserTest.cxx
         erp/fhir/FhirStructureDefinitionTest.cxx
         erp/fhir/FhirStructureRepositoryTest.cxx
+        erp/fhir/FhirTransformatorTest.cxx
         erp/hsm/BlobCacheTest.cxx
         erp/hsm/BlobDatabaseEntryTest.cxx
         erp/hsm/BlobDatabaseTest.cxx
@@ -207,11 +209,13 @@ list(
         erp/model/DeviceTest.cxx
         erp/model/ErxReceiptTest.cxx
         erp/model/ExtensionTest.cxx
+        erp/model/GemErpPrMedicationTest.cxx
         erp/model/JsonCanonicalizationTest.cxx
         erp/model/JsonCanonicalizationTestModel.cxx
         erp/model/JsonMaintainNumberPrecisionTest.cxx
         erp/model/JsonMaintainNumberPrecisionTestModel.cxx
         erp/model/KvnrTest.cxx
+        erp/model/MedicationDispenseOperationParametersTest.cxx
         erp/model/MedicationDispenseTest.cxx
         erp/model/MetaDataTest.cxx
         erp/model/OperationOutcomeTest.cxx
@@ -264,7 +268,9 @@ list(
         erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
+        erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.cxx
         erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
+        erp/service/EndpointHandlerTest/MedicationDispenseGetEndpointTest.cxx
         erp/service/EndpointHandlerTest/RejectTaskTest.cxx
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
@@ -440,6 +446,7 @@ target_link_libraries (
         CONAN_PKG::gtest
         )
 
-add_custom_target(test DEPENDS erp-test erp-integration-test erp-connection-test resources)
+add_custom_target(test DEPENDS erp-test erp-integration-test erp-connection-test exporter-test resources)
 
 add_subdirectory(fhirtools)
+add_subdirectory(exporter)

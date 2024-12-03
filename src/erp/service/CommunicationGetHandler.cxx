@@ -7,10 +7,10 @@
 
 #include "erp/service/CommunicationGetHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Identity.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
 

@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/JsonLog.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/JsonLog.hxx"
+#include "shared/util/Configuration.hxx"
 
 #include <gtest/gtest.h>
 

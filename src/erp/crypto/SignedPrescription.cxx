@@ -5,9 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "SignedPrescription.hxx"
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/pc/ProfessionOid.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/common/VauErrorCode.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/util/Expect.hxx"
 
 SignedPrescription SignedPrescription::fromBin(const std::string& content, TslManager& tslManager)
 {

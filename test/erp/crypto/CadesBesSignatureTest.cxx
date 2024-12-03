@@ -7,18 +7,18 @@
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/tsl/OcspHelper.hxx"
-#include "erp/tsl/OcspService.hxx"
-#include "erp/tsl/TslManager.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/SafeString.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/tsl/OcspHelper.hxx"
+#include "shared/tsl/OcspService.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/SafeString.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
@@ -729,5 +729,37 @@ TEST_F(CadesBesSignatureTest, ocspRequestFailure)
         {
             ADD_FAILURE() << "unexpected exception";
         }
+    }
+}
+
+TEST_F(CadesBesSignatureTest, getTelematikId)
+{
+    model::TelematikId referenceTelematikId{"2-HBA-Testkarte-883110000129087"};
+    CadesBesSignature cadesBesSignature(
+        Base64::encode(FileHelper::readFileAsString(::std::string(TEST_DATA_DIR) + "/issues/ERP-5822/kbv_bundle.p7s")));
+    std::optional<model::TelematikId> telematikId;
+    ASSERT_NO_THROW(telematikId = cadesBesSignature.getTelematikId());
+    EXPECT_EQ(referenceTelematikId.id(), telematikId->id());
+}
+
+TEST_F(CadesBesSignatureTest, getTelematikId2)
+{
+    model::TelematikId referenceTelematikId{"1-HBA-Testkarte-883110000129084"};
+    std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
+        FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
+    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
+    std::string signedText;
+    {
+        CadesBesSignature cms{cert, privKey, std::string{myText}};
+        ASSERT_NO_THROW(signedText = cms.getBase64());
+    }
+    {
+        CadesBesSignature cms{ signedText};
+        std::optional<model::TelematikId> telematikId;
+        ASSERT_NO_THROW(telematikId = cms.getTelematikId());
+        EXPECT_EQ(telematikId->id(), referenceTelematikId.id());
     }
 }

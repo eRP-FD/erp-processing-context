@@ -6,9 +6,9 @@
  */
 
 #include "erp/database/RedisClient.hxx"
-#include "erp/model/Timestamp.hxx"
 #include "erp/registration/RegistrationManager.hxx"
-#include "erp/util/health/ApplicationHealth.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/health/ApplicationHealth.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/TestConfiguration.hxx"
 
@@ -93,13 +93,24 @@ TEST_F(RegistrationManagerTest, RegistrationBasedOnApplicationHealth)//NOLINT(re
     RegistrationManager registrationManager(teeHost, config.serverPort(), std::move(uniqueRedisClient));
 
     ApplicationHealth applicationHealth;
+
+    std::vector<ApplicationHealth::Service> services;
+    const auto allService = magic_enum::enum_values<ApplicationHealth::Service>();
+    std::copy_if(allService.begin(), allService.end(), std::back_inserter(services),
+                 [](ApplicationHealth::Service service) {
+                     return service != ApplicationHealth::Service::EventDb;
+                 });
+
+    for (const auto& item : services)
+    {
+        applicationHealth.enableCheck(item);
+    }
     ASSERT_FALSE(registrationManager.registered());
     ASSERT_NO_THROW(registrationManager.updateRegistrationBasedOnApplicationHealth(applicationHealth));
     ASSERT_FALSE(registrationManager.registered());
 
     for (const auto& item : magic_enum::enum_values<ApplicationHealth::Service>())
     {
-        //
         applicationHealth.up(item);
     }
 

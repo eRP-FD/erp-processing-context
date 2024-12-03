@@ -5,21 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/Device.hxx"
+#include "erp/model/ErxReceipt.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MetaData.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/service/AuditEventCreator.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/DeviceHandler.hxx"
 #include "erp/service/MetaDataHandler.hxx"
@@ -33,14 +29,21 @@
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/FileHelper.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "mock/crypto/MockCryptography.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/audit/AuditEventCreator.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
+#include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
@@ -1206,8 +1209,14 @@ void checkGetConsentHandler(
     if(expectedStatus == HttpStatus::OK)
     {
         std::optional<model::Bundle> consentBundle;
-        ASSERT_NO_THROW(
-            consentBundle.emplace(model::Bundle::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())));
+        const auto& fhirInstance = Fhir::instance();
+        const auto& backend = fhirInstance.backend();
+        auto viewList = fhirInstance.structureRepository(model::Timestamp::now());
+        auto view = viewList.match(&backend, std::string{model::resource::structure_definition::consent},
+                                   ResourceTemplates::Versions::GEM_ERPCHRG_current());
+        ASSERT_NO_THROW(consentBundle.emplace(
+            model::ResourceFactory<model::Bundle>::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())
+                .getValidated(model::ProfileType::fhir, view)));
         ASSERT_TRUE(consentBundle);
         ASSERT_LE(consentBundle->getResourceCount(), 1);
         if(consentBundle->getResourceCount() == 1)
@@ -1625,7 +1634,9 @@ std::vector<std::string> makeTestParameters(const fs::path& basePath, const std:
 }
 }
 
-class EndpointHandlerTestPatchChargeItemInvalidParameters : public EndpointHandlerTestT<testing::TestWithParam<std::string>>
+class EndpointHandlerTestPatchChargeItemInvalidParameters
+    : public EndpointHandlerTest,
+      public testing::WithParamInterface<std::string>
 {
 };
 

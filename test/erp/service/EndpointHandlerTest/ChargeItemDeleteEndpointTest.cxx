@@ -1,7 +1,7 @@
 #include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
 
-#include "EndpointHandlerTest.hxx"
-#include "erp/util/Demangle.hxx"
+#include "EndpointHandlerTestFixture.hxx"
+#include "shared/util/Demangle.hxx"
 #include "test/util/StaticData.hxx"
 
 class ChargeItemDeleteEndpointTest : public EndpointHandlerTest {

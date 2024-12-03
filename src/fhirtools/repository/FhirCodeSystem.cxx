@@ -6,7 +6,7 @@
  */
 
 #include "fhirtools/repository/FhirCodeSystem.hxx"
-#include "erp/util/Version.hxx"
+#include "shared/util/Version.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirResourceGroup.hxx"
 
@@ -273,7 +273,7 @@ FhirCodeSystem FhirCodeSystem::Builder::getAndReset()
     FhirCodeSystem prev{std::move(*mCodeSystem)};
     mCodeSystem = std::make_unique<FhirCodeSystem>();
     mConceptStack.clear();
-    FPExpect3(prev.mGroup, "group not set for: " + prev.getUrl() + '|' + to_string(prev.getVersion()),
+    FPExpect3(prev.mGroup, "Missing group in CodeSystem: " + prev.getUrl() + '|' + to_string(prev.getVersion()),
               std::logic_error);
     return prev;
 }

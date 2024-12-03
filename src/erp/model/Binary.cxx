@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/Binary.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
@@ -55,23 +55,30 @@ rapidjson::Pointer metaVersionIdPointer{"/meta/versionId"};
 
 Binary::Binary(std::string_view id, std::string_view data, const Type type,
                const std::optional<std::string_view>& metaVersionId)
-    : Resource<Binary>(
-          [type]() -> Resource::Profile {
-              switch (type)
-              {
-                  case Type::PKCS7:
-                      return ProfileType::Gem_erxBinary;
-                  case Type::Digest:
-                      return ProfileType::Gem_erxDigest;
-              }
-              Fail("Unhandled type value.");
-              return Resource::NoProfile;
-          }(),
-          []() {
-              std::call_once(onceFlag, initTemplates);
-              return BinaryTemplate;
-          }()
-              .instance())
+    : Binary{id, data,
+             [type]() -> Resource::Profile {
+                 switch (type)
+                 {
+                     case Type::PKCS7:
+                         return ProfileType::Gem_erxBinary;
+                     case Type::Digest:
+                         return ProfileType::Gem_erxDigest;
+                 }
+                 Fail("Unhandled type value.");
+                 return Resource::NoProfile;
+             }(),
+             type, metaVersionId}
+{
+}
+
+model::Binary::Binary(std::string_view id, std::string_view data, const Profile& profile, const Type type,
+                      const std::optional<std::string_view>& metaVersionId)
+    : Resource<Binary>(profile,
+                       []() {
+                           std::call_once(onceFlag, initTemplates);
+                           return BinaryTemplate;
+                       }()
+                           .instance())
 {
     setValue(idPointer, id);
     setValue(dataPointer, data);

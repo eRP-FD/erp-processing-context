@@ -8,11 +8,11 @@
 #ifndef EPA_TEST_UTIL_TSLHELPER_HXX
 #define EPA_TEST_UTIL_TSLHELPER_HXX
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/tsl/TrustStore.hxx"
-#include "erp/tsl/TslManager.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/tsl/TrustStore.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"

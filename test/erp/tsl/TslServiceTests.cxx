@@ -7,13 +7,13 @@
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/tsl/OcspService.hxx"
-#include "erp/tsl/TrustStore.hxx"
-#include "erp/tsl/TslService.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/tsl/OcspService.hxx"
+#include "shared/tsl/TrustStore.hxx"
+#include "shared/tsl/TslService.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TPMPROXYAPI_HXX
 #define ERP_PROCESSING_CONTEXT_TPMPROXYAPI_HXX
 
-#include "erp/enrolment/EnrolmentHelper.hxx"
+#include "shared/enrolment/EnrolmentHelper.hxx"
 
 #include "tools/EnrolmentApiClient.hxx"
 

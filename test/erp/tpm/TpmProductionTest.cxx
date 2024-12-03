@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tpm/Tpm.hxx"
-#include "erp/tpm/TpmProduction.hxx"
+#include "shared/tpm/Tpm.hxx"
+#include "shared/tpm/TpmProduction.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
-#include "erp/hsm/BlobCache.hxx"
+#include "shared/hsm/BlobCache.hxx"
 
 #include <gtest/gtest.h>
 

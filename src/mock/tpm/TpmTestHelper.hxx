@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TPMTESTHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_TPMTESTHELPER_HXX
 
-#include "erp/tpm/Tpm.hxx"
+#include "shared/tpm/Tpm.hxx"
 
 #include <functional>
 #include <memory>

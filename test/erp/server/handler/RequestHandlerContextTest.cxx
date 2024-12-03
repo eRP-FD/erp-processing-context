@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/server/handler/RequestHandlerContext.hxx"
+#include "shared/server/handler/RequestHandlerContext.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 
 #include <gtest/gtest.h>

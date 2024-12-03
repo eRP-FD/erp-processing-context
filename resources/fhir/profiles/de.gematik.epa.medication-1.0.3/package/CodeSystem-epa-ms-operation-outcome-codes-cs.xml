@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="epa-ms-operation-outcome-codes-cs"/>
+  <url value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-codes-cs"/>
+  <version value="1.0.3"/>
+  <name value="EPAMSOperationOutcomeCS"/>
+  <title value="EPA Medication Service OperationOutcome CodeSystem"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="EPA Medication Service Operation Outcome CodeSystem"/>
+  <content value="complete"/>
+  <count value="8"/>
+  <concept>
+    <code value="MEDICATIONSVC_NO_VALID_STRUCTURE"/>
+    <display value="Invalid Data Structure in Medication Service"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_PRESCRIPTION_NO_EXIST"/>
+    <display value="Prescription Not Found in Medication Service"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_PRESCRIPTION_DUPLICATE"/>
+    <display value="Duplicate Prescription Detected in Medication Service"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_PRESCRIPTION_STATUS"/>
+    <display value="Operation Not Permitted on Current Prescription Status"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_DISPENSATION_NO_EXIST"/>
+    <display value="Dispensation Not Found in Medication Service"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_DISPENSATION_STATUS"/>
+    <display value="Operation Not Permitted on Current Dispensation Status"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_OPERATION_SUCCESS"/>
+    <display value="Operation Successfully Completed in Medication Service"/>
+  </concept>
+  <concept>
+    <code value="MEDICATIONSVC_PARAMETERS_REFERENCE_NO_EXIST"/>
+    <display value="Unresolved Reference in Parameters"/>
+  </concept>
+</CodeSystem>

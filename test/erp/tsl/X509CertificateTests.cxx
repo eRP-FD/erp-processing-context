@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/tsl/TslService.hxx"
-#include "erp/tsl/X509Certificate.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/tsl/TslService.hxx"
+#include "shared/tsl/X509Certificate.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 
 #include <gtest/gtest.h>
@@ -498,3 +498,14 @@ TEST_F(X509CertificateTests, VerifyEcdsaSignedCertificate)
     EXPECT_FALSE(certificateEcdsa.signatureIsValidAndWasSignedBy(certificateEcdsa));
 }
 // GEMREQ-end GS-A_4361-02#VerifyEcdsaSignedCertificate
+
+
+TEST_F(X509CertificateTests, GetTelematikId)
+{
+    const std::string certificateString = "MIIDpDCCA0ugAwIBAgIHAIdnUk67xjAKBggqhkjOPQQDAjCBqTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxIDAeBgNVBGEMF1VTdC1JZE5yLiBERSAwMDk5NzQ1OTMzMTYwNAYDVQQLDC1RdWFsaWZpemllcnRlciBWREEgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkdFTS5IQkEtcUNBNiBURVNULU9OTFkwHhcNMjAwNjEwMDAwMDAwWhcNMjUwNjA5MjM1OTU5WjBwMQswCQYDVQQGEwJERTFhMAwGA1UEBAwFT3TDrXMwFAYDVQQqDA1Hw7xudGhlciBHcmFmMBsGA1UEBRMUODAyNzY4ODMxMTAwMDAxMjkwODQwHgYDVQQDDBdHw7xudGhlciBPdMOtc1RFU1QtT05MWTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAARWlKcfW0m68/TET8EeRTIDKz6jg8W5gO53LgcGVuH2OUgkSG3+K8uPnKnBCB1uJh7ZR4CnGVKBlspDNCOt7qsYo4IBkzCCAY8wGwYJKwYBBAHAbQMFBA4wDAYKKwYBBAHAbQMFATAiBggrBgEFBQcBAwQWMBQwCAYGBACORgEBMAgGBgQAjkYBBDAMBgNVHRMBAf8EAjAAMB8GA1UdIwQYMBaAFCTZChFbJmvfkp4YpIn0uEodL2NsMB0GA1UdDgQWBBRa+NF9ioAMs/XDGMH0zuzpvAYqYzAOBgNVHQ8BAf8EBAMCBkAwOQYDVR0gBDIwMDAJBgcqghQATARIMAkGBwQAi+xAAQIwCgYIKoIUAEwEgREwDAYKKwYBBAGCzTMBATA4BggrBgEFBQcBAQQsMCowKAYIKwYBBQUHMAGGHGh0dHA6Ly9laGNhLmdlbWF0aWsuZGUvb2NzcC8weQYFKyQIAwMEcDBupCgwJjELMAkGA1UEBhMCREUxFzAVBgNVBAoMDmdlbWF0aWsgQmVybGluMEIwQDA+MDwwDgwMw4RyenRpbi9Bcnp0MAkGByqCFABMBB4THzEtSEJBLVRlc3RrYXJ0ZS04ODMxMTAwMDAxMjkwODQwCgYIKoZIzj0EAwIDRwAwRAIgOnPRGFiOQwW7yl0rRvd48ZufBhAlTCUNQ7vNy5jbt+sCIBc/kta/QHQdgnuTkANjPgdWAOX9rL6rxuan+s+OpXwU";
+
+    const auto telematikIdCertificate{X509Certificate::createFromBase64(certificateString)};
+
+    EXPECT_EQ("1-HBA-Testkarte-883110000129084", telematikIdCertificate.getTelematikId());
+}
+

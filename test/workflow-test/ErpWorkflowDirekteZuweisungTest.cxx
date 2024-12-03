@@ -8,7 +8,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceManager.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 
 
 class ErpWorkflowDirekteZuweisungTestP : public ErpWorkflowTestP

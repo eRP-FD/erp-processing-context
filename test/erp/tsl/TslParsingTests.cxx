@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Timestamp.hxx"
-#include "erp/tsl/TslParser.hxx"
-#include "erp/tsl/X509Certificate.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/tsl/TslParser.hxx"
+#include "shared/tsl/X509Certificate.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/util/ResourceManager.hxx"

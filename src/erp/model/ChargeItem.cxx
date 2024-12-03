@@ -6,11 +6,12 @@
  */
 
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 #include <rapidjson/pointer.h>
+#include <mutex>
 
 using namespace ::std::literals;
 

@@ -8,7 +8,7 @@
 // NOLINTBEGIN
 #include <gtest/gtest.h>
 // NOLINTEND
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"

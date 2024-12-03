@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Buffer.hxx"
+#include "shared/util/Buffer.hxx"
 
 #include <gtest/gtest.h>
 

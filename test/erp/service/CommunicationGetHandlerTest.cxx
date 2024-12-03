@@ -7,11 +7,11 @@
 
 #include "erp/service/CommunicationGetHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/util/JsonTestUtils.hxx"
@@ -39,7 +39,7 @@ public:
         {
             mIsInitialCleanupRequired = false;
 
-            auto connection = std::make_unique<pqxx::connection>(PostgresBackend::defaultConnectString());
+            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
 
             // There is no predefined method for this. Run an adhoc SQL query.
             for (const std::string user : {InsurantF, InsurantG, InsurantH})

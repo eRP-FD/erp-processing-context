@@ -6,9 +6,9 @@
  */
 #include <gtest/gtest.h>
 
-#include "erp/hsm/BlobCache.hxx"
+#include "shared/hsm/BlobCache.hxx"
 
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <atomic>
 #include <test/util/TestUtils.hxx>

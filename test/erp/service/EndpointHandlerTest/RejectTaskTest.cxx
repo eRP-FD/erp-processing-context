@@ -5,19 +5,21 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "erp/service/task/DispenseTaskHandler.hxx"
+#include "erp/service/task/GetTaskHandler.hxx"
+#include "erp/service/task/RejectTaskHandler.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/model/OperationOutcome.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceTemplates.hxx"
-
-#include <erp/model/OperationOutcome.hxx>
-#include <erp/service/task/DispenseTaskHandler.hxx>
-#include <erp/service/task/GetTaskHandler.hxx>
-#include <erp/service/task/RejectTaskHandler.hxx>
+#include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 class RejectTaskTest : public EndpointHandlerTest
 {
@@ -107,11 +109,10 @@ protected:
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         ASSERT_NO_THROW(getTaskHandler.handleRequest(sessionContext));
-
-        const auto& options = Configuration::instance().defaultValidatorOptions(model::ProfileType::KBV_PR_ERP_Bundle);
-        auto bundle = model::ResourceFactory<model::Bundle>::fromXml(
-                          serverResponse.getBody(), *StaticData::getXmlValidator(), {.validatorOptions = options})
-                          .getValidated(model::ProfileType::fhir);
+        std::optional<model::UnspecifiedResource> unspec;
+        ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody())));
+        ASSERT_NO_THROW(testutils::bestEffortValidate(*unspec));
+        auto bundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument());
         auto tasks = bundle.getResourcesByType<model::Task>();
         ASSERT_EQ(tasks.size(), 1);
         ASSERT_FALSE(tasks[0].secret().has_value());
@@ -156,7 +157,7 @@ TEST_F(RejectTaskTest, MedicationDispenseDeleted)
     testTask([](model::Task& savedTask)
     {
         // GEMREQ-start A_24286#test1
-        A_24286.test("task.lastMedicationDispense has been deleted");
+        A_24286_02.test("task.lastMedicationDispense has been deleted");
         EXPECT_FALSE(savedTask.lastMedicationDispense().has_value());
         // GEMREQ-end A_24286#test1
     });

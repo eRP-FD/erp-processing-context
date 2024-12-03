@@ -1,0 +1,145 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2024
+# (C) Copyright IBM Corp. 2021, 2024
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-medication-exporter
+  namespace: %NAMESPACE%
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: erp-medication-exporter
+      serverpod: erp-medication-exporter
+  template:
+    metadata:
+      labels:
+        app: erp-medication-exporter
+        serverpod: erp-medication-exporter
+    spec:
+      imagePullSecrets:
+        - name: %IMAGE_PULL_SECRET%
+      containers:
+        - name: erp-medication-exporter
+          image: %ICR_INSTANCE%/%ICR_NAMESPACE%/erp-medication-exporter:%VERSION%
+          imagePullPolicy: Always
+          volumeMounts:
+            - mountPath: /erp/config
+              name: erp-config
+              readOnly: true
+            - mountPath: /erp/config_exporter
+              name: erp-config-exporter
+              readOnly: true
+            - mountPath: /erp/redis
+              name: erp-redis
+              readOnly: true
+            - mountPath: /erp/tsl
+              name: erp-tsl
+              readOnly: true
+          resources:
+            requests:
+              memory: "1024Mi"
+            limits:
+              memory: "2048Mi"
+          ports:
+            - containerPort: 9191
+              name: enrolment-port
+            - containerPort: 9999
+              name: admin-port
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: admin-port
+              scheme: HTTPS
+            initialDelaySeconds: 10
+            timeoutSeconds: 1
+            periodSeconds: 40
+            successThreshold: 1
+            failureThreshold: 3 
+          env:
+            - name: ERP_BUILD
+              value: "reldeb"
+            - name: ERP_MEDICATION_EXPORTER_IS_PRODUCTION
+              value: "false"
+            - name: ERP_SERVER_HOST
+              value: erp-medication-exporter.%NAMESPACE%.svc.cluster.local
+            - name: ERP_SERVER_PORT
+              value: "9087"
+            - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
+              value: "9087"
+            - name: ERP_SERVER_THREAD_COUNT
+              value: "10"
+            - name: ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC
+              value: "20"
+            - name: ERP_REDIS_CERTIFICATE_PATH
+              value: "/erp/redis/REDIS_CERT"
+            - name: ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH
+              value: "/erp/tsl/tsl-ssl-root-ca.pem"
+            - name: ERP_TSL_INITIAL_DOWNLOAD_URL
+              value: "https://download-test.tsl.telematik-test/ECC/ECC-RSA_TSL-test.xml"
+            - name: ERP_TSL_INITIAL_CA_DER_PATH
+              value: "/erp/tsl/tsl-ca.der"
+            - name: ERP_TSL_DOWNLOAD_CIPHERS
+              value: "DHE-RSA-AES256-SHA:DHE-RSA-AES128-GCM-SHA256"
+            - name: MOCK_USE_MOCK_TPM
+              value: "false"
+            - name: TPM_INTERFACE_TYPE
+              value: "socsim"
+            - name: TPM_COMMAND_PORT
+              value: "2321"
+            - name: TPM_PLATFORM_PORT
+              value: "2322"
+            - name: TPM_SERVER_TYPE
+              value: "mssim"
+            - name: TPM_SERVER_NAME
+              value: tpm-simulator-2.%NAMESPACE%.svc.cluster.local
+            - name: ERP_E_PRESCRIPTION_SERVICE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: secret-erp-pc-srv
+                  key: E_PRESCRIPTION_SERVICE_URL
+            - name: ERP_IDP_REGISTERED_FD_URI
+              valueFrom:
+                secretKeyRef:
+                  name: secret-erp-pc-srv
+                  key: IDP_REGISTERED_FD_URI
+            - name: ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: secret-subscription-erp-pc
+                  key: SERVICE_SUBSCRIPTION_SIGNING_KEY
+          envFrom:
+            - prefix: ERP_
+              secretRef:
+                name: secret-erp-pc-srv
+                optional: false
+            - prefix: ERP_MEDICATION_EXPORTER_
+              secretRef:
+                name: secret-erp-exporter-srv
+                optional: false
+            - prefix: ERP_
+              secretRef:
+                name: secret-redis-erp-pc
+                optional: false
+            - prefix: ERP_
+              secretRef:
+                name: secret-subscription-erp-pc
+                optional: false
+      volumes:
+        - name: erp-config
+          secret:
+            secretName: secret-erp-pc-srv
+        - name: erp-config-exporter
+          secret:
+            secretName: secret-erp-exporter-srv
+        - name: erp-redis
+          secret:
+            secretName: secret-redis-erp-pc
+        - name: erp-tsl
+          secret:
+            secretName: erp-initial-tsl

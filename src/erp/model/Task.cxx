@@ -6,17 +6,17 @@
  */
 
 #include "erp/model/Task.hxx"
-#include "erp/ErpConstants.hxx"
-#include "erp/ErpRequirements.hxx"
 #include "erp/model/Composition.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
-#include "erp/util/WorkDay.hxx"
-#include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/util/Gsl.hxx"
+#include "shared/ErpConstants.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/WorkDay.hxx"
 
 #include <date/tz.h>
 #include <rapidjson/pointer.h>
@@ -204,7 +204,8 @@ constexpr std::string_view codeOutputReceipt = "3";
 } // namespace
 
 
-Task::Task(const model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode)
+Task::Task(const model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode,
+           Timestamp lastStatusChange)
     : Resource<Task>(profileType,
                      []() {
                          std::call_once(onceFlag, initTemplates);
@@ -214,6 +215,7 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
                          A_19114.finish();
                      }()
                          .instance())
+    , mLastStatusChange(lastStatusChange)
 {
     if (accessCode.has_value())
     {
@@ -240,13 +242,13 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
 }
 
 Task::Task(const PrescriptionId& id, PrescriptionType prescriptionType, Timestamp lastModified, Timestamp authoredOn,
-           Task::Status status)
-    : Task(prescriptionType, {})
+           Task::Status status, Timestamp lastStatusChange)
+    : Task(prescriptionType, {}, lastStatusChange)
 {
     setPrescriptionId(id);
     updateLastUpdate(lastModified);
     setValue(authoredOnPointer, authoredOn.toXsDateTime());
-    setStatus(status);
+    setStatus(status, lastStatusChange);
 }
 
 void Task::setPrescriptionId(const PrescriptionId& prescriptionId)
@@ -326,6 +328,11 @@ std::optional<std::string_view> Task::owner() const
     return getOptionalStringValue(ownerIdentifierValuePointer);
 }
 
+const Timestamp& Task::lastStatusChangeDate() const
+{
+    return mLastStatusChange;
+}
+
 std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& array,
                                                     std::string_view code) const
 {
@@ -373,7 +380,13 @@ void Task::updateLastUpdate(const Timestamp& timestamp)
 
 void Task::setStatus(const Task::Status newStatus)
 {
+    setStatus(newStatus, Timestamp::now());
+}
+
+void Task::setStatus(Status newStatus, model::Timestamp lastStatusChange)
+{
     setValue(statusPointer, StatusNames.at(newStatus).data());
+    mLastStatusChange = lastStatusChange;
 }
 
 void Task::setKvnr(const Kvnr& kvnr)
@@ -381,6 +394,14 @@ void Task::setKvnr(const Kvnr& kvnr)
     ModelExpect(!hasValue(kvnrPointer), "KVNR cannot be set multiple times.");
     ModelExpect(kvnr.getType() != model::Kvnr::Type::unspecified, "Unspecified kvnr type not allowed");
     setValue(kvnrPointer, kvnr.id());
+    const auto& profileName = getProfileName();
+    if (profileName && fhirtools::DefinitionKey{*profileName}.version >= model::version::GEM_ERP_1_4)
+    {
+        // GEM_ERP_PR_Task V1.4 allows only GKV
+        // https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.4.3/files/2550145
+        setValue(kvnrSysPointer, model::resource::naming_system::gkvKvid10);
+        return;
+    }
     setValue(kvnrSysPointer, kvnr.namingSystem());
 }
 
@@ -592,6 +613,7 @@ void Task::deleteLastMedicationDispense()
 
 Task::Task(NumberAsStringParserDocument&& jsonTree)
     : Resource<Task>(std::move(jsonTree))
+    , mLastStatusChange(Timestamp{0.})
 {
     std::call_once(onceFlag, initTemplates);
 }

@@ -12,11 +12,10 @@
 */
 
 #include "test/mock/ClientTeeProtocol.hxx"
-
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jwt.hxx"
-#include "erp/tee/OuterTeeRequest.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/tee/OuterTeeRequest.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 #include <gtest/gtest.h>
 

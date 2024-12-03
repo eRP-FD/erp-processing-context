@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/expression/BooleanLogic.hxx"
 #include "fhirtools/expression/Comparison.hxx"
 #include "fhirtools/expression/Conversion.hxx"
@@ -419,6 +419,24 @@ TEST_F(ExpressionTest, SubsettingFirst)
     ASSERT_EQ(result.size(), 1);
     EXPECT_EQ(result.singleOrEmpty()->type(), Element::Type::String);
     EXPECT_EQ(result.singleOrEmpty()->asString(), "foo");
+}
+
+TEST_F(ExpressionTest, SubsettingLast)
+{
+    SubsettingLast subsettingFirst(mRepo);
+    const auto result =
+    subsettingFirst.eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "foo"),
+        std::make_shared<PrimitiveElement>(mRepo, Element::Type::Decimal, DecimalType(5))});
+    ASSERT_EQ(result.size(), 1);
+    EXPECT_EQ(result.singleOrEmpty()->type(), Element::Type::Decimal);
+    EXPECT_EQ(result.singleOrEmpty()->asDecimal(), DecimalType(5));
+}
+
+TEST_F(ExpressionTest, SubsettingLastOnEmpty)
+{
+    SubsettingLast subsettingFirst(mRepo);
+    const auto result = subsettingFirst.eval({});
+    ASSERT_TRUE(result.empty());
 }
 
 TEST_F(ExpressionTest, SubsettingTail)
@@ -1049,6 +1067,154 @@ TEST_F(ExpressionTest, AmpersandOperator)
     StringConcatenationTest<AmpersandOperator>(""s, "b"s, "b"s);
     StringConcatenationTest<AmpersandOperator>("a"s, ""s, "a"s);
 }
+
+struct StringManipSplitTestParam{
+  std::list<std::string> input;
+  std::string delimiter;
+  std::vector<std::string> expect;
+};
+
+void PrintTo(const StringManipSplitTestParam& param,  std::ostream* out)
+{
+    (*out) << R"("input": [)";
+    for (std::string_view sep{}; const auto& i: param.input)
+    {
+        (*out) << sep << '"' << i << '"';
+        sep = ", ";
+    }
+    (*out) << R"(], "delimiter": ")" << param.delimiter;
+    (*out) << R"(", "expect": [)";
+    for (std::string_view sep{}; const auto& e: param.expect)
+    {
+        (*out) << sep << '"' << e << '"';
+        sep = ", ";
+    }
+    (*out) << "]";
+}
+
+class StringManipSplitTest : public ExpressionTest, public testing::WithParamInterface<StringManipSplitTestParam>
+{
+public:
+    Collection toCollection(const std::list<std::string>& strings)
+    {
+        Collection result;
+        for (const auto& s : strings)
+        {
+            result.emplace_back(std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, s));
+        }
+        return result;
+    }
+};
+
+TEST_P(StringManipSplitTest, StringManipSplit)
+{
+    PrintTo(GetParam(), &std::cerr);
+    Collection input = toCollection(GetParam().input);
+    ExpressionPtr delimiter = std::make_shared<LiteralStringExpression>(mRepo, GetParam().delimiter);
+    const auto& expected = GetParam().expect;
+    StringManipSplit split{mRepo, delimiter};
+    Collection actualCollection = split.eval(input);
+    ASSERT_EQ(actualCollection.size(), expected.size());
+    for (size_t i = 0; i < expected.size(); ++i)
+    {
+        auto actual = actualCollection.at(i);
+        EXPECT_EQ(actual->type(), fhirtools::Element::Type::String);
+        EXPECT_EQ(actual->asString(), expected.at(i));
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(singleInput, StringManipSplitTest,
+                         testing::ValuesIn<std::list<StringManipSplitTestParam>>({
+                             {
+                                 .input = {"Hello World!"},
+                                 .delimiter = " ",
+                                 .expect = {"Hello", "World!"},
+                             },
+                             {
+                                 .input = {"Hello wide World!"},
+                                 .delimiter = " wide ",
+                                 .expect = {"Hello", "World!"},
+                             },
+                             {
+                                 .input = {"A,B,C,D"},
+                                 .delimiter = ",",
+                                 .expect = {"A", "B", "C", "D"},
+                             },
+                             {
+                                 .input = {"A, B, C, D"},
+                                 .delimiter = ", ",
+                                 .expect = {"A", "B", "C", "D"},
+                             },
+                             {
+                                 .input = {"ABCD"},
+                                 .delimiter = "",
+                                 .expect = {"A", "B", "C", "D"},
+                             },
+                             {
+                                 .input = {},
+                                 .delimiter = ",",
+                                 .expect = {},
+                             },
+                             {
+                                 .input = {""},
+                                 .delimiter = "",
+                                 .expect = {""},
+                             },
+                             {
+                                 .input = {""},
+                                 .delimiter = ",",
+                                 .expect = {""},
+                             },
+                             {
+                                 .input = {","},
+                                 .delimiter = ",",
+                                 .expect = {"", ""},
+                             },
+                             {
+                                 .input = {",,,"},
+                                 .delimiter = ",",
+                                 .expect = {"", "", "", ""},
+                             },
+                             {
+                                 .input = {"A,,B"},
+                                 .delimiter = ",",
+                                 .expect = {"A", "", "B"},
+                             },
+                             {
+                                 .input = {",A,B"},
+                                 .delimiter = ",",
+                                 .expect = {"", "A", "B"},
+                             },
+                             {
+                                 .input = {"A,B,"},
+                                 .delimiter = ",",
+                                 .expect = {"A", "B", ""},
+                             },
+                         }));
+
+INSTANTIATE_TEST_SUITE_P(multiInput, StringManipSplitTest,
+                         testing::ValuesIn<std::list<StringManipSplitTestParam>>({
+                             {
+                                 .input = {"Hello", "World!"},
+                                 .delimiter = "l",
+                                 .expect = {"He", "", "o", "Wor", "d!"},
+                             },
+                             {
+                                 .input = {"A,B", "C,D,"},
+                                 .delimiter = ",",
+                                 .expect = {"A", "B", "C", "D", ""},
+                             },
+                             {
+                                 .input = {"", "A,B"},
+                                 .delimiter = ",",
+                                 .expect = {"", "A", "B"},
+                             },
+                             {
+                                 .input = {"A,B", ""},
+                                 .delimiter = ",",
+                                 .expect = {"A", "B", ""},
+                             },
+                         }));
 
 TEST_F(ExpressionTest, Trace)
 {

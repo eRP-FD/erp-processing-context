@@ -6,19 +6,19 @@
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/beast/BoostBeastStringWriter.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/beast/BoostBeastStringWriter.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Mod10.hxx"
-#include "erp/util/Uuid.hxx"
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/Mod10.hxx"
+#include "shared/util/Uuid.hxx"
+#include "shared/validation/XmlValidator.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
@@ -271,7 +271,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::checkTaskAccept(
     std::string& createdSecret,
-    std::optional<model::Timestamp>& lastModifiedDate,
+    std::optional<model::Timestamp>& lastStatusUpdate,
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
     const std::string& accessCode,
@@ -328,7 +328,8 @@ void ErpWorkflowTestBase::checkTaskAccept(
     ASSERT_EQ(secret.value(), task->secret().value());
     createdSecret = secret.value();
     EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(createdSecret));
-    lastModifiedDate = task->lastModifiedDate();
+    auto taskFromDb = client->getContext()->databaseFactory()->retrieveTaskForUpdate(task->prescriptionId());
+    lastStatusUpdate = taskFromDb->task.lastStatusChangeDate();
 
     if(withConsent)
     {
@@ -363,7 +364,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
     const std::string& secret,
-    const model::Timestamp& lastModified,
+    const model::Timestamp& lastStatusUpdateDate,
     const std::vector<model::Communication>& communications,
     size_t numMedicationDispenses)
 {
@@ -392,7 +393,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     EXPECT_TRUE(composition.telematikId().has_value());
     EXPECT_EQ(composition.telematikId().value(), telematicId.value());
     EXPECT_TRUE(composition.periodStart().has_value());
-    EXPECT_EQ(composition.periodStart().value(), lastModified);
+    EXPECT_EQ(composition.periodStart().value(), lastStatusUpdateDate);
     EXPECT_TRUE(composition.periodEnd().has_value());
     EXPECT_TRUE(composition.date().has_value());
     const auto deviceResources = closeReceipt->getResourcesByType<model::Device>("Device");
@@ -474,7 +475,7 @@ void ErpWorkflowTestBase::checkTaskAbort(
     ASSERT_FALSE(medicationDispenseForTask.has_value());
 
     // Check deletion of task related communication objects:
-    A_19027_04.test("Deletion of task related communications");
+    A_19027_06.test("Deletion of task related communications");
     checkCommunicationsDeleted(prescriptionId, kvnr, communications);
 }
 
@@ -1242,6 +1243,24 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
     }
 }
 
+std::string ErpWorkflowTestBase::dispenseOrCloseTaskBody(model::ProfileType profileType, const std::string& kvnr,
+                                                         const std::string& prescriptionIdForMedicationDispense,
+                                                         const std::string& whenHandedOver,
+                                                         size_t numMedicationDispenses)
+{
+    if (serverGematikProfileVersion() >= ResourceTemplates::Versions::GEM_ERP_1_4)
+    {
+        return dispenseOrCloseTaskParameters(profileType, kvnr,
+                                             prescriptionIdForMedicationDispense, whenHandedOver,
+                                             numMedicationDispenses);
+    }
+    if (numMedicationDispenses == 1)
+    {
+        return medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
+    }
+    return medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+}
+
 std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
                                                     const std::string& prescriptionIdForMedicationDispense,
                                                     const std::string& whenHandedOver)
@@ -1257,7 +1276,7 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvn
                                                           size_t numMedicationDispenses)
 {
     fhirtools::DefinitionKey profileKey{std::string{model::resource::structure_definition::medicationDispenseBundle},
-                                        ResourceTemplates::Versions::GEM_ERP_current()};
+                                        serverGematikProfileVersion()};
     model::Bundle closeBody{model::BundleType::collection, profileKey, Uuid()};
     for (size_t i = 0; i < numMedicationDispenses; ++i)
     {
@@ -1267,6 +1286,36 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvn
     }
     return closeBody.serializeToXmlString();
 }
+
+std::string ErpWorkflowTestBase::dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
+                                                               const std::string& prescriptionIdForMedicationDispense,
+                                                               const std::string& whenHandedOver, size_t numMedicationDispenses)
+{
+    const auto& gemVersion= serverGematikProfileVersion();
+    Expect3(gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4,
+            "closeTaskParameters: gemVersion must be at least 1.4", std::logic_error);
+    ResourceTemplates::MedicationDispenseOperationParametersOptions parametersOptions{
+        .profileType = profileType,
+        .id = Uuid{},
+        .version = gemVersion,
+        .medicationDispenses = {},
+    };
+    for (size_t i = 0; i < numMedicationDispenses; ++i)
+    {
+        parametersOptions.medicationDispenses.emplace_back(ResourceTemplates::MedicationDispenseOptions{
+            .id = prescriptionIdForMedicationDispense + "-" + std::to_string(i),
+            .prescriptionId = prescriptionIdForMedicationDispense,
+            .kvnr = kvnr,
+            .whenHandedOver = whenHandedOver,
+            .gematikVersion = gemVersion,
+            .medication = ResourceTemplates::MedicationOptions{
+                .version = gemVersion,
+                .id = Uuid{},
+            }});
+    }
+    return ResourceTemplates::medicationDispenseOperationParametersXml(parametersOptions);
+}
+
 
 
 std::string ErpWorkflowTestBase::patchVersionsInBundle(const std::string& bundle)
@@ -1325,14 +1374,23 @@ void ErpWorkflowTestBase::taskDispenseInternal(
     const std::string& whenHandedOver, size_t numMedicationDispenses)
 {
     std::string dispenseBody;
-    if (numMedicationDispenses == 1)
+    if (serverGematikProfileVersion() < ResourceTemplates::Versions::GEM_ERP_1_4)
     {
-        dispenseBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
+        if (numMedicationDispenses == 1)
+        {
+            dispenseBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
+        }
+        else
+        {
+            dispenseBody =
+                medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+        }
     }
     else
     {
         dispenseBody =
-            medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+            dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, kvnr,
+                                    prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
     }
     std::string dispensePath = "/Task/" + prescriptionId.toString() + "/$dispense?secret=" + secret;
     ClientResponse serverResponse;
@@ -1366,16 +1424,9 @@ void ErpWorkflowTestBase::taskCloseInternal(
     const std::optional<std::string>& expectedIssueDiagnostics,
     const std::string& whenHandedOver, size_t numMedicationDispenses)
 {
-    std::string closeBody;
-    if (numMedicationDispenses == 1)
-    {
-        closeBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
-    }
-    else
-    {
-        closeBody =
-            medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
-    }
+    std::string closeBody =
+        dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
+                                prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
     std::string closePath = "/Task/" + prescriptionId.toString() + "/$close?secret=" + secret;
     ClientResponse serverResponse;
     JWT jwt{ jwtApotheke() };
@@ -1418,7 +1469,9 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(), *getXmlValidator()));
+        auto unspec = model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody());
+        ASSERT_NO_THROW(testutils::bestEffortValidate(unspec)) << serverResponse.getBody();
+        bundle = model::Bundle::fromJson(std::move(unspec).jsonDocument());
     }
     else
     {
@@ -1683,7 +1736,14 @@ void ErpWorkflowTestBase::consentGetInternal(
     if(expectedStatus == HttpStatus::OK)
     {
         std::optional<model::Bundle> consentBundle;
-        ASSERT_NO_THROW(consentBundle = model::Bundle::fromJson(serverResponse.getBody(), *getJsonValidator()));
+        const auto& fhirInstance = Fhir::instance();
+        const auto& backend = fhirInstance.backend();
+        auto viewList = fhirInstance.structureRepository(model::Timestamp::now());
+        auto view = viewList.match(&backend, std::string{model::resource::structure_definition::consent},
+                                   ResourceTemplates::Versions::GEM_ERPCHRG_current());
+        ASSERT_NO_THROW(consentBundle.emplace(
+            model::ResourceFactory<model::Bundle>::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())
+                .getValidated(model::ProfileType::fhir, view)));
         ASSERT_TRUE(consentBundle.has_value());
         ASSERT_LE(consentBundle->getResourceCount(), 1);
         if(consentBundle->getResourceCount() == 1)
@@ -2269,9 +2329,6 @@ void ErpWorkflowTestBase::verifyBdeV2Headers(const Header& outerResponseHeader, 
 
 void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)
 {
-    const auto& fhirInstance = Fhir::instance();
-    const auto& backend = std::addressof(fhirInstance.backend());
-    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
     std::optional<model::UnspecifiedResource> resourceForValidation;
     if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
     {
@@ -2283,14 +2340,7 @@ void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)
     }
     if (resourceForValidation.has_value())
     {
-        fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-        auto validationResult = resourceForValidation->genericValidate(model::ProfileType::fhir, options, repoView);
-        auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
-        for (const auto& item : filteredValidationErrors)
-        {
-            ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
-                                                                   << innerResponse.getBody();
-        }
+        ASSERT_NO_FATAL_FAILURE(testutils::bestEffortValidate(*resourceForValidation)) << innerResponse.getBody();
     }
 }
 
@@ -2936,10 +2986,6 @@ std::string ErpWorkflowTestBase::kbvBundleMvoXml(ResourceTemplates::KbvBundleMvo
 
 std::string ErpWorkflowTestBase::kbvBundleXml(ResourceTemplates::KbvBundleOptions opts)
 {
-    if (! opts.kbvVersion)
-    {
-        opts.kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(opts.authoredOn);
-    }
     if (!opts.lanr.validChecksum())
     {
         switch(opts.lanr.getType())

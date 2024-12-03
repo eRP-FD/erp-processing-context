@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="provide-prescription-erp-OP"/>
+  <url value="https://gematik.de/fhir/epa-medication/OperationDefinition/provide-prescription-erp-OP"/>
+  <version value="1.0.3"/>
+  <name value="Provide Prescription eRP"/>
+  <title value="$provide-prescription-erp Operation"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The $provide-prescription-erp operation in the ePA MedicationService is used to add electronic prescriptions to a patient's record. These prescriptions are already made by the E-Rezept-Fachdienst. This operation does not create new patient prescriptions; it just puts the ones made by the E-Rezept-Fachdienst into the patient's ePA, making sure they are stored safely and can be easily accessed."/>
+  <code value="provide-prescription-erp"/>
+  <system value="true"/>
+  <type value="false"/>
+  <instance value="false"/>
+  <inputProfile value="https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-provide-prescription-erp-input-parameters"/>
+  <outputProfile value="https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-prescription-erp-output-parameters"/>
+  <parameter>
+    <name value="rxPrescription"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="*"/>
+    <part>
+      <name value="prescriptionId"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Identifier"/>
+    </part>
+    <part>
+      <name value="authoredOn"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="date"/>
+    </part>
+    <part>
+      <name value="medicationRequest"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="MedicationRequest"/>
+    </part>
+    <part>
+      <name value="medication"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Medication"/>
+    </part>
+    <part>
+      <name value="organization"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Organization"/>
+    </part>
+    <part>
+      <name value="practitioner"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Practitioner"/>
+    </part>
+  </parameter>
+  <parameter>
+    <name value="rxPrescription"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="*"/>
+    <part>
+      <name value="prescriptionId"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Identifier"/>
+    </part>
+    <part>
+      <name value="authoredOn"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="date"/>
+    </part>
+    <part>
+      <name value="operationOutcome"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="OperationOutcome"/>
+    </part>
+  </parameter>
+</OperationDefinition>

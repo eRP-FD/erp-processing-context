@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="glasgow-coma-score-motor"/>
+  <url value="http://fhir.de/ValueSet/glasgow-coma-score-motor"/>
+  <version value="1.5.0"/>
+  <name value="VS_Score_GlasgowComaScore_Motor"/>
+  <title value="VS Score Glasgow Coma Score Motor"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Dieses ValueSet enthält Codes für die Motorische Reaktion Komponente des Glasgow Coma Scores."/>
+  <compose>
+    <include>
+      <system value="http://loinc.org"/>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="1"/>
+        </extension>
+        <code value="LA6562-8"/>
+        <display value="No motor response"/>
+      </concept>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="2"/>
+        </extension>
+        <code value="LA6563-6"/>
+        <display value="Extension to pain"/>
+      </concept>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="3"/>
+        </extension>
+        <code value="LA6564-4"/>
+        <display value="Flexion to pain"/>
+      </concept>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="4"/>
+        </extension>
+        <code value="LA6565-1"/>
+        <display value="Withdrawal from pain"/>
+      </concept>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="5"/>
+        </extension>
+        <code value="LA6566-9"/>
+        <display value="Localizing pain"/>
+      </concept>
+      <concept>
+        <extension url="http://hl7.org/fhir/StructureDefinition/ordinalValue">
+          <valueDecimal value="6"/>
+        </extension>
+        <code value="LA6567-7"/>
+        <display value="Obeys commands"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

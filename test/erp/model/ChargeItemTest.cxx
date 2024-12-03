@@ -6,9 +6,9 @@
  */
 
 #include "test/util/ResourceManager.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/util/ResourceTemplates.hxx"

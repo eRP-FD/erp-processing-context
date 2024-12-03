@@ -6,10 +6,11 @@
  */
 
 #include "mock/tsl/MockTslManager.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
 #include "mock/util/MockConfiguration.hxx"
 
 #include "UrlRequestSenderMock.hxx"
@@ -53,9 +54,16 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
         Certificate::fromPem(MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_CERT));
     const auto certCA = Certificate::fromPem(
         MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_SIGNER_CERT));
+    const auto autCert =
+        Certificate::fromPem(MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_VAU_AUT_CERT));
+    const auto autCertCA = Certificate::fromPem(
+        MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_VAU_AUT_SIGNER_CERT));
+
     requestSender->setOcspUrlRequestHandler(
         MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_OCSP_URL),
-        {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}, ocspCertificate, ocspPrivateKey);
+        {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS},
+         {autCert, autCertCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+        ocspCertificate, ocspPrivateKey);
 
 
     const auto qesCert = Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/qes.pem"));
@@ -70,7 +78,8 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
         FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/nonQesSmcbIssuer.der"));
     requestSender->setOcspUrlRequestHandler("http://ocsp-test.ocsp.telematik-test:8080/",
                                             {{nonQesSmcbCert, nonQesSmcbIssuer, MockOcsp::CertificateOcspTestMode::SUCCESS},
-                                            {cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+                                            {cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS},
+                                            {autCert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
                                             ocspCertificate, ocspPrivateKey);
 
     auto trustStore = std::make_unique<TrustStore>(

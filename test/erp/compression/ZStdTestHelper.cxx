@@ -7,7 +7,7 @@
 
 #include "test/erp/compression/ZStdTestHelper.hxx"
 
-#include "erp/util/Base64.hxx"
+#include "shared/util/Base64.hxx"
 
 static constexpr std::string_view sampleDictionaryBase64 =
     "N6Qw7AEAAAA6ELjANgAAAAAAMBERAGAd2pP3u/feXnaL3N8rhUViYeW3729mVn5XzJq10ZLpJYma"

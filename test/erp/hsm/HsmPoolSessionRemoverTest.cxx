@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/HsmPoolSessionRemover.hxx"
+#include "shared/hsm/HsmPoolSessionRemover.hxx"
 
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

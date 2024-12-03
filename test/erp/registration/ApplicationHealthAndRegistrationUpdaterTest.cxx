@@ -6,16 +6,15 @@
  */
 
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/health/ApplicationHealth.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
-#include "erp/util/health/ApplicationHealth.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
-
-#include <thread> // for std::this_thread::sleep_for
 #include <string>
+#include <thread>// for std::this_thread::sleep_for
 
 
 class ApplicationHealthAndRegistrationUpdaterTest : public testing::Test

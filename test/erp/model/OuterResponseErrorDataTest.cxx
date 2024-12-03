@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/OuterResponseErrorData.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 
 #include <gtest/gtest.h>
 

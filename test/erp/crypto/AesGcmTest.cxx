@@ -7,8 +7,8 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 
 class AesGcm128Test : public testing::Test

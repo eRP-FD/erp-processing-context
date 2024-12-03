@@ -7,10 +7,10 @@
 
 #include "erp/service/DeviceHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/Device.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/util/TLog.hxx"
 
 
 DeviceHandler::DeviceHandler()

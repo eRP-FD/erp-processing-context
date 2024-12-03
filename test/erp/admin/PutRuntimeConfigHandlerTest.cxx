@@ -3,12 +3,12 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "erp/admin/PutRuntimeConfigHandler.hxx"
-#include "erp/common/Header.hxx"
+#include "shared/network/message/Header.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/AccessLog.hxx"
+#include "shared/server/AccessLog.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 

@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/String.hxx"
+#include "shared/util/String.hxx"
 
 
-#include "erp/util/Base64.hxx"
+#include "shared/util/Base64.hxx"
 
 #include <gtest/gtest.h>
 #include <map>

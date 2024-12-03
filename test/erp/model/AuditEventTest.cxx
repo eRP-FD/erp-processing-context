@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/AuditEvent.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/model/AuditEvent.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test_config.h"
 #include "test/util/ResourceTemplates.hxx"
 

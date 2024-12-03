@@ -1,7 +1,8 @@
 #include "erp/service/chargeitem/ChargeItemPatchHandler.hxx"
 
-#include "EndpointHandlerTest.hxx"
-#include "erp/util/Demangle.hxx"
+#include "EndpointHandlerTestFixture.hxx"
+#include "shared/util/Demangle.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/StaticData.hxx"
 
 class ChargeItemPatchEndpointTest : public EndpointHandlerTest {

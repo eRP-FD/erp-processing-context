@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="Origin"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/Origin"/>
+  <version value="0.11.12"/>
+  <name value="Origin"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="CodeSystem which identifies the origin of a resource in the FHIR Directory"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="2"/>
+  <concept>
+    <code value="ldap"/>
+    <display value="Synchronized from LDAP Directory"/>
+  </concept>
+  <concept>
+    <code value="owner"/>
+    <display value="Provided by Identity Owner"/>
+  </concept>
+</CodeSystem>

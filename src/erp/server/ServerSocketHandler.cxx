@@ -5,12 +5,13 @@
  * non-exclusively licensed to gematik GmbH
 */
 
-#include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/ErrorHandler.hxx"
 #include "erp/server/ServerSocketHandler.hxx"
+#include "erp/server/context/SessionContext.hxx"
+#include "shared/server/ErrorHandler.hxx"
 #include "erp/server/ServerSession.hxx"
 
 #include <boost/asio/strand.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 
 
 ServerSocketHandler::ServerSocketHandler(

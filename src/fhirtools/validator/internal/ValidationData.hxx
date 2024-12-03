@@ -32,6 +32,9 @@ public:
     ValidationData(std::unique_ptr<ProfiledElementTypeInfo> initMapKey);
     void add(Severity, std::string message, std::string elementFullPath, const FhirStructureDefinition* profile);
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
+    void addInfo(ValidationAdditionalInfo::Kind kind, const std::shared_ptr<const Element>& element,
+                 const std::optional<std::string>& elementFullPath, const std::string& typeId,
+                 const FhirConstraint::Key& constraintKey);
     void append(ValidationResults);
     const ValidationResults& results() const;
     [[nodiscard]] bool isFailed() const;

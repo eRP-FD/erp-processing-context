@@ -12,8 +12,10 @@
 #include "erp/model/Communication.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/service/CommunicationPostHandler.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/util/JsonTestUtils.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/TestUtils.hxx"
 
 
@@ -97,20 +99,24 @@ TEST_F(CommunicationPostEndpointTest, ERP_12846_SubscriptionKeyRefresh)
 
 TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfile)
 {
+    const auto& fhirInstance = Fhir::instance();
+    const auto& backend = fhirInstance.backend();
+    const auto supported =
+        fhirInstance.structureRepository(model::Timestamp::now())
+            .supportedVersions(&backend,
+                               {
+                                   // std::string{model::resource::structure_definition::communicationInfoReq},
+                                   std::string{model::resource::structure_definition::communicationReply},
+                                   std::string{model::resource::structure_definition::communicationDispReq},
+                                   std::string{model::resource::structure_definition::communicationRepresentative},
+                                   std::string{model::resource::structure_definition::communicationChargChangeReq},
+                                   std::string{model::resource::structure_definition::communicationChargChangeReply},
+                               });
+    const auto& newProfs = String::join(supported, ", ");
     char message[] = "Invalid request body";
-    // clang-format off
-    std::string newProfs =
-        // R"("https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq|1.2", )"
-        R"(https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2, )"
-        R"(https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.2, )"
-        R"(https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.2, )"
-        R"(https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq|1.0, )"
-        R"(https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply|1.0)";
-    // clang-format on
     std::string diagnostics =
         "invalid profile https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_ChargChangeReply|1.0 "
-        "must be one of: " +
-        newProfs;
+        "must be one of: " + newProfs;
 
     auto body = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/ERP-13187-POST_Communication_InvalidProfile.json");
     ASSERT_NO_FATAL_FAILURE(test(std::move(body), {.expectedResult = HttpStatus::BadRequest, .message = message, .diagnostics = diagnostics}));

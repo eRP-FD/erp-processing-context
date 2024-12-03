@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/KbvMedicationCompounding.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 #include <rapidjson/pointer.h>
 
@@ -20,7 +20,7 @@ const rapidjson::Pointer itemCodeableConceptCodePointer("/itemCodeableConcept/co
 } // namespace
 
 KbvMedicationCompounding::KbvMedicationCompounding(NumberAsStringParserDocument&& document)
-    : KbvMedicationBase<KbvMedicationCompounding>(std::move(document))
+    : MedicationBase<KbvMedicationCompounding>(std::move(document))
 {
 }
 

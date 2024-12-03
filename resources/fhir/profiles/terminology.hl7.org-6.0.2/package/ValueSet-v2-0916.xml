@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="v2-0916"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: ValueSet v2-0916</b>
+      </p>
+      <a name="v2-0916"> </a>
+      <a name="hcv2-0916"> </a>
+      <a name="v2-0916-en-US"> </a>
+      <ul>
+        <li>Include all codes defined in <a href="CodeSystem-v2-0916.html"><code>http://terminology.hl7.org/CodeSystem/v2-0916</code></a></li>
+      </ul>
+    </div>
+  </text>
+  <url value="http://terminology.hl7.org/ValueSet/v2-0916"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.21.440"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="Hl7VSRelevantClincialInformation"/>
+  <title value="hl7VS-relevantClincialInformation"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Value Set of codes that specify additional clinical information about the patient or specimen to report the supporting and/or suspected diagnosis and clinical findings on requests for interpreted diagnostic studies."/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <compose>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/v2-0916"/>
+      <version value="2.0.0"/>
+    </include>
+  </compose>
+</ValueSet>

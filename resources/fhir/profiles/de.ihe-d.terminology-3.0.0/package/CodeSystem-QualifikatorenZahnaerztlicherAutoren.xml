@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="QualifikatorenZahnaerztlicherAutoren"/>
+  <url value="http://ihe-d.de/CodeSystems/QualifikatorenZahnaerztlicherAutoren"/>
+  <version value="2021-10-15T12:13:26"/>
+  <name value="QualifikatorenZahnaerztlicherAutoren"/>
+  <title value="Qualifikatoren Zahnaerztlicher Autoren"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="6"/>
+  <concept>
+    <code value="1"/>
+    <display value="Zahnarzt"/>
+  </concept>
+  <concept>
+    <code value="2"/>
+    <display value="FZA Allgemeine Zahnheilkunde"/>
+  </concept>
+  <concept>
+    <code value="3"/>
+    <display value="FZA Parodontologie"/>
+  </concept>
+  <concept>
+    <code value="4"/>
+    <display value="FZA Oralchirurgie"/>
+  </concept>
+  <concept>
+    <code value="5"/>
+    <display value="FZA Kieferorthopädie"/>
+  </concept>
+  <concept>
+    <code value="6"/>
+    <display value="FZA öffentliches Gesundheitswesen"/>
+  </concept>
+</CodeSystem>

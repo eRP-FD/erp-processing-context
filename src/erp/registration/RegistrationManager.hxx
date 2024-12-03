@@ -10,7 +10,7 @@
 
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/service/RedisInterface.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 
 class ApplicationHealth;
 

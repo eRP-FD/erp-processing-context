@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_TESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_TESTCLIENT_HXX
 
-#include "erp/client/response/ClientResponse.hxx"
+#include "shared/network/client/response/ClientResponse.hxx"
 
 #include <functional>
 #include <iosfwd>

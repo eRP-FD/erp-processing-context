@@ -6,7 +6,7 @@
  */
 
 #include "MockIdpUpdater.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/util/MockConfiguration.hxx"
 

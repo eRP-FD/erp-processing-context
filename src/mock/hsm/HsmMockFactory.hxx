@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSMMOCKFACTORY_HXX
 #define ERP_PROCESSING_CONTEXT_HSMMOCKFACTORY_HXX
 
-#include "erp/hsm/HsmFactory.hxx"
+#include "shared/hsm/HsmFactory.hxx"
 
 #include "mock/hsm/HsmMockClient.hxx"
 

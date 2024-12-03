@@ -6,12 +6,14 @@
  */
 
 #include "erp/model/MetaData.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 #include <mutex>// for call_once
 
@@ -261,19 +263,35 @@ const rapidjson::Pointer releaseDatePointer("/software/releaseDate");
 
 const rapidjson::Pointer restResourceArrayPointer("/rest/0/resource");
 
-std::string baseType(const fhirtools::FhirStructureRepository& view, ProfileType profileType)
+
+fhirtools::DefinitionKey latestProfileKey(const fhirtools::FhirStructureRepositoryBackend& backend,
+                          const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
+                          model::ProfileType profileType)
 {
-    auto prof = profile(profileType);
-    Expect3(prof.has_value(), "no profile for: " + std::string{magic_enum::enum_name(profileType)}, std::logic_error);
-    const auto* def = view.findStructure(fhirtools::DefinitionKey{std::string{*prof}, std::nullopt});
-    Expect3(def != nullptr, "structure not found in view " + std::string{view.id()} + ": " + std::string{*prof},
-            std::logic_error);
-    const auto* typeDef = view.findTypeById(def->typeId());
-    Expect3(typeDef != nullptr, "type not found in view " + std::string{view.id()} + ": " + def->typeId(),
-            std::logic_error);
-    return typeDef->urlAndVersion();
+  std::string profileUrl{value(profile(profileType))};
+  auto supported = viewList.supportedVersions(&backend, {profileUrl});
+  Expect3(!supported.empty(), "profile not supported: " + profileUrl, std::logic_error);
+  return std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version);
+}
+std::string latestProfile(const fhirtools::FhirStructureRepositoryBackend& backend,
+                                          const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
+                                          model::ProfileType profileType)
+{
+  return to_string(latestProfileKey(backend, viewList, profileType));
 }
 
+std::string baseType(const fhirtools::FhirStructureRepositoryBackend& backend,
+                     const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
+                     model::ProfileType profileType)
+{
+    auto key = latestProfileKey(backend, viewList, profileType);
+    Expect3(key.version.has_value(), "latestProfileKey must return a version for: " + key.url, std::logic_error);
+    const auto* profile = backend.findDefinition(key.url, *key.version);
+    Expect3(profile != nullptr, "Profile not found in backend: " + to_string(key), std::logic_error);
+    const auto* typeDef = backend.findTypeById(profile->typeId());
+    Expect3(typeDef != nullptr, "base type for "+ to_string(key) + " not found: " + profile->typeId(), std::logic_error);
+    return typeDef->urlAndVersion();
+}
 
 }// anonymous namespace
 
@@ -297,6 +315,7 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
                    .instance())
 {
     const auto& fhirInstance = Fhir::instance();
+    const auto& backend = fhirInstance.backend();
     static constexpr auto valueIsString = &NumberAsStringParserDocument::valueIsString;
     static constexpr auto getStringValueFromValue = &NumberAsStringParserDocument::getStringValueFromValue;
     using namespace std::string_literals;
@@ -307,8 +326,6 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
     auto viewList = fhirInstance.structureRepository(referenceTimestamp);
     Expect3(! viewList.empty(), "no view for referenceTimestamp: " + referenceTimestamp.toXsDateTime(),
             std::logic_error);
-    const auto& viewConfig = viewList.latest();
-    gsl::not_null view = viewConfig.view(std::addressof(fhirInstance.backend()));
     auto* restResourceArray = getValue(restResourceArrayPointer);
     Expect3(restResourceArray && restResourceArray->IsArray(), "rest resource must be array.", std::logic_error);
     for (auto& resource : restResourceArray->GetArray())
@@ -323,28 +340,16 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
                 std::logic_error);
         if (typeProfiles.size() == 1)
         {
-            auto key = profileWithVersion(typeProfiles.front(), *view);
-            Expect3(key.has_value(),
-                    "no profile found for "s.append(magic_enum::enum_name(typeProfiles.front()))
-                        .append("in view ")
-                        .append(view->id()),
-                    std::logic_error);
-            setKeyValue(resource, rapidjson::Pointer{"/profile"}, to_string(*key));
+            setKeyValue(resource, rapidjson::Pointer{"/profile"}, latestProfile(backend, viewList, typeProfiles.front()));
         }
         else
         {
 
-            setKeyValue(resource, rapidjson::Pointer{"/profile"}, baseType(*view, typeProfiles.front()));
+            setKeyValue(resource, rapidjson::Pointer{"/profile"}, baseType(backend, viewList, typeProfiles.front()));
             rapidjson::Value supportedProfileArray(rapidjson::kArrayType);
             for (const auto& profileType : typeProfiles)
             {
-                auto key = profileWithVersion(profileType, *view);
-                Expect3(key.has_value(),
-                        "no profile found for "s.append(magic_enum::enum_name(typeProfiles.front()))
-                            .append("in view ")
-                            .append(view->id()),
-                        std::logic_error);
-                addStringToArray(supportedProfileArray, to_string(*key));
+                addStringToArray(supportedProfileArray, latestProfile(backend, viewList, profileType));
             }
             setKeyValue(resource, rapidjson::Pointer{"/supportedProfile"}, supportedProfileArray);
         }

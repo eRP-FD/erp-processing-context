@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="OrganizationVisibilityCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/OrganizationVisibilityCS"/>
+  <version value="0.11.12"/>
+  <name value="OrganizationVisibilityCS"/>
+  <title value="OrganizationVisibilityCS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="OrganizationVisibilityCS"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="hide-erezeptApp"/>
+    <display value="Eintrag nicht in eRezeptApp darstellen"/>
+  </concept>
+</CodeSystem>

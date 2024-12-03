@@ -10,14 +10,14 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "mock/tsl/MockOcsp.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/StaticData.hxx"
-
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/response/ServerResponse.hxx"
+#include "erp/server/RequestHandler.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 
 #include <test_config.h>

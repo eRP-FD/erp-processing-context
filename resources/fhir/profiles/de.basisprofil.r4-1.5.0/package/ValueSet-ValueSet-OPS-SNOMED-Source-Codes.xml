@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="ValueSet-OPS-SNOMED-Source-Codes"/>
+  <url value="http://fhir.de/ValueSet/ValueSet-OPS-SNOMED-Source-Codes"/>
+  <version value="1.5.0"/>
+  <name value="ValueSet_OPS_SNOMED_Source_Codes"/>
+  <title value="ValueSet of OPS Source Codes for the OPS-SNOMED ConceptMap"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="ValueSet containing all source concepts from the ConceptMap OPS-SNOMED Category Mapping"/>
+  <compose>
+    <include>
+      <system value="http://fhir.de/CodeSystem/bfarm/ops"/>
+      <concept>
+        <code value="1"/>
+        <display value="Diagnostische Maßnahmen"/>
+      </concept>
+      <concept>
+        <code value="3"/>
+        <display value="Bildgebende Diagnostik"/>
+      </concept>
+      <concept>
+        <code value="5"/>
+        <display value="Operationen"/>
+      </concept>
+      <concept>
+        <code value="6"/>
+        <display value="Medikamente"/>
+      </concept>
+      <concept>
+        <code value="8"/>
+        <display value="Nichtoperative therapeutische Maßnahmen"/>
+      </concept>
+      <concept>
+        <code value="9"/>
+        <display value="Ergänzende Maßnahmen"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

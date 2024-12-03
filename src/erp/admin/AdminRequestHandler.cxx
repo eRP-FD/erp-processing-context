@@ -8,14 +8,14 @@
 #include "erp/admin/AdminRequestHandler.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/ConfigurationFormatter.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/TerminationHandler.hxx"
-#include "erp/util/UrlHelper.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/ConfigurationFormatter.hxx"
+#include "shared/util/RuntimeConfiguration.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/util/UrlHelper.hxx"
 
 AdminRequestHandlerBase::AdminRequestHandlerBase(ConfigurationKey credentialsKey)
     : mCredentialsKey(credentialsKey)

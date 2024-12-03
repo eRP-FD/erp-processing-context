@@ -1,7 +1,7 @@
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 
 #include "erp/service/CommunicationGetHandler.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceTemplates.hxx"

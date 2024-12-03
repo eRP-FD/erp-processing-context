@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="EndpointVisibilityCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/EndpointVisibilityCS"/>
+  <version value="0.11.12"/>
+  <name value="EndpointVisibilityCS"/>
+  <title value="EndpointVisibilityCS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="EndpointVisibilityCS"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="hide-versicherte"/>
+    <display value="Eintrag für Versicherte verbergen"/>
+  </concept>
+</CodeSystem>

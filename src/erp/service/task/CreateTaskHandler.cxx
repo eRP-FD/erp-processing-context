@@ -7,13 +7,13 @@
 
 #include "erp/service/task/CreateTaskHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/model/Parameters.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/TLog.hxx"
 
 CreateTaskHandler::CreateTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
         : TaskHandlerBase(Operation::POST_Task_create, allowedProfessionOiDs)

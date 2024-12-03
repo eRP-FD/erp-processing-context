@@ -8,7 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/MedicationBase.hxx"
 #include "erp/model/extensions/KBVMedicationCategory.hxx"
 
 #include <optional>
@@ -19,13 +20,14 @@ class XmlValidator;
 namespace model
 {
 
-template<class TDerivedMedication>
-// NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationBase : public Resource<TDerivedMedication>
+class KbvMedicationGeneric : public MedicationBase<KbvMedicationGeneric>
 {
 public:
-    explicit KbvMedicationBase(NumberAsStringParserDocument&& document);
-    static constexpr auto resourceTypeName = "Medication";
+    KbvMedicationGeneric(NumberAsStringParserDocument&& document)
+        : MedicationBase<KbvMedicationGeneric>(std::move(document))
+    {
+    }
+
     bool isNarcotics() const
     {
         const auto narcotics = this->template getExtension<KBVMedicationCategory>();
@@ -35,25 +37,7 @@ public:
     }
 
 private:
-    friend Resource<KbvMedicationBase>;
-};
-
-template<class TDerivedMedication>
-KbvMedicationBase<TDerivedMedication>::KbvMedicationBase(NumberAsStringParserDocument&& document)
-    : Resource<TDerivedMedication>(std::move(document))
-{
-}
-
-class KbvMedicationGeneric : public KbvMedicationBase<KbvMedicationGeneric>
-{
-public:
-    KbvMedicationGeneric(NumberAsStringParserDocument&& document)
-        : KbvMedicationBase<KbvMedicationGeneric>(std::move(document))
-    {
-    }
-
-private:
-    friend KbvMedicationBase<KbvMedicationGeneric>;
+    friend MedicationBase<KbvMedicationGeneric>;
 };
 
 

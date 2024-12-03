@@ -6,3 +6,7 @@
  */
 
 #include "KBVEXFORLegalBasis.hxx"
+
+#include "shared/model/Extension.txx"
+
+template class model::Extension<model::KBVEXFORLegalBasis>;

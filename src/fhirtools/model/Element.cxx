@@ -197,6 +197,7 @@ Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>
     : mFhirStructureRepository(fhirStructureRepository)
     , mDefinitionPointer(std::move(definitionPointer))
     , mParent(std::move(parent))
+    , mSubElementLevel(mParent.lock() ? mParent.lock()->mSubElementLevel + 1 : 0)
     , mType(GetElementType(fhirStructureRepository.get(), mDefinitionPointer))
 {
     Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
@@ -207,6 +208,7 @@ Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepository>
     : mFhirStructureRepository(fhirStructureRepository)
     , mDefinitionPointer(fhirStructureRepository, elementId)
     , mParent(std::move(parent))
+    , mSubElementLevel(mParent.lock() ? mParent.lock()->mSubElementLevel + 1 : 0)
     , mType(GetElementType(fhirStructureRepository.get(), mDefinitionPointer))
 {
     Expect3(mFhirStructureRepository != nullptr, "fhirStructureRepository must not be nullptr", std::logic_error);
@@ -424,7 +426,7 @@ Element::IdentityAndResult Element::referenceTargetIdentity(std::string_view ele
     if (mType == Type::Structured && definitionPointer().element()->typeId() == "Reference")
     {
         const auto& referenceField = subElements("reference");
-        if (referenceField.empty())
+        if (referenceField.empty() || referenceField[0]->isDataAbsent())
         {
             IdentityAndResult result;
             result.result.add(Severity::debug, "Reference is not a url reference", std::string{elementFullPath},
@@ -610,10 +612,17 @@ Element::resolveUrlReference(const Identity& urlIdentity, std::string_view eleme
 {
     using namespace std::string_literals;
     auto fullTargetRef = referenceTargetIdentity({urlIdentity}, elementFullPath);
-    const auto containingBundle = this->containingBundle();
-    if (containingBundle)
+    std::tuple<std::shared_ptr<const Element>, ValidationResults> resolution;
+    if (auto containingBundle = this->containingBundle())
     {
-        auto resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
+        resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
+    }
+    else
+    {
+        resolution = documentRoot()->resolveGenericReference(fullTargetRef.identity, elementFullPath);
+    }
+    if (get<std::shared_ptr<const Element>>(resolution))
+    {
         fullTargetRef.result.merge(std::move(get<ValidationResults>(resolution)));
         return {std::move(get<std::shared_ptr<const Element>>(resolution)), std::move(fullTargetRef.result)};
     }
@@ -672,21 +681,53 @@ std::tuple<std::shared_ptr<const Element>, ValidationResults>
 fhirtools::Element::resolveContainedReference(std::string_view containedId) const
 {
     ValidationResults resultList;
-    for (const auto& contained : subElements("contained"))
+    if (hasSubElement("contained"))
     {
-        const auto& id = contained->subElements("id");
-        if (id.empty())
+        for (const auto& contained : subElements("contained"))
         {
-            resultList.add(Severity::error, "No id in contained resource", "<unknown>", nullptr);
-            continue;
-        }
-        if (id[0]->asString() == containedId)
-        {
-            return {contained, std::move(resultList)};
+            const auto& id = contained->subElements("id");
+            if (id.empty())
+            {
+                resultList.add(Severity::error, "No id in contained resource", "<unknown>", nullptr);
+                continue;
+            }
+            if (id[0]->asString() == containedId)
+            {
+                return {contained, std::move(resultList)};
+            }
         }
     }
     return {nullptr, std::move(resultList)};
 }
+
+std::tuple<std::shared_ptr<const Element>, ValidationResults>
+// NOLINTNEXTLINE(misc-no-recursion)
+fhirtools::Element::resolveGenericReference(const Identity& urlIdentity, std::string_view elementFullPath) const
+{
+    using namespace std::string_literals;
+    Expect3(! urlIdentity.pathOrId.empty(), "Expecting path based id.", std::logic_error);
+    if (isResource())
+    {
+        auto ownIdentity = resourceIdentity(elementFullPath);
+        if (ownIdentity.identity == urlIdentity)
+        {
+            return {shared_from_this(), {}};
+        }
+    }
+    for (const auto& name: subElementNames())
+    {
+        for (const auto& subElement: subElements(name))
+        {
+            auto result = subElement->resolveGenericReference(urlIdentity, elementFullPath);
+            if (get<std::shared_ptr<const Element>>(result))
+            {
+                return result;
+            }
+        }
+    }
+    return {nullptr, {}};
+}
+
 
 // NOLINTNEXTLINE(misc-no-recursion)
 std::shared_ptr<const Element> fhirtools::Element::documentRoot() const
@@ -785,6 +826,21 @@ bool Element::isContainerResource() const
     return mDefinitionPointer.isResource() && hasSubElement("contained");
 }
 
+bool fhirtools::Element::isDataAbsent() const
+{
+    if (type() != Type::Structured && hasSubElement("extension"))
+    {
+        const auto& extensions = subElements("extension");
+        if (! extensions.empty() && extensions[0]->hasSubElement("url"))
+        {
+            const auto& urls = extensions[0]->subElements("url");
+            return ! urls.empty() &&
+                   urls[0]->asString() == "http://hl7.org/fhir/StructureDefinition/data-absent-reason";
+        }
+    }
+    return false;
+}
+
 // NOLINTNEXTLINE(misc-no-recursion)
 std::optional<std::strong_ordering> fhirtools::Element::compareTo(const Element& rhs) const
 {
@@ -846,6 +902,10 @@ std::optional<std::strong_ordering> fhirtools::Element::compareTo(const Element&
 
 std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
 {
+    if (isDataAbsent() != rhs.isDataAbsent())
+    {
+        return false;
+    }
     try
     {
         switch (rhs.type())
@@ -910,7 +970,12 @@ bool Element::matches(const Element& pattern) const
         }
         return true;
     }
-    return equals(pattern) == true;
+    return asRaw() == pattern.asRaw();
+}
+
+size_t fhirtools::Element::subElementLevel() const
+{
+    return mSubElementLevel;
 }
 
 Element::QuantityType::QuantityType(DecimalType value, const std::string_view& unit)
@@ -1051,6 +1116,11 @@ PrimitiveElement::GetStructureDefinition(const FhirStructureRepository* fhirStru
             break;
     }
     FPFail("unsupported type for PrimitiveElement");
+}
+
+std::string fhirtools::PrimitiveElement::asRaw() const
+{
+    return asString();
 }
 
 int32_t PrimitiveElement::asInt() const
@@ -1403,6 +1473,7 @@ std::ostream& Element::json(std::ostream& out) const
         using enum Type;
         case Integer:
         case Decimal:
+            return out << asRaw();
         case Boolean:
             return out << asString();
         case Date:

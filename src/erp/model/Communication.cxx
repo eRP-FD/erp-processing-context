@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/String.hxx"
-#include "erp/util/UrlHelper.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
+#include "shared/util/UrlHelper.hxx"
 
 #include <rapidjson/writer.h>
 #include <map>
@@ -226,6 +226,9 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::Gem_erxCompositionElement:
     case ProfileType::Gem_erxDevice:
     case ProfileType::Gem_erxDigest:
+    case ProfileType::GEM_ERP_PR_Medication:
+    case ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input:
+    case ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input:
     case ProfileType::KBV_PR_ERP_Bundle:
     case ProfileType::KBV_PR_ERP_Composition:
     case ProfileType::KBV_PR_ERP_Medication_Compounding:
@@ -249,6 +252,12 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::DAV_DispenseItem:
     case ProfileType::Subscription:
     case ProfileType::OperationOutcome:
+    case ProfileType::ProvidePrescriptionErpOp:
+    case ProfileType::EPAOpRxPrescriptionERPOutputParameters:
+    case ProfileType::CancelPrescriptionErpOp:
+    case ProfileType::EPAOpRxDispensationERPOutputParameters:
+    case ProfileType::ProvideDispensationErpOp:
+    case ProfileType::OrganizationDirectory:
             ModelFail("Not a Communication Profile");
     }
     Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +

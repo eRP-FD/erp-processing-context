@@ -7,7 +7,7 @@
 
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <algorithm>
 

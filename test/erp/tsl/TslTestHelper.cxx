@@ -9,14 +9,14 @@
 
 #include "test/erp/tsl/TslTestHelper.hxx"
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/tsl/TslService.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/String.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/tsl/TslService.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/String.hxx"
 
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
 #include "test/erp/tsl/RefreshJobTestTslManager.hxx"

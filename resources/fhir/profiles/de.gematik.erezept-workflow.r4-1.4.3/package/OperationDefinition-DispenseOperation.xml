@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="DispenseOperation"/>
+  <url value="https://gematik.de/fhir/erp/OperationDefinition/DispenseOperationDefinition"/>
+  <version value="1.4"/>
+  <name value="Dispense"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2024-07-15"/>
+  <description value="The operation $dispense lets the pharmacy perform a dispense for a medication without changing the status of the task. This actions lets a frontend display that a medication has been dispensed before it is closed by the pharmacy."/>
+  <affectsState value="true"/>
+  <code value="dispense"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="false"/>
+  <instance value="true"/>
+  <inputProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_DispenseOperation_Input"/>
+  <outputProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_DispenseOperation_Output"/>
+  <parameter>
+    <name value="secret"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The secret parameter that lets a pharmacy access the Task exclusively as part of the URL. This parameter must be equal to the value stored in Task.identifier:Secret. Otherwise the Operation aborts with an error."/>
+    <type value="string"/>
+  </parameter>
+  <parameter>
+    <name value="rxDispensation"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="*"/>
+    <documentation value="Information on dispensed Medication(s)"/>
+    <part>
+      <name value="medicationDispense"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="MedicationDispense"/>
+    </part>
+    <part>
+      <name value="medication"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Medication"/>
+    </part>
+  </parameter>
+  <parameter>
+    <name value="rxDispensation"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="*"/>
+    <documentation value="The MedicationDispense that has been transmitted by the pharmacy as a confirmation, that it has been successfully uploaded."/>
+    <part>
+      <name value="medicationDispense"/>
+      <use value="out"/>
+      <min value="0"/>
+      <max value="1"/>
+      <type value="MedicationDispense"/>
+    </part>
+    <part>
+      <name value="medication"/>
+      <use value="out"/>
+      <min value="0"/>
+      <max value="1"/>
+      <type value="Medication"/>
+    </part>
+    <part>
+      <name value="operationOutcome"/>
+      <use value="out"/>
+      <min value="0"/>
+      <max value="1"/>
+      <documentation value="In case of errors or issues the E-Rezept-Fachdienst will issue an OperationOutcome."/>
+      <type value="OperationOutcome"/>
+    </part>
+  </parameter>
+</OperationDefinition>

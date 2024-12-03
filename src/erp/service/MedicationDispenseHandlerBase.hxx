@@ -8,18 +8,22 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_MEDICATIONDISPENSEHANDLERBASE_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_MEDICATIONDISPENSEHANDLERBASE_HXX
 
-#include "erp/model/MedicationDispense.hxx"
+
 #include "erp/service/ErpRequestHandler.hxx"
+#include "shared/service/Operation.hxx"
 
 #include <vector>
 #include <string>
 
-namespace fhirtools
-{
-class Collection;
-}
 class ErpElement;
 
+namespace model
+{
+class GemErpPrMedication;
+class MedicationDispense;
+class MedicationDispenseBundle;
+class MedicationsAndDispenses;
+}
 
 class MedicationDispenseHandlerBase: public ErpRequestHandler
 {
@@ -27,13 +31,21 @@ public:
     MedicationDispenseHandlerBase(Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
 protected:
-    static std::vector<model::MedicationDispense> medicationDispensesFromBody(PcSessionContext& session);
+    static model::MedicationsAndDispenses parseBody(PcSessionContext& session, Operation forOperation);
+
     static void checkMedicationDispenses(std::vector<model::MedicationDispense>& medicationDispenses,
                                 const model::PrescriptionId& prescriptionId, const model::Kvnr& kvnr,
                                 const std::string& telematikIdFromAccessToken);
 
-    static model::Bundle createBundle(
-        const std::vector<model::MedicationDispense>& medicationDispenses);
+    static model::MedicationDispenseBundle createBundle(const model::MedicationsAndDispenses& bodyData);
+
+private:
+    using  UnspecifiedResourceFactory = model::ResourceFactory<model::UnspecifiedResource>;
+    static void checkSingleOrBundleAllowed(const model::MedicationDispense& medicationDispense);
+    static model::MedicationDispense medicationDispensesSingle(UnspecifiedResourceFactory&& unspec);
+    static std::vector<model::MedicationDispense> medicationDispensesFromBundle(UnspecifiedResourceFactory&& unspec);
+    static model::ProfileType parameterTypeFor(Operation operation);
+    static model::MedicationsAndDispenses medicationDispensesFromParameters(UnspecifiedResourceFactory&& unspec, Operation forOperation);
 };
 
 #endif

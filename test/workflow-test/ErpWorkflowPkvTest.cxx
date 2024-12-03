@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
 */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -897,7 +897,11 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     ASSERT_TRUE(task->owner().has_value());
     ASSERT_EQ(task->owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
 
-    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, task->lastModifiedDate(), communications));
+    const auto lastStatusChangeDate = client->getContext()
+                                          ->databaseFactory()
+                                          ->retrieveTaskForUpdate(task->prescriptionId())
+                                          ->task.lastStatusChangeDate();
+    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastStatusChangeDate, communications));
 
     auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematikId.has_value());

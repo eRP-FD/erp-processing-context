@@ -5,14 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/EllipticCurve.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/enrolment/EnrolmentHelper.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/HsmSession.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/enrolment/EnrolmentHelper.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/HsmSession.hxx"
 #include "erp/service/VauRequestHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/TLog.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
@@ -26,9 +26,9 @@
 #include "test/util/HsmTestBase.hxx"
 
 #if ! defined(__APPLE__) && ! defined(_WINNT_)
-    #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
-    #include "erp/hsm/production/HsmProductionFactory.hxx"
-    #include "erp/hsm/production/HsmProductionClient.hxx"
+    #include "shared/hsm/production/TeeTokenProductionUpdater.hxx"
+    #include "shared/hsm/production/HsmProductionFactory.hxx"
+    #include "shared/hsm/production/HsmProductionClient.hxx"
 #endif
 
 #include <functional>
@@ -480,6 +480,42 @@ TEST_P(HsmSessionTest, wrapAndUnwrapPayload)
     ASSERT_EQ(input, unwrappedResult);
 }
 
+TEST_P(HsmSessionTest, signWithVauAutKey)
+{
+    // sign arbitrary data
+    const auto input = ErpVector::create("hello");
+    const auto signedData = parameters.session->signWithVauAutKey(input);
+
+    // validate the signature using the extracted public key from the blob
+    auto ctx = shared_EVP_MD_CTX::make();
+    Expect(ctx != nullptr, "Can't create context");
+    const auto publicKey = parameters.session->getVauAutPublicKey();
+    auto autKeyBlob = parameters.blobCache->getBlob(BlobType::VauAut);
+    // sanity check to validate the certificate and the keypair in the HSM match
+    const auto vauAutCert = Certificate::fromBase64(autKeyBlob.certificate.value());
+    ASSERT_EQ(EVP_PKEY_cmp(vauAutCert.getPublicKey(), publicKey), 1);
+
+    Expect(EVP_DigestVerifyInit(ctx, nullptr, EVP_sha256(), nullptr, publicKey.removeConst()) == 1,
+           "Can't create digest structure");
+    Expect(EVP_DigestVerifyUpdate(ctx, input.data(), input.size()) == 1, "Can't update digest structure with header");
+
+    std::array<unsigned char, 32> rvec{0};
+    std::array<unsigned char, 32> svec{0};
+    std::copy_n(std::begin(signedData), rvec.size(), std::begin(rvec));
+    std::copy_n(std::begin(signedData) + rvec.size(), svec.size(), std::begin(svec));
+
+    auto sig = shared_ECDSA_SIG::make();
+    auto r = shared_BN::make();
+    auto s = shared_BN::make();
+    BN_bin2bn(rvec.data(), 32, r);
+    BN_bin2bn(svec.data(), 32, s);
+    ECDSA_SIG_set0(sig, r.release(), s.release());
+    int siglen = i2d_ECDSA_SIG(sig, nullptr);
+    std::vector<unsigned char> sig_der_bytes(static_cast<size_t>(siglen), 0u);
+    unsigned char* rawptr = sig_der_bytes.data();
+    i2d_ECDSA_SIG(sig, &rawptr);
+    ASSERT_EQ(EVP_DigestVerifyFinal(ctx, sig_der_bytes.data(), gsl::narrow<size_t>(siglen)), 1);
+}
 
 TEST_P(HsmSessionTest, getLatestTaskPersistenceId)
 {

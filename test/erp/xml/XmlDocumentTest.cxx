@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/xml/XmlDocument.hxx"
-#include "erp/util/GLog.hxx"
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/xml/XmlDocument.hxx"
+#include "shared/util/GLog.hxx"
+#include "shared/validation/XmlValidator.hxx"
 #include "test/util/LogTestBase.hxx"
 
 #include <gtest/gtest.h>

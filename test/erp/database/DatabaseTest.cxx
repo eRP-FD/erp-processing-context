@@ -5,12 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/TelematikId.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/TelematikId.hxx"
 #include "test/erp/database/DatabaseTestFixture.hxx"
 #include "test/util/CryptoHelper.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
@@ -79,7 +80,7 @@ public:
         receiptJson = String::replaceAll(receiptJson, "##PRESCRIPTION_ID##", id->toString());
         auto receipt = ::model::Bundle::fromJsonNoValidation(receiptJson);
 
-        ASSERT_NO_THROW(db.activateTask(task, signedPrescription));
+        ASSERT_NO_THROW(db.activateTask(task, signedPrescription, JwtBuilder::testBuilder().makeJwtArzt()));
         ASSERT_NO_THROW(db.storeChargeInformation(::model::ChargeInformation{
             ::std::move(chargeItem), ::std::move(signedPrescription), ::std::move(prescription),
             ::std::move(signedDispenseItem), ::std::move(dispenseItem), ::std::move(receipt)}));

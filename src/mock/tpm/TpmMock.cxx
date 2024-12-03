@@ -7,9 +7,9 @@
 
 #include "mock/tpm/TpmMock.hxx"
 
-#include "erp/common/HttpStatus.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/network/message/HttpStatus.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 
 

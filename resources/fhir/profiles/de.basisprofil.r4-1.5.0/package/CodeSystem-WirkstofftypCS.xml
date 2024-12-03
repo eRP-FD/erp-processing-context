@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="WirkstofftypCS"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablecodesystem"/>
+  </meta>
+  <url value="http://fhir.de/CodeSystem/WirkstofftypCS"/>
+  <version value="1.5.0"/>
+  <name value="WirkstofftypCS"/>
+  <title value="CodeSystem - Wirkstofftypen"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Codes zur Differenzierung von Wirkstoffen zwischen genauer Substanz (z.B. Salz, Ester etc.), allgemeiner (normalisierter) Substanz und Kombinationscode für mehrere Wirkstoffe."/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://fhir.de/ValueSet/WirkstofftypVS"/>
+  <content value="complete"/>
+  <count value="3"/>
+  <concept>
+    <code value="IN"/>
+    <display value="ingredient"/>
+    <definition value="The name of the substance."/>
+    <designation>
+      <language value="de-DE"/>
+      <value value="Wirkstoff allgemein"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="PIN"/>
+    <display value="precise ingredient"/>
+    <definition value="The name of the substance expressed precisely as a salt or ester of the ingredient."/>
+    <designation>
+      <language value="de-DE"/>
+      <value value="Wirkstoff präzise"/>
+    </designation>
+  </concept>
+  <concept>
+    <code value="MIN"/>
+    <display value="multiple ingredients"/>
+    <definition value="The name of the substances in a combination product."/>
+    <designation>
+      <language value="de-DE"/>
+      <value value="Kombinationswirkstoff"/>
+    </designation>
+  </concept>
+</CodeSystem>

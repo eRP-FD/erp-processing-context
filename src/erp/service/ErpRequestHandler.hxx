@@ -11,21 +11,21 @@
 #include <string>
 #include <unordered_set>
 
-#include "erp/common/Header.hxx"
-#include "erp/common/HttpStatus.hxx"
-#include "erp/common/MimeType.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/Resource.hxx"
-#include "erp/model/ResourceFactory.hxx"
+#include "shared/network/message/Header.hxx"
+#include "shared/network/message/HttpStatus.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceFactory.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/service/Operation.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/validation/JsonValidator.hxx"
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/service/Operation.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/validation/JsonValidator.hxx"
+#include "shared/validation/XmlValidator.hxx"
 #include "fhirtools/util/SaxHandler.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
@@ -40,7 +40,13 @@ public:
     explicit ErpRequestHandler (Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     ~ErpRequestHandler (void) override = default;
 
-    void preHandleRequestHook(SessionContext& session) override;
+    // Within erp, switch from BaseSessionContext to PcSessionContext via dynamic_cast.
+    // All derived classes use SessionContext.
+
+    virtual void handleRequest(PcSessionContext& session) = 0;
+    void handleRequest(BaseSessionContext& session) override { handleRequest(dynamic_cast<PcSessionContext&>(session)); }
+    virtual void preHandleRequestHook(SessionContext& session);
+    void preHandleRequestHook(BaseSessionContext& baseSessionContext) override { preHandleRequestHook(dynamic_cast<SessionContext&>(baseSessionContext)); }
 
     bool allowedForProfessionOID (std::string_view professionOid) const override;
     Operation getOperation (void) const override;

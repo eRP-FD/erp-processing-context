@@ -1,4 +1,4 @@
-#include "erp/util/Version.hxx"
+#include "shared/util/Version.hxx"
 
 
 #include <gtest/gtest.h>

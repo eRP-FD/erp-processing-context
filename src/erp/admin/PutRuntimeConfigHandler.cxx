@@ -4,11 +4,11 @@
 
 #include "erp/admin/PutRuntimeConfigHandler.hxx"
 
-#include <erp/pc/PcServiceContext.hxx>
-#include <erp/server/context/SessionContext.hxx>
-#include <erp/server/request/ServerRequest.hxx>
-#include <erp/util/RuntimeConfiguration.hxx>
-#include <erp/util/UrlHelper.hxx>
+#include "erp/pc/PcServiceContext.hxx"
+#include "erp/server/context/SessionContext.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/util/RuntimeConfiguration.hxx"
+#include "shared/util/UrlHelper.hxx"
 
 PutRuntimeConfigHandler::PutRuntimeConfigHandler()
     : AdminRequestHandlerBase(ConfigurationKey::ADMIN_RC_CREDENTIALS)

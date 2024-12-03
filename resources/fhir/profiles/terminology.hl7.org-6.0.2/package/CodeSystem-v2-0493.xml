@@ -1,0 +1,317 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="v2-0493"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: CodeSystem v2-0493</b>
+      </p>
+      <a name="v2-0493"> </a>
+      <a name="hcv2-0493"> </a>
+      <a name="v2-0493-en-US"> </a>
+      <p>
+        <b>Properties</b>
+      </p>
+      <p>
+        <b>This code system defines the following properties for its concepts</b>
+      </p>
+      <table class="grid">
+        <tr>
+          <td>
+            <b>Name</b>
+          </td>
+          <td>
+            <b>Code</b>
+          </td>
+          <td>
+            <b>URI</b>
+          </td>
+          <td>
+            <b>Type</b>
+          </td>
+          <td>
+            <b>Description</b>
+          </td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>status</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#status</td>
+          <td>code</td>
+          <td>Status of the concept</td>
+        </tr>
+        <tr>
+          <td>deprecated</td>
+          <td>deprecated</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated</td>
+          <td>code</td>
+          <td>Version of HL7 in which the code was deprecated</td>
+        </tr>
+        <tr>
+          <td>V2 Concept Comment</td>
+          <td>v2-concComment</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-concComment</td>
+          <td>string</td>
+          <td>V2 Concept Comment</td>
+        </tr>
+        <tr>
+          <td>V2 Concept Comment As Published</td>
+          <td>v2-concCommentAsPub</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-concCommentAsPub</td>
+          <td>string</td>
+          <td>V2 Concept Comment As Published</td>
+        </tr>
+      </table>
+      <p>
+        <b>Concepts</b>
+      </p>
+      <p>This case-sensitive code system <code>http://terminology.hl7.org/CodeSystem/v2-0493</code> defines the following codes in a Is-A hierarchy:</p>
+      <table class="codes">
+        <tr>
+          <td style="white-space:nowrap">
+            <b>Code</b>
+          </td>
+          <td>
+            <b>Display</b>
+          </td>
+          <td>
+            <b>Definition</b>
+          </td>
+          <td>
+            <b>V2 Concept Comment</b>
+          </td>
+          <td>
+            <b>V2 Concept Comment As Published</b>
+          </td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">AUT<a name="v2-0493-AUT"> </a></td>
+          <td>Autolyzed</td>
+          <td>Autolyzed</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">CLOT<a name="v2-0493-CLOT"> </a></td>
+          <td>Clotted</td>
+          <td>Clotted</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">CON<a name="v2-0493-CON"> </a></td>
+          <td>Contaminated</td>
+          <td>Contaminated</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">COOL<a name="v2-0493-COOL"> </a></td>
+          <td>Cool</td>
+          <td>Cool</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">FROZ<a name="v2-0493-FROZ"> </a></td>
+          <td>Frozen</td>
+          <td>Frozen</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">HEM<a name="v2-0493-HEM"> </a></td>
+          <td>Hemolyzed</td>
+          <td>Hemolyzed</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">LIVE<a name="v2-0493-LIVE"> </a></td>
+          <td>Live</td>
+          <td>Live</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">ROOM<a name="v2-0493-ROOM"> </a></td>
+          <td>Room temperature</td>
+          <td>Room temperature</td>
+          <td/>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">SNR<a name="v2-0493-SNR"> </a></td>
+          <td>Sample not received</td>
+          <td>Sample not received</td>
+          <td>Deprecated in v 2.8</td>
+          <td>Deprecated in v 2.8</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">CFU<a name="v2-0493-CFU"> </a></td>
+          <td>Centrifuged</td>
+          <td>Centrifuged</td>
+          <td/>
+          <td/>
+        </tr>
+      </table>
+    </div>
+  </text>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
+    <valueCode value="oo"/>
+  </extension>
+  <url value="http://terminology.hl7.org/CodeSystem/v2-0493"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.18.317"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="SpecimenCondition"/>
+  <title value="specimenCondition"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Code system of concepts specifying a mode or state of being that describes the nature of the specimen.  Used in HL7 Version 2.x messaging in the SPM segment."/>
+  <purpose value="Underlying Master Code System for V2 table 0493 (Specimen Condition)"/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://terminology.hl7.org/ValueSet/v2-0493"/>
+  <hierarchyMeaning value="is-a"/>
+  <compositional value="false"/>
+  <versionNeeded value="false"/>
+  <content value="complete"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#status"/>
+    <description value="Status of the concept"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="deprecated"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated"/>
+    <description value="Version of HL7 in which the code was deprecated"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="v2-concComment"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-concComment"/>
+    <description value="V2 Concept Comment"/>
+    <type value="string"/>
+  </property>
+  <property>
+    <code value="v2-concCommentAsPub"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-concCommentAsPub"/>
+    <description value="V2 Concept Comment As Published"/>
+    <type value="string"/>
+  </property>
+  <concept id="5325">
+    <code value="AUT"/>
+    <display value="Autolyzed"/>
+    <definition value="Autolyzed"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5326">
+    <code value="CLOT"/>
+    <display value="Clotted"/>
+    <definition value="Clotted"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5327">
+    <code value="CON"/>
+    <display value="Contaminated"/>
+    <definition value="Contaminated"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5328">
+    <code value="COOL"/>
+    <display value="Cool"/>
+    <definition value="Cool"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5329">
+    <code value="FROZ"/>
+    <display value="Frozen"/>
+    <definition value="Frozen"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5330">
+    <code value="HEM"/>
+    <display value="Hemolyzed"/>
+    <definition value="Hemolyzed"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5331">
+    <code value="LIVE"/>
+    <display value="Live"/>
+    <definition value="Live"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5332">
+    <code value="ROOM"/>
+    <display value="Room temperature"/>
+    <definition value="Room temperature"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5333">
+    <code value="SNR"/>
+    <display value="Sample not received"/>
+    <definition value="Sample not received"/>
+    <property>
+      <code value="v2-concComment"/>
+      <valueString value="Deprecated in v 2.8"/>
+    </property>
+    <property>
+      <code value="v2-concCommentAsPub"/>
+      <valueString value="Deprecated in v 2.8"/>
+    </property>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="5334">
+    <code value="CFU"/>
+    <display value="Centrifuged"/>
+    <definition value="Centrifuged"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+</CodeSystem>

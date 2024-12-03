@@ -8,20 +8,20 @@
 #include "test/workflow-test/EndpointTestClient.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/admin/AdminServer.hxx"
-#include "erp/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/enrolment/EnrolmentServer.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/idp/MockIdpUpdater.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/enrolment/VsdmHmacKey.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/VsdmKeyBlobDatabase.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/idp/IdpUpdater.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -75,13 +75,20 @@ void EndpointTestClient::initEnrolmentServer()
 void EndpointTestClient::initClient()
 {
 
-    const SafeString serverCertificate{Configuration::instance().getStringValue(ConfigurationKey::SERVER_CERTIFICATE)};
-    const SafeString clientCertificate{
+    const auto serverCertificate{Configuration::instance().getStringValue(ConfigurationKey::SERVER_CERTIFICATE)};
+    const auto clientCertificate{
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_CERTIFICATE)};
-    const SafeString clientPrivateKey{
+    const auto clientPrivateKey{
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_PRIVATE_KEY)};
-    mHttpsClient = std::make_unique<HttpsClient>(getHostAddress(), getPort(), 30, Constants::resolveTimeout, true,
-                                                 serverCertificate, clientCertificate, clientPrivateKey);
+    mHttpsClient = std::make_unique<HttpsClient>(ConnectionParameters{
+        .hostname = getHostAddress(),
+        .port = std::to_string(getPort()),
+        .connectionTimeoutSeconds = 30,
+        .resolveTimeout = Constants::resolveTimeout,
+        .tlsParameters = TlsConnectionParameters{
+            .certificateVerifier = TlsCertificateVerifier::withCustomRootCertificates(serverCertificate),
+            .clientCertificate =
+                CertificateChainAndKey{CertificateKeyPair::fromPem(clientCertificate, clientPrivateKey)}}});
 }
 
 void EndpointTestClient::initVsdmKeys()
@@ -235,11 +242,11 @@ std::unique_ptr<TestClient> EndpointTestClient::factory(std::shared_ptr<XmlValid
 
 std::unique_ptr<HttpsServer> EndpointTestClient::httpsServerFactory(const std::string_view address, uint16_t port,
                                                                     RequestHandlerManager&& requestHandlers,
-                                                                    PcServiceContext& serviceContext,
+                                                                    BaseServiceContext& serviceContext,
                                                                     bool enforceClientAuthentication,
                                                                     const SafeString& caCertificates)
 {
-    return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), serviceContext,
+    return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), dynamic_cast<PcServiceContext&>(serviceContext),
                                          enforceClientAuthentication, caCertificates);
 }
 

@@ -6,20 +6,21 @@
  */
 
 #include "erp/service/MedicationDispenseHandler.hxx"
-#include "erp/service/MedicationDispenseHandlerBase.hxx"
-
 #include "erp/database/Database.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/search/UrlArguments.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/common/MimeType.hxx"
-#include "erp/ErpRequirements.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
+#include "erp/service/MedicationDispenseHandlerBase.hxx"
+#include "erp/util/search/UrlArguments.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/TLog.hxx"
 
 
 using namespace model;
@@ -139,12 +140,19 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19406_01.start("Filter MedicationDispense on KVNR of the insured");
     // No additional search parameters for GetMedicationDispenseById
     auto* databaseHandle = session.database();
-    const auto medicationDispense = databaseHandle->retrieveMedicationDispense(kvnr, medicationDispenseId);
+    const auto [medicationDispenses, medications] = databaseHandle->retrieveMedicationDispense(kvnr, medicationDispenseId);
     A_19406_01.finish();
 
-    ErpExpect(medicationDispense.has_value(), HttpStatus::NotFound,
-              "No Medication Dispense found for Id " + pathId.value());
-    makeResponse(session, HttpStatus::OK, &medicationDispense.value());
+    ErpExpect(!medicationDispenses.empty(), HttpStatus::NotFound, "No Medication Dispense found for Id " + pathId.value());
+    if (medications.empty())
+    {
+        makeResponse(session, HttpStatus::OK, &medicationDispenses.front());
+    }
+    else
+    {
+        model::MedicationDispenseBundle responseBundle{getLinkBase(), medicationDispenses, medications};
+        makeResponse(session, HttpStatus::OK, &responseBundle);
+    }
     // GEMREQ-end A_19406-01#getId-3
 
     // Collect Audit data
@@ -152,7 +160,7 @@ void GetMedicationDispenseHandler::handleRequest(PcSessionContext& session)
         .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::read)
         .setEventId(model::AuditEventId::GET_MedicationDispense_id)
-        .setPrescriptionId(medicationDispense->prescriptionId());
+        .setPrescriptionId(medicationDispenses.front().prescriptionId());
 
     A_19141.finish();
 }

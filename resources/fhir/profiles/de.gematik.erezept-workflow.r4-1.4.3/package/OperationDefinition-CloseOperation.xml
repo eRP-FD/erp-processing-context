@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="CloseOperation"/>
+  <url value="https://gematik.de/fhir/erp/OperationDefinition/CloseOperationDefinition"/>
+  <version value="1.4"/>
+  <name value="Close"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2024-07-15"/>
+  <description value="The operation $close finishes the e-prescription workflow and creates a receipt. The Output of this operation is a signed Bundle, to be used for further financial processing. The status of the Task then changes into #completed"/>
+  <affectsState value="true"/>
+  <code value="close"/>
+  <resource value="Task"/>
+  <system value="false"/>
+  <type value="false"/>
+  <instance value="true"/>
+  <inputProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input"/>
+  <outputProfile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Output"/>
+  <parameter>
+    <name value="secret"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The secret parameter that lets a pharmacy access the Task exclusively as part of the URL. This parameter must be equal to the value stored in Task.identifier:Secret. Otherwise the Operation aborts with an error."/>
+    <type value="string"/>
+  </parameter>
+  <parameter>
+    <name value="rxDispensation"/>
+    <use value="in"/>
+    <min value="0"/>
+    <max value="*"/>
+    <documentation value="Information on dispensed Medication(s)"/>
+    <part>
+      <name value="medicationDispense"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="MedicationDispense"/>
+    </part>
+    <part>
+      <name value="medication"/>
+      <use value="in"/>
+      <min value="0"/>
+      <max value="1"/>
+      <type value="Medication"/>
+    </part>
+  </parameter>
+  <parameter>
+    <name value="return"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="1"/>
+    <documentation value="The receipt Bundle containing the signing Device, the pharmacy`s TelematikID and a signature."/>
+    <type value="Bundle"/>
+  </parameter>
+</OperationDefinition>

@@ -8,10 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 #define ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 
-#include "erp/crypto/RandomSource.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/hsm/ErpTypes.hxx"
+#include "shared/crypto/RandomSource.hxx"
+#include "shared/database/DatabaseConnectionInfo.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
+#include "shared/hsm/ErpTypes.hxx"
 
 #include <date/date.h>
 #include <functional>
@@ -32,7 +32,9 @@ class Consent;
 class ErxReceipt;
 class Kvnr;
 class MedicationDispense;
+class MedicationDispenseBundle;
 class MedicationDispenseId;
+class MedicationsAndDispenses;
 class PrescriptionId;
 class Task;
 class Timestamp;
@@ -40,10 +42,11 @@ class Timestamp;
 
 class CmacKey;
 class HsmPool;
-class DatabaseBackend;
+class ErpDatabaseBackend;
 class KeyDerivation;
 class UrlArguments;
 class Uuid;
+class JWT;
 
 enum class CmacKeyCategory : int8_t;
 
@@ -55,7 +58,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "21";
+    static constexpr const char* expectedSchemaVersion = "29";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -82,16 +85,20 @@ public:
     virtual model::PrescriptionId storeTask(const model::Task& task) = 0;
     virtual void updateTaskStatusAndSecret(const model::Task& task) = 0;
     virtual void updateTaskStatusAndSecret(const model::Task& task, const SafeString& key) = 0;
-    virtual void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) = 0;
-    virtual void activateTask(const model::Task& task, const SafeString& key, const model::Binary& healthCareProviderPrescription) = 0;
+    virtual void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription,
+                              const JWT& doctorIdentity) = 0;
+    virtual void activateTask(const model::Task& task, const SafeString& key,
+                              const model::Binary& healthCareProviderPrescription, const JWT& doctorIdentity) = 0;
+    virtual void updateTaskReceipt(const model::Task& task, const model::ErxReceipt& receipt, const SafeString& key,
+                                   const JWT& pharmacyIdentity) = 0;
     virtual void updateTaskMedicationDispense(const model::Task& task,
-                                              const std::vector<model::MedicationDispense>& medicationDispenses) = 0;
+                                              const model::MedicationDispenseBundle& medicationDispenses) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::Task& task,
-                                                     const std::vector<model::MedicationDispense>& medicationDispenses,
-                                                     const model::ErxReceipt& receipt) = 0;
+                                                     const model::MedicationDispenseBundle& medicationDispenses,
+                                                     const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) = 0;
     virtual void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
-                                                     const std::vector<model::MedicationDispense>& medicationDispenses,
-                                                     const model::ErxReceipt& receipt) = 0;
+                                                     const model::MedicationDispenseBundle& medicationDispenses,
+                                                     const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) = 0;
     virtual void updateTaskDeleteMedicationDispense(const model::Task& task) = 0;
     virtual void updateTaskClearPersonalData(const model::Task& task) = 0;
 
@@ -120,9 +127,9 @@ public:
     virtual uint64_t countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>
-    [[nodiscard]] virtual std::vector<model::MedicationDispense>
+    [[nodiscard]] virtual model::MedicationsAndDispenses
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
-    [[nodiscard]] virtual std::optional<model::MedicationDispense>
+    [[nodiscard]] virtual model::MedicationsAndDispenses
     retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) = 0;
 
     virtual CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource = RandomSource::defaultSource()) = 0;
@@ -203,7 +210,7 @@ public:
     virtual void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) = 0;
     virtual uint64_t countChargeInformationForInsurant (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
-    virtual DatabaseBackend& getBackend() = 0;
+    virtual ErpDatabaseBackend& getBackend() = 0;
 };
 
 #endif

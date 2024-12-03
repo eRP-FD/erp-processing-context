@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_SERVICE_HEALTHHANDLERTESTTSLMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_SERVICE_HEALTHHANDLERTESTTSLMANAGER_HXX
 
-#include "erp/tsl/TslManager.hxx"
+#include "shared/tsl/TslManager.hxx"
 
 #include <memory>
 #include <vector>
@@ -34,7 +34,7 @@ public:
     OcspResponse
     getCertificateOcspResponse(
         const TslMode tslMode,
-        X509Certificate &certificate,
+        const X509Certificate &certificate,
         const std::unordered_set<CertificateType> &typeRestrictions,
         const OcspCheckDescriptor& ocspCheckDescriptor) override
     {

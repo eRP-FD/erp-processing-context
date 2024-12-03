@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Random.hxx"
+#include "shared/util/Random.hxx"
 
 #include <gtest/gtest.h>
 #include <iostream>
@@ -33,4 +33,25 @@ TEST(RandomTest, randomBinaryData)
     size_t size = 65536;
     util::Buffer buffer = Random::randomBinaryData(size);
     ASSERT_EQ(buffer.size(), size);
+}
+
+
+TEST(RandomTest, selectRandomElement)
+{
+    const int numElements = 10;
+    std::vector<int> v(numElements);
+    std::iota(v.begin(), v.end(), 0);
+    for (int i = 0; i < 50; ++i)
+    {
+        auto it = Random::selectRandomElement(v.begin(), v.end());
+        auto dist = std::distance(v.begin(), it);
+        ASSERT_GE(dist, 0);
+        ASSERT_LT(dist, numElements);
+    }
+
+    auto it = Random::selectRandomElement(v.begin(), v.begin() + 1);
+    ASSERT_TRUE(it == v.begin());
+
+    ASSERT_ANY_THROW(Random::selectRandomElement(v.begin(), v.begin()));
+    ASSERT_ANY_THROW(Random::selectRandomElement(v.end(), v.begin()));
 }

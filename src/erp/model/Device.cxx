@@ -6,10 +6,10 @@
  */
 
 #include "erp/model/Device.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
-#include "erp/erp-serverinfo.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
+#include "shared/erp-serverinfo.hxx"
 
 #include <magic_enum/magic_enum.hpp>
 

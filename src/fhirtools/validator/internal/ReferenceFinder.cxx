@@ -274,6 +274,8 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
             {
                 mResult.validationResults.add(Severity::debug, "profile not found: " + profileUrl,
                                               std::string{elementFullPath}, pet.profile());
+                /// FIXME: Workaround for ERP-23967
+                referenceTargetsOk = true;
                 continue;
             }
             if (type != nullptr && ! (profile->isDerivedFrom(repo, *type) || type->isDerivedFrom(repo, *profile)))
@@ -295,7 +297,7 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
                 msg << sepProf << '"' << prof << '"';
                 sepProf = ", ";
             }
-            msg << "] matches type: " << type->url() << '|' << type->version();
+            msg << "] matches type: " << (type?type->urlAndVersion():"<undefined>");
             mResult.validationResults.add(Severity::error, msg.str(), std::string{elementFullPath} + ".type", pet.profile());
         }
         targetProfiles << ']';

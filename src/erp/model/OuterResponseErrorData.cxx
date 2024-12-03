@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/OuterResponseErrorData.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 namespace model
 {

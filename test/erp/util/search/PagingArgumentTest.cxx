@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/common/HttpStatus.hxx"
-#include "erp/util/ErpException.hxx"
+#include "shared/network/message/HttpStatus.hxx"
+#include "shared/util/ErpException.hxx"
 #include "erp/util/search/PagingArgument.hxx"
 #include "test/util/ErpMacros.hxx"
 

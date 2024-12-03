@@ -7,7 +7,7 @@
 
 #include "erp/pc/SeedTimer.hxx"
 
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/hsm/HsmPool.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/TestUtils.hxx"

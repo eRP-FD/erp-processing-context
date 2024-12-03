@@ -5,13 +5,34 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 namespace model
 {
+
+model::MedicationDispenseBundle::MedicationDispenseBundle(const std::string& linkBase,
+                                                          const std::vector<model::MedicationDispense>& medicationDispenses,
+                                                          const std::vector<model::GemErpPrMedication>& medications)
+    : MedicationDispenseBundle{model::BundleType::searchset, ::model::FhirResourceBase::NoProfile}
+{
+    for (const auto& medicationDispense : medicationDispenses)
+    {
+        const std::string urn = linkBase + "/MedicationDispense/" + medicationDispense.id().toString();
+        addResource(urn, {}, model::BundleSearchMode::match, medicationDispense.jsonDocument());
+    }
+    for (const auto& medication: medications)
+    {
+        std::string urn = "urn:uuid:";
+        urn += value(medication.getId());
+        addResource(urn, {}, model::BundleSearchMode::include, medication.jsonDocument());
+    }
+}
 
 /**
  * @see ERP-22297
@@ -45,13 +66,16 @@ void MedicationDispenseBundle::prepare()
         setProfile(value(model::profileWithVersion(ProfileType::MedicationDispenseBundle, *repoView)));
     }
 }
+Timestamp model::MedicationDispenseBundle::whenHandedOver() const
+{
+    const auto medications = getResourcesByType<model::MedicationDispense>();
+    ModelExpect(! medications.empty(), "Expected at least one MedicationDispense in MedicationDispenseBundle");
+    return medications[0].whenHandedOver();
+}
 
 std::optional<model::Timestamp> MedicationDispenseBundle::getValidationReferenceTimestamp() const
 {
-    const auto medications = getResourcesByType<model::MedicationDispense>();
-    ErpExpect(! medications.empty(), HttpStatus::BadRequest,
-              "Expected at least one MedicationDispense in MedicationDispenseBundle");
-    return medications[0].whenHandedOver();
+    return whenHandedOver();
 }
 
 }// namespace model

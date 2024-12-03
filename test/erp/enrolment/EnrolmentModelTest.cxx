@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <erp/enrolment/EnrolmentModel.hxx>
+#include <shared/enrolment/EnrolmentModel.hxx>
 #include <gtest/gtest.h>
 #include <regex>
 

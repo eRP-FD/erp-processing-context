@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Seeder.hxx"
+#include "shared/crypto/Seeder.hxx"
 
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/hsm/HsmPool.hxx"
 
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

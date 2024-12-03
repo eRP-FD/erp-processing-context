@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/compression/ZStdDictionary.hxx"
+#include "shared/compression/ZStdDictionary.hxx"
 
 #include "test/erp/compression/ZStdTestHelper.hxx"
 

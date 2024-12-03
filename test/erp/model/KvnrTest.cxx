@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "erp/model/Iknr.hxx"
 #include "erp/model/Lanr.hxx"
 #include "erp/model/Pzn.hxx"

@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurve.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/String.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/String.hxx"
 
 #include "test/util/ResourceManager.hxx"
 

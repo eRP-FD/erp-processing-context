@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="atc"/>
+  <url value="http://fhir.de/CodeSystem/bfarm/atc"/>
+  <name value="Atc"/>
+  <title value="ATC"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="ATC Platzhalter-CodeSystem"/>
+  <copyright value="BfArM - Bundesinstitut für Arzneimittel und Medizinprodukte"/>
+  <caseSensitive value="true"/>
+  <content value="not-present"/>
+</CodeSystem>

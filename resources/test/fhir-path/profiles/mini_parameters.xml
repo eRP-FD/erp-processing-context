@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <id value="Parameters"/>
+  <url value="http://fhir-tools.test/minifhirtypes/Parameters"/>
+  <version value="4.0.1"/>
+  <name value="Parameters"/>
+  <status value="draft"/>
+  <kind value="resource"/>
+  <abstract value="false"/>
+  <type value="Parameters"/>
+  <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+  <derivation value="specialization"/>
+  <snapshot>
+    <element id="Parameters">
+      <path value="Parameters"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+    </element>
+    <element id="Parameters.id">
+      <path value="Parameters.id"/>
+      <representation value="xmlAttr"/>
+      <min value="1"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.id"/>
+        <min value="1"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="http://hl7.org/fhirpath/System.String"/>
+      </type>
+    </element>
+    <element id="Parameters.meta">
+      <path value="Parameters.meta"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.meta"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="Meta"/>
+      </type>
+    </element>
+    <element id="Parameters.extension">
+      <path value="Parameters.extension"/>
+      <slicing>
+        <discriminator>
+          <type value="value"/>
+          <path value="url"/>
+        </discriminator>
+        <rules value="open"/>
+      </slicing>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource.extension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+      </type>
+    </element>
+    <element id="Parameters.contained">
+      <path value="Parameters.contained"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource.contained"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Resource"/>
+      </type>
+    </element>
+    <element id="Parameters.parameter">
+      <path value="Parameters.parameter"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Parameters.parameter"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="BackboneElement"/>
+      </type>
+    </element>
+    <element id="Parameters.parameter.name">
+      <path value="Parameters.parameter.name"/>
+      <min value="1"/>
+      <max value="1"/>
+      <base>
+        <path value="Parameters.parameter.name"/>
+        <min value="1"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="string"/>
+      </type>
+    </element>
+    <element id="Parameters.parameter.value[x]">
+      <path value="Parameters.parameter.value[x]"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Parameters.parameter.value[x]"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="string"/>
+      </type>
+    </element>
+    <element id="Parameters.parameter.resource">
+        <path value="Parameters.parameter.resource"/>
+        <min value="0"/>
+        <max value="1"/>
+        <base>
+            <path value="Parameters.parameter.resource"/>
+            <min value="0"/>
+            <max value="1"/>
+        </base>
+        <type>
+            <code value="Resource"/>
+        </type>
+    </element>
+    <element id="Parameters.parameter.part">
+        <path value="Parameters.parameter.part"/>
+        <min value="0"/>
+        <max value="*"/>
+        <base>
+            <path value="Parameters.parameter.part"/>
+            <min value="0"/>
+            <max value="*"/>
+        </base>
+        <contentReference value="#Parameters.parameter"/>
+    </element>
+</snapshot>
+</StructureDefinition>

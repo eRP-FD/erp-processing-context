@@ -8,11 +8,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_TASK_HXX
 #define ERP_PROCESSING_CONTEXT_TASK_HXX
 
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/PrescriptionType.hxx"
-#include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/PrescriptionType.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/model/Kvnr.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
@@ -46,11 +46,12 @@ public:
     static Status fromNumericalStatus(int8_t status);
 
     // For creation of a new task
-    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode);
+    explicit Task(model::PrescriptionType prescriptionType, const std::optional<std::string_view>& accessCode,
+                  Timestamp lastStatusChange = Timestamp::now());
 
     // For creation from database entry
     explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType, model::Timestamp lastModified,
-                  model::Timestamp authoredOn, Status status);
+                  model::Timestamp authoredOn, Status status, Timestamp lastStatusChange);
 
     [[nodiscard]] Status status() const;
     [[nodiscard]] std::optional<Kvnr> kvnr() const;
@@ -67,6 +68,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> patientConfirmationUuid() const;
     [[nodiscard]] std::optional<std::string_view> receiptUuid() const;
     [[nodiscard]] std::optional<std::string_view> owner() const;
+    [[nodiscard]] const Timestamp& lastStatusChangeDate() const;
 
     void setPrescriptionId (const model::PrescriptionId& prescriptionId);
     void setStatus(Status newStatus);
@@ -106,6 +108,9 @@ private:
     [[nodiscard]] model::Timestamp dateFromExtensionArray(std::string_view url) const;
 
     void setAcceptDateDependentPrescriptionType(const model::Timestamp& baseTime);
+    void setStatus(Status newStatus, model::Timestamp lastStatusChange);
+
+    model::Timestamp mLastStatusChange;
 };
 
 // NOLINTNEXTLINE(bugprone-exception-escape)

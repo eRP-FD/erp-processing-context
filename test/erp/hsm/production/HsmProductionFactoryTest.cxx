@@ -6,10 +6,10 @@
  */
 
 
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/hsm/production/HsmProductionFactory.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
+#include "shared/hsm/production/HsmProductionFactory.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 
 #include <gtest/gtest.h>

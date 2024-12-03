@@ -6,8 +6,9 @@
  */
 
 #include "ResourceManager.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/TLog.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include <rapidjson/error/en.h>

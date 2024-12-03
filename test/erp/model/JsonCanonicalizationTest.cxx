@@ -6,12 +6,12 @@
  */
 
 #include "test/erp/model/JsonCanonicalizationTest.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/String.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/String.hxx"
 
 
 #include <boost/format.hpp>

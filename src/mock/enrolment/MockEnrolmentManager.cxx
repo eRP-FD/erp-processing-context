@@ -6,8 +6,8 @@
  */
 
 #include "mock/enrolment/MockEnrolmentManager.hxx"
-#include "erp/hsm/HsmIdentity.hxx"
-#include "erp/util/Hash.hxx"
+#include "shared/hsm/HsmIdentity.hxx"
+#include "shared/util/Hash.hxx"
 
 #include "TpmProxyApi.hxx"
 #include "mock_config.h"

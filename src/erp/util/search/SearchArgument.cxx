@@ -6,7 +6,7 @@
  */
 
 #include "erp/util/search/SearchArgument.hxx"
-#include "erp/util/UrlHelper.hxx"
+#include "shared/util/UrlHelper.hxx"
 #include "erp/model/Task.hxx"
 
 #include <boost/algorithm/string/join.hpp>

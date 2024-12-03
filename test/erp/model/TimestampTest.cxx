@@ -5,10 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Timestamp.hxx"
-#include "erp/model/ModelException.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/model/ModelException.hxx"
+#include "shared/util/TLog.hxx"
 
+#include <chrono>
 #include <date/date.h>
 #include <gtest/gtest.h>
 
@@ -85,10 +86,10 @@ TEST_F(TimestampTest, fromXsDateTime_success)
 
     // Time zone plus one, but hour minus one, cancel each other out.
     EXPECT_EQ(Timestamp::fromXsDateTime("2022-01-29T11:34:56-01:00"), expectedDateTime);
-    EXPECT_NO_THROW(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z"));
-    EXPECT_EQ(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z").toXsDateTime(), "0001-01-01T00:00:00.000+00:00");
-    EXPECT_EQ(Timestamp::fromXsDateTime("0001-01-01T00:00:00Z").toXsDateTimeWithoutFractionalSeconds(),
-              "0001-01-01T00:00:00+00:00");
+    EXPECT_NO_THROW(Timestamp::fromXsDateTime("1893-04-02T00:00:00Z"));
+    EXPECT_EQ(Timestamp::fromXsDateTime("1893-04-02T00:00:00Z").toXsDateTime(), "1893-04-02T00:00:00.000+00:00");
+    EXPECT_EQ(Timestamp::fromXsDateTime("1893-04-02T00:00:00Z").toXsDateTimeWithoutFractionalSeconds(),
+              "1893-04-02T00:00:00+00:00");
 }
 
 
@@ -179,8 +180,8 @@ TEST_F(TimestampTest, fromXsDateTime_withTimeZone)
 TEST_F(TimestampTest, toXsDateTime)
 {
     EXPECT_EQ(Timestamp(sys_days{January/29/2022} + 12h + 34min + 56s + 123ms).toXsDateTime(), "2022-01-29T12:34:56.123+00:00");
-    EXPECT_EQ(Timestamp(sys_days{August / 30 / 1754} + 22h + 43min + 42s + 123ms).toXsDateTime(),
-              "1754-08-30T22:43:42.123+00:00");
+    EXPECT_EQ(Timestamp(sys_days{August / 30 / 1893} + 22h + 43min + 42s + 123ms).toXsDateTime(),
+              "1893-08-30T22:43:42.123+00:00");
 }
 
 TEST_F(TimestampTest, toXsDate)
@@ -261,6 +262,10 @@ TEST_F(TimestampTest, fromXsDate_failForInvalidDates)//NOLINT(readability-functi
     EXPECT_THROW(Timestamp::fromXsDate("2022-01-1", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsDate("2022-01-00", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsDate("2022-01-32", Timestamp::UTCTimezone), ModelException);
+
+    // before introduction of CET:
+    EXPECT_THROW(Timestamp::fromXsDate("1893-04-01", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("1893-04-01", Timestamp::GermanTimezone), ModelException);
 }
 
 
@@ -298,6 +303,10 @@ TEST_F(TimestampTest, fromXsGYearMonth_failForInvalidDates)//NOLINT(readability-
     EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-1", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-00", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsGYearMonth("2022-13", Timestamp::UTCTimezone), ModelException);
+
+    // before introduction of CET:
+    EXPECT_THROW(Timestamp::fromXsDate("1893-04", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("1893-04", Timestamp::GermanTimezone), ModelException);
 }
 
 
@@ -318,7 +327,7 @@ TEST_F(TimestampTest, fromXsGYear_success)
     // Note that the range of the dates, covered by time_point is not specified.
     // These value have been determined experimentally.
     // Adjusting these values (that make the intervall smaller) is OK as long as a sensible range is maintained.
-    EXPECT_EQ(Timestamp::fromXsGYear("1678", Timestamp::UTCTimezone), Timestamp(sys_days{January / 01 / 1678}));
+    EXPECT_EQ(Timestamp::fromXsGYear("1894", Timestamp::UTCTimezone), Timestamp(sys_days{January / 01 / 1894}));
     EXPECT_EQ(Timestamp::fromXsGYear("2262", Timestamp::UTCTimezone), Timestamp(sys_days{January / 01 / 2262}));
 }
 
@@ -332,6 +341,10 @@ TEST_F(TimestampTest, fromXsGYear_failForInvalidDates)//NOLINT(readability-funct
     EXPECT_THROW(Timestamp::fromXsGYear("22", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsGYear("022", Timestamp::UTCTimezone), ModelException);
     EXPECT_THROW(Timestamp::fromXsGYear("20022", Timestamp::UTCTimezone), ModelException);
+
+    // before introduction of CET:
+    EXPECT_THROW(Timestamp::fromXsDate("1893", Timestamp::UTCTimezone), ModelException);
+    EXPECT_THROW(Timestamp::fromXsDate("1893", Timestamp::GermanTimezone), ModelException);
 }
 
 
@@ -453,4 +466,24 @@ TEST_F(TimestampTest, toDatabaseSUuid)
     EXPECT_THROW(Timestamp::fromDatabaseSUuid("g1eb9e8f-9c04-bc00-0000-000000000000"), ModelException);
     EXPECT_THROW(Timestamp::fromDatabaseSUuid("1eb9e8f-9c04-bc00-0000-000000000000"), ModelException);
     EXPECT_THROW(Timestamp::fromDatabaseSUuid("00000000-0000-0000-0000-000000000000"), ModelException);
+}
+
+
+TEST_F(TimestampTest, fromTmInUtc)
+{
+    using namespace date;
+    static constexpr auto check = [](const year_month_day& sample) {
+        struct tm asTm{};
+        asTm.tm_mday = static_cast<int>(static_cast<unsigned>(sample.day()));
+        asTm.tm_mon = static_cast<int>(static_cast<unsigned>(sample.month())) - 1;
+        asTm.tm_year = static_cast<int>(sample.year()) - 1900;
+        ASSERT_EQ(model::Timestamp::fromTmInUtc(asTm).toTimeT(), timegm(&asTm));
+    };
+    // before introduction of daylight saving:
+    EXPECT_NO_FATAL_FAILURE(check(January / 1 / 1970));
+    EXPECT_NO_FATAL_FAILURE(check(June / 1 / 1970));
+
+    // after introduction of daylight saving:
+    EXPECT_NO_FATAL_FAILURE(check(January / 1 / 1981));
+    EXPECT_NO_FATAL_FAILURE(check(June / 1 / 1981));
 }

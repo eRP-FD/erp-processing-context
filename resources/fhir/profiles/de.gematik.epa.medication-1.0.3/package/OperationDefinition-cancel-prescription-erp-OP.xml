@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<OperationDefinition xmlns="http://hl7.org/fhir">
+  <id value="cancel-prescription-erp-OP"/>
+  <url value="https://gematik.de/fhir/epa-medication/OperationDefinition/cancel-prescription-erp-OP"/>
+  <version value="1.0.3"/>
+  <name value="Cancel Prescription eRP"/>
+  <title value="$cancel-prescription-erp Operation"/>
+  <status value="active"/>
+  <kind value="operation"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The $cancel-prescription-erp operation is used by the E-Rezept-Fachdienst to cancel an already issued electronic prescription. This function is applied when a prescription is no longer needed for various reasons, such as changes in medication or errors in the initial issuance. After cancellation by the E-Rezept-Fachdienst, this information is transmitted to the ePA Medication Service, where the prescription is calculations. It can then no longer be used for dispensing medication. This process ensures accuracy and safety in the management of medications."/>
+  <code value="cancel-prescription-erp"/>
+  <system value="true"/>
+  <type value="false"/>
+  <instance value="false"/>
+  <inputProfile value="https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters"/>
+  <outputProfile value="https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-prescription-erp-output-parameters"/>
+  <parameter>
+    <name value="rxPrescription"/>
+    <use value="in"/>
+    <min value="1"/>
+    <max value="*"/>
+    <part>
+      <name value="prescriptionId"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Identifier"/>
+    </part>
+    <part>
+      <name value="authoredOn"/>
+      <use value="in"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="date"/>
+    </part>
+  </parameter>
+  <parameter>
+    <name value="rxPrescription"/>
+    <use value="out"/>
+    <min value="1"/>
+    <max value="*"/>
+    <part>
+      <name value="prescriptionId"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="Identifier"/>
+    </part>
+    <part>
+      <name value="authoredOn"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="date"/>
+    </part>
+    <part>
+      <name value="operationOutcome"/>
+      <use value="out"/>
+      <min value="1"/>
+      <max value="1"/>
+      <type value="OperationOutcome"/>
+    </part>
+  </parameter>
+</OperationDefinition>

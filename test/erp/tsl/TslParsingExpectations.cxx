@@ -7,7 +7,7 @@
 
 #include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/util/ResourceManager.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 
 
 const std::string TslParsingExpectations::expectedId{"ID31003620200826113628Z"};

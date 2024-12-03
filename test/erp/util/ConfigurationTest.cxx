@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/ErpConstants.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/ErpConstants.hxx"
 #include "test_config.h"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"

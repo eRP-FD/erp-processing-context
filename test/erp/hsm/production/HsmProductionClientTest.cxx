@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/production/HsmProductionClient.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
 
-#include "erp/hsm/production/HsmRawSession.hxx"
-#include "erp/hsm/HsmIdentity.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/hsm/production/HsmRawSession.hxx"
+#include "shared/hsm/HsmIdentity.hxx"
+#include "shared/util/Configuration.hxx"
 
 #include <gtest/gtest.h>
 #include "test/util/EnvironmentVariableGuard.hxx"

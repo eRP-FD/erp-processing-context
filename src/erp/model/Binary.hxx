@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_BINARY_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_BINARY_HXX
 
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Resource.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/Resource.hxx"
 
 #include <rapidjson/document.h>
 #include <optional>
@@ -33,6 +33,8 @@ public:
     };
 
     Binary(std::string_view id, std::string_view data, const Type type = Type::PKCS7,
+           const std::optional<std::string_view>& metaVersionId = "1");
+    Binary(std::string_view id, std::string_view data, const Profile& profile, const Type type = Type::PKCS7,
            const std::optional<std::string_view>& metaVersionId = "1");
 
     [[nodiscard]] std::optional<std::string_view> id() const;

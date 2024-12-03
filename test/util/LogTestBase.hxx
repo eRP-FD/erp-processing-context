@@ -8,7 +8,7 @@
 #ifndef TEST_UTIL_LOGTESTBASE_HXX
 #define TEST_UTIL_LOGTESTBASE_HXX
 
-#include "erp/util/GLog.hxx"
+#include "shared/util/GLog.hxx"
 
 #include <gtest/gtest.h>
 #include <mutex>

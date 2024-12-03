@@ -8,9 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSMMOCKCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_HSMMOCKCLIENT_HXX
 
-#include "erp/hsm/HsmSession.hxx"
+#include "shared/hsm/HsmSession.hxx"
 
-#include "erp/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
 
 #if WITH_HSM_MOCK  != 1
 #error HsmMockClient.hxx included but WITH_HSM_MOCK not enabled
@@ -79,6 +79,10 @@ public:
     ErpVector unwrapRawPayload(
         const HsmRawSession& session,
         UnwrapRawPayloadInput&& input) override;
+
+    ErpVector signWithVauAutKey(
+        const HsmRawSession& session,
+        SignVauAutInput&& input) override;
 
     void reconnect (HsmRawSession& session) override;
 

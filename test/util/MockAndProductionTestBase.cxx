@@ -6,10 +6,10 @@
  */
 
 #include "MockAndProductionTestBase.hxx"
-#include "erp/hsm/production/HsmProductionFactory.hxx"
+#include "shared/hsm/production/HsmProductionFactory.hxx"
 #if WITH_HSM_TPM_PRODUCTION > 0
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/enrolment/EnrolmentHelper.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
+#include "shared/enrolment/EnrolmentHelper.hxx"
 #endif
 
 void MockAndProductionTestBase::SetUp()

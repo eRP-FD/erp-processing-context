@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="NichtPatientBezogeneGesundheitsversorgung"/>
+  <url value="http://ihe-d.de/CodeSystems/NichtPatientBezogeneGesundheitsversorgung"/>
+  <version value="2018-07-13T16:21:25"/>
+  <name value="NichtPatientBezogeneGesundheitsversorgung"/>
+  <title value="Nicht Patient Bezogene Gesundheitsversorgung"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="7"/>
+  <concept>
+    <code value="BIL"/>
+    <display value="Bildungseinrichtung"/>
+    <definition value="Kindergarten, Schulen, Hochschulen und andere erzieherische Einrichtungen für Kinder oder Erwachsene"/>
+  </concept>
+  <concept>
+    <code value="FOR"/>
+    <display value="Forschungseinrichtung"/>
+    <definition value="Einrichtung der medizinischen Forschung außerhalb von Arztpraxis oder Krankenhaus."/>
+  </concept>
+  <concept>
+    <code value="GEN"/>
+    <display value="Gen-Analysedienste"/>
+    <definition value="Organisationen die Dienste für Vaterschafts-/Mutterschaftstest anbieten, für Abstammungtests, Riskoanalysen, etc."/>
+  </concept>
+  <concept>
+    <code value="MDK"/>
+    <display value="Medizinischer Dienst der Krankenversicherung"/>
+    <definition value="Alle medizinischen Dienste die sozialmedizinische Begutachtungen nach § 275 SGB V für die Krankenversicherungen oder Pflegebegutachtungen nach § 18 bzw. §§ 114ff SGB XI für die Pflegeversicherungen durchführen."/>
+  </concept>
+  <concept>
+    <code value="PAT"/>
+    <display value="Patient außerhalb der Betreuung"/>
+    <definition value="Dieser Wert kann zur Kennzeichnung der Herkunft von Dokumenten verwendet werden, die der Patient selbstständig erstellt und eingestellt hat, zum Beispiel über ein Patientenportal oder eine Smartphone-App. Daten die vom Patienten über eine solche Lösung stellvertretend für einen Heilberufler eingestellt werden (z.B. gescannter Arztbrief, DICOM-DVD) sollten nicht diesen Wert verwenden, sondern den für den Heilberufler vorgesehenen Wert."/>
+  </concept>
+  <concept>
+    <code value="SPE"/>
+    <display value="Spendedienste"/>
+    <definition value="Blutspendedienst, Knochenmarkspendedienst, Samenbank, Nabelschnur-Blutbank, Bio-Banken, etc."/>
+  </concept>
+  <concept>
+    <code value="VER"/>
+    <display value="Versicherungsträger"/>
+    <definition value="Träger der gesetzlichen Krankenversicherung (d.h. Krankenkasse) oder der privaten Krankenversicherung."/>
+  </concept>
+</CodeSystem>

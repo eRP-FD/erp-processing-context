@@ -8,7 +8,7 @@
 #include "erp/service/MetaDataHandler.hxx"
 
 #include "erp/model/MetaData.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 
 MetaDataHandler::MetaDataHandler ()

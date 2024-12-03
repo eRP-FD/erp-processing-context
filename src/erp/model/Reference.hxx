@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_REFERENCE_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_REFERENCE_HXX
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 
 namespace model
 {

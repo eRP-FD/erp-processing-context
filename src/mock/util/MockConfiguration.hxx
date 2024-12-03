@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_MOCKCONFIGURATION_HXX
 
 
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 
 #if WITH_HSM_MOCK  != 1
 #error MockConfiguration.hxx included but WITH_HSM_MOCK not enabled
@@ -25,7 +25,10 @@ enum class MockConfigurationKey
     MOCK_ID_FD_SIG_OCSP_URL,
     MOCK_ID_FD_SIG_CERT,
     MOCK_USE_MOCK_TPM,
-    MOCK_GENERATED_PKI_PATH
+    MOCK_GENERATED_PKI_PATH,
+    MOCK_VAU_AUT_PRIVATE_KEY,
+    MOCK_VAU_AUT_CERT,
+    MOCK_VAU_AUT_SIGNER_CERT
 };
 
 class MockConfigurationKeyNames : public ConfigurationKeyNamesBase<MockConfigurationKey>

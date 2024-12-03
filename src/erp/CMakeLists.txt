@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(erp-processing-context)
 
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/erp-serverinfo.cxx.in" "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.cxx")
+set(ERP_APP_NAME ${PROJECT_NAME})
 
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
@@ -26,102 +26,23 @@ add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 #
 list(
     APPEND erp-processing-context-source-files
-        ErpConstants.hxx
         ErpMain.cxx
         ErpProcessingContext.cxx
         admin/AdminRequestHandler.cxx
         admin/AdminServer.cxx
         admin/PutRuntimeConfigHandler.cxx
-        beast/BoostBeastHeader.cxx
-        beast/BoostBeastStringReader.cxx
-        beast/BoostBeastStringWriter.cxx
-        client/ClientBase.cxx
-        client/HttpClient.cxx
-        client/HttpsClient.cxx
-        client/RootCertificatesMgr.cxx
-        client/TcpStream.cxx
-        client/UrlRequestSender.cxx
-        client/implementation/ClientImpl.cxx
-        client/implementation/TlsSession.cxx
-        client/request/ClientRequest.cxx
-        client/request/ClientRequestWriter.cxx
-        client/request/ValidatedClientRequest.cxx
-        client/response/ClientResponse.cxx
-        client/response/ClientResponseReader.cxx
-        common/BoostBeastMethod.cxx
-        common/Header.cxx
-        common/HttpMethod.cxx
-        common/HttpStatus.cxx
-        common/MimeType.cxx
-        compression/Compression.cxx
-        compression/Deflate.cxx
-        compression/ZStd.cxx
-        compression/ZStdDictionary.cxx
-        compression/ZStdDictionaryRepository.cxx
-        crypto/AesGcm.cxx
-        crypto/CMAC.cxx
-        crypto/CadesBesSignature.cxx
-        crypto/Certificate.cxx
-        crypto/DiffieHellman.cxx
-        crypto/EllipticCurve.cxx
-        crypto/EllipticCurvePublicKey.cxx
-        crypto/EllipticCurveUtils.cxx
-        crypto/EssCertificateHelper.cxx
-        crypto/Jws.cxx
-        crypto/Jwt.cxx
-        crypto/OpenSslHelper.cxx
-        crypto/Pbkdf2Hmac.cxx
-        crypto/RandomSource.cxx
-        crypto/SecureRandomGenerator.cxx
-        crypto/Seeder.cxx
-        crypto/Sha256.cxx
         crypto/SignedPrescription.cxx
         database/Database.cxx
-        database/DatabaseCodec.cxx
-        database/DatabaseConnectionInfo.cxx
         database/DatabaseConnectionTimer.cxx
         database/DatabaseFrontend.cxx
-        database/DatabaseModel.cxx
+        database/ErpDatabaseModel.cxx
         database/PostgresBackend.cxx
-        database/PostgresBackendHelper.cxx
         database/PostgresBackendChargeItem.cxx
         database/PostgresBackendTask.cxx
-        database/PostgresConnection.cxx
         database/RedisClient.cxx
         database/redis/RateLimiter.cxx
-        hsm/BlobCache.cxx
-        hsm/BlobDatabase.cxx
-        hsm/VsdmKeyCache.cxx
-        enrolment/EnrolmentData.cxx
-        enrolment/EnrolmentModel.cxx
-        enrolment/EnrolmentRequestHandler.cxx
-        enrolment/EnrolmentServer.cxx
-        enrolment/VsdmHmacKey.cxx
-        fhir/Fhir.cxx
-        fhir/FhirCanonicalizer.cxx
-        fhir/FhirConverter.cxx
-        fhir/internal/FhirJsonToXmlConverter.cxx
-        fhir/internal/FhirSAXHandler.cxx
-        hsm/ErpTypes.cxx
-        hsm/HsmFactory.cxx
-        hsm/HsmIdentity.cxx
-        hsm/HsmPool.cxx
-        hsm/HsmPoolSession.cxx
-        hsm/HsmPoolSessionRemover.cxx
-        hsm/HsmException.cxx
-        hsm/KeyDerivation.cxx
-        hsm/HsmSession.cxx
-        hsm/HsmSessionExpiredException.cxx
-        hsm/production/ProductionBlobDatabase.cxx
-        hsm/production/ProductionVsdmKeyBlobDatabase.cxx
-        hsm/TeeTokenUpdater.cxx
-        idp/Idp.cxx
-        idp/IdpUpdater.cxx
         model/AbgabedatenPkvBundle.cxx
-        model/AuditData.cxx
-        model/AuditEvent.cxx
         model/Binary.cxx
-        model/Bundle.cxx
         model/ChargeItem.cxx
         model/Communication.cxx
         model/CommunicationPayload.cxx
@@ -129,13 +50,12 @@ list(
         model/Consent.cxx
         model/Device.cxx
         model/ErxReceipt.cxx
-        model/Extension.cxx
         model/extensions/ChargeItemMarkingFlags.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
         model/extensions/KBVMedicationCategory.cxx
         model/extensions/KBVMultiplePrescription.cxx
-        model/Health.cxx
+        model/GemErpPrMedication.cxx
         model/Iknr.cxx
         model/KbvBundle.cxx
         model/KbvComposition.cxx
@@ -148,35 +68,23 @@ list(
         model/KbvOrganization.cxx
         model/KbvPractitioner.cxx
         model/KbvPracticeSupply.cxx
-        model/Kvnr.cxx
         model/Lanr.cxx
         model/Link.cxx
         model/MedicationDispense.cxx
         model/MedicationDispenseBundle.cxx
         model/MedicationDispenseId.cxx
+        model/MedicationDispenseOperationParameters.cxx
+        model/MedicationsAndDispenses.cxx
         model/MetaData.cxx
-        model/ModelException.cxx
-        model/NumberAsStringParserDocument.cxx
-        model/NumberAsStringParserWriter.cxx
-        model/OperationOutcome.cxx
         model/OuterResponseErrorData.cxx
-        model/Parameters.cxx
         model/Patient.cxx
-        model/PrescriptionId.cxx
-        model/PrescriptionType.cxx
-        model/ProfileType.cxx
         model/Pzn.cxx
         model/Reference.cxx
-        model/Resource.cxx
-        model/ResourceBase.cxx
-        model/ResourceFactory.cxx
-        model/ResourceNames.cxx
+        model/ResourceInstances.cxx
         model/Signature.cxx
         model/Subscription.cxx
         model/Task.cxx
-        model/TelematikId.cxx
-        model/TimePeriod.cxx
-        model/Timestamp.cxx
+        model/WorkflowParameters.cxx
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
@@ -186,28 +94,11 @@ list(
         pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.cxx
         registration/ApplicationHealthAndRegistrationUpdater.cxx
         registration/RegistrationManager.cxx
-        server/AccessLog.cxx
-        server/ErrorHandler.cxx
         server/HttpsServer.cxx
-        server/ServerSocketHandler.cxx
         server/ServerSession.cxx
-        server/SslStream.cxx
-        server/ThreadPool.cxx
-        server/TlsSettings.cxx
-        server/Worker.cxx
+        server/ServerSocketHandler.cxx
         server/context/SessionContext.cxx
-        server/handler/RequestHandlerContext.cxx
-        server/handler/RequestHandlerInterface.cxx
-        server/handler/RequestHandlerManager.cxx
-        server/request/ServerRequest.cxx
-        server/request/ServerRequestReader.cxx
-        server/response/ResponseBuilder.cxx
-        server/response/ServerResponse.cxx
-        server/response/ServerResponseWriter.cxx
-        server/response/ValidatedServerResponse.cxx
-        service/AuditDataCollector.cxx
-        service/AuditEventCreator.cxx
-        service/AuditEventTextTemplates.cxx
+        server/RequestHandler.cxx
         service/AuditEventHandler.cxx
         service/CommunicationDeleteHandler.cxx
         service/CommunicationGetHandler.cxx
@@ -218,7 +109,6 @@ list(
         service/MedicationDispenseHandler.cxx
         service/MedicationDispenseHandlerBase.cxx
         service/MetaDataHandler.cxx
-        service/Operation.cxx
         service/RedisInterface.hxx
         service/SubscriptionPostHandler.cxx
         service/VauRequestHandler.cxx
@@ -244,91 +134,14 @@ list(
         tee/ErpTeeProtocol.cxx
         tee/InnerTeeRequest.cxx
         tee/InnerTeeResponse.cxx
-        tee/OuterTeeRequest.cxx
         tee/OuterTeeResponse.cxx
-        tpm/PcrSet.cxx
-        tpm/Tpm.cxx
-        tsl/C14NHelper.cxx
-        tsl/CertificateId.cxx
-        tsl/OcspHelper.cxx
-        tsl/OcspResponse.cxx
-        tsl/OcspService.cxx
-        tsl/OcspUrl.hxx
-        tsl/TrustStore.cxx
-        tsl/error/TslErrorCode.hxx
-        tsl/error/TslError.cxx
-        tsl/TslManager.cxx
-        tsl/TslMode.hxx
-        tsl/TslParser.cxx
-        tsl/TslRefreshJob.cxx
-        tsl/TslService.cxx
-        tsl/X509Certificate.cxx
-        tsl/X509Store.cxx
-        util/Base64.cxx
-        util/Buffer.cxx
-        util/ByteHelper.cxx
-        util/Condition.cxx
-        util/Configuration.cxx
-        util/ConfigurationFormatter.cxx
-        util/CrashHandler.cxx
-        util/Demangle.cxx
-        util/DurationConsumer.cxx
-        util/Environment.cxx
-        util/ErpException.cxx
-        util/ErpServiceException.cxx
-        util/ExceptionHelper.cxx
-        util/ExceptionWrapper.cxx
-        util/Expect.cxx
-        util/FileHelper.cxx
-        util/GLogConfiguration.cxx
-        util/Hash.cxx
-        util/Holidays.cxx
-        util/InvalidConfigurationException.cxx
-        util/JsonLog.cxx
-        util/JsonXmlParserHelper.cxx
-        util/PeriodicTimer.cxx
-        util/Random.cxx
-        util/RapidjsonDocument.cxx
-        util/RuntimeConfiguration.cxx
-        util/SafeString.cxx
-        util/ServerException.cxx
-        util/SignalHandler.cxx
-        util/String.cxx
-        util/TerminationHandler.cxx
-        util/ThreadNames.cxx
-        util/Timer.cxx
-        util/TimerJobBase.cxx
-        util/TLog.cxx
-        util/UrlHelper.cxx
-        util/Uuid.cxx
-        util/health/ApplicationHealth.cxx
         util/health/HealthCheck.cxx
         util/search/PagingArgument.cxx
         util/search/SearchArgument.cxx
         util/search/SearchParameter.cxx
         util/search/SortArgument.cxx
-        util/Version.cxx
         util/search/UrlArguments.cxx
-        util/WorkDay.cxx
-        validation/JsonValidator.cxx
-        validation/RapidjsonErrorDocument.cxx
-        validation/XmlValidator.cxx
-        xml/XmlDocument.cxx
-        xml/XmlMemory.cxx
-        "${CMAKE_CURRENT_BINARY_DIR}/erp-serverinfo.cxx"
         )
-
-if(ERP_WITH_HSM_TPM_PRODUCTION)
-    list(
-        APPEND erp-processing-context-source-files
-            enrolment/EnrolmentHelper.cxx
-            hsm/production/HsmProductionClient.cxx
-            hsm/production/HsmProductionFactory.cxx
-            hsm/production/HsmRawSession.cxx
-            hsm/production/TeeTokenProductionUpdater.cxx
-            tpm/TpmProduction.cxx
-     )
-endif()
 
 add_library(
     erp-processing-context-files OBJECT
@@ -349,7 +162,7 @@ target_include_directories (
 
 target_link_libraries (
     erp-processing-context-files
-        PUBLIC fhirtools
+        PUBLIC erp-shared
         PUBLIC CONAN_PKG::boost
         PUBLIC CONAN_PKG::date
         PUBLIC CONAN_PKG::glog

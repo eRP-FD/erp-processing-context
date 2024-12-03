@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/util/Configuration.hxx"
 #include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
 #include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"

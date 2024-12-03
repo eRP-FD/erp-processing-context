@@ -8,11 +8,12 @@
 #include "mock/hsm/MockBlobCache.hxx"
 
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #if WITH_HSM_TPM_PRODUCTION > 0
@@ -203,6 +204,17 @@ void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
         entry.certificate = tpm::vauSigCertificate_base64;
         blobCache.storeBlob(std::move(entry));
     }
+
+    // VAU AUT
+    if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauAut))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::VauAut;
+        entry.name = ErpVector::create("vau-aut");
+        entry.blob = ErpBlob::fromCDump(tpm::vauAutKeyPair_blob_base64);
+        entry.certificate = tpm::vauAutCertificate_base64;
+        blobCache.storeBlob(std::move(entry));
+    }
 }
 
 
@@ -271,6 +283,17 @@ void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
         entry.name = ErpVector::create("vau-sig");
         entry.blob = ErpBlob(std::string_view(MockCryptography::getIdFdSigPrivateKeyPkcs8()), 11);
         entry.certificate = tpm::vauSigCertificate_base64;
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    // VAU AUT
+    if (! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauAut))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::VauAut;
+        entry.name = ErpVector::create("vau-aut");
+        entry.blob = ErpBlob(std::string_view(MockCryptography::getVauAutPrivateKeyPem()), 11);
+        entry.certificate = MockCryptography::getVauAutCertificate().toBase64Der();
         blobCache.storeBlob(std::move(entry));
     }
 }

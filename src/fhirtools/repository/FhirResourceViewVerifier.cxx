@@ -153,7 +153,7 @@ void FhirResourceViewVerifier::verifyElement(const FhirStructureDefinition& def,
     FPExpect3(def.resourceGroup(), "group not set in element: " + def.urlAndVersion() + '.' + element.originalName(),
               std::logic_error);
     verifyElementProfiles(def, element);
-    verifyBinding(element, def.resourceGroup());
+    verifyBinding(element, def.resourceGroup(), def.urlAndVersion());
     verifySlicing(def, element);
     parseConstraints(def, element);
     if (mView)
@@ -181,7 +181,7 @@ void FhirResourceViewVerifier::verifyProfileExists(const FhirResourceGroup& grou
 {
     if (mView)
     {
-        verifyProfileExistsInView(profile, context);
+        verifyProfileExistsInView(profile, context, mustResolve);
     }
     else if (mustResolve)
     {
@@ -210,25 +210,33 @@ void FhirResourceViewVerifier::verifyProfileExistsInGroup(const FhirResourceGrou
     }
 }
 
-void fhirtools::FhirResourceViewVerifier::verifyProfileExistsInView(const std::string& profile,
-                                                                    const std::string& context)
+void FhirResourceViewVerifier::verifyProfileExistsInView(const std::string& profile, const std::string& context,
+                                                         bool mustResolve)
 {
     if (! mView->findStructure(DefinitionKey{profile}))
     {
-        unresolvedProfiles.emplace(profile);
-        TLOG(ERROR) << "Failed to resolve " << context << " in view " << mView->id() << ": " << profile;
-        mVerfied = false;
+        if (mustResolve)
+        {
+            unresolvedProfiles.emplace(profile);
+            TLOG(ERROR) << "Failed to resolve " << context << " in view " << mView->id() << ": " << profile;
+            mVerfied = false;
+        }
+        else
+        {
+            TLOG(WARNING) << "Failed to resolve " << context << " in view " << mView->id() << ": " << profile;
+        }
     }
 }
 
 void FhirResourceViewVerifier::verifyBinding(const FhirElement& element,
-                                             const std::shared_ptr<const fhirtools::FhirResourceGroup>& group)
+                                             const std::shared_ptr<const fhirtools::FhirResourceGroup>& group,
+                                             const std::string& context)
 {
     using namespace std::string_literals;
     if (element.hasBinding())
     {
         auto bindingKey = group->find(element.binding().key).first;
-        if (tryResolve(group, bindingKey, element.binding().strength))
+        if (tryResolve(group, bindingKey, element.binding().strength, context + "@" + element.originalName()))
         {
             requiredValueSets.emplace(element.binding().key);
         }
@@ -237,7 +245,8 @@ void FhirResourceViewVerifier::verifyBinding(const FhirElement& element,
 
 const FhirValueSet*
 FhirResourceViewVerifier::tryResolve(const std::shared_ptr<const fhirtools::FhirResourceGroup>& group,
-                                     const DefinitionKey& key, FhirElement::BindingStrength bindingStrength)
+                                     const DefinitionKey& key, FhirElement::BindingStrength bindingStrength,
+                                     const std::string& context)
 {
     if (mView)
     {
@@ -246,12 +255,12 @@ FhirResourceViewVerifier::tryResolve(const std::shared_ptr<const fhirtools::Fhir
         if (! valueSet)
         {
             std::stringstream msg;
-            msg << "Failed to resolve " << magic_enum::enum_name(bindingStrength) << " binding '" << to_string(key)
+            msg << context << ": Failed to resolve " << magic_enum::enum_name(bindingStrength) << " binding '" << to_string(key)
                 << "'";
             switch (bindingStrength)
             {
                 case FhirElement::BindingStrength::required:
-                    TLOG(WARNING) << msg.str();
+                    TLOG(ERROR) << msg.str();
                     unresolvedBindings.insert(to_string(key));
                     mVerfied = false;
                     break;
@@ -417,7 +426,7 @@ void FhirResourceViewVerifier::verifyValueSetsRequiredOnly()
         {
             if (valueSet->hasErrors())
             {
-                TLOG(WARNING) << "Required Valueset " << valueSetKey << " has errors: " << valueSet->getWarnings();
+                TLOG(ERROR) << "Required Valueset " << valueSetKey << " has errors: " << valueSet->getWarnings();
                 mVerfied = false;
             }
             verifyValueSet(valueSetKey, *valueSet);

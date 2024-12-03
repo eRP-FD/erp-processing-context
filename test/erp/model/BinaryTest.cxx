@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/Binary.hxx"
-#include "erp/util/String.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/util/String.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 #include <gtest/gtest.h>
 

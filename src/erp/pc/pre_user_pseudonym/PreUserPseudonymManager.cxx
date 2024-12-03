@@ -8,10 +8,10 @@
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 
 #include "erp/database/Database.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 
 
 std::unique_ptr<PreUserPseudonymManager> PreUserPseudonymManager::create(PcServiceContext* serviceContext)

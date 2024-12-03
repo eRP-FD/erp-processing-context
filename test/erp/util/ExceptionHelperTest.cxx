@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/ExceptionHelper.hxx"
+#include "shared/util/ExceptionHelper.hxx"
 
-#include "erp/hsm/HsmException.hxx"
-#include "erp/util/ErpException.hxx"
-#include "erp/util/JwtException.hxx"
+#include "shared/hsm/HsmException.hxx"
+#include "shared/util/ErpException.hxx"
+#include "shared/util/JwtException.hxx"
 
 #include <boost/exception/exception.hpp>
 #include <gtest/gtest.h>

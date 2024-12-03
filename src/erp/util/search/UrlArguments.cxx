@@ -7,12 +7,13 @@
 
 #include "erp/util/search/UrlArguments.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/hsm/KeyDerivation.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/hsm/KeyDerivation.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/UrlHelper.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/UrlHelper.hxx"
 
 #include <date/date.h>
 #include <pqxx/nontransaction>

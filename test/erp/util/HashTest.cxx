@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Hash.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include <gtest/gtest.h>
 
 namespace

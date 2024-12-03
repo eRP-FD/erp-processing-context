@@ -7,11 +7,11 @@
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/erp-serverinfo.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/erp-serverinfo.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -103,7 +103,9 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
-    const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), model::Timestamp::now().toGermanDate());
+    const auto closeBody =
+        dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
+                                prescriptionId->toString(), model::Timestamp::now().toGermanDate(), 1);
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
     const JWT jwt{ jwtApotheke() };
     ClientResponse serverResponse;
@@ -822,7 +824,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
     EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), taskNum);
     EXPECT_EQ(bundle.getTotalSearchMatches(), taskNum);
 
-    A_19027_04.test("Retrieve list of cancelled tasks");
+    A_19027_06.test("Retrieve list of cancelled tasks");
     bundle = taskGet(kvnr, "status=cancelled").value();
     const auto tasks = bundle.getResourcesByType<model::Task>("Task");
     EXPECT_EQ(tasks.size(), taskNum / 2);

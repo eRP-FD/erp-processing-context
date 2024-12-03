@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tpm/PcrSet.hxx"
+#include "shared/tpm/PcrSet.hxx"
 
 #include <gtest/gtest.h>
 

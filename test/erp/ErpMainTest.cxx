@@ -9,16 +9,16 @@
 
 #include "erp/ErpMain.hxx"
 
-#include "erp/client/HttpsClient.hxx"
-#include "erp/common/Constants.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/registration/RegistrationManager.hxx"
-#include "erp/util/Condition.hxx"
-#include "erp/util/TerminationHandler.hxx"
-#include "erp/util/ThreadNames.hxx"
+#include "shared/util/Condition.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/util/ThreadNames.hxx"
 
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
@@ -76,7 +76,7 @@ public:
      */
     void runApplication (std::function<void(void)>&& terminationAction, Factories factories = StaticData::makeMockFactoriesWithServers())
     {
-        ErpMain::StateCondition state (ErpMain::State::Unknown);
+        MainStateCondition state (MainState::Unknown);
         auto processingContextThread = std::thread(
             [&state, &factories]
             {
@@ -105,15 +105,15 @@ public:
         // Initialization of the processing context takes some time. Wait until all is setup and the PC is waiting for
         // its termination.
         TVLOG(1) << "waiting for the processing context to finish its initialization";
-        auto currentState = state.waitForValue(ErpMain::State::WaitingForTermination, std::chrono::seconds(60));
-        ASSERT_EQ(currentState, ErpMain::State::WaitingForTermination);
+        auto currentState = state.waitForValue(MainState::WaitingForTermination, std::chrono::seconds(60));
+        ASSERT_EQ(currentState, MainState::WaitingForTermination);
 
         makeRequests();
         terminationAction();
 
         TVLOG(0) << "requested termination, waiting for that to finish";
-        currentState = state.waitForValue(ErpMain::State::Terminated, std::chrono::seconds(15));
-        ASSERT_EQ(currentState, ErpMain::State::Terminated);
+        currentState = state.waitForValue(MainState::Terminated, std::chrono::seconds(15));
+        ASSERT_EQ(currentState, MainState::Terminated);
 
         processingContextThread.join();
     }
@@ -140,8 +140,13 @@ public:
 
     void makeRequestToUnknownPort (void)
     {
-        HttpsClient client("127.0.0.1", 7090, 30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout,
-                           false /*enforceServerAuthentication*/);
+        HttpsClient client(ConnectionParameters{
+            .hostname = "127.0.0.1",
+            .port = "7090",
+            .connectionTimeoutSeconds = 30,
+            .resolveTimeout = Constants::resolveTimeout,
+            .tlsParameters = TlsConnectionParameters{
+                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
         try
         {
             client.send(
@@ -164,8 +169,13 @@ public:
     void makeRequestToProcessingContext (void)
     {
         const auto& config = Configuration::instance();
-        HttpsClient client("127.0.0.1", config.serverPort(), 30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout,
-                           false /*enforceServerAuthentication*/);
+            HttpsClient client(ConnectionParameters{
+            .hostname = "127.0.0.1",
+            .port = std::to_string(config.serverPort()),
+            .connectionTimeoutSeconds = 30,
+            .resolveTimeout = Constants::resolveTimeout,
+            .tlsParameters = TlsConnectionParameters{
+                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
@@ -178,9 +188,13 @@ public:
     void makeRequestToEnrolmentService (void)
     {
         const auto& config = Configuration::instance();
-        HttpsClient client(
-            "127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
-            30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout, false /*enforceServerAuthentication*/);
+        HttpsClient client(ConnectionParameters{
+            .hostname = "127.0.0.1",
+            .port = config.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
+            .connectionTimeoutSeconds = 30,
+            .resolveTimeout = Constants::resolveTimeout,
+            .tlsParameters = TlsConnectionParameters{
+                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown),
@@ -220,9 +234,13 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
         []
         {
             const auto& config = Configuration::instance();
-            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30,
-                               Constants::resolveTimeout, false);
+            HttpsClient client(ConnectionParameters{
+                .hostname = config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
+                .connectionTimeoutSeconds = 30,
+                .resolveTimeout = Constants::resolveTimeout,
+                .tlsParameters = TlsConnectionParameters{
+                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
             const auto response =
                 client.send(ClientRequest(Header(HttpMethod::POST, "/admin/shutdown", 11,
                                                  {{Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
@@ -239,12 +257,15 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
 {
     EnvironmentVariableGuard adminApiAuth{"ERP_ADMIN_CREDENTIALS", "cred"};
     runApplication(
-        []
-        {
+        [] {
             const auto& config = Configuration::instance();
-            HttpsClient client(config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
-                               gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), 30,
-                               Constants::resolveTimeout, false);
+            HttpsClient client(ConnectionParameters{
+                .hostname = config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
+                .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
+                .connectionTimeoutSeconds = 30,
+                .resolveTimeout = Constants::resolveTimeout,
+                .tlsParameters = TlsConnectionParameters{
+                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
             const auto response = client.send(
                 ClientRequest(
                     Header(HttpMethod::POST, "/admin/shutdown", 11,
@@ -284,7 +305,7 @@ TEST_F(ErpMainTest, runProcessingContext_initialTslDownloadFails)
     auto processingContextThread = std::thread(
         [&factories]
         {
-            ErpMain::StateCondition state (ErpMain::State::Unknown);
+            MainStateCondition state (MainState::Unknown);
             // Run the processing context in a thread so that it does not block the test.
             ThreadNames::instance().setCurrentThreadName("pc-main");
             ASSERT_NO_FATAL_FAILURE(ErpMain::runApplication(

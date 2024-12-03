@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_OUTERRESPONSEERRORDATA_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_OUTERRESPONSEERRORDATA_HXX
 
-#include "erp/common/HttpStatus.hxx"
-#include "erp/model/ResourceBase.hxx"
+#include "shared/network/message/HttpStatus.hxx"
+#include "shared/model/ResourceBase.hxx"
 
 namespace model
 {

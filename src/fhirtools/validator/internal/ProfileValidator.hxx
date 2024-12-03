@@ -136,8 +136,9 @@ public:
 
     std::map<ProfiledElementTypeInfo, ProfiledElementTypeInfo> elementMap;
     uint32_t count = 0;
+    std::optional<uint32_t> max;
     void check(ProfileValidator::Map& profMap, const ProfileValidatorCounterKey& cKey,
-               std::string_view elementFullPath) const;
+               std::string_view elementFullPath, const std::shared_ptr<const Element>& element) const;
 };
 
 std::ostream& operator<<(std::ostream& out, const ProfileValidator::CounterKey& key);

@@ -6,9 +6,9 @@
  */
 
 #include "test/mock/TestUrlArguments.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/Task.hxx"
+#include "shared/model/Bundle.hxx"
 
 #include <date/date.h>
 #include <unordered_set>

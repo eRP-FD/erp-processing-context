@@ -181,4 +181,63 @@ Collection AmpersandOperator::eval(const Collection& collection) const
     const auto rhsStr = rhs ? rhs->asString() : "";
     return {makeStringElement(lhsStr + rhsStr)};
 }
+
+Collection StringManipSplit::eval(const Collection& collection) const
+{
+    EVAL_TRACE;
+    if (collection.empty())
+    {
+        return {};
+    }
+    if (! mArg)
+    {
+        return collection;
+    }
+    const auto delimiterResult = mArg->eval(collection);
+    if (delimiterResult.empty())
+    {
+        return {};
+    }
+    const auto delimiter = delimiterResult.front()->asString();
+    Collection result;
+    for (const auto& item: collection)
+    {
+        if (item->type() == Element::Type::String)
+        {
+            split(result, item->asString(), delimiter);
+        }
+    }
+    return result;
+}
+
+void fhirtools::StringManipSplit::split(Collection& result, std::string_view str, std::string_view delimiter) const
+{
+    if (str.empty())
+    {
+        result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{}));
+        return;
+    }
+    if (delimiter.empty())
+    {
+        chars(result, str);
+        return;
+    }
+    for (auto range = std::ranges::search(str, delimiter); range.begin() != str.end();
+         range = std::ranges::search(str, delimiter))
+    {
+        result.emplace_back(
+            std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{str.begin(), range.begin()}));
+        str = {range.end(), str.end()};
+    }
+    result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{str}));
+}
+
+void fhirtools::StringManipSplit::chars(Collection& result, std::string_view str) const
+{
+    for (char c : str)
+    {
+        result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string(1, c)));
+    }
+}
+
 }

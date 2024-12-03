@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_TASKHANDLER_HXX
 
 
-#include "erp/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 
 #include <optional>

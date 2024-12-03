@@ -1,10 +1,12 @@
-#include "EndpointHandlerTest.hxx"
+#include "EndpointHandlerTestFixture.hxx"
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
-#include "erp/util/Demangle.hxx"
+#include "shared/util/Demangle.hxx"
 #include "fhirtools/model/Collection.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 class ChargeItemGetEndpointTest : public EndpointHandlerTest {
 
@@ -49,10 +51,6 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
     const auto parse = [&defaultView](std::string_view expr) {
         return fhirtools::FhirPathParser::parse(defaultView.get().get(), expr);
     };
-    using BundleFactory = model::ResourceFactory<model::Bundle>;
-    BundleFactory::Options factoryOptions{.validatorOptions = fhirtools::ValidatorOptions{
-                                              .allowNonLiteralAuthorReference = true,
-                                          }};
     auto linkBase = Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
     auto expectFullUrl = linkBase + "/Device/1";
     ChargeItemGetByIdHandler handler{{}};
@@ -68,13 +66,13 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(auto bundleFactory = BundleFactory::fromJson(serverResponse.getBody(),
-                                                                 *StaticData::getJsonValidator(), factoryOptions);
-                    bundle.emplace(std::move(bundleFactory).getValidated(model::ProfileType::fhir));)
-        << serverResponse.getBody();
+    std::optional<model::UnspecifiedResource> unspec;
+    ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromJsonNoValidation(serverResponse.getBody()))) << serverResponse.getBody();
+    ASSERT_NO_THROW(testutils::bestEffortValidate(unspec.value())) << serverResponse.getBody();
+    const auto bundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument());
+
     fhirtools::Collection bundleCollection = {std::make_shared<ErpElement>(
-        defaultView, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle->jsonDocument()))};
+        defaultView, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle.jsonDocument()))};
     const auto supportingInformationExpr = parse("Bundle.entry.resource.ofType(ChargeItem).supportingInformation");
     const auto supportingInformation = supportingInformationExpr->eval(bundleCollection);
     ASSERT_EQ(supportingInformation.size(), 3);

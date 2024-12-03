@@ -6,10 +6,10 @@
  */
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
-#include "erp/model/Timestamp.hxx"
-#include "erp/tsl/TrustStore.hxx"
-#include "erp/tsl/TslParser.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/tsl/TrustStore.hxx"
+#include "shared/tsl/TslParser.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"

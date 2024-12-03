@@ -8,17 +8,17 @@
 #ifndef ERP_PROCESSING_CONTEXT_TOOLS_ENROLMENT_API_CLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TOOLS_ENROLMENT_API_CLIENT_HXX
 
-#include "erp/client/HttpClient.hxx"
-#include "erp/client/HttpsClient.hxx"
-#include "erp/common/Constants.hxx"
-#include "erp/common/Header.hxx"
-#include "erp/common/HttpMethod.hxx"
-#include "erp/enrolment/EnrolmentModel.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/server/SslStream.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/enrolment/EnrolmentModel.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/network/client/HttpClient.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/connection/SslStream.hxx"
+#include "shared/network/message/Header.hxx"
+#include "shared/network/message/HttpMethod.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "src/shared/enrolment/VsdmHmacKey.hxx"
 
 #include <chrono>
 #include <optional>

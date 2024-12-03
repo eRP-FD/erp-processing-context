@@ -6,10 +6,10 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "mock/tsl/MockTslManager.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
@@ -89,7 +89,7 @@ protected:
             receiptJson = ::String::replaceAll(receiptJson, "##PRESCRIPTION_ID##", prescriptionId->toString());
             auto receipt = ::model::Bundle::fromJsonNoValidation(receiptJson);
 
-            ASSERT_NO_THROW(db->activateTask(task, signedPrescription));
+            ASSERT_NO_THROW(db->activateTask(task, signedPrescription, mJwtBuilder.makeJwtArzt()));
             ASSERT_NO_THROW(db->storeChargeInformation(::model::ChargeInformation{
                 ::std::move(chargeItem), ::std::move(signedPrescription), ::std::move(prescription),
                 ::std::move(signedDispenseItem), ::std::move(dispenseItem), ::std::move(receipt)}));

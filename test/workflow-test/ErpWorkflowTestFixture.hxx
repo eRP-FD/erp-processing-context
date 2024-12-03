@@ -8,16 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX
 #define ERP_PROCESSING_CONTEXT_ERPWORKFLOWTESTFIXTURE_HXX
 
-#include "erp/common/MimeType.hxx"
-#include "erp/crypto/CMAC.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jwt.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/AuditEvent.hxx"
+#include "HttpsTestClient.hxx"
+#include "TestClient.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
@@ -25,25 +18,32 @@
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MetaData.hxx"
-#include "erp/model/OperationOutcome.hxx"
-#include "erp/model/Parameters.hxx"
-#include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/UrlHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "fhirtools/util/Gsl.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/AuditEvent.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/OperationOutcome.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/UrlHelper.hxx"
+#include "shared/util/Uuid.hxx"
+#include "test_config.h"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/StaticData.hxx"
-#include "HttpsTestClient.hxx"
-#include "TestClient.hxx"
-#include "test_config.h"
 
 #include <gtest/gtest.h>
 #include <rapidjson/error/en.h>
@@ -417,7 +417,7 @@ public:
 
     void checkTaskAccept(
         std::string& createdSecret,
-        std::optional<model::Timestamp>& lastModifiedDate,
+        std::optional<model::Timestamp>& lastStatusUpdate,
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& accessCode,
@@ -434,7 +434,7 @@ public:
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& secret,
-        const model::Timestamp& lastModified,
+        const model::Timestamp& lastStatusUpdateDate,
         const std::vector<model::Communication>& communications,
         size_t numMedicationDispenses = 1);
 
@@ -503,12 +503,19 @@ public:
 
 
 protected:
+    virtual std::string dispenseOrCloseTaskBody(model::ProfileType profileType, const std::string& kvnr,
+                                                const std::string& prescriptionIdForMedicationDispense,
+                                                const std::string& whenHandedOver, size_t numMedicationDispenses);
+
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
                                            const std::string& whenHandedOver);
     virtual std::string medicationDispenseBundle(const std::string& kvnr,
                                                  const std::string& prescriptionIdForMedicationDispense,
                                                  const std::string& whenHandedOver, size_t numMedicationDispenses);
+    virtual std::string dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
+                                                      const std::string& prescriptionIdForMedicationDispense,
+                                                      const std::string& whenHandedOver, size_t numMedicationDispenses);
 
     static std::string patchVersionsInBundle(const std::string& bundle);
 

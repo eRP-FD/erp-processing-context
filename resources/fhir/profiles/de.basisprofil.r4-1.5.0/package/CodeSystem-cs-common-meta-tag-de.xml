@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="cs-common-meta-tag-de"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablecodesystem"/>
+  </meta>
+  <url value="http://fhir.de/CodeSystem/common-meta-tag-de"/>
+  <version value="1.5.0"/>
+  <name value="CS_CommonMetaTag_De"/>
+  <title value="CS Basisprofil Common Meta Tag DE"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Gebräuchliche Codes zur Kodierung von Resource.meta.tag"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://fhir.de/ValueSet/common-meta-tag-de"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="external"/>
+    <display value="External"/>
+    <definition value="Informationen welche in der Ressource abgebildet werden stammen aus einem externen, potentiell unverifizierten System"/>
+  </concept>
+</CodeSystem>

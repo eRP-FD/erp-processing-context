@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVPRACTITIONER_HXX_
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVPRACTITIONER_HXX_
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Lanr.hxx"
 
 namespace model

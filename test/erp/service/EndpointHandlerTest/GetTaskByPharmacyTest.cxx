@@ -5,24 +5,30 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/compression/Deflate.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
+#include "erp/model/ErxReceipt.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Demangle.hxx"
-#include "erp/util/Random.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/compression/Deflate.hxx"
+#include "shared/enrolment/VsdmHmacKey.hxx"
+#include "shared/hsm/VsdmKeyBlobDatabase.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Demangle.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/Random.hxx"
+#include "shared/util/RuntimeConfiguration.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
-#include <gtest/gtest.h>
-#include <erp/service/task/CloseTaskHandler.hxx>
-#include <chrono>
 #include <date/tz.h>
+#include <erp/service/task/CloseTaskHandler.hxx>
+#include <gtest/gtest.h>
+#include <chrono>
 using namespace std::chrono_literals;
 
 namespace
@@ -493,8 +499,11 @@ protected:
         serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikID));
         serverRequest.setQueryParameters({{"secret", secret}});
         serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
-        serverRequest.setBody(ResourceTemplates::medicationDispenseXml({.prescriptionId = prescriptionId,
-                                                                       .telematikId = telematikID}));
+        serverRequest.setBody(ResourceTemplates::dispenseOrCloseTaskBodyXml({
+            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+            .version = ResourceTemplates::Versions::GEM_ERP_current(),
+            .medicationDispenses = {{.prescriptionId = prescriptionId, .telematikId = telematikID}},
+        }));
         AccessLog accessLog;
         ServerResponse serverResponse;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
@@ -685,7 +694,7 @@ public:
             {
                 // force race condition:
                 MockDatabase::updateTaskClearPersonalData(res[0].prescriptionId, model::Task::Status::cancelled,
-                                                          model::Timestamp::now());
+                                                          model::Timestamp::now(), model::Timestamp::now());
             }
             return res;
         }

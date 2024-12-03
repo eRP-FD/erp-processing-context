@@ -8,13 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_ERPMACROS_HXX
 #define ERP_PROCESSING_CONTEXT_ERPMACROS_HXX
 
-#include "erp/util/String.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
 
+#include <gtest/gtest.h>
 #include <set>
 #include <string_view>
 #include <vector>
-
-#include <gtest/gtest.h>
 
 #define EXPECT_ERP_EXCEPTION(expression, httpStatus)                                               \
     {                                                                                              \
@@ -43,7 +43,7 @@
         catch (const ErpException& ex)                                                             \
         {                                                                                          \
             EXPECT_EQ(ex.status(), httpStatus);                                                    \
-            EXPECT_EQ(ex.what(), std::string_view(message)) << ex.what();                          \
+            EXPECT_STREQ(ex.what(), (message)) << ex.what();                          \
         }                                                                                          \
         catch (...)                                                                                \
         {                                                                                          \
@@ -92,6 +92,23 @@
         {                                                                                          \
             FAIL() << "Expected ErpException, but wrong exception type was thrown";                \
         }                                                                                          \
+    }
+
+#define ASSERT_NO_ERP_EXCEPTION(expression)                                                                            \
+    {                                                                                                                  \
+        try                                                                                                            \
+        {                                                                                                              \
+            static_cast<void>(expression);                                                                             \
+        }                                                                                                              \
+        catch (const ErpException& ex)                                                                                 \
+        {                                                                                                              \
+            FAIL() << "ErpException what: " << ex.what() << " diagnostics: " << ex.diagnostics().value_or("none");     \
+            throw;                                                                                                     \
+        }                                                                                                              \
+        catch (...)                                                                                                    \
+        {                                                                                                              \
+            ASSERT_NO_FATAL_FAILURE(throw);                                                                            \
+        }                                                                                                              \
     }
 
 

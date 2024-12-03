@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVMEDICATIONREQUEST_HXX_
 
 #include "erp/database/Database.hxx"
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 
 namespace model
 {

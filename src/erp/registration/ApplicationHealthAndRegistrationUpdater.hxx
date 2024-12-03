@@ -9,8 +9,8 @@
 #define ERP_PROCESSING_CONTEXT_REGISTRATION_HEARTBEATSENDER_HXX
 
 #include "erp/registration/RegistrationInterface.hxx"
-#include "erp/util/TimerJobBase.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/deprecated/TimerJobBase.hxx"
+#include "shared/util/Configuration.hxx"
 
 #include <future>
 #include <memory>

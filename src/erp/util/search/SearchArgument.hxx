@@ -9,11 +9,11 @@
 #define ERP_PROCESSING_CONTEXT_SEARCHARGUMENT_HXX
 
 
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/database/DatabaseModel.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/TimePeriod.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/model/TimePeriod.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "erp/util/search/SearchParameter.hxx"
 
 #include <pqxx/connection>

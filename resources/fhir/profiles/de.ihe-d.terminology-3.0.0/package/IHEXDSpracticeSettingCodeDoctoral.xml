@@ -1,0 +1,1264 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+    <id value="1.2.276.0.76.11.69--20190405083559"/>
+    <meta>
+        <profile value="http://hl7.org/fhir/StructureDefinition/shareablevalueset"/>
+        <!--<profile value="http://hl7.org/fhir/4.0/StructureDefinition/ValueSet"/>-->
+    </meta>
+    <extension url="http://hl7.org/fhir/StructureDefinition/resource-effectivePeriod">
+        <valuePeriod>
+            <start value="2019-04-05T08:35:59+01:00"/>
+        </valuePeriod>
+    </extension>
+    <url value="http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCodeDoctoral"/>
+    <identifier>
+        <use value="official"/>
+        <system value="urn:ietf:rfc:3986"/>
+        <value value="urn:oid:1.2.276.0.76.11.69"/>
+    </identifier>
+    <version value="2019-04-05T08:35:59"/>
+    <name value="IHEXDSpracticeSettingCodedoctoral"/>
+    <title value="PracticeSetting doctoral"/>
+    <status value="active"/>
+    <experimental value="false"/>
+    <publisher value="IHE Deutschland e.V."/>
+    <description value="PracticeSetting doctoral"/>
+    <immutable value="false"/>
+    <compose>
+        <include>
+            <system value="http://ihe-d.de/CodeSystems/AerztlicheFachrichtungen"/>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Allgemeinmedizin beinhaltet die Grundversorgung eines Patienten bei körperlichen und/oder seelischen Gesundheitsstörungen. Weiterhin gehören die Aspekte der Prävention und Rehabilitation in den Versorgungsbereich der Allgemeinmedizin.Nutzungshinweis: Dazu zählen auch hausärztlich tätige Praxen von Praktischen Ärzten."/>
+                </extension>
+                <code value="ALLG"/>
+                <display value="Allgemeinmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Allgemeinmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Anästhesiologie umfasst neben den Anästhesieverfahren selbst die Aufrechterhaltung der Vitalfunktionen eines Patienten während eines Eingriffs."/>
+                </extension>
+                <code value="ANAE"/>
+                <display value="Anästhesiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Anästhesiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Arbeitsmedizin ist ein präventivmedizinisches Fachgebiet und umfasst einerseits die Wechselbeziehungen zwischen Arbeits- und Lebenswelten, andererseits auch die Gesundheit und Krankheiten. Der wesentliche Aspekt ist hierbei der Erhalt und die Förderung der physischen und psychischen Gesundheit und Leistungsfähigkeit des arbeitenden Menschen.Nutzungshinweis: Das Konzept umfasst auch die Musikermedizin, auch wenn Patienten aus diesem Bereich nicht notwendigerweise professionelle Musiker sind."/>
+                </extension>
+                <code value="ARBE"/>
+                <display value="Arbeitsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Arbeitsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Augenheilkunde  umfasst die Diagnose und Behandlung aller Erkrankungen bzw. Funktionsstörungen des Sehorgans, seiner Anhangsorgane sowie des Sehsinnes."/>
+                </extension>
+                <code value="AUGE"/>
+                <display value="Augenheilkunde"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Augenheilkunde"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Chirurgie umfasst alle operativen Therapien von Krankheiten sowie von Verletzungen. Teilgebiete der Chirurgie etablierten sich als &quot;Spezialdisziplin&quot;. Nutzungshinweis: Teilgebiete für die keine eigenen Konzepte aufgeführt sind, z.B. die Handchirurgie, können mit diesem Konzept abgedeckt werden."/>
+                </extension>
+                <code value="CHIR"/>
+                <display value="Chirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Chirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Allgemeinchirurgie war früher der Oberbergriff für die gesamte Chirurgie. Bedingt durch die Spezialisierungen in der Chirurgie entwickelte sich die Allgemeinchirurgie als &quot;Auffangbecken&quot;, in welchem alle Eingriffe durchgeführt werden, die nicht durch eine Spezialisierung abgedeckt werden."/>
+                </extension>
+                <code value="ALCH"/>
+                <display value="Allgemeinchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Allgemeinchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Gefäßchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die Behandlung der Blutgefäße bei Verschlusserkrankungen oder auch Aneurysmen."/>
+                </extension>
+                <code value="GFCH"/>
+                <display value="Gefäßchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Gefäßchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Herzchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die Therapie von Erkrankungen sowie von Verletzungen des Herzens und der herznahen Gefäße."/>
+                </extension>
+                <code value="HZCH"/>
+                <display value="Herzchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Herzchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Kinderchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die operative und konservative Therapie von Erkrankungen, Verletzungen, Fehlbildungen im Kindesalter inkl. der Pränatalchirurgie."/>
+                </extension>
+                <code value="KDCH"/>
+                <display value="Kinderchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinderchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Orthopädie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die Erkrankungen und Fehlbildungen des Stütz- und Bewegungsapparates. Nutzungshinweis: Falls die Wirbelsäulenchirurgie organisatorisch als Teil der Orthopädie (und nicht als Teil der Neurochirurgie) geführt wird, deckt dieses Konzept auch die Wirbelsäulenchirurgie ab."/>
+                </extension>
+                <code value="ORTH"/>
+                <display value="Orthopädie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Orthopädie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Plastische Chirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst formverändernde oder wiederherstellende Eingriffe am menschlichen Körper."/>
+                </extension>
+                <code value="PLCH"/>
+                <display value="Plastische und Ästhetische Chirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Plastische und Ästhetische Chirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Thoraxchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst diagnostische und therapeutische Eingriffe an den Organen des Brustkorbs ausgenommen dem Herzen. D.h. es umfasst die Versorgung von Erkrankungen und Verletzungen der Lunge, der Pleura, des Bronchialsystems, des Mediastinums und der Thoraxwand."/>
+                </extension>
+                <code value="THCH"/>
+                <display value="Thoraxchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Thoraxchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Unfallchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die Versorgung von Verletzungen sowie die  Behandlung von Mehrfachverletzten einschließlich des entsprechenden Traumamanagements."/>
+                </extension>
+                <code value="UNFC"/>
+                <display value="Unfallchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Unfallchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Viszeralchirurgie ist eine Spezialisierung des Fachgebietes Chirurgie. Das Fachgebiet umfasst die Eingriffe an den Organen des Bauchraumes sowie die operative Behandlung der Schilddrüse und der Nebenschilddrüse."/>
+                </extension>
+                <code value="VICH"/>
+                <display value="Viszeralchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Viszeralchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Frauenheilkunde beinhaltet die Diagnose und Therapie der Erkrankungen des weiblichen Sexual- und Fortpflanzungstraktes. Die Fachrichtung der Geburtshilfe befasst sich mit der Überwachung von Schwangerschaften sowie der Vorbereitung, Durchführung und Nachbehandlung von Geburten."/>
+                </extension>
+                <code value="FRAU"/>
+                <display value="Frauenheilkunde und Geburtshilfe"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Frauenheilkunde und Geburtshilfe"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die gynäkologische Endokrinologie befasst sich mit der Diagnostik und Therapie von Hormonstörungen. Die Reproduktionsmedizin befasst sich mit Fragen bei unerfülltem Kinderwunsch."/>
+                </extension>
+                <code value="GEND"/>
+                <display value="Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die gynäkologische Onkologie befasst sich mit  Vorsorge, Diagnostik, Therapie und Nachsorge von Krebserkrankungen bei der Brust bzw. des weiblichen Genitals."/>
+                </extension>
+                <code value="GONK"/>
+                <display value="Gynäkologische Onkologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Gynäkologische Onkologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Perinatalmedizin befasst sich mit den Erkrankungen und Gefährdungen von Mutter und Kind im perinatalen Zeitraum, dies ist der Zeitraum zwischen der 24. Schwangerschaftswoche und dem 7. Tag nach der Geburt."/>
+                </extension>
+                <code value="PERI"/>
+                <display value="Perinatalmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Perinatalmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Geriatrie beschäftigt sich mit der Versorgung von akuten und chronischen Erkrankungen sowie der Rehabilitation und Prävention alter Patienten."/>
+                </extension>
+                <code value="GERI"/>
+                <display value="Geriatrie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Geriatrie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Hals-Nasen-Ohrenkunde befasst sich mit Erkrankungen, Verletzungen, Fehlbildungen sowie Funktionsstörungen im Kopf-, Halsbereich, insbesondere der Ohren, der oberen und unteren Luftwege sowie der Speiseröhre."/>
+                </extension>
+                <code value="HNOH"/>
+                <display value="Hals-Nasen-Ohrenheilkunde"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Hals-Nasen-Ohrenheilkunde"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet Sprach-, Stimm- und kindliche Hörstörungen umfasst die Diagnostik, Therapie und Forschung in den Bereichen Stimmstörungen, kindliche Hörstörungen, Wahrnehmungsstörungen, Störungen der Sprech- und Sprachentwicklung, erworbenen Sprech- und Sprachstörungen (z.B. Aphasien) und Schluckstörungen."/>
+                </extension>
+                <code value="HRST"/>
+                <display value="Sprach-, Stimm- und kindliche Hörstörungen"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Sprach-, Stimm- und kindliche Hörstörungen"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Konzept umfasst sowohl die Dermatologie, wie auch die Phlebologie und die Venerologie. Das Gebiet der Dermatologie befasst sich mit Diagnose und Therapie von Erkrankungen der Haut. Das Gebiet der Phlebologie umfasst die Erkennung und Behandlung von Gefäßerkrankungen. Die Venerologie beinhaltet die Diagnose und Therapie der sexuell übertragbaren Erkrankungen."/>
+                </extension>
+                <code value="HAUT"/>
+                <display value="Haut- und Geschlechtskrankheiten"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Haut- und Geschlechtskrankheiten"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Humangenetik beschäftigt sich mit dem Erbgut des Menschen. Zum Themenumfeld in der Humangenetik gehören insbesondere die Aufklärung, Erkennung und Behandlung genetisch bedingter Erkrankungen, einschließlich der genetischen Beratungen von Patienten, Angehörigen und behandelnden Ärzten. Nutzungshinweis:  Falls die Pädiatrische Genetik organisatorisch als Teil der Humangenetik (und nicht als Teil der Pädiatrie) geführt wird, deckt dieses Konzept auch die Pädiatrische Genetik ab."/>
+                </extension>
+                <code value="HUMA"/>
+                <display value="Humangenetik"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Humangenetik"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Hygiene beschäftigt sich mit krankmachenden Einwirkungen auf den Organismus und versucht diese durch verschiedene Maßnahmen (Aufklärung, Reinigung, Desinfektion, Sterilisation, Grenzwerte) auszuschalten. Die Umweltmedizin beschäftigt sich mit Fragestellungen, die hinsichtlich Prävention, Diagnose und Therapie von Erkrankungen mit Umweltfaktoren in Verbindung gebracht werden."/>
+                </extension>
+                <code value="HYGI"/>
+                <display value="Hygiene und Umweltmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Hygiene und Umweltmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Inneren Medizin befasst sich mit der Prävention, Diagnostik, nicht-operativen Therapie und der Rehabilitation bei Erkrankungen sämtlicher Organsysteme des Körpers. Die Innere Medizin beinhaltet mehrere Teilgebiete, die sich im Rahmen von Spezialisierungen entwickelten.Nutzungshinweis: Teilgebiete, für die keine eigenen Konzepte aufgeführt sind wie z.B. die klinische Immunologie, außerhalb der Rheumatologie, können mit diesem Konzept abgedeckt werden. Dazu zählen auch hausärztlich tätige Arztpraxen für Innere Medizin."/>
+                </extension>
+                <code value="INNE"/>
+                <display value="Innere Medizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Innere Medizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Angiologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Gebiet beschäftigt sich mit der Funktion und den Erkrankungen der Arterien, Venen und Lymphgefäße, insbesondere mit Diagnose und Therapie der verschiedenen Gefäßerkrankungen."/>
+                </extension>
+                <code value="ANGI"/>
+                <display value="Angiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Angiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Endokrinologie und Diabetologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Die Endokrinologie beschäftigt sich mit der der Funktion sowie den (krankhaften) Störungen der hormonproduzierenden Organe. Dazu zählt auch die Diabetologie."/>
+                </extension>
+                <code value="ENDO"/>
+                <display value="Endokrinologie und Diabetologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Endokrinologie und Diabetologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Gastroenterologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Gebiet beschäftigt sich mit den Erkrankungen des Magen-Darm-Traktes, der Leber und der zum Verdauungstrakt gehörenden Hormondrüsen wie der Bauchspeicheldrüse.Nutzungshinweis: Das Konzept umfasst auch die Hepatologie."/>
+                </extension>
+                <code value="GAST"/>
+                <display value="Gastroenterologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Gastroenterologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Hämatologie und internistische Onkologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Dieses medizinische Teilgebiet beschäftigt sich mit gut- und bösartigen Erkrankungen des Blutes, der Lymphknoten und des lymphatischen Systems sowie bösartigen soliden Tumoren."/>
+                </extension>
+                <code value="HAEM"/>
+                <display value="Hämatologie und internistische Onkologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Hämatologie und internistische Onkologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Kardiologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Gebiet befasst sich mit Diagnose und Therapie von Herz-Kreislauf-Erkrankungen."/>
+                </extension>
+                <code value="KARD"/>
+                <display value="Kardiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kardiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Nephrologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Gebiet beschäftigt mit Diagnostik und Therapie von Erkrankungen der Nieren."/>
+                </extension>
+                <code value="NEPH"/>
+                <display value="Nephrologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Nephrologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Pneumologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Gebiet beschäftigt sich mit der  Prophylaxe, Diagnose und nicht-operativen Therapie von Erkrankungen der Lunge, der Bronchien und der Pleura."/>
+                </extension>
+                <code value="PNEU"/>
+                <display value="Pneumologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Pneumologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Rheumatologie ist eine Spezialisierung des Fachgebietes Innere Medizin. Das Konzept umfasst auch die Fachrichtung 'orthopädische Rheumatologie'.  Das Gebiet beschäftigt sich mit Diagnose und Therapie der rheumatischen Erkrankungen, d.h. Erkrankungen  im Bereich der Gelenke, Gelenkkapseln, Sehnen, Knochen, Muskeln und des Bindegewebes, die nicht durch eine akute Verletzung oder einen Tumor hervorgerufen werden."/>
+                </extension>
+                <code value="RHEU"/>
+                <display value="Rheumatologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Rheumatologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Intensivmedizin beschäftigt sich mit der Diagnostik und Therapie lebensbedrohlicher Zustände sowie Krankheiten, die derartige Zustände beinhalten.Nutzungshinweis: Falls eine Intermediate Care Unit organisatorisch als Teil der Intensivmedizin (und nicht als Teil der jeweiligen Fachabteilung) geführt wird, deckt dieses Konzept auch die Intermediate Care Unit ab."/>
+                </extension>
+                <code value="INTM"/>
+                <display value="Intensivmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Intensivmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Interdisziplinäre Zusammenarbeit bezeichnet die Kooperationen verschiedener ärztlichen Fachrichtungen, die in einem gemeinsamen organisatorischen Rahmen an klinischen und wissenschaftlichen Fragestellungen arbeiten. Wenn möglich sollten die untergeordneten Fachrichtungen verwendet werden."/>
+                </extension>
+                <code value="INTZ"/>
+                <display value="Interdisziplinäre Zusammenarbeit"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Interdisziplinäre Zusammenarbeit"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Onkologie beschäftigt sich mit der Prävention, der Diagnostik, der Therapie und der Nachsorge von Krebserkrankungen. Hierbei ist oftmals eine fächerübergreifende (&quot;interdisziplinäre&quot;) Zusammenarbeit erforderlich, woraus sich interdisziplinäre Behandlungszentren entwickelten."/>
+                </extension>
+                <code value="INTO"/>
+                <display value="Interdisziplinäre Onkologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Interdisziplinäre Onkologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Schmerzmedizin beschäftigt sich mit der Diagnostik und Therapie des chronischen Schmerzes."/>
+                </extension>
+                <code value="INTS"/>
+                <display value="Interdisziplinäre Schmerzmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Interdisziplinäre Schmerzmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Transplantationsmedizin befasst sich mit der Übertragung von Zellen, Geweben, Organen oder Organsystemen von einem Organismus auf einen anderen Organismus. Die gesetzlichen Rahmenbedingungen der Transplantationsmedizin sind in Deutschland im Transplantationsgesetz geregelt, woraus sich die Bildung interdisziplinärer Einrichtungen zur Übertragung von Spenderorganen ableitet. Solche Transplantationszentren übernehmen in Ergänzung zu den jeweiligen spezialisierten klinischen Fachgebieten (z.B. Viszeralchirurgie, Herzchirurgie, Nephrologie) insbesondere Aufgaben im Bereich der Indikationsstellung, Vorbereitung, Dokumentation und Nachsorge bei Organtransplantationen und Lebend-Organspenden, sowie beim Wartelistenmanagement und bei erforderlicher psychischer Betreuung der Patienten im Krankenhaus vor und nach der Organübertragung. Sofern Dokumente in solchen oder vergleichbaren Transplantationsmedizinischen Einrichtungen erstellt werden und nicht einer spezifischeren, an Transplantationen beteiligten Fachrichtung zuzuordnen sind, können sie mit diesem Konzept codiert werden. Dokumente aus der Transplantationsimmunologie sollen mit dem Konzept TRAN (Transfusionsmedizin) codiert werden."/>
+                </extension>
+                <code value="TRPL"/>
+                <display value="Transplantationsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Transplantationsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Fachrichtung &quot;seltene Erkrankungen&quot; ist die Disziplin, die sich mit der Diagnostik und Behandlung von seltenen Erkrankungen (z.B. laut EU Prävalenz 1:2000 Erkrankungen) beschäftigt."/>
+                </extension>
+                <code value="SELT"/>
+                <display value="seltene Erkrankungen"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="seltene Erkrankungen"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Kinder- und Jugendmedizin beschäftigt sich mit Prävention, Diagnose und Therapie von Erkrankungen des kindlichen und des jugendlichen Organismus sowie den Entwicklungsstörungen und Fehlbildungen bei einem Kind.Nutzungshinweis:  Falls die Pädiatrische Genetik organisatorisch als Teil der Pädiatrie (und nicht als Teil der Humangenetik) geführt wird, deckt dieses Konzept auch die Pädiatrische Genetik ab."/>
+                </extension>
+                <code value="KIJU"/>
+                <display value="Kinder- und Jugendmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinder- und Jugendmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Kinder-Hämatologie und -Onkologie ist eine Spezialisierung des Fachgebietes der Kinder- und Jugendmedizin. Das Gebiet beschäftigt mit der Diagnose und Therapie von Blut- und Tumorerkrankungen bei Kindern und Jugendlichen."/>
+                </extension>
+                <code value="KONK"/>
+                <display value="Kinder-Hämatologie und -Onkologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinder-Hämatologie und -Onkologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Kinderkardiologie ist eine Spezialisierung des Fachgebietes der Kinder- und Jugendmedizin. Das Gebiet beschäftigt sich mit dem frühestmöglichen Erkennen und Behandeln von kindlichen angeborenen Herzfehlern."/>
+                </extension>
+                <code value="KKAR"/>
+                <display value="Kinder-Kardiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinder-Kardiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Neonatologie ist eine Spezialisierung des Fachgebietes der Kinder- und Jugendmedizin. Das Gebiet beschäftigt sich mit Diagnose und Therapie der Erkrankungen von Neugeborenen."/>
+                </extension>
+                <code value="NNAT"/>
+                <display value="Neonatologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neonatologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Neuropädiatrie ist eine Spezialisierung des Fachgebietes der Kinder- und Jugendmedizin. Das Gebiet beschäftigt sich mit der Prävention, Diagnose und Therapie von Nervenkrankheiten von Kindern."/>
+                </extension>
+                <code value="NPAE"/>
+                <display value="Neuropädiatrie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neuropädiatrie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Kinder- und Jugendpsychiatrie und -psychotherapie beinhaltet Diagnostik, die nichtoperative Therapie sowie Prävention und Rehabilitation von psychischen, psychosomatischen, entwicklungsbedingten und neurologischen Erkrankungen oder Störungen im Kindes- und Jugendalter, ebenso psychische und soziale Verhaltensauffälligkeiten bei Kindern und Jugendlichen."/>
+                </extension>
+                <code value="KPSY"/>
+                <display value="Kinder- und Jugendpsychiatrie und -psychotherapie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinder- und Jugendpsychiatrie und -psychotherapie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Laboratoriumsmedizin beschäftigt sich mit der Untersuchung von Körperflüssigkeiten und -ausscheidungen zum Zwecke der Diagnostik bzw. Verlaufs- und Therapiekontrolle. Durch dieses Konzept werden auch die Konzepte &quot;Immunologisches Labor&quot; und &quot;Zellmarkerlabor&quot; abgedeckt."/>
+                </extension>
+                <code value="LABO"/>
+                <display value="Laboratoriumsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Laboratoriumsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Die Mikrobiologie beschäftigt sich mit der Erforschung von Mikroorganismen, ihrem Stoffwechsel und ihrer Wirkung auf andere Organismen. Die Virologie ist die Lehre von den Viren. Die Infektionsepidemiologie beschäftigt sich  mit der Epidemiologie von übertragbaren Erkrankungen.In diesen drei Fachgebieten wird mittels der Labordiagnostik die Ursache von durch Mikroorganismen, Viren und anderen übertragbaren Stoffen ausgelöste Erkrankungen gesucht."/>
+                </extension>
+                <code value="MIKR"/>
+                <display value="Mikrobiologie, Virologie und Infektionsepidemiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Mikrobiologie, Virologie und Infektionsepidemiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Mund-, Kiefer- und Gesichtschirurgie umfasst die Prävention, Diagnostik, Therapie und Nachsorge von Erkrankungen, Verletzungen oder Fehlbildungen im Bereich des Kiefers, des Gesichtes, der Zähne und des Mund- und Rachenraumes bis hin zum Halsbereich."/>
+                </extension>
+                <code value="MKGC"/>
+                <display value="Mund-Kiefer-Gesichtschirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Mund-Kiefer-Gesichtschirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Naturheilverfahren umfassen Maßnahmen, die sich keiner technologischen Hilfsmittel bedienen und die Selbstheilungskräfte des Körpers stärken wollen."/>
+                </extension>
+                <code value="NATU"/>
+                <display value="Naturheilverfahren und alternative Heilmethoden"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Naturheilverfahren und alternative Heilmethoden"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Notfallmedizin befasst sich mit der Diagnostik und Therapie von akut eingetretenen, unter Umständen lebensbedrohlichen Gesundheitsstörungen. Das Gebiet hat die zwei Spezialisierungen &quot;präklinische Rettungsmedizin&quot; und &quot;Katastrophenmedizin&quot;."/>
+                </extension>
+                <code value="NOTF"/>
+                <display value="Notfallmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Notfallmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Neurochirurgie befasst sich mit der operativen Behandlung von Fehlbildungen, Erkrankungen oder Verletzungen des peripheren oder zentralen Nervensystems.Nutzungshinweis: Falls die Wirbelsäulenchirurgie organisatorisch als Teil der Neurochirurgie (und nicht als Teil der Orthopädie) geführt wird, deckt dieses Konzept auch die Wirbelsäulenchirurgie ab."/>
+                </extension>
+                <code value="NRCH"/>
+                <display value="Neurochirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neurochirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Neurologie umfasst die Prophylaxe, Diagnose und (nicht-operative) Therapie von Erkrankungen des zentralen, peripheren und vegetativen Nervensystems."/>
+                </extension>
+                <code value="NEUR"/>
+                <display value="Neurologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neurologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Nuklearmedizin beschäftigt sich mit der Anwendung radioaktiver Substanzen in Diagnostik und Therapie."/>
+                </extension>
+                <code value="NUKL"/>
+                <display value="Nuklearmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Nuklearmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet des Öffentlichen Gesundheitswesens befasst sich mit der Aufrechterhaltung der Gesundheit der Bevölkerung sowie der Prophylaxe, Diagnose und Therapie von Erkrankungen."/>
+                </extension>
+                <code value="GESU"/>
+                <display value="Öffentliches Gesundheitswesen"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Öffentliches Gesundheitswesen"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Palliativmedizin beschäftigt sich mit der Sicherstellung der bestmöglichen Lebensqualität von Patienten, die unter einer unheilbaren Krankheit im fortgeschrittenen Stadium leiden und nur noch eine begrenzte Lebenszeit haben."/>
+                </extension>
+                <code value="PALL"/>
+                <display value="Palliativmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Palliativmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Pathologie beschäftigt sich mit der Erforschung von abnormen und/oder krankhaften Vorgängen und Zuständen von Lebewesen sowie der diesen Zuständen zugrundeliegenden Ursachen. Das Konzept deckt auch die Histologie und die Zytologie ab. Die Histologie (Gewebelehre) befasst sich mit dem Aufbau von biologischen Geweben. Im diagnostischen Kontext bezeichnet sie die morphologische Untersuchung von Zellen und Geweben. Unter Zytologie versteht man im Allgemeinen die Lehre vom Aufbau der Zelle und ihren Funktionen, im medizinischen Umfeld wird mit diesem Begriff die Zytodiagnostik an einzelnen Zellen bezeichnet. Auch folgende diagnostische Disziplinen und Labore sind mit diesem Konzept abzubilden: Molekularpathologisches Labor, Immunhistologisches Labor, Pathologielabor, Histologie-Labor, Zytologie-Labor."/>
+                </extension>
+                <code value="PATH"/>
+                <display value="Pathologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Pathologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Neuropathologie beschäftigt sich mit den Krankheitserscheinungen und/oder den Veränderungen des neuronalen Gewebes."/>
+                </extension>
+                <code value="NPAT"/>
+                <display value="Neuropathologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neuropathologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Pharmakologie beschäftigt sich mit den Wechselwirkungen zwischen (Wirk-) Stoffen und Lebewesen"/>
+                </extension>
+                <code value="PHAR"/>
+                <display value="Pharmakologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Pharmakologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Toxikologie umfasst die Lehre der Giftstoffe. Dies beinhaltet insbesondere auch die Diagnose und Therapie von Vergiftungen. Dabei ist die Toxikologie ein interdisziplinäres Fachgebiet, in dem neben Ärzten auch Chemiker und Biochemiker als Toxikologen arbeiten.Nutzungshinweis: Falls die forensische Toxikologie organisatorisch als Teil der Toxikologie (und nicht als Teil der Rechtsmedizin) geführt wird, deckt dieses Konzept auch die forensische Toxikologie ab."/>
+                </extension>
+                <code value="TOXI"/>
+                <display value="Toxikologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Toxikologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Gebiet der Physikalischen und Rehabilitativen Medizin beschäftigt sich mit &quot;der sekundären Prävention, der interdisziplinären Diagnostik, Behandlung und Rehabilitation von körperlichen Beeinträchtigungen mittels konservativen, physikalischen, manuellen und naturheilkundlichen Verfahren&quot;. (Facharzt Weiterbildungsordnung)"/>
+                </extension>
+                <code value="REHA"/>
+                <display value="Physikalische und Rehabilitative Medizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Physikalische und Rehabilitative Medizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Psychiatrie beschäftigt sich mit Prävention, Diagnostik und Therapie psychischer Erkrankungen.Mit Psychotherapie bezeichnet man die Tätigkeit, welche zur Erkennung und Therapie von geistig-seelisch bedingten, dysfunktionalen Zuständen eines Patienten durchgeführt wird."/>
+                </extension>
+                <code value="PSYC"/>
+                <display value="Psychiatrie und Psychotherapie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Psychiatrie und Psychotherapie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Forensischen Psychiatrie stellt eine Spezialisierung innerhalb der Psychiatrie dar. Das Gebiet befasst sich mit der Begutachtung und der Therapie (ggfs. inkl. Unterbringung) von psychisch kranken Straftätern sowie mit Patienten, welche unter Drogeneinfluss ein strafrechtlich relevantes Delikt begingen."/>
+                </extension>
+                <code value="FPSY"/>
+                <display value="Forensische Psychiatrie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Forensische Psychiatrie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Psychosomatischen Medizin und Psychotherapie beschäftigt sich mit der Prävention, der Erkennung, der psychotherapeutischen Behandlung sowie der Rehabilitation von Erkrankungen, deren Ursachen psychosozialer und psychosomatischer Natur sind."/>
+                </extension>
+                <code value="PSYM"/>
+                <display value="Psychosomatische Medizin und Psychotherapie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Psychosomatische Medizin und Psychotherapie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Radiologie umfasst alle Bereiche der Bildgebung zu diagnostischen und therapeutischen Zwecken."/>
+                </extension>
+                <code value="RADI"/>
+                <display value="Radiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Radiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Kinderradiologie stellt eine Spezialisierung der Radiologie dar. Das Gebiet beschäftigt mit der radiologischen Bildgebung beim Kind und beim Jugendlichen."/>
+                </extension>
+                <code value="KRAD"/>
+                <display value="Kinderradiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kinderradiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Neuroradiologie stellt eine Spezialisierung der Radiologie dar. Das Gebiet beschäftigt sich mit der Sichtbarmachung von neurologischen Strukturen durch bildgebende Verfahren."/>
+                </extension>
+                <code value="NRAD"/>
+                <display value="Neuroradiologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Neuroradiologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Rechtsmedizin beschäftigt sich mit  juristischen Aspekten der Medizin, insbesondere mit der Anwendung medizinischer Kenntnisse zur Beurteilung und Klärung von Rechtsfragen sowie der Vermittlung rechtlicher und ethischer Kenntnisse an die Ärzteschaft.Nutzungshinweis: Falls die forensische Toxikologie organisatorisch als Teil der Rechtsmedizin (und nicht als Teil der Toxikologie) geführt wird, deckt dieses Konzept auch die forensische Toxikologie ab."/>
+                </extension>
+                <code value="RECH"/>
+                <display value="Rechtsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Rechtsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Schlafmedizin beschäftigt sich mit Diagnostik und Therapie von Schlafstörungen."/>
+                </extension>
+                <code value="SCHL"/>
+                <display value="Schlafmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Schlafmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Sportmedizin beschäftigt sich mit der Prävention, Diagnostik, Therapie und Rehabilitation mit sportlicher Betätigung assoziierten Erkrankungen."/>
+                </extension>
+                <code value="SPOR"/>
+                <display value="Sport- und Bewegungsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Sport- und Bewegungsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Strahlentherapie beschäftigt sich mit  der Anwendung von ionisierender Strahlung bei Menschen und Tieren, um Krankheiten zu heilen oder deren Fortschreiten zu verzögern."/>
+                </extension>
+                <code value="STRA"/>
+                <display value="Strahlentherapie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Strahlentherapie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Transfusionsmedizin beschäftigt sich mit allen Fragen zu Bluttransfusionen im weitesten Sinne. Insbesondere gehören dazu die Auswahl und medizinische Betreuung von Blutspendern sowie die Unterhaltung von Blutbanken und die damit verbundene Bereitstellung von Blutkonserven für die medizinischen Fachgebiete. Das Konzept umfasst auch die Transplantationsimmunologie."/>
+                </extension>
+                <code value="TRAN"/>
+                <display value="Transfusionsmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Transfusionsmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Tropenmedizin beschäftigt sich mit der Epidemiologie, Prävention, Diagnostik und Therapie/Bekämpfung von Tropenerkrankungen.Das Fachgebiet der Reisemedizin beschäftigt sich mit allen Fragen, welche bei der Erforschung und Bekämpfung von Erkrankungen, die im Rahmen von Reisen entstehen können, auftreten. Insbesondere die Prävention vor diesen Erkrankungen gehört zu der Reisemedizin."/>
+                </extension>
+                <code value="TROP"/>
+                <display value="Tropen-/Reisemedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Tropen-/Reisemedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Urologie beschäftigt sich mit der Prävention, Diagnose und Therapie von Erkrankungen der Niere, der ableitenden Harnwege und der männlichen Geschlechtsorgane."/>
+                </extension>
+                <code value="UROL"/>
+                <display value="Urologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Urologie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Zahnmedizin ist die Kurzform für das Fachgebiet der Zahn-, Mund- und Kieferheilkunde. Das Fachgebiet beinhaltet die Prävention, Diagnostik und Therapie von Erkrankungen im Zahn-, Mund- und Kieferbereich."/>
+                </extension>
+                <code value="MZKH"/>
+                <display value="Zahnmedizin"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Zahnmedizin"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Oralchirurgie stellt eine Spezialisierung innerhalb der Zahnmedizin dar. Das Gebiet beinhaltet die operative Versorgung sämtlicher Erkrankungen, Verletzungen oder Fehlstellungen im Bereich der Mundhöhle, des Zahnapparates, des Zahnhalteapparates und des Zahnfleischs."/>
+                </extension>
+                <code value="ORAL"/>
+                <display value="Oralchirurgie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Oralchirurgie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet der Kieferorthopädie stellt eine Spezialisierung innerhalb der Zahnmedizin dar. Das Gebiet beinhaltet die Prophylaxe, Diagnostik und Therapie von Fehlstellungen der Kiefer und der Zähne."/>
+                </extension>
+                <code value="KIEF"/>
+                <display value="Kieferorthopädie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Kieferorthopädie"/>
+                </designation>
+            </concept>
+            <concept>
+                <extension url="http://hl7.org/fhir/StructureDefinition/valueset-concept-comments">
+                    <valueString value="Das Fachgebiet Parodontologie  stellt eine Weiterbildung innerhalb der Zahnmedizin im Kammergebiet Westfalen-Lippe dar. Das Fachgebiet beinhaltet die Prävention, die Diagnostik, die Therapie und Nachsorge von Erkrankungen parodontaler und periimplantärer Gewebe und Strukturen."/>
+                </extension>
+                <code value="PARO"/>
+                <display value="Parodontologie"/>
+                <designation>
+                    <language value="de-DE"/>
+                    <use>
+                        <system value="http://snomed.info/sct"/>
+                        <code value="900000000000013009"/>
+                        <display value="Synonym"/>
+                    </use>
+                    <value value="Parodontologie"/>
+                </designation>
+            </concept>
+        </include>
+    </compose>
+</ValueSet>

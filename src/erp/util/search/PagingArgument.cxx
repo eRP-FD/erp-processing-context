@@ -7,10 +7,10 @@
 
 #include "erp/util/search/PagingArgument.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/common/HttpStatus.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/String.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/network/message/HttpStatus.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
 
 
 namespace

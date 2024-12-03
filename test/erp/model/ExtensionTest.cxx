@@ -5,14 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Bundle.hxx"
-#include "erp/model/Extension.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/Extension.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
-
-#include "test/util/ResourceTemplates.hxx"
 
 
 class MyTestExtension : public model::UnspecifiedExtension

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PharmacyTypeCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/PharmacyTypeCS"/>
+  <version value="0.11.12"/>
+  <name value="PharmacyTypeCS"/>
+  <title value="Pharmacy type"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Pharmacy type codes of accessability for patients"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="6"/>
+  <concept>
+    <code value="offizin-apotheke"/>
+    <display value="Offizin-Apotheke"/>
+  </concept>
+  <concept>
+    <code value="krankenhausversorgende-apotheke"/>
+    <display value="Krankenhausversorgende Apotheke"/>
+  </concept>
+  <concept>
+    <code value="bundeswehrapotheke"/>
+    <display value="Bundeswehrapotheke"/>
+  </concept>
+  <concept>
+    <code value="heimversorgende-apotheke"/>
+    <display value="Heimversorgende Apotheke"/>
+  </concept>
+  <concept>
+    <code value="versandapotheke"/>
+    <display value="Versandapotheke"/>
+  </concept>
+  <concept>
+    <code value="sterilherstellung"/>
+    <display value="Sterilherstellung"/>
+  </concept>
+</CodeSystem>

@@ -8,7 +8,7 @@
 #ifndef FHIR_TOOLS_FHIRELEMENT_HXX
 #define FHIR_TOOLS_FHIRELEMENT_HXX
 
-#include "erp/util/Version.hxx"
+#include "shared/util/Version.hxx"
 #include "fhirtools/model/DecimalType.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/repository/FhirConstraint.hxx"
@@ -48,8 +48,9 @@ public:
         std::optional<uint32_t> max = std::nullopt;
         bool isConstraint(bool isArray);
         auto operator<=>(const Cardinality&) const = default;
-        ValidationResults check(uint32_t count, std::string_view elementFullPath,
-                                   const FhirStructureDefinition*) const;
+        ValidationResults check(uint32_t count, std::string_view elementFullPath, const FhirStructureDefinition*,
+                                const std::shared_ptr<const Element>& element,
+                                const std::string& typeId) const;
         bool restricts(const Cardinality&) const;
     private:
         bool isArrayConstraint() const;

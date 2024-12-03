@@ -510,7 +510,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         {
             if (element->contentReference().empty())
             {
-                FPExpect(!element->typeId().empty(), "element has neither type nor contentReference.");
+                FPExpect(! element->typeId().empty(), "element has neither type nor contentReference.");
                 return addSliceElement(element, {element->typeId()});
             }
             return addSliceElement(element, {element->contentReference()});

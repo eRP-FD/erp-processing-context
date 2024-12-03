@@ -11,7 +11,7 @@
 #include <sw/redis++/redis++.h>
 
 #include "erp/service/RedisInterface.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 #include <chrono>
 
 class RedisClient : public RedisInterface

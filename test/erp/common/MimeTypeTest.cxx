@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/common/MimeType.hxx"
+#include "shared/network/message/MimeType.hxx"
 
 #include "gtest/gtest.h"
 

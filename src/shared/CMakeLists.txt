@@ -1,0 +1,241 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2024
+# (C) Copyright IBM Corp. 2021, 2024
+#
+# non-exclusively licensed to gematik GmbH
+
+configure_file(erp-serverinfo.cxx.in erp-serverinfo.cxx)
+
+add_library(erp-shared STATIC
+    audit/AuditDataCollector.cxx
+    audit/AuditEventCreator.cxx
+    audit/AuditEventTextTemplates.cxx
+    beast/BoostBeastHeader.cxx
+    beast/BoostBeastMethod.cxx
+    beast/BoostBeastStringReader.cxx
+    beast/BoostBeastStringWriter.cxx
+    compression/Compression.cxx
+    compression/Deflate.cxx
+    compression/ZStd.cxx
+    compression/ZStdDictionary.cxx
+    compression/ZStdDictionaryRepository.cxx
+    crypto/AesGcm.cxx
+    crypto/CMAC.cxx
+    crypto/CadesBesSignature.cxx
+    crypto/Certificate.cxx
+    crypto/CertificateChainAndKey.cxx
+    crypto/CertificateKeyPair.cxx
+    crypto/DiffieHellman.cxx
+    crypto/EllipticCurve.cxx
+    crypto/EllipticCurvePublicKey.cxx
+    crypto/EllipticCurveUtils.cxx
+    crypto/EssCertificateHelper.cxx
+    crypto/Jws.cxx
+    crypto/Jwt.cxx
+    crypto/OpenSslHelper.cxx
+    crypto/Pbkdf2Hmac.cxx
+    crypto/RandomSource.cxx
+    crypto/SecureRandomGenerator.cxx
+    crypto/Seeder.cxx
+    crypto/Sha256.cxx
+    database/CommonDatabaseFrontend.cxx
+    database/CommonPostgresBackend.cxx
+    database/DatabaseCodec.cxx
+    database/DatabaseConnectionInfo.cxx
+    database/DatabaseModel.cxx
+    database/PostgresConnection.cxx
+    deprecated/SignalHandler.cxx
+    deprecated/TerminationHandler.cxx
+    deprecated/Timer.cxx
+    deprecated/TimerJobBase.cxx
+    enrolment/EnrolmentData.cxx
+    enrolment/EnrolmentModel.cxx
+    enrolment/EnrolmentRequestHandler.cxx
+    enrolment/EnrolmentServer.cxx
+    enrolment/VsdmHmacKey.cxx
+    fhir/FhirCanonicalizer.cxx
+    fhir/Fhir.cxx
+    hsm/BlobCache.cxx
+    hsm/BlobDatabase.cxx
+    hsm/ErpTypes.cxx
+    hsm/HsmException.cxx
+    hsm/HsmFactory.cxx
+    hsm/HsmIdentity.cxx
+    hsm/HsmPool.cxx
+    hsm/HsmPoolSession.cxx
+    hsm/HsmPoolSessionRemover.cxx
+    hsm/HsmSession.cxx
+    hsm/HsmSessionExpiredException.cxx
+    hsm/KeyDerivation.cxx
+    hsm/TeeTokenUpdater.cxx
+    hsm/VsdmKeyCache.cxx
+    hsm/production/ProductionBlobDatabase.cxx
+    hsm/production/ProductionVsdmKeyBlobDatabase.cxx
+    idp/Idp.cxx
+    idp/IdpUpdater.cxx
+    model/AuditData.cxx
+    model/AuditEvent.cxx
+    model/Bundle.cxx
+    model/Coding.cxx
+    model/Extension.cxx
+    model/Health.cxx
+    model/Kvnr.cxx
+    model/ModelException.cxx
+    model/OperationOutcome.cxx
+    model/Parameters.cxx
+    model/PrescriptionId.cxx
+    model/PrescriptionType.cxx
+    model/ProfileType.cxx
+    model/RapidjsonDocument.cxx
+    model/ResourceBase.cxx
+    model/Resource.cxx
+    model/ResourceFactory.cxx
+    model/ResourceNames.cxx
+    model/TelematikId.cxx
+    model/TimePeriod.cxx
+    model/Timestamp.cxx
+    network/client/ClientBase.cxx
+    network/client/CoHttpsClient.cxx
+    network/client/HttpClient.cxx
+    network/client/HttpsClient.cxx
+    network/client/TlsCertificateVerifier.cxx
+    network/client/implementation/ClientImpl.cxx
+    network/client/implementation/TlsSession.cxx
+    network/client/request/ClientRequest.cxx
+    network/client/request/ClientRequestWriter.cxx
+    network/client/request/ValidatedClientRequest.cxx
+    network/client/response/ClientResponse.cxx
+    network/client/response/ClientResponseReader.cxx
+    network/client/UrlRequestSender.cxx
+    network/connection/RootCertificatesMgr.cxx
+    network/connection/SslStream.cxx
+    network/connection/TcpStream.cxx
+    network/connection/TlsSettings.cxx
+    network/message/ContentType.cxx
+    network/message/Header.cxx
+    network/message/HttpMethod.cxx
+    network/message/HttpStatus.cxx
+    network/message/MimeType.cxx
+    network/Resolver.cxx
+
+    server/AccessLog.cxx
+    server/BaseHttpsServer.cxx
+    server/BaseServerSession.cxx
+    server/BaseServiceContext.cxx
+    server/ErrorHandler.cxx
+    server/PartialRequestHandler.cxx
+    server/ThreadPool.cxx
+    server/Worker.cxx
+    server/handler/RequestHandlerContext.cxx
+    server/handler/RequestHandlerManager.cxx
+    server/request/ServerRequest.cxx
+    server/request/ServerRequestReader.cxx
+    server/response/ResponseBuilder.cxx
+    server/response/ServerResponse.cxx
+    server/response/ServerResponseWriter.cxx
+    server/response/ValidatedServerResponse.cxx
+
+    service/Operation.cxx
+
+    tee/OuterTeeRequest.cxx
+
+    tpm/PcrSet.cxx
+    tpm/Tpm.cxx
+    tsl/C14NHelper.cxx
+    tsl/CertificateId.cxx
+    tsl/error/TslError.cxx
+    tsl/OcspHelper.cxx
+    tsl/OcspResponse.cxx
+    tsl/OcspService.cxx
+    tsl/TrustStore.cxx
+    tsl/TslManager.cxx
+    tsl/TslParser.cxx
+    tsl/TslProvider.cxx
+    tsl/TslRefreshJob.cxx
+    tsl/TslService.cxx
+    tsl/X509Certificate.cxx
+    tsl/X509Store.cxx
+    util/Base64.cxx
+    util/Buffer.cxx
+    util/ByteHelper.cxx
+    util/Condition.cxx
+    util/Configuration.cxx
+    util/ConfigurationFormatter.cxx
+    util/CrashHandler.cxx
+    util/Demangle.cxx
+    util/DurationConsumer.cxx
+    util/Environment.cxx
+    util/ErpException.cxx
+    util/ErpServiceException.cxx
+    util/ServerException.cxx
+    util/ExceptionHelper.cxx
+    util/ExceptionWrapper.cxx
+    util/Expect.cxx
+    util/FileHelper.cxx
+    util/GLogConfiguration.cxx
+    util/Hash.cxx
+    util/HeaderLog.cxx
+    util/Holidays.cxx
+    util/InvalidConfigurationException.cxx
+    util/JsonLog.cxx
+    util/PeriodicTimer.cxx
+    util/Random.cxx
+    util/RuntimeConfiguration.cxx
+    util/SafeString.cxx
+    util/String.cxx
+    util/TimeoutHelper.cxx
+    util/ThreadNames.cxx
+    util/TLog.cxx
+    util/UrlHelper.cxx
+    util/Uuid.cxx
+    util/Version.cxx
+    util/WorkDay.cxx
+    util/health/ApplicationHealth.cxx
+    validation/JsonValidator.cxx
+    validation/RapidjsonErrorDocument.cxx
+    validation/XmlValidator.cxx
+    xml/XmlDocument.cxx
+    erp-serverinfo.cxx
+    Application.cxx
+)
+
+set_source_files_properties(erp-serverinfo.cxx PROPERTIES GENERATED ON)
+
+
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+    target_sources(erp-shared PRIVATE
+            enrolment/EnrolmentHelper.cxx
+            hsm/production/HsmProductionClient.cxx
+            hsm/production/HsmProductionFactory.cxx
+            hsm/production/HsmRawSession.cxx
+            hsm/production/TeeTokenProductionUpdater.cxx
+            tpm/TpmProduction.cxx
+        )
+endif()
+
+target_compile_definitions(erp-shared
+    PUBLIC
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
+)
+
+target_include_directories(erp-shared PUBLIC "${CMAKE_SOURCE_DIR}/src")
+target_link_libraries(erp-shared
+    PUBLIC
+        fhirtools
+        CONAN_PKG::boost
+        CONAN_PKG::date
+        CONAN_PKG::glog
+        CONAN_PKG::gsl-lite
+        CONAN_PKG::libpq
+        CONAN_PKG::libpqxx
+        CONAN_PKG::libxml2
+        CONAN_PKG::magic_enum
+        CONAN_PKG::openssl
+        CONAN_PKG::redis-plus-plus
+        CONAN_PKG::zstd
+        CONAN_PKG::zlib
+        $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
+        $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
+    )

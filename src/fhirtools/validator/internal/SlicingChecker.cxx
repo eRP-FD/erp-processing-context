@@ -4,19 +4,21 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "fhirtools/validator/internal/SlicingChecker.hxx"
-#include "erp/util/TLog.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
+#include "shared/util/TLog.hxx"
 
 
 using fhirtools::SlicingChecker;
 fhirtools::SlicingChecker::SlicingChecker(const fhirtools::FhirStructureDefinition* initBaseProfile,
                                           const fhirtools::FhirSlicing& slicing,
+                                          const fhirtools::ValidatorOptions& options,
                                           std::optional<FhirSlicing::SlicingRules> ruleOverride)
     : mOrdered{slicing.ordered()}
     , mRules{ruleOverride ? *ruleOverride : slicing.slicingRules()}
     , mBaseProfile{initBaseProfile}
+    , mOptions(options)
 {
     for (const auto& slice : slicing.slices())
     {
@@ -53,7 +55,7 @@ void fhirtools::SlicingChecker::foundSliced(const fhirtools::FhirStructureDefini
     mLastIdx = idx;
 }
 
-void SlicingChecker::foundUnsliced(std::string_view fullElementName)
+void SlicingChecker::foundUnsliced(const fhirtools::Element& element, std::string_view fullElementName)
 {
     mUnmatchedFullName = fullElementName;
     switch (mRules)
@@ -64,10 +66,20 @@ void SlicingChecker::foundUnsliced(std::string_view fullElementName)
         case reportOther:
             mResult.add(Severity::unslicedWarning, "element doesn't belong to any slice.", std::string{fullElementName},
                         mBaseProfile);
+            if (mOptions.collectInfo)
+            {
+                mResult.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(),
+                                std::string{fullElementName}, element.definitionPointer().element()->typeId());
+            }
             break;
         case closed:
             mResult.add(Severity::error, "element doesn't match any slice in closed slicing",
                         std::string{fullElementName}, mBaseProfile);
+            if (mOptions.collectInfo)
+            {
+                mResult.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(),
+                                std::string{fullElementName}, element.definitionPointer().element()->typeId());
+            }
             break;
         case openAtEnd:
             break;
@@ -75,14 +87,15 @@ void SlicingChecker::foundUnsliced(std::string_view fullElementName)
     mDone = true;
 }
 
-void SlicingChecker::finalize(std::string_view elementFullPath)
+void SlicingChecker::finalize(std::string_view elementFullPath, const std::shared_ptr<const Element>& element)
 {
     for (const auto& slice : mSingleSlices)
     {
         const auto& rootElement = slice.profile->rootElement();
         std::ostringstream name;
         name << elementFullPath << '.' << rootElement->fieldName();
-        mResult.merge(rootElement->cardinality().check(slice.count, name.str(), slice.profile));
+        mResult.merge(rootElement->cardinality().check(slice.count, name.str(), slice.profile, element,
+                                                       slice.profile->rootElement()->typeId()));
     }
 }
 

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="v2-0916"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: CodeSystem v2-0916</b>
+      </p>
+      <a name="v2-0916"> </a>
+      <a name="hcv2-0916"> </a>
+      <a name="v2-0916-en-US"> </a>
+      <p>
+        <b>Properties</b>
+      </p>
+      <p>
+        <b>This code system defines the following properties for its concepts</b>
+      </p>
+      <table class="grid">
+        <tr>
+          <td>
+            <b>Name</b>
+          </td>
+          <td>
+            <b>Code</b>
+          </td>
+          <td>
+            <b>URI</b>
+          </td>
+          <td>
+            <b>Type</b>
+          </td>
+          <td>
+            <b>Description</b>
+          </td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>status</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#status</td>
+          <td>code</td>
+          <td>Status of the concept</td>
+        </tr>
+        <tr>
+          <td>deprecated</td>
+          <td>deprecated</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated</td>
+          <td>code</td>
+          <td>Version of HL7 in which the code was deprecated</td>
+        </tr>
+      </table>
+      <p>
+        <b>Concepts</b>
+      </p>
+      <p>This case-sensitive code system <code>http://terminology.hl7.org/CodeSystem/v2-0916</code> defines the following codes in a Is-A hierarchy:</p>
+      <table class="codes">
+        <tr>
+          <td style="white-space:nowrap">
+            <b>Code</b>
+          </td>
+          <td>
+            <b>Display</b>
+          </td>
+          <td>
+            <b>Definition</b>
+          </td>
+          <td>
+            <b>deprecated</b>
+          </td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">F<a name="v2-0916-F"> </a></td>
+          <td>Patient was fasting prior to the procedure.</td>
+          <td>Patient was fasting prior to the procedure.</td>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">NF<a name="v2-0916-NF"> </a></td>
+          <td>The patient indicated they did not fast prior to the procedure.</td>
+          <td>The patient indicated they did not fast prior to the procedure.</td>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">NG<a name="v2-0916-NG"> </a></td>
+          <td>Not Given - Patient was not asked at the time of the procedure.</td>
+          <td>Not Given - Patient was not asked at the time of the procedure.</td>
+          <td/>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">FNA<a name="v2-0916-FNA"> </a></td>
+          <td>Fasting not asked of the patient at time of procedure.</td>
+          <td>Fasting not asked of the patient at time of procedure.</td>
+          <td>2.9</td>
+        </tr>
+      </table>
+    </div>
+  </text>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
+    <valueCode value="oo"/>
+  </extension>
+  <url value="http://terminology.hl7.org/CodeSystem/v2-0916"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.18.422"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="RelevantClincialInformation"/>
+  <title value="relevantClincialInformation"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Code system of concepts specifying additional clinical information about the patient or specimen to report the supporting and/or suspected diagnosis and clinical findings on requests for interpreted diagnostic studies. Used in HL7 Version 2.x messaging in the OBR segment."/>
+  <purpose value="Underlying Master Code System for V2 table 0916 (Relevant Clincial Information)"/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://terminology.hl7.org/ValueSet/v2-0916"/>
+  <hierarchyMeaning value="is-a"/>
+  <compositional value="false"/>
+  <versionNeeded value="false"/>
+  <content value="complete"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#status"/>
+    <description value="Status of the concept"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="deprecated"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated"/>
+    <description value="Version of HL7 in which the code was deprecated"/>
+    <type value="code"/>
+  </property>
+  <concept id="6624">
+    <code value="F"/>
+    <display value="Patient was fasting prior to the procedure."/>
+    <definition value="Patient was fasting prior to the procedure."/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="6625">
+    <code value="NF"/>
+    <display value="The patient indicated they did not fast prior to the procedure."/>
+    <definition value="The patient indicated they did not fast prior to the procedure."/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="6626">
+    <code value="NG"/>
+    <display value="Not Given - Patient was not asked at the time of the procedure."/>
+    <definition value="Not Given - Patient was not asked at the time of the procedure."/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="6627">
+    <code value="FNA"/>
+    <display value="Fasting not asked of the patient at time of procedure."/>
+    <definition value="Fasting not asked of the patient at time of procedure."/>
+    <property>
+      <code value="deprecated"/>
+      <valueCode value="2.9"/>
+    </property>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+</CodeSystem>

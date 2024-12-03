@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="HealthcareServiceTypeVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/HealthcareServiceTypeVS"/>
+  <version value="0.11.12"/>
+  <name value="HealthcareServiceTypeVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="ValueSet for `HealthcareService.type`"/>
+  <compose>
+    <include>
+      <system value="urn:oid:1.3.6.1.4.1.19376.3.276.1.5.4"/>
+      <concept>
+        <code value="ALLG"/>
+        <display value="Allgemeinmedizin"/>
+      </concept>
+      <concept>
+        <code value="ANAE"/>
+        <display value="Anästhesiologie"/>
+      </concept>
+      <concept>
+        <code value="ARBE"/>
+        <display value="Arbeitsmedizin"/>
+      </concept>
+      <concept>
+        <code value="AUGE"/>
+        <display value="Augenheilkunde"/>
+      </concept>
+      <concept>
+        <code value="CHIR"/>
+        <display value="Chirurgie"/>
+      </concept>
+      <concept>
+        <code value="ALCH"/>
+        <display value="Allgemeinchirurgie"/>
+      </concept>
+      <concept>
+        <code value="GFCH"/>
+        <display value="Gefäßchirurgie"/>
+      </concept>
+      <concept>
+        <code value="HZCH"/>
+        <display value="Herzchirurgie"/>
+      </concept>
+      <concept>
+        <code value="KDCH"/>
+        <display value="Kinderchirurgie"/>
+      </concept>
+      <concept>
+        <code value="ORTH"/>
+        <display value="Orthopädie"/>
+      </concept>
+      <concept>
+        <code value="PLCH"/>
+        <display value="Plastische und Ästhetische Chirurgie"/>
+      </concept>
+      <concept>
+        <code value="THCH"/>
+        <display value="Thoraxchirurgie"/>
+      </concept>
+      <concept>
+        <code value="UNFC"/>
+        <display value="Unfallchirurgie"/>
+      </concept>
+      <concept>
+        <code value="VICH"/>
+        <display value="Viszeralchirurgie"/>
+      </concept>
+      <concept>
+        <code value="FRAU"/>
+        <display value="Frauenheilkunde und Geburtshilfe"/>
+      </concept>
+      <concept>
+        <code value="GEND"/>
+        <display value="Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+      </concept>
+      <concept>
+        <code value="GONK"/>
+        <display value="Gynäkologische Onkologie"/>
+      </concept>
+      <concept>
+        <code value="PERI"/>
+        <display value="Perinatalmedizin"/>
+      </concept>
+      <concept>
+        <code value="GERI"/>
+        <display value="Geriatrie"/>
+      </concept>
+      <concept>
+        <code value="HNOH"/>
+        <display value="Hals-Nasen-Ohrenheilkunde"/>
+      </concept>
+      <concept>
+        <code value="HRST"/>
+        <display value="Sprach-, Stimm- und kindliche Hörstörungen"/>
+      </concept>
+      <concept>
+        <code value="HAUT"/>
+        <display value="Haut- und Geschlechtskrankheiten"/>
+      </concept>
+      <concept>
+        <code value="HIST"/>
+        <display value="Histologie / Zytologie"/>
+      </concept>
+      <concept>
+        <code value="HUMA"/>
+        <display value="Humangenetik"/>
+      </concept>
+      <concept>
+        <code value="HYGI"/>
+        <display value="Hygiene und Umweltmedizin"/>
+      </concept>
+      <concept>
+        <code value="INNE"/>
+        <display value="Innere Medizin"/>
+      </concept>
+      <concept>
+        <code value="ANGI"/>
+        <display value="Angiologie"/>
+      </concept>
+      <concept>
+        <code value="ENDO"/>
+        <display value="Endokrinologie und Diabetologie"/>
+      </concept>
+      <concept>
+        <code value="GAST"/>
+        <display value="Gastroenterologie"/>
+      </concept>
+      <concept>
+        <code value="HAEM"/>
+        <display value="Hämatologie und internistische Onkologie"/>
+      </concept>
+      <concept>
+        <code value="KARD"/>
+        <display value="Kardiologie"/>
+      </concept>
+      <concept>
+        <code value="NEPH"/>
+        <display value="Nephrologie"/>
+      </concept>
+      <concept>
+        <code value="PNEU"/>
+        <display value="Pneumologie"/>
+      </concept>
+      <concept>
+        <code value="RHEU"/>
+        <display value="Rheumatologie"/>
+      </concept>
+      <concept>
+        <code value="INTM"/>
+        <display value="Intensivmedizin"/>
+      </concept>
+      <concept>
+        <code value="INTZ"/>
+        <display value="Interdisziplinäre Zusammenarbeit"/>
+      </concept>
+      <concept>
+        <code value="INTO"/>
+        <display value="Interdisziplinäre Onkologie"/>
+      </concept>
+      <concept>
+        <code value="INTS"/>
+        <display value="Interdisziplinäre Schmerzmedizin"/>
+      </concept>
+      <concept>
+        <code value="TRPL"/>
+        <display value="Transplantationsmedizin"/>
+      </concept>
+      <concept>
+        <code value="SELT"/>
+        <display value="seltene Erkrankungen"/>
+      </concept>
+      <concept>
+        <code value="KIJU"/>
+        <display value="Kinder- und Jugendmedizin"/>
+      </concept>
+      <concept>
+        <code value="KONK"/>
+        <display value="Kinder-Hämatologie und -Onkologie"/>
+      </concept>
+      <concept>
+        <code value="KKAR"/>
+        <display value="Kinder-Kardiologie"/>
+      </concept>
+      <concept>
+        <code value="NNAT"/>
+        <display value="Neonatologie"/>
+      </concept>
+      <concept>
+        <code value="NPAE"/>
+        <display value="Neuropädiatrie"/>
+      </concept>
+      <concept>
+        <code value="KPSY"/>
+        <display value="Kinder- und Jugendpsychiatrie und -psychotherapie"/>
+      </concept>
+      <concept>
+        <code value="LABO"/>
+        <display value="Laboratoriumsmedizin"/>
+      </concept>
+      <concept>
+        <code value="MIKR"/>
+        <display value="Mikrobiologie, Virologie und Infektionsepidemiologie"/>
+      </concept>
+      <concept>
+        <code value="MKGC"/>
+        <display value="Mund-Kiefer-Gesichtschirurgie"/>
+      </concept>
+      <concept>
+        <code value="NATU"/>
+        <display value="Naturheilverfahren und alternative Heilmethoden"/>
+      </concept>
+      <concept>
+        <code value="NOTF"/>
+        <display value="Notfallmedizin"/>
+      </concept>
+      <concept>
+        <code value="NRCH"/>
+        <display value="Neurochirurgie"/>
+      </concept>
+      <concept>
+        <code value="NEUR"/>
+        <display value="Neurologie"/>
+      </concept>
+      <concept>
+        <code value="NUKL"/>
+        <display value="Nuklearmedizin"/>
+      </concept>
+      <concept>
+        <code value="GESU"/>
+        <display value="Öffentliches Gesundheitswesen"/>
+      </concept>
+      <concept>
+        <code value="PALL"/>
+        <display value="Palliativmedizin"/>
+      </concept>
+      <concept>
+        <code value="PATH"/>
+        <display value="Pathologie"/>
+      </concept>
+      <concept>
+        <code value="NPAT"/>
+        <display value="Neuropathologie"/>
+      </concept>
+      <concept>
+        <code value="PHAR"/>
+        <display value="Pharmakologie"/>
+      </concept>
+      <concept>
+        <code value="TOXI"/>
+        <display value="Toxikologie"/>
+      </concept>
+      <concept>
+        <code value="REHA"/>
+        <display value="Physikalische und Rehabilitative Medizin"/>
+      </concept>
+      <concept>
+        <code value="PSYC"/>
+        <display value="Psychiatrie und Psychotherapie"/>
+      </concept>
+      <concept>
+        <code value="FPSY"/>
+        <display value="Forensische Psychiatrie"/>
+      </concept>
+      <concept>
+        <code value="PSYM"/>
+        <display value="Psychosomatische Medizin und Psychotherapie"/>
+      </concept>
+      <concept>
+        <code value="RADI"/>
+        <display value="Radiologie"/>
+      </concept>
+      <concept>
+        <code value="KRAD"/>
+        <display value="Kinderradiologie"/>
+      </concept>
+      <concept>
+        <code value="NRAD"/>
+        <display value="Neuroradiologie"/>
+      </concept>
+      <concept>
+        <code value="RECH"/>
+        <display value="Rechtsmedizin"/>
+      </concept>
+      <concept>
+        <code value="SCHL"/>
+        <display value="Schlafmedizin"/>
+      </concept>
+      <concept>
+        <code value="SPOR"/>
+        <display value="Sport- und Bewegungsmedizin"/>
+      </concept>
+      <concept>
+        <code value="STRA"/>
+        <display value="Strahlentherapie"/>
+      </concept>
+      <concept>
+        <code value="TRAN"/>
+        <display value="Transfusionsmedizin"/>
+      </concept>
+      <concept>
+        <code value="TROP"/>
+        <display value="Tropen-/Reisemedizin"/>
+      </concept>
+      <concept>
+        <code value="UROL"/>
+        <display value="Urologie"/>
+      </concept>
+      <concept>
+        <code value="MZKH"/>
+        <display value="Zahnmedizin"/>
+      </concept>
+      <concept>
+        <code value="ORAL"/>
+        <display value="Oralchirurgie"/>
+      </concept>
+      <concept>
+        <code value="KIEF"/>
+        <display value="Kieferorthopädie"/>
+      </concept>
+      <concept>
+        <code value="PARO"/>
+        <display value="Parodontologie"/>
+      </concept>
+    </include>
+    <include>
+      <system value="urn:oid:1.2.276.0.76.5.494"/>
+      <concept>
+        <code value="MZAH"/>
+        <display value="Allgemeine Zahnheilkunde"/>
+      </concept>
+      <concept>
+        <code value="ZGES"/>
+        <display value="Öffentliches Gesundheitswesen"/>
+      </concept>
+    </include>
+    <include>
+      <system value="urn:oid:1.3.6.1.4.1.19376.3.276.1.5.5"/>
+      <concept>
+        <code value="ERG"/>
+        <display value="Ergotherapie"/>
+      </concept>
+      <concept>
+        <code value="ERN"/>
+        <display value="Ernährung und Diätetik"/>
+      </concept>
+      <concept>
+        <code value="FOR"/>
+        <display value="Forschung"/>
+      </concept>
+      <concept>
+        <code value="PFL"/>
+        <display value="Pflege und Betreuung"/>
+      </concept>
+      <concept>
+        <code value="ALT"/>
+        <display value="Altenpflege"/>
+      </concept>
+      <concept>
+        <code value="KIN"/>
+        <display value="Kinderpflege"/>
+      </concept>
+      <concept>
+        <code value="PAT"/>
+        <display value="Patient außerhalb der Betreuung"/>
+      </concept>
+      <concept>
+        <code value="PHZ"/>
+        <display value="Pharmazeutik"/>
+      </concept>
+      <concept>
+        <code value="POD"/>
+        <display value="Podologie"/>
+      </concept>
+      <concept>
+        <code value="PRV"/>
+        <display value="Prävention"/>
+      </concept>
+      <concept>
+        <code value="SOZ"/>
+        <display value="Sozialwesen"/>
+      </concept>
+      <concept>
+        <code value="SPR"/>
+        <display value="Sprachtherapie"/>
+      </concept>
+      <concept>
+        <code value="VKO"/>
+        <display value="Versorgungskoordination"/>
+      </concept>
+      <concept>
+        <code value="VER"/>
+        <display value="Verwaltung"/>
+      </concept>
+      <concept>
+        <code value="PST"/>
+        <display value="Psychotherapie"/>
+      </concept>
+    </include>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/PharmacyTypeCS"/>
+    </include>
+  </compose>
+</ValueSet>

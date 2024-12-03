@@ -230,62 +230,9 @@
     </resource>
   </entry>
   <entry>
-    <fullUrl value="http://pvs.praxis.local/fhir/Medication/4980b470-e8e5-44bf-a53a-47ade2561cdb" />
+    <fullUrl value="urn:uuid:001413e4-a5e9-48da-9b07-c17bab476407"/>
     <resource>
-      <Medication>
-        <id value="4980b470-e8e5-44bf-a53a-47ade2561cdb" />
-        <meta>
-          <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.1.0" />
-        </meta>
-        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type">
-          <valueCodeableConcept>
-            <coding>
-              <system value="http://snomed.info/sct" />
-              <version value="http://snomed.info/sct/900000000000207008/version/20220331" />
-              <code value="763158003" />
-              <display value="Medicinal product (product)" />
-            </coding>
-          </valueCodeableConcept>
-        </extension>
-        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category">
-          <valueCoding>
-            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category" />
-            <code value="###MEDICATION_CATEGORY###" />
-          </valueCoding>
-        </extension>
-        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine">
-          <valueBoolean value="false" />
-        </extension>
-        <extension url="http://fhir.de/StructureDefinition/normgroesse">
-          <valueCode value="N1" />
-        </extension>
-        <code>
-          <coding>
-            <system value="http://fhir.de/CodeSystem/ifa/pzn" />
-            <code value="###PZN###" />
-          </coding>
-          <text value="Doxycyclin AL 200 T, 10 Tabletten N1" />
-        </code>
-        <form>
-          <coding>
-            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM" />
-            <code value="###DARREICHUNGSFORM###" />
-          </coding>
-        </form>
-        <amount>
-          <numerator>
-            <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize">
-              <valueString value="10" />
-            </extension>
-            <unit value="Tabletten" />
-            <system value="http://unitsofmeasure.org" />
-            <code value="{tbl}" />
-          </numerator>
-          <denominator>
-            <value value="1" />
-          </denominator>
-        </amount>
-      </Medication>
+####MEDICATION_RESOURCE####
     </resource>
   </entry>
   <entry>
@@ -365,7 +312,7 @@
         <status value="active" />
         <intent value="order" />
         <medicationReference>
-          <reference value="Medication/4980b470-e8e5-44bf-a53a-47ade2561cdb" />
+          <reference value="urn:uuid:001413e4-a5e9-48da-9b07-c17bab476407"/>
         </medicationReference>
         <subject>
           <reference value="Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7" />

@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_MODEL_JSONMAINTAINNUMBERPRECISIONTESTMODEL_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_MODEL_JSONMAINTAINNUMBERPRECISIONTESTMODEL_HXX
 
-#include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/Timestamp.hxx"
 
 class JsonMaintainNumberPrecisionTestModel : public model::ResourceBase
 {

@@ -1,0 +1,478 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="HolderCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/HolderCS"/>
+  <version value="0.11.12"/>
+  <name value="HolderCS"/>
+  <title value="Codes for identity authorities (Holder)"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Code System for identity authories in the TI, which verify and control the identities of practitioners and organisations"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="116"/>
+  <concept>
+    <code value="aeksh"/>
+    <display value="Ärztekammer Schleswig-Holstein"/>
+  </concept>
+  <concept>
+    <code value="aekhh"/>
+    <display value="Ärztekammer Hamburg"/>
+  </concept>
+  <concept>
+    <code value="aekn"/>
+    <display value="Ärztekammer Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="aekhb"/>
+    <display value="Ärztekammer Bremen"/>
+  </concept>
+  <concept>
+    <code value="aeknr"/>
+    <display value="Ärztekammer Nordrhein"/>
+  </concept>
+  <concept>
+    <code value="aekwl"/>
+    <display value="Ärztekammer Westfalen-Lippe"/>
+  </concept>
+  <concept>
+    <code value="laekh"/>
+    <display value="Landesärztekammer Hessen"/>
+  </concept>
+  <concept>
+    <code value="baeknordwuert"/>
+    <display value="Bezirksärztekammer Nordwürttemberg"/>
+  </concept>
+  <concept>
+    <code value="baeksuedwuert"/>
+    <display value="Bezirksärztekammer Südwürttemberg"/>
+  </concept>
+  <concept>
+    <code value="baeknordbaden"/>
+    <display value="Bezirksärztekammer Nordbaden"/>
+  </concept>
+  <concept>
+    <code value="baeksuedba"/>
+    <display value="Bezirksärztekammer Südbaden"/>
+  </concept>
+  <concept>
+    <code value="blaek"/>
+    <display value="Bayerische Landesärztekammer"/>
+  </concept>
+  <concept>
+    <code value="aekb"/>
+    <display value="Ärztekammer Berlin"/>
+  </concept>
+  <concept>
+    <code value="aekmv"/>
+    <display value="Ärztekammer Mecklenburg-Vorpommern"/>
+  </concept>
+  <concept>
+    <code value="laekbb"/>
+    <display value="Landesärztekammer Brandenburg"/>
+  </concept>
+  <concept>
+    <code value="aeksa"/>
+    <display value="Ärztekammer Sachsen-Anhalt"/>
+  </concept>
+  <concept>
+    <code value="laekt"/>
+    <display value="Landesärztekammer Thüringen"/>
+  </concept>
+  <concept>
+    <code value="slaek"/>
+    <display value="Sächsische Landeszahnärztekammer"/>
+  </concept>
+  <concept>
+    <code value="baekrheinhessen"/>
+    <display value="Bezirksärztekammer Rheinhessen"/>
+  </concept>
+  <concept>
+    <code value="baekpfalz"/>
+    <display value="Bezirksärztekammer Pfalz"/>
+  </concept>
+  <concept>
+    <code value="baektrier"/>
+    <display value="Bezirksärztekammer Trier"/>
+  </concept>
+  <concept>
+    <code value="baekkoblenz"/>
+    <display value="Bezirksärztekammer Koblenz"/>
+  </concept>
+  <concept>
+    <code value="baek"/>
+    <display value="Bundesärtzekammer"/>
+  </concept>
+  <concept>
+    <code value="kvsh"/>
+    <display value="KV Schleswig Holstein"/>
+  </concept>
+  <concept>
+    <code value="kvhh"/>
+    <display value="KV Hamburg"/>
+  </concept>
+  <concept>
+    <code value="kvhb"/>
+    <display value="KV Bremen"/>
+  </concept>
+  <concept>
+    <code value="kvn"/>
+    <display value="KV Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="kvwl"/>
+    <display value="KV Westfalen-Lippe"/>
+  </concept>
+  <concept>
+    <code value="kvno"/>
+    <display value="KV Nordrhein"/>
+  </concept>
+  <concept>
+    <code value="kvh"/>
+    <display value="KV Hessen"/>
+  </concept>
+  <concept>
+    <code value="kvrlp"/>
+    <display value="KV Rheinland-Pfalz"/>
+  </concept>
+  <concept>
+    <code value="kvbw"/>
+    <display value="KV Baden-Württemberg"/>
+  </concept>
+  <concept>
+    <code value="kvb"/>
+    <display value="KV Bayern"/>
+  </concept>
+  <concept>
+    <code value="kvbe"/>
+    <display value="KV Berlin"/>
+  </concept>
+  <concept>
+    <code value="kvsl"/>
+    <display value="KV Saarland"/>
+  </concept>
+  <concept>
+    <code value="kvmv"/>
+    <display value="KV Mecklenburg-Vorpommern"/>
+  </concept>
+  <concept>
+    <code value="kvbb"/>
+    <display value="KV Brandenburg"/>
+  </concept>
+  <concept>
+    <code value="kvsa"/>
+    <display value="KV Sachsen Anhalt"/>
+  </concept>
+  <concept>
+    <code value="kvt"/>
+    <display value="KV Thüringen"/>
+  </concept>
+  <concept>
+    <code value="kvs"/>
+    <display value="KV Sachsen"/>
+  </concept>
+  <concept>
+    <code value="lzkbw"/>
+    <display value="Landeszahnärztekammer Baden-Württemberg"/>
+  </concept>
+  <concept>
+    <code value="blzaek"/>
+    <display value="Bayerische Landeszahnärztekammer"/>
+  </concept>
+  <concept>
+    <code value="zaekbe"/>
+    <display value="Zahnärztekammer Berlin"/>
+  </concept>
+  <concept>
+    <code value="lzkbb"/>
+    <display value="Landeszahnärztekammer Brandenburg"/>
+  </concept>
+  <concept>
+    <code value="zaekhb"/>
+    <display value="Zahnärztekammer Bremen"/>
+  </concept>
+  <concept>
+    <code value="zaekhh"/>
+    <display value="Zahnärztekammer Hamburg"/>
+  </concept>
+  <concept>
+    <code value="lzkh"/>
+    <display value="Landeszahnärztekammer Hessen"/>
+  </concept>
+  <concept>
+    <code value="zaekmv"/>
+    <display value="Zahnärztekammer Mecklenburg-Vorpommern"/>
+  </concept>
+  <concept>
+    <code value="zaekn"/>
+    <display value="Zahnärztekammer Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="zaeknr"/>
+    <display value="Zahnärztekammer Nordrhein"/>
+  </concept>
+  <concept>
+    <code value="lzkrlp"/>
+    <display value="Landeszahnärztekammer Rheinland-Pfalz"/>
+  </concept>
+  <concept>
+    <code value="zaeksaar"/>
+    <display value="Ärztekammer des Saarlandes - Abteilung Zahnärzte"/>
+  </concept>
+  <concept>
+    <code value="lzaeks"/>
+    <display value="Landeszahnärztekammer Sachsen"/>
+  </concept>
+  <concept>
+    <code value="zaeksa"/>
+    <display value="Zahnärztekammer Sachsen-Anhalt"/>
+  </concept>
+  <concept>
+    <code value="zaeksh"/>
+    <display value="Zahnärztekammer Schleswig-Holstein"/>
+  </concept>
+  <concept>
+    <code value="lzkth"/>
+    <display value="Landeszahnärztekammer Thüringen"/>
+  </concept>
+  <concept>
+    <code value="zaekwl"/>
+    <display value="Zahnärztekammer Westfalen-Lippe"/>
+  </concept>
+  <concept>
+    <code value="bzaek"/>
+    <display value="Bundeszahnärztekammer"/>
+  </concept>
+  <concept>
+    <code value="kzvbw"/>
+    <display value="KZV Baden-Württemberg"/>
+  </concept>
+  <concept>
+    <code value="kzvn"/>
+    <display value="KZV Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="kzvrlp"/>
+    <display value="KZV Rheinland-Pfalz"/>
+  </concept>
+  <concept>
+    <code value="kzvba"/>
+    <display value="KZV Bayerns"/>
+  </concept>
+  <concept>
+    <code value="kzvnr"/>
+    <display value="KZV Nordrhein"/>
+  </concept>
+  <concept>
+    <code value="kzvh"/>
+    <display value="KZV Hessen"/>
+  </concept>
+  <concept>
+    <code value="kzvb"/>
+    <display value="KZV Berlin"/>
+  </concept>
+  <concept>
+    <code value="kzvhb"/>
+    <display value="KZV Bremen"/>
+  </concept>
+  <concept>
+    <code value="kzvhh"/>
+    <display value="KZV Hamburg"/>
+  </concept>
+  <concept>
+    <code value="kzvsl"/>
+    <display value="KZV Saarland"/>
+  </concept>
+  <concept>
+    <code value="kzvsh"/>
+    <display value="KZV Schleswig-Holstein"/>
+  </concept>
+  <concept>
+    <code value="kzvwl"/>
+    <display value="KZV Westfalen-Lippe"/>
+  </concept>
+  <concept>
+    <code value="kzvmv"/>
+    <display value="KZV Mecklenburg-Vorpommern"/>
+  </concept>
+  <concept>
+    <code value="kzvlb"/>
+    <display value="KZV Brandenburg"/>
+  </concept>
+  <concept>
+    <code value="kzvsa"/>
+    <display value="KZV Sachsen-Anhalt"/>
+  </concept>
+  <concept>
+    <code value="kzvt"/>
+    <display value="KZV Thüringen"/>
+  </concept>
+  <concept>
+    <code value="kzvs"/>
+    <display value="KZV Sachsen"/>
+  </concept>
+  <concept>
+    <code value="kzbv"/>
+    <display value="KZBV"/>
+  </concept>
+  <concept>
+    <code value="lakbw"/>
+    <display value="Landesapothekerkammer Baden-Württemberg"/>
+  </concept>
+  <concept>
+    <code value="blak"/>
+    <display value="Bayerische Landesapothekerkammer"/>
+  </concept>
+  <concept>
+    <code value="akb"/>
+    <display value="Apothekerkammer Berlin"/>
+  </concept>
+  <concept>
+    <code value="lakbb"/>
+    <display value="Landesapothekerkammer Brandenburg"/>
+  </concept>
+  <concept>
+    <code value="akhb"/>
+    <display value="Apothekerkammer Bremen"/>
+  </concept>
+  <concept>
+    <code value="akhh"/>
+    <display value="Apothekerkammer Hamburg"/>
+  </concept>
+  <concept>
+    <code value="lakh"/>
+    <display value="Landesapothekerkammer Hessen"/>
+  </concept>
+  <concept>
+    <code value="akmv"/>
+    <display value="Apothekerkammer Mecklenburg-Vorpommern"/>
+  </concept>
+  <concept>
+    <code value="akn"/>
+    <display value="Apothekerkammer Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="aknr"/>
+    <display value="Apothekerkammer Nordrhein"/>
+  </concept>
+  <concept>
+    <code value="lakrlp"/>
+    <display value="Landesapothekerkammer Rheinland-Pfalz"/>
+  </concept>
+  <concept>
+    <code value="aksl"/>
+    <display value="Apothekerkammer des Saarlandes"/>
+  </concept>
+  <concept>
+    <code value="aksa"/>
+    <display value="Apothekerkammer Sachsen-Anhalt"/>
+  </concept>
+  <concept>
+    <code value="slak"/>
+    <display value="Sächsische Landesapothekerkammer"/>
+  </concept>
+  <concept>
+    <code value="aksh"/>
+    <display value="Apothekerkammer Schleswig-Holstein"/>
+  </concept>
+  <concept>
+    <code value="lakt"/>
+    <display value="Landesapothekerkammer Thüringen"/>
+  </concept>
+  <concept>
+    <code value="akwl"/>
+    <display value="Apothekerkammer Westfalen-Lippe"/>
+  </concept>
+  <concept>
+    <code value="bak"/>
+    <display value="Bundesapothekenkammer"/>
+  </concept>
+  <concept>
+    <code value="ngda"/>
+    <display value="NGDA Netzgesellschaft Deutscher Apotheker mbH"/>
+  </concept>
+  <concept>
+    <code value="ptksh"/>
+    <display value="Psychotherapeutenkammer Schleswig-Holstein"/>
+  </concept>
+  <concept>
+    <code value="ptkhh"/>
+    <display value="Psychotherapeutenkammer Hamburg"/>
+  </concept>
+  <concept>
+    <code value="ptkn"/>
+    <display value="Psychotherapeutenkammer Niedersachsen"/>
+  </concept>
+  <concept>
+    <code value="lptkbr"/>
+    <display value="Psychotherapeutenkammer Bremen"/>
+  </concept>
+  <concept>
+    <code value="ptknrw"/>
+    <display value="Psychotherapeutenkammer Nordrhein-Westfalen"/>
+  </concept>
+  <concept>
+    <code value="ptkh"/>
+    <display value="Psychotherapeutenkammer Hessen"/>
+  </concept>
+  <concept>
+    <code value="lpkrlp"/>
+    <display value="Psychotherapeutenkammer Rheinland-Pfalz"/>
+  </concept>
+  <concept>
+    <code value="lpkbw"/>
+    <display value="Psychotherapeutenkammer Baden-Württemberg"/>
+  </concept>
+  <concept>
+    <code value="ptkba"/>
+    <display value="Psychotherapeutenkammer Bayern"/>
+  </concept>
+  <concept>
+    <code value="ptks"/>
+    <display value="Psychotherapeutenkammer des Saarlandes"/>
+  </concept>
+  <concept>
+    <code value="ptkb"/>
+    <display value="Psychotherapeutenkammer Berlin"/>
+  </concept>
+  <concept>
+    <code value="optk"/>
+    <display value="Ostdeutsche Psychotherapeutenkammer"/>
+  </concept>
+  <concept>
+    <code value="dtrust"/>
+    <display value="D-Trust"/>
+  </concept>
+  <concept>
+    <code value="dktig"/>
+    <display value="DKTIG"/>
+  </concept>
+  <concept>
+    <code value="dtsg"/>
+    <display value="Deutsche Telekom Security"/>
+  </concept>
+  <concept>
+    <code value="gkv"/>
+    <display value="GKV-Spitzenverband"/>
+  </concept>
+  <concept>
+    <code value="shc"/>
+    <display value="SHC Stolle &amp; Heinz Consultants"/>
+  </concept>
+  <concept>
+    <code value="egbr"/>
+    <display value="Elektronisches Gesundheitsberuferegister - eGBR"/>
+  </concept>
+  <concept>
+    <code value="gemmon"/>
+    <display value="gematik GmbH (Monitoring)"/>
+  </concept>
+  <concept>
+    <code value="gematik"/>
+    <display value="gematik GmbH"/>
+  </concept>
+  <concept>
+    <code value="dgns"/>
+    <display value="DGN Service / Medisign"/>
+  </concept>
+</CodeSystem>

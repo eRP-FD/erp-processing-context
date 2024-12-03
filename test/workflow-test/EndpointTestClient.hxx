@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
 
-#include "erp/client/HttpsClient.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/hsm/HsmPool.hxx"
 #include "erp/server/HttpsServer.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "test/mock/MockDatabase.hxx"
@@ -40,7 +40,7 @@ private:
     Database::Factory createDatabaseFactory();
     static std::unique_ptr<HttpsServer> httpsServerFactory(const std::string_view address, uint16_t port,
                                                            RequestHandlerManager&& requestHandlers,
-                                                           PcServiceContext& serviceContext,
+                                                           BaseServiceContext& serviceContext,
                                                            bool enforceClientAuthentication,
                                                            const SafeString& caCertificates);
 
@@ -60,7 +60,6 @@ private:
     const Target mTarget;
     std::unique_ptr<EnvironmentVariableGuard> mPortGuard;
 };
-
 
 
 #endif // ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX

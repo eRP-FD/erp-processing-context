@@ -7,9 +7,9 @@
 
 #include "mock/crypto/MockCryptography.hxx"
 
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/Base64.hxx"
 
 #include "mock/util/MockConfiguration.hxx"
 
@@ -97,4 +97,19 @@ const SafeString& MockCryptography::getIdFdSigPrivateKeyPkcs8 (void)
 {
     static SafeString privateKeyPkcs8 = pemToPkcs8(getIdFdSigPrivateKeyPem());
     return privateKeyPkcs8;
+}
+
+
+const SafeString& MockCryptography::getVauAutPrivateKeyPem()
+{
+    static SafeString privateKeyPem =
+        MockConfiguration::instance().getSafeStringValue(MockConfigurationKey::MOCK_VAU_AUT_PRIVATE_KEY);
+    return privateKeyPem;
+}
+
+const Certificate& MockCryptography::getVauAutCertificate()
+{
+    static shared_EVP_PKEY privateKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(getVauAutPrivateKeyPem());
+    static auto certificate = Certificate::createSelfSignedCertificateMock(privateKey);
+    return certificate;
 }

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKTERMINATIONHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKTERMINATIONHANDLER_HXX
 
-#include "erp/util/TerminationHandler.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
 
 
 /**

@@ -6,10 +6,9 @@
  */
 
 #include "erp/service/task/ActivateTaskHandler.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/fhir/internal/FhirSAXHandler.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/KbvBundle.hxx"
@@ -18,15 +17,15 @@
 #include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/Parameters.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/Uuid.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
@@ -239,7 +238,8 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19025_02.start("2. store the PKCS7 file in database");
     databaseHandle = session.database();
     ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing task key.");
-    databaseHandle->activateTask(taskAndKey->task, *taskAndKey->key, healthCareProviderPrescriptionBinary);
+    databaseHandle->activateTask(taskAndKey->task, *taskAndKey->key, healthCareProviderPrescriptionBinary,
+                                 session.request.getAccessToken());
     A_19025_02.finish();
 
     makeResponse(session, responseStatus, &task);

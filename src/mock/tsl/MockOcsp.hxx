@@ -8,8 +8,8 @@
 #ifndef TEST_ERP_PROCESSING_CONTEXT_CRYPTO_MOCK_OCSP_MOCKOCSP_HXX
 #define TEST_ERP_PROCESSING_CONTEXT_CRYPTO_MOCK_OCSP_MOCKOCSP_HXX
 
-#include "erp/crypto/OpenSslHelper.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/Certificate.hxx"
 
 #include <string>
 #include <boost/core/noncopyable.hpp>

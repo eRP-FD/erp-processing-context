@@ -7,19 +7,19 @@
 
 #include "test/util/HsmTestBase.hxx"
 
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 
-#if ! defined(__APPLE__)
-    #include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
-    #include "erp/hsm/production/HsmProductionFactory.hxx"
-    #include "erp/hsm/production/HsmProductionClient.hxx"
+#if WITH_HSM_TPM_PRODUCTION > 0
+    #include "shared/hsm/production/TeeTokenProductionUpdater.hxx"
+    #include "shared/hsm/production/HsmProductionFactory.hxx"
+    #include "shared/hsm/production/HsmProductionClient.hxx"
 #endif
 
 class TestTeeTokenUpdater : public TeeTokenUpdater
@@ -37,7 +37,7 @@ public:
 bool HsmTestBase::isHsmSimulatorSupportedAndConfigured (void)
 {
     static const bool isSimulatorSupportedAndConfigured = mAllowProductionHsm &&
-#if defined(__APPLE__) || defined(_WIN32)
+#if WITH_HSM_TPM_PRODUCTION > 0
         false;
 #else
         ! Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE).empty();
@@ -69,7 +69,7 @@ void HsmTestBase::setupHsmTest(bool allowProductionUpdater, std::chrono::system_
 
 std::unique_ptr<HsmClient> HsmTestBase::createHsmClient (void)
 {
-#if ! defined(__APPLE__) && ! defined(_WIN32)
+#if WITH_HSM_TPM_PRODUCTION > 0
     if (isHsmSimulatorSupportedAndConfigured())
         return std::make_unique<HsmProductionClient>();
     else
@@ -82,7 +82,7 @@ std::unique_ptr<HsmFactory> HsmTestBase::createFactory (
     std::unique_ptr<HsmClient>&& client,
     std::shared_ptr<BlobCache> blobCache)
 {
-#if ! defined(__APPLE__) && ! defined(_WIN32)
+#if WITH_HSM_TPM_PRODUCTION > 0
     if (isHsmSimulatorSupportedAndConfigured())
         return std::make_unique<HsmProductionFactory>(std::move(client), std::move(blobCache));
     else
@@ -96,6 +96,7 @@ std::unique_ptr<TeeTokenUpdater> HsmTestBase::createTeeTokenUpdater(HsmPool& hsm
                                                                     std::chrono::system_clock::duration retryInterval)
 {
     TeeTokenUpdater::TokenRefresher tokenRefresher;
+#if WITH_HSM_TPM_PRODUCTION > 0
     if (isHsmSimulatorSupportedAndConfigured())
         tokenRefresher = [this](HsmPool& hsmPool) {
             TeeTokenProductionUpdater::refreshTeeToken(hsmPool);
@@ -103,6 +104,7 @@ std::unique_ptr<TeeTokenUpdater> HsmTestBase::createTeeTokenUpdater(HsmPool& hsm
                 mUpdateCallback();
         };
     else
+#endif
         tokenRefresher = [this](HsmPool& hsmPool) {
             auto hsmPoolSession = hsmPool.acquire();
             auto& hsmSession = hsmPoolSession.session();

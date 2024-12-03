@@ -8,19 +8,19 @@
 #ifndef ERP_PROCESSING_CONTEXT_POSTGRESDATABASETEST_HXX
 #define ERP_PROCESSING_CONTEXT_POSTGRESDATABASETEST_HXX
 
-#include "erp/compression/ZStd.hxx"
-#include "erp/crypto/Jwt.hxx"
+#include "shared/compression/ZStd.hxx"
+#include "shared/crypto/Jwt.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/TelematikId.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/DurationConsumer.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/TelematikId.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/DurationConsumer.hxx"
+#include "shared/util/Expect.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test_config.h"
 #include "test/erp/model/CommunicationTest.hxx"
@@ -117,7 +117,7 @@ protected:
         Expect(usePostgres(), "database support is disabled, database should not be used");
         if (!mConnection)
         {
-            mConnection = std::make_unique<pqxx::connection>(PostgresBackend::defaultConnectString());
+            mConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
         }
         return *mConnection;
     }

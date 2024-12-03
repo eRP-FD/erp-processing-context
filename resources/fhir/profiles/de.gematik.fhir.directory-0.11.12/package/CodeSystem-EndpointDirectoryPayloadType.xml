@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="EndpointDirectoryPayloadType"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/EndpointDirectoryPayloadType"/>
+  <version value="0.11.12"/>
+  <name value="EndpointDirectoryPayloadType"/>
+  <title value="Codes for Endpoint.payloadType"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="CodeSystem TI specific payload types assigned to the Endpoints&#10;&#10;Codes are maintained by gematik.&#10;The codes are used to declare which processes are supported by an entity with the corresponding entry in the gematik Directory.&#10;New codes can be requested at gematik. There must exist a specification for each code so that developers can find out how to implement the process."/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="tim-chat"/>
+    <display value="TI-Messenger chat"/>
+  </concept>
+</CodeSystem>

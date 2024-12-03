@@ -8,22 +8,25 @@
 #include "test/util/ServerTestBase.hxx"
 #include "TestUtils.hxx"
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/common/Constants.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/KbvBundle.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Patient.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
@@ -180,8 +183,15 @@ void ServerTestBase::TearDown (void)
 HttpsClient ServerTestBase::createClient (void)
 {
     const auto& config = Configuration::instance();
-    return HttpsClient("127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
-                       30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout, false /*enforceServerAuthentication*/);
+    return HttpsClient(ConnectionParameters{
+        .hostname = "127.0.0.1",
+        .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
+        .connectionTimeoutSeconds = 30,
+        .resolveTimeout = Constants::resolveTimeout,
+        .tlsParameters = TlsConnectionParameters{
+            .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+        }
+    });
 }
 
 
@@ -315,14 +325,7 @@ void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) 
     }
     if (resourceForValidation)
     {
-        fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-        auto validationResult = resourceForValidation->genericValidate(model::ProfileType::fhir, options, repoView);
-        auto filteredValidationErrors = testutils::validationResultFilter(validationResult, options);
-        for (const auto& item : filteredValidationErrors)
-        {
-            ASSERT_LT(item.severity(), fhirtools::Severity::error) << to_string(item) << "\n"
-                                                                   << innerResponse.getBody();
-        }
+        ASSERT_NO_THROW(testutils::bestEffortValidate(*resourceForValidation));
     }
 }
 
@@ -369,7 +372,7 @@ pqxx::connection& ServerTestBase::getConnection()
     Expect(mHasPostgresSupport, "can not return Postgres connection because postgres support is disabled");
     if ( ! mConnection)
     {
-        mConnection = std::make_unique<pqxx::connection>(PostgresBackend::defaultConnectString());
+        mConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
     }
     return *mConnection;
 }
@@ -496,7 +499,7 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
     const Binary healthCareProviderPrescriptionBinary(*task.healthCarePrescriptionUuid(), encodedPrescriptionBundleXmlString);
 
     auto database = createDatabase();
-    database->activateTask(task, healthCareProviderPrescriptionBinary);
+    database->activateTask(task, healthCareProviderPrescriptionBinary, mJwtBuilder.makeJwtArzt());
     database->commitTransaction();
 }
 
@@ -538,8 +541,16 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     std::vector<model::MedicationDispense> medicationDispenses;
     for (size_t i = 0; i < numMedications; ++i)
     {
-        medicationDispenses.emplace_back(
-            createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared));
+        if (medicationWhenPrepared.has_value())
+        {
+            medicationDispenses.emplace_back(
+                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, *medicationWhenPrepared));
+        }
+        else
+        {
+            medicationDispenses.emplace_back(
+                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, std::monostate{}));
+        }
         medicationDispenses.back().setId(model::MedicationDispenseId(medicationDispenses.back().prescriptionId(), i));
     }
 
@@ -548,7 +559,8 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
         compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
     auto database = createDatabase();
-    database->updateTaskMedicationDispenseReceipt(task, medicationDispenses, responseReceipt);
+    database->updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}}, responseReceipt,
+                                                  mJwtBuilder.makeJwtApotheke());
     database->deleteCommunicationsForTask(task.prescriptionId());
     database->commitTransaction();
 
@@ -572,28 +584,21 @@ MedicationDispense ServerTestBase::createMedicationDispense(
     Task& task,
     const std::string_view& telematicIdPharmacy,
     const Timestamp& whenHandedOver,
-    const std::optional<Timestamp>& whenPrepared) const
+    const std::variant<std::monostate, Timestamp, std::string>& whenPrepared) const
 {
-    const auto medicationDispenseString = ResourceTemplates::medicationDispenseXml({});
-
-    MedicationDispense medicationDispense =
-        MedicationDispense::fromXml(medicationDispenseString, *StaticData::getXmlValidator());
-
     PrescriptionId prescriptionId = task.prescriptionId();
     const auto kvnrPatient = task.kvnr().value();
 
-    medicationDispense.setPrescriptionId(prescriptionId);
-    medicationDispense.setId({prescriptionId, 0});
-    medicationDispense.setKvnr(kvnrPatient);
-    medicationDispense.setTelematicId(model::TelematikId{telematicIdPharmacy});
-    medicationDispense.setWhenHandedOver(whenHandedOver);
+    const auto medicationDispenseString = ResourceTemplates::medicationDispenseXml({
+        .id = model::MedicationDispenseId{prescriptionId, 0},
+        .prescriptionId = prescriptionId,
+        .kvnr = kvnrPatient.id(),
+        .telematikId = telematicIdPharmacy,
+        .whenHandedOver = whenHandedOver,
+        .whenPrepared = whenPrepared,
+    });
 
-    if (whenPrepared.has_value())
-    {
-        medicationDispense.setWhenPrepared(whenPrepared.value());
-    }
-
-    return medicationDispense;
+    return MedicationDispense::fromXmlNoValidation(medicationDispenseString);
 }
 
 std::vector<Uuid> ServerTestBase::addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors)

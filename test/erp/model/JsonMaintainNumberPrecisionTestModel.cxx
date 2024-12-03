@@ -9,10 +9,10 @@
 #define _USE_CUSTOM_READER
 
 #include "test/erp/model/JsonMaintainNumberPrecisionTestModel.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/NumberAsStringParserWriter.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserWriter.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <boost/format.hpp>
 

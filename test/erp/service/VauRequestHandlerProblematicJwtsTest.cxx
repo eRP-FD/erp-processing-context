@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "erp/service/VauRequestHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/JwtException.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/JwtException.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 
@@ -63,6 +63,7 @@ public:
 
     std::string jwtWithSignatureAlgorithm(const std::string& sigalg)
     {
+        using namespace std::string_view_literals;
         const auto now = std::chrono::system_clock::now();
         const auto exp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch() + std::chrono::minutes(5));
         const auto iat = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch());
@@ -81,7 +82,8 @@ public:
             + ",\"idNummer\":\"1212\""
             + ",\"jti\":\"0\""
             + "}";
-        return std::string{Base64::encode("{\"alg\":\"" + sigalg + "\"}") + "." + Base64::encode(payload) + "." + Base64::encode("invalid")};
+        return std::string{Base64::encode("{\"alg\":\"" + sigalg + "\"}") + "." + Base64::encode(payload) + "." +
+                           Base64::encode("invalid"sv)};
     };
 
     ClientTeeProtocol teeProtocol;

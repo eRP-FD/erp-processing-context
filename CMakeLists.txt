@@ -209,6 +209,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(ERP_WARNING_AS_ERROR OFF CACHE BOOL "Treat all warnings as errors")
 message(NOTICE "ERP_WARNING_AS_ERROR: ${ERP_WARNING_AS_ERROR}")
+
+# allow logging in ePA code
+add_compile_definitions(ENABLE_LOG=1)
 # enable std::string support in RapidJSON across all targets
 add_compile_definitions(RAPIDJSON_HAS_STDSTRING=1)
 add_compile_definitions(RAPIDJSON_SCHEMA_VERBOSE=0)
@@ -254,7 +257,10 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_subdirectory(resources)
+add_subdirectory(src/shared)
+add_subdirectory(src/tee3)
 add_subdirectory(src/fhirtools)
+add_subdirectory(src/exporter)
 add_subdirectory(src/erp)
 add_subdirectory(src/mock)
 add_subdirectory(tools)

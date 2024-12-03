@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_TSL_REFRESHJOBTESTTSLMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_TSL_REFRESHJOBTESTTSLMANAGER_HXX
 
-#include "erp/tsl/TslManager.hxx"
+#include "shared/tsl/TslManager.hxx"
 
 #include <memory>
 #include <vector>

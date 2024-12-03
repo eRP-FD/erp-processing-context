@@ -8,9 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_CONSENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_CONSENT_HXX
 
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <optional>
 

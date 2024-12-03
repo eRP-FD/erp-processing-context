@@ -8,13 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATION_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATION_HXX
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/CommunicationPayload.hxx"
 #include "erp/model/Identity.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/Uuid.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/Uuid.hxx"
+#include "shared/validation/SchemaType.hxx"
 
 class JsonValidator;
 

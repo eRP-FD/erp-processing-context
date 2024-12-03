@@ -10,8 +10,8 @@
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
 
-#include "erp/common/MimeType.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 
 namespace model

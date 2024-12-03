@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/ModelException.hxx"
-#include "erp/model/Resource.hxx"
+#include "shared/model/ModelException.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Subscription.hxx"
 
 #include <gtest/gtest.h>

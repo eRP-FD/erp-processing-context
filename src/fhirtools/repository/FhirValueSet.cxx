@@ -38,6 +38,11 @@ std::strong_ordering FhirValueSet::Code::operator<=>(const FhirValueSet::Code& o
     return order;
 }
 
+DefinitionKey FhirValueSet::key() const
+{
+    return {mUrl, mVersion};
+}
+
 const std::string& FhirValueSet::getUrl() const
 {
     return mUrl;
@@ -445,6 +450,11 @@ FhirValueSet FhirValueSet::Builder::getAndReset()
 const std::string& FhirValueSet::Builder::getName() const
 {
     return mFhirValueSet->getName();
+}
+
+DefinitionKey FhirValueSet::Builder::key()
+{
+    return mFhirValueSet->key();
 }
 
 std::ostream& operator<<(std::ostream& ostream, const fhirtools::FhirValueSet::Code& code)

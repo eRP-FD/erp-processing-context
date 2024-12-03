@@ -2,10 +2,11 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
+#include "mock/tsl/MockTslManager.hxx"
+#include "src/shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
@@ -13,7 +14,6 @@
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestConfiguration.hxx"
-#include "mock/tsl/MockTslManager.hxx"
 
 
 const Certificate StaticData::idpCertificate = Certificate::fromPem(R"(-----BEGIN CERTIFICATE-----
@@ -38,7 +38,7 @@ Factories StaticData::makeMockFactories()
 {
     Factories factories;
     factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) -> std::unique_ptr<Database> {
-        std::unique_ptr<DatabaseBackend> backend;
+        std::unique_ptr<ErpDatabaseBackend> backend;
         if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
             backend = std::make_unique<PostgresBackend>();
         else
@@ -74,7 +74,7 @@ Factories StaticData::makeMockFactories()
     factories.xmlValidatorFactory = StaticData::getXmlValidator;
     factories.jsonValidatorFactory = StaticData::getJsonValidator;
 
-    factories.teeServerFactory = [](const std::string_view, uint16_t, RequestHandlerManager&&, PcServiceContext&, bool,
+    factories.teeServerFactory = [](const std::string_view, uint16_t, RequestHandlerManager&&, BaseServiceContext&, bool,
                                     const SafeString&) {
         return std::unique_ptr<HttpsServer>{nullptr};
     };
@@ -89,9 +89,9 @@ Factories StaticData::makeMockFactoriesWithServers()
 {
     auto factories = makeMockFactories();
     factories.teeServerFactory = [](const std::string_view address, uint16_t port,
-                                    RequestHandlerManager&& requestHandlers, PcServiceContext& serviceContext,
+                                    RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                     bool enforceClientAuthentication, const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), serviceContext,
+        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), dynamic_cast<PcServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
     factories.enrolmentServerFactory = factories.teeServerFactory;

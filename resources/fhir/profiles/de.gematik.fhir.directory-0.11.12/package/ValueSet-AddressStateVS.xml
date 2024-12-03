@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="AddressStateVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/AddressStateVS"/>
+  <version value="0.11.12"/>
+  <name value="AddressStateVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="ValueSet for `Address.state`"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/Region"/>
+    </include>
+  </compose>
+</ValueSet>

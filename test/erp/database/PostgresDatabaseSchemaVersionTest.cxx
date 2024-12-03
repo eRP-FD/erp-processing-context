@@ -6,7 +6,7 @@
  */
 
 #include "test/erp/database/PostgresDatabaseTest.hxx"
-#include "erp/util/Version.hxx"
+#include "shared/util/Version.hxx"
 
 
 class PostgresDatabaseSchemaVersionTest : public PostgresDatabaseTest

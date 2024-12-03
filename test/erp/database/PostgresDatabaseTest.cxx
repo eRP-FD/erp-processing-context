@@ -6,7 +6,7 @@
  */
 
 #include "test/erp/database/PostgresDatabaseTest.hxx"
-#include "erp/crypto/CMAC.hxx"
+#include "shared/crypto/CMAC.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/util/search/SearchParameter.hxx"
@@ -123,7 +123,7 @@ TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-co
     //
     // Cmac Key 1:   [quarterBegin ... today ... quarterEnd]
     // Cmac Key 2:   [nextQuarterBegin ... nextQuarterEnd]
-    // Grace Period: starts from 00:00:00 of last days quarterEndd and ends at 24:00:00 of first days nextQuarterBegin.
+    // Grace Period: is the first day of the following quarter (see: ERP-13845).
     //
     // Within the grace period, both keys are accepted. Expired keys are left in the table and are not considered since the
     // TelematicPseudonymManager always works with the current date.
@@ -162,12 +162,16 @@ TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-co
         // Test at end of first quarter (key1, grace period.)
         queryDate = date::year_month_day(date::year{1997}, date::month{12}, date::day{31});
         EXPECT_FALSE(mTelematicPseudonymManager->keyUpdateRequired(queryDate));
-        EXPECT_TRUE(mTelematicPseudonymManager->withinGracePeriod(queryDate));
+        EXPECT_FALSE(mTelematicPseudonymManager->withinGracePeriod(queryDate));
 
         // Test at beginning of next quarter (key2, still in grace period.)
         queryDate = date::year_month_day(date::year{1998}, date::month{01}, date::day{01});
         EXPECT_TRUE(mTelematicPseudonymManager->keyUpdateRequired(queryDate));
         EXPECT_TRUE(mTelematicPseudonymManager->withinGracePeriod(queryDate));
+
+        queryDate = date::year_month_day(date::year{1998}, date::month{01}, date::day{02});
+        EXPECT_TRUE(mTelematicPseudonymManager->keyUpdateRequired(queryDate));
+        EXPECT_FALSE(mTelematicPseudonymManager->withinGracePeriod(queryDate));
     }
 
     // Sign with the key expected to be used in the future, when the first quarter is over.
@@ -229,7 +233,7 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
         task.setAcceptDate(model::Timestamp::now());
         task.setExpiryDate(model::Timestamp::now() + std::chrono::days(30));
         auto prescriptionDummy = model::Binary(Uuid().toString(), "{}");
-        database().activateTask(task, prescriptionDummy);
+        database().activateTask(task, prescriptionDummy, mJwtBuilder.makeJwtArzt());
     }
     database().commitTransaction();
     EXPECT_EQ(taskCount(), 4);

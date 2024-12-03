@@ -6,7 +6,6 @@
  */
 
 #include "erp/ErpMain.hxx"
-#include "ErpRequirements.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/admin/AdminRequestHandler.hxx"
 #include "erp/admin/AdminServer.hxx"
@@ -14,30 +13,31 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
-#include "erp/enrolment/EnrolmentServer.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/hsm/VsdmKeyCache.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
-#include "erp/idp/IdpUpdater.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/tpm/Tpm.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Condition.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Holidays.hxx"
-#include "erp/util/SignalHandler.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/TerminationHandler.hxx"
 #include "erp/util/health/HealthCheck.hxx"
-#include "erp/validation/JsonValidator.hxx"
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/deprecated/SignalHandler.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/hsm/VsdmKeyCache.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
+#include "shared/idp/IdpUpdater.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/tpm/Tpm.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Condition.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/Holidays.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/validation/JsonValidator.hxx"
+#include "shared/validation/XmlValidator.hxx"
 
 
 #if WITH_HSM_MOCK > 0
@@ -49,10 +49,10 @@
 #include "mock/tsl/MockTslManager.hxx"
 #endif
 #if WITH_HSM_TPM_PRODUCTION > 0
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/hsm/production/HsmProductionFactory.hxx"
-#include "erp/hsm/production/TeeTokenProductionUpdater.hxx"
-#include "erp/tpm/TpmProduction.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
+#include "shared/hsm/production/HsmProductionFactory.hxx"
+#include "shared/hsm/production/TeeTokenProductionUpdater.hxx"
+#include "shared/tpm/TpmProduction.hxx"
 #endif
 
 
@@ -120,7 +120,7 @@ std::unique_ptr<DatabaseConnectionTimer> ErpMain::setupDatabaseTimer(PcServiceCo
 
 int ErpMain::runApplication (
     Factories&& factories,
-    StateCondition& state,
+    MainStateCondition& state,
     const std::function<void(PcServiceContext&)>& postInitializationCallback)
 {
 #define log TLOG(INFO) << "Initialization: "
@@ -129,14 +129,14 @@ int ErpMain::runApplication (
     configuration.check();
 
     log << "setting up signal handler";
-    state = State::Initializing;
+    state = MainState::Initializing;
 
     // trigger construction of singleton, before starting any thread
     (void)Holidays::instance();
 
     // access the Fhir instance to load the structure definitions now.
     log << "initializing FHIR data processing";
-    (void)Fhir::instance();
+    Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
 
     // There is only one service context for the whole runtime of the service
 
@@ -228,7 +228,7 @@ int ErpMain::runApplication (
     }
     serviceContext->databaseFactory()->closeConnection();
     auto databaseConnectionRefresher = setupDatabaseTimer(*serviceContext);
-    state = State::WaitingForTermination;
+    state = MainState::WaitingForTermination;
     serviceContext->getTeeServer().waitForShutdown();
     if (serviceContext->getEnrolmentServer())
     {
@@ -241,7 +241,7 @@ int ErpMain::runApplication (
     // Therefore it is not treated as error.
     TerminationHandler::instance().notifyTerminationCallbacks(signalHandler.mSignal != SIGTERM);
 
-    state = State::Terminated;
+    state = MainState::Terminated;
 
     if (TerminationHandler::instance().hasError())
         return EXIT_FAILURE;
@@ -285,7 +285,7 @@ Factories ErpMain::createProductionFactories()
         return std::make_unique<ProductionVsdmKeyBlobDatabase>();
     };
 
-    factories.tslManagerFactory = ErpMain::setupTslManager;
+    factories.tslManagerFactory = TslManager::setupTslManager;
 
     if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false))
     {
@@ -337,9 +337,9 @@ Factories ErpMain::createProductionFactories()
 
     factories.teeServerFactory = [](const std::string_view address, uint16_t port,
                                     RequestHandlerManager&& requestHandlers,
-                                    PcServiceContext& serviceContext, bool enforceClientAuthentication,
+                                    BaseServiceContext& serviceContext, bool enforceClientAuthentication,
                                     const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), serviceContext,
+        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers), dynamic_cast<PcServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
     factories.enrolmentServerFactory = factories.teeServerFactory;
@@ -366,53 +366,6 @@ Factories ErpMain::createProductionFactories()
     };
 
     return factories;
-}
-
-
-std::shared_ptr<TslManager> ErpMain::setupTslManager(const std::shared_ptr<XmlValidator>& xmlValidator)
-{
-    TLOG(INFO) << "Initializing TSL-Manager";
-
-    try
-    {
-        std::string tslSslRootCa;
-        const std::string tslRootCaFile =
-            Configuration::instance().getStringValue(ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH);
-        if ( ! tslRootCaFile.empty())
-        {
-            tslSslRootCa = FileHelper::readFileAsString(tslRootCaFile);
-        }
-
-        const auto useMockTslManager =
-            Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER, false);
-
-#if WITH_HSM_MOCK > 0
-        if (useMockTslManager)
-        {
-            return MockTslManager::createMockTslManager(xmlValidator);
-        }
-#else
-        Expect3(! useMockTslManager,
-                "Configuration error: DEBUG_ENABLE_MOCK_TSL_MANAGER=true, but WITH_HSM_MOCK is not compiled in",
-                std::logic_error);
-#endif
-        auto requestSender = std::make_shared<UrlRequestSender>(
-            SafeString(std::move(tslSslRootCa)), static_cast<uint16_t>(Configuration::instance().getIntValue(
-                                                     ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
-            std::chrono::milliseconds{
-                Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
-        return std::make_shared<TslManager>(std::move(requestSender), xmlValidator);
-    }
-    catch (const TslError& e)
-    {
-        TLOG(ERROR) << "Can not create TslManager, TslError: " << e.what();
-        throw;
-    }
-    catch (const std::exception& e)
-    {
-        TLOG(ERROR) << "Can not create TslManager, unexpected exception: " << e.what();
-        throw;
-    }
 }
 
 

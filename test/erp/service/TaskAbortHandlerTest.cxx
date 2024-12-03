@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test_config.h"
@@ -134,7 +134,7 @@ void TaskAbortHandlerTest::checkResultingData(
 // GEMREQ-start A_19027-03
 TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_19027_04.test("Check deletion of personal data and Task related communications");
+    A_19027_06.test("Check deletion of personal data and Task related communications");
     const std::string insurant = InsurantF;
     const std::string telematicId = mPharmacy.id();
 

@@ -2,6 +2,8 @@
 add_library(fhirtools STATIC)
 
 target_link_libraries(fhirtools
+    PRIVATE
+        erp-shared
     PUBLIC
         CONAN_PKG::antlr4-cppruntime
         CONAN_PKG::boost
@@ -29,6 +31,10 @@ if (CMAKE_COMPILER_IS_GNUCXX)
 endif()
 target_sources(fhirtools
     PRIVATE
+        converter/FhirConverter.cxx
+        converter/FhirConverter.hxx
+        converter/internal/FhirJsonToXmlConverter.cxx
+        converter/internal/FhirSAXHandler.cxx
         expression/BooleanLogic.cxx
         expression/Comparison.cxx
         expression/Conversion.cxx
@@ -42,6 +48,9 @@ target_sources(fhirtools
         model/DateTime.cxx
         model/Element.cxx
         model/erp/ErpElement.cxx
+        model/MutableElement.cxx
+        model/NumberAsStringParserDocument.cxx
+        model/NumberAsStringParserWriter.cxx
         model/ValueElement.cxx
         parser/ErrorListener.cxx
         parser/FhirPathFixer.cxx
@@ -63,9 +72,11 @@ target_sources(fhirtools
         repository/FhirVersion.cxx
         repository/internal/FhirStructureDefinitionParser.cxx
         repository/internal/FhirStructureRepositoryFixer.cxx
+        transformer/ResourceProfileTransformer.cxx
         util/SaxHandler.cxx
         util/Utf8Helper.cxx
         util/VaListHelper.cxx
+        util/XmlMemory.cxx
         typemodel/ProfiledElementTypeInfo.cxx
         validator/FhirPathValidator.cxx
         validator/internal/ProfileSetValidator.cxx

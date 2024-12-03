@@ -7,19 +7,19 @@
 
 
 #include "erp/service/task/GetTaskHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/compression/Deflate.hxx"
-#include "erp/hsm/VsdmKeyCache.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/service/AuditEventCreator.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
-#include "erp/util/String.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/xml/XmlDocument.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/audit/AuditEventCreator.hxx"
+#include "shared/compression/Deflate.hxx"
+#include "shared/hsm/VsdmKeyCache.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/RuntimeConfiguration.hxx"
+#include "shared/util/String.hxx"
+#include "shared/xml/XmlDocument.hxx"
 
 
 namespace

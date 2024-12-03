@@ -6,10 +6,10 @@
  */
 
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 
 std::unique_ptr<TelematicPseudonymManager> TelematicPseudonymManager::create(PcServiceContext* serviceContext)
 {

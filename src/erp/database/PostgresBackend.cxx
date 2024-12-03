@@ -7,15 +7,15 @@
 
 #include "erp/database/PostgresBackend.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CMAC.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/database/DatabaseConnectionInfo.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/DurationConsumer.hxx"
-#include "erp/util/JsonLog.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/DurationConsumer.hxx"
+#include "shared/util/JsonLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
 #include <boost/algorithm/string.hpp>
@@ -23,16 +23,9 @@
 #include <pqxx/pqxx>
 
 
-struct PostgresBackend::QueryDefinition
-{
-    const char* name;
-    const char* query;
-};
-
 namespace
 {
-
-#define QUERY(name, query) constexpr PostgresBackend::QueryDefinition name = {# name, query};
+#define QUERY(name, query) const QueryDefinition name = {# name, query};
     QUERY(retrieveCmac                        , "SELECT cmac FROM erp.vau_cmac WHERE valid_date = $1 AND cmac_type = $2")
     // try to insert the new value
     // if that fails return the old value
@@ -111,10 +104,6 @@ namespace
           "AND (message_type = $3 OR message_type = $4)")
 // GEMREQ-end A_22117-01#query-deleteCommunicationsForChargeItemStatement
 
-    QUERY(insertAuditEventData,
-          "INSERT INTO erp.auditevent (id, kvnr_hashed, event_id, action, agent_type, observer, prescription_id, prescription_type, metadata, blob_id) "
-          "VALUES (erp.gen_suuid($1), $2, $3, $4, $5, $6, $7, $8, $9, $10)"
-          "RETURNING id")
     QUERY(retrieveAuditEventDataStatement, R"--(
           SELECT id, erp.epoch_from_suuid(id) AS recorded, event_id, action, agent_type, observer, prescription_id, prescription_type, metadata, blob_id
           FROM erp.auditevent
@@ -122,17 +111,6 @@ namespace
               kvnr_hashed = $1
               AND ($2::uuid IS NULL OR id = $2::uuid)
               AND ($3::bigint IS NULL OR (prescription_id = $3::bigint AND prescription_type = $4::smallint)))--")
-
-    QUERY(insertOrReturnAccountSalt, R"--(
-          SELECT erp.insert_or_return_account_salt($1::bytea, $2::smallint, $3::integer, $4::bytea))--")
-
-    QUERY(retrieveSaltForAccount, R"--(
-          SELECT salt FROM erp.account WHERE account_id = $1 AND master_key_type = $2 AND blob_id = $3)--")
-
-    QUERY(retrieveSchemaVersionQuery,
-          "SELECT value FROM erp.config WHERE parameter = 'schema_version'")
-
-    QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
 
     QUERY(retrieveAllMedicationDispensesByKvnr, R"--(
         SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type from erp.task_view
@@ -143,7 +121,7 @@ namespace
 // GEMREQ-start A_19115-01#query
     QUERY(retrieveAllTasksByKvnr, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, salt, task_key_blob_id, prescription_type FROM erp.task_view
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type FROM erp.task_view
         WHERE kvnr_hashed = $1
         )--")
 // GEMREQ-end A_19115-01#query
@@ -166,175 +144,29 @@ namespace
     )--")
 // GEMREQ-end A_22158#query
 
+    QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
+
 #undef QUERY
 
 
 }  // anonymous namespace
 
-std::string PostgresBackend::connectStringSslMode (void)
-{
-    const auto& configuration = Configuration::instance();
-
-    const bool useSsl = configuration.getBoolValue(ConfigurationKey::POSTGRES_USESSL);
-    const std::string serverRootCertPath = configuration.getStringValue(ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH);
-    const auto sslCertificatePath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH);
-    const auto sslKeyPath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_KEY_PATH);
-
-    if (serverRootCertPath.empty())
-    {
-        if (useSsl)
-            return " sslmode=require";
-        else
-            return "";
-    }
-    else
-    {
-        std::string sslmode =  " sslmode=verify-full sslrootcert='" + serverRootCertPath + "'";
-        if (sslCertificatePath.has_value() && !String::trim(sslCertificatePath.value()).empty()
-            && sslKeyPath.has_value() && !String::trim(sslKeyPath.value()).empty())
-        {
-            const auto sslcert = String::trim(sslCertificatePath.value());
-            const auto sslkey = String::trim(sslKeyPath.value());
-            if ( ! (sslcert.empty() || sslkey.empty()))
-                sslmode += " sslcert='" + sslcert + "' sslkey='" + sslkey + "'";
-        }
-        return sslmode;
-    }
-}
-
-
-std::string PostgresBackend::defaultConnectString (void)
-{
-    const auto& configuration = Configuration::instance();
-
-    const std::string host = configuration.getStringValue(ConfigurationKey::POSTGRES_HOST);
-    const std::string port = configuration.getStringValue(ConfigurationKey::POSTGRES_PORT);
-    const std::string user = configuration.getStringValue(ConfigurationKey::POSTGRES_USER);
-    const std::string password = configuration.getStringValue(ConfigurationKey::POSTGRES_PASSWORD);
-    const std::string dbname = configuration.getStringValue(ConfigurationKey::POSTGRES_DATABASE);
-    const std::string connectTimeout = configuration.getStringValue(ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS);
-    bool enableScramAuthentication = configuration.getBoolValue(ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION);
-    const std::string tcpUserTimeoutMs = configuration.getStringValue(ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS);
-    const std::string keepalivesIdleSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC);
-    const std::string keepalivesIntervalSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC);
-    const std::string keepalivesCountSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_COUNT);
-    const std::string targetSessionAttrs = configuration.getStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS);
-
-    std::string sslmode = connectStringSslMode();
-
-    std::string connectionString = "host='" + host
-                                            + "' port='" + port
-                                            + "' dbname='" + dbname
-                                            + "' user='" + user + "'"
-                                            + (password.empty() ? "" : " password='" + password + "'")
-                                            + sslmode
-                                            + (targetSessionAttrs.empty() ? "" : (" target_session_attrs=" + targetSessionAttrs))
-                                            + " connect_timeout=" + connectTimeout
-                                            + " tcp_user_timeout=" + tcpUserTimeoutMs
-                                            + " keepalives=1"
-                                            + " keepalives_idle=" + keepalivesIdleSec
-                                            + " keepalives_interval=" + keepalivesIntervalSec
-                                            + " keepalives_count=" + keepalivesCountSec
-                                            + (enableScramAuthentication ? " channel_binding=require" : "");
-
-    JsonLog(LogId::INFO, JsonLog::makeVLogReceiver(0))
-        .message("postgres connection string")
-        .keyValue("value", boost::replace_all_copy(connectionString, password, "******"));
-    TVLOG(2) << "using connection string '" << boost::replace_all_copy(connectionString, password, "******") << "'";
-
-    return connectionString;
-}
-
-thread_local PostgresConnection PostgresBackend::mConnection{defaultConnectString()};
+thread_local PostgresConnection PostgresBackend::mConnection{PostgresConnection::defaultConnectString()};
 
 
 PostgresBackend::PostgresBackend (void)
-    : mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
+    : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
+    , mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask169(model::PrescriptionType::direkteZuweisung)
     , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
     , mBackendTask209(model::PrescriptionType::direkteZuweisungPkv)
 {
-    mConnection.connectIfNeeded();
-    mTransaction = mConnection.createTransaction();
 }
 
-void PostgresBackend::commitTransaction()
-{
-    TVLOG(1) << "committing transaction";
-    try
-    {
-        mTransaction->commit();
-        mTransaction.reset();
-    }
-    catch (const pqxx::in_doubt_error& /*inDoubtError*/)
-    {
-        // Exception that might be thrown in rare cases where the connection to the database is lost while finishing a
-        // database transaction, and there's no way of telling whether it was actually executed by the backend. In this
-        // case the database is left in an indeterminate (but consistent) state, and only manual inspection will tell
-        // which is the case.
-        constexpr std::string_view error = "Connection to database lost during committing a transaction. The "
-                                           "transaction may or may not have been successful";
-        TLOG(WARNING) << error;
-        ErpFail(HttpStatus::InternalServerError, std::string(error));
-    }
-    catch (...)
-    {
-        constexpr std::string_view error = "Error committing database transaction";
-        TLOG(WARNING) << error;
-        ErpFail(HttpStatus::InternalServerError, std::string(error));
-    }
-}
-
-bool PostgresBackend::isCommitted() const
-{
-    return !mTransaction;
-}
-
-void PostgresBackend::closeConnection()
-{
-    TVLOG(1) << "closing connection to database";
-    mTransaction.reset();
-    mConnection.close();
-    TVLOG(2) << "connection closed";
-}
-
-std::string PostgresBackend::retrieveSchemaVersion()
-{
-    checkCommonPreconditions();
-    TVLOG(2) << retrieveSchemaVersionQuery.query;
-    const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:retrieveSchemaVersion");
-
-    const auto results = mTransaction->exec(retrieveSchemaVersionQuery.query);
-    TVLOG(2) << "got " << results.size() << " results";
-
-    Expect(results.size() == 1, "Exactly one database schema version entry expected");
-    Expect(!results[0].at(0).is_null(), "Database schema version must not be null");
-
-    return results[0].at(0).as<std::string>();
-}
-
-void PostgresBackend::healthCheck()
-{
-    checkCommonPreconditions();
-    TVLOG(2) << healthCheckQuery.query;
-    const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:healthCheck");
-
-    const auto result = mTransaction->exec(healthCheckQuery.query);
-    TVLOG(2) << "got " << result.size() << " results";
-}
-
-std::optional<DatabaseConnectionInfo> PostgresBackend::getConnectionInfo() const
-{
-    return mConnection.getConnectionInfo();
-}
-
-/*static*/ void PostgresBackend::recreateConnection()
+/* static */ void PostgresBackend::recreateConnection()
 {
     mConnection.recreateConnection();
 }
-
 
 std::vector<db_model::MedicationDispense>
 PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnrHashed,
@@ -421,10 +253,11 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
 std::tuple<model::PrescriptionId, model::Timestamp> PostgresBackend::createTask(model::PrescriptionType prescriptionType,
                                                                                 model::Task::Status taskStatus,
                                                                                 const model::Timestamp& lastUpdated,
-                                                                                const model::Timestamp& created)
+                                                                                const model::Timestamp& created,
+                                                                                const model::Timestamp& lastStatusUpdate)
 {
     checkCommonPreconditions();
-    return getTaskBackend(prescriptionType).createTask(*mTransaction, taskStatus, lastUpdated, created);
+    return getTaskBackend(prescriptionType).createTask(*mTransaction, taskStatus, lastUpdated, created, lastStatusUpdate);
 }
 
 void PostgresBackend::updateTask(const model::PrescriptionId& taskId,
@@ -447,27 +280,37 @@ void PostgresBackend::updateTaskStatusAndSecret(const model::PrescriptionId& tas
                                                  model::Task::Status status,
                                                  const model::Timestamp& lastModifiedDate,
                                                  const std::optional<db_model::EncryptedBlob>& secret,
-                                                 const std::optional<db_model::EncryptedBlob>& owner)
+                                                 const std::optional<db_model::EncryptedBlob>& owner,
+                                                 const model::Timestamp& lastStatusUpdate)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type()).updateTaskStatusAndSecret(*mTransaction, taskId, status, lastModifiedDate, secret,
-                                                            owner);
+                                                            owner, lastStatusUpdate);
 }
 
-void PostgresBackend::activateTask (
-    const model::PrescriptionId& taskId,
-    const db_model::EncryptedBlob& encryptedKvnr,
-    const db_model::HashedKvnr& hashedKvnr,
-    model::Task::Status taskStatus,
-    const model::Timestamp& lastModified,
-    const model::Timestamp& expiryDate,
-    const model::Timestamp& acceptDate,
-    const db_model::EncryptedBlob& healthCareProviderPrescription)
+void PostgresBackend::activateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& encryptedKvnr,
+                                   const db_model::HashedKvnr& hashedKvnr, model::Task::Status taskStatus,
+                                   const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
+                                   const model::Timestamp& acceptDate,
+                                   const db_model::EncryptedBlob& healthCareProviderPrescription,
+                                   const db_model::EncryptedBlob& doctorIdentity,
+                                   const model::Timestamp& lastStatusUpdate)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .activateTask(*mTransaction, taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate,
-                      acceptDate, healthCareProviderPrescription);
+                      acceptDate, healthCareProviderPrescription, doctorIdentity, lastStatusUpdate);
+}
+
+void PostgresBackend::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+                                        const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
+                                        const db_model::EncryptedBlob& pharmacyIdentity,
+                                        const model::Timestamp& lastStatusUpdate)
+{
+    checkCommonPreconditions();
+    getTaskBackend(taskId.type())
+        .updateTaskReceipt(*mTransaction, taskId, taskStatus, lastModified, receipt, pharmacyIdentity,
+                           lastStatusUpdate);
 }
 
 void PostgresBackend::updateTaskMedicationDispense(
@@ -478,31 +321,31 @@ void PostgresBackend::updateTaskMedicationDispense(
     BlobId medicationDispenseBlobId,
     const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver,
-    const std::optional<model::Timestamp>& whenPrepared)
+    const std::optional<model::Timestamp>& whenPrepared,
+    const db_model::Blob& medicationDispenseSalt)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispense(*mTransaction, taskId, lastModified, lastMedicationDispense, medicationDispense,
-                                      medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared);
+                                      medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
+                                      medicationDispenseSalt);
 }
 
 void PostgresBackend::updateTaskMedicationDispenseReceipt(
-    const model::PrescriptionId& taskId,
-    const model::Task::Status& taskStatus,
-    const model::Timestamp& lastModified,
-    const db_model::EncryptedBlob& medicationDispense,
-    BlobId medicationDispenseBlobId,
-    const db_model::HashedTelematikId& telematikId,
-    const model::Timestamp& whenHandedOver,
-    const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::EncryptedBlob& receipt,
-    const model::Timestamp& lastMedicationDispense)
+    const model::PrescriptionId& taskId, const model::Task::Status& taskStatus, const model::Timestamp& lastModified,
+    const db_model::EncryptedBlob& medicationDispense, BlobId medicationDispenseBlobId,
+    const db_model::HashedTelematikId& telematikId, const model::Timestamp& whenHandedOver,
+    const std::optional<model::Timestamp>& whenPrepared, const db_model::EncryptedBlob& receipt,
+    const model::Timestamp& lastMedicationDispense, const db_model::Blob& medicationDispenseSalt,
+    const db_model::EncryptedBlob& pharmacyIdentity,
+    const model::Timestamp& lastStatusUpdate)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispenseReceipt(*mTransaction, taskId, taskStatus, lastModified, medicationDispense,
                                              medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
-                                             receipt, lastMedicationDispense);
+                                             receipt, lastMedicationDispense, medicationDispenseSalt, pharmacyIdentity,
+                                             lastStatusUpdate);
 }
 
 void PostgresBackend::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
@@ -515,45 +358,14 @@ void PostgresBackend::updateTaskDeleteMedicationDispense(const model::Prescripti
 // GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
 void PostgresBackend::updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                                    model::Task::Status taskStatus,
-                                                   const model::Timestamp& lastModified)
+                                                   const model::Timestamp& lastModified,
+                                                   const model::Timestamp& lastStatusUpdate)
 {
     checkCommonPreconditions();
-    getTaskBackend(taskId.type()).updateTaskClearPersonalData(*mTransaction, taskId, taskStatus, lastModified);
+    getTaskBackend(taskId.type())
+        .updateTaskClearPersonalData(*mTransaction, taskId, taskStatus, lastModified, lastStatusUpdate);
 }
 // GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
-
-std::string PostgresBackend::storeAuditEventData(db_model::AuditData& auditData)
-{
-    checkCommonPreconditions();
-    TVLOG(2) << insertAuditEventData.query;
-    const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:storeAuditEventData");
-
-    const std::string actionString(1, static_cast<char>(auditData.action));
-    const auto recorded = model::Timestamp::now();
-
-    const pqxx::result result = mTransaction->exec_params(
-        insertAuditEventData.query,
-        recorded.toXsDateTime(),
-        auditData.insurantKvnr.binarystring(),
-        static_cast<std::int16_t>(auditData.eventId),
-        actionString,
-        static_cast<std::int16_t>(auditData.agentType),
-        auditData.deviceId,
-        auditData.prescriptionId.has_value() ? auditData.prescriptionId->toDatabaseId() : std::optional<int64_t>(),
-        auditData.prescriptionId.has_value() ? static_cast<int16_t>(magic_enum::enum_integer(auditData.prescriptionId->type())) : std::optional<int16_t>(),
-        auditData.metaData.has_value() ?  auditData.metaData->binarystring() : std::optional<db_model::postgres_bytea_view>(),
-        auditData.blobId);
-    TVLOG(2) << "got " << result.size() << " results";
-
-    Expect(result.size() == 1 && result.front().size() == 1, "Expected one result");
-    auto sid = result.front().at(0).as<std::string>();
-    Uuid id(sid);
-    auditData.id = id;
-    auditData.recorded = recorded;
-
-    return id;
-}
 
 std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         const db_model::HashedKvnr& kvnr,
@@ -706,10 +518,10 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
 
     for (const auto& res : results)
     {
-        Expect(res.size() == 10, "Invalid number of fields in result row: " + std::to_string(res.size()));
-        Expect(!res.at(9).is_null(), "prescription_type is null");
+        Expect(res.size() == 11, "Invalid number of fields in result row: " + std::to_string(res.size()));
+        Expect(!res.at(10).is_null(), "prescription_type is null");
         auto prescription_type_opt =
-            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(9).as<int16_t>()));
+            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(10).as<int16_t>()));
         Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
         resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
     }
@@ -731,7 +543,7 @@ uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kv
     checkCommonPreconditions();
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
                                                                         "PostgreSQL:countAllTasksForPatient");
-    return PostgresBackendHelper::executeCountQuery(*mTransaction, countAllTasksByKvnr.query, kvnr, search, "tasks");
+    return executeCountQuery(*mTransaction, countAllTasksByKvnr.query, kvnr, search, "tasks");
 }
 
 uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr,
@@ -740,7 +552,7 @@ uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr,
     checkCommonPreconditions();
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
                                                                         "PostgreSQL:countAll160TasksByKvnr");
-    return PostgresBackendHelper::executeCountQuery(*mTransaction, countAll160TasksByKvnr.query, kvnr, search, "tasks");
+    return executeCountQuery(*mTransaction, countAll160TasksByKvnr.query, kvnr, search, "tasks");
 }
 
 std::optional<Uuid> PostgresBackend::insertCommunication(const model::PrescriptionId& prescriptionId,
@@ -879,14 +691,13 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
     return communications;
 }
 
-
 uint64_t PostgresBackend::countCommunications(
     const db_model::HashedId& user,
     const std::optional<UrlArguments>& search)
 {
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:countCommunications");
-    return PostgresBackendHelper::executeCountQuery(*mTransaction, countCommunicationsStatement.query, user, search, "communications");
+    return executeCountQuery(*mTransaction, countCommunicationsStatement.query, user, search, "communications");
 }
 
 
@@ -910,7 +721,6 @@ std::vector<Uuid> PostgresBackend::retrieveCommunicationIds (const db_model::Has
 
     return ids;
 }
-
 
 std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend::deleteCommunication(
     const Uuid& communicationId,
@@ -940,7 +750,6 @@ std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend
     else
         return {{},{}};
 }
-
 
 void PostgresBackend::markCommunicationsAsRetrieved (
     const std::vector<Uuid>& communicationIds,
@@ -980,32 +789,6 @@ void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& 
     TVLOG(2) << "got " << result.size() << " results";
 }
 // GEMREQ-end A_19027-03#query-call-deleteCommunicationsForTask
-
-std::optional<db_model::Blob>
-PostgresBackend::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
-                                           db_model::MasterKeyType masterKeyType,
-                                           BlobId blobId,
-                                           const db_model::Blob& salt)
-{
-    checkCommonPreconditions();
-    TVLOG(2) << ::insertOrReturnAccountSalt.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:insertOrReturnAccountSalt");
-
-    auto result = mTransaction->exec_params(::insertOrReturnAccountSalt.query,
-                                              accountId.binarystring(),
-                                              gsl::narrow<int>(masterKeyType),
-                                              gsl::narrow<int32_t>(blobId),
-                                              salt.binarystring());
-    TVLOG(2) << "got " << result.size() << " results";
-    Expect(result.size() == 1, "Expected exactly one row.");
-    Expect(result.front().size() == 1, "Expected exactly one column.");
-    if (result[0][0].is_null())
-    {
-        return std::nullopt;
-    }
-    return std::make_optional<db_model::Blob>(result[0][0].as<db_model::postgres_bytea>());
-}
 
 void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
 {
@@ -1142,35 +925,6 @@ uint64_t PostgresBackend::countChargeInformationForInsurant(const db_model::Hash
     return mBackendChargeItem.countChargeInformationForInsurant(*mTransaction, kvnr, search);
 }
 
-std::optional<db_model::Blob> PostgresBackend::retrieveSaltForAccount(const db_model::HashedId& accountId,
-                                                                      db_model::MasterKeyType masterKeyType,
-                                                                      BlobId blobId)
-{
-    checkCommonPreconditions();
-    TVLOG(2) << ::retrieveSaltForAccount.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:retrieveSaltForAccount");
-
-    auto result = mTransaction->exec_params(::retrieveSaltForAccount.query,
-                                              accountId.binarystring(),
-                                              gsl::narrow<int>(masterKeyType),
-                                              gsl::narrow<int32_t>(blobId));
-    TVLOG(2) << "got " << result.size() << " results";
-    Expect(result.size() <= 1, "Expected at most one salt");
-    if (result.empty())
-    {
-        return std::nullopt;
-    }
-    return db_model::Blob(result[0].at(0).as<db_model::postgres_bytea>());
-}
-
-
-void PostgresBackend::checkCommonPreconditions() const
-{
-    Expect3(mTransaction, "Transaction already committed", std::logic_error);
-}
-
-
 PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionType prescriptionType)
 {
     switch (prescriptionType)
@@ -1187,5 +941,46 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
     Fail("invalid prescriptionType: " + std::to_string(std::uintmax_t(prescriptionType)));
 }
 
-
 PostgresBackend::~PostgresBackend (void) = default;
+
+PostgresConnection& PostgresBackend::connection() const
+{
+    return mConnection;
+}
+
+uint64_t PostgresBackend::executeCountQuery(pqxx::work& transaction, const std::string_view& query, const db_model::Blob& paramValue,
+                                            const std::optional<UrlArguments>& search, const std::string_view& context)
+{
+    std::string completeQuery(query);
+
+    // Append an expression to the query for the search arguments, if there are any.
+    if (search.has_value())
+    {
+        const auto whereExpression = search->getSqlWhereExpression(transaction.conn());
+        if (! whereExpression.empty())
+        {
+            completeQuery += " AND ";
+            completeQuery += whereExpression;
+        }
+    }
+
+    TVLOG(2) << completeQuery;
+    const pqxx::result result = transaction.exec_params(completeQuery, paramValue.binarystring());
+
+    TVLOG(2) << "got " << result.size() << " results";
+
+    Expect(result.size() == 1, "Expecting one element as result containing count.");
+    int64_t count = 0;
+    Expect(result.front().at(0).to(count), "Could not retrieve count of " + std::string(context) + " as int64_t");
+
+    return gsl::narrow<uint64_t>(count);
+}
+
+void PostgresBackend::healthCheck()
+{
+    checkCommonPreconditions();
+    TVLOG(2) << healthCheckQuery.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:healthCheck");
+    const auto result = mTransaction->exec(healthCheckQuery.query);
+    TVLOG(2) << "got " << result.size() << " results";
+}

@@ -2,7 +2,7 @@
 #define ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX
 
 
-#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
@@ -11,7 +11,7 @@
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/ResourceManager.hxx"
 
-#include <erp/fhir/Fhir.hxx>
+#include <shared/fhir/Fhir.hxx>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <memory>

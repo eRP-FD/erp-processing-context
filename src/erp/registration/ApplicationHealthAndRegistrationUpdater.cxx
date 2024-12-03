@@ -6,12 +6,12 @@
  */
 
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
-#include "erp/registration/RegistrationManager.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TerminationHandler.hxx"
-#include "erp/util/health/ApplicationHealth.hxx"
+#include "erp/registration/RegistrationManager.hxx"
 #include "erp/util/health/HealthCheck.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/health/ApplicationHealth.hxx"
 
 #include <chrono>
 #include <iostream>

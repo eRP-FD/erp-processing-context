@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/BlobDatabase.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/hsm/BlobDatabase.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/TLog.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"

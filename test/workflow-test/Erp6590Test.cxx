@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 

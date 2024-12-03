@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/idp/Idp.hxx"
+#include "shared/idp/Idp.hxx"
 
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "mock/crypto/MockCryptography.hxx"
-#include "erp/crypto/EllipticCurve.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
 
 #include <gtest/gtest.h>
 

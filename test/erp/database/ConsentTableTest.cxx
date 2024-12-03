@@ -1,6 +1,6 @@
 #include "erp/model/Consent.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "test/erp/database/DatabaseTestFixture.hxx"
 #include "test/util/TestUtils.hxx"
 

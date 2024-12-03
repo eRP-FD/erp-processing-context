@@ -7,13 +7,13 @@
 
 #include "erp/service/task/RejectTaskHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/TLog.hxx"
 
 
 RejectTaskHandler::RejectTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -71,13 +71,13 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
     databaseHandle->updateTaskStatusAndSecret(task, *taskAndKey->key);
 
     // GEMREQ-start A_24286#delete-MedicationDispense
-    A_24286.start("Delete MedicationDispense");
+    A_24286_02.start("Delete MedicationDispense");
     if(task.lastMedicationDispense().has_value())
     {
         task.deleteLastMedicationDispense();
         databaseHandle->updateTaskDeleteMedicationDispense(task);
     }
-    A_24286.finish();
+    A_24286_02.finish();
     // GEMREQ-end A_24286#delete-MedicationDispense
 
     A_19514.start("HttpStatus 204 for successful POST");

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTILS
 #define ERP_PROCESSING_CONTEXT_TEST_UTILS
 
-#include "erp/model/ProfileType.hxx"
+#include "shared/model/ProfileType.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/model/DateTime.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -21,6 +21,7 @@ namespace model
 {
 class Bundle;
 class ErxReceipt;
+class UnspecifiedResource;
 }
 
 namespace testutils
@@ -43,6 +44,8 @@ static void waitFor(T predicate)
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
 
+void bestEffortValidate(const model::UnspecifiedResource& res);
+
 template<typename BundleT = model::ErxReceipt>
 [[nodiscard]] BundleT
 getValidatedErxReceiptBundle(std::string_view xmlDoc,
@@ -53,6 +56,10 @@ extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view 
 
 class ShiftFhirResourceViewsGuard {
 public:
+    class AsConfiguredTag {};
+    static constexpr AsConfiguredTag asConfigured{};
+
+    ShiftFhirResourceViewsGuard(const AsConfiguredTag&);
     ShiftFhirResourceViewsGuard(const std::string& viewId, const fhirtools::Date& startDate);
     ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate);
 

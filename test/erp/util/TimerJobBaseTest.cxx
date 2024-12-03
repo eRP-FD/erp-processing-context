@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/TimerJobBase.hxx"
+#include "shared/deprecated/TimerJobBase.hxx"
 
 #include <gtest/gtest.h>
 #include <chrono>

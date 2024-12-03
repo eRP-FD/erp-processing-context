@@ -5,15 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
-#include "erp/model/Parameters.hxx"
-#include "erp/model/Resource.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/ErpException.hxx"
-#include "erp/util/String.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Parameters.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/ErpException.hxx"
+#include "shared/util/String.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -55,25 +55,38 @@ TEST(ResourceBaseTest, InvalidConstruction)//NOLINT(readability-function-cogniti
 
 TEST(ResourceFactoryTest, invalid_profile)
 {
-    auto mdisp = ResourceTemplates::medicationDispenseXml({});
-    mdisp = String::replaceAll(mdisp, "https://gematik.de/fhir/erp/StructureDefinition",
-                               "https://invalid/fhir/erp/StructureDefinition");
+    static constexpr auto makeBroken = [](const std::string& good) {
+        return String::replaceAll(good, "https://gematik.de/fhir/erp/StructureDefinition",
+                                  "https://invalid/fhir/erp/StructureDefinition");
+    };
+    using namespace std::string_literals;
+    const auto& fhirInstance = Fhir::instance();
+    const auto& backend = fhirInstance.backend();
+    auto supported =
+        fhirInstance.structureRepository(model::Timestamp::now())
+            .supportedVersions(&backend, {std::string{model::resource::structure_definition::medicationDispense}});
+    ASSERT_FALSE(supported.empty());
+    std::string_view sep{};
+    std::string profileList;
+    for (const auto& profile: supported)
+    {
+        profileList += sep;
+        profileList += to_string(profile);
+        sep = ", ";
+    }
+    const auto goodProfile = to_string(std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version));
+    const auto badProfile = makeBroken(goodProfile);
+    auto badMedicationDispense = makeBroken(ResourceTemplates::medicationDispenseXml({}));
     using Factory = model::ResourceFactory<model::MedicationDispense>;
     try {
-        Factory::fromXml(mdisp, *StaticData::getXmlValidator())
+        Factory::fromXml(badMedicationDispense, *StaticData::getXmlValidator())
             .getValidated(model::ProfileType::Gem_erxMedicationDispense);
         GTEST_FAIL() << "Expected ErpException";
     }
     catch (const ErpException& ex)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
-        EXPECT_EQ(
-            *ex.diagnostics(),
-            R"(MedicationDispense: error: Unknown profile: https://invalid/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2; )"
-            R"(MedicationDispense.meta.profile[0]: error: )"
-            R"----(value must match fixed value: "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2")----"
-            R"----( (but is "https://invalid/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2"))----"
-            R"----( (from profile: https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.2); )----");
+        EXPECT_EQ( *ex.diagnostics(), "invalid profile " + badProfile + " must be one of: " + profileList);
     }
     catch (const std::exception& ex)
     {

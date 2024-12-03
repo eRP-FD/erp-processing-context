@@ -6,10 +6,11 @@
  */
 
 #include "erp/database/RedisClient.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/DurationConsumer.hxx"
-#include "erp/util/String.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/DurationConsumer.hxx"
+#include "shared/util/String.hxx"
 
 #include <sw/redis++/redis++.h>
 

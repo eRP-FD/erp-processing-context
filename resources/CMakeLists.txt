@@ -63,33 +63,28 @@ foreach(schema ${SCHEMA_FILES})
             COMMENT "copy ${CMAKE_CURRENT_SOURCE_DIR}/production/${schema} ${ERP_RUNTIME_RESOURCE_DIR}/${schema}"
     )
 endforeach()
-set(FHIR_PROFILES
-          "fhir/CodeSystem-v2-0131.xml"
-          "fhir/CodeSystem-v2-0203.xml"
-)
 
 set(FHIR_PROFILES_DIRS
         "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1"
+        "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1"
         "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0"
+        "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0"
         "fhir/profiles/de.basisprofil.r4-1.3.2"
-        "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0"
+        "fhir/profiles/de.basisprofil.r4-1.5.0/package"
+        "fhir/profiles/de.gematik.epa.medication-1.0.3/package"
+        "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4"
         "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0"
         "fhir/profiles/de.gematik.erezept-workflow.r4-1.3.1"
+        "fhir/profiles/de.gematik.erezept-workflow.r4-1.4.3"
+        "fhir/profiles/de.gematik.fhir.directory-0.11.12/package"
+        "fhir/profiles/de.ihe-d.terminology-3.0.0/package"
         "fhir/profiles/KBV.Basis-1.3.0"
         "fhir/profiles/kbv.ita.erp-1.1.2"
         "fhir/profiles/kbv.ita.for-1.1.0/package/"
         "fhir/profiles/fhir.kbv.de"
+        "fhir/profiles/terminology.hl7.org-6.0.2/package"
         )
 
-foreach(profile ${FHIR_PROFILES})
-    add_custom_command (
-            COMMAND "${CMAKE_COMMAND}" -E make_directory "${ERP_RUNTIME_RESOURCE_DIR}"
-            OUTPUT "${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
-            DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${profile}"
-            COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_SOURCE_DIR}/${profile}" "${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
-            COMMENT "copy ${CMAKE_CURRENT_SOURCE_DIR}/${profile} ${ERP_RUNTIME_RESOURCE_DIR}/${profile}"
-    )
-endforeach()
 foreach(profile ${FHIR_PROFILES_DIRS})
     add_custom_command (
             COMMAND "${CMAKE_COMMAND}" -E make_directory "${ERP_RUNTIME_RESOURCE_DIR}"
@@ -132,24 +127,29 @@ message(STATUS "ERP_EASTER_LIST=${ERP_EASTER_LIST}")
 # create install script for installation
 set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/resources/01_production.config.json)
 set(ERP_CONFIGURATION_DEVEL_FILE "")
+set(ERP_CONFIGURATION_MEDICATION_EXPORTER_FILE ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json)
 set(ERP_RUNTIME_RESOURCE_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}")
 set(ERP_CONFIGURATION_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production.config.json.in")
 set(ERP_CONFIGURATION_DEVEL_IN "")
+set(ERP_CONFIGURATION_MEDICATION_EXPORTER_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production-medication-exporter.config.json.in")
 configure_file(install-config.cmake.in install-config.cmake @ONLY)
 include(${CMAKE_CURRENT_BINARY_DIR}/install-config.cmake)
 
 # create install script for build tree
 set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/bin/01_production.config.json)
 set(ERP_CONFIGURATION_DEVEL_FILE ${CMAKE_BINARY_DIR}/bin/02_development.config.json)
+set(ERP_CONFIGURATION_MEDICATION_EXPORTER_FILE ${CMAKE_BINARY_DIR}/bin/01_production-medication-exporter.config.json)
 set(ERP_RUNTIME_RESOURCE_DIR "${CMAKE_BINARY_DIR}/bin/resources")
 set(ERP_CONFIGURATION_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production.config.json.in")
 set(ERP_CONFIGURATION_DEVEL_IN "${CMAKE_CURRENT_SOURCE_DIR}/test/02_development.config.json.in")
+set(ERP_CONFIGURATION_MEDICATION_EXPORTER_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production-medication-exporter.config.json.in")
 configure_file(install-config.cmake.in install-config-devel.cmake @ONLY)
 
 add_custom_command(
     OUTPUT ${ERP_CONFIGURATION_FILE}
     OUTPUT ${ERP_CONFIGURATION_DEVEL_FILE}
     DEPENDS production/01_production.config.json.in
+    DEPENDS production/01_production-medication-exporter.config.json.in
     DEPENDS test/02_development.config.json.in
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/install-config-devel.cmake
     COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install-config-devel.cmake
@@ -163,7 +163,6 @@ add_custom_target(resources ALL
         ${ERP_CONFIGURATION_DEVEL_FILE}
         ${ZDICT_FILES}
         ${ERP_EASTER_LIST}
-        ${FHIR_PROFILES}
         ${FHIR_PROFILES_DIRS}
 )
 
@@ -174,6 +173,12 @@ install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
         DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
         COMPONENT production)
 install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
+        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+        COMPONENT blob-db-initialization)
+install(FILES ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json
+        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+        COMPONENT production)
+install(FILES ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json
         DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
         COMPONENT blob-db-initialization)
 if (NOT TARGET production)

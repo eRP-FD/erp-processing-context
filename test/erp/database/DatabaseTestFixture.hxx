@@ -10,7 +10,7 @@
 
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/hsm/HsmPool.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"

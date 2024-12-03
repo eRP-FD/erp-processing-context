@@ -6,13 +6,13 @@
  */
 
 #include "erp/admin/AdminRequestHandler.hxx"
-#include "erp/enrolment/EnrolmentRequestHandler.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
+#include "shared/enrolment/EnrolmentRequestHandler.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ErpMacros.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/server/request/ServerRequest.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <boost/mpl/map.hpp>
@@ -21,7 +21,10 @@
 class MockRequestHandlerBasicAuthentication : public RequestHandlerBasicAuthentication
 {
 public:
-    void handleRequest(SessionContext&) override
+    void handleRequest(BaseSessionContext&) override
+    {
+    }
+    void handleRequest(PcSessionContext&) override
     {
     }
     Operation getOperation(void) const override

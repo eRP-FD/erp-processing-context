@@ -5,9 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Environment.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/GLogConfiguration.hxx"
 #include "workflow-test/HttpsTestClient.hxx"
-#include "erp/erp-serverinfo.hxx"
 
 #include <gtest/gtest.h>
 
@@ -23,5 +25,7 @@ int main (int argc, char** argv)
     ::testing::Test::RecordProperty("BuildType", ErpServerInfo::BuildType().data());
     ::testing::Test::RecordProperty("ReleaseVersion", ErpServerInfo::ReleaseVersion().data());
     ::testing::Test::RecordProperty("ReleaseDate", ErpServerInfo::ReleaseDate().data());
+
+    Fhir::init<ConfigurationBase::ERP>(Fhir::Init::later);
     return RUN_ALL_TESTS();
 }

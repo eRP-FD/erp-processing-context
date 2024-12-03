@@ -6,10 +6,10 @@
  */
 
 #include "erp/service/consent/ConsentPostHandler.hxx"
-#include "erp/server/response/ServerResponse.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <pqxx/except>
 

@@ -6,8 +6,8 @@
  */
 
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
@@ -131,6 +131,7 @@ TEST_F(ErpProcessingContextTest, PostTaskReject_ProfessionOIDs)
     });
 }
 
+// GEMREQ-start A_24279
 TEST_F(ErpProcessingContextTest, PostTaskDispense_ProfessionOIDs)
 {
     A_24279.test("Unit test of allowedForProfessionOID() function");
@@ -139,6 +140,7 @@ TEST_F(ErpProcessingContextTest, PostTaskDispense_ProfessionOIDs)
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
     });
 }
+// GEMREQ-end A_24279
 
 TEST_F(ErpProcessingContextTest, PostTaskClose_ProfessionOIDs)
 {

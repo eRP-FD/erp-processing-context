@@ -5,12 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/fhir/Fhir.hxx"
-#include "erp/fhir/FhirConverter.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/NumberAsStringParserWriter.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/model/Resource.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserWriter.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/FileHelper.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <fstream>
@@ -50,7 +51,11 @@ int main(int argc, char* argv[])
     {
         auto owd = std::filesystem::current_path();
         auto here = std::filesystem::path(argv[0]).remove_filename().native();
-        chdir(here.c_str());
+        if(int res = chdir(here.c_str()) != EXIT_SUCCESS)
+        {
+            return res;
+        }
+        Fhir::init<ConfigurationBase::ERP>();
         const auto& fhir = Fhir::instance();
         Expect(argc > 1, "Missing input filename.");
         for (int i = 1; i < argc; ++i)

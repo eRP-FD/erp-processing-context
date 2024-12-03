@@ -103,7 +103,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                                    def erp_release_version = "1.15.0"
+                                    def erp_release_version = "1.16.0"
                                     def result = sh(returnStatus: true, script: "cd /media/erp && scripts/ci-build.sh "+
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}'")
@@ -138,6 +138,7 @@ pipeline {
                                         declare -a public_packages=(
                                                 antlr4-cppruntime
                                                 boost
+                                                botan
                                                 date
                                                 glog
                                                 gsl-lite
@@ -196,42 +197,46 @@ pipeline {
                                     projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
                             }
                         }
-                        stage ("Run Tests (erp-test) Testzeitraum 2") {
+                        stage ("Run Tests (erp-test) Testzeitraum 2024-11-01") {
                             steps {
                                 sh """
                                     YESTERDAY_DATE=\$(date -d "yesterday" +%Y-%m-%d)
                                     CURRENT_DATE=\$(date +%Y-%m-%d)
                                     TOMORROW_DATE=\$(date -d "tomorrow" +%Y-%m-%d)
                                     # Set environments for resource-views
-                                    ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
-                                    ERP_2024_10_01_VALID_FROM=\$CURRENT_DATE
-                                    ERP_2024_11_01_VALID_FROM=\$TOMORROW_DATE
-                                    set |grep ERP_
+                                    export ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
+                                    export ERP_2024_10_01_VALID_FROM=\$YESTERDAY_DATE
+                                    export ERP_2024_11_01_VALID_FROM=\$CURRENT_DATE
+                                    export ERP_GEM_2025_01_15_VALID_FROM=\$TOMORROW_DATE
+                                    export ERP_DAV_2025_01_15_VALID_FROM=\$TOMORROW_DATE
+                                    env |grep ERP_
                                     # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_instance=1 --gtest_output=xml:erp-test-2.xml
+                                    ./erp-test --erp_instance=2 --gtest_output=xml:erp-test-3.xml
                                 """
                             }
                             post {
                                 always {
-                                    junit "jenkins-build-debug/bin/erp-test-2.xml"
+                                    junit "jenkins-build-debug/bin/erp-test-3.xml"
                                 }
                             }
                         }
-                        stage ("Run Tests (erp-test) Testzeitraum 3") {
+                        stage ("Run Tests (erp-test) Testzeitraum 2025-01-15") {
                             steps {
                                 sh """
                                     YESTERDAY_DATE=\$(date -d "yesterday" +%Y-%m-%d)
                                     CURRENT_DATE=\$(date +%Y-%m-%d)
                                     TOMORROW_DATE=\$(date -d "tomorrow" +%Y-%m-%d)
                                     # Set environments for resource-views
-                                    ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
-                                    ERP_2024_10_01_VALID_FROM=\$YESTERDAY_DATE
-                                    ERP_2024_11_01_VALID_FROM=\$CURRENT_DATE
-                                    set |grep ERP_
+                                    export ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
+                                    export ERP_2024_10_01_VALID_FROM=\$YESTERDAY_DATE
+                                    export ERP_2024_11_01_VALID_FROM=\$YESTERDAY_DATE
+                                    export ERP_GEM_2025_01_15_VALID_FROM=\$CURRENT_DATE
+                                    export ERP_DAV_2025_01_15_VALID_FROM=\$CURRENT_DATE
+                                    env |grep ERP_
                                     # Run the unit and integration tests
                                     cd jenkins-build-debug/bin
-                                    ./erp-test --erp_instance=2 --gtest_output=xml:erp-test-3.xml
+                                    ./erp-test --erp_instance=3 --gtest_output=xml:erp-test-3.xml
                                 """
                             }
                             post {
@@ -250,6 +255,19 @@ pipeline {
                             post {
                                 always {
                                     junit "jenkins-build-debug/bin/fhirtools-test.xml"
+                                }
+                            }
+                        }
+                        stage ("Run Tests (exporter)") {
+                            steps {
+                                sh """
+                                    cd jenkins-build-debug/bin
+                                    ./exporter-test --gtest_output=xml:exporter-test.xml
+                                """
+                            }
+                            post {
+                                always {
+                                    junit "jenkins-build-debug/bin/exporter-test.xml"
                                 }
                             }
                         }
@@ -301,7 +319,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.15.0"
+                                def release_version = "1.16.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -326,6 +344,46 @@ pipeline {
             }
         }
 
+        stage('Build docker image (erp-medication-exporter)') {
+            when {
+                anyOf {
+                    branch 'master'
+                    branch 'release/*'
+                }
+            }
+            steps {
+                sh "cp docker/exporter/Dockerfile Dockerfile"
+                script {
+                    withDockerRegistry(registry: [url: 'https://de.icr.io/v2/', credentialsId: 'icr_image_pusher_erp_dev_api_key']) {
+                        loadNexusConfiguration{
+                            withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
+                                                              usernameVariable: 'GITHUB_USERNAME',
+                                                              passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
+                                def release_version = "1.0.0"
+                                def image = docker.build(
+                                    "de.icr.io/erp_dev/erp-medication-exporter:${currentBuild.displayName}",
+                                    "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
+                                    "--build-arg CONAN_PASSWORD=\"${env.NEXUS_PASSWORD}\" " +
+                                    "--build-arg GITHUB_USERNAME=\"${env.GITHUB_USERNAME}\" " +
+                                    "--build-arg GITHUB_OAUTH_TOKEN=\"${env.GITHUB_OAUTH_TOKEN}\" " +
+                                    "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
+                                    "--build-arg ERP_RELEASE_VERSION=\"${release_version}\" " +
+                                    ".")
+
+                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-medication-exporter:${currentBuild.displayName}):/erp-exporter/erp-medication-exporter.tar.gz ./erp-medication-exporter.tar.gz"
+                                sh "docker cp \$(docker create --rm de.icr.io/erp_dev/erp-medication-exporter:${currentBuild.displayName}):/debug/erp-exporter/erp-medication-exporter-debug.tar.gz ./erp-medication-exporter-debug.tar.gz"
+                                image.push()
+
+                                // SBOM generation
+                                sh "syft --file erp-medication-exporter-syft-bom.xml --output cyclonedx-xml@1.4 de.icr.io/erp_dev/erp-medication-exporter:${currentBuild.displayName}"
+                                archiveArtifacts allowEmptyArchive: true, artifacts: '*bom.xml', fingerprint: true, followSymlinks: false, onlyIfSuccessful: true
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         stage('Build blob-db-initialization docker image') {
             when {
                 anyOf {
@@ -341,7 +399,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.15.0"
+                                def release_version = "1.16.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

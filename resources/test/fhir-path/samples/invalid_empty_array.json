@@ -1,0 +1,19 @@
+{
+    "resourceType": "OperationOutcome",
+    "meta": {
+        "profile": [
+            "http://hl7.org/fhir/StructureDefinition/OperationOutcome"
+        ]
+    },
+    "issue": [
+        {
+            "severity": "error",
+            "code": "invalid",
+            "details": {
+                "text": "Länge PZN unzulässig (muss 8-stellig sein)"
+            },
+            "diagnostics": "diagnostics",
+            "expression": []
+        }
+    ]
+}

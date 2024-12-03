@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/SafeString.hxx"
+#include "shared/util/SafeString.hxx"
 
 #include <gtest/gtest.h>
 

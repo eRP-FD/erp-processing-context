@@ -1,0 +1,195 @@
+{
+  "erp-medication-exporter": {
+    "is-production": "true",
+    "server": {
+      "thread-count": "8",
+      "io-thread-count": "5"
+    },
+    "postgres": {
+      "host": "localhost",
+      "port": "5433",
+      "user": "postgres",
+      "password": "Postgres Admin Password",
+      "database": "erp_medication_exporter",
+      "useSsl": "true",
+      "certificatePath": "",
+      "connectTimeoutSeconds": "2",
+      "tcpUserTimeoutMs": "1000",
+      "keepalivesIdleSec": "75",
+      "keepalivesIntervalSec": "75",
+      "keepalivesCount": "9",
+      "targetSessionAttrs": "read-write",
+      "enableScramAuthentication": "false",
+      "connectionMaxAgeMinutes": "120"
+    },
+    "ocsp": {
+      "gracePeriodEpa": "3600"
+    },
+    "vau-https-client": {
+      "connectTimeoutMilliseconds": "1500",
+      "sslHandshakeTimeoutMilliseconds": "3000",
+      "messageSendTimeoutMilliseconds": "3000",
+      "messageReceiveMilliseconds": "3000",
+      "retryTimeoutMilliseconds": "3000",
+      "retriesPerAddress": "3",
+      "resolveTimeoutMilliseconds": "2000"
+    },
+    "epa-account-lookup": {
+      "connectTimeoutSeconds": "2",
+      "resolveTimeoutMilliseconds": "2000",
+      "enforceServerAuthentication": "true",
+      "endpoint": "/information/api/v1/ehr/consentdecisions",
+      "userAgent": "ERP-FD/1.16.0",
+      "erpSubmissionFunctionId": "erp-submission",
+      "epaAsFqdn": ["epa-as-1-mock:443"]
+    },
+    "epa-processing-outcome": {
+      "epaDelayRetrySeconds": "60"
+    },
+    "admin": {
+      "server": {
+        "interface": "0.0.0.0",
+        "port": "9999"
+      }
+    },
+    "fhir": {
+      "structure-files": [
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
+        "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.5.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.fhir.directory-0.11.12/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.ihe-d.terminology-3.0.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_ITA_WOP_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DMP_V1.06.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_NORMGROESSE_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_ITA_WOP_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DMP_V1.06.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package/KBV_CS_FOR_Payor_Type_KBV.xml",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/terminology.hl7.org-6.0.2/package"
+      ],
+      "synthesize-codesystems": [
+        { "url": "http://loinc.org", "version": null },
+        { "url": "urn:ietf:bcp:47", "version": null },
+        { "url": "http://unitsofmeasure.org", "version": null },
+        { "url": "http://standardterms.edqm.eu", "version": null },
+        { "url": "urn:oid:1.2.276.0.76.5.514", "version": null },
+        { "url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11", "version": null },
+        { "url": "urn:oid:1.2.276.0.76.5.492", "version": null },
+        { "url": "urn:iso:std:iso:3166", "version": null }
+      ],
+      "synthesize-valuesets": [
+        { "url": "http://loinc.org/vs/LL379-9", "version": "4.0.1" }
+      ],
+      "resource-groups": [
+        {
+          "id": "missing-codesystems",
+          "match": [
+            { "url": "http://loinc.org", "version": null },
+            { "url": "urn:ietf:bcp:47", "version": null },
+            { "url": "urn:ietf:bcp:47", "version": null },
+            { "url": "http://unitsofmeasure.org", "version": null },
+            { "url": "http://standardterms.edqm.eu", "version": null },
+            { "url": "urn:oid:1.2.276.0.76.5.514", "version": null },
+            { "url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11", "version": null },
+            { "url": "urn:oid:1.2.276.0.76.5.492", "version": null },
+            { "url": "urn:iso:std:iso:3166", "version": null }
+          ]
+        },
+        {
+          "id": "missing-valuesets",
+          "match": [
+            { "url": "http://loinc.org/vs/LL379-9", "version": "4.0.1" }
+          ]
+        },
+        {
+          "id": "hl7_fhir_r4_core_4_0_1",
+          "include": [ "missing-codesystems", "missing-valuesets" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/terminology\\.hl7\\.org-6\\.0\\.2/package/.*\\.xml"},
+            { "file": ".*/hl7.org/.*" }
+          ]
+        },
+        {
+          "id": "de.ihe-d.terminology-3.0.0",
+          "include": ["hl7_fhir_r4_core_4_0_1"],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.ihe-d\\.terminology-3\\.0\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "KBV_CS_FOR_Payor_Type_KBV-1.1.0",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV", "version": "1.1.0" }
+          ]
+        },
+        {
+          "id": "de.basisprofil.r4-1.5.0",
+          "include": [ "hl7_fhir_r4_core_4_0_1", "KBV_CS_FOR_Payor_Type_KBV-1.1.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.5\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.fhir.directory-0.11.12",
+          "include": [ "de.basisprofil.r4-1.5.0", "de.ihe-d.terminology-3.0.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.fhir\\.directory-0\\.11\\.12/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "fhir.kbv.de-2024-10-01",
+          "match": [
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT",  "version": "1.00"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION",  "version": "1.00"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP",                 "version": "1.00"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM",    "version": "1.14"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP",                 "version": "1.06"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE",         "version": "1.00"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE",      "version": "1.02"},
+            {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS",  "version": "1.02"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT",  "version": "1.00"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_SEITENLOKALISATION",  "version": "1.00"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP",                 "version": "1.00"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM",    "version": "1.14"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP",                 "version": "1.06"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE",         "version": "1.00"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PERSONENGRUPPE",      "version": "1.02"},
+            {"url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS",  "version": "1.02"}
+          ]
+        },
+        {
+          "id": "de.gematik.epa.medication-1.0.3",
+          "include": [ "de.gematik.fhir.directory-0.11.12" ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa\\.medication-1\\.0\\.3/package/.*\\.xml" }
+          ]
+        }
+      ],
+      "resource-views": [
+        {
+          "id": "epa.medication-1.0.3",
+          "env-name": "ERP_MEDICATION_EXPORTER_EPA_MEDICATION_1_0_3",
+          "groups": [
+            "fhir.kbv.de-2024-10-01",
+            "de.gematik.epa.medication-1.0.3"
+          ]
+        }
+      ]
+    }
+  }
+}

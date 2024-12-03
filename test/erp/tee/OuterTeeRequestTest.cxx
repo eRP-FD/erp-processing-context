@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tee/OuterTeeRequest.hxx"
+#include "shared/tee/OuterTeeRequest.hxx"
 
 #include <gtest/gtest.h>
 

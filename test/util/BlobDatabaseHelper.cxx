@@ -7,7 +7,7 @@
 
 #include "test/util/BlobDatabaseHelper.hxx"
 
-#include "erp/database/PostgresBackend.hxx"
+#include "shared/database/PostgresConnection.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/TestConfiguration.hxx"
 
@@ -16,7 +16,7 @@ void BlobDatabaseHelper::removeUnreferencedBlobs (void)
 {
     if ( TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
     {
-        auto connection = pqxx::connection(PostgresBackend::defaultConnectString());
+        auto connection = pqxx::connection(PostgresConnection::defaultConnectString());
         pqxx::work transaction (connection);
         transaction.exec("DELETE FROM erp.blob WHERE type NOT IN (6,7,8,12)");
         transaction.exec("DELETE FROM erp.blob AS blob"
@@ -45,7 +45,7 @@ void BlobDatabaseHelper::removeTestVsdmKeyBlobs(char operatorId)
 {
     if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
     {
-        auto connection = pqxx::connection(PostgresBackend::defaultConnectString());
+        auto connection = pqxx::connection(PostgresConnection::defaultConnectString());
         pqxx::work transaction(connection);
         transaction.exec_params("DELETE FROM erp.vsdm_key_blob WHERE operator LIKE $1", std::string{operatorId});
         transaction.commit();

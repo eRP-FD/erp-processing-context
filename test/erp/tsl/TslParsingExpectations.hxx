@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_TSL_TSLPARSINGEXPECTATIONS_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_TSL_TSLPARSINGEXPECTATIONS_HXX
 
-#include "erp/tsl/X509Certificate.hxx"
-#include "erp/tsl/TslParser.hxx"
+#include "shared/tsl/X509Certificate.hxx"
+#include "shared/tsl/TslParser.hxx"
 
 #include <string>
 #include <chrono>

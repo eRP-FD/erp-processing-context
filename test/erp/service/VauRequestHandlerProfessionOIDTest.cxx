@@ -6,14 +6,15 @@
  */
 
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/client/HttpsClient.hxx"
-#include "erp/crypto/Jwt.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/pc/ProfessionOid.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ProfessionOid.hxx"
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/util/String.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/String.hxx"
 
 
 #include "mock/crypto/MockCryptography.hxx"
@@ -289,6 +290,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskRejectForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 
+// GEMREQ-start A_24279
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskDispenseSuccess)
 {
     A_24279.test("Valid professionOID claim in JWT");
@@ -309,6 +311,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskDispenseForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
+// GEMREQ-end A_24279
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskCloseSuccess)
 {

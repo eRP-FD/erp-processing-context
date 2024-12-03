@@ -6,13 +6,12 @@
  */
 
 #include "erp/tee/ErpTeeProtocol.hxx"
-
 #include "InnerTeeResponse.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/tee/OuterTeeRequest.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/tee/OuterTeeRequest.hxx"
 
 
 InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, HsmPool& hsmPool)

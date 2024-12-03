@@ -13,7 +13,7 @@ RETRY_SLEEP_SECONDS=10
 sleep 30
 EXPECTED_VERSION=$("$ENROLMENT_HELPER" version)
 
-for PROCESSING_CONTEXT in {1..2}; do
+for PROCESSING_CONTEXT in {1..3}; do
     for ((ATTEMPT=1; ATTEMPT <= MAX_ATTEMPTS ; ++ATTEMPT)); do
         echo "Checking health for processing context $PROCESSING_CONTEXT version $EXPECTED_VERSION (attempt $ATTEMPT)"
         HEALTH=$("$ENROLMENT_HELPER" "health$PROCESSING_CONTEXT")

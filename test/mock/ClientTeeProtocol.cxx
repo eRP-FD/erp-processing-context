@@ -6,18 +6,17 @@
  */
 
 #include "test/mock/ClientTeeProtocol.hxx"
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/beast/BoostBeastHeader.hxx"
-#include "erp/client/request/ClientRequestWriter.hxx"
-#include "erp/client/request/ValidatedClientRequest.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jwt.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
-#include "erp/tee/OuterTeeRequest.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/beast/BoostBeastHeader.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
+#include "shared/network/client/request/ClientRequestWriter.hxx"
+#include "shared/network/client/request/ValidatedClientRequest.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "src/shared/tee/OuterTeeRequest.hxx"
 
 
 namespace todo {

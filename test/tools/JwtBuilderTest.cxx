@@ -8,11 +8,11 @@
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 #include "test/util/JwtBuilder.hxx"
-#include "erp/idp/Idp.hxx"
-#include "erp/idp/IdpUpdater.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
+#include "shared/idp/Idp.hxx"
+#include "shared/idp/IdpUpdater.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 
 #include "test/util/ResourceManager.hxx"

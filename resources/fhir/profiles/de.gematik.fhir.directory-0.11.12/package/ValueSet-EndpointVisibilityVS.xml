@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="EndpointVisibilityVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/EndpointVisibilityVS"/>
+  <version value="0.11.12"/>
+  <name value="EndpointVisibilityVS"/>
+  <title value="EndpointVisibilityVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="EndpointVisibilityVS"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/EndpointVisibilityCS"/>
+    </include>
+  </compose>
+</ValueSet>

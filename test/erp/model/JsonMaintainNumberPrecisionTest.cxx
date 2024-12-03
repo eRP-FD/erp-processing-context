@@ -7,10 +7,10 @@
 
 #include "test/erp/model/JsonMaintainNumberPrecisionTest.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/NumberAsStringParserWriter.hxx"
-#include "erp/model/ModelException.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "fhirtools/model/NumberAsStringParserWriter.hxx"
+#include "shared/model/ModelException.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/FileHelper.hxx"
 
 #include <boost/format.hpp>
 

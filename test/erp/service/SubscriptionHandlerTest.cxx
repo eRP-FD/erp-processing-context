@@ -6,15 +6,15 @@
  */
 
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/client/HttpsClient.hxx"
-#include "erp/crypto/CMAC.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jwt.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jwt.hxx"
 #include "erp/model/Subscription.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/util/String.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/util/String.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"

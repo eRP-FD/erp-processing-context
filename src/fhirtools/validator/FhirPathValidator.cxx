@@ -149,11 +149,17 @@ void FhirPathValidator::validateAllSubElements(const std::shared_ptr<const Eleme
         bool exists = unprocessedSubNames.erase(subName) > 0;
         const auto& subElements =
             exists ? element->subElements(subName) : std::vector<std::shared_ptr<const Element>>{};
+        if (exists && subElements.empty())
+        {
+            result.add(Severity::error,
+                       "Array cannot be empty - the property should not be present if it has no values",
+                       std::string{elementFullPath} + "." + subName, element->definitionPointer().profile());
+        }
         if (! exists)
         {
             // needed to create counters for non-existing fields
             auto sub = elementInfo.subField(*element->getFhirStructureRepository(), subName);
-            sub->finalize(subFullPathBase.str());
+            sub->finalize(subFullPathBase.str(), element);
             result.merge(sub->results());
         }
         processSubElements(element, subName, subElements, referenceContext, elementInfo, subFullPathBase.str());
@@ -240,7 +246,7 @@ void FhirPathValidator::validateElement(const std::shared_ptr<const Element>& el
     FPExpect3(element != nullptr, "element must not be null.", std::logic_error);
     profileSetValidator.process(*element, elementFullPath);
     validateAllSubElements(element, referenceContext, profileSetValidator, elementFullPath);
-    profileSetValidator.finalize(elementFullPath);
+    profileSetValidator.finalize(elementFullPath, element);
     result.merge(profileSetValidator.results());
 }
 

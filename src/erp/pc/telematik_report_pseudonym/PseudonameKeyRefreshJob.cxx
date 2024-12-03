@@ -5,18 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/DiffieHellman.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/DiffieHellman.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/hsm/HsmPool.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/ErpException.hxx"
-#include "erp/util/JsonLog.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/JsonLog.hxx"
+#include "shared/util/Uuid.hxx"
 
 #include <exception>
 #include <mutex>

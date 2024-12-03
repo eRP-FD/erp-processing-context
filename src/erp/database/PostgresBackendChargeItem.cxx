@@ -6,12 +6,12 @@
 */
 
 #include "erp/database/PostgresBackendChargeItem.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/database/PostgresBackendHelper.hxx"
-#include "erp/model/PrescriptionType.hxx"
-#include "erp/util/DurationConsumer.hxx"
+#include "PostgresBackend.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/PrescriptionType.hxx"
+#include "shared/util/DurationConsumer.hxx"
 
 #include <magic_enum/magic_enum.hpp>
 #include <pqxx/pqxx>
@@ -142,8 +142,8 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction
         static_cast<uint32_t>(chargeItem.prescriptionId.type()), chargeItem.prescriptionId.toDatabaseId(), chargeItem.enterer.binarystring(),
         chargeItem.enteredDate.toXsDateTime(),                   chargeItem.lastModified.toXsDateTime(),   markingFlag,
         chargeItem.blobId,                                       chargeItem.salt.binarystring(),           chargeItem.accessCode.binarystring(),
-        chargeItem.kvnr.binarystring(),                          hashedKvnr.binarystring(),                chargeItem.prescription->binarystring(),
-        chargeItem.prescriptionJson->binarystring(),             chargeItem.receiptXml->binarystring(),    chargeItem.receiptJson->binarystring(),
+        chargeItem.kvnr.binarystring(),                          hashedKvnr.binarystring(),                value(chargeItem.prescription).binarystring(),
+        value(chargeItem.prescriptionJson).binarystring(),       chargeItem.receiptXml->binarystring(),    value(chargeItem.receiptJson).binarystring(),
         chargeItem.billingData.binarystring(),                   chargeItem.billingDataJson.binarystring()
         // clang-format on
     );
@@ -246,8 +246,8 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
 {
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
         DurationConsumer::categoryPostgres, "PostgreSQL:countChargeInformationForInsurant");
-    return ::PostgresBackendHelper::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
-                                                      kvnr, search, "ChargeItem for insurant");
+    return ::PostgresBackend::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
+                                                kvnr, search, "ChargeItem for insurant");
 }
 
 ::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::work& transaction,

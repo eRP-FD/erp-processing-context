@@ -7,12 +7,12 @@
 
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>
-#include <mutex> // for call_once
+#include <mutex>// for call_once
 
 using namespace model;
 using namespace model::resource;
@@ -55,18 +55,20 @@ const rapidjson::Pointer idPointer(ElementName::path(elements::id));
 const rapidjson::Pointer prescriptionIdSystemPointer(ElementName::path(elements::identifier, 0, elements::system));
 const rapidjson::Pointer prescriptionIdValuePointer(ElementName::path(elements::identifier, 0, elements::value));
 const rapidjson::Pointer kvnrValuePointer(ElementName::path(elements::subject, elements::identifier, elements::value));
-const rapidjson::Pointer kvnrSystemPointer(ElementName::path(elements::subject, elements::identifier, elements::system));
-const rapidjson::Pointer telematicIdSystemPointer(
-    ElementName::path(elements::performer, 0, elements::actor, elements::identifier, elements::value));
-const rapidjson::Pointer telematikIdValuePointer(
-    ElementName::path(elements::performer, 0, elements::actor, elements::identifier, elements::value));
+const rapidjson::Pointer kvnrSystemPointer(ElementName::path(elements::subject, elements::identifier,
+                                                             elements::system));
+const rapidjson::Pointer telematicIdSystemPointer(ElementName::path(elements::performer, 0, elements::actor,
+                                                                    elements::identifier, elements::value));
+const rapidjson::Pointer telematikIdValuePointer(ElementName::path(elements::performer, 0, elements::actor,
+                                                                   elements::identifier, elements::value));
 const rapidjson::Pointer whenHandedOverPointer(ElementName::path(elements::whenHandedOver));
 const rapidjson::Pointer whenPreparedPointer(ElementName::path(elements::whenPrepared));
+const rapidjson::Pointer medicationReferencePointer(ElementName::path(elements::medicationReference, elements::reference));
 
-}  // anonymous namespace
+}// anonymous namespace
 
 
-MedicationDispense::MedicationDispense (NumberAsStringParserDocument&& jsonTree)
+MedicationDispense::MedicationDispense(NumberAsStringParserDocument&& jsonTree)
     : Resource<MedicationDispense>(std::move(jsonTree))
 {
 }
@@ -106,6 +108,11 @@ MedicationDispenseId MedicationDispense::id() const
     return MedicationDispenseId::fromString(getStringValue(idPointer));
 }
 
+std::string_view MedicationDispense::medicationReference() const
+{
+    return getStringValue(medicationReferencePointer);
+}
+
 void MedicationDispense::setId(const MedicationDispenseId& id)
 {
     setValue(idPointer, id.toString());
@@ -129,12 +136,17 @@ void MedicationDispense::setTelematicId(const model::TelematikId& telematikId)
 
 void MedicationDispense::setWhenHandedOver(const model::Timestamp& whenHandedOver)
 {
-    setValue(whenHandedOverPointer, whenHandedOver.toXsDateTime());
+    setValue(whenHandedOverPointer, whenHandedOver.toGermanDate());
 }
 
 void MedicationDispense::setWhenPrepared(const model::Timestamp& whenPrepared)
 {
-    setValue(whenPreparedPointer, whenPrepared.toXsDateTime());
+    setValue(whenPreparedPointer, whenPrepared.toGermanDate());
+}
+
+void MedicationDispense::setMedicationReference(std::string_view newReference)
+{
+    setValue(medicationReferencePointer, newReference);
 }
 
 std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() const
@@ -142,4 +154,4 @@ std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() c
     return whenHandedOver();
 }
 
-} // namespace model
+}// namespace model

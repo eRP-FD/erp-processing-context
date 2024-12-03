@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Timer.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/deprecated/Timer.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <gtest/gtest.h>
 #include <array>

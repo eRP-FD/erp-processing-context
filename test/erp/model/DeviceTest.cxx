@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/Device.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/util/FileHelper.hxx"
 
 #include <gtest/gtest.h>
 

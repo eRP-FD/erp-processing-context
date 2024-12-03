@@ -5,7 +5,7 @@
       "port": "9005",
       "user": "erp_admin",
       "password":  "erp0815",
-      "database": "erp-processing-context",
+      "database": "erp_processing_context",
       "useSsl": "true",
       "certificatePath": "",
       "connectTimeoutSeconds": "2",
@@ -27,6 +27,39 @@
       "device": "9000@localhost",
       "work-username": "ERP_WORK",
       "work-password": "password"
+      "max-session-count" : "5",
+      "tee-token" :{
+          "update-seconds" : "1200",
+          "retry-seconds" : "30"
+      }
     }
+  },
+  "erp-medication-exporter": {
+      "postgres": {
+      "host": "localhost",
+      "port": "9006",
+      "user": "erp_admin",
+      "password": "erp0815",
+      "database": "erp_event_db",
+      "useSsl": "true",
+      "certificatePath": "",
+      "connectTimeoutSeconds": "2",
+      "tcpUserTimeoutMs": "1000",
+      "keepalivesIdleSec": "75",
+      "keepalivesIntervalSec": "75",
+      "keepalivesCount": "9",
+      "targetSessionAttrs": "read-write",
+      "enableScramAuthentication": "false",
+      "connectionMaxAgeMinutes": "120"
+    }
+  },
+  "test": {
+      "use-postgres": "true"
+  },
+  "debug": {
+      "enable-hsm-mock": "false"
+  },
+  "mock": {
+      "use-mock-tpm": "false"
   }
 }

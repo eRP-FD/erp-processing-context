@@ -6,13 +6,13 @@
  */
 
 #include "EnrolmentApiClient.hxx"
-#include "erp/common/Constants.hxx"
-#include "erp/common/HttpMethod.hxx"
-#include "erp/enrolment/EnrolmentRequestHandler.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/tpm/PcrSet.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/network/message/HttpMethod.hxx"
+#include "shared/tpm/PcrSet.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "src/shared/enrolment/EnrolmentRequestHandler.hxx"
 
 #include <boost/format.hpp>
 
@@ -67,6 +67,8 @@ EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
                                                    case ::BlobType::PseudonameKey:
                                                        // Not allowed for enrolment.
                                                        break;
+                                                   case BlobType::VauAut:
+                                                       return "/Enrolment/VauAut";
                                                }
                                                Fail("encountered unhandled blob type");
                                            }()}
@@ -89,13 +91,14 @@ EnrolmentApiClient::Header::Header(::HttpMethod method, ::std::string_view endpo
 }
 
 EnrolmentApiClient::EnrolmentApiClient()
-    : ::HttpsClient{
-          ::Configuration::instance().serverHost(),
-          ::gsl::narrow<uint16_t>(::Configuration::instance().getIntValue(::ConfigurationKey::ENROLMENT_SERVER_PORT)),
-          ::Constants::httpTimeoutInSeconds,
-          std::chrono::milliseconds{
-              Configuration::instance().getIntValue(::ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
-          false}
+    : HttpsClient{ConnectionParameters{
+          .hostname = Configuration::instance().serverHost(),
+          .port = Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
+          .connectionTimeoutSeconds = Constants::httpTimeoutInSeconds,
+          .resolveTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
+              ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
+          .tlsParameters = TlsConnectionParameters{.certificateVerifier =
+                                                       TlsCertificateVerifier::withVerificationDisabledForTesting()}}}
 {
 }
 
@@ -158,9 +161,9 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
 })") % ::Base64::encode(id) %
                    ::Base64::encode(blob.data) % blob.generation;
 
-    if (type == ::BlobType::VauSig)
+    if (type == ::BlobType::VauSig || type == BlobType::VauAut)
     {
-        Expect(certificate.has_value(), "VauSig requires a certificate");
+        Expect(certificate.has_value(), "VauSig/VauAut require a certificate");
 
         auto additionalVauSigData = (::boost::format{R"(,
   "certificate": "%1%")"} % ::Base64::encode(certificate.value()))
@@ -206,7 +209,8 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
     }
 
     const auto response = send(ClientRequest{
-        Header{(type == ::BlobType::VauSig) ? ::HttpMethod::POST : ::HttpMethod::PUT, type}, request.str()});
+        Header{(type == BlobType::VauSig || type == BlobType::VauAut) ? ::HttpMethod::POST : ::HttpMethod::PUT, type},
+        request.str()});
     if (response.getHeader().status() != ::HttpStatus::Created)
     {
         ::std::string details;

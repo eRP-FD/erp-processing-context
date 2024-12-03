@@ -8,13 +8,15 @@
 #ifndef TEST_UTIL_RESOURCETEMPLATES_HXX
 #define TEST_UTIL_RESOURCETEMPLATES_HXX
 
-#include "erp/model/Bundle.hxx"
 #include "erp/model/Iknr.hxx"
-#include "erp/model/Kvnr.hxx"
 #include "erp/model/Lanr.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Pzn.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/Timestamp.hxx"
 
+#include <erp/model/MedicationDispenseBundle.hxx>
 #include <chrono>
 #include <optional>
 #include <string>
@@ -32,23 +34,28 @@ struct Versions {
     };
     struct GEM_ERP : fhirtools::FhirVersion {
         using FhirVersion::FhirVersion;
-        explicit GEM_ERP(const FhirVersion& ver);
+        explicit GEM_ERP(FhirVersion ver);
     };
     struct GEM_ERPCHRG : fhirtools::FhirVersion {
         using FhirVersion::FhirVersion;
     };
     struct DAV_PKV : fhirtools::FhirVersion {
         using FhirVersion::FhirVersion;
+        explicit DAV_PKV(FhirVersion ver);
     };
 
     static inline GEM_ERP GEM_ERP_1_2{"1.2"};
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
+    static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
+    static inline DAV_PKV DAV_PKV_1_3{"1.3"};
 
+    static fhirtools::DefinitionKey latest(std::string_view profileUrl,
+                                           const model::Timestamp& reference = model::Timestamp::now());
     static GEM_ERP GEM_ERP_current(const model::Timestamp& reference = model::Timestamp::now());
-    static KBV_ERP KBV_ERP_current(const model::Timestamp& reference);
+    static KBV_ERP KBV_ERP_current(const model::Timestamp& reference = model::Timestamp::now());
     static GEM_ERPCHRG GEM_ERPCHRG_current(const model::Timestamp& reference = model::Timestamp::now());
     static DAV_PKV DAV_PKV_current(const model::Timestamp& reference = model::Timestamp::now());
 
@@ -57,29 +64,6 @@ struct Versions {
     static std::initializer_list<GEM_ERPCHRG> GEM_ERPCHRG_all;
     static std::initializer_list<DAV_PKV> DAV_PKV_all;
 };
-
-struct KbvBundleOptions
-{
-    model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
-    model::Timestamp authoredOn = model::Timestamp::now();
-    std::string_view kvnr = "X234567891";
-    std::optional<Versions::KBV_ERP> kbvVersion = Versions::KBV_ERP_current(model::Timestamp::now());
-    std::string_view medicationCategory = "00";
-    std::string_view coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis";
-    std::optional<std::string_view> coverageInsuranceType = std::nullopt;
-    std::string_view coveragePayorExtension = "";
-    std::string_view metaExtension = "";
-    model::Iknr iknr = model::Iknr{"109500969"};
-    model::Lanr lanr = model::Lanr{"444444400", model::Lanr::Type::lanr};
-    model::Pzn pzn = model::Pzn{"04773414"};
-    std::optional<std::string_view> forceInsuranceType = std::nullopt;
-    std::optional<std::string_view> forceAuthoredOn = std::nullopt;
-    std::optional<std::string_view> forceKvid10Ns = std::nullopt;
-    std::string_view patientIdentifierSystem = "http://fhir.de/CodeSystem/identifier-type-de-basis";
-    std::string darreichungsfrom = "TAB";
-};
-
-std::string kbvBundleXml(const KbvBundleOptions& bundleOptions = {});
 
 struct KbvBundleMvoOptions
 {
@@ -105,20 +89,33 @@ struct KbvBundlePkvOptions
 std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions);
 
 struct MedicationOptions {
-    std::optional<Versions::KBV_ERP> version = std::nullopt;
-    std::string templatePrefix = "test/EndpointHandlerTest/medication_template_";
-    std::string id = "001413e4-a5e9-48da-9b07-c17bab476407";
+    static constexpr auto* PZN{"test/EndpointHandlerTest/medication_template_"};
+    static constexpr auto* COMPOUNDING{"test/EndpointHandlerTest/medication_compounding_template_"};
+    static constexpr auto* INGREDIENT{"test/EndpointHandlerTest/medication_ingredient_template_"};
+    static constexpr auto* FREETEXT{"test/EndpointHandlerTest/medication_freetext_template_"};
+    std::variant<std::monostate, Versions::KBV_ERP, Versions::GEM_ERP> version = std::monostate{};
+    std::string templatePrefix = PZN;
+    std::optional<std::string> id = std::nullopt;
     std::string darreichungsform = "TAB";
+    std::string_view medicationCategory = "00";
+    model::Pzn pzn = model::Pzn{"04773414"};
 };
 
 struct MedicationDispenseOptions {
-    std::variant<model::PrescriptionId, std::string> prescriptionId = model::PrescriptionId::fromString("160.000.033.491.280.78");
+    std::variant<model::MedicationDispenseId, std::string> id{
+        std::in_place_type<model::MedicationDispenseId>, model::PrescriptionId::fromString("160.000.033.491.280.78"),
+        0};
+    std::variant<model::PrescriptionId, std::string> prescriptionId = guessPrescriptionId(id);
     std::string_view kvnr = "X234567891";
     std::string_view telematikId = "3-SMC-B-Testkarte-883110000120312";
     std::variant<model::Timestamp, std::string> whenHandedOver = model::Timestamp::now();
-    std::optional<model::Timestamp> whenPrepared = std::nullopt;
+    std::variant<std::monostate, model::Timestamp, std::string> whenPrepared = std::monostate{};
     Versions::GEM_ERP gematikVersion = Versions::GEM_ERP_current();
-    MedicationOptions medication{};
+    using MedicationReference = std::string;
+    std::variant<MedicationOptions, MedicationReference> medication{};
+private:
+    std::variant<model::PrescriptionId, std::string>
+    guessPrescriptionId(std::variant<model::MedicationDispenseId, std::string>& medicationDispenseId);
 };
 
 struct MedicationDispenseBundleOptions {
@@ -128,10 +125,35 @@ struct MedicationDispenseBundleOptions {
 };
 
 std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& bundleOptions = {});
+namespace internal_type
+{
+model::MedicationDispenseBundle medicationDispenseBundle(const MedicationDispenseBundleOptions& bundleOptions = {});
+}
 
 std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDispenseOptions = {});
 
 std::string medicationXml(const MedicationOptions& medicationOptions = {});
+
+struct KbvBundleOptions
+{
+    model::PrescriptionId prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    model::Timestamp authoredOn = model::Timestamp::now();
+    std::string_view kvnr = "X234567891";
+    Versions::KBV_ERP kbvVersion = Versions::KBV_ERP_current(authoredOn);
+    std::string_view coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis";
+    std::optional<std::string_view> coverageInsuranceType = std::nullopt;
+    std::string_view coveragePayorExtension = "";
+    std::string_view metaExtension = "";
+    model::Iknr iknr = model::Iknr{"109500969"};
+    model::Lanr lanr = model::Lanr{"444444400", model::Lanr::Type::lanr};
+    std::optional<std::string_view> forceInsuranceType = std::nullopt;
+    std::optional<std::string_view> forceAuthoredOn = std::nullopt;
+    std::optional<std::string_view> forceKvid10Ns = std::nullopt;
+    std::string_view patientIdentifierSystem = "http://fhir.de/CodeSystem/identifier-type-de-basis";
+    MedicationOptions medicationOptions{.version = kbvVersion};
+};
+
+std::string kbvBundleXml(const KbvBundleOptions& bundleOptions = {});
 
 enum class TaskType
 {
@@ -174,10 +196,23 @@ std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions, std::strin
 struct DavDispenseItemOptions {
     Versions::DAV_PKV davPkvVersion = Versions::DAV_PKV_current();
     model::PrescriptionId prescriptionId;
+    model::Timestamp whenHandenOver = model::Timestamp::now();
 };
 
 std::string davDispenseItemXml(const DavDispenseItemOptions& dispenseItemOptions);
 
+
+struct MedicationDispenseOperationParametersOptions {
+    model::ProfileType profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input;
+    std::string id = Uuid{};
+    Versions::GEM_ERP version = Versions::GEM_ERP_1_4;
+    std::list<MedicationDispenseOptions> medicationDispenses = {
+        {.gematikVersion = Versions::GEM_ERP_1_4, .medication = MedicationOptions{.version = Versions::GEM_ERP_1_4}}};
+};
+
+std::string medicationDispenseOperationParametersXml(const MedicationDispenseOperationParametersOptions& options);
+
+std::string dispenseOrCloseTaskBodyXml(const MedicationDispenseOperationParametersOptions& options);
 
 } // namespace ResourceTemplates
 

@@ -984,6 +984,12 @@ void fhirtools::FhirStructureDefinitionParser::handleExpansionContainsSubtree(
 
 void fhirtools::FhirStructureDefinitionParser::leaveValueSet()
 {
+    auto prevVs = std::ranges::find_if(mValueSets, [this](const FhirValueSet& vs){ return mValueSetBuilder.key() == vs.key(); });
+    if (prevVs != mValueSets.end())
+    {
+        LOG(ERROR) << "duplicate ValueSet: " << prevVs->key();
+        return;
+    }
     mValueSetBuilder.initGroup(*groupResolver, currentFile);
     mValueSets.emplace_back(mValueSetBuilder.getAndReset());
 }

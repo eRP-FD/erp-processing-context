@@ -6,11 +6,11 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 namespace
 {

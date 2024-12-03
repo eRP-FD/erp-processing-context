@@ -5,15 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <gtest/gtest.h>
+#include <gtest/gtest.h> // MUST BE FIRST (for friend tests)
 
-#include "erp/hsm/VsdmKeyCache.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Random.hxx"
+#include "shared/hsm/VsdmKeyCache.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "shared/enrolment/VsdmHmacKey.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Random.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 

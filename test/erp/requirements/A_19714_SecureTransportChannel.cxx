@@ -7,7 +7,7 @@
 
 #include "test/util/ServerTestBase.hxx"
 
-#include "erp/crypto/EllipticCurve.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"

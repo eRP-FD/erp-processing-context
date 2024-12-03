@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="v2-0373"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: CodeSystem v2-0373</b>
+      </p>
+      <a name="v2-0373"> </a>
+      <a name="hcv2-0373"> </a>
+      <a name="v2-0373-en-US"> </a>
+      <p>
+        <b>Properties</b>
+      </p>
+      <p>
+        <b>This code system defines the following properties for its concepts</b>
+      </p>
+      <table class="grid">
+        <tr>
+          <td>
+            <b>Name</b>
+          </td>
+          <td>
+            <b>Code</b>
+          </td>
+          <td>
+            <b>URI</b>
+          </td>
+          <td>
+            <b>Type</b>
+          </td>
+          <td>
+            <b>Description</b>
+          </td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>status</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#status</td>
+          <td>code</td>
+          <td>Status of the concept</td>
+        </tr>
+        <tr>
+          <td>deprecated</td>
+          <td>deprecated</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated</td>
+          <td>code</td>
+          <td>Version of HL7 in which the code was deprecated</td>
+        </tr>
+      </table>
+      <p>
+        <b>Concepts</b>
+      </p>
+      <p>This case-sensitive code system <code>http://terminology.hl7.org/CodeSystem/v2-0373</code> defines the following codes in a Is-A hierarchy:</p>
+      <table class="codes">
+        <tr>
+          <td style="white-space:nowrap">
+            <b>Code</b>
+          </td>
+          <td>
+            <b>Display</b>
+          </td>
+          <td>
+            <b>Definition</b>
+          </td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">LDLP<a name="v2-0373-LDLP"> </a></td>
+          <td>LDL Precipitation</td>
+          <td>LDL Precipitation</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">RECA<a name="v2-0373-RECA"> </a></td>
+          <td>Recalification</td>
+          <td>Recalification</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">DEFB<a name="v2-0373-DEFB"> </a></td>
+          <td>Defibrination</td>
+          <td>Defibrination</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">ACID<a name="v2-0373-ACID"> </a></td>
+          <td>Acidification</td>
+          <td>Acidification</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">NEUT<a name="v2-0373-NEUT"> </a></td>
+          <td>Neutralization</td>
+          <td>Neutralization</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">ALK<a name="v2-0373-ALK"> </a></td>
+          <td>Alkalization</td>
+          <td>Alkalization</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">FILT<a name="v2-0373-FILT"> </a></td>
+          <td>Filtration</td>
+          <td>Filtration</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">UFIL<a name="v2-0373-UFIL"> </a></td>
+          <td>Ultrafiltration</td>
+          <td>Ultrafiltration</td>
+        </tr>
+      </table>
+    </div>
+  </text>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
+    <valueCode value="oo"/>
+  </extension>
+  <url value="http://terminology.hl7.org/CodeSystem/v2-0373"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.18.231"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="Treatment"/>
+  <title value="treatment"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Code system of concepts that identify the specimen treatment performed during lab processing.  Used in the Interaction Specimen Container Detail (SAC) segment in HL7 Version 2.x messaging."/>
+  <purpose value="Underlying Master Code System for V2 table 0373 (Treatment)"/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://terminology.hl7.org/ValueSet/v2-0373"/>
+  <hierarchyMeaning value="is-a"/>
+  <compositional value="false"/>
+  <versionNeeded value="false"/>
+  <content value="complete"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#status"/>
+    <description value="Status of the concept"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="deprecated"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated"/>
+    <description value="Version of HL7 in which the code was deprecated"/>
+    <type value="code"/>
+  </property>
+  <concept id="3800">
+    <code value="LDLP"/>
+    <display value="LDL Precipitation"/>
+    <definition value="LDL Precipitation"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3801">
+    <code value="RECA"/>
+    <display value="Recalification"/>
+    <definition value="Recalification"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3802">
+    <code value="DEFB"/>
+    <display value="Defibrination"/>
+    <definition value="Defibrination"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3803">
+    <code value="ACID"/>
+    <display value="Acidification"/>
+    <definition value="Acidification"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3804">
+    <code value="NEUT"/>
+    <display value="Neutralization"/>
+    <definition value="Neutralization"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3805">
+    <code value="ALK"/>
+    <display value="Alkalization"/>
+    <definition value="Alkalization"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3806">
+    <code value="FILT"/>
+    <display value="Filtration"/>
+    <definition value="Filtration"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="3807">
+    <code value="UFIL"/>
+    <display value="Ultrafiltration"/>
+    <definition value="Ultrafiltration"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+</CodeSystem>

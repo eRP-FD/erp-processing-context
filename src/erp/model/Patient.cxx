@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Reference.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>
 #include <utility>

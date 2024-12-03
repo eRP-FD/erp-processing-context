@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/UrlHelper.hxx"
+#include "shared/util/UrlHelper.hxx"
 
-#include "erp/util/ErpException.hxx"
+#include "shared/util/ErpException.hxx"
 
 #include <gtest/gtest.h>
 

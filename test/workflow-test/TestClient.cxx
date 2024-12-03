@@ -6,7 +6,8 @@
  */
 
 #include "TestClient.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/Expect.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 

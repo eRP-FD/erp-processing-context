@@ -7,9 +7,9 @@
 
 #include "fhirtools/util/SaxHandler.hxx"
 #include "VaListHelper.hxx"
-#include "erp/util/ExceptionWrapper.hxx"
-#include "erp/util/String.hxx"
-#include "erp/xml/XmlMemory.hxx"
+#include "shared/util/ExceptionWrapper.hxx"
+#include "shared/util/String.hxx"
+#include "fhirtools/util/XmlMemory.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/util/Gsl.hxx"
 

@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="cs-merkzeichen-de"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablecodesystem"/>
+  </meta>
+  <url value="http://fhir.de/CodeSystem/merkzeichen-de"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:1.2.276.0.76.5.528"/>
+  </identifier>
+  <version value="1.5.0"/>
+  <name value="Merkzeichen"/>
+  <title value="Deutsche Merkzeichen auf dem Behindertenausweis"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Deutsche Merkzeichen, wie sie auf dem Behindertenausweis verwendet werden"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://fhir.de/ValueSet/merkzeichen-de"/>
+  <content value="complete"/>
+  <count value="14"/>
+  <concept>
+    <code value="G"/>
+    <display value="erhebliche Gehbehinderung"/>
+    <definition value="erhebliche Gehbehinderung"/>
+  </concept>
+  <concept>
+    <code value="aG"/>
+    <display value="außergewöhnliche Gehbehinderung"/>
+    <definition value="außergewöhnliche Gehbehinderung"/>
+  </concept>
+  <concept>
+    <code value="H"/>
+    <display value="Hilflosigkeit"/>
+    <definition value="Hilflosigkeit"/>
+  </concept>
+  <concept>
+    <code value="B"/>
+    <display value="Begleitperson"/>
+    <definition value="Begleitperson"/>
+  </concept>
+  <concept>
+    <code value="RF"/>
+    <display value="Ermäßigung des Rundfunkbeitrags"/>
+    <definition value="Ermäßigung des Rundfunkbeitrags"/>
+  </concept>
+  <concept>
+    <code value="Gl"/>
+    <display value="Gehörlosigkeit"/>
+    <definition value="Gehörlosigkeit"/>
+  </concept>
+  <concept>
+    <code value="Bl"/>
+    <display value="Blindheit"/>
+    <definition value="Blindheit"/>
+  </concept>
+  <concept>
+    <code value="TBl"/>
+    <display value="Taubblindheit"/>
+    <definition value="Taubblindheit"/>
+  </concept>
+  <concept>
+    <code value="Kl"/>
+    <display value="1. Wagenklasse in Zügen der Deutschen Bahn"/>
+    <definition value="1. Wagenklasse in Zügen der Deutschen Bahn"/>
+  </concept>
+  <concept>
+    <code value="KB"/>
+    <display value="Kriegsbeschädigt"/>
+    <definition value="Kriegsbeschädigt"/>
+  </concept>
+  <concept>
+    <code value="VB"/>
+    <display value="Versorgungsberechtigte nach dem Soldatenversorgungsgesetz, dem Opferentschädigungsgesetz u. ä."/>
+    <definition value="Versorgungsberechtigte nach dem Soldatenversorgungsgesetz, dem Opferentschädigungsgesetz u. ä."/>
+  </concept>
+  <concept>
+    <code value="EB"/>
+    <display value="Entschädigungsberechtigte nach dem Bundesentschädigungsgesetz"/>
+    <definition value="Entschädigungsberechtigte nach dem Bundesentschädigungsgesetz"/>
+  </concept>
+  <concept>
+    <code value="HS"/>
+    <display value="Hochgradig Sehbehindert (Mecklenburg-Vorpommern)"/>
+    <definition value="Hochgradig Sehbehindert (Mecklenburg-Vorpommern)"/>
+  </concept>
+  <concept>
+    <code value="T"/>
+    <display value="Teilnahmeberechtigung am Sonderfahrdienst (Berlin)"/>
+    <definition value="Teilnahmeberechtigung am Sonderfahrdienst (Berlin)"/>
+  </concept>
+</CodeSystem>

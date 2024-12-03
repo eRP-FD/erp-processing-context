@@ -8,15 +8,15 @@
 #include "test/util/ServerTestBase.hxx"
 
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 
 
 namespace {
     class ErrorHandler : public RequestHandlerInterface
     {
     public:
-        void handleRequest (SessionContext& session) override
+        void handleRequest (BaseSessionContext& session) override
         {
             const auto requestedResponseStatus = std::stoi(session.request.getPathParameter("status").value_or("200"));
             throw ErpException("test", fromBoostBeastStatus(gsl::narrow<uint32_t>(requestedResponseStatus)));

@@ -6,16 +6,16 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemGetHandler.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/ErpRequirements.hxx"
 #include "erp/model/AbgabedatenPkvBundle.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/util/Base64.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/TLog.hxx"
 
 
 namespace

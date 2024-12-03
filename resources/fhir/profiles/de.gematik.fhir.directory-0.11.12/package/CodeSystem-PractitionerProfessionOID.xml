@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PractitionerProfessionOID"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/PractitionerProfessionOID"/>
+  <version value="0.11.12"/>
+  <name value="PractitionerProfessionOID"/>
+  <title value="CodeSystem for Practitioner's ProfessionOID"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The codes for Practitioners based on Profession OIDs defined in [gemSpec_OID](https://fachportal.gematik.de/fachportal-import/files/gemSpec_OID_V3.10.0.pdf)"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="37"/>
+  <concept>
+    <code value="1.2.276.0.76.4.30"/>
+    <display value="Ärztin/Arzt"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.31"/>
+    <display value="Zahnärztin/Zahnarzt"/>
+    <definition value="..."/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.32"/>
+    <display value="Apotheker/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.33"/>
+    <display value="Apothekerassistent/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.34"/>
+    <display value="Pharmazieingenieur/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.35"/>
+    <display value="pharmazeutisch-technische/-r Assistent/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.36"/>
+    <display value="pharmazeutisch-kaufmännische/-r Angestellte"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.37"/>
+    <display value="Apothekenhelfer/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.38"/>
+    <display value="Apothekenassistent/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.39"/>
+    <display value="Pharmazeutische/-r Assistent/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.40"/>
+    <display value="Apothekenfacharbeiter/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.41"/>
+    <display value="Pharmaziepraktikant/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.42"/>
+    <display value="Stud.pharm. oder Famulant/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.43"/>
+    <display value="PTA-Praktikant/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.44"/>
+    <display value="PKA Auszubildende/-r"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.45"/>
+    <display value="Psychotherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.46"/>
+    <display value="Psychologische/-r Psychotherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.47"/>
+    <display value="Kinder- und Jugendlichenpsychotherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.48"/>
+    <display value="Rettungsassistent/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.49"/>
+    <display value="Versicherte/-r"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.178"/>
+    <display value="Notfallsanitäter/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.232"/>
+    <display value="Gesundheits- und Krankenpfleger/-in, Gesundheits- und Kinderkrankenpfleger/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.233"/>
+    <display value="Altenpfleger/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.234"/>
+    <display value="Pflegefachfrauen und Pflegefachmänner"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.235"/>
+    <display value="Hebamme"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.236"/>
+    <display value="Physiotherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.237"/>
+    <display value="Augenoptiker/-in und Optometrist/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.238"/>
+    <display value="Hörakustiker/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.239"/>
+    <display value="Orthopädieschuhmacher/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.240"/>
+    <display value="Orthopädietechniker/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.241"/>
+    <display value="Zahntechniker/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.274"/>
+    <display value="Ergotherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.275"/>
+    <display value="Logopäde/Logopädin"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.276"/>
+    <display value="Podologe/Podologin"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.277"/>
+    <display value="Ernährungstherapeut/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.305"/>
+    <display value="Orthopädieschuhmacher/-in und Orthopädietechniker/-in"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.308"/>
+    <display value="Augenoptiker/-in, Optometrist/-in und Hörakustiker/-in"/>
+  </concept>
+</CodeSystem>

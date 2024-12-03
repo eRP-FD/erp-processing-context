@@ -3,7 +3,7 @@
 #ifndef FHIRTOOLS_FHIRVERSION
 #define FHIRTOOLS_FHIRVERSION
 
-#include "erp/util/Version.hxx"
+#include "shared/util/Version.hxx"
 
 #include <iosfwd>
 #include <optional>

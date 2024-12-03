@@ -5,16 +5,24 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "erp/service/chargeitem/ChargeItemPostHandler.hxx"
-#include "erp/tsl/OcspHelper.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Demangle.hxx"
+#include "shared/tsl/OcspHelper.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Demangle.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "test/util/CryptoHelper.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/erp/tsl/TslTestHelper.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <gtest/gtest.h>
 
 using OperationType = ResourceTemplates::ChargeItemOptions::OperationType;
@@ -380,10 +388,8 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(re
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
     auto dispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
-    dispenseBundleXml = regex_replace(
-        dispenseBundleXml,
-        std::regex{davDispenseItemProfile + '|' + to_string(ResourceTemplates::Versions::DAV_PKV_current())},
-        davDispenseItemProfile + "|1.1");
+    boost::replace_all(dispenseBundleXml, davDispenseItemProfile + '|' + to_string(ResourceTemplates::Versions::DAV_PKV_current()),
+        davDispenseItemProfile + "|0.1");
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
                                         std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
@@ -402,7 +408,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(re
     std::optional<model::ChargeItem> resultChargeItem;
     ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml,
                                                        inputChargeItem.prescriptionId(), referencedTask.secret(),
-                                                       HttpStatus::BadRequest, "FHIR-Validation error"));
+                                                       HttpStatus::BadRequest, "parsing / validation error"));
 }
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(readability-function-cognitive-complexity)
@@ -452,7 +458,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLIN
     std::optional<model::ChargeItem> resultChargeItem;
     ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(
         resultChargeItem, mServiceContext, jwtPharmacy, inputChargeItem.serializeToXmlString(),
-        inputChargeItem.prescriptionId(), referencedTask.secret(), HttpStatus::BadRequest, "FHIR-Validation error"));
+        inputChargeItem.prescriptionId(), referencedTask.secret(), HttpStatus::BadRequest, "parsing / validation error"));
 }
 
 TEST_F(ChargeItemPostHandlerTest, PostNonPkvFails)

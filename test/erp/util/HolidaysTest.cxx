@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Holidays.hxx"
+#include "shared/util/Holidays.hxx"
 
 #include <date/date.h>
 #include <gtest/gtest.h>
 
-#include "erp/util/Environment.hxx"
+#include "shared/util/Environment.hxx"
 
 class HolidaysTest : public testing::Test
 {

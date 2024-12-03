@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKANDPRODUCTIONTESTBASE_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKANDPRODUCTIONTESTBASE_HXX
 
-#include "erp/tpm/Tpm.hxx"
+#include "shared/tpm/Tpm.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

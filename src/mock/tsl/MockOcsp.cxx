@@ -6,15 +6,15 @@
  */
 
 #include "MockOcsp.hxx"
-#include "erp/crypto/OpenSslHelper.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/tsl/X509Certificate.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/tsl/X509Certificate.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "fhirtools/util/Gsl.hxx"
-#include "erp/util/OpenSsl.hxx"
-#include "erp/util/SafeString.hxx"
+#include "shared/crypto/OpenSsl.hxx"
+#include "shared/util/SafeString.hxx"
 #include "mock/util/MockConfiguration.hxx"
 
 #include <functional>

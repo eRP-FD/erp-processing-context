@@ -5,15 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/enrolment/EnrolmentHelper.hxx"
+#include "shared/enrolment/EnrolmentHelper.hxx"
 
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/HsmIdentity.hxx"
-#include "erp/hsm/HsmSession.hxx"
-#include "erp/hsm/production/HsmProductionClient.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/HsmIdentity.hxx"
+#include "shared/hsm/HsmSession.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 #include "mock/hsm/MockBlobCache.hxx"

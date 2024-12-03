@@ -7,9 +7,9 @@
 
 #include "erp/tee/OuterTeeResponse.hxx"
 
-#include "erp/common/MimeType.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/RandomSource.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/RandomSource.hxx"
 
 
 OuterTeeResponse::OuterTeeResponse (const std::string& a, const SafeString& aesKey)

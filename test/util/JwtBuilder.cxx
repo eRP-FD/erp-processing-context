@@ -7,9 +7,9 @@
 
 #include "test/util/JwtBuilder.hxx"
 
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/Base64.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "ResourceManager.hxx"
 

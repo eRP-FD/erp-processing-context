@@ -7,10 +7,10 @@
 
 #include "erp/tee/InnerTeeRequest.hxx"
 
-#include "erp/beast/BoostBeastHeader.hxx"
-#include "erp/beast/BoostBeastStringReader.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/beast/BoostBeastHeader.hxx"
+#include "shared/beast/BoostBeastStringReader.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Expect.hxx"
 
 
 struct InnerTeeRequest::Data

@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/common/Header.hxx"
+#include "shared/network/message/Header.hxx"
 #include "erp/tee/InnerTeeResponse.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 #include <gtest/gtest.h>
 

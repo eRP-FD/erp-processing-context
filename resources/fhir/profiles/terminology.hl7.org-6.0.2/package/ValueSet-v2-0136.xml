@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="v2-0136"/>
+  <text>
+    <status value="extensions"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: ValueSet v2-0136</b>
+      </p>
+      <a name="v2-0136"> </a>
+      <a name="hcv2-0136"> </a>
+      <a name="v2-0136-en-US"> </a>
+      <ul>
+        <li>Include these codes as defined in <a href="CodeSystem-v2-0532.html"><code>http://terminology.hl7.org/CodeSystem/v2-0532</code></a> version <code>2.0.0</code><table class="none"><tr><td style="white-space:nowrap"><b>Code</b></td><td><b>Display</b></td><td><b>Definition</b></td></tr><tr><td><a href="CodeSystem-v2-0532.html#v2-0532-Y">Y</a></td><td style="color: #cccccc">Yes</td><td>Yes</td></tr><tr><td><a href="CodeSystem-v2-0532.html#v2-0532-N">N</a></td><td style="color: #cccccc">No</td><td>No</td></tr></table></li>
+      </ul>
+    </div>
+  </text>
+  <url value="http://terminology.hl7.org/ValueSet/v2-0136"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.21.72"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="Hl7VSYesNoIndicator"/>
+  <title value="hl7VS-yes-no-Indicator"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Codes specifying either Yes or No used in fields containing binary answers generally user-specified."/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <compose>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/v2-0532"/>
+      <version value="2.0.0"/>
+      <concept>
+        <code value="Y"/>
+      </concept>
+      <concept>
+        <code value="N"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

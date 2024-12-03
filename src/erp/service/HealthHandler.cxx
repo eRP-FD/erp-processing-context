@@ -7,7 +7,7 @@
 
 #include "erp/service/HealthHandler.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/response/ResponseBuilder.hxx"
+#include "shared/server/response/ResponseBuilder.hxx"
 #include "erp/util/health/HealthCheck.hxx"
 
 

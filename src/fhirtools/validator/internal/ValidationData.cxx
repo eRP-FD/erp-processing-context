@@ -27,6 +27,13 @@ void fhirtools::ValidationData::add(FhirConstraint constraint, std::string eleme
     mResult.add(std::move(constraint), std::move(elementFullPath), profile);
 }
 
+void ValidationData::addInfo(ValidationAdditionalInfo::Kind kind, const std::shared_ptr<const Element>& element,
+                             const std::optional<std::string>& elementFullPath, const std::string& typeId,
+                             const FhirConstraint::Key& constraintKey)
+{
+    mResult.addInfo(kind, element, elementFullPath, typeId, constraintKey);
+}
+
 void fhirtools::ValidationData::add(fhirtools::Severity severity, std::string message, std::string elementFullPath,
                                     const fhirtools::FhirStructureDefinition* profile)
 {

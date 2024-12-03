@@ -8,10 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEE_INNERTEEREQUEST_HXX
 #define ERP_PROCESSING_CONTEXT_TEE_INNERTEEREQUEST_HXX
 
-#include "erp/crypto/Jwt.hxx"
-#include "erp/util/SafeString.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/util/SafeString.hxx"
 
-#include "erp/common/Header.hxx"
+#include "shared/network/message/Header.hxx"
 
 #include <memory>
 #include <string>

@@ -5,10 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
+#include "erp/database/DatabaseFrontend.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/util/CryptoHelper.hxx"
+#include "test/util/ErpMacros.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
 class ActivateTaskTest : public EndpointHandlerTest
@@ -69,6 +76,7 @@ public:
 
         ActivateTaskHandler handler({});
         ServerRequest request{serverRequest(taskJson, kbvBundleXml, args.signingTime)};
+        request.setAccessToken(mJwtBuilder->makeJwtArzt());
         ServerResponse serverResponse;
         AccessLog accessLog;
         SessionContext sessionContext{serviceContext, request, serverResponse, accessLog};
@@ -529,8 +537,15 @@ TEST_F(ActivateTaskTest, authoredOnReference)
 
     // authoredOn is in DARREICHUNGSFORM 1.13 period (yesterday)
     {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = taskId, .authoredOn = model::Timestamp{yesterday}, .darreichungsfrom = "IID"});
+        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+            .prescriptionId = taskId,
+            .authoredOn = model::Timestamp{yesterday},
+            .medicationOptions =
+                {
+                    .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                    .darreichungsform = "IID",
+                },
+        });
         ASSERT_NO_FATAL_FAILURE(
             checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
                               {.expectedStatus = HttpStatus::BadRequest, .signingTime = model::Timestamp{yesterday}}));
@@ -538,8 +553,15 @@ TEST_F(ActivateTaskTest, authoredOnReference)
 
     // authoredOn is in DARREICHUNGSFORM 1.14 period (yesterday)
     {
-        const auto kbvBundleXml =
-            ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .authoredOn = model::Timestamp{today}, .darreichungsfrom = "IID"});
+        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+            .prescriptionId = taskId,
+            .authoredOn = model::Timestamp{today},
+            .medicationOptions =
+                {
+                    .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                    .darreichungsform = "IID",
+                },
+        });
         ASSERT_NO_FATAL_FAILURE(
             checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = model::Timestamp{today}}));
     }
@@ -595,8 +617,9 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
         // see ERP-13187:
-        EXPECT_EQ(ex.diagnostics().value(), "Bundle: error: Unknown profile: "
-                                            "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0; ");
+        EXPECT_EQ(ex.diagnostics().value(),
+                  "invalid profile https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0"
+                  " must be one of: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0");
     }
     catch (...)
     {
@@ -823,8 +846,15 @@ TEST_F(ActivateTaskTest, failInvalidPZNChecksum)
     auto signingTime = model::Timestamp::now();
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
-    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = taskId, .authoredOn = signingTime, .kvnr = kvnr.id(), .pzn = pzn});
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = taskId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr.id(),
+        .medicationOptions{
+            .version = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+            .pzn = pzn,
+        },
+    });
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
 
@@ -844,8 +874,15 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
     auto signingTime = model::Timestamp::now();
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
-    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = taskId, .authoredOn = signingTime, .kvnr = kvnr.id(), .pzn = shortPZN});
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = taskId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr.id(),
+        .medicationOptions{
+            .version = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+            .pzn = shortPZN,
+        },
+    });
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
 
@@ -909,8 +946,14 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
-    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = GetParam().darreichungsfrom});
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(ResourceTemplates::KbvBundleOptions{
+        .prescriptionId = taskId,
+        .medicationOptions =
+            {
+                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .darreichungsform = GetParam().darreichungsfrom,
+            },
+    });
 
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(
@@ -963,8 +1006,14 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformValid)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
-    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        ResourceTemplates::KbvBundleOptions{.prescriptionId = taskId, .darreichungsfrom = GetParam().darreichungsfrom});
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(ResourceTemplates::KbvBundleOptions{
+        .prescriptionId = taskId,
+        .medicationOptions =
+            {
+                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .darreichungsform = GetParam().darreichungsfrom,
+            },
+    });
 
     ASSERT_NO_FATAL_FAILURE(
         checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",

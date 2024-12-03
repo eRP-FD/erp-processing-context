@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="DokumentenWarnhinweise"/>
+  <url value="http://ihe-d.de/CodeSystems/DokumentenWarnhinweise"/>
+  <version value="2021-07-06T21:19:41"/>
+  <name value="DokumentenWarnhinweise"/>
+  <title value="Dokumenten Warnhinweise"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="4"/>
+  <concept>
+    <code value="H1"/>
+    <display value="vom Patienten mitgebracht"/>
+    <definition value="Dokumente, die der Patient zu seinem Arzt oder in die Klinik mitgebracht hat und die dort eingescannt wurden. Die Dokumente können von Medizinern und anderen Leistungserbringern, von anderen Autoren wie z.B. Behörden/Krankenkassen/Schulen oder vom Patienten selbst erstellt worden sein."/>
+  </concept>
+  <concept>
+    <code value="H2"/>
+    <display value="noch nicht mit Patient besprochen"/>
+    <definition value="Der Hinweis gibt Auskunft darüber, ob das Dokument zum Zeitpunkt des Einstellens bereits mit dem Patienten besprochen wurde. Dies kann genutzt werden um zu verhindern, dass der Patient sensible Informationen, wie die Diagnose einer unheilbaren Krankheit, aus einem Dokument anstatt von seinem Arzt erfährt. Dabei liegt der Fokus auf der Frage, ob das Dokument noch mit dem Patienten besprochen werden muss und nicht wer es noch mit dem Patienten besprechen muss. Somit können auch einrichtungsübergreifende Szenarien unterstützt werden, z.B. wenn die Besprechung des Befundes nicht in der Hand des Erzeugers liegt."/>
+  </concept>
+  <concept>
+    <code value="H3"/>
+    <display value="eventuell veraltete Daten"/>
+    <definition value="Der Hinweis zeigt an, dass es sich eventuell um veraltete Daten handelt. Dieses Kennzeichen wird üblicherweise nachträglich zu schon registrierten Dokumenten hinzugefügt. Im Gegensatz zum availabilityStatus &quot;Deprecated&quot; ist es unklar ob das Dokument wirklich veraltet ist oder nicht. Daher handelt es sich hier nur um einen Hinweis für den Empfänger, der üblicherweise keine automatischen Auswirkungen auf Berechtigungen, Speicherfristen, etc. hat."/>
+  </concept>
+  <concept>
+    <code value="H4"/>
+    <display value="vorläufiges Dokument"/>
+    <definition value="Der Hinweis zeigt an, dass es sich um ein vorläufiges Dokument handelt. IHE XDS sieht hierfür keinen eigenen Wert im availabilityStatus Attribut vor, daher wird dieses Konzept ausschließlich über diesen eventCode kommuniziert."/>
+  </concept>
+</CodeSystem>

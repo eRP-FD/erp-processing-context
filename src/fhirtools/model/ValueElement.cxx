@@ -87,6 +87,15 @@ std::vector<std::string> ValueElement::subElementNames() const
     return result;
 }
 
+std::string fhirtools::ValueElement::asRaw() const
+{
+    const auto& attributeMap = mValue->attributes();
+    auto valueIter = attributeMap.find("value");
+    Expect(valueIter != attributeMap.end(), "Missing value attribute: " + mValue->elementId());
+    return valueIter->second;
+}
+
+
 Element::QuantityType ValueElement::asQuantity() const
 {
     return asPrimitiveElement()->asQuantity();
@@ -161,9 +170,7 @@ std::string ValueElement::resourceType() const
 std::shared_ptr<PrimitiveElement> ValueElement::asPrimitiveElement() const
 {
     const auto& attributeMap = mValue->attributes();
-    auto valueIter = attributeMap.find("value");
-    Expect(valueIter != attributeMap.end(), "Missing value attribute: " + mValue->elementId());
-    const auto& value = valueIter->second;
+    const auto& value = asRaw();
     auto elementType = type();
     auto unitIter = attributeMap.find("unit");
     std::string unit = unitIter != attributeMap.end() ? unitIter->second : std::string{};

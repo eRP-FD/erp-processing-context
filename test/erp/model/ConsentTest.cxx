@@ -6,11 +6,11 @@
  */
 
 #include "test/util/ResourceManager.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/ModelException.hxx"
-#include "erp/util/Uuid.hxx"
-#include "erp/util/String.hxx"
+#include "shared/model/ModelException.hxx"
+#include "shared/util/Uuid.hxx"
+#include "shared/util/String.hxx"
 
 #include "test/util/StaticData.hxx"
 

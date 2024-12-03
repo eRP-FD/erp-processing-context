@@ -16,10 +16,10 @@
 #include <vector>
 #include <map>
 
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/hsm/BlobDatabase.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
+#include "shared/hsm/BlobDatabase.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Uuid.hxx"
 
 class MockAccountTable;
 class UrlArguments;

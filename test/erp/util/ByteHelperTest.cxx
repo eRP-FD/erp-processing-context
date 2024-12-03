@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 #include <gtest/gtest.h>
 #include <boost/algorithm/string.hpp>

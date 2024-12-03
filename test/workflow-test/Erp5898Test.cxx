@@ -5,11 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/client/request/ClientRequestWriter.hxx"
-#include "erp/client/request/ValidatedClientRequest.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/network/client/request/ClientRequestWriter.hxx"
+
+#include "shared/network/client/request/ValidatedClientRequest.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 

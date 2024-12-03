@@ -33,8 +33,6 @@ protected:
 
     UrlArguments searchForSent (const std::string& sentString);
     UrlArguments searchForReceived (const std::string& receivedString);
-
-    std::string taskFile() const;
 };
 
 #endif //ERP_PROCESSING_CONTEXT_TEST_ERP_DATABASE_POSTGRESDATABASECOMMUNICATIONTEST_HXX

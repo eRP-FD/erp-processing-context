@@ -7,8 +7,8 @@
 
 #include "test/util/CertificateDirLoader.h"
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "ResourceManager.hxx"
 
 std::list<Certificate> CertificateDirLoader::loadDir(const std::filesystem::path& dir)

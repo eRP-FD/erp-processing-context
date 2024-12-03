@@ -1,16 +1,15 @@
 <MedicationDispense xmlns="http://hl7.org/fhir">
-    <id value="3465270a-11e7-4bbf-ae53-378f9cc52747" />
+    <id value="###MEDICATION_DISPENSE_ID###" />
     <meta>
         <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.3" />
-    </meta>
-    <contained>###MEDICATION###</contained>
+    </meta>###CONTAINED_MEDICATION###
     <identifier>
         <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
         <value value="###PRESCRIPTION_ID###" />
     </identifier>
     <status value="completed" />
     <medicationReference>
-        <reference value="#001413e4-a5e9-48da-9b07-c17bab476407" />
+        <reference value="###MEDICATION_REFERENCE###" />
     </medicationReference>
     <subject>
         <identifier>

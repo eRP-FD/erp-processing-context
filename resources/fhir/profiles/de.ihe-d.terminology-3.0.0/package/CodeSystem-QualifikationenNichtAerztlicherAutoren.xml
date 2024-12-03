@@ -1,0 +1,700 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="QualifikationenNichtAerztlicherAutoren"/>
+  <url value="http://ihe-d.de/CodeSystems/QualifikationenNichtAerztlicherAutoren"/>
+  <version value="2021-10-15T12:13:26"/>
+  <name value="QualifikationenNichtAerztlicherAutoren"/>
+  <title value="Qualifikationen Nicht Aerztlicher Autoren"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="171"/>
+  <concept>
+    <code value="1"/>
+    <display value="Gesundheits- Sozial-, Sportmanagement"/>
+  </concept>
+  <concept>
+    <code value="2"/>
+    <display value="Arzthilfe, Praxisorganisation, -verwaltung"/>
+  </concept>
+  <concept>
+    <code value="179"/>
+    <display value="Physician Assistant"/>
+  </concept>
+  <concept>
+    <code value="3"/>
+    <display value="Kaufmann/-frau - Gesundheitswesen"/>
+  </concept>
+  <concept>
+    <code value="4"/>
+    <display value="Medizinischer Fachangestellter"/>
+  </concept>
+  <concept>
+    <code value="6"/>
+    <display value="Zahnmedizinischer Fachangestellter"/>
+  </concept>
+  <concept>
+    <code value="7"/>
+    <display value="Arztsekretär"/>
+  </concept>
+  <concept>
+    <code value="8"/>
+    <display value="Sozial-, Gesundheitsmanagement"/>
+  </concept>
+  <concept>
+    <code value="9"/>
+    <display value="Gesundheitsaufseher / Hygienekontrolleur"/>
+  </concept>
+  <concept>
+    <code value="10"/>
+    <display value="Assistent Gesundheits- und Sozialwesen"/>
+  </concept>
+  <concept>
+    <code value="11"/>
+    <display value="Beamte Sozialversicherung"/>
+  </concept>
+  <concept>
+    <code value="12"/>
+    <display value="Beamte Sozialverwaltung"/>
+  </concept>
+  <concept>
+    <code value="13"/>
+    <display value="Betriebswirt  Sozialversicherung"/>
+  </concept>
+  <concept>
+    <code value="14"/>
+    <display value="Gesundheitsmanager"/>
+  </concept>
+  <concept>
+    <code value="15"/>
+    <display value="Sozialökonom, -wirt"/>
+  </concept>
+  <concept>
+    <code value="16"/>
+    <display value="Sozialversicherungsfachangestellte"/>
+  </concept>
+  <concept>
+    <code value="17"/>
+    <display value="Sportmanagement"/>
+  </concept>
+  <concept>
+    <code value="18"/>
+    <display value="Sportassistent"/>
+  </concept>
+  <concept>
+    <code value="19"/>
+    <display value="Fachwirt Fitness"/>
+  </concept>
+  <concept>
+    <code value="20"/>
+    <display value="Sport- und Fitnesskaufmann"/>
+  </concept>
+  <concept>
+    <code value="21"/>
+    <display value="Sportmanager, Sportökonom"/>
+  </concept>
+  <concept>
+    <code value="22"/>
+    <display value="nichtärztliche medizinische Analyse, Beratung, Pflege, Therapie"/>
+  </concept>
+  <concept>
+    <code value="23"/>
+    <display value="Gesundheitsberatung, -förderung"/>
+  </concept>
+  <concept>
+    <code value="24"/>
+    <display value="Assistenten für Gesundheitstourismus,  -prophylaxe"/>
+  </concept>
+  <concept>
+    <code value="25"/>
+    <display value="Diätassistent"/>
+  </concept>
+  <concept>
+    <code value="26"/>
+    <display value="Gesundheitsförderer, -pädagoge"/>
+  </concept>
+  <concept>
+    <code value="27"/>
+    <display value="Gesundheitswissenschaftler"/>
+  </concept>
+  <concept>
+    <code value="28"/>
+    <display value="Oekotrophologe"/>
+  </concept>
+  <concept>
+    <code value="29"/>
+    <display value="Tai-Chi-Chuan- und Qigong-Lehrer"/>
+  </concept>
+  <concept>
+    <code value="30"/>
+    <display value="Yogalehrer"/>
+  </concept>
+  <concept>
+    <code value="31"/>
+    <display value="Sportfachmann"/>
+  </concept>
+  <concept>
+    <code value="32"/>
+    <display value="Sportwissenschaftler"/>
+  </concept>
+  <concept>
+    <code value="33"/>
+    <display value="Kranken-, Altenpflege, Geburtshilfe"/>
+  </concept>
+  <concept>
+    <code value="34"/>
+    <display value="Altenpflegehelfer"/>
+  </concept>
+  <concept>
+    <code value="35"/>
+    <display value="Altenpfleger"/>
+  </concept>
+  <concept>
+    <code value="36"/>
+    <display value="Fachkraft Pflegeassistenz"/>
+  </concept>
+  <concept>
+    <code value="37"/>
+    <display value="Gesundheits- und Kinderkrankenpfleger"/>
+  </concept>
+  <concept>
+    <code value="38"/>
+    <display value="Gesundheits- und Krankenpflegehelfer"/>
+  </concept>
+  <concept>
+    <code value="39"/>
+    <display value="Gesundheits- und Krankenpfleger"/>
+  </concept>
+  <concept>
+    <code value="40"/>
+    <display value="Haus- und Familienpfleger"/>
+  </concept>
+  <concept>
+    <code value="41"/>
+    <display value="Hebamme / Entbindungspfleger"/>
+  </concept>
+  <concept>
+    <code value="42"/>
+    <display value="Heilerziehungspfleger"/>
+  </concept>
+  <concept>
+    <code value="43"/>
+    <display value="Helfer Altenpflege"/>
+  </concept>
+  <concept>
+    <code value="44"/>
+    <display value="Helfer stationäre Krankenpflege"/>
+  </concept>
+  <concept>
+    <code value="45"/>
+    <display value="Heilerziehungspflegehelfer"/>
+  </concept>
+  <concept>
+    <code value="46"/>
+    <display value="Pflegewissenschaftler"/>
+  </concept>
+  <concept>
+    <code value="175"/>
+    <display value="Fachgesundheits- und krankenpfleger für Intensivpflege und Anästhesie"/>
+  </concept>
+  <concept>
+    <code value="176"/>
+    <display value="Fachgesundheits- und krankenpfleger im Operations-/Endoskopiedienst"/>
+  </concept>
+  <concept>
+    <code value="177"/>
+    <display value="Fachgesundheits- und krankenpfleger für Hygiene"/>
+  </concept>
+  <concept>
+    <code value="178"/>
+    <display value="Fachgesundheits- und krankenpfleger für Palliativ- und Hospizpflege"/>
+  </concept>
+  <concept>
+    <code value="186"/>
+    <display value="Pflegefachmann/Pflegefachfrau"/>
+  </concept>
+  <concept>
+    <code value="187"/>
+    <display value="Fachgesundheits- und krankenpfleger für Onkologie"/>
+  </concept>
+  <concept>
+    <code value="188"/>
+    <display value="Fachgesundheits- und krankenpfleger für Psychiatrie"/>
+  </concept>
+  <concept>
+    <code value="47"/>
+    <display value="Nichtärztliche Behandlung, Therapie (außer Psychotherapie)"/>
+  </concept>
+  <concept>
+    <code value="48"/>
+    <display value="Akademischer Sprachtherapeut"/>
+  </concept>
+  <concept>
+    <code value="49"/>
+    <display value="Atem-, Sprech- und Stimmlehrer"/>
+  </concept>
+  <concept>
+    <code value="50"/>
+    <display value="Ergotherapeut"/>
+  </concept>
+  <concept>
+    <code value="51"/>
+    <display value="Fachangestellter für Bäderbetriebe"/>
+  </concept>
+  <concept>
+    <code value="52"/>
+    <display value="Heilpraktiker"/>
+  </concept>
+  <concept>
+    <code value="53"/>
+    <display value="Klinischer Linguist"/>
+  </concept>
+  <concept>
+    <code value="54"/>
+    <display value="Kunsttherapeut"/>
+  </concept>
+  <concept>
+    <code value="55"/>
+    <display value="Logopäde"/>
+  </concept>
+  <concept>
+    <code value="56"/>
+    <display value="Masseur und medizinische Bademeister"/>
+  </concept>
+  <concept>
+    <code value="57"/>
+    <display value="Motologe"/>
+  </concept>
+  <concept>
+    <code value="58"/>
+    <display value="Musiktherapeut"/>
+  </concept>
+  <concept>
+    <code value="59"/>
+    <display value="Orthoptist"/>
+  </concept>
+  <concept>
+    <code value="60"/>
+    <display value="Physiotherapeut"/>
+  </concept>
+  <concept>
+    <code value="61"/>
+    <display value="Podologe"/>
+  </concept>
+  <concept>
+    <code value="62"/>
+    <display value="Sporttherapeut"/>
+  </concept>
+  <concept>
+    <code value="63"/>
+    <display value="Sprechwissenschaftler"/>
+  </concept>
+  <concept>
+    <code value="64"/>
+    <display value="Staatlich anerkannter Sprachtherapeut"/>
+  </concept>
+  <concept>
+    <code value="65"/>
+    <display value="Stomatherapeut"/>
+  </concept>
+  <concept>
+    <code value="66"/>
+    <display value="Tanz- und Bewegungstherapeut"/>
+  </concept>
+  <concept>
+    <code value="68"/>
+    <display value="Sozialtherapeut"/>
+  </concept>
+  <concept>
+    <code value="69"/>
+    <display value="Pharmazeutische Beratung, Pharmavertrieb"/>
+  </concept>
+  <concept>
+    <code value="70"/>
+    <display value="Apotheker /Fachapotheker"/>
+  </concept>
+  <concept>
+    <code value="71"/>
+    <display value="Pharmazeut"/>
+  </concept>
+  <concept>
+    <code value="72"/>
+    <display value="Pharmazeutisch-technischer Assistent – PTA"/>
+  </concept>
+  <concept>
+    <code value="73"/>
+    <display value="Pharmazeutisch-kaufmännischer Angestellter"/>
+  </concept>
+  <concept>
+    <code value="180"/>
+    <display value="Pharmazieingenieur"/>
+  </concept>
+  <concept>
+    <code value="181"/>
+    <display value="Apothekenassistent"/>
+    <definition value="Der Apothekenassistent hat ein zweijähriges Studium an der Ingenieurschule für Pharmazie in Leipzig absolviert."/>
+  </concept>
+  <concept>
+    <code value="182"/>
+    <display value="Apothekerassistent"/>
+    <definition value="Personen, die die pharmazeutische Vorprüfung nach der „Prüfungsordnung für Apotheker“ vom 18. Mai 1904 oder nach der „Prüfungsordnung für Apotheker“ vom 8. Dezember 1934 bestanden haben (vorgeprüfte Apothekeranwärter), dürfen eine Tätigkeit unter der Berufsbezeichnung „Apothekerassistentin“ oder „Apothekerassistent“ ausüben (§ 1 Abs. 1 ApoAnwRstG)."/>
+  </concept>
+  <concept>
+    <code value="74"/>
+    <display value="Psychologische Analyse, Beratung, Therapie"/>
+  </concept>
+  <concept>
+    <code value="75"/>
+    <display value="Gesundheits- und Rehabilitationspsychologe"/>
+  </concept>
+  <concept>
+    <code value="76"/>
+    <display value="Kinder- und Jugendlichenpsychotherapeut"/>
+  </concept>
+  <concept>
+    <code value="77"/>
+    <display value="Klinischer Psychologe"/>
+  </concept>
+  <concept>
+    <code value="78"/>
+    <display value="Kommunikationspsychologe"/>
+  </concept>
+  <concept>
+    <code value="79"/>
+    <display value="Pädagogischer Psychologe"/>
+  </concept>
+  <concept>
+    <code value="80"/>
+    <display value="Psychoanalytiker"/>
+  </concept>
+  <concept>
+    <code value="81"/>
+    <display value="Psychologe"/>
+  </concept>
+  <concept>
+    <code value="82"/>
+    <display value="Psychologischer Psychotherapeut"/>
+  </concept>
+  <concept>
+    <code value="183"/>
+    <display value="Psychotherapeut"/>
+  </concept>
+  <concept>
+    <code value="184"/>
+    <display value="Fachpsychotherapeut für Kinder und Jugendliche"/>
+  </concept>
+  <concept>
+    <code value="185"/>
+    <display value="Fachpsychotherapeut für Erwachsene"/>
+  </concept>
+  <concept>
+    <code value="83"/>
+    <display value="Sportpsychologe"/>
+  </concept>
+  <concept>
+    <code value="84"/>
+    <display value="Verkehrspsychologe"/>
+  </concept>
+  <concept>
+    <code value="85"/>
+    <display value="Wirtschaftspsychologe"/>
+  </concept>
+  <concept>
+    <code value="86"/>
+    <display value="Rettungsdienst"/>
+  </concept>
+  <concept>
+    <code value="87"/>
+    <display value="Ingenieur Rettungswesen"/>
+  </concept>
+  <concept>
+    <code value="88"/>
+    <display value="Notfallsanitäter"/>
+  </concept>
+  <concept>
+    <code value="89"/>
+    <display value="Rettungsassistent"/>
+  </concept>
+  <concept>
+    <code value="90"/>
+    <display value="Rettungshelfer"/>
+  </concept>
+  <concept>
+    <code value="91"/>
+    <display value="Rettungssanitäter"/>
+  </concept>
+  <concept>
+    <code value="92"/>
+    <display value="med. Datenverarbeitung"/>
+  </concept>
+  <concept>
+    <code value="94"/>
+    <display value="Medizinischer Dokumentar"/>
+  </concept>
+  <concept>
+    <code value="95"/>
+    <display value="Medizinischer Dokumentationsassistent"/>
+  </concept>
+  <concept>
+    <code value="173"/>
+    <display value="Fachangestellter f. Medien- und Informationsdienste - Medizinische Dokumentation"/>
+  </concept>
+  <concept>
+    <code value="174"/>
+    <display value="Medizinischer Informationsmanager"/>
+  </concept>
+  <concept>
+    <code value="96"/>
+    <display value="Soziales, Pädagogik"/>
+  </concept>
+  <concept>
+    <code value="97"/>
+    <display value="Kinderbetreuung, -erziehung"/>
+  </concept>
+  <concept>
+    <code value="98"/>
+    <display value="Pädagoge"/>
+  </concept>
+  <concept>
+    <code value="99"/>
+    <display value="Kinderdorfmutter, -vater"/>
+  </concept>
+  <concept>
+    <code value="100"/>
+    <display value="Kinderpfleger"/>
+  </concept>
+  <concept>
+    <code value="101"/>
+    <display value="Erzieher"/>
+  </concept>
+  <concept>
+    <code value="102"/>
+    <display value="Erzieher Jugend- und Heimerziehung"/>
+  </concept>
+  <concept>
+    <code value="103"/>
+    <display value="Lehrer"/>
+  </concept>
+  <concept>
+    <code value="104"/>
+    <display value="Orientierungs- und Mobilitätslehrer"/>
+  </concept>
+  <concept>
+    <code value="105"/>
+    <display value="Medien-, Kulturpädagogik"/>
+  </concept>
+  <concept>
+    <code value="106"/>
+    <display value="Musikpädagoge"/>
+  </concept>
+  <concept>
+    <code value="107"/>
+    <display value="Sozialberatung, -arbeit"/>
+  </concept>
+  <concept>
+    <code value="108"/>
+    <display value="Sozialarbeiter / Sozialpädagoge"/>
+  </concept>
+  <concept>
+    <code value="109"/>
+    <display value="Betreuungskraft / Alltagsbegleiter"/>
+  </concept>
+  <concept>
+    <code value="110"/>
+    <display value="Gerontologe"/>
+  </concept>
+  <concept>
+    <code value="111"/>
+    <display value="Psychosozialer Prozessbegleiter"/>
+  </concept>
+  <concept>
+    <code value="112"/>
+    <display value="Rehabilitationspädagoge"/>
+  </concept>
+  <concept>
+    <code value="113"/>
+    <display value="Sozialassistent"/>
+  </concept>
+  <concept>
+    <code value="114"/>
+    <display value="Seelsorge"/>
+  </concept>
+  <concept>
+    <code value="115"/>
+    <display value="Religionspädagoge"/>
+  </concept>
+  <concept>
+    <code value="116"/>
+    <display value="Gemeindehelfer, Gemeindediakon"/>
+  </concept>
+  <concept>
+    <code value="117"/>
+    <display value="Theologe"/>
+  </concept>
+  <concept>
+    <code value="118"/>
+    <display value="Medizintechnik, Laboranalyse"/>
+  </concept>
+  <concept>
+    <code value="119"/>
+    <display value="Medizin-, Orthopädie- und Rehatechnik"/>
+  </concept>
+  <concept>
+    <code value="120"/>
+    <display value="Assistent Medizinische Gerätetechnik"/>
+  </concept>
+  <concept>
+    <code value="121"/>
+    <display value="Augenoptiker"/>
+  </concept>
+  <concept>
+    <code value="122"/>
+    <display value="Hörakustiker / Hörgeräteakustiker"/>
+  </concept>
+  <concept>
+    <code value="123"/>
+    <display value="Hörgeräteakustikermeister"/>
+  </concept>
+  <concept>
+    <code value="124"/>
+    <display value="Ingenieur Augenoptik"/>
+  </concept>
+  <concept>
+    <code value="125"/>
+    <display value="Ingenieur - Hörtechnik und Audiologie"/>
+  </concept>
+  <concept>
+    <code value="126"/>
+    <display value="Ingenieur - Medizintechnik"/>
+  </concept>
+  <concept>
+    <code value="127"/>
+    <display value="Ingenieur - Orthopädie- und Rehatechnik"/>
+  </concept>
+  <concept>
+    <code value="128"/>
+    <display value="Medizinphysiker (z.B. in Strahlenmedizin)"/>
+  </concept>
+  <concept>
+    <code value="129"/>
+    <display value="Orthopädieschuhmacher"/>
+  </concept>
+  <concept>
+    <code value="130"/>
+    <display value="Orthopädietechnik-Mechaniker"/>
+  </concept>
+  <concept>
+    <code value="131"/>
+    <display value="Zahntechniker"/>
+  </concept>
+  <concept>
+    <code value="132"/>
+    <display value="Glasbläser (Fachrichtung Kunstaugen)"/>
+  </concept>
+  <concept>
+    <code value="133"/>
+    <display value="staatlich geprüfter Techniker der Fachrichtung Medizintechnik"/>
+  </concept>
+  <concept>
+    <code value="134"/>
+    <display value="Medizinisch-technische Assistenz"/>
+  </concept>
+  <concept>
+    <code value="135"/>
+    <display value="Anästhesietechnischer Assistent"/>
+  </concept>
+  <concept>
+    <code value="136"/>
+    <display value="HNO Audiologieassistent"/>
+  </concept>
+  <concept>
+    <code value="137"/>
+    <display value="Medizinisch-Technischer Assistent Funktionsdiagnostik – MTA-F"/>
+  </concept>
+  <concept>
+    <code value="138"/>
+    <display value="Medizinisch-Technischer Laboratoriumsassistent – MTA-L"/>
+  </concept>
+  <concept>
+    <code value="139"/>
+    <display value="Medizinisch-Technischer Radiologieassistent – MTA-R"/>
+  </concept>
+  <concept>
+    <code value="140"/>
+    <display value="Operationstechnischer Angestellter"/>
+  </concept>
+  <concept>
+    <code value="141"/>
+    <display value="Operationstechnischer Assistent"/>
+  </concept>
+  <concept>
+    <code value="143"/>
+    <display value="Zytologieassistent"/>
+  </concept>
+  <concept>
+    <code value="144"/>
+    <display value="Chemie, naturwissenschaftliche Laboranalyse (außer MTA)"/>
+  </concept>
+  <concept>
+    <code value="145"/>
+    <display value="Biochemiker (z.B. klinische Chemie)"/>
+  </concept>
+  <concept>
+    <code value="146"/>
+    <display value="Chemiker (z.B. klinische Chemie)"/>
+  </concept>
+  <concept>
+    <code value="147"/>
+    <display value="Humangenetiker"/>
+  </concept>
+  <concept>
+    <code value="148"/>
+    <display value="Mikrobiologe"/>
+  </concept>
+  <concept>
+    <code value="149"/>
+    <display value="Dienstleistungen am Menschen (außer medizinische)"/>
+  </concept>
+  <concept>
+    <code value="150"/>
+    <display value="Körperpflege"/>
+  </concept>
+  <concept>
+    <code value="151"/>
+    <display value="Fachkraft Beauty und Wellness"/>
+  </concept>
+  <concept>
+    <code value="152"/>
+    <display value="Friseur"/>
+  </concept>
+  <concept>
+    <code value="153"/>
+    <display value="Kosmetiker"/>
+  </concept>
+  <concept>
+    <code value="154"/>
+    <display value="Bestattungswesen"/>
+  </concept>
+  <concept>
+    <code value="155"/>
+    <display value="Bestattungsfachkraft"/>
+  </concept>
+  <concept>
+    <code value="156"/>
+    <display value="Berufe aus sonstigen Berufsfeldern"/>
+  </concept>
+  <concept>
+    <code value="157"/>
+    <display value="Umwelt"/>
+  </concept>
+  <concept>
+    <code value="165"/>
+    <display value="Jurist"/>
+  </concept>
+  <concept>
+    <code value="169"/>
+    <display value="Taxifahrer bei Krankentransport"/>
+  </concept>
+</CodeSystem>

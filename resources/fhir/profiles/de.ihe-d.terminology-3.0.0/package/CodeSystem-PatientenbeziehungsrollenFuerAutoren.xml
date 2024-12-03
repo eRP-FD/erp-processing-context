@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PatientenbeziehungsrollenFuerAutoren"/>
+  <url value="http://ihe-d.de/CodeSystems/PatientenbeziehungsrollenFuerAutoren"/>
+  <version value="2021-06-25T13:21:07"/>
+  <name value="PatientenbeziehungsrollenFuerAutoren"/>
+  <title value="Patientenbeziehungsrollen Fuer Autoren"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="5"/>
+  <concept>
+    <code value="101"/>
+    <display value="Hausarzt"/>
+    <definition value="der Hausarzt (Primärversorger) des Patienten"/>
+  </concept>
+  <concept>
+    <code value="102"/>
+    <display value="Patient"/>
+    <definition value="der Patient selbst"/>
+  </concept>
+  <concept>
+    <code value="103"/>
+    <display value="Arbeitgebervertreter"/>
+    <definition value="ein Vertreter des Arbeitgebers des Patienten"/>
+  </concept>
+  <concept>
+    <code value="104"/>
+    <display value="Primärbetreuer (langfristig)"/>
+    <definition value="Die Person, die den Patienten normalerweise primär betreut. Beispiele: Langzeitpflege, Stammapotheke"/>
+  </concept>
+  <concept>
+    <code value="105"/>
+    <display value="Kostenträgerverteter"/>
+    <definition value="ein Vertreter des Kostenträgers"/>
+  </concept>
+</CodeSystem>

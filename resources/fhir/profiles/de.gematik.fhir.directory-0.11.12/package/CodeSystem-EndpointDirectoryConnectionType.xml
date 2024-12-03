@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="EndpointDirectoryConnectionType"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/EndpointDirectoryConnectionType"/>
+  <version value="0.11.12"/>
+  <name value="EndpointDirectoryConnectionType"/>
+  <title value="Codes for Endpoint.connectionType"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="CodeSystem TI specific connection types assigned to the Endpoints"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="15"/>
+  <concept>
+    <code value="tim"/>
+    <display value="TI-Messenger Endpoint"/>
+  </concept>
+  <concept>
+    <code value="tim-fa"/>
+    <display value="TI-Messenger Funktionsaccount"/>
+  </concept>
+  <concept>
+    <code value="tim-bot"/>
+    <display value="TI-Messenger Chatbot"/>
+  </concept>
+  <concept>
+    <code value="kim-1.0"/>
+    <display value="KIM 1.0 Endpoint"/>
+  </concept>
+  <concept>
+    <code value="kim-1.5"/>
+    <display value="KIM 1.5 Endpoint"/>
+  </concept>
+  <concept>
+    <code value="kim-2.0"/>
+    <display value="KIM 2.0 Endpoint"/>
+  </concept>
+  <concept>
+    <code value="epa-supported"/>
+    <display value="ePA Endpoint"/>
+  </concept>
+  <concept>
+    <code value="ident-eingangsabruf"/>
+    <display value="Ident Eingangsdatenabruf"/>
+  </concept>
+  <concept>
+    <code value="apotheken-identverfahren"/>
+    <display value="Apotheken Ident Verfahren"/>
+  </concept>
+  <concept>
+    <code value="eRP-onPremise"/>
+    <display value="Reservierung"/>
+  </concept>
+  <concept>
+    <code value="eRP-delivery"/>
+    <display value="Botendienst"/>
+  </concept>
+  <concept>
+    <code value="eRP-shipment"/>
+    <display value="Versand"/>
+  </concept>
+  <concept>
+    <code value="terminbuchung-online"/>
+    <display value="Online Terminbuchung"/>
+  </concept>
+  <concept>
+    <code value="terminbuchung-telefonisch"/>
+    <display value="Telefonische Terminbuchung"/>
+  </concept>
+  <concept>
+    <code value="terminbuchung-tim"/>
+    <display value="TI-Messenger Terminbuchung"/>
+  </concept>
+</CodeSystem>

@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/util/Environment.hxx"
+#include "shared/util/Environment.hxx"
 
 class EnvironmentTest : public testing::Test
 {

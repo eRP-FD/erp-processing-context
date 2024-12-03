@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="DeutscheDokumentenformate"/>
+  <url value="http://ihe-d.de/CodeSystems/DeutscheDokumentenformate"/>
+  <version value="2018-12-14T17:07:12"/>
+  <name value="DeutscheDokumentenformate"/>
+  <title value="Deutsche Dokumentenformate"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="31"/>
+  <concept>
+    <code value="urn:ihe-d:ig:Entlassmanagementbrief:2018"/>
+    <display value="Entlassmanagementbrief"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:NotaufnahmeregisterTraumaModul:2017"/>
+    <display value="NotaufnahmeregisterTraumamodul"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:NotaufnahmeregisterBasisModul:2017"/>
+    <display value="NotaufnahmeregisterBasismodul"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:MeldepflichtigeKrankheitenLabor:2014"/>
+    <display value="Meldepflichtige Krankheiten: Labormeldung"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:MeldepflichtigeKrankheitenArzt:2013"/>
+    <display value="Übermittlung meldepflichtiger Krankheiten – Arztmeldung"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:RehaEntlassbrief:2009"/>
+    <display value="Ärztlicher Reha-Entlassungsbericht"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:KurzberichtUeberleitungKrankenhaus:2016"/>
+    <display value="Überleitungsmanagement Ärztlicher Kurzbericht über den Krankenhausaufenthalt"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:KurzberichtUeberleitungNiedergelassenerArzt:2016"/>
+    <display value="Überleitungsmanagement Ärztlicher Kurzbericht des niedergelassenen Arztes"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:Medikationsplan:2015"/>
+    <display value="Medikationsplan"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:Arztbriefplus:2017"/>
+    <display value="Arztbrief plus"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:arztbrief:2014:nonXmlBody"/>
+    <display value="Arztbrief 2014"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:eppc-g:2015"/>
+    <display value="Enhanced Patient Privacy Consent - Germany"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:ig:eppc-g-sd:2015"/>
+    <display value="Enhanced Patient Privacy Consent - Germany - Scanned Document Option"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:spec:PDF_A1:2005"/>
+    <display value="PDF/A-1"/>
+    <definition value="PDF Format für die elektronische Archivierung nach ISO 19005-1:2005"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:spec:PDF_A2:2011"/>
+    <display value="PDF/A-2"/>
+    <definition value="PDF Format für die elektronische Archivierung nach ISO 19005-2"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:spec:PDF_A3:2012"/>
+    <display value="PDF/A-3"/>
+    <definition value="PDF Format für die elektronische Archivierung nach ISO 19005-3"/>
+  </concept>
+  <concept>
+    <code value="urn:ihe-d:spec:PDF_UA:2008"/>
+    <display value="PDF/UA"/>
+    <definition value="Barrierefreies PDF nach ISO 14289"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Arztbrief:r3.1"/>
+    <display value="Arztbrief § 291f SGB V"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Medikationsplan:r3.1"/>
+    <display value="Medikationsplan (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Notfalldatensatz:r3.1"/>
+    <display value="Notfalldatensatz"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:DatensatzPersoenlicheErklaerungen:r3.1"/>
+    <display value="Datensatz für persönliche Erklärungen (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Impfausweis:v1.1.0"/>
+    <display value="Impfausweis (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Mutterpass:v1.0.0"/>
+    <display value="Mutterpass (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Kinderuntersuchungsheft:v1.0.0"/>
+    <display value="Kinderuntersuchungsheft (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Arbeitsunfaehigkeitsbescheinigung:r4.0"/>
+    <display value="Arbeitsunfähigkeitsbescheinigung (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:VerordnungsdatensatzMedikation:r4.0"/>
+    <display value="Verordnungsdatensatz Medikation (gematik)"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:KinderuntersuchungsheftUntersuchungen:v1.0.0"/>
+    <display value="Untersuchungen Kinderuntersuchungsheft"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:KinderuntersuchungsheftTeilnahmekarte:v1.0.0"/>
+    <display value="Teilnahmekarte Kinderuntersuchungsheft"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:KinderuntersuchungsheftNotizen:v1.0.0"/>
+    <display value="Notizen Kinderuntersuchungsheft"/>
+  </concept>
+  <concept>
+    <code value="urn:hl7-de:DGUV-StatEntlassbrief:2020"/>
+    <display value="DGUV Stationärer Entlassbrief"/>
+  </concept>
+  <concept>
+    <code value="urn:gematik:ig:Zahnbonusheft:v1.1.0"/>
+    <display value="Zahnbonusheft (gematik)"/>
+  </concept>
+</CodeSystem>

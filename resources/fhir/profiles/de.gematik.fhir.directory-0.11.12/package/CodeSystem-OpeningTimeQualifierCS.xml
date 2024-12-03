@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="OpeningTimeQualifierCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/OpeningTimeQualifierCS"/>
+  <version value="0.11.12"/>
+  <name value="OpeningTimeQualifierCS"/>
+  <title value="OpeningTimeQualifierCS"/>
+  <status value="draft"/>
+  <description value="Qualifier code for HealthCareService opening times"/>
+  <content value="complete"/>
+  <count value="1"/>
+  <concept>
+    <code value="notdienst"/>
+    <display value="Notdienst"/>
+  </concept>
+</CodeSystem>

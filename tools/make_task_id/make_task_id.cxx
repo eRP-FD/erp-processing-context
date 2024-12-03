@@ -8,7 +8,7 @@
 #include <iostream>
 #include <string>
 
-#include "erp/model/PrescriptionId.hxx"
+#include "shared/model/PrescriptionId.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
 int main(int argc, char** argv)

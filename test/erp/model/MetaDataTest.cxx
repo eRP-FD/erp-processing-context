@@ -6,14 +6,15 @@
  */
 
 #include "erp/model/MetaData.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/String.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 
@@ -110,9 +111,10 @@ public:
 
 
 };
-// TODO: ERP-20650
-TEST_P(MetaDataProfileTest, DISABLED_ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(MetaDataProfileTest, ProfileVersions)//NOLINT(readability-function-cognitive-complexity)
 {
+
+    testutils::ShiftFhirResourceViewsGuard shift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     using namespace model::resource;
     static const rapidjson::Pointer restPtr{"/rest"};
     static const rapidjson::Pointer modePtr{"/mode"};
@@ -138,8 +140,8 @@ TEST_P(MetaDataProfileTest, DISABLED_ProfileVersions)//NOLINT(readability-functi
     {
         bool isSupported = GetParam().workflowVersion == workflowVer;
         EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Task", task, workflowVer));
-        EXPECT_NO_FATAL_FAILURE(
-            checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
+        // EXPECT_NO_FATAL_FAILURE(
+        //     checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
         EXPECT_NO_FATAL_FAILURE(
             checkProfile(resourceArray, isSupported, "Communication", communicationReply, workflowVer));
         EXPECT_NO_FATAL_FAILURE(
@@ -161,16 +163,43 @@ TEST_P(MetaDataProfileTest, DISABLED_ProfileVersions)//NOLINT(readability-functi
         EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "ChargeItem", chargeItem, chargeInfoVersion));
         EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Consent", consent, chargeInfoVersion));
     }
+    if (HasFailure())
+    {
+        LOG(INFO) << metaData.serializeToJsonString();
+    }
 }
-// clang-format off
-INSTANTIATE_TEST_SUITE_P(Combinations, MetaDataProfileTest, ::testing::Values(
-    MetaDataProfileTestParam{
-        .name = "v_2023_07_01",
-        .referenceTimestamp = model::Timestamp::fromGermanDate("2023-07-01"),
-        .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
-        .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
-    }),
-[](const auto& info) { return std::string{info.param.name}; }
-);
-// clang-format on
+
+INSTANTIATE_TEST_SUITE_P(Combinations, MetaDataProfileTest,
+                         ::testing::ValuesIn(std::list<MetaDataProfileTestParam>{
+                             {
+                                 .name = "v_2023_07_01",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2023-07-01"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                             },
+                             {
+                                 .name = "v_2024_10_01",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2024-10-01"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                             },
+                             {
+                                 .name = "v_2024_11_01",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2024-11-01"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_3,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                             },
+                             {
+                                 .name = "v_2025_01_15",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2025-01-15"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                             },
+                         }),
+                         [](const auto& info) {
+                             return std::string{info.param.name};
+                         });

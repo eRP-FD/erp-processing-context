@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
@@ -16,10 +16,8 @@ SessionContext::SessionContext(
     ServerResponse& response,
     AccessLog& log,
     model::Timestamp initSessionTime)
-    : serviceContext(serviceContext)
-    , request(request)
-    , response(response)
-    , accessLog(log)
+    : BaseSessionContext(serviceContext, request, response, log)
+    , serviceContext(serviceContext)
     , callerWantsJson(false)
     , mSessionTime(initSessionTime)
 {

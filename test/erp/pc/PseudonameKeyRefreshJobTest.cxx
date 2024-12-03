@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/hsm/HsmPool.hxx"
 #include "erp/pc/telematik_report_pseudonym/PseudonameKeyRefreshJob.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/util/MockConfiguration.hxx"
@@ -60,7 +60,7 @@ public:
 
     void SetUp() override
     {
-        mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
+        mBlobCache = MockBlobCache::createAndSetup(MockBlobCache::MockTarget::MockedHsm, std::make_unique<MockBlobDatabase>());
         mHsmPool =
             std::make_unique<HsmPool>(std::make_unique<HsmMockFactory>(createHsmClient(), mBlobCache),
                                       TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());

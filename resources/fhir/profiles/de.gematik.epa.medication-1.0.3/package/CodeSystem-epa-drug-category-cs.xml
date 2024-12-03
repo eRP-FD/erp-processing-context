@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="epa-drug-category-cs"/>
+  <url value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs"/>
+  <version value="1.0.3"/>
+  <name value="EPADrugCategoryCS"/>
+  <title value="EPA Drug Category CodeSystem"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The CodeSystem for drug category."/>
+  <content value="complete"/>
+  <count value="4"/>
+  <concept>
+    <code value="00"/>
+    <display value="Arzneimittel oder in die Arzneimittelversorgung nach § 31 SGB V einbezogenes Produkt"/>
+  </concept>
+  <concept>
+    <code value="01"/>
+    <display value="BtM"/>
+  </concept>
+  <concept>
+    <code value="02"/>
+    <display value="AMVV § 3a Abs. 1 (Thalidomid o. ä.)"/>
+  </concept>
+  <concept>
+    <code value="03"/>
+    <display value="Sonstiges"/>
+  </concept>
+</CodeSystem>

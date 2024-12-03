@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="v2-0276"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: CodeSystem v2-0276</b>
+      </p>
+      <a name="v2-0276"> </a>
+      <a name="hcv2-0276"> </a>
+      <a name="v2-0276-en-US"> </a>
+      <p>
+        <b>Properties</b>
+      </p>
+      <p>
+        <b>This code system defines the following properties for its concepts</b>
+      </p>
+      <table class="grid">
+        <tr>
+          <td>
+            <b>Name</b>
+          </td>
+          <td>
+            <b>Code</b>
+          </td>
+          <td>
+            <b>URI</b>
+          </td>
+          <td>
+            <b>Type</b>
+          </td>
+          <td>
+            <b>Description</b>
+          </td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>status</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#status</td>
+          <td>code</td>
+          <td>Status of the concept</td>
+        </tr>
+        <tr>
+          <td>deprecated</td>
+          <td>deprecated</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated</td>
+          <td>code</td>
+          <td>Version of HL7 in which the code was deprecated</td>
+        </tr>
+      </table>
+      <p>
+        <b>Concepts</b>
+      </p>
+      <p>This case-sensitive code system <code>http://terminology.hl7.org/CodeSystem/v2-0276</code> defines the following codes in a Is-A hierarchy:</p>
+      <table class="codes">
+        <tr>
+          <td style="white-space:nowrap">
+            <b>Code</b>
+          </td>
+          <td>
+            <b>Display</b>
+          </td>
+          <td>
+            <b>Definition</b>
+          </td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">ROUTINE<a name="v2-0276-ROUTINE"> </a></td>
+          <td>Routine appointment - default if not valued</td>
+          <td>Routine appointment - default if not valued</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">WALKIN<a name="v2-0276-WALKIN"> </a></td>
+          <td>A previously unscheduled walk-in visit</td>
+          <td>A previously unscheduled walk-in visit</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">CHECKUP<a name="v2-0276-CHECKUP"> </a></td>
+          <td>A routine check-up, such as an annual physical</td>
+          <td>A routine check-up, such as an annual physical</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">FOLLOWUP<a name="v2-0276-FOLLOWUP"> </a></td>
+          <td>A follow up visit from a previous appointment</td>
+          <td>A follow up visit from a previous appointment</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">EMERGENCY<a name="v2-0276-EMERGENCY"> </a></td>
+          <td>Emergency appointment</td>
+          <td>Emergency appointment</td>
+        </tr>
+      </table>
+    </div>
+  </text>
+  <url value="http://terminology.hl7.org/CodeSystem/v2-0276"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.18.169"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="AppointmentReason"/>
+  <title value="appointmentReason"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Code system of concepts used to describe the kind of appointment or the reason why an appointment has been scheduled.  Used in HL7 Version 2.x messaging in the ARQ segment."/>
+  <purpose value="Underlying Master Code System for V2 table 0276 (Appointment reason codes)"/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://terminology.hl7.org/ValueSet/v2-0276"/>
+  <hierarchyMeaning value="is-a"/>
+  <compositional value="false"/>
+  <versionNeeded value="false"/>
+  <content value="complete"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#status"/>
+    <description value="Status of the concept"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="deprecated"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated"/>
+    <description value="Version of HL7 in which the code was deprecated"/>
+    <type value="code"/>
+  </property>
+  <concept id="2669">
+    <code value="ROUTINE"/>
+    <display value="Routine appointment - default if not valued"/>
+    <definition value="Routine appointment - default if not valued"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="2670">
+    <code value="WALKIN"/>
+    <display value="A previously unscheduled walk-in visit"/>
+    <definition value="A previously unscheduled walk-in visit"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="2671">
+    <code value="CHECKUP"/>
+    <display value="A routine check-up, such as an annual physical"/>
+    <definition value="A routine check-up, such as an annual physical"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="2672">
+    <code value="FOLLOWUP"/>
+    <display value="A follow up visit from a previous appointment"/>
+    <definition value="A follow up visit from a previous appointment"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="2673">
+    <code value="EMERGENCY"/>
+    <display value="Emergency appointment"/>
+    <definition value="Emergency appointment"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+</CodeSystem>

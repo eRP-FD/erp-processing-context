@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/PeriodicTimer.hxx"
+#include "shared/util/PeriodicTimer.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include <boost/asio/io_context.hpp>

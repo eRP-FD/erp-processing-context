@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="icd-10-gm"/>
+  <url value="http://fhir.de/CodeSystem/bfarm/icd-10-gm"/>
+  <name value="ICD10GM"/>
+  <title value="ICD-10-GM"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="ICD-10-GM Platzhalter-CodeSystem"/>
+  <copyright value="WHO, BfArM 1994 - 2024 - Die Erstellung erfolgt unter Verwendung der maschinenlesbaren Fassung des  Bundesinstituts für Arzneimittel und Medizinprodukte (BfArM)"/>
+  <caseSensitive value="true"/>
+  <content value="not-present"/>
+</CodeSystem>

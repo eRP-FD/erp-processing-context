@@ -6,12 +6,12 @@
  */
 
 #include "erp/model/KbvMedicationIngredient.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 namespace model
 {
 KbvMedicationIngredient::KbvMedicationIngredient(NumberAsStringParserDocument&& document)
-    : KbvMedicationBase<KbvMedicationIngredient>(std::move(document))
+    : MedicationBase<KbvMedicationIngredient>(std::move(document))
 {
 }
 

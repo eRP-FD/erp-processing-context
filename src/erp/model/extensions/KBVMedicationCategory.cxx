@@ -6,3 +6,7 @@
  */
 
 #include "erp/model/extensions/KBVMedicationCategory.hxx"
+
+#include "shared/model/Extension.txx"
+
+template class model::Extension<model::KBVMedicationCategory>;

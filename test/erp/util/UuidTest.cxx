@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Uuid.hxx"
 
 #include <gtest/gtest.h>
 

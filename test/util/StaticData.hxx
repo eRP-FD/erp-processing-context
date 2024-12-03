@@ -9,10 +9,10 @@
 #define ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 
 #include "EnvironmentVariableGuard.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/crypto/Certificate.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/validation/JsonValidator.hxx"
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/validation/JsonValidator.hxx"
+#include "shared/validation/XmlValidator.hxx"
 #include "test_config.h"
 #include "test/util/TestConfiguration.hxx"
 

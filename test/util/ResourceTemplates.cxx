@@ -6,15 +6,17 @@
  */
 
 #include "test/util/ResourceTemplates.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestUtils.hxx"
-#include "erp/util/Uuid.hxx"
-#include "erp/fhir/Fhir.hxx"
 
 #include <boost/algorithm/string.hpp>
 
@@ -24,6 +26,7 @@ namespace ResourceTemplates
 std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
     Versions::GEM_ERP_1_2,
     Versions::GEM_ERP_1_3,
+    Versions::GEM_ERP_1_4,
 };
 std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
     Versions::KBV_ERP_1_1_0,
@@ -37,9 +40,22 @@ std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
     Versions::DAV_PKV_1_2,
 };
 
-Versions::GEM_ERP::GEM_ERP(const fhirtools::FhirVersion& ver)
-    : FhirVersion{ver}
+Versions::GEM_ERP::GEM_ERP(fhirtools::FhirVersion ver)
+    : FhirVersion{std::move(ver)}
 {
+}
+
+fhirtools::DefinitionKey Versions::latest(std::string_view profileUrl, const model::Timestamp& reference)
+{
+    const auto& fhirInstance = Fhir::instance();
+    const auto& backend = fhirInstance.backend();
+    auto view = fhirInstance.structureRepository(reference);
+    auto supported = view.supportedVersions(&backend, {std::string{profileUrl}});
+    if (supported.empty())
+    {
+        return {std::string{profileUrl}, std::nullopt};
+    }
+    return std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version);
 }
 
 Versions::GEM_ERPCHRG Versions::GEM_ERPCHRG_current(const model::Timestamp& reference [[maybe_unused]])
@@ -54,24 +70,29 @@ Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[
 
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
 {
-    const auto& fhirInstance = Fhir::instance();
-    auto view = fhirInstance.structureRepository(reference).latest().view(&fhirInstance.backend());
-    const auto* def = view->findStructure(fhirtools::DefinitionKey{std::string{model::resource::structure_definition::task}, std::nullopt});
-    return GEM_ERP{def->version()};
+    auto taskKey = latest(model::resource::structure_definition::task, reference);
+    return taskKey.version ? GEM_ERP{*taskKey.version} : GEM_ERP_1_3;
+}
+
+Versions::DAV_PKV::DAV_PKV(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
 }
 
 Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Timestamp& reference [[maybe_unused]])
 {
-    return DAV_PKV_1_2;
+    auto dispenseItemKey = latest(model::resource::structure_definition::dispenseItem, reference);
+    return dispenseItemKey.version ? DAV_PKV{std::move(*dispenseItemKey.version)} : DAV_PKV_1_3;
 }
 
 std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
 {
+    Expect3(holds_alternative<Versions::KBV_ERP>(bundleOptions.medicationOptions.version),
+            "Medication in KBV-Bundle must have KBV-Version", std::logic_error);
     auto& resourceManager = ResourceManager::instance();
-    const std::string kbvVersionStr{to_string(
-        bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)))};
     std::string kvid10Ns{model::resource::naming_system::gkvKvid10};
-    std::string templateFileName = "test/EndpointHandlerTest/kbv_bundle_template_" + kbvVersionStr + ".xml";
+    std::string templateFileName =
+        "test/EndpointHandlerTest/kbv_bundle_template_" + to_string(bundleOptions.kbvVersion) + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     const auto& prescriptionId = bundleOptions.prescriptionId;
 
@@ -97,7 +118,6 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     boost::replace_all(bundle, "###INSURANT_KVNR###", bundleOptions.kvnr);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", prescriptionId.toString());
-    boost::replace_all(bundle, "###MEDICATION_CATEGORY###", bundleOptions.medicationCategory);
     const auto coverageInsuranceType = bundleOptions.coverageInsuranceType.value_or(insuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_TYPE###", coverageInsuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_SYSTEM###", bundleOptions.coverageInsuranceSystem);
@@ -140,8 +160,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     boost::replace_all(bundle, "###LANR_SYSTEM###", bundleOptions.lanr.namingSystem());
     boost::replace_all(bundle, "###LANR_CODE_SYSTEM###", anrCodeSystem);
     boost::replace_all(bundle, "###QUALIFICATION_TYPE###", qualificationType);
-    boost::replace_all(bundle, "###PZN###", bundleOptions.pzn.id());
-    boost::replace_all(bundle, "###DARREICHUNGSFORM###", bundleOptions.darreichungsfrom);
+    boost::replace_all(bundle, "####MEDICATION_RESOURCE####", medicationXml(bundleOptions.medicationOptions));
     return bundle;
 }
 
@@ -190,6 +209,23 @@ std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
     return bundle;
 }
 
+std::variant<model::PrescriptionId, std::string> MedicationDispenseOptions::guessPrescriptionId(
+    std::variant<model::MedicationDispenseId, std::string>& medicationDispenseId)
+{
+    struct Guess {
+        using ResultType = std::variant<model::PrescriptionId, std::string>;
+        ResultType operator()(const model::MedicationDispenseId& mediDisId) const
+        {
+            return mediDisId.getPrescriptionId();
+        }
+        ResultType operator()(const std::string& mediDisId)
+        {
+            return mediDisId.substr(0, mediDisId.rfind('-'));
+        }
+    };
+    return std::visit(Guess{}, medicationDispenseId);
+}
+
 std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& bundleOptions)
 {
     const fhirtools::DefinitionKey profileKey{
@@ -220,6 +256,48 @@ std::string medicationDispenseBundleXml(const MedicationDispenseBundleOptions& b
     return bundle.serializeToXmlString();
 }
 
+model::MedicationDispenseBundle
+internal_type::medicationDispenseBundle(const MedicationDispenseBundleOptions& bundleOptions)
+{
+    const fhirtools::DefinitionKey profileKey{
+        std::string{profile(model::ProfileType::MedicationDispenseBundle).value()}, bundleOptions.gematikVersion};
+    model::MedicationDispenseBundle bundle{model::BundleType::collection, profileKey};
+    bundle.setIdentifier(bundleOptions.prescriptionId);
+    for (size_t idx = 0; const auto& medicationDispenseOpt : bundleOptions.medicationDispenses)
+    {
+        std::optional<model::MedicationDispenseId> id;
+        if (std::holds_alternative<model::PrescriptionId>(medicationDispenseOpt.prescriptionId))
+        {
+            id.emplace(std::get<model::PrescriptionId>(medicationDispenseOpt.prescriptionId), idx);
+        }
+        else
+        {
+            id.emplace(model::PrescriptionId::fromStringNoValidation(
+                           std::get<std::string>(medicationDispenseOpt.prescriptionId)),
+                       idx);
+        }
+        ++idx;
+        MedicationDispenseOptions medicationDispenseOptions = medicationDispenseOpt;
+        if (bundleOptions.gematikVersion >= Versions::GEM_ERP_1_4)
+        {
+            auto medicationOptions = std::get<MedicationOptions>(medicationDispenseOpt.medication);
+            medicationOptions.id = medicationOptions.id.value_or(Uuid{});
+            medicationOptions.version = bundleOptions.gematikVersion;
+            medicationDispenseOptions.medication = "urn:uuid:" + *medicationOptions.id;
+            auto medication = model::GemErpPrMedication::fromXmlNoValidation(medicationXml(medicationOptions));
+            bundle.addResource("http://pvs.praxis-topp-gluecklich.local/fhir/Medication/" + *medicationOptions.id,
+                               std::nullopt, std::nullopt, std::move(medication).jsonDocument());
+        }
+        auto medicationDispense =
+            model::MedicationDispense::fromXmlNoValidation(medicationDispenseXml(medicationDispenseOptions));
+        medicationDispense.setId(*id);
+        std::string fullUrl = "http://pvs.praxis-topp-gluecklich.local/fhir/MedicationDispense/";
+        fullUrl.append(id->toString());
+        bundle.addResource(fullUrl, std::nullopt, std::nullopt, std::move(medicationDispense).jsonDocument());
+    }
+    return bundle;
+}
+
 
 std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDispenseOptions)
 {
@@ -228,14 +306,14 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
     std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_template_" + gematikVersion + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     auto medicationOptions = medicationDispenseOptions.medication;
-    struct toString {
+    struct ToString {
         std::string operator()(const model::PrescriptionId& prescriptionId) const
         {
             return prescriptionId.toString();
         }
         std::string operator()(const model::Timestamp& timestamp) const
         {
-            if(Versions::GEM_ERP_current() != Versions::GEM_ERP_1_3)
+            if (includeTime)
             {
                 return timestamp.toXsDateTime();
             }
@@ -245,16 +323,60 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
         {
             return str;
         }
+        std::string operator()(const std::monostate&)
+        {
+            Fail2("cannot convert monostate to string.", std::logic_error);
+        }
+        std::string operator()(const model::MedicationDispenseId& medicationDispenseId)
+        {
+            return medicationDispenseId.toString();
+        }
+        bool includeTime;
     };
-    boost::replace_all(bundle, "###PRESCRIPTION_ID###", std::visit(toString{}, medicationDispenseOptions.prescriptionId));
+    ToString toString{false};
+    ToString whenHandenOverToString{.includeTime = medicationDispenseOptions.gematikVersion < Versions::GEM_ERP_1_3};
+    ToString whenPreparedToString{.includeTime = medicationDispenseOptions.gematikVersion < Versions::GEM_ERP_1_4};
+    boost::replace_all(bundle, "###MEDICATION_DISPENSE_ID###", std::visit(toString, medicationDispenseOptions.id));
+    boost::replace_all(bundle, "###PRESCRIPTION_ID###", std::visit(toString, medicationDispenseOptions.prescriptionId));
     boost::replace_all(bundle, "###INSURANT_KVNR###", medicationDispenseOptions.kvnr);
     boost::replace_all(bundle, "###TELEMATIK_ID###", medicationDispenseOptions.telematikId);
-    boost::replace_all(bundle, "###WHENHANDEDOVER###", std::visit(toString{}, medicationDispenseOptions.whenHandedOver));
-    boost::replace_all(bundle, "###MEDICATION###", medicationXml(medicationOptions));
+    boost::replace_all(bundle, "###WHENHANDEDOVER###",
+                       std::visit(whenHandenOverToString, medicationDispenseOptions.whenHandedOver));
+    struct InsertMedication {
+        void operator()(const ResourceTemplates::MedicationDispenseOptions::MedicationReference& ref)
+        {
+            boost::replace_all(bundle, "###CONTAINED_MEDICATION###", std::string{});
+            boost::replace_all(bundle, "###MEDICATION_REFERENCE###", ref);
+        }
+        void operator()(ResourceTemplates::MedicationOptions medicationOptions)
+        {
+            if (!medicationOptions.id)
+            {
+                medicationOptions.id = Uuid{};
+            }
+            if (std::holds_alternative<std::monostate>(medicationOptions.version))
+            {
+                if (medicationDispenseOptions.gematikVersion >= Versions::GEM_ERP_1_4)
+                {
+                    medicationOptions.version = Versions::GEM_ERP_1_4;
+                }
+                else
+                {
+                    medicationOptions.version = Versions::KBV_ERP_1_1_0;
+                }
+            }
+            boost::replace_all(bundle, "###CONTAINED_MEDICATION###",
+                               "\n    <contained>\n" + medicationXml(medicationOptions) + "\n    </contained>\n");
+            boost::replace_all(bundle, "###MEDICATION_REFERENCE###", "#" + medicationOptions.id.value());
+        }
+        std::string& bundle;
+        const MedicationDispenseOptions& medicationDispenseOptions;
+    };
+    visit(InsertMedication{bundle, medicationDispenseOptions}, medicationOptions);
     std::string whenPrepared;
-    if (medicationDispenseOptions.whenPrepared.has_value())
+    if (!std::holds_alternative<std::monostate>(medicationDispenseOptions.whenPrepared))
     {
-        whenPrepared = "<whenPrepared value=\"" + medicationDispenseOptions.whenPrepared->toXsDateTime() + "\" />";
+        whenPrepared = "<whenPrepared value=\"" + visit(whenPreparedToString, medicationDispenseOptions.whenPrepared) + "\" />";
     }
     boost::replace_all(bundle, "###WHENPREPARED###", whenPrepared);
     return bundle;
@@ -262,14 +384,34 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
 
 std::string medicationXml(const MedicationOptions& medicationOptions)
 {
+    struct GetTemplate {
+        std::string operator()(const Versions::KBV_ERP& version)
+        {
+            return (std::ostringstream{} << medicationOptions.templatePrefix << version <<".xml").str();
+        }
+        std::string operator()(const Versions::GEM_ERP& version)
+        {
+            return (std::ostringstream{} << medicationOptions.templatePrefix << "gem_" << version <<".xml").str();
+        }
+        std::string operator()(const std::monostate&)
+        {
+            if (auto gemVer = Versions::GEM_ERP_current(model::Timestamp::now()); gemVer >= Versions::GEM_ERP_1_4)
+            {
+                return (*this)(gemVer);
+            }
+            return (*this)(Versions::KBV_ERP_current(model::Timestamp::now()));
+        }
+
+        const MedicationOptions& medicationOptions;
+    };
+
     using namespace std::string_literals;
     auto& resourceManager = ResourceManager::instance();
-    auto version = medicationOptions.version.value_or(Versions::KBV_ERP_current(model::Timestamp::now()));
-    std::ostringstream templateFileName;
-    templateFileName << medicationOptions.templatePrefix << version << ".xml";
-    auto medication = resourceManager.getStringResource(templateFileName.view());
-    boost::replace_all(medication, "###MEDICATION_ID###", medicationOptions.id);
+    auto medication = resourceManager.getStringResource(visit(GetTemplate{medicationOptions}, medicationOptions.version));
+    boost::replace_all(medication, "###MEDICATION_ID###", medicationOptions.id.value_or("001413e4-a5e9-48da-9b07-c17bab476407"));
     boost::replace_all(medication, "###DARREICHUNGSFORM###", medicationOptions.darreichungsform);
+    boost::replace_all(medication, "###MEDICATION_CATEGORY###", medicationOptions.medicationCategory);
+    boost::replace_all(medication, "###PZN###", medicationOptions.pzn.id());
     return medication;
 }
 
@@ -352,8 +494,62 @@ std::string davDispenseItemXml(const DavDispenseItemOptions& dispenseItemOptions
                                                                  to_string(dispenseItemOptions.davPkvVersion) + ".xml");
 
     boost::replace_all(dispenseItem, "##PRESCRIPTION_ID##", dispenseItemOptions.prescriptionId.toString());
+    boost::replace_all(dispenseItem, "###WHEN_HANDED_OVER###", dispenseItemOptions.whenHandenOver.toGermanDate());
 
     return dispenseItem;
 }
 
+std::string medicationDispenseOperationParametersXml(const MedicationDispenseOperationParametersOptions& options)
+{
+    auto part = [](std::string name, std::string resource) {
+        std::string result;
+        result += "  <part>\n";
+        result += "    <name value=\"" + name += "\" />\n";
+        result += "    <resource>\n" + resource + "\n    </resource>\n";
+        result += "  </part>\n";
+        return result;
+    };
+    std::string profile =
+        std::string{model::profile(options.profileType).value()}.append(1, '|').append(to_string(options.version));
+    std::string result = "<Parameters xmlns=\"http://hl7.org/fhir\">\n  <id value=\"" + options.id + "\"/>\n" +
+                         "  <meta>\n"
+                         "    <profile value=\"" + profile + "\" />\n"
+                         "  </meta>\n";
+    for (auto dispense: options.medicationDispenses)
+    {
+        Expect(std::holds_alternative<MedicationOptions>(dispense.medication), "medication must not be MedicationReference");
+        auto medicationOptions = get<MedicationOptions>(dispense.medication);
+        if (!medicationOptions.id)
+        {
+            medicationOptions.id = Uuid{};
+        }
+        dispense.medication =  "Medication/" + medicationOptions.id.value();
+        result += "<parameter>\n";
+        result += "  <name value=\"rxDispensation\" />\n";
+        result += part("medicationDispense", medicationDispenseXml(dispense));
+        result += part("medication", medicationXml(medicationOptions));
+        result += "</parameter>\n";
+    }
+    result += "</Parameters>";
+    return result;
+}
+
+std::string dispenseOrCloseTaskBodyXml(const MedicationDispenseOperationParametersOptions& options)
+{
+    if (options.version >= Versions::GEM_ERP_1_4)
+    {
+        return medicationDispenseOperationParametersXml(options);
+    }
+    if (options.medicationDispenses.size() == 1)
+    {
+        return medicationDispenseXml(options.medicationDispenses.front());
+    }
+    return medicationDispenseBundleXml({
+        .gematikVersion = options.version,
+        .medicationDispenses = options.medicationDispenses,
+    });
+}
+
+
 }// namespace ResourceTemplates
+

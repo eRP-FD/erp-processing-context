@@ -316,6 +316,10 @@ public:
     bool testPathElement(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
         auto codingSubElements = element.subElements("coding");
+        if (codingSubElements.empty())
+        {
+            return false;
+        }
         for (const auto& codingSubElement : codingSubElements)
         {
             if (! DiscriminatorCodingBindingCondition::testPathElement(*codingSubElement, opt))
@@ -515,7 +519,7 @@ std::shared_ptr<FhirSlicing::Condition> fhirtools::FhirSliceDiscriminator::value
     {
         if (mType == DiscriminatorType::pattern)
         {
-            TLOG(WARNING) << "Discriminator Type is 'pattern' but only fixed is set: " << def->urlAndVersion()
+            TLOG(INFO) << "Discriminator Type is 'pattern' but only fixed is set: " << def->urlAndVersion()
                           << " - treating as 'value'";
         }
         return std::make_shared<DiscriminatorValueCondition>(repo, std::move(elementInfos), std::move(pathExpression));

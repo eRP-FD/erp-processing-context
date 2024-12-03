@@ -4,8 +4,6 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "fhirtools/validator/internal/ProfileValidator.hxx"
-#include "erp/util/ExceptionWrapper.hxx"
-#include "erp/util/TLog.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/model/ValueElement.hxx"
@@ -14,8 +12,11 @@
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
 #include "fhirtools/validator/internal/ValidationData.hxx"
+#include "shared/util/ExceptionWrapper.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <boost/algorithm/string/split.hpp>
 #include <regex>
@@ -29,7 +30,8 @@ fhirtools::ProfileValidatorCounterKey::ProfileValidatorCounterKey(std::string in
 }
 void fhirtools::ProfileValidatorCounterData::check(ProfileValidator::Map& profMap,
                                                    const fhirtools::ProfileValidatorCounterKey& cKey,
-                                                   std::string_view elementFullPath) const
+                                                   std::string_view elementFullPath,
+                                                   const std::shared_ptr<const Element>& parentElement) const
 {
     using namespace std::string_view_literals;
     for (const auto& element : elementMap)
@@ -45,8 +47,9 @@ void fhirtools::ProfileValidatorCounterData::check(ProfileValidator::Map& profMa
             subElementPath << ':' << cKey.slice;
         }
         profMap.at(element.first)
-            .appendResults(
-                element.second.element()->cardinality().check(count, subElementPath.str(), element.second.profile()));
+            .appendResults(element.second.element()->cardinality().check(count, subElementPath.str(),
+                                                                         element.second.profile(), parentElement,
+                                                                         element.second.element()->typeId()));
     }
 }
 
@@ -236,6 +239,11 @@ void fhirtools::ProfileValidator::checkConstraints(const fhirtools::Element& ele
                 TVLOG(3) << elementFullPath << ": " << magic_enum::enum_name(constraint.getSeverity()) << ": "
                          << constraint.getKey() << "{" << constraint.getExpression() << "} ==> " << evalResult;
                 mData->add(constraint, std::string{elementFullPath}, mDefPtr.profile());
+                if (mSetValidator.get().options().collectInfo && constraint.getSeverity() >= Severity::error)
+                {
+                    mData->addInfo(ValidationAdditionalInfo::ConstraintViolation, element.shared_from_this(),
+                                   std::string{elementFullPath}, mDefPtr.element()->typeId(), constraint.getKey());
+                }
             }
         }
         catch (const std::runtime_error& re)
@@ -253,7 +261,7 @@ void ProfileValidator::checkValue(const Element& element, std::string_view eleme
     if (const auto& fixed = mDefPtr.element()->fixed(); fixed)
     {
         ValueElement fixedVal{element.getFhirStructureRepository(), fixed};
-        if (element.equals(fixedVal) != true)
+        if (!element.matches(fixedVal) || !fixedVal.matches(element))
         {
             std::ostringstream msg;
             msg << "value must match fixed value: ";

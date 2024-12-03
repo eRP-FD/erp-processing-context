@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Base64.hxx"
+#include "shared/util/Base64.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceManager.hxx"
 

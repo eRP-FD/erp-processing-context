@@ -6,31 +6,32 @@
  */
 
 #include "erp/service/VauRequestHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/AesGcm.hxx"
-#include "erp/crypto/CMAC.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
-#include "erp/hsm/HsmException.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/OperationOutcome.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
-#include "erp/pc/ProfessionOid.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ResponseBuilder.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ResponseBuilder.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Demangle.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/JwtException.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/hsm/HsmException.hxx"
+#include "shared/model/Coding.hxx"
+#include "shared/model/OperationOutcome.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Demangle.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/JwtException.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <boost/exception/diagnostic_information.hpp>
 #include <pqxx/except>
@@ -120,7 +121,7 @@ void fillErrorResponse(ServerResponse& innerResponse,
     const model::OperationOutcome operationOutcome({
         model::OperationOutcome::Issue::Severity::error,
         model::OperationOutcome::httpCodeToOutcomeIssueType(httpStatus),
-        detailsText, diagnostics, {} /*expression*/ });
+        detailsText, {}, diagnostics, {} /*expression*/ });
     fillErrorResponse(innerResponse, httpStatus, innerRequest, operationOutcome);
 }
 

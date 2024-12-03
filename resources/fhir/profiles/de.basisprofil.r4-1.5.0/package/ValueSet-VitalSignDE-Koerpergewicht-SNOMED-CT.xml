@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="VitalSignDE-Koerpergewicht-SNOMED-CT"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablevalueset"/>
+  </meta>
+  <url value="http://fhir.de/ValueSet/VitalSignDE-Koerpergewicht-SNOMED-CT"/>
+  <version value="1.5.0"/>
+  <name value="VitalSignDE_Koerpergewicht_SNOMED_CT"/>
+  <title value="VitalSignDE_Koerpergewicht_SNOMED_CT"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="VitalSignDE_Koerpergewicht_SNOMED_CT enthält die erwarteten $sct Codes für Koerpergewicht"/>
+  <copyright value="This value set includes content from SNOMED CT, which is copyright © 2002 International Health Terminology Standards Development Organisation (IHTSDO), and distributed by agreement between IHTSDO and HL7. Implementer use of SNOMED CT is not covered by this agreement."/>
+  <compose>
+    <include>
+      <system value="http://snomed.info/sct"/>
+      <concept>
+        <code value="27113001"/>
+        <display value="Body weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="400967004"/>
+        <display value="Baseline weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="364589006"/>
+        <display value="Birth weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="424927000"/>
+        <display value="Body weight with shoes (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="425024002"/>
+        <display value="Body weight without shoes (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="735395000"/>
+        <display value="Current body weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="445541000"/>
+        <display value="Dry body weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="443245006"/>
+        <display value="Estimated weight using Broselow Luten pediatric weight estimation (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="363808001"/>
+        <display value="Measured body weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="248351003"/>
+        <display value="Previous well-weight (observable entity)"/>
+      </concept>
+      <concept>
+        <code value="784399000"/>
+        <display value="Self reported body weight (observable entity)"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

@@ -1,0 +1,104 @@
+BasedOnStyle: LLVM
+AccessModifierOffset: -4
+AlignAfterOpenBracket: AlwaysBreak
+AlignConsecutiveAssignments: false
+AlignOperands: Align
+AllowAllArgumentsOnNextLine: true
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterCaseLabel: true
+  AfterClass: true
+  AfterControlStatement: Always
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeCatch: true
+  BeforeElse: true
+  IndentBraces: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeTernaryOperators: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+ColumnLimit: 100
+CompactNamespaces: false
+ContinuationIndentWidth: 4
+ConstructorInitializerIndentWidth: 2
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Group 0, top: Google Test so that FRIEND_TEST macros in subsequent headers work.
+  - Regex:           '<gtest/gtest.h>'
+    Priority:       -1
+    SortPriority:   -1
+  # (Implicit second group: the header file for the current translation unit)
+  # Group 0, middle: Our normal non-test header files.
+  - Regex:           '^"(backend|client|library)/'
+    Priority:        0
+    SortPriority:    101
+  # Group 0, bottom: Our test/ header files.
+  - Regex:           '^"(test)/'
+    Priority:        0
+    SortPriority:    102
+  # Group 0, even further down: Our test-utils/ header files.
+  - Regex:           '^"(test-utils)/'
+    Priority:        0
+    SortPriority:    103
+  # Group 1, middle: Windows header files with include order requirements (https://stackoverflow.com/a/23294767).
+  - Regex:           '<winsock2.h>'
+    Priority:        1
+    SortPriority:    104
+  - Regex:           '<windows.h>'
+    Priority:        1
+    SortPriority:    105
+  # Group 1, top: Header files with a file extension or path (dependencies).
+  - Regex:           '^<.*[/\.]'
+    Priority:        1
+    SortPriority:    103
+  # Group 1, bottom: Header files with no file extension (stdlib).
+  - Regex:           '^<'
+    Priority:        1
+    SortPriority:    106
+IndentCaseLabels: true
+IndentPPDirectives: None
+IndentWidth: 4
+FixNamespaceComments: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 2
+NamespaceIndentation: Inner
+PackConstructorInitializers: Never
+PointerAlignment: Left
+ReflowComments: false
+SpaceAfterCStyleCast: true
+SpaceAfterLogicalNot: true
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: false
+SpaceBeforeCtorInitializerColon: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+TabWidth: 4
+UseTab: Never
+PenaltyReturnTypeOnItsOwnLine: 1000
+InsertNewlineAtEOF: true

@@ -1,0 +1,32 @@
+{
+  "resourceType": "Parameters",
+  "id": "ParametersRoot",
+  "parameter": [
+    {
+      "name": "one",
+      "resource": {
+        "resourceType": "Resource",
+        "id": "one"
+      }
+    },
+    {
+      "name": "two",
+      "part": [
+        {
+          "name": "two.one",
+          "resource": {
+            "resourceType": "Resource",
+            "id": "two"
+          }
+        },
+        {
+          "name": "two.two",
+          "resource": {
+            "resourceType": "Resource",
+            "id": "three"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -9,13 +9,15 @@
 #include "erp/ErpMain.hxx"
 #include "erp/database/DatabaseConnectionTimer.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/ConfigurationFormatter.hxx"
-#include "erp/util/String.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/ConfigurationFormatter.hxx"
+#include "shared/util/String.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "test/util/TestUtils.hxx"
 
+#include <barrier>
 #include <gtest/gtest.h>
 
 
@@ -31,7 +33,7 @@ public:
 
     void checkPostgresConnectionString (void)//NOLINT(readability-function-cognitive-complexity)
     {
-        const auto connectionString = PostgresBackend::defaultConnectString();
+        const auto connectionString = PostgresConnection::defaultConnectString();
         const auto& configuration = Configuration::instance();
 
         expectContains(connectionString, "host='%%'", configuration.getStringValue(ConfigurationKey::POSTGRES_HOST));
@@ -134,6 +136,7 @@ TEST_F(PostgresBackendTest, connectString_verifyFull_withoutBoth)
 
 TEST_F(PostgresBackendTest, recreateConnectionTimer)
 {
+    static constexpr size_t threadCount = 3;
     using namespace std::chrono_literals;
     if (! TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, true))
     {
@@ -143,7 +146,10 @@ TEST_F(PostgresBackendTest, recreateConnectionTimer)
     EnvironmentVariableGuard maxAgeEnv(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES, "0");
     auto factories = StaticData::makeMockFactoriesWithServers();
     PcServiceContext context{Configuration::instance(), std::move(factories)};
-    context.getTeeServer().serve(3, "th");
+    context.getTeeServer().serve(threadCount, "th");
+    testutils::waitFor([&threadPool = context.getTeeServer().getThreadPool()]{
+        return threadPool.getThreadCount() == threadPool.getWorkerCount();
+    });
     auto& ioContext = context.getTeeServer().getThreadPool().ioContext();
     context.getTeeServer().getThreadPool().runOnAllThreads([&] {
         auto database = context.databaseFactory();

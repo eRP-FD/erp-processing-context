@@ -6,3 +6,7 @@
  */
 
 #include "erp/model/extensions/KBVEXERPAccident.hxx"
+
+#include "shared/model/Extension.txx"
+
+template class model::Extension<model::KBVEXERPAccident>;

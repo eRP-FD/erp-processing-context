@@ -7,11 +7,11 @@
 
 #include "HttpsTestClient.hxx"
 
-#include "erp/common/Constants.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/Expect.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 
@@ -22,7 +22,15 @@ std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidato
     uint16_t serverPort = getTargetPort(target);
     Expect(serverPort > 0, "Environment variable ERP_SERVER_PORT is out of range");
     std::unique_ptr<HttpsTestClient> testClient{
-        new HttpsTestClient(serverHost, serverPort, Constants::httpTimeoutInSeconds, Constants::resolveTimeout, false)};
+        new HttpsTestClient(ConnectionParameters{
+            .hostname = serverHost,
+            .port = std::to_string(serverPort),
+            .connectionTimeoutSeconds = Constants::httpTimeoutInSeconds,
+            .resolveTimeout = Constants::resolveTimeout,
+            .tlsParameters = TlsConnectionParameters{
+                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+            }
+        })};
     TVLOG(1) << "using: https://" << serverHost << ":" << serverPort;
     testClient->mRemoteCertificate = testClient->retrieveEciesRemoteCertificate();
     return testClient;
@@ -126,14 +134,10 @@ bool HttpsTestClient::runsInErpTest() const
 }
 
 
-HttpsTestClient::HttpsTestClient(const std::string& host, uint16_t port, const uint16_t connectionTimeoutSeconds,
-                                 std::chrono::milliseconds resolveTimeout, bool enforceServerAuthentication,
-                                 const SafeString& caCertificates, const SafeString& clientCertificate,
-                                 const SafeString& clientPrivateKey)
-    : mHttpsClient(host, port, connectionTimeoutSeconds, resolveTimeout, enforceServerAuthentication, caCertificates,
-                   clientCertificate, clientPrivateKey)
-    , mServerAddress(host)
-    , mPort(port)
+HttpsTestClient::HttpsTestClient(const ConnectionParameters& params)
+    : mHttpsClient(params)
+    , mServerAddress(params.hostname)
+    , mPort(gsl::narrow<uint16_t>(std::stoi(params.port)))
 {
 }
 

@@ -5,12 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/OperationOutcome.hxx"
+#include "shared/model/OperationOutcome.hxx"
 #include "test/util/StaticData.hxx"
 
-#include <magic_enum/magic_enum.hpp>
-
 #include <gtest/gtest.h>
+#include <magic_enum/magic_enum.hpp>
 
 using namespace model;
 
@@ -61,34 +60,39 @@ void checkOperationOutcome(const model::OperationOutcome& operationOutcome)//NOL
 
 TEST(OperationOutcomeTest, Construct)//NOLINT(readability-function-cognitive-complexity)
 {
-    const OperationOutcome::Issue issueCompare1 {
-        OperationOutcome::Issue::Severity::error,
-        OperationOutcome::Issue::Type::code_invalid,
-        "details-1", "diagnostics-1",
-        { "expr-1-1", "expr-1-2", "expr-1-3", "expr-1-4" } };
-    auto issue1 =  issueCompare1;
+    const OperationOutcome::Issue issueCompare1{OperationOutcome::Issue::Severity::error,
+                                                OperationOutcome::Issue::Type::code_invalid,
+                                                "details-1",
+                                                {},
+                                                "diagnostics-1",
+                                                {"expr-1-1", "expr-1-2", "expr-1-3", "expr-1-4"}};
+    auto issue1 = issueCompare1;
     OperationOutcome operationOutcome(std::move(issue1));
 
-    const OperationOutcome::Issue issueCompare2 {
-        OperationOutcome::Issue::Severity::fatal,
-        OperationOutcome::Issue::Type::exception,
-        {}, "diagnostics-2",
-        {} };
+    const OperationOutcome::Issue issueCompare2{OperationOutcome::Issue::Severity::fatal,
+                                                OperationOutcome::Issue::Type::exception,
+                                                {},
+                                                {},
+                                                "diagnostics-2",
+                                                {}};
     auto issue2 = issueCompare2;
     operationOutcome.addIssue(std::move(issue2));
 
-    const OperationOutcome::Issue issueCompare3 {
-        OperationOutcome::Issue::Severity::warning,
-        OperationOutcome::Issue::Type::not_found,
-        "details-3", {},
-        { "expr-3-1" } };
+    const OperationOutcome::Issue issueCompare3{OperationOutcome::Issue::Severity::warning,
+                                                OperationOutcome::Issue::Type::not_found,
+                                                "details-3",
+                                                {},
+                                                {},
+                                                {"expr-3-1"}};
     auto issue3 = issueCompare3;
     operationOutcome.addIssue(std::move(issue3));
 
-    const OperationOutcome::Issue issueCompare4 {
-        OperationOutcome::Issue::Severity::information,
-        OperationOutcome::Issue::Type::informational,
-        "details-4", {}, {} };
+    const OperationOutcome::Issue issueCompare4{OperationOutcome::Issue::Severity::information,
+                                                OperationOutcome::Issue::Type::informational,
+                                                "details-4",
+                                                {},
+                                                {},
+                                                {}};
     auto issue4 = issueCompare4;
     operationOutcome.addIssue(std::move(issue4));
 

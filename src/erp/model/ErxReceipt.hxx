@@ -9,11 +9,11 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_ERXRECEIPT_HXX
 
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/util/Uuid.hxx"
 
 #include <rapidjson/document.h>
 

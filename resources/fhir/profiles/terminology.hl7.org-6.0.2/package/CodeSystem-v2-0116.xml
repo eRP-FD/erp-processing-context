@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="v2-0116"/>
+  <text>
+    <status value="generated"/>
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <p class="res-header-id">
+        <b>Generated Narrative: CodeSystem v2-0116</b>
+      </p>
+      <a name="v2-0116"> </a>
+      <a name="hcv2-0116"> </a>
+      <a name="v2-0116-en-US"> </a>
+      <p>
+        <b>Properties</b>
+      </p>
+      <p>
+        <b>This code system defines the following properties for its concepts</b>
+      </p>
+      <table class="grid">
+        <tr>
+          <td>
+            <b>Name</b>
+          </td>
+          <td>
+            <b>Code</b>
+          </td>
+          <td>
+            <b>URI</b>
+          </td>
+          <td>
+            <b>Type</b>
+          </td>
+          <td>
+            <b>Description</b>
+          </td>
+        </tr>
+        <tr>
+          <td>status</td>
+          <td>status</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#status</td>
+          <td>code</td>
+          <td>Status of the concept</td>
+        </tr>
+        <tr>
+          <td>deprecated</td>
+          <td>deprecated</td>
+          <td>http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated</td>
+          <td>code</td>
+          <td>Version of HL7 in which the code was deprecated</td>
+        </tr>
+      </table>
+      <p>
+        <b>Concepts</b>
+      </p>
+      <p>This case-sensitive code system <code>http://terminology.hl7.org/CodeSystem/v2-0116</code> defines the following codes in a Is-A hierarchy:</p>
+      <table class="codes">
+        <tr>
+          <td style="white-space:nowrap">
+            <b>Code</b>
+          </td>
+          <td>
+            <b>Display</b>
+          </td>
+          <td>
+            <b>Definition</b>
+          </td>
+          <td>
+            <b>Deutsch (German, de)</b>
+          </td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">C<a name="v2-0116-C"> </a></td>
+          <td>Closed</td>
+          <td>Closed</td>
+          <td>Nicht verfügbar</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">H<a name="v2-0116-H"> </a></td>
+          <td>Housekeeping</td>
+          <td>Housekeeping</td>
+          <td>Reinigung</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">O<a name="v2-0116-O"> </a></td>
+          <td>Occupied</td>
+          <td>Occupied</td>
+          <td>belegt</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">U<a name="v2-0116-U"> </a></td>
+          <td>Unoccupied</td>
+          <td>Unoccupied</td>
+          <td>Frei</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">K<a name="v2-0116-K"> </a></td>
+          <td>Contaminated</td>
+          <td>Contaminated</td>
+          <td>Kontaminiert</td>
+        </tr>
+        <tr>
+          <td style="white-space:nowrap">I<a name="v2-0116-I"> </a></td>
+          <td>Isolated</td>
+          <td>Isolated</td>
+          <td>Isoliert</td>
+        </tr>
+      </table>
+    </div>
+  </text>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
+    <valueCode value="inm"/>
+  </extension>
+  <extension url="http://hl7.org/fhir/StructureDefinition/structuredefinition-wg">
+    <valueCode value="pa"/>
+  </extension>
+  <url value="http://terminology.hl7.org/CodeSystem/v2-0116"/>
+  <identifier>
+    <system value="urn:ietf:rfc:3986"/>
+    <value value="urn:oid:2.16.840.1.113883.18.47"/>
+  </identifier>
+  <version value="2.0.0"/>
+  <name value="BedStatus"/>
+  <title value="bedStatus"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2019-12-01"/>
+  <publisher value="Health Level Seven International"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.org"/>
+    </telecom>
+    <telecom>
+      <system value="email"/>
+      <value value="hq@HL7.org"/>
+    </telecom>
+  </contact>
+  <description value="Code system of concepts which specify the state of a bed in an inpatient setting, and is used to determine if a patient may be assigned to it or not.  Used in HL7 Version 2.x messaging in the DLD and PV1 segments."/>
+  <purpose value="Underlying Master Code System for V2 table 0116 (Bed Status)"/>
+  <copyright value="This material derives from the HL7 Terminology (THO). THO is copyright ©1989+ Health Level Seven International and is made available under the CC0 designation. For more licensing information see: https://terminology.hl7.org/license.html"/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://terminology.hl7.org/ValueSet/v2-0116"/>
+  <hierarchyMeaning value="is-a"/>
+  <compositional value="false"/>
+  <versionNeeded value="false"/>
+  <content value="complete"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#status"/>
+    <description value="Status of the concept"/>
+    <type value="code"/>
+  </property>
+  <property>
+    <code value="deprecated"/>
+    <uri value="http://terminology.hl7.org/CodeSystem/utg-concept-properties#v2-table-deprecated"/>
+    <description value="Version of HL7 in which the code was deprecated"/>
+    <type value="code"/>
+  </property>
+  <concept id="1352">
+    <code value="C"/>
+    <display value="Closed"/>
+    <definition value="Closed"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="Nicht verfügbar"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="1353">
+    <code value="H"/>
+    <display value="Housekeeping"/>
+    <definition value="Housekeeping"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="Reinigung"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="1354">
+    <code value="O"/>
+    <display value="Occupied"/>
+    <definition value="Occupied"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="belegt"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="1355">
+    <code value="U"/>
+    <display value="Unoccupied"/>
+    <definition value="Unoccupied"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="Frei"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="1356">
+    <code value="K"/>
+    <display value="Contaminated"/>
+    <definition value="Contaminated"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="Kontaminiert"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+  <concept id="1357">
+    <code value="I"/>
+    <display value="Isolated"/>
+    <definition value="Isolated"/>
+    <designation>
+      <language value="de"/>
+      <use>
+        <system value="http://terminology.hl7.org/CodeSystem/hl7TermMaintInfra"/>
+        <code value="preferredForLanguage"/>
+      </use>
+      <value value="Isoliert"/>
+    </designation>
+    <property>
+      <code value="status"/>
+      <valueCode value="A"/>
+    </property>
+  </concept>
+</CodeSystem>

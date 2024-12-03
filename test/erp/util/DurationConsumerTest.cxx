@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/DurationConsumer.hxx"
-#include "erp/util/TimerJobBase.hxx"
-#include "erp/util/PeriodicTimer.hxx"
+#include "shared/util/DurationConsumer.hxx"
+#include "shared/deprecated/TimerJobBase.hxx"
+#include "shared/util/PeriodicTimer.hxx"
 
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <atomic>
 #include <boost/asio/io_context.hpp>

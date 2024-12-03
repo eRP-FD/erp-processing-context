@@ -6,11 +6,11 @@
  */
 
 #include "erp/model/CommunicationPayload.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/UrlHelper.hxx"
-#include "erp/validation/JsonValidator.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/UrlHelper.hxx"
+#include "shared/validation/JsonValidator.hxx"
 
 #include <boost/url.hpp>
 #include <rapidjson/pointer.h>

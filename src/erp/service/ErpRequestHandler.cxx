@@ -7,20 +7,22 @@
 
 #include "erp/service/ErpRequestHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/TLog.hxx"
 #include "erp/util/search/PagingArgument.hxx"
 
 #include <utility>
 
 
+// GEMREQ-start allowedProfessionOIDs
 ErpRequestHandler::ErpRequestHandler (const Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOIDs)
     : mOperation(operation),
       mAllowedProfessionOIDs(allowedProfessionOIDs)
 {
 }
+// GEMREQ-end allowedProfessionOIDs
 
 
 // GEMREQ-start allowedForProfessionOID

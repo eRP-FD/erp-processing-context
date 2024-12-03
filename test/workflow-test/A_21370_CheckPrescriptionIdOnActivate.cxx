@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/KbvBundle.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/ResourceTemplates.hxx"

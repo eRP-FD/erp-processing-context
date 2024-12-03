@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="VitalSignDE-Body-Weigth-UCUM"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablevalueset"/>
+  </meta>
+  <url value="http://fhir.de/ValueSet/VitalSignDE_Body_Weigth_UCUM"/>
+  <version value="1.5.0"/>
+  <name value="VitalSignDE_Body_Weigth_UCUM"/>
+  <title value="VitalSignDE_Body_Weigth_UCUM"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="VitalSignDE_Body_Weigth_UCUM enthält alle validen Einheiten zur Kodierung eines Körpergewichtes"/>
+  <copyright value="The UCUM codes, UCUM table (regardless of format), and UCUM Specification are copyright © 1999-2009, Regenstrief Institute, Inc. and the Unified Codes for Units of Measures (UCUM) Organization. All rights reserved."/>
+  <compose>
+    <include>
+      <system value="http://unitsofmeasure.org"/>
+      <concept>
+        <code value="kg"/>
+        <display value="kilogram"/>
+      </concept>
+      <concept>
+        <code value="g"/>
+        <display value="gram"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

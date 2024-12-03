@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="FallkontextBeiDokumentenerstellung"/>
+  <url value="http://ihe-d.de/CodeSystems/FallkontextBeiDokumentenerstellung"/>
+  <version value="2021-07-06T21:19:41"/>
+  <name value="FallkontextBeiDokumentenerstellung"/>
+  <title value="Fallkontext Bei Dokumentenerstellung"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="23"/>
+  <concept>
+    <code value="E100"/>
+    <display value="ambulanter Kontakt"/>
+    <definition value="Ambulanter Kontakt in beliebiger Einrichtung mit Teilnahme an der ambulanten Versorgung"/>
+  </concept>
+  <concept>
+    <code value="E110"/>
+    <display value="ambulante OP"/>
+    <definition value="Ambulant durchgeführte OP in beliebiger Einrichtung mit ambulant operativer Versorgung"/>
+  </concept>
+  <concept>
+    <code value="E200"/>
+    <display value="stationärer Aufenthalt"/>
+    <definition value="Voll-, teil- oder nachstationäre Behandlung in einer Einrichtung mit Teilnahme an der stationären Versorgung"/>
+  </concept>
+  <concept>
+    <code value="E210"/>
+    <display value="stationäre Aufnahme"/>
+    <definition value="Aufnahme zur voll-, teil- oder nachstationären Behandlung in eine Einrichtung mit Teilnahme an der stationären Versorgung"/>
+  </concept>
+  <concept>
+    <code value="E211"/>
+    <display value="Aufnahme vollstationär"/>
+    <definition value="Aufnahme in vollstationäre Krankenhausbehandlung; einschließlich vollstationäre Behandlung mit vorausgegangener vorstationärer Behandlung"/>
+  </concept>
+  <concept>
+    <code value="E212"/>
+    <display value="Aufnahme/Wiederaufnahme teilstationär"/>
+    <definition value="Aufnahme/Wiederaufnahme in teilstationäre Krankenhausbehandlung: Kontakt im Rahmen einer teilstationären Behandlung; einschließlich Tagesklinik"/>
+  </concept>
+  <concept>
+    <code value="E213"/>
+    <display value="Aufnahme Entbindung stationär"/>
+    <definition value="Aufnahme zur stationären Entbindung"/>
+  </concept>
+  <concept>
+    <code value="E214"/>
+    <display value="Aufnahme eines Neugeborenen"/>
+    <definition value="Aufnahme eines Neugeborenen bei stationärer Entbindung"/>
+  </concept>
+  <concept>
+    <code value="E215"/>
+    <display value="Aufnahme des Spenders zur Organentnahme"/>
+    <definition value="Stationäre Aufnahme zur Organentnahme"/>
+  </concept>
+  <concept>
+    <code value="E230"/>
+    <display value="stationäre Entlassung"/>
+    <definition value="Entlassung nach voll-, teil- oder nachstationärer Behandlung aus einer Einrichtung mit Teilnahme an der stationären Versorgung"/>
+  </concept>
+  <concept>
+    <code value="E231"/>
+    <display value="stationäre Entlassung nach Hause"/>
+    <definition value="Entlassung aus stationärem Aufenthalt nach Hause: Routineentlassung (Behandlung regulär beendet); Behandlung gegen ärztlichen Rat beendet; Behandlung aus sonstigen Gründen beendet. Einschließlich Entlassung mit geplanter ambulanter Weiterbehandlung. Einschließlich Entlassung in organisierte häusliche Pflege"/>
+  </concept>
+  <concept>
+    <code value="E232"/>
+    <display value="stationäre Entlassung in eine Rehabilitationseinrichtung"/>
+    <definition value="Entlassung aus stationärem Aufenthalt in eine Rehabilitationseinrichtung"/>
+  </concept>
+  <concept>
+    <code value="E233"/>
+    <display value="stationäre Entlassung in eine Pflegeeinrichtung/Hospiz"/>
+    <definition value="Entlassung aus stationärem Aufenthalt in eine Pflegeeinrichtung oder ein Hospiz"/>
+  </concept>
+  <concept>
+    <code value="E234"/>
+    <display value="Entlassung zur nachstationären Behandlung"/>
+    <definition value="Entlassung aus stationärem Aufenthalt, nachstationäre Behandlung vorgesehen: Behandlung regulär oder gegen ärztlichen Rat beendet mit geplanter nachstationärer Behandlung"/>
+  </concept>
+  <concept>
+    <code value="E235"/>
+    <display value="Patient während stationärem Aufenthalt verstorben"/>
+    <definition value="Patient während stationärem Aufenthalt verstorben"/>
+  </concept>
+  <concept>
+    <code value="E250"/>
+    <display value="stationäre Verlegung"/>
+    <definition value="Verlegung im Verlauf oder bei Abschluss eines stationären Aufenthaltes"/>
+  </concept>
+  <concept>
+    <code value="E251"/>
+    <display value="Verlegung innerhalb eines Krankenhauses"/>
+    <definition value="Verlegung innerhalb einer stationären Einrichtung (&quot;interne stationäre Verlegung&quot;)"/>
+  </concept>
+  <concept>
+    <code value="E252"/>
+    <display value="Verlegung in ein anderes Krankenhaus"/>
+    <definition value="Verlegung in ein anderes Krankenhaus (&quot;externe stationäre Verlegung&quot;)"/>
+  </concept>
+  <concept>
+    <code value="E253"/>
+    <display value="externe Verlegung in Psychiatrie"/>
+    <definition value="Verlegung zur psychiatrischen Behandlung in eine andere Einrichtung"/>
+  </concept>
+  <concept>
+    <code value="E270"/>
+    <display value="kurzzeitige Unterbrechung einer stationären Behandlung"/>
+    <definition value="Entlassung mit geplanter nachfolgender stationärer Wiederaufnahme in derselben Einrichtung, z.B. Unterbrechung gegen ärztlichen Rat"/>
+  </concept>
+  <concept>
+    <code value="E280"/>
+    <display value="Konsil"/>
+    <definition value="Konsiliarische Mitbehandlung im Verlauf eines stationären Aufenthaltes oder im ambulanten Kontext, ohne Verlegung"/>
+  </concept>
+  <concept>
+    <code value="E300"/>
+    <display value="Behandlung im häuslichen Umfeld"/>
+    <definition value="Behandlung/ Monitoring im häuslichen Umfeld"/>
+  </concept>
+  <concept>
+    <code value="E400"/>
+    <display value="Virtual Encounter"/>
+    <definition value="Behandlung/ Monitoring über virtuellen Patientenkontakt z.B. telemedizinischer Patientenkontakt"/>
+  </concept>
+</CodeSystem>

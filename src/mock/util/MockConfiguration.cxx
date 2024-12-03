@@ -7,7 +7,7 @@
 
 #include "mock/util/MockConfiguration.hxx"
 
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 
 MockConfigurationKeyNames::MockConfigurationKeyNames()
 {
@@ -23,7 +23,10 @@ MockConfigurationKeyNames::MockConfigurationKeyNames()
         { MockConfigurationKey::MOCK_ID_FD_SIG_OCSP_URL,     {"MOCK_ID_FD_SIG_OCSP_URL",     "/mock/id.fd.sig/ocsp-url", Flags::categoryDebug, ""} },
         { MockConfigurationKey::MOCK_ID_FD_SIG_CERT,         {"MOCK_ID_FD_SIG_CERT",         "/mock/id.fd.sig/cert", Flags::categoryDebug, ""} },
         { MockConfigurationKey::MOCK_USE_MOCK_TPM,           {"MOCK_USE_MOCK_TPM",           "/mock/use-mock-tpm", Flags::categoryDebug, ""} },
-        { MockConfigurationKey::MOCK_GENERATED_PKI_PATH,     {"MOCK_GENERATED_PKI_PATH",     "/mock/generated-pki-path", Flags::categoryDebug, ""} }
+        { MockConfigurationKey::MOCK_GENERATED_PKI_PATH,     {"MOCK_GENERATED_PKI_PATH",     "/mock/generated-pki-path", Flags::categoryDebug, ""} },
+        { MockConfigurationKey::MOCK_VAU_AUT_PRIVATE_KEY,    {"MOCK_VAU_AUT_PRIVATE_KEY",    "/mock/vau.aut/private-key", Flags::categoryDebug, ""} },
+        { MockConfigurationKey::MOCK_VAU_AUT_CERT,           {"MOCK_VAU_AUT_CERT",           "/mock/vau.aut/cert", Flags::categoryDebug, ""} },
+        { MockConfigurationKey::MOCK_VAU_AUT_SIGNER_CERT,    {"MOCK_VAU_AUT_PRIVATE_KEY",    "/mock/vau.aut/signer-cert", Flags::categoryDebug, ""} }
     });
     // clang-format on
 }

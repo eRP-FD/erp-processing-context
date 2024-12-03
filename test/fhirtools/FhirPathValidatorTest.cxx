@@ -5,19 +5,18 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Bundle.hxx"
 #include "erp/model/Communication.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
+#include "shared/model/Bundle.hxx"
 #include "test/fhirtools/SampleValidation.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <gtest/gtest.h>
 #include <iostream>
-
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/validator/FhirPathValidator.hxx"
 
 using namespace fhirtools;
 
@@ -304,7 +303,6 @@ public:
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/Profile-observation-grad-der-behinderung.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/Profile-reisepassnummer.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.36--20181001183306.xml",
-            "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.37--20190517134631.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.38--20180713162205.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.39--20180713132816.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.40--20180713132721.xml",
@@ -356,14 +354,13 @@ public:
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.32--20180713132315.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.33--20180713132759.xml",
             "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.34--20180713132843.xml",
-            "fhir/profiles/de.basisprofil.r4-1.3.2/package/ValueSet-1.2.276.0.76.11.35--20181214170712.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/CodeSystem-GEM-ERPCHRG-CS-ConsentType.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/StructureDefinition-GEM-ERPCHRG-EX-MarkingFlag.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/StructureDefinition-GEM-ERPCHRG-PR-ChargeItem.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/StructureDefinition-GEM-ERPCHRG-PR-Communication-ChargChangeReply.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/StructureDefinition-GEM-ERPCHRG-PR-Communication-ChargChangeReq.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/StructureDefinition-GEM-ERPCHRG-PR-Consent.xml",
-            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0/ValueSet-GEM-ERPCHRG-VS-ConsentType.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/CodeSystem-GEM-ERPCHRG-CS-ConsentType.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/StructureDefinition-GEM-ERPCHRG-EX-MarkingFlag.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/StructureDefinition-GEM-ERPCHRG-PR-ChargeItem.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/StructureDefinition-GEM-ERPCHRG-PR-Communication-ChargChangeReply.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/StructureDefinition-GEM-ERPCHRG-PR-Communication-ChargChangeReq.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/StructureDefinition-GEM-ERPCHRG-PR-Consent.xml",
+            "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package/ValueSet-GEM-ERPCHRG-VS-ConsentType.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/CodeSystem-GEM-ERP-CS-AvailabilityStatus.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/CodeSystem-GEM-ERP-CS-DocumentType.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/CodeSystem-GEM-ERP-CS-FlowType.xml",
@@ -454,56 +451,56 @@ public:
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_PR_FOR_PractitionerRole.xml",
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_VS_FOR_Payor_type.xml",
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_VS_FOR_Qualification_Type.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/CodeSystem-DAV-CS-ERP-CompositionTypes.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/CodeSystem-DAV-CS-ERP-InvoiceTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/CodeSystem-DAV-CS-ERP-MedicationDispenseTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/CodeSystem-DAV-CS-ERP-RueckspracheArzt.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/CodeSystem-DAV-CS-ERP-ZusatzattributGruppe.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Abrechnungszeilen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Gesamtzuzahlung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-KostenVersicherter.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-MwStSatz.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Rezeptaenderung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Vertragskennzeichen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Zaehler.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-Zusatzattribute.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-ZusatzdatenEinheit.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-ZusatzdatenFaktorkennzeichen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-ZusatzdatenHerstellung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Extension-DAV-EX-ERP-ZusatzdatenPreiskennzeichen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-AbgabedatenBundle.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-AbgabedatenComposition.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-Abgabeinformationen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-Abrechnungszeilen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-Apotheke.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-ZusatzdatenEinheit.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-Base-ZusatzdatenHerstellung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-ERP-AbgabedatenMeta.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-ERP-DAVHerstellerSchluessel.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/Profile-DAV-PR-ERP-PreisangabeEUR.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/ValueSet-DAV-VS-ERP-DEUEV-Anlage-8.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/ValueSet-DAV-VS-ERP-InvoiceTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/ValueSet-DAV-VS-ERP-MedicationDispenseTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1/ValueSet-DAV-VS-ERP-RueckspracheArzt.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/CodeSystem-DAV-PKV-CS-ERP-AbrechnungsTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/CodeSystem-DAV-PKV-CS-ERP-ArtRezeptaenderung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/CodeSystem-DAV-PKV-CS-ERP-KostenVersicherterKategorie.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/CodeSystem-DAV-PKV-CS-ERP-ZusatzattributSchluesselAutidemAustausch.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/CodeSystem-DAV-PKV-CS-ERP-ZusatzdatenEinheitFaktorkennzeichen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Extension-DAV-PKV-EX-ERP-AbrechnungsTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Extension-DAV-PKV-EX-ERP-Bankverbindung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-AbgabedatenBundle.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-AbgabedatenComposition.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-Abgabeinformationen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-Abrechnungszeilen.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-Apotheke.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-ZusatzdatenEinheit.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/Profile-DAV-PKV-PR-ERP-ZusatzdatenHerstellung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/ValueSet-DAV-PKV-VS-ERP-AbrechnungsTyp.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/ValueSet-DAV-PKV-VS-ERP-ArtRezeptaenderung.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/ValueSet-DAV-PKV-VS-ERP-KostenVersicherterKategorie.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/ValueSet-DAV-PKV-VS-ERP-ZusatzattributSchluesselAutidemAustausch.xml",
-            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0/ValueSet-DAV-PKV-VS-ERP-ZusatzdatenEinheitFaktorkennzeichen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/CodeSystem-DAV-CS-ERP-CompositionTypes.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/CodeSystem-DAV-CS-ERP-InvoiceTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/CodeSystem-DAV-CS-ERP-MedicationDispenseTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/CodeSystem-DAV-CS-ERP-RueckspracheArzt.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/CodeSystem-DAV-CS-ERP-ZusatzattributGruppe.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Abrechnungszeilen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Gesamtzuzahlung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-KostenVersicherter.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-MwStSatz.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Rezeptaenderung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Vertragskennzeichen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Zaehler.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-Zusatzattribute.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-ZusatzdatenEinheit.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-ZusatzdatenFaktorkennzeichen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-ZusatzdatenHerstellung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Extension-DAV-EX-ERP-ZusatzdatenPreiskennzeichen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-AbgabedatenBundle.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-AbgabedatenComposition.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-Abgabeinformationen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-Abrechnungszeilen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-Apotheke.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-ZusatzdatenEinheit.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-Base-ZusatzdatenHerstellung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-ERP-AbgabedatenMeta.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-ERP-DAVHerstellerSchluessel.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/Profile-DAV-PR-ERP-PreisangabeEUR.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/ValueSet-DAV-VS-ERP-DEUEV-Anlage-8.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/ValueSet-DAV-VS-ERP-InvoiceTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/ValueSet-DAV-VS-ERP-MedicationDispenseTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package/ValueSet-DAV-VS-ERP-RueckspracheArzt.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/CodeSystem-DAV-PKV-CS-ERP-AbrechnungsTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/CodeSystem-DAV-PKV-CS-ERP-ArtRezeptaenderung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/CodeSystem-DAV-PKV-CS-ERP-KostenVersicherterKategorie.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/CodeSystem-DAV-PKV-CS-ERP-ZusatzattributSchluesselAutidemAustausch.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/CodeSystem-DAV-PKV-CS-ERP-ZusatzdatenEinheitFaktorkennzeichen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Extension-DAV-PKV-EX-ERP-AbrechnungsTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Extension-DAV-PKV-EX-ERP-Bankverbindung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-AbgabedatenBundle.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-AbgabedatenComposition.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-Abgabeinformationen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-Abrechnungszeilen.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-Apotheke.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-ZusatzdatenEinheit.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/Profile-DAV-PKV-PR-ERP-ZusatzdatenHerstellung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/ValueSet-DAV-PKV-VS-ERP-AbrechnungsTyp.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/ValueSet-DAV-PKV-VS-ERP-ArtRezeptaenderung.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/ValueSet-DAV-PKV-VS-ERP-KostenVersicherterKategorie.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/ValueSet-DAV-PKV-VS-ERP-ZusatzattributSchluesselAutidemAustausch.xml",
+            "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package/ValueSet-DAV-PKV-VS-ERP-ZusatzdatenEinheitFaktorkennzeichen.xml",
             "fhir/profiles/kbv.ita.erp-1.1.2/KBV_CS_ERP_Medication_Category.xml",
             "fhir/profiles/kbv.ita.erp-1.1.2/KBV_CS_ERP_Medication_Type.xml",
             "fhir/profiles/kbv.ita.erp-1.1.2/KBV_CS_ERP_Section_Type.xml",
@@ -573,6 +570,17 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
     }},
     Sample{"OperationOutcome", "test/fhir-path/samples/invalid_empty_value.xml", {
         {std::make_tuple(Severity::error, "Attribute value must not be empty"), "OperationOutcome.issue[0].diagnostics"}
+    }, {
+        {"dom-6", "OperationOutcome"}
+    }},
+    Sample{"OperationOutcome", "test/fhir-path/samples/invalid_empty_element.json", {
+    }, {
+        {"dom-6", "OperationOutcome"},{"ele-1", "OperationOutcome.issue[0].details"}
+    }},
+    Sample{"OperationOutcome", "test/fhir-path/samples/invalid_empty_array.json", {
+        {std::make_tuple(Severity::error,
+            "Array cannot be empty - the property should not be present if it has no values"),
+            "OperationOutcome.issue[0].expression"}
     }, {
         {"dom-6", "OperationOutcome"}
     }}

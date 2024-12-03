@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/OperationOutcome.hxx"
+#include "shared/model/OperationOutcome.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"

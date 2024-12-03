@@ -8,12 +8,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_SERVERSOCKETHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_SERVERSOCKETHANDLER_HXX
 
-#include "erp/server/handler/RequestHandlerManager.hxx"
+#include "shared/server/handler/RequestHandlerManager.hxx"
 
 #include <memory>
 
 #include <boost/asio/io_context.hpp>
+#include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/ssl.hpp>
+
 
 class PcServiceContext;
 
@@ -43,5 +45,6 @@ private:
     void do_accept (void);
     void on_accept (boost::beast::error_code ec, boost::asio::ip::tcp::socket socket);
 };
+
 
 #endif

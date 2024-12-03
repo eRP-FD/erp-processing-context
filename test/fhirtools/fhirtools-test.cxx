@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Environment.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <gtest/gtest.h>
 
@@ -20,6 +21,8 @@ int main(int argc, char** argv)
 
     GLogConfiguration::init_logging(argv[0]);
     ::testing::InitGoogleTest(&argc, argv);
+
+    Fhir::init<ConfigurationBase::ERP>(Fhir::Init::later);
 
     return RUN_ALL_TESTS();
 }

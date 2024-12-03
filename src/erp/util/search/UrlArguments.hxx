@@ -10,9 +10,9 @@
 
 
 #include "erp/model/Link.hxx"
-#include "erp/model/TimePeriod.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/model/TimePeriod.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "erp/util/search/PagingArgument.hxx"
 #include "erp/util/search/ReverseIncludeArgument.hxx"
 #include "erp/util/search/SearchArgument.hxx"

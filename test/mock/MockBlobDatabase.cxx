@@ -9,8 +9,8 @@
 
 #include <vector>
 
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/util/Expect.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 BlobDatabase::Entry MockBlobDatabase::getBlob (

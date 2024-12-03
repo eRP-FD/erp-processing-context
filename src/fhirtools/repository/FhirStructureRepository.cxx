@@ -6,7 +6,7 @@
  */
 
 #include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
 #include "fhirtools/repository/FhirResourceGroupConst.hxx"
@@ -160,6 +160,7 @@ FhirStructureRepositoryBackend::~FhirStructureRepositoryBackend() = default;
 void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>& filesAndDirectories,
                                           const FhirResourceGroupResolver& groupResolver)
 {
+    bool success = true;
     TVLOG(1) << "Loading FHIR structure definitions.";
     mergeGroups(groupResolver.allGroups());
     std::list<std::pair<FhirCodeSystem, std::filesystem::path>> supplements;
@@ -167,14 +168,20 @@ void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>
     {
         if (is_regular_file(file))
         {
-            loadFile(supplements, file, groupResolver);
+            if (!loadFile(supplements, file, groupResolver))
+            {
+                success = false;
+            }
         }
         else if (is_directory(file))
         {
             for (const auto& dirEntry : std::filesystem::directory_iterator{file})
             {
                 FPExpect(dirEntry.is_regular_file(), "only regular files supported in profile directories.");
-                loadFile(supplements, dirEntry.path(), groupResolver);
+                if (!loadFile(supplements, dirEntry.path(), groupResolver))
+                {
+                    success = false;
+                }
             }
         }
         else
@@ -189,6 +196,10 @@ void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>
     repoFixer.fix();
     FhirResourceViewVerifier verifier(*this);
     verifier.verify();
+    if (!success)
+    {
+        Fail2("error loading repository", std::logic_error);
+    }
 }
 
 void fhirtools::FhirStructureRepositoryBackend::synthesizeCodeSystem(const std::string& url, const FhirVersion& version,
@@ -222,10 +233,11 @@ void FhirStructureRepositoryBackend::finalizeValueSets()
     }
 }
 
-void FhirStructureRepositoryBackend::loadFile(std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
+bool FhirStructureRepositoryBackend::loadFile(std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
                                               const std::filesystem::path& file,
                                               const FhirResourceGroupResolver& groupResolver)
 {
+    bool success = true;
     try
     {
         TVLOG(2) << "loading: " << file;
@@ -247,13 +259,22 @@ void FhirStructureRepositoryBackend::loadFile(std::list<std::pair<FhirCodeSystem
         }
         for (auto&& valueSet : valueSets)
         {
-            addValueSet(std::make_unique<FhirValueSet>(std::move(valueSet)));
+            try {
+                addValueSet(std::make_unique<FhirValueSet>(std::move(valueSet)));
+            }
+            catch (const std::exception& ex)
+            {
+                LOG(ERROR) << file.string() + ": " + ex.what();
+                success = false;
+            }
         }
     }
     catch (const std::exception& ex)
     {
-        Fail2(file.string() + ": " + ex.what(), std::logic_error);
+        LOG(ERROR) << file.string() + ": " + ex.what();
+        success = false;
     }
+    return success;
 }
 
 

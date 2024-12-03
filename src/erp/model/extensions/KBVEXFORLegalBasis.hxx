@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVEXFORLEGALBASIS_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVEXFORLEGALBASIS_HXX
 
-#include "erp/model/Extension.hxx"
+#include "shared/model/Extension.hxx"
 
 namespace model
 {

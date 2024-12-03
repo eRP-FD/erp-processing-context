@@ -5,15 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "erp/model/MedicationDispense.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "test_config.h"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
@@ -58,6 +60,7 @@ public:
             task.setExpiryDate(::model::Timestamp::now());
             task.setAcceptDate(::model::Timestamp::now());
             task.setStatus(::model::Task::Status::ready);
+            task.updateLastMedicationDispense();
             database().updateTaskStatusAndSecret(task);
 
             auto prescriptionXML = ResourceTemplates::kbvBundlePkvXml({id, model::Kvnr(kvnr)});
@@ -66,7 +69,7 @@ public:
                 ::model::Binary{prescription.getId().toString(),
                                 ::CryptoHelper::toCadesBesSignature(prescription.serializeToJsonString())};
 
-            database().activateTask(task, signedPrescription);
+            database().activateTask(task, signedPrescription, mJwtBuilder.makeJwtArzt());
 
             auto chargeItem = model::ChargeItem::fromXmlNoValidation(
                 resourceManager.getStringResource("test/EndpointHandlerTest/charge_item_input.xml"));
@@ -78,11 +81,8 @@ public:
             chargeItem.setAccessCode(::MockDatabase::mockAccessCode);
             chargeItem.deleteContainedBinary();
 
-            const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
-            auto medicationDispense = ::model::MedicationDispense::fromXmlNoValidation(dispenseItemXML);
-            medicationDispense.setTelematicId(model::TelematikId("606358757"));
-            medicationDispense.setWhenHandedOver(::model::Timestamp::now());
-            auto dispenseItem = ::model::AbgabedatenPkvBundle::fromJsonNoValidation(medicationDispense.serializeToJsonString());
+            const auto& dispenseItemXML = ResourceTemplates::davDispenseItemXml({.prescriptionId = id});
+            auto dispenseItem = ::model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
             dispenseItem.setId(::Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
             auto signedDispenseItem =
                 ::model::Binary{"fe4a04af-0828-4977-a5ce-bfeed16ebf10",
@@ -98,10 +98,16 @@ public:
 
             ::std::vector<::model::MedicationDispense> medicationDispenses;
             medicationDispenses.emplace_back(
-                ::model::MedicationDispense::fromJsonNoValidation(dispenseItem.serializeToJsonString()));
+                ::model::MedicationDispense::fromXmlNoValidation(ResourceTemplates::medicationDispenseXml({
+                    .prescriptionId = id,
+                    .kvnr = kvnr,
+                    .telematikId = "606358757",
+                    .whenHandedOver = ::model::Timestamp::now(),
+                })));
 
-            database().updateTaskMedicationDispenseReceipt(task, medicationDispenses,
-                                                           ::model::ErxReceipt::fromJsonNoValidation(receiptJson));
+            database().updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}},
+                                                           ::model::ErxReceipt::fromJsonNoValidation(receiptJson),
+                                                           mJwtBuilder.makeJwtApotheke());
 
             result.emplace_back(::model::ChargeInformation{::std::move(chargeItem), ::std::move(signedPrescription),
                                                            ::std::move(prescription), ::std::move(signedDispenseItem),

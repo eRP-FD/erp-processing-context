@@ -7,8 +7,8 @@
 
 #include "erp/util/search/UrlArguments.hxx"
 
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/KeyDerivation.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/KeyDerivation.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 

@@ -7,7 +7,7 @@
 
 #include "MockConsentTable.hxx"
 
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 #include "erp/model/Consent.hxx"
 
 #include <pqxx/except>

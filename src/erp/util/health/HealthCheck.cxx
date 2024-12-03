@@ -6,11 +6,11 @@
  */
 
 #include "erp/util/health/HealthCheck.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
+#include "shared/database/DatabaseConnectionInfo.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
-#include "erp/util/Demangle.hxx"
-#include "erp/util/ExceptionHelper.hxx"
+#include "shared/util/Demangle.hxx"
+#include "shared/util/ExceptionHelper.hxx"
 #include <sw/redis++/errors.h>
 
 namespace

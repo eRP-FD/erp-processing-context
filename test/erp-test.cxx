@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Environment.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/TLog.hxx"
 #include "workflow-test/EndpointTestClient.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
 #include "test/util/TestUtils.hxx"
@@ -59,5 +60,6 @@ int main(int argc, char** argv)
     ThreadNames::instance().setCurrentThreadName("test-runner");
     MockTerminationHandler::setupForTesting();
     Configuration::instance().check();
+    Fhir::init<ConfigurationBase::ERP>(Fhir::Init::later);
     return RUN_ALL_TESTS();
 }

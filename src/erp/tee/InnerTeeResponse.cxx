@@ -7,10 +7,10 @@
 
 #include "erp/tee/InnerTeeResponse.hxx"
 
-#include "erp/beast/BoostBeastHeader.hxx"
-#include "erp/server/response/ValidatedServerResponse.hxx"
-#include "erp/server/response/ServerResponseWriter.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/beast/BoostBeastHeader.hxx"
+#include "shared/server/response/ValidatedServerResponse.hxx"
+#include "shared/server/response/ServerResponseWriter.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 
 InnerTeeResponse::InnerTeeResponse (const std::string& requestId, const Header& header, const std::string& body)

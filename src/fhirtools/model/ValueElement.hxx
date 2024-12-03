@@ -32,6 +32,9 @@ public:
     [[nodiscard]] bool hasValue() const override;
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
     [[nodiscard]] std::vector<std::string> subElementNames() const override;
+
+    [[nodiscard]] std::string asRaw() const override;
+
     [[nodiscard]] Element::QuantityType asQuantity() const override;
     [[nodiscard]] DateTime asDateTime() const override;
     [[nodiscard]] Time asTime() const override;

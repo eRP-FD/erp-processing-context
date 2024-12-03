@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/TerminationHandler.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
 
 #include <gtest/gtest.h>
 #include <atomic>

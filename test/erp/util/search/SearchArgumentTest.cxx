@@ -8,7 +8,7 @@
 #include "erp/database/PostgresBackend.hxx"
 
 #include "erp/database/Database.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/ErpMacros.hxx"
@@ -180,7 +180,7 @@ private:
             mIsIntialCleanupRequested = false;
 
             const std::string query = "DELETE FROM erp.communication WHERE sender = '\\x" + hashedHex(sender) + "'";
-            auto connection = std::make_unique<pqxx::connection>(PostgresBackend::defaultConnectString());
+            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
             pqxx::work transaction (*connection);
             const auto result = transaction.exec(query);
             transaction.commit();

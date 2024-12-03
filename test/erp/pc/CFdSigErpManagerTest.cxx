@@ -6,8 +6,8 @@
  */
 
 #include "erp/pc/CFdSigErpManager.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Configuration.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -350,7 +350,7 @@ TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
         header.setContentLength(0);
         requesting = true;
         requestStarted.unlock();
-        completedMtx.try_lock_for(10s);
+        (void)completedMtx.try_lock_for(10s);
         requesting = false;
         TVLOG(0) << "Completed request";
         return {header, ""};

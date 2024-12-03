@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="identifier-type-de-basis"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablecodesystem"/>
+  </meta>
+  <url value="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
+  <version value="1.5.0"/>
+  <name value="IdentifierTypeDeBasis"/>
+  <title value="Identifier Type De Basis"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Liste der Identfikatorentypen des deutschen Basisprofils welche die Standardtypen ergänzen."/>
+  <copyright value="HL7 Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <valueSet value="http://fhir.de/ValueSet/identifier-type-de-basis-de"/>
+  <content value="complete"/>
+  <count value="5"/>
+  <property>
+    <code value="status"/>
+    <uri value="http://hl7.org/fhir/concept-properties#status"/>
+    <description value="A property that indicates the status of the concept. One of active, experimental, deprecated, or retired."/>
+    <type value="code"/>
+  </property>
+  <concept>
+    <code value="GKV"/>
+    <display value="Gesetzliche Krankenversicherung"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="retired"/>
+    </property>
+  </concept>
+  <concept>
+    <code value="PKV"/>
+    <display value="Private Krankenversicherung"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="retired"/>
+    </property>
+  </concept>
+  <concept>
+    <code value="ZANR"/>
+    <display value="Zahnarztnummer"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="active"/>
+    </property>
+  </concept>
+  <concept>
+    <code value="KZVA"/>
+    <display value="KZVAbrechnungsnummer"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="active"/>
+    </property>
+  </concept>
+  <concept>
+    <code value="KVZ10"/>
+    <display value="Krankenversichertennummer"/>
+    <property>
+      <code value="status"/>
+      <valueCode value="active"/>
+    </property>
+  </concept>
+</CodeSystem>

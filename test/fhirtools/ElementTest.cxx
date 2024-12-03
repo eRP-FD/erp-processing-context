@@ -5,9 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -505,8 +509,10 @@ protected:
     void testResolution(const Element& baseElement, const std::string_view ref,
                         const std::shared_ptr<const Element>& expectedResolution)
     {
-        const auto& [element, resultList] =
-            baseElement.resolveReference(Element::IdentityAndResult::fromReferenceString(ref, "N/A").identity, "N/A");
+        std::shared_ptr<const Element> element;
+        ValidationResults resultList;
+        ASSERT_NO_THROW(std::tie(element, resultList) = baseElement.resolveReference(
+                            Element::IdentityAndResult::fromReferenceString(ref, "N/A").identity, "N/A"));
         ASSERT_LE(resultList.highestSeverity(), Severity::debug) << resultList.summary(fhirtools::Severity::debug);
         ASSERT_EQ(element, expectedResolution) << resultList.summary(fhirtools::Severity::debug);
     }
@@ -725,7 +731,7 @@ TEST_F(ElementNavigationTest, resolveReferenceByString)
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry0DomainResource[0], "Bundle/rootBundle", nullptr));
 
     // resolve http://erp.test/DomainResource/1
-    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/DomainResource/1", nullptr));
+    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/DomainResource/1", entry0DomainResource[0]));
     EXPECT_NO_FATAL_FAILURE(
         testResolution(*entry0DomainResource[0], "http://erp.test/DomainResource/1", entry0DomainResource[0]));
     EXPECT_NO_FATAL_FAILURE(
@@ -744,13 +750,13 @@ TEST_F(ElementNavigationTest, resolveReferenceByString)
 
 
     // resolve http://erp.test/Bundle/1
-    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/Bundle/1", nullptr));
+    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/Bundle/1", entry1Bundle[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry0DomainResource[0], "http://erp.test/Bundle/1", entry1Bundle[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry1BundleEntry[0], "http://erp.test/Bundle/1", entry1Bundle[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry1BundleEntry0Resource[0], "http://erp.test/Bundle/1", nullptr));
 
     // resolve http://erp.test/Resource/2
-    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/Resource/2", nullptr));
+    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/Resource/2", entry1BundleEntry0Resource[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry0DomainResource[0], "http://erp.test/Resource/2", nullptr));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry1BundleEntry[0], "http://erp.test/Resource/2", nullptr));
     EXPECT_NO_FATAL_FAILURE(
@@ -800,6 +806,85 @@ TEST_F(ElementNavigationTest, documentRoot)
     EXPECT_EQ(entry1BundleEntry[0]->documentRoot(), bundle);
     EXPECT_EQ(entry1BundleEntry0Resource[0]->documentRoot(), bundle);
     EXPECT_EQ(entry1BundleEntry0ResourceId[0]->documentRoot(), bundle);
+}
+
+class ElementNavigationTest2 : public testing::Test {
+protected:
+    using ElementPtr = std::shared_ptr<const fhirtools::Element>;
+
+    void SetUp() override  {
+        static constexpr char miniFhirAndParameters[] = "mini-fhir+parameters";
+        fhirtools::FhirResourceGroupConst resolver{miniFhirAndParameters};
+        backend.load(
+            {
+                ResourceManager::getAbsoluteFilename("test/fhir-path/profiles/minifhirtypes.xml"),
+                ResourceManager::getAbsoluteFilename("test/fhir-path/profiles/mini_parameters.xml"),
+            },
+            resolver);
+        view = std::make_shared<fhirtools::FhirResourceViewGroupSet>(
+            miniFhirAndParameters, resolver.findGroupById(miniFhirAndParameters), &backend);
+    }
+
+    ElementPtr eval(const ElementPtr& element, std::string_view fhirPath)
+    {
+        ElementPtr result;
+        auto elementAsJson = [&]{
+            std::ostringstream out;
+            element->json(out);
+            return std::move(out).str();
+        };
+        [&] {
+            auto expr = fhirtools::FhirPathParser::parse(view.get(), fhirPath);
+            ASSERT_NE(expr, nullptr) << "compile failure: " << fhirPath;
+            const auto collection = expr->eval({element});
+            ASSERT_EQ(collection.size(), 1) << fhirPath << " in " << elementAsJson();
+            result = collection.single();
+        }();
+        return result;
+    }
+
+    ResourceManager& resourceManager = ResourceManager::instance();
+    FhirStructureRepositoryBackend backend;
+    std::shared_ptr<const fhirtools::FhirStructureRepository> view;
+
+    friend void PrintTo(const Element& element, std::ostream* out)
+    {
+        element.json(*out);
+    }
+};
+
+TEST_F(ElementNavigationTest2, genericResolve)
+{
+    auto referencesGenericJson = resourceManager.getStringResource("test/fhir-path/samples/references_generic.json");
+    auto referencesGeneric = model::NumberAsStringParserDocument::fromJson(referencesGenericJson);
+    auto rootElement = std::make_shared<const ErpElement>(view, std::weak_ptr<const fhirtools::Element>{}, "Parameters",
+                                                          &referencesGeneric);
+    auto result = fhirtools::FhirPathValidator::validate(rootElement, "Parameters", {});
+    // get fields:
+    ASSERT_LT(result.highestSeverity(), fhirtools::Severity::warning);
+    ElementPtr one;
+    ASSERT_NO_FATAL_FAILURE(one = eval(rootElement, "parameter.where(name='one').resource"));
+    ElementPtr parameterTwo;
+    ASSERT_NO_FATAL_FAILURE(parameterTwo = eval(rootElement, "parameter.where(name='two')"));
+    ElementPtr two;
+    ASSERT_NO_FATAL_FAILURE(two = eval(parameterTwo, "part.where(name='two.one').resource"));
+    ElementPtr three;
+    ASSERT_NO_FATAL_FAILURE(three = eval(parameterTwo, "part.where(name='two.two').resource"));
+
+    // test referencability from root
+    EXPECT_EQ(get<ElementPtr>(rootElement->resolveReference({.pathOrId = "Resource/one"}, "n/a")), one);
+    EXPECT_EQ(get<ElementPtr>(rootElement->resolveReference({.pathOrId = "Resource/two"}, "n/a")), two);
+    EXPECT_EQ(get<ElementPtr>(rootElement->resolveReference({.pathOrId = "Resource/three"}, "n/a")), three);
+
+    // test referencability from parameter
+    EXPECT_EQ(get<ElementPtr>(parameterTwo->resolveReference({.pathOrId = "Resource/one"}, "n/a")), one);
+    EXPECT_EQ(get<ElementPtr>(parameterTwo->resolveReference({.pathOrId = "Resource/two"}, "n/a")), two);
+    EXPECT_EQ(get<ElementPtr>(parameterTwo->resolveReference({.pathOrId = "Resource/three"}, "n/a")), three);
+
+    // test referencability from parameter.part.resource
+    EXPECT_EQ(get<ElementPtr>(three->resolveReference({.pathOrId = "Resource/one"}, "n/a")), one);
+    EXPECT_EQ(get<ElementPtr>(three->resolveReference({.pathOrId = "Resource/two"}, "n/a")), two);
+    EXPECT_EQ(get<ElementPtr>(three->resolveReference({.pathOrId = "Resource/three"}, "n/a")), three);
 }
 
 TEST(ElementIdentitySchemeTest, compare)

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_TELEMATICPSEUDONYM_TELEMATICPSEUDONYMMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_TELEMATICPSEUDONYM_TELEMATICPSEUDONYMMANAGER_HXX
 
-#include "erp/crypto/CMAC.hxx"
+#include "shared/crypto/CMAC.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 
 #include <date/date.h>

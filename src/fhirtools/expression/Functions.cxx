@@ -213,6 +213,12 @@ Collection SubsettingFirst::eval(const Collection& collection) const
     return collection.empty() ? Collection{} : Collection{collection[0]};
 }
 
+Collection SubsettingLast::eval(const Collection& collection) const
+{
+    EVAL_TRACE;
+    return collection.empty() ? Collection{} : Collection{collection.back()};
+}
+
 Collection SubsettingTail::eval(const Collection& collection) const
 {
     EVAL_TRACE;

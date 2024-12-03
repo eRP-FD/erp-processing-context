@@ -1,0 +1,873 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="FacharzttitelDerAerztekammern"/>
+  <url value="http://ihe-d.de/CodeSystems/FacharzttitelDerAerztekammern"/>
+  <version value="2021-10-15T12:13:26"/>
+  <name value="FacharzttitelDerAerztekammern"/>
+  <title value="Facharzttitel Der Aerztekammern"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="197"/>
+  <concept>
+    <code value="011001"/>
+    <display value="FA Allgemeinmedizin"/>
+  </concept>
+  <concept>
+    <code value="012901"/>
+    <display value="SP Geriatrie"/>
+    <definition value="FA Allgemeinmedizin mit SP Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="021001"/>
+    <display value="FA Anästhesiologie"/>
+  </concept>
+  <concept>
+    <code value="021002"/>
+    <display value="FA Anästhesiologie und Intensivtherapie"/>
+  </concept>
+  <concept>
+    <code value="031001"/>
+    <display value="FA Anatomie"/>
+  </concept>
+  <concept>
+    <code value="041001"/>
+    <display value="FA Arbeitshygiene"/>
+  </concept>
+  <concept>
+    <code value="041002"/>
+    <display value="FA Arbeitsmedizin"/>
+  </concept>
+  <concept>
+    <code value="051001"/>
+    <display value="FA Augenheilkunde"/>
+  </concept>
+  <concept>
+    <code value="061001"/>
+    <display value="FA Biochemie"/>
+  </concept>
+  <concept>
+    <code value="071107"/>
+    <display value="FA Allgemeinchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071101"/>
+    <display value="FA Allgemeine Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="071001"/>
+    <display value="FA Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="071102"/>
+    <display value="FA Gefäßchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071002"/>
+    <display value="FA Herzchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071202"/>
+    <display value="FA Kinder- und Jugendchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071003"/>
+    <display value="FA Kinderchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071004"/>
+    <display value="FA Orthopädie"/>
+  </concept>
+  <concept>
+    <code value="071103"/>
+    <display value="FA Orthopädie und Unfallchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071005"/>
+    <display value="FA Plastische Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="071106"/>
+    <display value="FA Plastische und Ästhetische Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="071201"/>
+    <display value="FA Plastische; Rekonstruktive und Ästhetische Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="071104"/>
+    <display value="FA Thoraxchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071105"/>
+    <display value="FA Visceralchirurgie"/>
+  </concept>
+  <concept>
+    <code value="071108"/>
+    <display value="FA Viszeralchirurgie"/>
+  </concept>
+  <concept>
+    <code value="072001"/>
+    <display value="SP Gefäßchirurgie"/>
+  </concept>
+  <concept>
+    <code value="072002"/>
+    <display value="SP Rheumatologie (Orthopädie)"/>
+    <definition value="FA Chirurgie mit SP Rheumatologie (Orthopädie)"/>
+  </concept>
+  <concept>
+    <code value="072003"/>
+    <display value="SP Thoraxchirurgie in der Chirurgie"/>
+    <definition value="FA Chirurgie mit SP Thoraxchirurgie in der Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="072004"/>
+    <display value="SP Thoraxchirurgie in der Herzchirurgie"/>
+    <definition value="FA Chirurgie mit SP Thoraxchirurgie in der Herzchirurgie"/>
+  </concept>
+  <concept>
+    <code value="072005"/>
+    <display value="SP Unfallchirurgie"/>
+    <definition value="FA Chirurgie mit SP Unfallchirurgie"/>
+  </concept>
+  <concept>
+    <code value="072006"/>
+    <display value="SP Visceralchirurgie"/>
+    <definition value="FA Chirurgie mit SP Visceralchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073001"/>
+    <display value="TG Echokardiologie herznaher Gefäße"/>
+    <definition value="FA Chirurgie mit TG Echokardiologie herznaher Gefäße"/>
+  </concept>
+  <concept>
+    <code value="073002"/>
+    <display value="TG Gefäßchirurgie"/>
+    <definition value="FA Chirurgie mit TG Gefäßchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073003"/>
+    <display value="TG Herz- und Gefäßchirurgie"/>
+    <definition value="FA Chirurgie mit TG Herz- und Gefäßchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073004"/>
+    <display value="TG Kinderchirurgie"/>
+    <definition value="FA Chirurgie mit TG Kinderchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073005"/>
+    <display value="TG Plastische Chirurgie"/>
+    <definition value="FA Chirurgie mit TG Plastische Chirurgie"/>
+  </concept>
+  <concept>
+    <code value="073006"/>
+    <display value="TG Rheumatologie (Orthopädie)"/>
+    <definition value="FA Chirurgie mit TG Rheumatologie (Orthopädie)"/>
+  </concept>
+  <concept>
+    <code value="073007"/>
+    <display value="TG Thorax- und Kardiovaskularchirurgie"/>
+    <definition value="FA Chirurgie mit TG Thorax- und Kardiovaskularchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073008"/>
+    <display value="TG Thoraxchirurgie"/>
+    <definition value="FA Chirurgie mit TG Thoraxchirurgie"/>
+  </concept>
+  <concept>
+    <code value="073009"/>
+    <display value="TG Unfallchirurgie"/>
+    <definition value="FA Chirurgie mit TG Unfallchirurgie"/>
+  </concept>
+  <concept>
+    <code value="081001"/>
+    <display value="FA Frauenheilkunde"/>
+  </concept>
+  <concept>
+    <code value="081002"/>
+    <display value="FA Frauenheilkunde und Geburtshilfe"/>
+  </concept>
+  <concept>
+    <code value="081003"/>
+    <display value="FA Gynäkologie und Geburtshilfe"/>
+  </concept>
+  <concept>
+    <code value="082101"/>
+    <display value="SP Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+    <definition value="FA Frauenheilkunde und Geburtshilfe mit SP Gynäkologische Endokrinologie und Reproduktionsmedizin"/>
+  </concept>
+  <concept>
+    <code value="082102"/>
+    <display value="SP Gynäkologische Onkologie"/>
+    <definition value="FA Frauenheilkunde und Geburtshilfe mit SP Gynäkologische Onkologie"/>
+  </concept>
+  <concept>
+    <code value="082103"/>
+    <display value="SP Spezielle Geburtshilfe und Perinatalmedizin"/>
+    <definition value="FA Frauenheilkunde und Geburtshilfe mit SP Spezielle Geburtshilfe und Perinatalmedizin"/>
+  </concept>
+  <concept>
+    <code value="091001"/>
+    <display value="FA Hals-Nasen-Ohrenheilkunde"/>
+  </concept>
+  <concept>
+    <code value="091002"/>
+    <display value="FA Phoniatrie und Pädaudiologie"/>
+  </concept>
+  <concept>
+    <code value="091101"/>
+    <display value="FA Sprach-; Stimm- und kindliche Hörstörungen"/>
+  </concept>
+  <concept>
+    <code value="093001"/>
+    <display value="TG Audiologie"/>
+    <definition value="FA Hals- Nasen- Ohrenheilkunde mit TG Audiologie"/>
+  </concept>
+  <concept>
+    <code value="093002"/>
+    <display value="TG Phoniatrie"/>
+    <definition value="FA Hals- Nasen- Ohrenheilkunde mit TG Phoniatrie"/>
+  </concept>
+  <concept>
+    <code value="093003"/>
+    <display value="TG Phoniatrie und Pädaudiologie"/>
+    <definition value="FA Hals- Nasen- Ohrenheilkunde mit TG Phoniatrie und Pädaudiologie"/>
+  </concept>
+  <concept>
+    <code value="101001"/>
+    <display value="FA Dermatologie und Venerologie"/>
+  </concept>
+  <concept>
+    <code value="101002"/>
+    <display value="FA Haut- und Geschlechtskrankheiten"/>
+  </concept>
+  <concept>
+    <code value="111001"/>
+    <display value="FA Humangenetik"/>
+  </concept>
+  <concept>
+    <code value="121001"/>
+    <display value="FA Hygiene"/>
+  </concept>
+  <concept>
+    <code value="121002"/>
+    <display value="FA Hygiene und Umweltmedizin"/>
+  </concept>
+  <concept>
+    <code value="131001"/>
+    <display value="FA Immunologie"/>
+  </concept>
+  <concept>
+    <code value="141002"/>
+    <display value="FA Innere Medizin"/>
+  </concept>
+  <concept>
+    <code value="141110"/>
+    <display value="FA Innere Medizin und Angiologie"/>
+  </concept>
+  <concept>
+    <code value="141111"/>
+    <display value="FA Innere Medizin und Endokrinologie und Diabetologie"/>
+  </concept>
+  <concept>
+    <code value="141112"/>
+    <display value="FA Innere Medizin und Gastroenterologie"/>
+  </concept>
+  <concept>
+    <code value="141903"/>
+    <display value="FA Innere Medizin und Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="141113"/>
+    <display value="FA Innere Medizin und Hämatologie und Onkologie"/>
+  </concept>
+  <concept>
+    <code value="141904"/>
+    <display value="FA Innere Medizin und Infektiologie"/>
+  </concept>
+  <concept>
+    <code value="141114"/>
+    <display value="FA Innere Medizin und Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="141115"/>
+    <display value="FA Innere Medizin und Nephrologie"/>
+  </concept>
+  <concept>
+    <code value="141116"/>
+    <display value="FA Innere Medizin und Pneumologie"/>
+  </concept>
+  <concept>
+    <code value="141117"/>
+    <display value="FA Innere Medizin und Rheumatologie"/>
+  </concept>
+  <concept>
+    <code value="141102"/>
+    <display value="FA Innere Medizin und Schwerpunkt Angiologie"/>
+  </concept>
+  <concept>
+    <code value="141103"/>
+    <display value="FA Innere Medizin und Schwerpunkt Endokrinologie und Diabetologie"/>
+  </concept>
+  <concept>
+    <code value="141104"/>
+    <display value="FA Innere Medizin und Schwerpunkt Gastroenterologie"/>
+  </concept>
+  <concept>
+    <code value="141901"/>
+    <display value="FA Innere Medizin und Schwerpunkt Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="141902"/>
+    <display value="FA Innere Medizin und Schwerpunkt gesamte Innere Medizin"/>
+  </concept>
+  <concept>
+    <code value="141105"/>
+    <display value="FA Innere Medizin und Schwerpunkt Hämatologie und Onkologie"/>
+  </concept>
+  <concept>
+    <code value="141106"/>
+    <display value="FA Innere Medizin und Schwerpunkt Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="141107"/>
+    <display value="FA Innere Medizin und Schwerpunkt Nephrologie"/>
+  </concept>
+  <concept>
+    <code value="141108"/>
+    <display value="FA Innere Medizin und Schwerpunkt Pneumologie"/>
+  </concept>
+  <concept>
+    <code value="141109"/>
+    <display value="FA Innere Medizin und Schwerpunkt Rheumatologie"/>
+  </concept>
+  <concept>
+    <code value="141003"/>
+    <display value="FA Internist/Lungen- und Bronchialheilkunde"/>
+  </concept>
+  <concept>
+    <code value="141005"/>
+    <display value="FA Lungen- und Bronchialheilkunde"/>
+  </concept>
+  <concept>
+    <code value="141004"/>
+    <display value="FA Lungenheilkunde"/>
+  </concept>
+  <concept>
+    <code value="142001"/>
+    <display value="SP Angiologie"/>
+  </concept>
+  <concept>
+    <code value="142002"/>
+    <display value="SP Endokrinologie"/>
+  </concept>
+  <concept>
+    <code value="142901"/>
+    <display value="SP Endokrinologie und Diabetologie"/>
+    <definition value="FA Innere Medizin mit SP Endokrinologie und Diabetologie"/>
+  </concept>
+  <concept>
+    <code value="142003"/>
+    <display value="SP Gastroenterologie"/>
+  </concept>
+  <concept>
+    <code value="142004"/>
+    <display value="SP Geriatrie"/>
+    <definition value="FA Innere Medizin mit SP Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="142005"/>
+    <display value="SP Hämatologie und Internistische Onkologie"/>
+    <definition value="FA Innere Medizin mit SP Hämatologie und Internistische Onkologie"/>
+  </concept>
+  <concept>
+    <code value="142006"/>
+    <display value="SP Infektiologie"/>
+    <definition value="FA Innere Medizin mit SP Infektiologie"/>
+  </concept>
+  <concept>
+    <code value="142007"/>
+    <display value="SP Kardiologie"/>
+    <definition value="FA Innere Medizin mit SP Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="142008"/>
+    <display value="SP Nephrologie"/>
+    <definition value="FA Innere Medizin mit SP Nephrologie"/>
+  </concept>
+  <concept>
+    <code value="142009"/>
+    <display value="SP Pneumologie"/>
+    <definition value="FA Innere Medizin mit SP Pneumologie"/>
+  </concept>
+  <concept>
+    <code value="142010"/>
+    <display value="SP Rheumatologie"/>
+    <definition value="FA Innere Medizin mit SP Rheumatologie"/>
+  </concept>
+  <concept>
+    <code value="143001"/>
+    <display value="TG Diabetologie"/>
+    <definition value="FA Innere Medizin mit TG Diabetologie"/>
+  </concept>
+  <concept>
+    <code value="143002"/>
+    <display value="TG Endokrinologie"/>
+    <definition value="FA Innere Medizin mit TG Endokrinologie"/>
+  </concept>
+  <concept>
+    <code value="143003"/>
+    <display value="TG Gastroenterologie"/>
+    <definition value="FA Innere Medizin mit TG Gastroenterologie"/>
+  </concept>
+  <concept>
+    <code value="143004"/>
+    <display value="TG Hämatologie"/>
+    <definition value="FA Innere Medizin mit TG Hämatologie"/>
+  </concept>
+  <concept>
+    <code value="143005"/>
+    <display value="TG Infektions- und Tropenmedizin"/>
+    <definition value="FA Innere Medizin mit TG Infektions- und Tropenmedizin"/>
+  </concept>
+  <concept>
+    <code value="143006"/>
+    <display value="TG Kardiologie"/>
+    <definition value="FA Innere Medizin mit TG Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="143901"/>
+    <display value="TG Kardiologie und Angiologie"/>
+    <definition value="FA Innere Medizin mit TG Kardiologie und Angiologie"/>
+  </concept>
+  <concept>
+    <code value="143007"/>
+    <display value="TG Lungen- und Bronchialheilkunde"/>
+    <definition value="FA Innere Medizin mit TG Lungen- und Bronchialheilkunde"/>
+  </concept>
+  <concept>
+    <code value="143008"/>
+    <display value="TG Nephrologie"/>
+    <definition value="FA Innere Medizin mit TG Nephrologie"/>
+  </concept>
+  <concept>
+    <code value="143009"/>
+    <display value="TG Rheumatologie"/>
+    <definition value="FA Innere Medizin mit TG Rheumatologie"/>
+  </concept>
+  <concept>
+    <code value="151002"/>
+    <display value="FA Kinder- und Jugendmedizin"/>
+  </concept>
+  <concept>
+    <code value="151001"/>
+    <display value="FA Kinderheilkunde"/>
+  </concept>
+  <concept>
+    <code value="152901"/>
+    <display value="SP Endokrinologie und Diabetologie in der Kinder- und Jugendmedizin"/>
+  </concept>
+  <concept>
+    <code value="152902"/>
+    <display value="SP Gastroenterologie in der Kinder- und Jugendmedizin"/>
+  </concept>
+  <concept>
+    <code value="152001"/>
+    <display value="SP Infektiologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Infektiologie"/>
+  </concept>
+  <concept>
+    <code value="152201"/>
+    <display value="SP Kinder- und Jugend-Hämatologie und -Onkologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Kinder- und Jugend-Hämatologie und -Onkologie"/>
+  </concept>
+  <concept>
+    <code value="152202"/>
+    <display value="SP Kinder- und Jugend-Kardiologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Kinder- und Jugend-Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="152101"/>
+    <display value="SP Kinder-Hämatologie und -Onkologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Kinder-Hämatologie und -Onkologie"/>
+  </concept>
+  <concept>
+    <code value="152002"/>
+    <display value="SP Kinder-Kardiologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Kinder-Kardiologie"/>
+  </concept>
+  <concept>
+    <code value="152906"/>
+    <display value="SP Kinderpneumologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Kinderpneumologie"/>
+  </concept>
+  <concept>
+    <code value="152003"/>
+    <display value="SP Neonatologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Neonatologie"/>
+  </concept>
+  <concept>
+    <code value="152903"/>
+    <display value="SP Nephrologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Nephrologie"/>
+  </concept>
+  <concept>
+    <code value="152102"/>
+    <display value="SP Neuropädiatrie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Neuropädiatrie"/>
+  </concept>
+  <concept>
+    <code value="152904"/>
+    <display value="SP Pädiatrische Rheumatologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Pädiatrische Rheumatologie"/>
+  </concept>
+  <concept>
+    <code value="152905"/>
+    <display value="SP Pulmologie in der Kinder- und Jugendmedizin"/>
+    <definition value="FA Kinder- und Jugendmedizin mit SP Pulmologie in der Kinder- und Jugendmedizin"/>
+  </concept>
+  <concept>
+    <code value="153001"/>
+    <display value="TG Kinderdiabetologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderdiabetologie"/>
+  </concept>
+  <concept>
+    <code value="153002"/>
+    <display value="TG Kindergastroenterologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kindergastroenterologie"/>
+  </concept>
+  <concept>
+    <code value="153003"/>
+    <display value="TG Kinderhämatologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderhämatologie"/>
+  </concept>
+  <concept>
+    <code value="153004"/>
+    <display value="TG Kinderkardiologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderkardiologie"/>
+  </concept>
+  <concept>
+    <code value="153005"/>
+    <display value="TG Kinderlungen- und -bronchialheilkunde"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderlungen- und -bronchialheilkunde"/>
+  </concept>
+  <concept>
+    <code value="153006"/>
+    <display value="TG Kinderneonatologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderneonatologie"/>
+  </concept>
+  <concept>
+    <code value="153007"/>
+    <display value="TG Kindernephrologie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kindernephrologie"/>
+  </concept>
+  <concept>
+    <code value="153008"/>
+    <display value="TG Kinderneuropsychiatrie"/>
+    <definition value="FA Kinder- und Jugendmedizin mit TG Kinderneuropsychiatrie"/>
+  </concept>
+  <concept>
+    <code value="161001"/>
+    <display value="FA Kinder- und Jugendpsychiatrie"/>
+  </concept>
+  <concept>
+    <code value="161002"/>
+    <display value="FA Kinder- und Jugendpsychiatrie und -psychotherapie"/>
+  </concept>
+  <concept>
+    <code value="171001"/>
+    <display value="FA Laboratoriumsmedizin"/>
+  </concept>
+  <concept>
+    <code value="173001"/>
+    <display value="TG Medizinische Mikrobiologie"/>
+    <definition value="FA Laboratoriumsmedizin mit TG Medizinische Mikrobiologie"/>
+  </concept>
+  <concept>
+    <code value="181001"/>
+    <display value="FA Mikrobiologie"/>
+  </concept>
+  <concept>
+    <code value="181002"/>
+    <display value="FA Mikrobiologie und Infektionsepidemiologie"/>
+  </concept>
+  <concept>
+    <code value="181101"/>
+    <display value="FA Mikrobiologie; Virologie und Infektionsepidemiologie"/>
+  </concept>
+  <concept>
+    <code value="191001"/>
+    <display value="FA Kieferchirurgie"/>
+  </concept>
+  <concept>
+    <code value="191002"/>
+    <display value="FA Mund-Kiefer-Gesichtschirurgie"/>
+  </concept>
+  <concept>
+    <code value="191901"/>
+    <display value="FA Oralchirurgie"/>
+  </concept>
+  <concept>
+    <code value="201001"/>
+    <display value="FA Nervenheilkunde"/>
+  </concept>
+  <concept>
+    <code value="201002"/>
+    <display value="FA Nervenheilkunde (Neurologie und Psychiatrie)"/>
+  </concept>
+  <concept>
+    <code value="201003"/>
+    <display value="FA Neurologie und Psychiatrie (Nervenarzt)"/>
+  </concept>
+  <concept>
+    <code value="203001"/>
+    <display value="TG Kinderneuropsychiatrie"/>
+    <definition value="FA Nervenheilkunde mit TG Kinderneuropsychiatrie"/>
+  </concept>
+  <concept>
+    <code value="211001"/>
+    <display value="FA Neurochirurgie"/>
+  </concept>
+  <concept>
+    <code value="221001"/>
+    <display value="FA Neurologie"/>
+  </concept>
+  <concept>
+    <code value="222901"/>
+    <display value="SP Geriatrie"/>
+    <definition value="FA Neurologie mit SP Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="231001"/>
+    <display value="FA Nuklearmedizin"/>
+  </concept>
+  <concept>
+    <code value="241001"/>
+    <display value="FA Öffentliches Gesundheitswesen"/>
+  </concept>
+  <concept>
+    <code value="251001"/>
+    <display value="FA Neuropathologie"/>
+  </concept>
+  <concept>
+    <code value="251002"/>
+    <display value="FA Pathobiochemie und Labordiagnostik"/>
+  </concept>
+  <concept>
+    <code value="251003"/>
+    <display value="FA Pathologie"/>
+  </concept>
+  <concept>
+    <code value="251004"/>
+    <display value="FA Pathologische Anatomie"/>
+  </concept>
+  <concept>
+    <code value="251005"/>
+    <display value="FA Pathologische Physiologie"/>
+  </concept>
+  <concept>
+    <code value="253001"/>
+    <display value="TG Neuropathologie"/>
+    <definition value="FA Pathologie mit TG Neuropathologie"/>
+  </concept>
+  <concept>
+    <code value="261001"/>
+    <display value="FA Klinische Pharmakologie"/>
+  </concept>
+  <concept>
+    <code value="261002"/>
+    <display value="FA Pharmakologie"/>
+  </concept>
+  <concept>
+    <code value="261003"/>
+    <display value="FA Pharmakologie und Toxikologie"/>
+  </concept>
+  <concept>
+    <code value="263001"/>
+    <display value="TG Klinische Pharmakologie"/>
+    <definition value="FA Pharmakologie mit TG Klinische Pharmakologie"/>
+  </concept>
+  <concept>
+    <code value="381201"/>
+    <display value="Phoniatrie und Pädaudiologie"/>
+  </concept>
+  <concept>
+    <code value="271001"/>
+    <display value="FA Physikalische und Rehabilitative Medizin"/>
+  </concept>
+  <concept>
+    <code value="271002"/>
+    <display value="FA Physiotherapie"/>
+  </concept>
+  <concept>
+    <code value="281001"/>
+    <display value="FA Physiologie"/>
+  </concept>
+  <concept>
+    <code value="291001"/>
+    <display value="FA Psychiatrie"/>
+  </concept>
+  <concept>
+    <code value="291002"/>
+    <display value="FA Psychiatrie und Psychotherapie"/>
+  </concept>
+  <concept>
+    <code value="292101"/>
+    <display value="SP Forensische Psychiatrie"/>
+  </concept>
+  <concept>
+    <code value="292901"/>
+    <display value="SP Geriatrie"/>
+    <definition value="FA Psychiatrie und Psychotherapie mit SP Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="301101"/>
+    <display value="FA Psychosomatische Medizin und Psychotherapie"/>
+  </concept>
+  <concept>
+    <code value="301001"/>
+    <display value="FA Psychotherapeutische Medizin"/>
+  </concept>
+  <concept>
+    <code value="301002"/>
+    <display value="FA Psychotherapie"/>
+  </concept>
+  <concept>
+    <code value="311001"/>
+    <display value="FA Diagnostische Radiologie"/>
+  </concept>
+  <concept>
+    <code value="311002"/>
+    <display value="FA Radiologie"/>
+  </concept>
+  <concept>
+    <code value="311003"/>
+    <display value="FA Radiologische Diagnostik"/>
+  </concept>
+  <concept>
+    <code value="312201"/>
+    <display value="SP Kinder- und Jugendradiologie"/>
+    <definition value="FA Radiologie mit SP Kinder- und Jugendradiologie"/>
+  </concept>
+  <concept>
+    <code value="312001"/>
+    <display value="SP Kinderradiologie"/>
+    <definition value="FA Radiologie mit SP Kinderradiologie"/>
+  </concept>
+  <concept>
+    <code value="312002"/>
+    <display value="SP Neuroradiologie"/>
+    <definition value="FA Radiologie mit SP Neuroradiologie"/>
+  </concept>
+  <concept>
+    <code value="313001"/>
+    <display value="TG Kinderradiologie"/>
+    <definition value="FA Radiologie mit TG Kinderradiologie"/>
+  </concept>
+  <concept>
+    <code value="313002"/>
+    <display value="TG Neuroradiologie"/>
+    <definition value="FA Radiologie mit TG Neuroradiologie"/>
+  </concept>
+  <concept>
+    <code value="313003"/>
+    <display value="TG Strahlentherapie"/>
+    <definition value="FA Radiologie mit TG Strahlentherapie"/>
+  </concept>
+  <concept>
+    <code value="321001"/>
+    <display value="FA Rechtsmedizin"/>
+  </concept>
+  <concept>
+    <code value="351001"/>
+    <display value="FA Strahlentherapie"/>
+  </concept>
+  <concept>
+    <code value="361001"/>
+    <display value="FA Blutspende- und Transfusionswesen"/>
+  </concept>
+  <concept>
+    <code value="361002"/>
+    <display value="FA Transfusionsmedizin"/>
+  </concept>
+  <concept>
+    <code value="371001"/>
+    <display value="FA Urologie"/>
+  </concept>
+  <concept>
+    <code value="011002"/>
+    <display value="FA Praktischer Arzt"/>
+  </concept>
+  <concept>
+    <code value="011101"/>
+    <display value="FA Innere und Allgemeinmedizin (Hausarzt)"/>
+  </concept>
+  <concept>
+    <code value="142902"/>
+    <display value="SP Geriatrie"/>
+    <definition value="Facharzt für Innere Medizin mit Schwerpunkt Geriatrie"/>
+  </concept>
+  <concept>
+    <code value="331001"/>
+    <display value="FA Sozialhygiene"/>
+  </concept>
+  <concept>
+    <code value="341001"/>
+    <display value="FA Sportmedizin"/>
+  </concept>
+  <concept>
+    <code value="590001"/>
+    <display value="Biomathematik"/>
+  </concept>
+  <concept>
+    <code value="590002"/>
+    <display value="Biophysik"/>
+  </concept>
+  <concept>
+    <code value="590003"/>
+    <display value="Geschichte der Medizin"/>
+  </concept>
+  <concept>
+    <code value="590004"/>
+    <display value="Industrietoxikologie"/>
+  </concept>
+  <concept>
+    <code value="590005"/>
+    <display value="Kieferchirurgie"/>
+  </concept>
+  <concept>
+    <code value="590006"/>
+    <display value="Klinische Strahlenphysik"/>
+  </concept>
+  <concept>
+    <code value="590007"/>
+    <display value="Medizinische Genetik"/>
+  </concept>
+  <concept>
+    <code value="590008"/>
+    <display value="Medizinische Informatik"/>
+  </concept>
+  <concept>
+    <code value="590009"/>
+    <display value="Medizinische Physik und Biophysik"/>
+  </concept>
+  <concept>
+    <code value="590010"/>
+    <display value="Medizinische Wissenschaftsinformation"/>
+  </concept>
+  <concept>
+    <code value="590011"/>
+    <display value="Pathologische Biochemie"/>
+  </concept>
+  <concept>
+    <code value="000001"/>
+    <display value="Ärztin/Arzt"/>
+  </concept>
+  <concept>
+    <code value="000011"/>
+    <display value="Praktische Ärztin/Praktischer Arzt (EWG-Recht ab 86/457/EWG)"/>
+  </concept>
+</CodeSystem>

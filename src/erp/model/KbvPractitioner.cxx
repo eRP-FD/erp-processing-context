@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
 
 
 namespace model

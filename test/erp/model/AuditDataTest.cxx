@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/AuditData.hxx"
+#include "shared/model/AuditData.hxx"
 
 #include <gtest/gtest.h>
 

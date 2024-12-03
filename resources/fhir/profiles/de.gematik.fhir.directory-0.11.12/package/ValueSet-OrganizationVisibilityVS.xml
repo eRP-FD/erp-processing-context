@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="OrganizationVisibilityVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/OrganizationVisibilityVS"/>
+  <version value="0.11.12"/>
+  <name value="OrganizationVisibilityVS"/>
+  <title value="OrganizationVisibilityVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="OrganizationVisibilityVS"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/OrganizationVisibilityCS"/>
+    </include>
+  </compose>
+</ValueSet>

@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/Bundle.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/Bundle.hxx"
 #include "erp/model/Patient.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test_config.h"
 
 #include <gtest/gtest.h>
@@ -109,7 +109,8 @@ TEST_F(BundleTest, getResourceSize)//NOLINT(readability-function-cognitive-compl
     // Verify the resource.
     const auto& retrievedResource = bundle.getResource(0);
     ASSERT_TRUE(retrievedResource.IsObject());
-    ASSERT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&retrievedResource["this"]), "is a resource");
+    ASSERT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&retrievedResource["this"]),
+              "is a resource");
 }
 
 TEST_F(BundleTest, getResourcesByTypePatient)

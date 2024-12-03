@@ -8,10 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_TESTURLARGUMENTS_HXX
 #define ERP_PROCESSING_CONTEXT_TESTURLARGUMENTS_HXX
 
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/model/AuditData.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "shared/model/AuditData.hxx"
 
 /**
  * Apply search, sort and paging arguments to the mock database.

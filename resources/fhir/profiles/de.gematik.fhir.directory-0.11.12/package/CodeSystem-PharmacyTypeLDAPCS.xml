@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PharmacyTypeLDAPCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/PharmacyTypeLDAPCS"/>
+  <version value="0.11.12"/>
+  <name value="PharmacyTypeLDAPCS"/>
+  <title value="Pharmacy type LDAP"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Pharmacy type codes used in the LDAP-VZD"/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="5"/>
+  <concept>
+    <code value="10"/>
+    <display value="Offizin-Apotheke"/>
+  </concept>
+  <concept>
+    <code value="20"/>
+    <display value="Krankenhausversorgende Apotheke"/>
+  </concept>
+  <concept>
+    <code value="30"/>
+    <display value="Heimversorgende Apotheke"/>
+  </concept>
+  <concept>
+    <code value="40"/>
+    <display value="Versandapotheke"/>
+  </concept>
+  <concept>
+    <code value="50"/>
+    <display value="Sterilherstellung"/>
+  </concept>
+</CodeSystem>

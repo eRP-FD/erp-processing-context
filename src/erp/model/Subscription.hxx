@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SUBSCRIPTION_HXX
 #define ERP_PROCESSING_CONTEXT_SUBSCRIPTION_HXX
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 
 #include <rapidjson/document.h>
 

@@ -6,28 +6,31 @@
  */
 
 
-#if defined (__GNUC__) && __GNUC__ == 12
+#if defined (__GNUC__) && __GNUC__ >= 12
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #include <pqxx/pqxx>
 #pragma GCC diagnostic pop
+#else
+#include <pqxx/pqxx>
 #endif
 
-#include "test/erp/database/PostgresDatabaseTest.hxx"
-#include "test/util/ResourceTemplates.hxx"
-#include "test/util/CryptoHelper.hxx"
-#include "test_config.h"
 #include "erp/model/Binary.hxx"
-#include "erp/model/MedicationDispense.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
+#include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/AuditData.hxx"
-#include "erp/ErpRequirements.hxx"
-
-#include "erp/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/AuditData.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
+#include "test_config.h"
+#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 
 class PostgresDatabaseTaskTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>
@@ -72,7 +75,7 @@ public:
         ASSERT_FALSE(result.empty());
         ASSERT_EQ(result.size(), 1);
         ASSERT_FALSE(result.front().empty());
-        ASSERT_EQ(result.front().size(), 21);
+        ASSERT_EQ(result.front().size(), 25);
     }
 
     UrlArguments searchForStatus(const std::string& status)
@@ -138,7 +141,7 @@ public:
             database().activateTask(
                 task1, model::Binary(Uuid().toString(),
                                      model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile)
-                                         .serializeToJsonString()));
+                                         .serializeToJsonString()), mJwtBuilder.makeJwtArzt());
             database().commitTransaction();
 
             outTasks.emplace_back(std::move(task1));
@@ -204,6 +207,7 @@ TEST_P(PostgresDatabaseTaskTest, InsertTask)//NOLINT(readability-function-cognit
     ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_bundle
     ASSERT_TRUE(result.front().at(row++).is_null()); // owner
     ASSERT_TRUE(result.front().at(row++).is_null()); // last_medication_dispense
+    ASSERT_TRUE(result.front().at(row++).is_null()); // medication_dispense_salt
 }
 
 TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-function-cognitive-complexity)
@@ -230,7 +234,8 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
         task1,
         model::Binary(
             Uuid().toString(),
-            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()));
+            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()),
+        mJwtBuilder.makeJwtArzt());
     database().commitTransaction();
 
     // KVNR is now set
@@ -406,7 +411,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     task.setAcceptDate(model::Timestamp::now());
     task.setExpiryDate(model::Timestamp::now());
 
-    database().activateTask(task, model::Binary{Uuid().toString(), "HealthCareProviderPrescription"});
+    database().activateTask(task, model::Binary{Uuid().toString(), "HealthCareProviderPrescription"},
+                            mJwtBuilder.makeJwtArzt());
     database().commitTransaction();
 
     const auto [task1, healthCareProviderPrescription] = database().retrieveTaskAndPrescription(id);
@@ -465,7 +471,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
         task1,
         model::Binary(
             Uuid().toString(),
-            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()));
+            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()),
+        mJwtBuilder.makeJwtArzt());
     task2.setKvnr(kvnr2);
     task2.setExpiryDate(model::Timestamp::now());
     task2.setAcceptDate(model::Timestamp::now());
@@ -473,7 +480,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
         task2,
         model::Binary(
             Uuid().toString(),
-            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()));
+            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()),
+        mJwtBuilder.makeJwtArzt());
     task3.setKvnr(kvnr2);
     task3.setExpiryDate(model::Timestamp::now());
     task3.setAcceptDate(model::Timestamp::now());
@@ -481,7 +489,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
         task3,
         model::Binary(
             Uuid().toString(),
-            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()));
+            model::Bundle(model::BundleType::document, ::model::FhirResourceBase::NoProfile).serializeToJsonString()),
+        mJwtBuilder.makeJwtArzt());
     database().commitTransaction();
 
     const auto result1 =  database().retrieveAllTasksForPatient(kvnr1, {});
@@ -569,7 +578,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispense)//NOLINT(readabili
 
     std::vector<model::MedicationDispense> medicationDispenses;
     medicationDispenses.emplace_back(std::move(medicationDispense));
-    database().updateTaskMedicationDispense(task, medicationDispenses);
+    database().updateTaskMedicationDispense(task, model::MedicationDispenseBundle{"", medicationDispenses, {}});
     database().commitTransaction();
 
     pqxx::result result;
@@ -626,7 +635,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
 
     std::vector<model::MedicationDispense> medicationDispenses;
     medicationDispenses.emplace_back(std::move(medicationDispense));
-    database().updateTaskMedicationDispenseReceipt(task, medicationDispenses, receipt);
+    database().updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}}, receipt, mJwtBuilder.makeJwtApotheke());
     database().commitTransaction();
 
     pqxx::result result;
@@ -670,7 +679,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         GTEST_SKIP();
     }
 
-    A_19027_04.test("Deletion of personal data from database");
+    A_19027_06.test("Deletion of personal data from database");
 
     model::Task task(prescriptionType(), "access_code");
     task.setStatus(model::Task::Status::ready);
@@ -1188,7 +1197,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveTaskWithSecretAndPrescription)
         authoredOn.emplace(task.authoredOn());
         const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = *prescriptionId, .kvnr = kvnr});
         model::Binary bin{task.healthCarePrescriptionUuid().value() , CryptoHelper::toCadesBesSignature(bundle), model::Binary::Type::PKCS7};
-        database().activateTask(task, bin);
+        database().activateTask(task, bin, mJwtBuilder.makeJwtArzt());
         task = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = *prescriptionId, .kvnr = kvnr}));
         task.updateLastUpdate(*authoredOn + 1s);
         accessCode = task.accessCode();

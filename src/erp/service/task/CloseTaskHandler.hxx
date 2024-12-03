@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_CLOSETASKHANDLER_HXX
 
 #include "erp/service/task/TaskHandler.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
 
 namespace fhirtools

@@ -6,12 +6,12 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemBodyHandlerBase.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Expect.hxx"
 
 
 ChargeItemBodyHandlerBase::ChargeItemBodyHandlerBase(
@@ -94,6 +94,10 @@ std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::v
     {
         TVLOG(1) << "ErpException: " << ex.what();
         VauFailWithDiagnostics(ex.status(), onError, ex.what(), ex.diagnostics());
+    }
+    catch(const model::ModelException& mex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", mex.what());
     }
     catch(const std::invalid_argument& exc)
     {

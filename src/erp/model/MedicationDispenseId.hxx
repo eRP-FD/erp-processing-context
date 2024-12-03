@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEID_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEID_HXX
 
-#include "erp/model/PrescriptionId.hxx"
+#include "shared/model/PrescriptionId.hxx"
 
 namespace model
 {
@@ -20,6 +20,7 @@ public:
     [[nodiscard]] static MedicationDispenseId fromString(const std::string_view& str);
     // MedicationDispense IDs are appended with index, because more than one may exist per task.
     MedicationDispenseId(const PrescriptionId& prescriptionId, size_t index);
+    MedicationDispenseId(const MedicationDispenseId&) = default;
     [[nodiscard]] std::string toString() const;
 
     [[nodiscard]] const PrescriptionId& getPrescriptionId() const;

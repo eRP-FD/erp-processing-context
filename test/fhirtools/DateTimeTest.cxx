@@ -83,6 +83,34 @@ TEST(Date, SpecificationSamples)
     EXPECT_NO_THROW(Date("2014"));
 }
 
+TEST(DateTime, ValidTest)
+{
+    EXPECT_NO_THROW(DateTime("1970"));
+    EXPECT_NO_THROW(DateTime("1970-01"));
+    EXPECT_NO_THROW(DateTime("1970-01-01"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00Z"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00+00:00"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00.000"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00.000Z"));
+    EXPECT_NO_THROW(DateTime("1970-01-01T00:00:00.000+00:00"));
+}
+
+TEST(DateTime, ExtraCharacters)
+{
+    EXPECT_ANY_THROW(DateTime("1970Z"));
+    EXPECT_ANY_THROW(DateTime("1970-01Z"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01Z"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01T00A"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01T00:00A"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01T00:00:00A"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01T00:00:00ZA"));
+    EXPECT_ANY_THROW(DateTime("1970-01-01T00:00:00+00:00A"));
+
+}
+
 TEST(DateTime, SpecificationSamples)
 {
     EXPECT_NO_THROW(DateTime("2014-01-25T14:30:14.559"));

@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_IDENTITY_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_IDENTITY_HXX
 
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/TelematikId.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/TelematikId.hxx"
 
 #include <variant>
 

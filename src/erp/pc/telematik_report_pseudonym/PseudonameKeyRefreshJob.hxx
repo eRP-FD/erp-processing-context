@@ -8,8 +8,8 @@
 #ifndef KEY_REFRESH_JOB_HXX
 #define KEY_REFRESH_JOB_HXX
 
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/util/TimerJobBase.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/deprecated/TimerJobBase.hxx"
 
 class BlobCache;
 class Configuration;

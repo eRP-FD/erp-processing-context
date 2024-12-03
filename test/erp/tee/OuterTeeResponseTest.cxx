@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <erp/crypto/AesGcm.hxx>
-#include <erp/tee/OuterTeeResponse.hxx>
-#include <gtest/gtest.h>
-
-#include "erp/hsm/HsmPool.hxx"
+#include "erp/tee/OuterTeeResponse.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "shared/crypto/AesGcm.hxx"
+#include "shared/hsm/HsmPool.hxx"
+
+#include <gtest/gtest.h>
 
 class OuterTeeResponseTest : public testing::Test
 {

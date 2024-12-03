@@ -4,7 +4,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Environment.hxx"
+#include "shared/util/Environment.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/repository/FhirResourceGroup.hxx"
@@ -78,11 +78,30 @@ FhirResourceViewConfiguration::ViewList::match(gsl::not_null<const FhirStructure
     return result;
 }
 
-std::list<DefinitionKey> fhirtools::FhirResourceViewConfiguration::ViewList::supportedVersions(
+FhirResourceViewConfiguration::ViewList
+FhirResourceViewConfiguration::ViewList::matchAll(const FhirStructureRepositoryBackend& backend, const std::string& url,
+                                                  FhirVersion version) const
+{
+    ViewList result;
+    const DefinitionKey key{url, version};
+    for (std::shared_ptr<const ViewConfig> viewCfg : *this)
+    {
+        auto v = viewCfg->view(&backend);
+        if (v->findStructure(key) == nullptr)
+        {
+            continue;
+        }
+
+        result.emplace_back(viewCfg);
+    }
+    return result;
+}
+
+std::set<DefinitionKey> fhirtools::FhirResourceViewConfiguration::ViewList::supportedVersions(
     gsl::not_null<const FhirStructureRepositoryBackend*> backend, //NOLINT(performance-unnecessary-value-param)
     const std::list<std::string>& profileUrls) const
 {
-    std::list<DefinitionKey> result;
+    std::set<DefinitionKey> result;
     for (const auto& viewCfg : *this)
     {
         auto v = viewCfg->view(backend);
@@ -91,7 +110,7 @@ std::list<DefinitionKey> fhirtools::FhirResourceViewConfiguration::ViewList::sup
             const DefinitionKey key{url, std::nullopt};
             if (const auto* profile = v->findStructure(key))
             {
-                result.emplace_back(profile->definitionKey());
+                result.emplace(profile->definitionKey());
             }
         }
     }
@@ -197,7 +216,7 @@ std::optional<date::local_days> fhirtools::FhirResourceViewConfiguration::retrie
     const auto defaultValue = configValue ? std::make_optional<std::string>(configValue->GetString()) : std::nullopt;
 
     KeyData keyData{.environmentVariable = envName, .jsonPath = ""};
-    const auto envValue = Environment::get(keyData.environmentVariable.data());
+    const auto envValue = Environment::get(keyData.environmentVariable);
     std::optional actual = envValue ? envValue : defaultValue;
     mVariables.emplace_back(keyData, actual.value_or("none"), defaultValue.value_or("none"));
     if (actual)

@@ -6,20 +6,20 @@
  */
 
 #include "TaskHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/Jws.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/Jws.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/model/ModelException.hxx"
+#include "shared/model/ModelException.hxx"
 #include "erp/model/Signature.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 
 
 #include <algorithm>

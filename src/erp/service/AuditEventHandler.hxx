@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_AUDITEVENTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_AUDITEVENTHANDLER_HXX
 
-#include "erp/model/AuditData.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
+#include "shared/model/AuditData.hxx"
 
 
 class GetAllAuditEventsHandler: public ErpRequestHandler

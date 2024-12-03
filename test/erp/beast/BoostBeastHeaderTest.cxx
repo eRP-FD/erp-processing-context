@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/beast/BoostBeastHeader.hxx"
+#include "shared/beast/BoostBeastHeader.hxx"
 
 
 #include <gtest/gtest.h>

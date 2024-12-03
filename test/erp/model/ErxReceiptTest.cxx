@@ -6,9 +6,9 @@
  */
 
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test_config.h"
 
 #include <gtest/gtest.h>

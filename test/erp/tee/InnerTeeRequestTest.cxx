@@ -6,9 +6,9 @@
  */
 
 #include "erp/tee/InnerTeeRequest.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/JwtException.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/JwtException.hxx"
 #include "test/util/ErpMacros.hxx"
 
 #include <gtest/gtest.h>
@@ -31,7 +31,10 @@ public:
 
 TEST_F(InnerTeeRequestTest, create_success)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string serializedJwt = JWT( Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three") ).serialize();
+    using namespace std::string_view_literals;
+    const std::string serializedJwt =
+        JWT(Base64::encode(R"({"alg":"BP256R1"})"sv) + "." + Base64::encode("{}"sv) + "." + Base64::encode("three"sv))
+            .serialize();
     InnerTeeRequest message (SafeString("1 "
                              + serializedJwt + " "
                              + toHex("request-id") + " "
@@ -53,7 +56,10 @@ TEST_F(InnerTeeRequestTest, create_success)//NOLINT(readability-function-cogniti
 
 TEST_F(InnerTeeRequestTest, create_successWithoutBody)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string serializedJwt = JWT( Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three") ).serialize();
+    using namespace std::string_view_literals;
+    const std::string serializedJwt =
+        JWT(Base64::encode(R"({"alg":"BP256R1"})"sv) + "." + Base64::encode("{}"sv) + "." + Base64::encode("three"sv))
+            .serialize();
     InnerTeeRequest message (SafeString("1 "
                              + serializedJwt + " "
                              + toHex("request-id") + " "
@@ -75,7 +81,10 @@ TEST_F(InnerTeeRequestTest, create_successWithoutBody)//NOLINT(readability-funct
 
 TEST_F(InnerTeeRequestTest, create_failForMissingHeaderEnd)
 {
-    const std::string serializedJwt = JWT( Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three") ).serialize();
+    using namespace std::string_view_literals;
+    const std::string serializedJwt =
+        JWT(Base64::encode(R"({"alg":"BP256R1"})"sv) + "." + Base64::encode("{}"sv) + "." + Base64::encode("three"sv))
+            .serialize();
     auto innerTeeRequest= InnerTeeRequest (SafeString("1 "
                          + serializedJwt + " "
                          + toHex("request-id") + " "
@@ -87,8 +96,9 @@ TEST_F(InnerTeeRequestTest, create_failForMissingHeaderEnd)
 
 TEST_F(InnerTeeRequestTest, create_failInvalidHexToken)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_view_literals;
     const std::string serializedJwt =
-        JWT(Base64::encode(R"({"alg":"BP256R1"})") + "." + Base64::encode("{}") + "." + Base64::encode("three"))
+        JWT(Base64::encode(R"({"alg":"BP256R1"})"sv) + "." + Base64::encode("{}"sv) + "." + Base64::encode("three"sv))
             .serialize();
     EXPECT_ERP_EXCEPTION(
         InnerTeeRequest{

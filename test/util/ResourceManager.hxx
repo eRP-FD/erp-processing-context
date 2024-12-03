@@ -8,11 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_TOOLS_RESOURCEMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_TOOLS_RESOURCEMANAGER_HXX
 
-#include "erp/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
 
 #include <filesystem>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <rapidjson/document.h>
 #include <shared_mutex>
 #include <string>

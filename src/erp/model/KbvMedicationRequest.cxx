@@ -6,9 +6,9 @@
  */
 
 #include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/ErpConstants.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/ErpConstants.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
 
 #include <date/tz.h>

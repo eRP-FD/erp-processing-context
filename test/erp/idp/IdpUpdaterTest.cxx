@@ -7,10 +7,10 @@
 
 #include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
-#include "erp/idp/IdpUpdater.hxx"
+#include "shared/idp/IdpUpdater.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Base64.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"

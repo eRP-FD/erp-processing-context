@@ -370,19 +370,20 @@ std::optional<std::strong_ordering> DateTime::compareTo(const DateTime& other) c
 
 void DateTime::setTimePoint()
 {
+    using traits = std::istringstream::traits_type;
     const auto& fullStr = toString(true);
     std::istringstream iss(fullStr);
     iss.imbue(std::locale::classic());
     if (mTimezone)
     {
         date::from_stream(iss, (fullStr.back() == 'Z' ? fmtDateTimeZ : fmtDateTimeTz), mTimePoint);
-        FPExpect(! iss.fail() && mTimePoint != decltype(mTimePoint){}, "failed to parse DateTime " + fullStr);
+        FPExpect(! iss.fail() && iss.peek() == traits::eof() , "failed to parse DateTime " + fullStr);
     }
     else
     {
         date::local_time<std::chrono::milliseconds> localTime;
         date::from_stream(iss, fmtDateTime, localTime);
-        FPExpect(! iss.fail() && localTime != decltype(localTime){}, "failed to parse DateTime " + fullStr);
+        FPExpect(! iss.fail() && iss.peek() == traits::eof(), "failed to parse DateTime " + fullStr);
         mTimePoint = date::make_zoned(germanTimezone, localTime).get_sys_time();
     }
     using zoned_ms = date::zoned_time<std::chrono::milliseconds>;

@@ -1,0 +1,440 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="minifhirtypes"/>
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/PatternAndFixed"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Resource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/PatternAndFixed"/>
+        <version value="4.0.1"/>
+        <name value="PatternAndFixed"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="false"/>
+        <type value="Resource"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <!-- ****************** BEGIN Extension ****************** -->
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="closed"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <!-- ****************** fixed string ****************** -->
+          <element id="Resource.extension:fixedString">
+            <path value="Resource.extension"/>
+            <sliceName value="fixedString"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.extension:fixedString.url">
+            <path value="Resource.extension.url"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="fixedString"/>
+          </element>
+          <element id="Resource.extension:fixedString.value[x]">
+            <path value="Resource.extension.value[x]"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.value[x]"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="A string in a fixed."/>
+          </element>
+          <!-- ****************** pattern string ****************** -->
+          <element id="Resource.extension:patternString">
+            <path value="Resource.extension"/>
+            <sliceName value="patternString"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.extension:patternString.url">
+            <path value="Resource.extension.url"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="patternString"/>
+          </element>
+          <element id="Resource.extension:patternString.value[x]">
+            <path value="Resource.extension.value[x]"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.value[x]"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <patternString value="A string in a pattern."/>
+          </element>
+          <!-- ******************fixed decimal ****************** -->
+          <element id="Resource.extension:fixedDecimal">
+            <path value="Resource.extension"/>
+            <sliceName value="fixedDecimal"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.extension:fixedDecimal.url">
+            <path value="Resource.extension.url"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="fixedDecimal"/>
+          </element>
+          <element id="Resource.extension:fixedDecimal.value[x]">
+            <path value="Resource.extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension:fixedDecimal.value[x]"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="decimal"/>
+            </type>
+            <fixedDecimal value="1.1"/>
+          </element>
+          <!-- ******************pattern decimal ****************** -->
+          <element id="Resource.extension:patternDecimal">
+            <path value="Resource.extension"/>
+            <sliceName value="patternDecimal"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.extension:patternDecimal.url">
+            <path value="Resource.extension.url"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="patternDecimal"/>
+          </element>
+          <element id="Resource.extension:patternDecimal.value[x]">
+            <path value="Resource.extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension:patternDecimal.value[x]"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="decimal"/>
+            </type>
+            <patternDecimal value="1.2"/>
+          </element>
+          <!-- ******************fixed decimal - leading zero ****************** -->
+          <element id="Resource.extension:fixedDecimalLeadingZero">
+              <path value="Resource.extension"/>
+              <sliceName value="fixedDecimalLeadingZero"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="Extension"/>
+              </type>
+          </element>
+          <element id="Resource.extension:fixedDecimalLeadingZero.url">
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension.url"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="string"/>
+              </type>
+              <fixedString value="fixedDecimalLeadingZero"/>
+          </element>
+          <element id="Resource.extension:fixedDecimalLeadingZero.value[x]">
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension:fixedDecimalLeadingZero.value[x]"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="decimal"/>
+              </type>
+              <fixedDecimal value="01.1"/>
+          </element>
+          <!-- ******************pattern decimal - leading zero ****************** -->
+          <element id="Resource.extension:patternDecimalLeadingZero">
+              <path value="Resource.extension"/>
+              <sliceName value="patternDecimalLeadingZero"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="Extension"/>
+              </type>
+          </element>
+          <element id="Resource.extension:patternDecimalLeadingZero.url">
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension.url"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="string"/>
+              </type>
+              <fixedString value="patternDecimalLeadingZero"/>
+          </element>
+          <element id="Resource.extension:patternDecimalLeadingZero.value[x]">
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension:patternDecimalLeadingZero.value[x]"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="decimal"/>
+              </type>
+              <patternDecimal value="01.2"/>
+          </element>
+          <!-- ******************fixed decimal - trailing zero ****************** -->
+          <element id="Resource.extension:fixedDecimalTrailingZero">
+              <path value="Resource.extension"/>
+              <sliceName value="fixedDecimalTrailingZero"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="Extension"/>
+              </type>
+          </element>
+          <element id="Resource.extension:fixedDecimalTrailingZero.url">
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension.url"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="string"/>
+              </type>
+              <fixedString value="fixedDecimalTrailingZero"/>
+          </element>
+          <element id="Resource.extension:fixedDecimalTrailingZero.value[x]">
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension:fixedDecimalTrailingZero.value[x]"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="decimal"/>
+              </type>
+              <fixedDecimal value="1.10"/>
+          </element>
+          <!-- ******************pattern decimal - trailing zero ****************** -->
+          <element id="Resource.extension:patternDecimalTrailingZero">
+              <path value="Resource.extension"/>
+              <sliceName value="patternDecimalTrailingZero"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="Extension"/>
+              </type>
+          </element>
+          <element id="Resource.extension:patternDecimalTrailingZero.url">
+              <path value="Resource.extension.url"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension.url"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="string"/>
+              </type>
+              <fixedString value="patternDecimalTrailingZero"/>
+          </element>
+          <element id="Resource.extension:patternDecimalTrailingZero.value[x]">
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+              <base>
+                  <path value="Resource.extension:patternDecimalTrailingZero.value[x]"/>
+                  <min value="0"/>
+                  <max value="*"/>
+              </base>
+              <type>
+                  <code value="decimal"/>
+              </type>
+              <patternDecimal value="1.20"/>
+          </element>
+          <!-- ****************** END Extension ****************** -->
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="0"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

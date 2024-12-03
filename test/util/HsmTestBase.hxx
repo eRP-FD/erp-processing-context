@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSMTESTBASE_HXX
 #define ERP_PROCESSING_CONTEXT_HSMTESTBASE_HXX
 
-#include "erp/hsm/ErpTypes.hxx"
+#include "shared/hsm/ErpTypes.hxx"
 
 #include <chrono>
 #include <functional>

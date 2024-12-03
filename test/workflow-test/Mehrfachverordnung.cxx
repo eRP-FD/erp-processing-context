@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/OperationOutcome.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/OperationOutcome.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 

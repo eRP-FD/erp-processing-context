@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/SafeString.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/SafeString.hxx"
+#include "shared/util/Base64.hxx"
 #include "test_config.h"
 
 #include <gtest/gtest.h>

@@ -90,10 +90,27 @@ protected:
     std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
                                    const std::string&) override
     {
-        return ResourceTemplates::medicationDispenseXml(
-            {.prescriptionId = prescriptionIdForMedicationDispense,
-             .kvnr = kvnr,
-             .whenPrepared = model::Timestamp::fromXsDateTime("0001-01-01T00:00:00Z")});
+        std::string whenPrepared = "0001-01-01T00:00:00Z";
+        if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
+        {
+            whenPrepared = "0001-01-01";
+        }
+        auto xml = ResourceTemplates::medicationDispenseXml({
+            .prescriptionId = prescriptionIdForMedicationDispense,
+            .kvnr = kvnr,
+            .whenPrepared = whenPrepared,
+        });
+        TVLOG(0) << xml;
+        return xml;
+    }
+
+    std::string dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
+                                              const std::string& prescriptionIdForMedicationDispense,
+                                              const std::string& whenHandedOver [[maybe_unused]],
+                                              size_t numMedicationDispenses) override
+    {
+        return ErpWorkflowTest::dispenseOrCloseTaskParameters(profileType, kvnr, prescriptionIdForMedicationDispense,
+                                                              "0001-01-01", numMedicationDispenses);
     }
 };
 
@@ -109,8 +126,8 @@ TEST_F(RegressionTestErp8170, Erp8170)
     ASSERT_TRUE(acceptBundle);
     const auto acceptedTasks = acceptBundle->getResourcesByType<model::Task>();
     ASSERT_EQ(acceptedTasks.size(), 1);
-    ASSERT_NO_FATAL_FAILURE(
-        taskClose(task->prescriptionId(), std::string{acceptedTasks[0].secret().value_or("")}, kvnr));
+    ASSERT_NO_FATAL_FAILURE(taskClose(task->prescriptionId(), std::string{acceptedTasks[0].secret().value_or("")}, kvnr,
+                                      HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 }
 
 TEST_F(RegressionTest, Erp11142)
@@ -128,11 +145,8 @@ TEST_F(RegressionTest, Erp11142)
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
-        R"(Bundle.meta.profile[0]: error: )"
-        R"(value must match fixed value: "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0")"
-        R"( (but is "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"))"
-        R"( (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0); )"));
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "parsing / validation error",
+        "missing version on meta.profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"));
 
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml =
@@ -141,8 +155,9 @@ TEST_F(RegressionTest, Erp11142)
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
-        "Bundle: error: Unknown profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0|1.1.0; "));
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "parsing / validation error",
+        "invalid profile https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0|1.1.0 must be one of: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0"));
 }
 
 TEST_F(RegressionTest, Erp10892)

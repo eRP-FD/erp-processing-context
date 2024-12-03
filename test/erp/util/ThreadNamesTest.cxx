@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/ThreadNames.hxx"
+#include "shared/util/ThreadNames.hxx"
 
 #include <gtest/gtest.h>
 

@@ -8,8 +8,8 @@
 #ifndef CRYPTOHELPER_H
 #define CRYPTOHELPER_H
 
-#include "erp/crypto/OpenSslHelper.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <optional>
 #include <string>

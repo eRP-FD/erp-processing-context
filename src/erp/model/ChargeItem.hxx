@@ -10,12 +10,12 @@
 
 #include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
 #include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <optional>
 

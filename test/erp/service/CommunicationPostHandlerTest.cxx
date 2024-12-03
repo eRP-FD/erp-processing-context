@@ -6,15 +6,15 @@
  */
 
 #include "erp/service/CommunicationPostHandler.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/model/OperationOutcome.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/OperationOutcome.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 
-#include "erp/common/MimeType.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/crypto/Certificate.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/util/Base64.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 

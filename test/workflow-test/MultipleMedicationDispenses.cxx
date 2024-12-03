@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <ostream>
@@ -98,7 +98,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
     {
         auto meds = medicationDispenseGetAll({}, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses);
         for (const auto& med : medBundle)
@@ -117,7 +117,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
             "identifier=" + std::string{model::resource::naming_system::prescriptionID} + "|" + task1.toString(),
             JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses);
         for (const auto& med : medBundle)
@@ -149,7 +149,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
     {
         auto meds = medicationDispenseGetAll({}, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses * 3);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses * 3);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses * 3);
         for (const auto& med : medBundle)
@@ -164,7 +164,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         auto meds =
             medicationDispenseGetAll("identifier=" + id(task1), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses);
         for (const auto& med : medBundle)
@@ -177,7 +177,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         auto meds =
             medicationDispenseGetAll("identifier=" + id(task2), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses);
         for (const auto& med : medBundle)
@@ -190,7 +190,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         auto meds =
             medicationDispenseGetAll("identifier=" + id(task3), JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses);
         for (const auto& med : medBundle)
@@ -203,7 +203,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         const auto searchArgument = "identifier=" + id(task1) + "," + id(task3);
         auto meds = medicationDispenseGetAll(searchArgument, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses * 2);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses * 2);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses * 2);
         for (const auto& med : medBundle)
@@ -216,7 +216,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
         const auto searchArgument = "identifier=" + id(task1) + ',' + id(task2) + ',' + id(task3);
         auto meds = medicationDispenseGetAll(searchArgument, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
         ASSERT_TRUE(meds.has_value());
-        ASSERT_EQ(meds->getResourceCount(), GetParam().numMedicationDispenses * 3);
+        ASSERT_EQ(meds->getResourcesByType<model::MedicationDispense>().size(), GetParam().numMedicationDispenses * 3);
         const auto& medBundle = meds->getResourcesByType<model::MedicationDispense>();
         ASSERT_EQ(medBundle.size(), GetParam().numMedicationDispenses * 3);
         for (const auto& med : medBundle)

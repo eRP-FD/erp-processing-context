@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVCOMPOSITION_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVCOMPOSITION_HXX
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 
 namespace model
 {

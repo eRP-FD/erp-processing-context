@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="epa-drug-category-vs"/>
+  <url value="https://gematik.de/fhir/epa-medication/ValueSet/epa-drug-category-vs"/>
+  <version value="1.0.3"/>
+  <name value="EPADrugCategoryVS"/>
+  <title value="EPA Drug Category ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The ValueSet for drug category."/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs"/>
+    </include>
+  </compose>
+</ValueSet>

@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKENROLMENTMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKENROLMENTMANAGER_HXX
 
-#include "erp/enrolment/EnrolmentHelper.hxx"
-#include "erp/hsm/ErpTypes.hxx"
+#include "shared/enrolment/EnrolmentHelper.hxx"
+#include "shared/hsm/ErpTypes.hxx"
 
 class BlobCache;
 

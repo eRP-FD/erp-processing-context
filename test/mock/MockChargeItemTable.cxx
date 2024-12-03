@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/database/DatabaseModel.hxx"
+#include "shared/util/TLog.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "test/mock/MockChargeItemTable.hxx"
 #include "test/mock/MockTaskTable.hxx"

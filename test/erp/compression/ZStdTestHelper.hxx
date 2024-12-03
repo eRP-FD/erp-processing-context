@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_ZSTDTESTHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_ZSTDTESTHELPER_HXX
 
-#include "erp/compression/Compression.hxx"
+#include "shared/compression/Compression.hxx"
 
 #include <string_view>
 

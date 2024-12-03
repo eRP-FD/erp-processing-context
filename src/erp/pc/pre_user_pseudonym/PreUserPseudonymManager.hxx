@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_PREUSERPSEUDONYM_PREUSERPSEUDONYMMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_PREUSERPSEUDONYM_PREUSERPSEUDONYMMANAGER_HXX
 
-#include "erp/crypto/CMAC.hxx"
+#include "shared/crypto/CMAC.hxx"
 
 #include <date/date.h>
 #include <memory>

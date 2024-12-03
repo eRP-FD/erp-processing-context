@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="OriginVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/OriginVS"/>
+  <version value="0.11.12"/>
+  <name value="OriginVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="ValueSet for `meta.tag[Origin]`"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/Origin"/>
+    </include>
+  </compose>
+</ValueSet>

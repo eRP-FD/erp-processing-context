@@ -7,7 +7,7 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/util/WorkDay.hxx"
+#include "shared/util/WorkDay.hxx"
 
 class WorkDayTest : public testing::Test
 {

@@ -6,14 +6,14 @@
  */
 
 #include "FhirElement.hxx"
+#include "fhirtools/FPExpect.hxx"
+#include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 
 #include <boost/algorithm/string/split.hpp>
 #include <magic_enum/magic_enum.hpp>
 #include <sstream>
 #include <utility>
-
-#include "fhirtools/FPExpect.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
 
 using fhirtools::FhirElement;
 
@@ -149,7 +149,7 @@ const std::string& fhirtools::to_string(FhirElement::Representation representati
     using Representation = FhirElement::Representation;
     switch (representation)
     {
-        // clang-format off
+            // clang-format off
         case Representation::xmlAttr:  return repesentation_strings::xmlAttr;
         case Representation::xmlText:  return repesentation_strings::xmlText;
         case Representation::typeAttr: return repesentation_strings::typeAttr;
@@ -213,7 +213,7 @@ FhirElement::Builder& FhirElement::Builder::addProfile(std::string profile)
     return *this;
 }
 
-fhirtools::FhirElement::Builder & fhirtools::FhirElement::Builder::setProfiles(std::list<std::string> profiles)
+fhirtools::FhirElement::Builder& fhirtools::FhirElement::Builder::setProfiles(std::list<std::string> profiles)
 {
     mFhirElement->mProfiles = std::move(profiles);
     return *this;
@@ -310,7 +310,7 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::bindingValueSet(const std
     {
         mFhirElement->mBinding->key.version = FhirVersion{parts[1]};
     }
-    TVLOG(2) << mFhirElement->mName << ": New Binding to " << canonical;
+    TVLOG(4) << mFhirElement->mName << ": New Binding to " << canonical;
     return *this;
 }
 
@@ -343,7 +343,7 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::maxValueDecimal(const std
 
 FhirElement::Builder& fhirtools::FhirElement::Builder::addTargetProfile(std::string&& targetProfile)
 {
-    TVLOG(2) << "target profile: " << targetProfile;
+    TVLOG(4) << "target profile: " << targetProfile;
     mFhirElement->mReferenceTargetProfiles.emplace(std::move(targetProfile));
     return *this;
 }
@@ -360,12 +360,14 @@ bool fhirtools::FhirElement::Cardinality::isFieldConstraint() const
 
 bool fhirtools::FhirElement::Cardinality::isConstraint(bool isArray)
 {
-    return (!isArray && isFieldConstraint()) || (isArray && isArrayConstraint());
+    return (! isArray && isFieldConstraint()) || (isArray && isArrayConstraint());
 }
 
 
 fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std::string_view elementFullPath,
-                                                                const FhirStructureDefinition* profile) const
+                                                             const FhirStructureDefinition* profile,
+                                                             const std::shared_ptr<const Element>& element,
+                                                             const std::string& typeId) const
 {
     using namespace std::string_literals;
     using std::to_string;
@@ -375,6 +377,11 @@ fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std
         if (min == 1)
         {
             result.add(Severity::error, "missing mandatory element", std::string{elementFullPath}, profile);
+            if (max == 1)
+            {
+                result.addInfo(ValidationAdditionalInfo::MissingMandatoryElement, element, std::string{elementFullPath},
+                               typeId);
+            }
         }
         else
         {

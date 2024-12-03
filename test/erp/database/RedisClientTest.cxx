@@ -7,9 +7,9 @@
 
 #include "erp/database/RedisClient.hxx"
 
-#include "erp/crypto/Jwt.hxx"
+#include "shared/crypto/Jwt.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
-#include "erp/util/JwtException.hxx"
+#include "shared/util/JwtException.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test_config.h"
 #include "test/mock/MockRedisStore.hxx"

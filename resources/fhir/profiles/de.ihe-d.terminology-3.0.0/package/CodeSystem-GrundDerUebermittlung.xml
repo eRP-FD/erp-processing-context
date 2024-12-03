@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="GrundDerUebermittlung"/>
+  <url value="http://ihe-d.de/CodeSystems/GrundDerUebermittlung"/>
+  <version value="2021-07-06T21:18:31"/>
+  <name value="GrundDerUebermittlung"/>
+  <title value="Grund Der Uebermittlung"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="11"/>
+  <concept>
+    <code value="1"/>
+    <display value="Patientenkontakt"/>
+  </concept>
+  <concept>
+    <code value="2"/>
+    <display value="Verlegung"/>
+  </concept>
+  <concept>
+    <code value="3"/>
+    <display value="Entlassung"/>
+  </concept>
+  <concept>
+    <code value="4"/>
+    <display value="Überweisung/Einweisung"/>
+  </concept>
+  <concept>
+    <code value="5"/>
+    <display value="Aufnahme"/>
+  </concept>
+  <concept>
+    <code value="6"/>
+    <display value="Anforderung"/>
+  </concept>
+  <concept>
+    <code value="7"/>
+    <display value="Auf Anfrage"/>
+  </concept>
+  <concept>
+    <code value="8"/>
+    <display value="Veranlassung durch Patient"/>
+    <definition value="Regelmäßige Übertragungen (z.B. Implantate, Fitnesstracker), auch wenn durch den Patienten ursprünglich veranlasst, werden über das Konzept 11 (&quot;Monitoring&quot;) abgebildet."/>
+  </concept>
+  <concept>
+    <code value="9"/>
+    <display value="Konsil/Zweitmeinung"/>
+  </concept>
+  <concept>
+    <code value="10"/>
+    <display value="Systemwechsel/Archivierung"/>
+  </concept>
+  <concept>
+    <code value="11"/>
+    <display value="Monitoring"/>
+  </concept>
+</CodeSystem>

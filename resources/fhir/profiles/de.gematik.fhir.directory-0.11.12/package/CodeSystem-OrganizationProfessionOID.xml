@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="OrganizationProfessionOID"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/OrganizationProfessionOID"/>
+  <version value="0.11.12"/>
+  <name value="OrganizationProfessionOID"/>
+  <title value="CodeSystem for ProfessionOID of Institutions"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="The codes for Organizations based on Profession OIDs defined in [gemSpec_OID](https://fachportal.gematik.de/fachportal-import/files/gemSpec_OID_V3.10.0.pdf)"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="62"/>
+  <concept>
+    <code value="1.2.276.0.76.4.50"/>
+    <display value="Betriebsstätte Arzt"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.51"/>
+    <display value="Zahnarztpraxis"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.52"/>
+    <display value="Betriebsstätte Psychotherapeut"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.53"/>
+    <display value="Krankenhaus"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.54"/>
+    <display value="Öffentliche Apotheke"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.55"/>
+    <display value="Krankenhausapotheke"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.56"/>
+    <display value="Bundeswehrapotheke"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.57"/>
+    <display value="Betriebsstätte Mobile Einrichtung Rettungsdienst"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.58"/>
+    <display value="Betriebsstätte gematik"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.59"/>
+    <display value="Betriebsstätte Kostenträger"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.187"/>
+    <display value="Betriebsstätte Leistungserbringerorganisation Vertragszahnärzte"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.190"/>
+    <display value="AdV-Umgebung bei Kostenträger"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.210"/>
+    <display value="Betriebsstätte Leistungserbringerorganisation Kassenärztliche Vereinigung"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.223"/>
+    <display value="Betriebsstätte GKV-Spitzenverband"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.226"/>
+    <display value="Betriebsstätte Mitgliedsverband der Krankenhäuser"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.227"/>
+    <display value="Betriebsstätte der Deutsche Krankenhaus TrustCenter und Informationsverarbeitung GmbH"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.228"/>
+    <display value="Betriebsstätte der Deutschen Krankenhausgesellschaft"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.224"/>
+    <display value="Betriebsstätte Apothekerverband"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.225"/>
+    <display value="Betriebsstätte Deutscher Apothekerverband"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.229"/>
+    <display value="Betriebsstätte der Bundesärztekammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.230"/>
+    <display value="Betriebsstätte einer Ärztekammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.231"/>
+    <display value="Betriebsstätte einer Zahnärztekammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.242"/>
+    <display value="Betriebsstätte der Kassenärztlichen Bundesvereinigung"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.243"/>
+    <display value="Betriebsstätte der Bundeszahnärztekammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.244"/>
+    <display value="Betriebsstätte der Kassenzahnärztlichen Bundesvereinigung"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.245"/>
+    <display value="Betriebsstätte Gesundheits-, Kranken- und Altenpflege"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.246"/>
+    <display value="Betriebsstätte Geburtshilfe"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.247"/>
+    <display value="Betriebsstätte Physiotherapie"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.248"/>
+    <display value="Betriebsstätte Augenoptiker"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.249"/>
+    <display value="Betriebsstätte Hörakustiker"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.250"/>
+    <display value="Betriebsstätte Orthopädieschuhmacher"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.251"/>
+    <display value="Betriebsstätte Orthopädietechniker"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.252"/>
+    <display value="Betriebsstätte Zahntechniker"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.253"/>
+    <display value="Rettungsleitstelle"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.254"/>
+    <display value="Betriebsstätte Sanitätsdienst Bundeswehr"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.255"/>
+    <display value="Betriebsstätte Öffentlicher Gesundheitsdienst"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.256"/>
+    <display value="Betriebsstätte Arbeitsmedizin"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.257"/>
+    <display value="Betriebsstätte Vorsorge- und Rehabilitation"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.273"/>
+    <display value="ePA KTR-Zugriffsautorisierung"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.262"/>
+    <display value="Betriebsstätte Pflegeberatung nach § 7a SGB XI"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.263"/>
+    <display value="Betriebsstätte Psychotherapeutenkammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.264"/>
+    <display value="Betriebsstätte Bundespsychotherapeutenkammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.265"/>
+    <display value="Betriebsstätte Landesapothekerkammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.266"/>
+    <display value="Betriebsstätte Bundesapothekerkammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.267"/>
+    <display value="Betriebsstätte elektronisches Gesundheitsberuferegister"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.268"/>
+    <display value="Betriebsstätte Handwerkskammer"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.269"/>
+    <display value="Betriebsstätte Register für Gesundheitsdaten"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.270"/>
+    <display value="Betriebsstätte Abrechnungsdienstleister"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.271"/>
+    <display value="Betriebsstätte PKV-Verband"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.278"/>
+    <display value="Ergotherapiepraxis"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.279"/>
+    <display value="Logopaedische Praxis"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.280"/>
+    <display value="Podologiepraxis"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.281"/>
+    <display value="Ernährungstherapeutische Praxis"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.282"/>
+    <display value="DIGA-Hersteller und Anbieter"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.284"/>
+    <display value="Betriebsstätte Weitere Kostenträger im Gesundheitswesen"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.285"/>
+    <display value="Weitere Organisationen der Gesundheitsversorgung"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.286"/>
+    <display value="KIM-Hersteller und -Anbieter"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.292"/>
+    <display value="NCPeH Fachdienst"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.295"/>
+    <display value="TIM-Hersteller und -Anbieter"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.303"/>
+    <display value="Ombudsstelle eines Kostenträgers"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.304"/>
+    <display value="Betriebsstätte Augenoptiker und Hörakustiker"/>
+  </concept>
+  <concept>
+    <code value="1.2.276.0.76.4.306"/>
+    <display value="Betriebsstätte Orthopädieschuhmacher und Orthopädietechniker"/>
+  </concept>
+</CodeSystem>

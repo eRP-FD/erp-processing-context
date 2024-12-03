@@ -5,14 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/client/HttpsClient.hxx"
-#include "erp/common/Constants.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/GLog.hxx"
+#include "shared/network/client/HttpClient.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/GLog.hxx"
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 
 #include <date/date.h>
@@ -97,6 +97,7 @@ Blob types:
     kvnr|kvnrHashKey
     tid|telematikIdHashKey
     vausig
+    vauaut
 )";
 
     if (message.empty())
@@ -141,6 +142,7 @@ struct BlobDescriptor
             case TelematikIdHashKey:
             case VauSig:
             case PseudonameKey:
+            case VauAut:
                 return false;
         }
         Fail("Unexpected blob type");
@@ -160,9 +162,9 @@ static std::vector<BlobDescriptor> blobDescriptors = {
     {BlobType::ChargeItemKeyDerivation,    "charge", "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
     {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
     {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
-    {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false}};
+    {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false},
+    {BlobType::VauAut,                     "vauaut", "vauAut",                     "AUTKeyPairSaved.blob",     "AUTKeyPairSaved.blob",         false, false, false}};
 // clang-format on
-
 
 struct VsdmKeyBlobDescriptor
 {
@@ -289,7 +291,7 @@ CommandLineArguments processCommandLine(const int argc,
                                             BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
                                             ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
-                                            BlobType::TelematikIdHashKey, BlobType::VauSig});
+                                            BlobType::TelematikIdHashKey, BlobType::VauSig, BlobType::VauAut});
                 arguments.vsdmBlobs = vsdmBlobDescriptors;
             }
             else if (argument == "static")
@@ -297,7 +299,7 @@ CommandLineArguments processCommandLine(const int argc,
                 arguments.blobTypes.insert({BlobType::EciesKeypair, BlobType::TaskKeyDerivation,
                                             BlobType::CommunicationKeyDerivation, BlobType::AuditLogKeyDerivation,
                                             ::BlobType::ChargeItemKeyDerivation, BlobType::KvnrHashKey,
-                                            BlobType::TelematikIdHashKey, BlobType::VauSig});
+                                            BlobType::TelematikIdHashKey, BlobType::VauSig, BlobType::VauAut});
             }
             else if (argument == "dynamic")
             {
@@ -437,11 +439,11 @@ StaticData readStaticData(const BlobDescriptor& descriptor, const CommandLineArg
 
 
         result.blob = ErpBlob::fromCDump(Base64::encode(FileHelper::readFileAsString(path)));
-        if (descriptor.type == BlobType::VauSig)
+        if (descriptor.type == BlobType::VauSig || descriptor.type == BlobType::VauAut)
         {
             path.replace_extension(".pem");
 
-            Expect(::FileHelper::exists(path), "No certificate file found for VauSig (expected " + path.string() + ")");
+            Expect(::FileHelper::exists(path), "No certificate file found for VauSig/VauAut (expected " + path.string() + ")");
 
             result.certificate = ::FileHelper::readFileAsString(path);
         }

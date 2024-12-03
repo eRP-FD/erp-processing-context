@@ -47,6 +47,8 @@ public:
         Severity mandatoryResolvableReferenceFailure = Severity::error;
     };
     SeverityLevels levels{};
+    // collect additional information, useful for FHIR-Transformer
+    bool collectInfo = false;
 };
 
 }

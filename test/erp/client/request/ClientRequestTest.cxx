@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/client/request/ValidatedClientRequest.hxx"
+#include "shared/network/client/request/ValidatedClientRequest.hxx"
 
 #include <gtest/gtest.h>
 

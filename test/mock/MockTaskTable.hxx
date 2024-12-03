@@ -8,9 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKTASKTABLE_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKTASKTABLE_HXX
 
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/database/DatabaseModel.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "test/mock/TestUrlArguments.hxx"
 
 #include <map>
@@ -24,9 +24,10 @@ class MockTaskTable {
 public:
 
     struct Row {
-        Row(model::Timestamp initAuthoredOn, model::Timestamp initLastModified);
+        Row(model::Timestamp initAuthoredOn, model::Timestamp initLastModified, model::Timestamp initLastStatusUpdate);
         model::Timestamp authoredOn;
         model::Timestamp lastModified;
+        model::Timestamp lastStatusUpdate;
         std::optional<db_model::EncryptedBlob> kvnr = std::nullopt;
         std::optional<db_model::HashedKvnr> kvnrHashed = std::nullopt;
         std::optional<date::year_month_day> expiryDate = std::nullopt;
@@ -45,18 +46,21 @@ public:
         std::optional<model::Timestamp> lastMedicationDispense = std::nullopt;
         std::optional<BlobId> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
+        std::optional<db_model::Blob> medicationDispenseSalt = std::nullopt;
     };
 
     explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
 
     Row& createRow(const model::PrescriptionId& taskId,
                    const model::Timestamp& lastUpdated,
-                   const model::Timestamp& created);
+                   const model::Timestamp& created,
+                   const model::Timestamp& initLastStatusUpdate);
 
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
-                                                                   const model::Timestamp& created);
+                                                                   const model::Timestamp& created,
+                                                                   const model::Timestamp& initLastStatusUpdate);
 
     void updateTask(const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode,
@@ -70,7 +74,8 @@ public:
                                    model::Task::Status taskStatus,
                                    const model::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& taskSecret,
-                                   const std::optional<db_model::EncryptedBlob>& owner);
+                                   const std::optional<db_model::EncryptedBlob>& owner,
+                                   const model::Timestamp& lastStatusUpdate);
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
@@ -78,7 +83,11 @@ public:
                       const model::Timestamp& lastModified,
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
-                      const db_model::EncryptedBlob& healthCareProviderPrescription);
+                      const db_model::EncryptedBlob& healthCareProviderPrescription,
+                      const model::Timestamp& lastStatusUpdate);
+    void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+                           const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
+                           const model::Timestamp& lastStatusUpdate);
     void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
                                       const model::Timestamp& lastModified,
                                       const model::Timestamp& lastMedicationDispense,
@@ -86,7 +95,8 @@ public:
                                       BlobId medicationDispenseBlobId,
                                       const db_model::HashedTelematikId& telematicId,
                                       const model::Timestamp& whenHandedOver,
-                                      const std::optional<model::Timestamp>& whenPrepared);
+                                      const std::optional<model::Timestamp>& whenPrepared,
+                                      const db_model::Blob& medicationDispenseSalt);
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -96,12 +106,15 @@ public:
                                              const model::Timestamp& whenHandedOver,
                                              const std::optional<model::Timestamp>& whenPrepared,
                                              const db_model::EncryptedBlob& receipt,
-                                             const model::Timestamp& lastMedicationDispense);
+                                             const model::Timestamp& lastMedicationDispense,
+                                             const db_model::Blob& medicationDispenseSalt,
+                                             const model::Timestamp& lastStatusUpdate);
     void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                      const model::Timestamp& lastModified);
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
-                                     const model::Timestamp& lastModified);
+                                     const model::Timestamp& lastModified,
+                                     const model::Timestamp& lastStatusUpdate);
 
 
     std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId);
@@ -129,6 +142,9 @@ public:
 
     bool isBlobUsed(BlobId blobId) const;
 
+    std::optional<db_model::Blob> retrieveMedicationDispenseSalt(const model::PrescriptionId& taskId);
+
+
 private:
     enum FieldName
     {
@@ -153,6 +169,7 @@ private:
         performer,
         medication_dispense_key_blob_id,
         medication_dispense_bundle,
+        medication_dispense_salt
     };
 
     std::optional<db_model::Task> select(int64_t databaseId, const std::set<FieldName>& fields) const;

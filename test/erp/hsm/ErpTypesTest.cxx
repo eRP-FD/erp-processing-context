@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/ErpTypes.hxx"
+#include "shared/hsm/ErpTypes.hxx"
 
 #include <gtest/gtest.h>
 

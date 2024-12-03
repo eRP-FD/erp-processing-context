@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="healthcareservice-technical-characteristic-vs"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/healthcareservice-technical-characteristic-vs"/>
+  <version value="0.11.12"/>
+  <name value="HealthCareServiceTechnicalCharacteristicVS"/>
+  <title value="HealthCareServiceTechnicalCharacteristicVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="HealthCareServiceTechnicalCharacteristicVS"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/VZDHealthCareServiceCharacteristicsCS"/>
+    </include>
+  </compose>
+</ValueSet>

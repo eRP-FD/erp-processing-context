@@ -6,10 +6,10 @@
  */
 
 #include "erp/service/consent/ConsentDeleteHandler.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/TLog.hxx"
 
 
 ConsentDeleteHandler::ConsentDeleteHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)

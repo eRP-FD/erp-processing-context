@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKIDPUPDATER_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKIDPUPDATER_HXX
 
-#include "erp/idp/IdpUpdater.hxx"
+#include "shared/idp/IdpUpdater.hxx"
 
 #if WITH_HSM_MOCK  != 1
 #error MockIdpUpdater.hxx included but WITH_HSM_MOCK not enabled

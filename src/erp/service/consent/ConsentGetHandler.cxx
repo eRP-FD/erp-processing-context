@@ -6,10 +6,10 @@
  */
 
 #include "erp/service/consent/ConsentGetHandler.hxx"
-#include "erp/ErpRequirements.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/Bundle.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/util/TLog.hxx"
 
 
 ConsentGetHandler::ConsentGetHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)

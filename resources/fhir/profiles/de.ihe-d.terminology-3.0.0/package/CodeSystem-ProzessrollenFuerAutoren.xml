@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="ProzessrollenFuerAutoren"/>
+  <url value="http://ihe-d.de/CodeSystems/ProzessrollenFuerAutoren"/>
+  <version value="2021-06-25T13:21:07"/>
+  <name value="ProzessrollenFuerAutoren"/>
+  <title value="Prozessrollen Fuer Autoren"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="17"/>
+  <concept>
+    <code value="1"/>
+    <display value="Einweiser"/>
+    <definition value="Die Person, die die Einweisung veranlasst hat. (Sie wird auch als Zuweiser bezeichnet.)"/>
+  </concept>
+  <concept>
+    <code value="2"/>
+    <display value="Entlassender"/>
+    <definition value="Die Person, die für die Entlassung verantwortlich ist."/>
+  </concept>
+  <concept>
+    <code value="3"/>
+    <display value="Überweiser"/>
+    <definition value="Die Person, die die Überweisung veranlasst hat."/>
+  </concept>
+  <concept>
+    <code value="4"/>
+    <display value="Durchführender"/>
+    <definition value="Die Person oder das Gerät, welche(s) die dokumentierte Aktion durchgeführt hat."/>
+  </concept>
+  <concept>
+    <code value="5"/>
+    <display value="durchführendes Gerät"/>
+    <definition value="Das Gerät, welches die dokumentierte Aktion durchgeführt hat."/>
+  </concept>
+  <concept>
+    <code value="6"/>
+    <display value="Betreuer"/>
+    <definition value="Die Person, die den Patienten betreut, d.h. den Überblick über die Behandlung behält und als primärer Ansprechpartner während der Behandlung dient."/>
+  </concept>
+  <concept>
+    <code value="7"/>
+    <display value="Pflegender"/>
+    <definition value="Die Person, die den Patienten pflegerisch (aktiv) betreut."/>
+  </concept>
+  <concept>
+    <code value="17"/>
+    <display value="Begutachtender"/>
+    <definition value="Die Person, die ein Gutachten erstellt."/>
+  </concept>
+  <concept>
+    <code value="8"/>
+    <display value="Behandler"/>
+    <definition value="Die Person, die den Patienten aktiv behandelt im Sinne der Verbesserung (oder zumindest Beibehaltung) des gesundheitlichen Zustandes."/>
+  </concept>
+  <concept>
+    <code value="9"/>
+    <display value="Erstbehandler außerhalb einer Einrichtung"/>
+    <definition value="Die Person, die den Patienten außerhalb der (eigenen) Einrichtung zuerst behandelt hat. Das kann - muss aber nicht - im Rahmen einer Notfallversorgung stattgefunden haben."/>
+  </concept>
+  <concept>
+    <code value="10"/>
+    <display value="Bereitstellender"/>
+    <definition value="Die Person, die zusätzliche Mittel (Medikamente, Heil-/Hilfsmittel) bereitgestellt hat."/>
+  </concept>
+  <concept>
+    <code value="11"/>
+    <display value="Dokumentierender"/>
+    <definition value="Die Person, die übermittelte Informationen eingibt oder ein Gerät, das erzeugte Daten im System hinterlegt."/>
+  </concept>
+  <concept>
+    <code value="12"/>
+    <display value="dokumentierendes Gerät"/>
+    <definition value="Das Gerät, welches erzeugte Daten im System hinterlegt."/>
+  </concept>
+  <concept>
+    <code value="13"/>
+    <display value="Validierer"/>
+    <definition value="Die Person, die Korrektheit der hinterlegten Information überprüft und verifiziert hat."/>
+  </concept>
+  <concept>
+    <code value="14"/>
+    <display value="Gesetzlich Verantwortlicher"/>
+    <definition value="Die Person, die vor dem Gesetz für die Korrektheit der Informationen verantwortlich ist und dafür haftet."/>
+  </concept>
+  <concept>
+    <code value="15"/>
+    <display value="Beratender"/>
+    <definition value="Die Person, die Auswertungen vorgenommen und beratend involviert war."/>
+  </concept>
+  <concept>
+    <code value="16"/>
+    <display value="Informierender"/>
+    <definition value="Eine Person, die zu den hier dokumentierten Informationen beigetragen hat."/>
+  </concept>
+</CodeSystem>

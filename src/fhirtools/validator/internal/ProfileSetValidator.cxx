@@ -243,7 +243,7 @@ void ProfileSetValidator::process(const Element& element, std::string_view eleme
         mProfileValidators.merge(std::move(forMerge));
         toValidate = std::move(addedProfiles);
     }
-    incrementCounters();
+    incrementCounters(element);
 }
 
 void fhirtools::ProfileSetValidator::createCounters(const ProfileValidator::Map& profileValidatorMap)
@@ -262,11 +262,12 @@ void fhirtools::ProfileSetValidator::createCounters(const ProfileValidator::Map&
             {
                 mParent->mChildCounters[counterKey].elementMap.emplace(pk, defPtr);
             }
+            mParent->mChildCounters[counterKey].max = defPtr.element()->cardinality().max;
         }
     }
 }
 
-void fhirtools::ProfileSetValidator::incrementCounters()
+void fhirtools::ProfileSetValidator::incrementCounters(const Element& element)
 {
     if (mParent)
     {
@@ -280,6 +281,14 @@ void fhirtools::ProfileSetValidator::incrementCounters()
                 continue;
             }
             ++counter->second.count;
+            if (options().collectInfo) [[unlikely]]
+            {
+                if (profVal.first.element()->cardinality().max == 0)
+                {
+                    mResults.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(), std::nullopt,
+                                     profVal.second.definitionPointer().element()->typeId());
+                }
+            }
         }
     }
 }
@@ -295,7 +304,7 @@ void fhirtools::ProfileSetValidator::createSliceCheckersAndCounters()
             const auto& slicing = defPtr.element()->slicing();
             if (slicing)
             {
-                auto [it, ins] = mParent->mSliceCheckers.try_emplace(defPtr, defPtr.profile(), *slicing,
+                auto [it, ins] = mParent->mSliceCheckers.try_emplace(defPtr, defPtr.profile(), *slicing, options(),
                                                                      getRuleOverride(profVal.first));
                 TVLOG(3) << "Adding Slicechecker for " << defPtr.profile()->url() << '|' << defPtr.profile()->version()
                          << "@" << defPtr.element()->name();
@@ -374,7 +383,7 @@ ProfileValidator::Map fhirtools::ProfileSetValidator::process(ProfileValidator::
             auto sliceChecker = mParent->mSliceCheckers.find(defPtr);
             if (sliceChecker != mParent->mSliceCheckers.end())
             {
-                sliceChecker->second.foundUnsliced(elementFullPath);
+                sliceChecker->second.foundUnsliced(element, elementFullPath);
             }
         }
         else
@@ -397,28 +406,31 @@ const ProfileValidator& ProfileSetValidator::getValidator(const ProfileValidator
     return result->second;
 }
 
-void fhirtools::ProfileSetValidator::finalize(std::string_view elementFullPath)
+void fhirtools::ProfileSetValidator::finalize(std::string_view elementFullPath,
+                                              const std::shared_ptr<const Element>& element)
 {
     TVLOG(4) << __PRETTY_FUNCTION__ << ": " << mRootValidator.definitionPointer() << mProfileValidators.size();
-    finalizeChildCounters(elementFullPath);
-    finalizeSliceCheckers(elementFullPath);
+    finalizeChildCounters(elementFullPath, element);
+    finalizeSliceCheckers(elementFullPath, element);
     propagateFailures();
 }
 
-void fhirtools::ProfileSetValidator::finalizeChildCounters(std::string_view elementFullPath)
+void fhirtools::ProfileSetValidator::finalizeChildCounters(std::string_view elementFullPath,
+                                                           const std::shared_ptr<const Element>& element)
 {
     for (const auto& counter : mChildCounters)
     {
-        counter.second.check(mProfileValidators, counter.first, elementFullPath);
+        counter.second.check(mProfileValidators, counter.first, elementFullPath, element);
     }
 }
 
 
-void ProfileSetValidator::finalizeSliceCheckers(std::string_view elementFullPath)
+void ProfileSetValidator::finalizeSliceCheckers(std::string_view elementFullPath,
+                                                const std::shared_ptr<const Element>& element)
 {
     for (auto& sliceChecker : mSliceCheckers)
     {
-        sliceChecker.second.finalize(elementFullPath);
+        sliceChecker.second.finalize(elementFullPath, element);
         auto slicingCheckResults = sliceChecker.second.results();
         for (const auto& affected : sliceChecker.second.affectedValidators())
         {

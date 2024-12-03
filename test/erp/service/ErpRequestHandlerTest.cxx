@@ -6,25 +6,24 @@
  */
 
 #include "erp/service/ErpRequestHandler.hxx"
-#include "test/mock/MockDatabase.hxx"
-#include "test/mock/MockRedisStore.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/util/StaticData.hxx"
-
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/model/Bundle.hxx"
-#include "erp/model/Communication.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/Parameters.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test_config.h"
+#include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockRedisStore.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
 
@@ -39,6 +38,9 @@ public:
           serviceContext(Configuration::instance(), StaticData::makeMockFactories())
     {
     }
+
+	void handleRequest(PcSessionContext& session) override { (void)session; }
+    void handleRequest(BaseSessionContext& session) override { handleRequest(dynamic_cast<PcSessionContext&>(session)); }
 
     template<typename TModel>
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -119,6 +121,9 @@ public:
             case Gem_erxCompositionElement:
             case Gem_erxDevice:
             case Gem_erxDigest:
+            case GEM_ERP_PR_Medication:
+            case GEM_ERP_PR_PAR_CloseOperation_Input:
+            case GEM_ERP_PR_PAR_DispenseOperation_Input:
             case KBV_PR_ERP_Bundle:
             case KBV_PR_FOR_PractitionerRole:
             case KBV_PR_FOR_Patient:
@@ -126,6 +131,12 @@ public:
             case DAV_DispenseItem:
             case Subscription:
             case OperationOutcome:
+            case ProvidePrescriptionErpOp:
+            case ProvideDispensationErpOp:
+            case EPAOpRxPrescriptionERPOutputParameters:
+            case EPAOpRxDispensationERPOutputParameters:
+            case CancelPrescriptionErpOp:
+            case OrganizationDirectory:
                 FAIL() << "wrong SchemaType for this test";
                 break;
             case Gem_erxChargeItem:
@@ -135,10 +146,6 @@ public:
                 testParseAndValidateRequestBodyT<model::Consent>(body, contentMimeType, expectFail);
                 break;
         }
-    }
-
-    void handleRequest(SessionContext&) override
-    {
     }
 
     PcServiceContext serviceContext;

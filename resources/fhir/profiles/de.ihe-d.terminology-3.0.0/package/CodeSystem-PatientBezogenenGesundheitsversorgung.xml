@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PatientBezogenenGesundheitsversorgung"/>
+  <url value="http://ihe-d.de/CodeSystems/PatientBezogenenGesundheitsversorgung"/>
+  <version value="2018-07-13T16:21:42"/>
+  <name value="PatientBezogenenGesundheitsversorgung"/>
+  <title value="Patient Bezogenen Gesundheitsversorgung"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="17"/>
+  <concept>
+    <code value="APD"/>
+    <display value="Ambulanter Pflegedienst"/>
+    <definition value="Sozialstationen und gewerblich betriebene ambulante Pflegedienste, die Patienten in der eigenen häuslichen Umgebung betreuen, aber keine ärztlichen Tätigkeiten durchführen."/>
+  </concept>
+  <concept>
+    <code value="APO"/>
+    <display value="Apotheke"/>
+    <definition value="Eine Einrichtung zur Abgabe und ggf. Lagerung oder Herstellung von Arzneimitteln. Dieser Wert sollte nicht zur Kennzeichnung von Daten aus Krankenhausapotheken verwendet werden."/>
+  </concept>
+  <concept>
+    <code value="BER"/>
+    <display value="Ärztlicher Bereitschaftsdienst"/>
+    <definition value="Der ärztliche Bereitschaftsdienst wird auch als Kassenärztlicher Notdienst bezeichnet. Er wird häufig durch Niedergelassene Ärzte durchgeführt und von der Kassenärztlichen Vereinigungen organisiert, da diese die Verantwortung für die Sicherstellung der medizinischen Versorgung auch außerhalb der üblichen Öffnungszeiten hat. Der Dienst ist vom Rettungsdienst zu unterscheiden, der auf speziell ausgebildete Notärzte zurückgreift."/>
+  </concept>
+  <concept>
+    <code value="PRA"/>
+    <display value="Arztpraxis"/>
+    <definition value="Arbeitsplatz einer oder mehrerer niedergelassenen Ärztinnen oder Zahnärztinnen. Umfasst sowohl den klassischen &quot;Einzelsitz&quot;, wie auch die Gemeinschaftspraxis oder die Praxisgemeinschaft. Auch mobile Arztpraxen, die ambulante Zentrumsdialyse (https://www.gbe-bund.de/glossar/Dialyseversorgungsarten.html) und Zahnarztpraxen werden durch diesen Wert abgedeckt. Ebenso werden niedergelassene Laborarztpraxen und von ärztlichen Psychotherapeuten geführte Arztpraxen über diesen Wert abgedeckt. Arztpraxen die Teil eines MVZ sind werden über das Konzept MVZ (&quot;Medizinisches Versorgungszentrum&quot;) abgebildet."/>
+  </concept>
+  <concept>
+    <code value="BAA"/>
+    <display value="Betriebsärztliche Abteilung"/>
+    <definition value="Betriebsärztliche Abteilung in einer nicht-medizinischen Organisation (z.B. große Firmen die selbst Ärzte anstellen) die eine medizinische Betreuung für Mitarbeiter anbietet. Betriebsärztliche Tätigkeiten einer Ärztin mit eigener Praxis oder eines Diensts eines Krankenhauses fallen nicht unter dieses Konzept, sondern werden mit dem Konzept PRA (&quot;Arztpraxis&quot;), bzw. KHS (&quot;Krankenhaus&quot;) abgebildet."/>
+  </concept>
+  <concept>
+    <code value="BHR"/>
+    <display value="Gesundheitsbehörde"/>
+    <definition value="Staatliche oder kommunale Gesundheitsbehörde."/>
+  </concept>
+  <concept>
+    <code value="HEB"/>
+    <display value="Hebamme/Geburtshaus"/>
+    <definition value="Eine freiberuflich tätige Hebamme; bzw. eine in Kooperation mit anderen Hebammen tätige Hebamme. Dieser Wert deckt auch Geburtshäuser ab, d.h. üblicherweise von Hebammen betriebene außerklinische Einrichtungen."/>
+  </concept>
+  <concept>
+    <code value="HOS"/>
+    <display value="Hospiz"/>
+    <definition value="Eine stationäre oder ambulante Einrichtung der Sterbebegleitung. Dies umfasst sowohl Pflegeheim-ähnliche Einrichtungen, wie auch Einrichtungen die den Patienten in der eigenen häuslichen Umgebung betreuen. Sowohl Einrichtungen unter ärztlicher Leitung, wie auch unter pflegerischer Leitung werden hier zusammengefasst."/>
+  </concept>
+  <concept>
+    <code value="KHS"/>
+    <display value="Krankenhaus"/>
+    <definition value="Eine Einrichtung die als Krankenhaus nach dem Krankenhausfinanzierungsgesetz (KHG) zu verstehen ist, mit Ausnahme von Reha-Kliniken. Zu den Krankenhäusern gehören hierbei auch Zahnkliniken. Zusätzlich fallen unter diesen Wert auch Krankenhäuser auf die das KHG keine Anwendung findet (siehe §3, z.B. im Straf- oder Maßregelvollzug, Polizeikrankenhäuser, Bundeswehrkrankenhäuser...), solange es sich nicht um Einrichtungen der medizinischen Rehabilitation handelt.  Für Dokumente aus der Abteilung Krankenhausapotheke oder aus Krankenhausambulanzen sollte immer das Konzept KHS &quot;Krankenhaus&quot; verwendet werden. Auch bei vornehmlich telemedizinisch erbrachten Leistungen eines Krankenhauses (z.B. Teleradiologie) sollte das Konzept KHS &quot;Krankenhaus&quot;&quot; verwendet werden.  Für angeschlossene, aber selbständige Einrichtungen, wie z.B. ein zum Krankenhaus gehöriges MVZ oder Hospiz, sollte dieses Konzept (KHS &quot;Krankenhaus&quot;), sondern ein spezifischeres Konzept für den Einrichtungstyp verwendet werden. Dazu zählen auch ausgegründete Labore, die als Arztpraxis abgebildet werden, da sie eine entsprechende KV-Zulassung benötigen. Psychotherapeutische, psychiatrische und psychosomatische Abteilungen von Krankenhäusern und eigenständige Fachkliniken aus diesem Bereich werden auch mit diesem Wert abgedeckt, unabhängig davon ob die Dienste stationär, als Tagesklinik oder ambulant angeboten werden."/>
+  </concept>
+  <concept>
+    <code value="MVZ"/>
+    <display value="Medizinisches Versorgungszentrum"/>
+    <definition value="Einrichtung zur ambulanten medizinischen Versorgung nach §95 SGB V; dieses Konzept sollte für ein MVZ unabhängig von der Besitzerstruktur gewählt werden, d.h. auch MVZ die einem Krankenhaus gehören, sollten als MVZ gekennzeichnet werden."/>
+  </concept>
+  <concept>
+    <code value="HAN"/>
+    <display value="Medizinisch-technisches Handwerk"/>
+    <definition value="Eine Einrichtung des medizinisch-technischen Handwerks, wie Augenoptiker, Hörakustiker-Fachgeschäft, Diätkoch, Orthopädische Schuhmacher, sowie Orthopädische Fachgeschäfte und Sanitätshäuser."/>
+  </concept>
+  <concept>
+    <code value="REH"/>
+    <display value="Medizinische Rehabilitation"/>
+    <definition value="Eine ambulante, teilstationäre oder stationäre Einrichtung der medizinischen Rehabilitation unter ärztlicher Leitung. Darunter fallen sowohl Kur-Einrichtungen und Reha-Kliniken als auch dezentrale Organisationsformen aus dem ambulanten Sektor."/>
+  </concept>
+  <concept>
+    <code value="HEI"/>
+    <display value="Nicht-ärztliche Heilberufs-Praxis"/>
+    <definition value="Von nicht-ärztlichen Heilberuflern betriebene Einrichtungen zur Beratung, Therapie oder Betreuung. Darunter fallen Praxen von Heilpraktikerinnen, Physiotherapeutinnen, Ergotherapeutinnen, Podologinnen, Masseurinnen, Logopädinnen, Sprachtherapeutinnen, Diätassistentinnen, sowie human-medizinische Beratungsstellen. Auch nicht-ärztliche psychotherapeutische Praxen, z.B. von Diplom oder Master-Psychologen, gehören dazu.  Dokumente von freiberuflichen Hebammen fallen nicht in diese Gruppe, sondern sind mit dem Konzept für HEB &quot;Hebamme/Geburtshaus&quot; zu kennzeichnen.  Dokumente von Pflegediensten oder freiberuflichen Pflegekräften fallen nicht in diese Gruppe sondern sind mit dem Konzept APD  &quot;Ambulante Pflegedienste&quot; zu kennzeichnen."/>
+  </concept>
+  <concept>
+    <code value="PFL"/>
+    <display value="Pflegeheim"/>
+    <definition value="Eine Einrichtung zur Unterbringung und Versorgung pflegebedürftiger Menschen. Umfasst Altenpflegeheime und Pflegeheime für Menschen mit Behinderung. Die Einrichtungen versorgen Menschen üblicherweise langfristig, aber auch Kurzzeitpflege der genannten Personengruppen ist durch dieses Konzept abgedeckt."/>
+  </concept>
+  <concept>
+    <code value="RTN"/>
+    <display value="Rettungsdienst"/>
+    <definition value="Einrichtungen des zivilen Rettungsdienst, wie z.B. Rettungswachen, Wasserrettung, etc."/>
+  </concept>
+  <concept>
+    <code value="SEL"/>
+    <display value="Selbsthilfe"/>
+    <definition value="Einrichtungen zur Information und Beratung zur Selbsthilfe sowie Selbsthilfegruppen, z.B. Suchtberatung, AIDS-Hilfe, etc."/>
+  </concept>
+  <concept>
+    <code value="TMZ"/>
+    <display value="Telemedizinisches Zentrum"/>
+    <definition value="Eine dedizierte Einrichtung die ausschließlich auf die telemedizinische Betreuung von Patienten abzielt. Dies umfasst sowohl dedizierte Care Management Organisationen, wie auch Telemonitoring-Zentren. Dokumente die im Rahmen von telemedizinischen Dienstleistungen von Krankenhäusern oder niedergelassenen Ärzten erbracht werden, sollten nicht mit diesem Konzept gekennzeichnet werden, sondern mit dem Konzept für KHS &quot;Krankenhaus&quot; bzw. PRA &quot;Arztpraxis&quot;."/>
+  </concept>
+</CodeSystem>

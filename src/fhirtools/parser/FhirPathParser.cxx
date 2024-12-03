@@ -516,6 +516,10 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
     {
         return fun<SubsettingFirst>();
     }
+    else if (identifier == SubsettingLast::IDENTIFIER)
+    {
+        return fun<SubsettingLast>();
+    }
     else if (identifier == SubsettingTail::IDENTIFIER)
     {
         return fun<SubsettingTail>();
@@ -555,6 +559,10 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
     else if (identifier == StringManipIndexOf::IDENTIFIER)
     {
         return unaryFun<StringManipIndexOf>(context);
+    }
+    else if (identifier == StringManipSplit::IDENTIFIER)
+    {
+        return unaryFun<StringManipSplit>(context);
     }
     else if (identifier == StringManipSubstring::IDENTIFIER)
     {

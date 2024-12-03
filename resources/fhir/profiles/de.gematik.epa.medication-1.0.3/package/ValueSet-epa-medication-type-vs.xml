@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="epa-medication-type-vs"/>
+  <url value="https://gematik.de/fhir/epa-medication/ValueSet/epa-medication-type-vs"/>
+  <version value="1.0.3"/>
+  <name value="EPAMedicationTypeVS"/>
+  <title value="EPA Medication Type ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="ValueSet of valid concepts for EPAMedication"/>
+  <compose>
+    <include>
+      <system value="http://snomed.info/sct"/>
+      <version value="http://snomed.info/sct/900000000000207008/version/20240201"/>
+      <concept>
+        <code value="781405001"/>
+        <display value="Medicinal product package (product)"/>
+      </concept>
+      <concept>
+        <code value="1208954007"/>
+        <display value="Extemporaneous preparation (product)"/>
+      </concept>
+      <concept>
+        <code value="373873005"/>
+        <display value="Pharmaceutical / biologic product (product)"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

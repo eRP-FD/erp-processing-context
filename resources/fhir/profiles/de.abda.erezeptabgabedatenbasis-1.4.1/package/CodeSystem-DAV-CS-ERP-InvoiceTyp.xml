@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="DAV-CS-ERP-InvoiceTyp"/>
+  <url value="http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-InvoiceTyp"/>
+  <version value="1.3"/>
+  <name value="DAV_CS_ERP_InvoiceTyp"/>
+  <status value="active"/>
+  <date value="2021-12-21"/>
+  <content value="complete"/>
+  <count value="2"/>
+  <concept>
+    <code value="Abrechnungszeilen"/>
+    <display value="Abrechnungszeilen eines eAbgabdatensatzes"/>
+  </concept>
+  <concept>
+    <code value="ZusatzdatenEinheit"/>
+    <display value="Einheit einer ZusatzdatenHerstellung"/>
+  </concept>
+</CodeSystem>

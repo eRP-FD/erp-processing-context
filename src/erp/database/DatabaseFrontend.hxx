@@ -9,13 +9,14 @@
 #define ERP_PROCESSING_CONTEXT_DATABASE_DATABASEFRONTEND_HXX
 
 #include "erp/database/Database.hxx"
-#include "erp/database/DatabaseCodec.hxx"
-#include "erp/hsm/KeyDerivation.hxx"
+#include "shared/database/CommonDatabaseFrontend.hxx"
+#include "shared/database/DatabaseCodec.hxx"
+#include "shared/hsm/KeyDerivation.hxx"
 
 #include <memory>
 #include <tuple>
 
-class DatabaseBackend;
+class ErpDatabaseBackend;
 class ErpVector;
 class HsmPool;
 struct OptionalDeriveKeyData;
@@ -37,7 +38,7 @@ enum class PrescriptionType : uint8_t;
 class DatabaseFrontend : public Database
 {
 public:
-    explicit DatabaseFrontend(std::unique_ptr<DatabaseBackend>&& backend, HsmPool& hsmPool, KeyDerivation& keyDerivation);
+    explicit DatabaseFrontend(std::unique_ptr<ErpDatabaseBackend>&& backend, HsmPool& hsmPool, KeyDerivation& keyDerivation);
     ~DatabaseFrontend(void) override;
 
     void commitTransaction() override;
@@ -51,17 +52,20 @@ public:
     [[nodiscard]] model::PrescriptionId storeTask(const model::Task& task) override;
     void updateTaskStatusAndSecret(const model::Task& task) override;
     void updateTaskStatusAndSecret(const model::Task& task, const SafeString& key) override;
-    void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription) override;
+    void activateTask(const model::Task& task, const model::Binary& healthCareProviderPrescription,
+                      const JWT& doctorIdentity) override;
     void activateTask(const model::Task& task, const SafeString& key,
-                      const model::Binary& healthCareProviderPrescription) override;
+                      const model::Binary& healthCareProviderPrescription, const JWT& doctorIdentity) override;
+    void updateTaskReceipt(const model::Task& task, const model::ErxReceipt& receipt, const SafeString& key,
+                           const JWT& pharmacyIdentity) override;
     void updateTaskMedicationDispense(const model::Task& task,
-                                      const std::vector<model::MedicationDispense>& medicationDispenses) override;
+                                      const model::MedicationDispenseBundle& medicationDispenseBundle) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task,
-                                             const std::vector<model::MedicationDispense>& medicationDispenses,
-                                             const model::ErxReceipt& receipt) override;
+                                             const model::MedicationDispenseBundle& medicationDispenseBundle,
+                                             const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) override;
     void updateTaskMedicationDispenseReceipt(const model::Task& task, const SafeString& key,
-                                             const std::vector<model::MedicationDispense>& medicationDispenses,
-                                             const model::ErxReceipt& receipt) override;
+                                             const model::MedicationDispenseBundle& medicationDispenseBundle,
+                                             const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) override;
     void updateTaskDeleteMedicationDispense(const model::Task& task) override;
     void updateTaskClearPersonalData(const model::Task& task) override;
 
@@ -92,10 +96,10 @@ public:
     [[nodiscard]] uint64_t
     countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] std::vector<model::MedicationDispense>
-    retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
-                                   const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] std::optional<model::MedicationDispense>
+    [[nodiscard]] model::MedicationsAndDispenses
+    retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+
+    [[nodiscard]] model::MedicationsAndDispenses
     retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) override;
 
 
@@ -139,7 +143,7 @@ public:
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const model::Kvnr& kvnr,
                                                              const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] DatabaseBackend& getBackend() override;
+    [[nodiscard]] ErpDatabaseBackend& getBackend() override;
 
 private:
     [[nodiscard]] std::tuple<std::optional<TaskAndKey>, std::optional<model::Binary>>
@@ -159,17 +163,15 @@ private:
     [[nodiscard]] static ErpVector taskKeyDerivationData(const model::PrescriptionId& taskId,
                                                          const model::Timestamp& authoredOn);
     [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId);
-    [[nodiscard]] SafeString taskKey(const model::PrescriptionId& taskId, const model::Timestamp& authoredOn,
-                                     const OptionalDeriveKeyData& secondCallData);
     [[nodiscard]] std::optional<SafeString> taskKey(const db_model::Task& dbTask);
 
     [[nodiscard]]
     std::tuple<SafeString, BlobId> communicationKeyAndId(const std::string_view& identity,
                                                                        const db_model::HashedId& identityHashed);
     [[nodiscard]] db_model::EncryptedBlob
-    encryptMedicationDispense(const std::vector<model::MedicationDispense>& medicationDispenses,
+    encryptMedicationDispense(const model::MedicationDispenseBundle& medicationDispenseBundle,
                               const SafeString& keyForMedicationDispense);
-    [[nodiscard]] std::tuple<SafeString, BlobId> medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr);
+    [[nodiscard]] std::tuple<SafeString, BlobId, db_model::Blob> medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr);
     [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
     chargeItemKey(const ::model::PrescriptionId& prescriptionId) const;
     [[nodiscard]] ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
@@ -177,7 +179,8 @@ private:
 
     [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
 
-    std::unique_ptr<DatabaseBackend> mBackend;
+    std::unique_ptr<ErpDatabaseBackend> mBackend;
+	std::unique_ptr<CommonDatabaseFrontend> mCommonDatabaseFrontend;
     HsmPool& mHsmPool;
     KeyDerivation& mDerivation;
     DataBaseCodec mCodec;

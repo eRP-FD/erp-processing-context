@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="HealthcareServiceSpecialtyCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/HealthcareServiceSpecialtyCS"/>
+  <version value="0.11.12"/>
+  <name value="HealthcareServiceSpecialtyCS"/>
+  <title value="HealthcareService Specialty"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Specialty codes of HealthcareServices"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="4"/>
+  <concept>
+    <code value="impfung"/>
+    <display value="Impfung"/>
+  </concept>
+  <concept>
+    <code value="koerperwerte"/>
+    <display value="Körperwerte"/>
+  </concept>
+  <concept>
+    <code value="allergietest"/>
+    <display value="Allergietest"/>
+  </concept>
+  <concept>
+    <code value="reisemedizin-beratung"/>
+    <display value="Reisemedizinberatung"/>
+  </concept>
+</CodeSystem>

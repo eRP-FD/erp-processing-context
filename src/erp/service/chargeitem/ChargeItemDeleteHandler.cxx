@@ -6,9 +6,9 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemDeleteHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/server/response/ServerResponse.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 
 
 ChargeItemDeleteHandler::ChargeItemDeleteHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)

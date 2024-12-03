@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="EndpointConnectionTypeVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/EndpointConnectionTypeVS"/>
+  <version value="0.11.12"/>
+  <name value="EndpointConnectionTypeVS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="ValueSet for `Endpoint.connectionType`"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/EndpointDirectoryConnectionType"/>
+    </include>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/endpoint-connection-type"/>
+    </include>
+  </compose>
+</ValueSet>

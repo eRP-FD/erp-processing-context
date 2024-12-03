@@ -8,10 +8,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_DATABASE_POSTGRESBACKEND_HXX
 #define ERP_PROCESSING_CONTEXT_DATABASE_POSTGRESBACKEND_HXX
 
-#include "erp/database/DatabaseBackend.hxx"
+#include "erp/database/ErpDatabaseBackend.hxx"
 #include "erp/database/PostgresBackendChargeItem.hxx"
 #include "erp/database/PostgresBackendTask.hxx"
-#include "erp/database/PostgresConnection.hxx"
+#include "shared/database/CommonPostgresBackend.hxx"
+#include "shared/database/PostgresConnection.hxx"
 
 #include <memory>
 #include <pqxx/binarystring>
@@ -19,27 +20,23 @@
 
 namespace pqxx {class connection;}
 
-class PostgresBackend
-    : public DatabaseBackend
+class PostgresBackend : public CommonPostgresBackend, public ErpDatabaseBackend
 {
 public:
     PostgresBackend (void);
     ~PostgresBackend (void) override;
 
-    void commitTransaction() override;
-    bool isCommitted() const override;
-    void closeConnection() override;
-
-    std::string retrieveSchemaVersion() override;
-
-    void healthCheck() override;
-    std::optional<DatabaseConnectionInfo> getConnectionInfo() const override;
     static void recreateConnection();
 
+    void healthCheck() override;
+
+    [[nodiscard]] static uint64_t executeCountQuery(pqxx::work& transaction, const std::string_view& query, const db_model::Blob& paramValue,
+                                                    const std::optional<UrlArguments>& search, const std::string_view& context);
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
-                                                                   const model::Timestamp& created) override;
+                                                                   const model::Timestamp& created,
+                                                                   const model::Timestamp& lastStatusUpdate) override;
 
     void updateTask(const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode,
@@ -53,7 +50,8 @@ public:
                                    model::Task::Status status,
                                    const model::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& secret,
-                                   const std::optional<db_model::EncryptedBlob>& owner) override;
+                                   const std::optional<db_model::EncryptedBlob>& owner,
+                                   const model::Timestamp& lastStatusUpdate) override;
     void activateTask(const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr,
                       const db_model::HashedKvnr& hashedKvnr,
@@ -61,7 +59,13 @@ public:
                       const model::Timestamp& lastModified,
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
-                      const db_model::EncryptedBlob& healthCareProviderPrescription) override;
+                      const db_model::EncryptedBlob& healthCareProviderPrescription,
+                      const db_model::EncryptedBlob& doctorIdentity,
+                      const model::Timestamp& lastStatusUpdate) override;
+    void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+                           const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
+                           const db_model::EncryptedBlob& pharmacyIdentity,
+                           const model::Timestamp& lastStatusUpdate) override;
     void updateTaskMedicationDispense(const model::PrescriptionId& taskId,
                                       const model::Timestamp& lastModified,
                                       const model::Timestamp& lastMedicationDispense,
@@ -69,25 +73,23 @@ public:
                                       BlobId medicationDispenseBlobId,
                                       const db_model::HashedTelematikId& telematikId,
                                       const model::Timestamp& whenHandedOver,
-                                      const std::optional<model::Timestamp>& whenPrepared) override;
-    void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
-                                             const model::Task::Status& taskStatus,
-                                             const model::Timestamp& lastModified,
-                                             const db_model::EncryptedBlob& medicationDispense,
-                                             BlobId medicationDispenseBlobId,
-                                             const db_model::HashedTelematikId& telematikId,
-                                             const model::Timestamp& whenHandedOver,
-                                             const std::optional<model::Timestamp>& whenPrepared,
-                                             const db_model::EncryptedBlob& receipt,
-                                             const model::Timestamp& lastMedicationDispense) override;
+                                      const std::optional<model::Timestamp>& whenPrepared,
+                                      const db_model::Blob& medicationDispenseSalt) override;
+    void updateTaskMedicationDispenseReceipt(
+        const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+        const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
+        BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
+        const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
+        const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense,
+        const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
+        const model::Timestamp& lastStatusUpdate) override;
     void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                             const model::Timestamp& lastModified) override;
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus,
-                                     const model::Timestamp& lastModified) override;
+                                     const model::Timestamp& lastModified,
+                                     const model::Timestamp& lastStatusUpdate) override;
 
-    [[nodiscard]]
-    std::string storeAuditEventData(db_model::AuditData& auditData) override;
     [[nodiscard]]
     std::vector<db_model::AuditData> retrieveAuditEventData(
         const db_model::HashedKvnr& kvnr,
@@ -160,18 +162,6 @@ public:
         const db_model::HashedId& recipient) override;
     void deleteCommunicationsForTask (const model::PrescriptionId& taskId) override;
 
-    [[nodiscard]]
-    std::optional<db_model::Blob> retrieveSaltForAccount(const db_model::HashedId& accountId,
-                                                         db_model::MasterKeyType masterKeyType,
-                                                         BlobId blobId) override;
-
-    /// on conflict the salt, that is already in the database is returned
-    [[nodiscard]]
-    std::optional<db_model::Blob> insertOrReturnAccountSalt(const db_model::HashedId& accountId,
-                                                            db_model::MasterKeyType masterKeyType,
-                                                            BlobId blobId,
-                                                            const db_model::Blob& salt) override;
-
     void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
     std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) override;
     [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
@@ -195,19 +185,11 @@ public:
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                                              const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]]
-    static std::string defaultConnectString();
-    [[nodiscard]]
-    static std::string connectStringSslMode();
-
-    struct QueryDefinition;
-
+    PostgresConnection& connection() const override;
 private:
-    void checkCommonPreconditions() const;
     PostgresBackendTask& getTaskBackend(const model::PrescriptionType prescriptionType);
 
     thread_local static PostgresConnection mConnection;
-    std::unique_ptr<pqxx::work> mTransaction;
 
     PostgresBackendTask mBackendTask;
     PostgresBackendTask mBackendTask169;
@@ -215,6 +197,5 @@ private:
     PostgresBackendTask mBackendTask209;
     PostgresBackendChargeItem mBackendChargeItem = {};
 };
-
 
 #endif // ERP_PROCESSING_CONTEXT_DATABASE_POSTGRESBACKEND_HXX

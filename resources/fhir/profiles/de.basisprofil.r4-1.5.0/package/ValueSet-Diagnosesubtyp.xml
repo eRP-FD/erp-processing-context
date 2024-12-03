@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="Diagnosesubtyp"/>
+  <url value="http://fhir.de/ValueSet/Diagnosesubtyp"/>
+  <version value="1.5.0"/>
+  <name value="Diagnosesubtyp"/>
+  <title value="Diagnosesubtyp ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Diagnosesubtyp ValueSet"/>
+  <compose>
+    <include>
+      <system value="http://fhir.de/CodeSystem/KontaktDiagnoseProzedur"/>
+      <concept>
+        <code value="surgery-diagnosis"/>
+        <display value="Operationsdiagnose"/>
+      </concept>
+      <concept>
+        <code value="department-main-diagnosis"/>
+        <display value="Abteilung Hauptdiagnose"/>
+      </concept>
+      <concept>
+        <code value="cause-of-death"/>
+        <display value="Todesursache"/>
+      </concept>
+      <concept>
+        <code value="infection-control-diagnosis"/>
+        <display value="Infektionsschutzdiagnose"/>
+      </concept>
+    </include>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/diagnosis-role"/>
+      <concept>
+        <code value="AD"/>
+        <display value="Admission diagnosis"/>
+      </concept>
+      <concept>
+        <code value="DD"/>
+        <display value="Discharge diagnosis"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

@@ -54,7 +54,8 @@ public:
         const ViewConfig& latest() const;
         std::shared_ptr<FhirStructureRepository> match(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
                                                        const std::string& url, FhirVersion version) const;
-        std::list<DefinitionKey> supportedVersions(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
+        ViewList matchAll(const FhirStructureRepositoryBackend& backend, const std::string& url, FhirVersion version) const;
+        std::set<DefinitionKey> supportedVersions(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
                                                    const std::list<std::string>& profileUrls) const;
     };
 

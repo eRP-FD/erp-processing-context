@@ -171,6 +171,10 @@ public:
 // http://hl7.org/fhirpath/N1/#last-collection
 class SubsettingLast : public Expression
 {
+public:
+    static constexpr auto IDENTIFIER = "last";
+    using Expression::Expression;
+    Collection eval(const Collection& collection) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#tail-collection

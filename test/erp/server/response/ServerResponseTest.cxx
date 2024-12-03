@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/server/response/ValidatedServerResponse.hxx"
+#include "shared/server/response/ValidatedServerResponse.hxx"
 
 #include <gtest/gtest.h>
 

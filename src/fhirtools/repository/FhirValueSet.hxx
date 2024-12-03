@@ -63,6 +63,7 @@ public:
         std::strong_ordering operator<=>(const Code&) const;
     };
 
+    [[nodiscard]] DefinitionKey key() const;
     [[nodiscard]] const std::string& getUrl() const;
     [[nodiscard]] const std::string& getName() const;
     [[nodiscard]] const std::vector<IncludeOrExclude>& getIncludes() const;
@@ -139,6 +140,8 @@ public:
     FhirValueSet getAndReset();
 
     const std::string& getName() const;
+
+    DefinitionKey key();
 
 private:
     std::unique_ptr<FhirValueSet> mFhirValueSet;

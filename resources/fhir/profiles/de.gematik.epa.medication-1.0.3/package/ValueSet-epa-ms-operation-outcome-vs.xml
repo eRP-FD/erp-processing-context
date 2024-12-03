@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="epa-ms-operation-outcome-vs"/>
+  <url value="https://gematik.de/fhir/epa-medication/ValueSet/epa-ms-operation-outcome-vs"/>
+  <version value="1.0.3"/>
+  <name value="EPAMSOperationOutcomeVS"/>
+  <title value="EPA Medication Service OperationOutcome VS"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Include all VS of EPAMSOperationOutcomeCS and Operation Outcome codes used by FHIR"/>
+  <compose>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/operation-outcome"/>
+    </include>
+    <include>
+      <system value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-codes-cs"/>
+    </include>
+  </compose>
+</ValueSet>

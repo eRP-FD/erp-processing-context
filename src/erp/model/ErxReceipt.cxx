@@ -6,12 +6,12 @@
  */
 
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once

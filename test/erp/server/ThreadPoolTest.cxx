@@ -5,14 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/server/ThreadPool.hxx"
+#include "shared/server/ThreadPool.hxx"
 
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <set>
 
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 
 TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-complexity)

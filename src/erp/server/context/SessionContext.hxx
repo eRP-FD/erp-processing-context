@@ -9,23 +9,21 @@
 #define ERP_PROCESSING_CONTEXT_SERVER_CONTEXT_SESSIONCONTEXT_HXX
 
 #include "erp/database/Database.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/server/AccessLog.hxx"
-#include "erp/service/AuditDataCollector.hxx"
+#include "shared/audit/AuditDataCollector.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/server/AccessLog.hxx"
+#include "shared/server/BaseSessionContext.hxx"
 
 #include <boost/core/noncopyable.hpp>
-#include <functional>
 #include <memory>
 #include <optional>
-#include <string>
+#include <string_view>
 
 
 namespace model {
 class KBVMultiplePrescription;
 }
 
-class ServerRequest;
-class ServerResponse;
 class PcServiceContext;
 
 
@@ -34,16 +32,13 @@ class PcServiceContext;
  * and visible only to a single request handler.
  * The exception is a reference to the, effectively global, ServiceContext.
  */
-class SessionContext : private boost::noncopyable
+class SessionContext : public BaseSessionContext, private boost::noncopyable
 {
 public:
     SessionContext(PcServiceContext& serviceContext, ServerRequest& request, ServerResponse& response, AccessLog& log,
                    model::Timestamp initSessionTime = model::Timestamp::now());
 
-    PcServiceContext& serviceContext;
-    ServerRequest& request;
-    ServerResponse& response;
-    AccessLog& accessLog;
+    PcServiceContext& serviceContext; // Specialized type (identical to BaseSessionContext::baseServiceContext)
     bool callerWantsJson;
     std::chrono::microseconds backendDuration{0};
 

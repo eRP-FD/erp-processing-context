@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 
 #include <gtest/gtest.h>
 #include <vector>

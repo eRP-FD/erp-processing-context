@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/KbvOrganization.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 namespace model
 {

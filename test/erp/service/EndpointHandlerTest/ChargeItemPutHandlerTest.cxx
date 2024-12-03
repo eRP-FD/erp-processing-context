@@ -5,14 +5,20 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Demangle.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/util/CryptoHelper.hxx"
+#include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
-#include <erp/util/Demangle.hxx>
 
 using OperationType = ResourceTemplates::ChargeItemOptions::OperationType;
 
@@ -305,7 +311,7 @@ TEST_F(ChargeItemPutHandlerTest,
     // expected reject
     ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
                                                       inputChargeItem, pkvTaskId, HttpStatus::BadRequest,
-                                                      "FHIR-Validation error"));
+                                                      "parsing / validation error"));
 }
 
 

@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tsl/TslManager.hxx"
-#include "erp/tsl/TslRefreshJob.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Hash.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/tsl/TslRefreshJob.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/Hash.hxx"
 #include "test/erp/tsl/RefreshJobTestTslManager.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"

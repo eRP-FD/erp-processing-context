@@ -3,7 +3,7 @@
 
 #include "FhirResourceGroup.hxx"
 #include "FhirStructureRepository.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
 
@@ -31,13 +31,15 @@ private:
                              bool mustResolve);
     void verifyProfileExistsInGroup(const FhirResourceGroup& group, const std::string& profile,
                                     const std::string& context);
-    void verifyProfileExistsInView(const std::string& profile, const std::string& context);
+    void verifyProfileExistsInView(const std::string& profile, const std::string& context, bool mustResolve);
 
 
-    void verifyBinding(const FhirElement& element, const std::shared_ptr<const FhirResourceGroup>& group);
+    void verifyBinding(const FhirElement& element, const std::shared_ptr<const FhirResourceGroup>& group,
+                       const std::string& context);
 
     const FhirValueSet* tryResolve(const std::shared_ptr<const fhirtools::FhirResourceGroup>& group,
-                                   const DefinitionKey& key, FhirElement::BindingStrength bindingStrength);
+                                   const DefinitionKey& key, FhirElement::BindingStrength bindingStrength,
+                                   const std::string& context);
 
     void verifyContentReference(const FhirStructureDefinition& def, const FhirElement& element);
 

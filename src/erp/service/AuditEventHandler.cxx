@@ -6,14 +6,13 @@
  */
 
 #include "erp/service/AuditEventHandler.hxx"
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/Bundle.hxx"
-#include "erp/service/AuditEventCreator.hxx"
-#include "erp/service/AuditEventTextTemplates.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/audit/AuditEventCreator.hxx"
+#include "shared/audit/AuditEventTextTemplates.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/util/TLog.hxx"
 
 
 namespace

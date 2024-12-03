@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="PharmacyHealthcareSpecialtyCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/PharmacyHealthcareSpecialtyCS"/>
+  <version value="0.11.12"/>
+  <name value="PharmacyHealthcareSpecialtyCS"/>
+  <title value="Pharmacy HealthcareService Specialty"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="Specialty codes of pharmacy HealthcareServices"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="5"/>
+  <concept>
+    <code value="10"/>
+    <display value="Handverkauf"/>
+  </concept>
+  <concept>
+    <code value="20"/>
+    <display value="Nacht- und Notdienst"/>
+  </concept>
+  <concept>
+    <code value="30"/>
+    <display value="Botendienst"/>
+  </concept>
+  <concept>
+    <code value="40"/>
+    <display value="Versand"/>
+  </concept>
+  <concept>
+    <code value="50"/>
+    <display value="Sterilherstellung"/>
+  </concept>
+</CodeSystem>

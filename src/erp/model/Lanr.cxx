@@ -6,10 +6,10 @@
  */
 
 #include "erp/model/Lanr.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Mod10.hxx"
-#include "erp/util/String.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/Mod10.hxx"
+#include "shared/util/String.hxx"
 
 #include <regex>
 #include <sstream>

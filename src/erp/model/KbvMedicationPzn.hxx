@@ -8,15 +8,15 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONPZN_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONPZN_HXX
 
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/validation/SchemaType.hxx"
+#include "shared/model/MedicationBase.hxx"
+#include "shared/validation/SchemaType.hxx"
 #include "erp/model/Pzn.hxx"
 
 namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationPzn : public KbvMedicationBase<KbvMedicationPzn>
+class KbvMedicationPzn : public MedicationBase<KbvMedicationPzn>
 {
 public:
     static constexpr auto profileType = ProfileType::KBV_PR_ERP_Medication_PZN;

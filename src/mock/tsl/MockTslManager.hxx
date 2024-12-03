@@ -9,8 +9,8 @@
 #define ERP_PROCESSING_CONTEXT_SRC_MOCK_TSL_MOCKTSLMANAGER_HXX
 
 
-#include "erp/tsl/TslManager.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/crypto/Certificate.hxx"
 
 #if WITH_HSM_MOCK  != 1
 #error MockTslManager.hxx included but WITH_HSM_MOCK not enabled

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVMEDICATIONCATEGORY_H
 #define ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_KBVMEDICATIONCATEGORY_H
 
-#include "erp/model/Extension.hxx"
+#include "shared/model/Extension.hxx"
 
 namespace model
 {

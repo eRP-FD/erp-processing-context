@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/ServerTestBase.hxx"

@@ -8,10 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SEEDTIMER_HXX
 #define ERP_PROCESSING_CONTEXT_SEEDTIMER_HXX
 
-#include "erp/crypto/SecureRandomGenerator.hxx"
-#include "erp/crypto/Seeder.hxx"
-#include "erp/util/PeriodicTimer.hxx"
-#include "erp/server/ThreadPool.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
+#include "shared/crypto/Seeder.hxx"
+#include "shared/util/PeriodicTimer.hxx"
+#include "shared/server/ThreadPool.hxx"
 
 class HsmPool;
 class ThreadPool;

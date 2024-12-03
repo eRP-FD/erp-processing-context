@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_TESTCONFIGURATION_HXX
 
 
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 
 enum class TestConfigurationKey
 {

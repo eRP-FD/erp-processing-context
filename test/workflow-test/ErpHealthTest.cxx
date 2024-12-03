@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "src/shared/model/Health.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "erp/model/Health.hxx"
 
 namespace {
 rapidjson::Pointer statusPointer("/status");

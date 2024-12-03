@@ -4,12 +4,14 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "fhirtools/validator/ValidationResult.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 #include "fhirtools/FPExpect.hxx"
+#include "fhirtools/model/Element.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 
 #include <magic_enum/magic_enum.hpp>
 #include <sstream>
+#include <utility>
 
 using fhirtools::ValidationError;
 using fhirtools::ValidationResults;
@@ -52,11 +54,24 @@ ValidationError::ValidationError(FhirConstraint inConstraint, std::string inFiel
 {
 }
 
-ValidationError::ValidationError(MessageReason inReason, std::string inFieldName, const FhirStructureDefinition* inProfile)
+ValidationError::ValidationError(MessageReason inReason, std::string inFieldName,
+                                 const FhirStructureDefinition* inProfile)
     : fieldName{std::move(inFieldName)}
     , reason{std::move(inReason)}
     , profile{inProfile}
 {
+}
+
+auto fhirtools::ValidationAdditionalInfo::operator<=>(const fhirtools::ValidationAdditionalInfo& other) const
+{
+    auto elementShared = element.lock();
+    Expect3(elementShared != nullptr, "additional info element is gone", std::logic_error);
+    auto elementLevel = elementShared->subElementLevel();
+    auto otherElementShared = other.element.lock();
+    Expect3(otherElementShared != nullptr, "additional info element is gone", std::logic_error);
+    auto otherElementLevel = otherElementShared->subElementLevel();
+    return std::tie(kind, elementLevel, elementFullPath, typeId, constraintKey, elementShared) <=>
+           std::tie(other.kind, otherElementLevel, elementFullPath, typeId, constraintKey, otherElementShared);
 }
 
 std::set<ValidationError> fhirtools::ValidationResults::results() &&
@@ -70,7 +85,7 @@ const std::set<ValidationError>& fhirtools::ValidationResults::results() const&
 }
 
 void fhirtools::ValidationResults::add(fhirtools::Severity severity, std::string message, std::string elementFullPath,
-                                       const fhirtools::FhirStructureDefinition* profile)
+                                       const fhirtools::FhirStructureDefinition* profiled)
 {
 #ifdef NDEBUG
     // do not store severites in release builds
@@ -80,7 +95,7 @@ void fhirtools::ValidationResults::add(fhirtools::Severity severity, std::string
         return;
     }
 #endif
-    mResults.emplace(std::make_tuple(severity, std::move(message)), std::move(elementFullPath), profile);
+    mResults.emplace(std::make_tuple(severity, std::move(message)), std::move(elementFullPath), profiled);
 }
 
 void fhirtools::ValidationResults::add(FhirConstraint constraint, std::string elementFullPath,
@@ -91,6 +106,7 @@ void fhirtools::ValidationResults::add(FhirConstraint constraint, std::string el
 
 void fhirtools::ValidationResults::merge(fhirtools::ValidationResults inResults)
 {
+    mInfo.merge(inResults.mInfo);
     merge(std::move(inResults).results());
 }
 
@@ -134,13 +150,13 @@ void fhirtools::ValidationResults::dumpToLog() const
 fhirtools::Severity ValidationError::severity() const
 {
     struct Visitor {
-        Severity operator()(const FhirConstraint& reason)
+        Severity operator()(const FhirConstraint& r)
         {
-            return reason.getSeverity();
+            return r.getSeverity();
         }
-        Severity operator()(const MessageReason& reason)
+        Severity operator()(const MessageReason& r)
         {
-            return std::get<0>(reason);
+            return std::get<0>(r);
         }
     };
     return std::visit(Visitor{}, reason);
@@ -177,4 +193,17 @@ std::string fhirtools::ValidationResults::summary(Severity minSeverity) const
         }
     }
     return oss.str();
+}
+
+void fhirtools::ValidationResults::addInfo(fhirtools::ValidationAdditionalInfo::Kind kind,
+                                           const std::shared_ptr<const Element>& element,
+                                           const std::optional<std::string>& elementFullPath, const std::string& typeId,
+                                           const std::optional<FhirConstraint::Key>& constraintKey)
+{
+    mInfo.emplace(kind, element, elementFullPath, typeId, constraintKey);
+}
+
+const fhirtools::ValidationResults::AdditionalInfoSet& fhirtools::ValidationResults::infos() const
+{
+    return mInfo;
 }

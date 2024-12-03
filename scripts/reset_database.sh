@@ -21,7 +21,7 @@ if [ "$#" = 5 ]; then
     DB_PASSWORD=$5
 else
     DB_HOST=localhost
-    DB_PORT=5430
+    DB_PORT=9005
     DB_USER=erp_admin
     read -p "Password ${DB_USER}@${DB_HOST}:" -s DB_PASSWORD
 fi
@@ -87,5 +87,11 @@ echo -e "\nSetting additional grants."
 run_psql -f "${HERE}/sql/additional_grants.sql" || die "Failed to setup additional grants."
 
 apply_migrations
+
+echo -e "\nEnable logical replication for events."
+run_psql -f "${HERE}/sql/enable_event_replication.sql" || die "Enable logical replication failed."
+
+echo -e "\nEnable the creation of events."
+run_psql -f "${HERE}/sql/enable_event_creation.sql" || die "Enable event creation failed."
 
 echo -e "\nDatabase setup complete.\n"

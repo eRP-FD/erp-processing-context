@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TPMMOCK_HXX
 #define ERP_PROCESSING_CONTEXT_TPMMOCK_HXX
 
-#include "erp/tpm/Tpm.hxx"
+#include "shared/tpm/Tpm.hxx"
 
 
 #if WITH_HSM_MOCK  != 1

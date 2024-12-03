@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/TimePeriod.hxx"
+#include "shared/model/TimePeriod.hxx"
 
 #include <date/date.h>
 #include <date/tz.h>

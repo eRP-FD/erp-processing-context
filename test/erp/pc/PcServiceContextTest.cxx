@@ -6,10 +6,10 @@
  */
 
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/tpm/Tpm.hxx"
-#include "erp/validation/JsonValidator.hxx"
+#include "shared/tpm/Tpm.hxx"
+#include "shared/validation/JsonValidator.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

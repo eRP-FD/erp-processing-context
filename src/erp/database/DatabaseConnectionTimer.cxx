@@ -6,9 +6,9 @@
 
 #include "erp/database/DatabaseConnectionTimer.hxx"
 #include "PostgresBackend.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
+#include "shared/util/TLog.hxx"
 
 DatabaseConnectionTimerHandler::DatabaseConnectionTimerHandler(PcServiceContext& serviceContext,
                                                                std::chrono::steady_clock::duration interval)

@@ -8,11 +8,15 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEBUNDLE_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_MEDICATIONDISPENSEBUNDLE_HXX
 
-#include "erp/model/Bundle.hxx"
-#include "erp/model/ProfileType.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/ProfileType.hxx"
+
+#include <vector>
 
 namespace model
 {
+class GemErpPrMedication;
+class MedicationDispense;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle>
@@ -20,11 +24,16 @@ class MedicationDispenseBundle : public BundleBase<MedicationDispenseBundle>
 public:
     static constexpr auto profileType = ProfileType::MedicationDispenseBundle;
 
+    explicit MedicationDispenseBundle(const std::string& linkBase,
+                                      const std::vector<model::MedicationDispense>& medicationDisplenses,
+                                      const std::vector<model::GemErpPrMedication>& medications);
+
     using BundleBase<MedicationDispenseBundle>::BundleBase;
     using Resource<MedicationDispenseBundle>::fromXml;
     using Resource<MedicationDispenseBundle>::fromJson;
 
     void prepare() override;
+    Timestamp whenHandedOver() const;
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 

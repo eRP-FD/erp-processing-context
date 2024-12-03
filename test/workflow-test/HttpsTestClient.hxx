@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_HTTPSTESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_HTTPSTESTCLIENT_HXX
 
-#include "erp/client/HttpsClient.hxx"
+#include "shared/network/client/HttpsClient.hxx"
 #include "TestClient.hxx"
 
 static constexpr auto defaultCloudServer { "localhost" };           // alternative names: erp.box.erezepttest.net, erp.lu.erezepttest.net, localhost
@@ -33,14 +33,7 @@ public:
 
 protected:
     HttpsTestClient(
-        const std::string& host,
-        std::uint16_t port,
-        const uint16_t connectionTimeoutSeconds,
-        std::chrono::milliseconds resolveTimeout,
-        bool enforceServerAuthentication = true,
-        const SafeString& caCertificates = SafeString(),
-        const SafeString& clientCertificate = SafeString(),
-        const SafeString& clientPrivateKey = SafeString());
+        const ConnectionParameters& params);
     ClientResponse send(const ClientRequest & clientRequest) override;
 private:
     std::unique_ptr<Certificate> retrieveEciesRemoteCertificate();

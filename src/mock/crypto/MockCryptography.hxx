@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKCRYPTOGRAPHY_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKCRYPTOGRAPHY_HXX
 
-#include "erp/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
 
 #if WITH_HSM_MOCK  != 1
 #error MockCryptography.hxx included but WITH_HSM_MOCK not enabled
@@ -44,6 +44,8 @@ public:
 
     static const SafeString& getIdFdSigPrivateKeyPem (void);
     static const SafeString& getIdFdSigPrivateKeyPkcs8 (void);
+    static const SafeString& getVauAutPrivateKeyPem();
+    static const Certificate& getVauAutCertificate();
 };
 
 

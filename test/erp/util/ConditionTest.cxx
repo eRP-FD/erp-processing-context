@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Condition.hxx"
+#include "shared/util/Condition.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>

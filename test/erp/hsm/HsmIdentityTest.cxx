@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/HsmIdentity.hxx"
+#include "shared/hsm/HsmIdentity.hxx"
 
 #include <gtest/gtest.h>
 

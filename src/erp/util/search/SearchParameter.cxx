@@ -6,6 +6,7 @@
  */
 
 #include "erp/util/search/SearchParameter.hxx"
+#include "shared/util/Expect.hxx"
 
 
 SearchParameter::SearchParameter (std::string&& nameUrl, std::string&& nameDb, const Type type)

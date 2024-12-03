@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/beast/BoostBeastHeader.hxx"
+#include "shared/beast/BoostBeastHeader.hxx"
 
-#include "erp/client/response/ClientResponseReader.hxx"
-#include "erp/server/response/ValidatedServerResponse.hxx"
-#include "erp/server/response/ServerResponseWriter.hxx"
+#include "shared/network/client/response/ClientResponseReader.hxx"
+#include "shared/server/response/ValidatedServerResponse.hxx"
+#include "shared/server/response/ServerResponseWriter.hxx"
 
 #include <gtest/gtest.h>
 

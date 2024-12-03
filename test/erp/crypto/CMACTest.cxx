@@ -7,9 +7,9 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/crypto/CMAC.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/SafeString.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/SafeString.hxx"
 
 #include <optional>
 

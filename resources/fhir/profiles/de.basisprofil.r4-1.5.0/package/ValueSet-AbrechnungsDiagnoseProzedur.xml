@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="AbrechnungsDiagnoseProzedur"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablevalueset"/>
+  </meta>
+  <url value="http://fhir.de/ValueSet/AbrechnungsDiagnoseProzedur"/>
+  <version value="1.5.0"/>
+  <name value="AbrechnungsDiagnoseProzedur"/>
+  <title value="AbrechnungsDiagnoseProzedur ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Rolle von Diagnosen und Prozeduren im Abrechnungs-Kontext"/>
+  <compose>
+    <include>
+      <system value="http://fhir.de/CodeSystem/KontaktDiagnoseProzedur"/>
+      <concept>
+        <code value="principle-DRG"/>
+        <display value="Principle-DRG"/>
+      </concept>
+      <concept>
+        <code value="secondary-DRG"/>
+        <display value="Secondary-DRG"/>
+      </concept>
+      <concept>
+        <code value="hospital-main-diagnosis"/>
+        <display value="Krankenhaus Hauptdiagnose"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

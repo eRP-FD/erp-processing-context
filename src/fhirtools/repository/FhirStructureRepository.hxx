@@ -155,8 +155,8 @@ public:
     const std::unordered_map<DefinitionKey, std::unique_ptr<FhirValueSet>>& valueSetsByKey() const;
 
 private:
-    void loadFile(std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
-                  const std::filesystem::path& file, const FhirResourceGroupResolver& groupResolver);
+    [[nodiscard]] bool loadFile(std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
+                                const std::filesystem::path& file, const FhirResourceGroupResolver& groupResolver);
     void mergeGroups(const std::map<std::string, std::shared_ptr<const FhirResourceGroup>>& groups);
     void finalizeValueSets();
     void addSystemTypes();

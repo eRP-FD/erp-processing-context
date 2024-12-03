@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="BetroffeneneinschaetzungVertraulichkeitsstufe"/>
+  <url value="http://ihe-d.de/CodeSystems/BetroffeneneinschaetzungVertraulichkeitsstufe"/>
+  <version value="2021-07-06T21:17:27"/>
+  <name value="BetroffeneneinschaetzungVertraulichkeitsstufe"/>
+  <title value="Betroffeneneinschaetzung Vertraulichkeitsstufe"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <publisher value="IHE Deutschland e.V."/>
+  <caseSensitive value="true"/>
+  <content value="complete"/>
+  <count value="3"/>
+  <concept>
+    <code value="PV"/>
+    <display value="gesperrt"/>
+    <definition value="Aus Sicht der Betroffenen sind die Daten so sensibel, dass sie für praktisch niemanden außer ihr selbst sichtbar sein sollten."/>
+  </concept>
+  <concept>
+    <code value="PR"/>
+    <display value="erhöhte Vertraulichkeit"/>
+    <definition value="Aus Sicht der Betroffenen sind die Daten sensibel genug, dass für sie besondere Zugriffsregelungen gelten sollen, die den Kreis der Zugriffsberechtigten signifikant einschränken."/>
+  </concept>
+  <concept>
+    <code value="PN"/>
+    <display value="übliche Vertraulichkeit"/>
+    <definition value="Aus Sicht der Betroffenen sind die Daten nicht sensibler als andere Gesundheitsdaten und können daher nach den gleichen Regeln benutzt werden"/>
+  </concept>
+</CodeSystem>

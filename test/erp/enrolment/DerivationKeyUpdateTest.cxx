@@ -6,10 +6,10 @@
  */
 
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/database/PostgresConnection.hxx"
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/model/Kvnr.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/database/PostgresConnection.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/workflow-test/EndpointTestClient.hxx"
@@ -79,14 +79,17 @@ private:
         {
             const auto& configuration = ::Configuration::instance();
 
-            mEnrolmentApiClient = ::std::make_unique<::EnrolmentApiClient>(
-                configuration.serverHost(),
-                static_cast<uint16_t>(configuration.getIntValue(::ConfigurationKey::ENROLMENT_SERVER_PORT)),
-                static_cast<uint16_t>(
-                    configuration.getIntValue(::ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
-                std::chrono::milliseconds{
-                    configuration.getIntValue(::ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
-                false);
+            mEnrolmentApiClient = std::make_unique<EnrolmentApiClient>(ConnectionParameters{
+                .hostname = configuration.serverHost(),
+                .port = configuration.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
+                .connectionTimeoutSeconds = static_cast<uint16_t>(
+                    configuration.getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
+                .resolveTimeout = std::chrono::milliseconds{
+                    configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
+                .tlsParameters = TlsConnectionParameters{
+                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+                }
+            });
         }
     }
 
@@ -119,7 +122,7 @@ public:
         {
             if (::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
             {
-                mConnection = std::make_unique<PostgresConnection>(PostgresBackend::defaultConnectString());
+                mConnection = std::make_unique<PostgresConnection>(PostgresConnection::defaultConnectString());
                 mConnection->connectIfNeeded();
                 mTransaction = mConnection->createTransaction();
             }

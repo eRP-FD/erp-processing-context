@@ -9,9 +9,9 @@
 #define ERP_PROCESSING_CONTEXT_SEARCHPARAMETER_HXX
 
 
-#include "erp/model/TimePeriod.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/model/TimePeriod.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 
 #include <pqxx/connection>
 #include <variant>

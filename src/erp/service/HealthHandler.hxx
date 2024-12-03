@@ -8,8 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_HEALTHHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_HEALTHHANDLER_HXX
 
-#include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
+#include "erp/server/RequestHandler.hxx"
 
 
 class HealthHandler : public UnconstrainedRequestHandler

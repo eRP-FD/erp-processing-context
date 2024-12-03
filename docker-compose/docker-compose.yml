@@ -5,8 +5,6 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-version: "3.3"
-
 # Overview
 # --------
 # The following images are pulled from ibmcloud:
@@ -79,14 +77,14 @@ services:
   # Postgres
   # --------------------------------------------------------------------------------
   postgres:
-    hostname: postgres_ssl
-    image: de.icr.io/erp_dev/erp-postgres-db:v-0.0.4
+    hostname: postgres-erp
+    image: de.icr.io/erp_dev/erp-postgres-db:master
     container_name: erp-postgres
     ports:
       - "9005:5432"
     environment:
       POSTGRES_HOST_AUTH_METHOD: 'trust'
-      POSTGRES_DB: 'erp-processing-context'
+      POSTGRES_DB: 'erp_processing_context'
       POSTGRES_USER: 'erp_admin'
       POSTGRES_PASSWORD: 'erp0815'
     volumes:
@@ -99,6 +97,36 @@ services:
       -c ssl=on
       -c ssl_cert_file=/erp/secrets/server.crt
       -c ssl_key_file=/erp/secrets/server.key
+      -c wal_level=logical
+      -c log_statement=none"
+    # set log_statement=all to get detailed output
+
+  # --------------------------------------------------------------------------------
+  # Postgres
+  # --------------------------------------------------------------------------------
+  postgres-erp-medication-exporter:
+    hostname: postgres-exporter
+    image: de.icr.io/erp_dev/erp-postgres-db:master
+    container_name: erp-postgres-medication-exporter
+    ports:
+      - "9006:5433"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: 'trust'
+      POSTGRES_DB: 'erp_event_db'
+      POSTGRES_USER: 'erp_admin'
+      POSTGRES_PASSWORD: 'erp0815'
+      PGPORT: '5433'
+    volumes:
+      - './tls:/tls'
+    entrypoint: >
+      /bin/bash -c "
+      install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
+      install -o postgres -m 644 /tls/server.crt /erp/secrets/server.crt &&
+      docker-entrypoint.sh
+      -c ssl=on
+      -c ssl_cert_file=/erp/secrets/server.crt
+      -c ssl_key_file=/erp/secrets/server.key
+      -c wal_level=logical
       -c log_statement=none"
     # set log_statement=all to get detailed output
 
@@ -106,18 +134,22 @@ services:
   # Postgres database schema import
   # --------------------------------------------------------------------------------
   db-schema:
-    image: postgres:13
+    image: postgres:16
     container_name: erp-postgres-schema
     volumes:
       - './tls:/tls'
       - '../scripts:/data'
     depends_on:
       - postgres
+      - postgres-erp-medication-exporter
     environment:
       PGPASSWORD: 'erp0815'
       PGSSLROOTCERT: '/tls/rootCA.crt'
     entrypoint: >
       /bin/bash -c "
+      echo Wait 10 s for postgres ... ;
+      sleep 10 ;
+      /data/reset_database.sh postgres-erp 5432 erp_processing_context erp_admin erp0815 ;
       echo Wait 3 s for postgres ... ;
       sleep 3 ;
-      /data/reset_database.sh postgres_ssl 5432 erp-processing-context erp_admin erp0815"
+      /data/reset_event_database.sh postgres-exporter 5433 erp_event_db erp_admin erp0815 erp_processing_context postgres-erp 5432 erp_admin erp0815"

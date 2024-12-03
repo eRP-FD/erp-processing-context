@@ -5,9 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvCoverage.hxx"
+#include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"

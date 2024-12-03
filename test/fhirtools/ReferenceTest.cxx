@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirResourceViewGroupSet.hxx"

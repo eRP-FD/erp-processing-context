@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="GEM-ERP-VS-OrganizationType"/>
+  <url value="https://gematik.de/fhir/erp/ValueSet/GEM_ERP_VS_OrganizationType"/>
+  <version value="1.4"/>
+  <name value="GEM_ERP_VS_OrganizationType"/>
+  <title value="ValueSet of Organizationtype Codes"/>
+  <status value="active"/>
+  <date value="2024-07-15"/>
+  <publisher value="gematik GmbH"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://www.gematik.de"/>
+    </telecom>
+  </contact>
+  <description value="Type of Organiziation"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_OrganizationType"/>
+    </include>
+  </compose>
+</ValueSet>

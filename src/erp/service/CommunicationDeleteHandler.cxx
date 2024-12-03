@@ -10,14 +10,14 @@
 #include "erp/database/Database.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 
-#include "erp/common/MimeType.hxx"
+#include "shared/network/message/MimeType.hxx"
 
 
 using namespace model;

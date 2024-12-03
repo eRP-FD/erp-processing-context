@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_CHARGEITEMMARKINGFLAG_H
 #define ERP_PROCESSING_CONTEXT_MODEL_EXTENSIONS_CHARGEITEMMARKINGFLAG_H
 
-#include "erp/model/Extension.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/Extension.hxx"
+#include "shared/model/ResourceNames.hxx"
 
 #include <map>
 #include <string>

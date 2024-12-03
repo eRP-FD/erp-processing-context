@@ -7,8 +7,8 @@
 
 #include "erp/database/redis/RateLimiter.hxx"
 #include "erp/service/RedisInterface.hxx"
-#include "erp/util/JsonLog.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/JsonLog.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <chrono>
 #include <string>

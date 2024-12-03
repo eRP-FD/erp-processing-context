@@ -5,15 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/TeeTokenUpdater.hxx"
+#include "shared/hsm/TeeTokenUpdater.hxx"
 
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/hsm/HsmClient.hxx"
-#include "erp/hsm/HsmFactory.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/HsmSession.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/hsm/HsmClient.hxx"
+#include "shared/hsm/HsmFactory.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/HsmSession.hxx"
 
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/HsmTestBase.hxx"
 #include "test/util/TestUtils.hxx"

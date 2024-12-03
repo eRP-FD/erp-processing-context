@@ -8,7 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_MOCKCONSENTTABLE_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_MOCKCONSENTTABLE_HXX
 
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/database/DatabaseModel.hxx"
+#include "shared/model/Timestamp.hxx"
 
 
 #include <map>

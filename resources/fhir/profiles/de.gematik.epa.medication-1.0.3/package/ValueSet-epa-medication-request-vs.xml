@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="epa-medication-request-vs"/>
+  <url value="https://gematik.de/fhir/epa-medication/ValueSet/epa-medication-request-vs"/>
+  <version value="1.0.3"/>
+  <name value="EPAMedicationRequestVS"/>
+  <title value="EPA Medication Request ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2024-08-21"/>
+  <publisher value="gematik GmbH"/>
+  <description value="EPA Medication Request ValueSet"/>
+  <compose>
+    <include>
+      <system value="http://hl7.org/fhir/CodeSystem/medicationrequest-status"/>
+      <concept>
+        <code value="active"/>
+      </concept>
+      <concept>
+        <code value="completed"/>
+      </concept>
+      <concept>
+        <code value="cancelled"/>
+      </concept>
+    </include>
+  </compose>
+</ValueSet>

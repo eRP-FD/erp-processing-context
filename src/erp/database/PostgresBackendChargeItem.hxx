@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_BACKEND_POSTGRES_BACKEND_CHARGE_ITEM_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_BACKEND_POSTGRES_BACKEND_CHARGE_ITEM_HXX
 
-#include "erp/database/DatabaseBackend.hxx"// for fwd declarations and model includes
-#include "erp/database/PostgresBackendHelper.hxx"
+#include "erp/database/ErpDatabaseBackend.hxx"// for fwd declarations and model includes
+#include "shared/database/CommonPostgresBackend.hxx"
 
 #include <pqxx/transaction>
 

@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Sha256.hxx"
+#include "shared/crypto/Sha256.hxx"
 
 #include <gtest/gtest.h>
 

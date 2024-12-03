@@ -5,7 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/Extension.txx"
 #include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
 
 #include <rapidjson/pointer.h>
@@ -57,4 +58,8 @@ ChargeItemMarkingFlag::ChargeItemMarkingFlag(const std::string_view url, bool va
     setValue(rapidjson::Pointer{ElementName::path(resource::elements::url)}, url);
     setValue(rapidjson::Pointer{ElementName::path(resource::elements::valueBoolean)}, rapidjson::Value(value));
 }
+
+template class Extension<ChargeItemMarkingFlag>;
+template class Extension<ChargeItemMarkingFlags>;
+
 }// namespace model

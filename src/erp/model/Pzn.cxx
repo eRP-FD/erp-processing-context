@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/Pzn.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/String.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/String.hxx"
 
 #include <regex>
 #include <sstream>

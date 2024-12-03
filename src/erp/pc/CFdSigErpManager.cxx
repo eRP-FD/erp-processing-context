@@ -1,10 +1,11 @@
 #include "erp/pc/CFdSigErpManager.hxx"
 
-#include "erp/tsl/OcspHelper.hxx"
-#include "erp/tsl/TslManager.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/tsl/OcspHelper.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/hsm/HsmPool.hxx"
 
 
 namespace

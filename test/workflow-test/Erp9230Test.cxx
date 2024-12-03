@@ -7,7 +7,7 @@
 
 #include "ErpWorkflowTestFixture.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/ResourceFactory.hxx"
+#include "shared/model/ResourceFactory.hxx"
 
 #include <gtest/gtest.h>
 

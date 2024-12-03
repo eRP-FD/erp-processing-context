@@ -95,6 +95,9 @@ public:
     [[nodiscard]] virtual bool hasValue() const = 0;
     [[nodiscard]] bool isResource() const;
     [[nodiscard]] bool isContainerResource() const;
+    [[nodiscard]] bool isDataAbsent() const;
+
+    [[nodiscard]] virtual std::string asRaw() const = 0;
 
     // Explicit conversion functions:
     [[nodiscard]] virtual int32_t asInt() const = 0;
@@ -139,6 +142,7 @@ public:
     [[nodiscard]] std::optional<bool> equals(const Element& rhs) const;
     [[nodiscard]] bool matches(const Element& pattern) const;
 
+    size_t subElementLevel() const;
 
     std::ostream& json(std::ostream&) const;
 
@@ -151,10 +155,13 @@ protected:
     resolveUrlReference(const Identity& urlIdentity, std::string_view elementFullPath) const;
     [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
     resolveBundleReference(std::string_view fullUrl, std::string_view elementFullPath) const;
+    [[nodiscard]] std::tuple<std::shared_ptr<const Element>, ValidationResults>
+    resolveGenericReference(const Identity& urlIdentity, std::string_view elementFullPath) const;
 
     std::shared_ptr<const fhirtools::FhirStructureRepository> mFhirStructureRepository;
     const ProfiledElementTypeInfo mDefinitionPointer;
     std::weak_ptr<const Element> mParent;
+    mutable size_t mSubElementLevel;
 
 private:
     [[nodiscard]] IdentityAndResult bundledResourceIdentity(std::string_view elementFullPath) const;
@@ -209,6 +216,8 @@ public:
                               Type type, ValueType&& value);
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
+
+    [[nodiscard]] std::string asRaw() const override;
 
     [[nodiscard]] int32_t asInt() const override;
     [[nodiscard]] std::string asString() const override;

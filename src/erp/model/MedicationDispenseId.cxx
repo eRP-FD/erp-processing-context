@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/String.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
 
 
 namespace model

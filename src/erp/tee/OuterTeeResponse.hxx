@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEE_OUTERTEERESPONSE_HXX
 #define ERP_PROCESSING_CONTEXT_TEE_OUTERTEERESPONSE_HXX
 
-#include "erp/server/response/ServerResponse.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 
 #include <string>
 

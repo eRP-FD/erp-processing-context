@@ -5,9 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tpm/Tpm.hxx"
-#include "erp/tpm/TpmProduction.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/tpm/Tpm.hxx"
+#include "shared/tpm/TpmProduction.hxx"
+#include "shared/util/Base64.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

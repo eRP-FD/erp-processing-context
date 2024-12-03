@@ -20,6 +20,7 @@ add_executable(fhirtools-test
         issues/ERP-12159-RefereceTypeCheck.cxx
         ReferenceTest.cxx
         SlicingValidationTest.cxx
+        ValueMatchingTest.cxx
         )
 
 target_link_libraries(fhirtools-test fhirtools CONAN_PKG::gtest erp-processing-context-files erp-test-util-lib

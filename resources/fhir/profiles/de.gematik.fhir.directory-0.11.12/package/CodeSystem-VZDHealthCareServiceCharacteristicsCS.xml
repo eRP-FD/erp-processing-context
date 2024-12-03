@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="VZDHealthCareServiceCharacteristicsCS"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/VZDHealthCareServiceCharacteristicsCS"/>
+  <version value="0.11.12"/>
+  <name value="VZDHealthCareServiceCharacteristicsCS"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="CodeSystem of VZD specific HealthcareService characteristics"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="4"/>
+  <concept>
+    <code value="erx-token-receiver"/>
+    <display value="eRX Token Receiver"/>
+  </concept>
+  <concept>
+    <code value="apotheke-verfuegbarkeitsanfrage"/>
+    <display value="Apotheke: Verfügbarkeitsanfrage"/>
+    <definition value="Apotheke ermöglicht die Abfrage einer Verfügbarkeit eines Medikaments"/>
+  </concept>
+  <concept>
+    <code value="apotheken-ident-verfahren"/>
+    <display value="Apotheken Ident Verfahren"/>
+  </concept>
+  <concept>
+    <code value="terminbuchung"/>
+    <display value="Terminbuchung"/>
+  </concept>
+</CodeSystem>

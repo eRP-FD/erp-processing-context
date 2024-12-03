@@ -8,11 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_COMMUNICATIONGETHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_COMMUNICATIONGETHANDLER_HXX
 
-#include "erp/service/ErpRequestHandler.hxx"
-
-#include "erp/pc/PcServiceContext.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/Communication.hxx"
+#include "erp/pc/PcServiceContext.hxx"
+#include "erp/service/ErpRequestHandler.hxx"
+#include "shared/model/Bundle.hxx"
 
 
 class Database;

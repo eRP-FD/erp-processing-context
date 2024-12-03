@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/BlobDatabase.hxx"
+#include "shared/hsm/BlobDatabase.hxx"
 
 #include <gtest/gtest.h>
 

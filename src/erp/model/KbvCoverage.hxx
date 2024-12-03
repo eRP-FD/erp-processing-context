@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVCOVERAGE_HXX_
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_KBVCOVERAGE_HXX_
 
-#include "erp/model/Resource.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/model/Iknr.hxx"
 
 namespace model

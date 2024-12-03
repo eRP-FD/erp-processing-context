@@ -9,26 +9,25 @@
 #define ERP_PROCESSING_CONTEXT_TEST_UTIL_SERVERTESTBASE_HXX
 
 
-#include "test/erp/model/CommunicationTest.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/JsonTestUtils.hxx"
 
-#include "erp/client/HttpsClient.hxx"
-#include "erp/crypto/Jwt.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/crypto/Jwt.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/KeyDerivation.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/KeyDerivation.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/TelematikId.hxx"
+#include "shared/model/TelematikId.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/HttpsServer.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
@@ -151,7 +150,7 @@ protected:
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
         const model::Timestamp& whenHandedOver = model::Timestamp::now(),
-        const std::optional<model::Timestamp>& whenPrepared = std::nullopt) const;
+        const std::variant<std::monostate, model::Timestamp, std::string>& whenPrepared = std::monostate{}) const;
 
     // Jwt of InsurantF ("X234567891"):
     std::unique_ptr<JWT> mJwt;

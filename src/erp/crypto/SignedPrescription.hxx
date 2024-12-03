@@ -7,7 +7,7 @@
 #ifndef ERP_PROCESSIONG_CONTEXT_SIGNEDPRESCRIPTION_HXX
 #define ERP_PROCESSIONG_CONTEXT_SIGNEDPRESCRIPTION_HXX
 
-#include "CadesBesSignature.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
 
 #include <string>
 

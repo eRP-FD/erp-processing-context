@@ -6,9 +6,9 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemPatchHandler.hxx"
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/Parameters.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 
 #include <string_view>
 

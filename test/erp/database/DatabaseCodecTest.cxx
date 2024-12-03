@@ -5,12 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/database/DatabaseCodec.hxx"
+#include "shared/database/DatabaseCodec.hxx"
 
-#include "erp/compression/ZStd.hxx"
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/compression/ZStd.hxx"
+#include "shared/database/DatabaseModel.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Configuration.hxx"
 
 #include <gtest/gtest.h>
 

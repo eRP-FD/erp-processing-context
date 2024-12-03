@@ -193,7 +193,7 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
     EXPECT_EQ(viewListViewA->size(), 1);
     {
         auto versions = viewListViewA->supportedVersions(&backend, {structUrl});
-        EXPECT_EQ(versions, (std::list{K{structUrl, "alpha"_ver}}));
+        EXPECT_EQ(versions, (std::set{K{structUrl, "alpha"_ver}}));
     }
     {
         const auto match = viewListViewA->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
@@ -231,7 +231,7 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
     EXPECT_EQ(viewListViewB->size(), 1);
     {
         auto versions = viewListViewB->supportedVersions(&backend, {structUrl});
-        EXPECT_EQ(versions, (std::list{K{structUrl, "beta"_ver}}));
+        EXPECT_EQ(versions, (std::set{K{structUrl, "beta"_ver}}));
     }
     {
         const auto match = viewListViewB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
@@ -266,7 +266,7 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
     EXPECT_EQ(viewListViewAandB->size(), 2);
     {
         auto versions = viewListViewAandB->supportedVersions(&backend, {structUrl});
-        EXPECT_EQ(versions, (std::list{K{structUrl, "alpha"_ver}, K{structUrl, "beta"_ver}}));
+        EXPECT_EQ(versions, (std::set{K{structUrl, "alpha"_ver}, K{structUrl, "beta"_ver}}));
     }
     {
         const auto match = viewListViewAandB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);

@@ -5,18 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Jwt.hxx"
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jws.hxx"
-#include "erp/pc/ProfessionOid.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/JwtException.hxx"
-#include "erp/util/SafeString.hxx"
-#include "erp/util/String.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/crypto/Jws.hxx"
+#include "shared/model/ProfessionOid.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/JwtException.hxx"
+#include "shared/util/SafeString.hxx"
+#include "shared/util/String.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "test_config.h"
@@ -127,25 +126,26 @@ TEST_F(JwtTest, DefaultConstructor)
 
 TEST_F(JwtTest, HeaderChecks)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_view_literals;
     A_20362.test("Check for the two periods in a JWT.");
 
     const auto idpPublicKey = MockCryptography::getIdpPublicKey();
 
-    std::string header = Base64::encode("{}");
-    std::string payload = Base64::encode("{}");
-    std::string signature = Base64::encode("invalid");
+    std::string header = Base64::encode("{}"sv);
+    std::string payload = Base64::encode("{}"sv);
+    std::string signature = Base64::encode("invalid"sv);
     JWT jwt0(header + "." + payload + "." + signature);
     ASSERT_THROW(jwt0.verify(idpPublicKey), JwtInvalidRfcFormatException); // header has no alg key.
 
-    header = Base64::encode(R"({"alg":"none"})");
-    payload = Base64::encode("{}");
-    signature = Base64::encode("invalid");
+    header = Base64::encode(R"({"alg":"none"})"sv);
+    payload = Base64::encode("{}"sv);
+    signature = Base64::encode("invalid"sv);
     JWT jwt1(header + "." + payload + "." + signature);
     ASSERT_THROW(jwt1.verify(idpPublicKey), JwtInvalidSignatureException);
 
-    header = Base64::encode(R"({"alg":"BP256R1"})");
-    payload = Base64::encode("{}");
-    signature = Base64::encode("invalid");
+    header = Base64::encode(R"({"alg":"BP256R1"})"sv);
+    payload = Base64::encode("{}"sv);
+    signature = Base64::encode("invalid"sv);
     JWT jwt2(header + "." + payload + "." + signature);
     // Test must fail at claims check, header is valid and must not throw JwtInvalidFormatException
     ASSERT_THROW(jwt2.verify(idpPublicKey), JwtRequiredClaimException);
@@ -231,7 +231,8 @@ TEST_F(JwtTest, MissingOptionalClaims)//NOLINT(readability-function-cognitive-co
 
 TEST_F(JwtTest, InvalidJsonPayload)
 {
-    ASSERT_THROW(JWT (mHeader + "." + Base64::encode(" a : b }") + "." + mSignature), JwtInvalidFormatException);
+    using namespace std::string_view_literals;
+    ASSERT_THROW(JWT(mHeader + "." + Base64::encode(" a : b }"sv) + "." + mSignature), JwtInvalidFormatException);
 }
 
 TEST_F(JwtTest, Expired)
@@ -463,6 +464,7 @@ TEST_F(JwtTest, ForceMissingRequiredTimingClaim_iat)//NOLINT(readability-functio
 
 TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-complexity)
 {
+    using namespace std::string_view_literals;
     // Basic  constructor checks.
     EXPECT_NO_THROW(JWT());
     EXPECT_THROW(JWT(""), JwtInvalidFormatException);
@@ -485,7 +487,8 @@ TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-comple
         EXPECT_THROW(JWT("a.b.").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT("a.b.c").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT(mHeader + ".b.c").verify(mIdpPublicKey), JwtInvalidFormatException);
-        EXPECT_THROW(JWT(mHeader + "." + Base64::encode("{}") + ".c").verify(mIdpPublicKey), JwtRequiredClaimException);
+        EXPECT_THROW(JWT(mHeader + "." + Base64::encode("{}"sv) + ".c").verify(mIdpPublicKey),
+                     JwtRequiredClaimException);
 
         const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -511,7 +514,8 @@ TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-comple
         auto parts = String::split(jwt.serialize(), ".");
         EXPECT_THROW(JWT(parts[0] + "." + parts[1] + ".").verify(mIdpPublicKey), JwtInvalidSignatureException);
         EXPECT_THROW(JWT(parts[0] + "." + parts[1] + ".c").verify(mIdpPublicKey), JwtInvalidSignatureException);
-        EXPECT_THROW(JWT(parts[0] + "." + parts[1] + "." + Base64::encode("{}")).verify(mIdpPublicKey), JwtInvalidSignatureException);
+        EXPECT_THROW(JWT(parts[0] + "." + parts[1] + "." + Base64::encode("{}"sv)).verify(mIdpPublicKey),
+                     JwtInvalidSignatureException);
 
         EXPECT_NO_THROW(JWT(jwt).verify(mIdpPublicKey));
     }

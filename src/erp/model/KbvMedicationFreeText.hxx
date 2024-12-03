@@ -8,14 +8,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONFREETEXT_HXX
 
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/ProfileType.hxx"
+#include "shared/model/MedicationBase.hxx"
+#include "shared/model/ProfileType.hxx"
 
 namespace model
 {
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
-class KbvMedicationFreeText : public KbvMedicationBase<KbvMedicationFreeText>
+class KbvMedicationFreeText : public MedicationBase<KbvMedicationFreeText>
 {
 public:
     static constexpr auto schemaType = ProfileType::KBV_PR_ERP_Medication_FreeText;

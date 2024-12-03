@@ -5,17 +5,17 @@
  * non-exclusively licensed to gematik GmbH
 */
 
-#include "erp/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "test/util/ServerTestBase.hxx"
 
-#include "erp/service/Operation.hxx"
+#include "shared/service/Operation.hxx"
 
 
 namespace {
     class ErrorHandler : public RequestHandlerInterface
     {
     public:
-        void handleRequest (SessionContext&) override
+        void handleRequest (BaseSessionContext&) override
         {
             throw std::runtime_error("simulated error in request handler implementation");
         }

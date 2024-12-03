@@ -7,8 +7,9 @@
 
 #include "JsonTestUtils.hxx"
 #include "TestUtils.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
 #include <boost/format.hpp>
@@ -149,6 +150,14 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 
     static constexpr const char* fmtSpecProfile = R"(
             "meta": {"profile": ["%1%|%2%"]})";
+    static constexpr const char fmtFlowTypeExtension[] = R"(
+                    {
+                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType",
+                        "valueCoding": {
+                            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType",
+                            "code": "%1%"
+                        }
+                    })";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             "basedOn": [{"reference": "Task/%1%"}])";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -232,6 +241,19 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
                        mProfileVersion.value_or(defaulVersion));
 
+    const ResourceTemplates::Versions::GEM_ERP gemVersion{
+        mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current())};
+
+    if (mMessageType == model::Communication::MessageType::DispReq &&
+        gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+    {
+        Expect3(mPrescriptionId && mPrescriptionId->size() >= 3,
+                "Cannot create Communication message: missing prescription id", std::logic_error);
+        body += ",\n";
+        body += R"(            "extension": [)""\n";
+        body += boost::str(boost::format(fmtFlowTypeExtension) % mPrescriptionId->substr(0, 3));
+        body += "            ]\n";
+    }
     if (mPrescriptionId.has_value() && mAccessCode.has_value())
         body += "," + boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
     else if (mPrescriptionId.has_value())
@@ -272,7 +294,14 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             {
                 id = id.substr(1);
             }
-            medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
+            if (gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+            {
+                medicationOptions.version = gemVersion;
+            }
+            else
+            {
+                medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
+            }
             medicationOptions.id = id;
         }
         body += R"(, "contained": [)" +
@@ -292,6 +321,13 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
 
     static constexpr const char* fmtSpecProfile = R"(
             <meta> <profile value="%1%|%2%" /></meta>)";
+    static constexpr const char fmtFlowTypeExtension[] = "\n" R"(
+            <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
+                <valueCoding>
+                    <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
+                    <code value="%1%" />
+                </valueCoding>
+            </extension>)""\n";
     static constexpr const char* fmtSpecBasedOnTaskId = R"(
             <basedOn> <reference value="Task/%1%"/> </basedOn>)";
     static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
@@ -313,41 +349,41 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
               <contentString value="%1%" />
             </payload>)--";
     static constexpr const char* fmtSpecPayloadInfoReqContentString =  R"--(
-        <payload>
-        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider">
-            <valueIdentifier>
-                <system value="http://fhir.de/sid/arge-ik/iknr" />
-                <value value="109500969" />
-            </valueIdentifier>
-        </extension>
-        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType">
-            <valueBoolean value="false" />
-        </extension>
-        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
-            <valueCoding>
-                <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
-                <code value="160" />
-            </valueCoding>
-        </extension>
-        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity">
-            <valueQuantity>
-                <value value="1" />
-                <system value="http://unitsofmeasure.org" />
-            </valueQuantity>
-        </extension>
-        <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType">
-            <extension url="onPremise">
-                <valueBoolean value="true" />
-            </extension>
-            <extension url="shipment">
-                <valueBoolean value="false" />
-            </extension>
-            <extension url="delivery">
-                <valueBoolean value="true" />
-            </extension>
-        </extension>
-        <contentString value="%1%" />
-    </payload>
+            <payload>
+                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider">
+                    <valueIdentifier>
+                        <system value="http://fhir.de/sid/arge-ik/iknr" />
+                        <value value="109500969" />
+                    </valueIdentifier>
+                </extension>
+                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType">
+                    <valueBoolean value="false" />
+                </extension>
+                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
+                    <valueCoding>
+                        <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
+                        <code value="160" />
+                    </valueCoding>
+                </extension>
+                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity">
+                    <valueQuantity>
+                        <value value="1" />
+                        <system value="http://unitsofmeasure.org" />
+                    </valueQuantity>
+                </extension>
+                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType">
+                    <extension url="onPremise">
+                        <valueBoolean value="true" />
+                    </extension>
+                    <extension url="shipment">
+                        <valueBoolean value="false" />
+                    </extension>
+                    <extension url="delivery">
+                        <valueBoolean value="true" />
+                    </extension>
+                </extension>
+                <contentString value="%1%" />
+            </payload>
     )--";
     std::string body = R"(<Communication xmlns="http://hl7.org/fhir">)";
 
@@ -357,10 +393,18 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
         isChargeItemRelated
             ? static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERPCHRG_current())
             : static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERP_current());
-
     body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
                        to_string(mProfileVersion.value_or(defaulVersion)));
 
+    const ResourceTemplates::Versions::GEM_ERP gemVersion{
+        mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current())};
+    if (mMessageType == model::Communication::MessageType::DispReq &&
+        gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+    {
+        Expect3(mPrescriptionId && mPrescriptionId->size() >= 3,
+                "Cannot create Communication message: missing prescription id", std::logic_error);
+        body += boost::str(boost::format(fmtFlowTypeExtension) % mPrescriptionId->substr(0, 3));
+    }
     if (mAbout)
     {
         ResourceTemplates::MedicationOptions medicationOptions;
@@ -375,7 +419,14 @@ std::string CommunicationJsonStringBuilder::createXmlString() const
             {
                 id = id.substr(1);
             }
-            medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
+            if (gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+            {
+                medicationOptions.version = gemVersion;
+            }
+            else
+            {
+                medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
+            }
             medicationOptions.id = id;
         }
         body += "<contained>" + ResourceTemplates::medicationXml(medicationOptions) + "</contained>";

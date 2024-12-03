@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTIL_ENVIRONMENTVARIABLEGUARD_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_UTIL_ENVIRONMENTVARIABLEGUARD_HXX
 
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
 
 #include <boost/noncopyable.hpp>
 #include <string>

@@ -1,7 +1,6 @@
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-
 #include "erp/model/Task.hxx"
-#include "erp/model/Bundle.hxx"
+#include "shared/model/Bundle.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <chrono>
 #include <iomanip>

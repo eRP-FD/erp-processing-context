@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/Jws.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Sha256.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/String.hxx"
+#include "shared/crypto/Jws.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Sha256.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/String.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"

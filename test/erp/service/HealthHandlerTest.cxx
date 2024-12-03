@@ -5,38 +5,37 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
-
 #include "erp/service/HealthHandler.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/model/Health.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/registration/RegistrationManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "erp/server/request/ServerRequest.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/tsl/TslManager.hxx"
-#include "erp/tsl/error/TslError.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/model/Health.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/tsl/TslManager.hxx"
+#include "shared/tsl/error/TslError.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "test_config.h"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
+#include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "mock/tsl/MockOcsp.hxx"
 #include "test/mock/MockRedisStore.hxx"
-#include "mock/tsl/UrlRequestSenderMock.hxx"
+#include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
-#include "erp/erp-serverinfo.hxx"
 
-#include "test_config.h"
-#include "test/mock/RegistrationMock.hxx"
-#include "erp/registration/RegistrationManager.hxx"
+#include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
 
 using namespace std::chrono_literals;
 
@@ -150,31 +149,32 @@ public:
         , mContext()
         , statusPointer("/status")
         , currentTimestampPointer("/timestamp")
-        , postgresStatusPointer("/checks/0/status")
-        , postgresRootCausePointer("/checks/0/data/rootCause")
-        , hsmStatusPointer("/checks/2/status")
-        , hsmRootCausePointer("/checks/2/data/rootCause")
-        , hsmIpPointer("/checks/2/data/ip")
-        , redisStatusPointer("/checks/1/status")
-        , redisRootCausePointer("/checks/1/data/rootCause")
-        , tslStatusPointer("/checks/3/status")
-        , tslRootCausePointer("/checks/3/data/rootCause")
-        , tslExpiryDatePointer("/checks/3/data/expiryDate")
-        , tslSequenceNumberPointer("/checks/3/data/sequenceNumber")
-        , tslIdPointer("/checks/3/data/id")
-        , tslHashPointer("/checks/3/data/hash")
-        , bnaStatusPointer("/checks/4/status")
-        , bnaRootCausePointer("/checks/4/data/rootCause")
-        , bnaExpiryDatePointer("/checks/4/data/expiryDate")
-        , bnaSequenceNumberPointer("/checks/4/data/sequenceNumber")
-        , bnaIdPointer("/checks/4/data/id")
-        , bnaHashPointer("/checks/4/data/hash")
-        , idpStatusPointer("/checks/5/status")
-        , idpRootCausePointer("/checks/5/data/rootCause")
-        , seedTimerStatusPointer("/checks/6/status")
-        , seedTimerRootCausePointer("/checks/6/data/rootCause")
-        , teeTokenUpdaterStatusPointer("/checks/7/status")
-        , teeTokenUpdaterRootCausePointer("/checks/7/data/rootCause")
+        // Note that the array indices is defined in ApplicationHealth::model()
+        , postgresStatusPointer("/checks/3/status")
+        , postgresRootCausePointer("/checks/3/data/rootCause")
+        , hsmStatusPointer("/checks/1/status")
+        , hsmRootCausePointer("/checks/1/data/rootCause")
+        , hsmIpPointer("/checks/1/data/ip")
+        , redisStatusPointer("/checks/4/status")
+        , redisRootCausePointer("/checks/4/data/rootCause")
+        , tslStatusPointer("/checks/7/status")
+        , tslRootCausePointer("/checks/7/data/rootCause")
+        , tslExpiryDatePointer("/checks/7/data/expiryDate")
+        , tslSequenceNumberPointer("/checks/7/data/sequenceNumber")
+        , tslIdPointer("/checks/7/data/id")
+        , tslHashPointer("/checks/7/data/hash")
+        , bnaStatusPointer("/checks/0/status")
+        , bnaRootCausePointer("/checks/0/data/rootCause")
+        , bnaExpiryDatePointer("/checks/0/data/expiryDate")
+        , bnaSequenceNumberPointer("/checks/0/data/sequenceNumber")
+        , bnaIdPointer("/checks/0/data/id")
+        , bnaHashPointer("/checks/0/data/hash")
+        , idpStatusPointer("/checks/2/status")
+        , idpRootCausePointer("/checks/2/data/rootCause")
+        , seedTimerStatusPointer("/checks/5/status")
+        , seedTimerRootCausePointer("/checks/5/data/rootCause")
+        , teeTokenUpdaterStatusPointer("/checks/6/status")
+        , teeTokenUpdaterRootCausePointer("/checks/6/data/rootCause")
         , cFdSigErpPointer("/checks/8/status")
         , cFdSigErpRootCausePointer("/checks/8/data/rootCause")
         , cFdSigErpTimestampPointer("/checks/8/data/timestamp")
@@ -472,6 +472,14 @@ TEST_F(HealthHandlerTest, IdpDown)//NOLINT(readability-function-cognitive-comple
 
 TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-complexity)
 {
+    for (const auto& item : magic_enum::enum_values<ApplicationHealth::Service>())
+    {
+        if (item == ApplicationHealth::Service::EventDb)
+        {
+            continue;
+        }
+        mServiceContext->applicationHealth().enableCheck(item);
+    }
     ASSERT_NO_THROW(handleRequest());
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
@@ -532,6 +540,15 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
 {
     mBlobCache->deleteBlob(BlobType::VauSig, ErpVector::create("vau-sig"));
     createServiceContext();
+    for (const auto& item : magic_enum::enum_values<ApplicationHealth::Service>())
+    {
+        if (item == ApplicationHealth::Service::EventDb)
+        {
+            continue;
+        }
+        mServiceContext->applicationHealth().enableCheck(item);
+    }
+
     ASSERT_NO_THROW(handleRequest());
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);

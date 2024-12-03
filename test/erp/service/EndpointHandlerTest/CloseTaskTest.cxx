@@ -5,18 +5,25 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/Sha256.hxx"
-#include "erp/erp-serverinfo.hxx"
+#include "erp/model/ErxReceipt.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/Sha256.hxx"
+#include "shared/erp-serverinfo.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/DispenseTaskHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/util/CertificateDirLoader.h"
+#include "test/util/CryptoHelper.hxx"
+#include "test/util/ErpMacros.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
 class CloseTaskTest : public EndpointHandlerTest
@@ -84,8 +91,9 @@ protected:
         };
         CloseTaskHandler handler{{}};
         AccessLog accessLog;
-        ServerRequest serverRequest = createRequest(
-            ResourceTemplates::medicationDispenseXml({.prescriptionId = prescriptionId, .telematikId = telematikId}));
+        ServerRequest serverRequest = createRequest(ResourceTemplates::dispenseOrCloseTaskBodyXml(
+            {.version = ResourceTemplates::Versions::GEM_ERP_current(),
+             .medicationDispenses = {{.prescriptionId = prescriptionId, .telematikId = telematikId}}}));
         ServerResponse serverResponse;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
         [&] {
@@ -131,7 +139,7 @@ protected:
         return prescriptionDigest;
     }
 
-    JWT jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
+    const JWT jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
     const std::string telematikId = jwtPharmacy.stringForClaim(JWT::idNumberClaim).value();
 
     static const inline model::PrescriptionId prescriptionId =
@@ -151,15 +159,71 @@ protected:
 
 };
 
-TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexity)
+class CloseTaskInputTest : public CloseTaskTest , public testing::WithParamInterface<std::string(CloseTaskInputTest::*)()>
+{
+public:
+    static constexpr char notSupported[] = "not supported";
+
+    std::string medicationDispenseXml()
+    {
+        dispenseOptions.gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, dispenseOptions.gematikVersion);
+        return ResourceTemplates::medicationDispenseXml(dispenseOptions);
+    }
+    std::string medicationDispenseBundleXml()
+    {
+        for (auto& opt: multiDispenseOptions)
+        {
+            opt.gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, opt.gematikVersion);
+        }
+        return ResourceTemplates::medicationDispenseBundleXml({
+            .gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, ResourceTemplates::Versions::GEM_ERP_current()),
+            .medicationDispenses = multiDispenseOptions,
+        });
+    }
+    std::string medicationDispenseBundleXmlNoProfile()
+    {
+        /* ERP-22297: remove meta/profile */
+        const std::string profileUrl{profile(model::ProfileType::MedicationDispenseBundle).value()};
+        std::string result =
+            regex_replace(medicationDispenseBundleXml(),
+                          std::regex{"<meta><profile value=\"" + profileUrl + "\\|" +
+                                     to_string(ResourceTemplates::Versions::GEM_ERP_current()) + "\"/></meta>"},
+                          "");
+        EXPECT_EQ(
+            result.find(R"("https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle")"),
+            std::string::npos);
+        return result;
+    }
+    std::string closeOperationInputParamers()
+    {
+        if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
+        {
+            return notSupported;
+        }
+        return ResourceTemplates::medicationDispenseOperationParametersXml({
+            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+            .medicationDispenses = multiDispenseOptions,
+        });
+    }
+protected:
+    const model::PrescriptionId prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                                     .telematikId = telematikId};
+    std::list<ResourceTemplates::MedicationDispenseOptions> multiDispenseOptions{
+        {.id{model::MedicationDispenseId{prescriptionId, 0}}, .telematikId = telematikId},
+        {.id{model::MedicationDispenseId{prescriptionId, 1}}, .telematikId = telematikId},
+    };
+
+};
+
+TEST_P(CloseTaskInputTest, CloseTask)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
     A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto& testConfig = TestConfiguration::instance();
 
     CloseTaskHandler handler({});
-    const auto prescriptionId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     const Header requestHeader{HttpMethod::POST,
                          "/Task/" + prescriptionId.toString() + "/$close/",
                          0,
@@ -168,26 +232,22 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
 
     const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                        .telematikId = telematikId};
-    const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(dispenseOptions);
-    const auto medicationDispenseBundleXml =
-        ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
-
-    /* ERP-22297: remove meta/profile */
-    const std::string medicationDispenseBundleProfile{profile(model::ProfileType::MedicationDispenseBundle).value()};
-    std::string medicationDispenseBundleXmlNoProfile = regex_replace(medicationDispenseBundleXml,
-        std::regex{"<meta><profile value=\"" +
-        medicationDispenseBundleProfile + "\\|" + to_string(ResourceTemplates::Versions::GEM_ERP_current()) +
-        "\"/></meta>"}, "");
-    EXPECT_TRUE(medicationDispenseBundleXmlNoProfile.find("<meta><profile value="
-        "\"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle") == std::string::npos);
+    std::list<std::string> testCandidates{};
 
     ServerRequest serverRequest{requestHeader};
     serverRequest.setAccessToken(jwtPharmacy);
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
 
-    for (const auto& payload : {medicationDispenseXml, medicationDispenseBundleXml, medicationDispenseBundleXmlNoProfile})
+    const auto& payload = (this->*GetParam())();
+    if (payload == notSupported)
+    {
+        GTEST_SKIP_("input type not supported");
+    }
+    else
     {
         mockDatabase.reset();
+        mServiceContext.databaseFactory(); // re-init mockdb
+        auto task = mockDatabase->retrieveTaskForUpdate(prescriptionId);
         serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
         serverRequest.setBody(payload);
         ServerResponse serverResponse;
@@ -198,6 +258,7 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
+
         std::optional<model::ErxReceipt> receipt;
         ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(serverResponse.getBody())));
         const auto compositionResources = receipt->getResourcesByType<model::Composition>("Composition");
@@ -207,7 +268,7 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         EXPECT_TRUE(composition.telematikId().has_value());
         EXPECT_EQ(composition.telematikId().value(), jwtPharmacy.stringForClaim(JWT::idNumberClaim).value());
         EXPECT_TRUE(composition.periodStart().has_value());
-        EXPECT_EQ(composition.periodStart().value().toXsDateTime(), "2021-02-02T16:18:43.036+00:00");
+        EXPECT_EQ(composition.periodStart().value().toXsDateTime(), task->lastStatusChange.toXsDateTime());
         EXPECT_TRUE(composition.periodEnd().has_value());
         EXPECT_TRUE(composition.date().has_value());
         EXPECT_TRUE(composition.author().has_value());
@@ -252,8 +313,14 @@ TEST_F(CloseTaskTest, CloseTask)//NOLINT(readability-function-cognitive-complexi
         serverRequest.setPathParameters({"id"}, {"9a27d600-5a50-4e2b-98d3-5e05d2e85aa0"});
         EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::NotFound);
     }
-
 }
+
+INSTANTIATE_TEST_SUITE_P(valid, CloseTaskInputTest, testing::Values(
+    &CloseTaskInputTest::medicationDispenseXml,
+    &CloseTaskInputTest::medicationDispenseBundleXml,
+    &CloseTaskInputTest::medicationDispenseBundleXmlNoProfile,
+    &CloseTaskInputTest::closeOperationInputParamers
+));
 
 // Regression Test for Bugticket ERP-5656
 TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readability-function-cognitive-complexity)
@@ -269,7 +336,7 @@ TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readabili
                          HttpStatus::Unknown};
     ServerRequest serverRequest{std::move(requestHeader)};
     serverRequest.setPathParameters({"id"}, {correctId.toString()});
-    serverRequest.setAccessToken(std::move(jwtPharmacy));
+    serverRequest.setAccessToken(jwtPharmacy);
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
     ServerResponse serverResponse;
     AccessLog accessLog;
@@ -344,7 +411,8 @@ TEST_F(CloseTaskTest, CloseTaskPartialDateTimeErp6513)//NOLINT(readability-funct
             .telematikId = telematikId,
             .whenPrepared = model::Timestamp::fromXsDate("1970-01-01", model::Timestamp::UTCTimezone)};
         auto medicationDispenseXml =
-            ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {dispenseOptions, dispenseOptions}});
+            ResourceTemplates::dispenseOrCloseTaskBodyXml({.version = ResourceTemplates::Versions::GEM_ERP_current(),
+                                                           .medicationDispenses = {dispenseOptions, dispenseOptions}});
         medicationDispenseXml = String::replaceAll(medicationDispenseXml, "1970-01-01T00:00:00.000+00:00", date);
         ASSERT_NO_FATAL_FAILURE(test(std::move(medicationDispenseXml)));
     }
@@ -367,17 +435,46 @@ TEST_F(CloseTaskTest, whenHandedOver)
 
     ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
         .medicationDispenses = {dispenseOptions, dispenseOptions}};
-    // whenHandedOver during old profile period
+
+    auto dispenseOptions1_4{dispenseOptions};
+    dispenseOptions1_4.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
+    ResourceTemplates::MedicationDispenseOperationParametersOptions parametersOptions{
+        .medicationDispenses = {dispenseOptions1_4, dispenseOptions1_4}};
+
+    // whenHandedOver during Workflow 1.2 period
     {
         testutils::ShiftFhirResourceViewsGuard shiftView{"2024-10-01", tomorrow};
+        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
+        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
+        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
+        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
+        // failure is expected due to darreichungsform = IID
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
+        // failure is expected due to darreichungsform = IID
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+        // failure is expected due to parameters only allowed with workflow 1.4
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
     }
-    // whenHandedOver during new profile period
+    // whenHandedOver during Workflow 1.3 period
     {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"2024-10-01", today};
+        testutils::ShiftFhirResourceViewsGuard shiftView{"2024-11-01", today};
+        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
+        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
+        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
+        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
+        // success is expected due to darreichungsform = IID
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+        // success is expected due to darreichungsform = IID
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+        // failure is expected due to parameters only allowed with workflow 1.4
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
+    }
+    // whenHandedOver during Workflow 1.4 period
+    {
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_2025-01-15", today};
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::success));
     }
 }
 
@@ -399,10 +496,11 @@ TEST_F(CloseTaskTest, whenHandedOverConsistentInBundle)
         .whenHandedOver = now,
     };
 
-    ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
+    ResourceTemplates::MedicationDispenseOperationParametersOptions options{
+        .version = ResourceTemplates::Versions::GEM_ERP_current(),
         .medicationDispenses = {dispenseLaterOptions, dispenseNowOptions}
     };
-    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+    ASSERT_NO_FATAL_FAILURE(test(dispenseOrCloseTaskBodyXml(options), ExpectedResult::success));
 }
 
 TEST_F(CloseTaskTest, NoEnvMetaVersionId)
@@ -689,7 +787,62 @@ TEST(CloseTaskConfigTest, defaultValues)
     EXPECT_EQ(*metaVersionId, "1");
 }
 
-TEST_F(CloseTaskTest, CloseTask_FutureLastModified)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(CloseTaskTest, CloseTask_FutureLastStatusUpdate)
+{
+    const auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4799);
+
+    // Create a task with last_status_update later than now() in order to simulate a clock skew.
+    {
+        const auto lastStatusChange = model::Timestamp::now() + std::chrono::minutes(5);
+
+        auto taskY = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = prescriptionId}));
+
+        model::Task taskX(taskY.prescriptionId(), taskY.type(), taskY.lastModifiedDate(), taskY.authoredOn(),
+                          taskY.status(), lastStatusChange);
+        taskX.setSecret(*taskY.secret());
+        taskX.setKvnr(*taskY.kvnr());
+
+        const auto& kbvBundleX = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId}));
+        const auto healthCarePrescriptionUuidX = taskY.healthCarePrescriptionUuid().value();
+        const auto healthCarePrescriptionBundleX = model::Binary(healthCarePrescriptionUuidX, kbvBundleX).serializeToJsonString();
+
+        mockDatabase->insertTask(taskX, std::nullopt, healthCarePrescriptionBundleX);
+    }
+
+    CloseTaskHandler handler({});
+
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+
+    const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                       .telematikId = telematikId};
+    const auto body = ResourceTemplates::dispenseOrCloseTaskBodyXml(
+        {.version = ResourceTemplates::Versions::GEM_ERP_current(), .medicationDispenses = {dispenseOptions}});
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwtPharmacy);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+    serverRequest.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
+        handler.handleRequest(sessionContext), HttpStatus::InternalServerError,
+        "in-progress date later than completed time.");
+
+    mockDatabase.reset();
+}
+
+TEST_F(CloseTaskTest, CloseTask_IgnoreFutureLastModified)
 {
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4799);
@@ -708,7 +861,6 @@ TEST_F(CloseTaskTest, CloseTask_FutureLastModified)//NOLINT(readability-function
 
         mockDatabase->insertTask(taskX, std::nullopt, healthCarePrescriptionBundleX);
     }
-
     CloseTaskHandler handler({});
 
     const Header requestHeader{HttpMethod::POST,
@@ -719,22 +871,21 @@ TEST_F(CloseTaskTest, CloseTask_FutureLastModified)//NOLINT(readability-function
 
     const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                        .telematikId = telematikId};
-    const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(dispenseOptions);
+    const auto body = ResourceTemplates::dispenseOrCloseTaskBodyXml(
+        {.version = ResourceTemplates::Versions::GEM_ERP_current(), .medicationDispenses = {dispenseOptions}});
 
     ServerRequest serverRequest{requestHeader};
     serverRequest.setAccessToken(jwtPharmacy);
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
 
     serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
-    serverRequest.setBody(medicationDispenseXml);
+    serverRequest.setBody(body);
     ServerResponse serverResponse;
     AccessLog accessLog;
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
-        handler.handleRequest(sessionContext), HttpStatus::InternalServerError,
-        "in-progress date later than completed time.");
+    EXPECT_NO_THROW(handler.handleRequest(sessionContext));
 
     mockDatabase.reset();
 }

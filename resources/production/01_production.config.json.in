@@ -100,23 +100,29 @@
         }
       },
       "structure-files": [
-        "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0131.xml",
-        "@ERP_FHIR_RESOURCE_DIR@CodeSystem-v2-0203.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/extension-definitions.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/valuesets.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.1",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.2.0",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.3.2/package",
-        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.0",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.5.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.3.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.4.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.fhir.directory-0.11.12/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.ihe-d.terminology-3.0.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
-        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de"
+        "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/terminology.hl7.org-6.0.2/package"
       ],
       "synthesize-codesystems": [
         {"url": "http://loinc.org"                                    , "version": null},
@@ -165,8 +171,7 @@
           "id": "hl7_fhir_r4_core_4_0_1",
           "include": ["missing-codesystems", "missing-valuesets"],
           "match": [
-            { "file": ".*/CodeSystem-v2-0131\\.xml"},
-            { "file": ".*/CodeSystem-v2-0203\\.xml"},
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/terminology\\.hl7\\.org-6\\.0\\.2/package/.*\\.xml"},
             { "file": ".*/hl7.org/.*"}
           ]
         },
@@ -233,45 +238,110 @@
           ]
         },
         {
-          "id": "DE_BASIS_ART_DECOR",
+          "id": "KBV-Schluesseltabellen-Q3/24",
+          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_13", "DMP_1_05"],
+          "match": []
+        },
+        {
+          "id": "KBV-Schluesseltabellen-Q4/24-Q1/25",
+          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_14", "DMP_1_06"],
+          "match": []
+        },
+        {
+          "id": "KBV_FOR_CS_VS-1.1.0",
           "match": [
-            { "url": "http://art-decor.org/fhir/ValueSet/1.2.276.0.76.11.58--20180713162142", "version": "2018-07-13T16:21:42"},
-            { "url": "http://art-decor.org/fhir/ValueSet/1.2.276.0.76.11.59--20180713162125", "version": "2018-07-13T16:21:25"}
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_.*", "version": "1.1.0" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_FOR_.*", "version": "1.1.0" }
           ]
         },
         {
-          "id": "DE_BASIS_IHE_D",
-          "include": ["DE_BASIS_ART_DECOR"],
+          "id": "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0",
           "match": [
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorRole"                , "version": "2018-07-13T13:12:46"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorSpeciality"          , "version": "2018-07-13T13:22:08"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSclassCode"                 , "version": "2018-07-13T13:23:15"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSconfidentialityCode"       , "version": "2018-07-13T13:27:59"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSeventCodeList"             , "version": "2018-07-13T13:28:43"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeDE"              , "version": "2018-12-14T17:07:12"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCode", "version": "2018-10-01T18:33:06"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCode"       , "version": "2019-05-17T13:46:31"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDStypeCode"                  , "version": "2018-07-13T16:22:05"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDScontentTypeCode"           , "version": "2018-07-13T13:28:16"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDScodeList"                  , "version": "2018-07-13T13:27:21"}
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCode", "version": "2019-05-17T13:46:31"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeDE", "version": "2018-12-14T17:07:12"}
           ]
         },
         {
-          "id": "KBV_2023_07_01",
-          "include": ["hl7_fhir_r4_core_4_0_1", "KBV_schluesseltabellen_sliced", "DE_BASIS_IHE_D", "error-codesystems"],
+          "id": "de.basisprofil.r4-1.3.2",
+          "include": ["hl7_fhir_r4_core_4_0_1", "KBV_FOR_CS_VS-1.1.0", "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0"],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.3\\.2/package/.*" }
+          ]
+        },
+        {
+          "id": "kbv.ita.erp-1.1.0",
+          "include": [
+            "KBV_schluesseltabellen_sliced",
+            "de.basisprofil.r4-1.3.2",
+            "error-codesystems"
+          ],
           "match": [
             { "file": ".*/KBV.Basis-1.3.0/package/.*" },
-            { "file": ".*/profiles/kbv.ita.for-1.1.0/package/.*" },
             { "file": ".*/profiles/kbv.ita.erp-1.1.2/.*" },
-            { "url": "http://fhir.de/CodeSystem/.*"         , "version": "1.3.2" },
-            { "url": "http://fhir.de/StructureDefinition/.*", "version": "1.3.2" },
-            { "url": "http://fhir.de/ValueSet/.*"           , "version": "1.3.2" },
-            { "url": "urn:iso:std:iso:3166-2:de"            , "version": "1.3.2" }
+            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_.*", "version": "1.1.0"},
+            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*", "version": "1.1.0"}
           ]
         },
         {
-          "id": "WORKFLOW_1_2_0",
-          "include": ["KBV_2023_07_01"],
+          "id": "de.ihe-d.terminology-3.0.0",
+          "include": ["hl7_fhir_r4_core_4_0_1", "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0"],
+          "match": [
+            { "url": "http://ihe-d.de/CodeSystems/AerztlicheFachrichtungen", "version": "2019-04-05T08:35:59" },
+            { "url": "http://ihe-d.de/CodeSystems/BetroffeneneinschaetzungVertraulichkeitsstufe", "version": "2021-07-06T21:17:27" },
+            { "url": "http://ihe-d.de/CodeSystems/DeutscheDokumentenformate", "version": "2018-12-14T17:07:12" },
+            { "url": "http://ihe-d.de/CodeSystems/DokumentenWarnhinweise", "version": "2021-07-06T21:19:41" },
+            { "url": "http://ihe-d.de/CodeSystems/FacharzttitelDerAerztekammern", "version": "2021-10-15T12:13:26" },
+            { "url": "http://ihe-d.de/CodeSystems/FallkontextBeiDokumentenerstellung", "version": "2021-07-06T21:19:41" },
+            { "url": "http://ihe-d.de/CodeSystems/GrundDerUebermittlung", "version": "2021-07-06T21:18:31" },
+            { "url": "http://ihe-d.de/CodeSystems/IHEXDSclassCode", "version": "2021-06-25T13:44:47" },
+            { "url": "http://ihe-d.de/CodeSystems/IHEXDStypeCode", "version": "2020-02-07T07:55:58" },
+            { "url": "http://ihe-d.de/CodeSystems/NichtPatientBezogeneGesundheitsversorgung", "version": "2018-07-13T16:21:25" },
+            { "url": "http://ihe-d.de/CodeSystems/NichtaerztlicheFachrichtungen", "version": "2021-11-14T15:59:46" },
+            { "url": "http://ihe-d.de/CodeSystems/PatientBezogenenGesundheitsversorgung", "version": "2018-07-13T16:21:42" },
+            { "url": "http://ihe-d.de/CodeSystems/PatientenbeziehungsrollenFuerAutoren", "version": "2021-06-25T13:21:07" },
+            { "url": "http://ihe-d.de/CodeSystems/ProzessrollenFuerAutoren", "version": "2021-06-25T13:21:07" },
+            { "url": "http://ihe-d.de/CodeSystems/QualifikationenNichtAerztlicherAutoren", "version": "2021-10-15T12:13:26" },
+            { "url": "http://ihe-d.de/CodeSystems/QualifikatorenZahnaerztlicherAutoren", "version": "2021-10-15T12:13:26" },
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorRole", "version": "2021-06-25T13:21:07"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorSpeciality", "version": "2021-10-15T12:13:26"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSclassCode", "version": "2021-06-25T13:44:47"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDScodeList", "version": "2021-06-25T13:42:01"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSconfidentialityCode", "version": "2021-07-06T21:17:27"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDScontentTypeCode", "version": "2021-07-06T21:18:31"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSeventCodeList", "version": "2021-07-06T21:19:41"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeINTL", "version": "2021-07-06T21:26:36"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCode", "version": "2021-07-06T21:23:52"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCodeOutsidePatientRelatedHealthcare", "version": "2018-07-13T16:21:25"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCodePatientRelatedHealthcare", "version": "2018-07-13T16:21:42"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCodeDoctoral", "version": "2019-04-05T08:35:59"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCodeNonDoctoral", "version": "2021-11-14T15:59:46"},
+            { "url": "http://ihe-d.de/ValueSets/IHEXDStypeCode", "version": "2020-02-07T07:55:58"}
+          ]
+        },
+        {
+          "id": "de.basisprofil.r4-1.5.0",
+          "include": [ "hl7_fhir_r4_core_4_0_1", "KBV_FOR_CS_VS-1.1.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.5\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.fhir.directory-0.11.12",
+          "include": [ "de.basisprofil.r4-1.5.0", "de.ihe-d.terminology-3.0.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.fhir\\.directory-0\\.11\\.12/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.epa.medication-1.0.3",
+          "include": [ "de.gematik.fhir.directory-0.11.12" ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa\\.medication-1\\.0\\.3/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.erezept-workflow.r4-1.2",
+          "include": ["kbv.ita.erp-1.1.0"],
           "match": [
             { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_.*"                     , "version": "1.2" },
             { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_VS_DocumentType"           , "version": "1.2" },
@@ -282,8 +352,8 @@
           ]
         },
         {
-          "id": "WORKFLOW_1_3_1",
-          "include": ["KBV_2023_07_01"],
+          "id": "de.gematik.erezept-workflow.r4-1.3",
+          "include": ["kbv.ita.erp-1.1.0"],
           "match": [
             { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_.*"                     , "version": "1.3" },
             { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_VS_DocumentType"           , "version": "1.3" },
@@ -294,8 +364,20 @@
           ]
         },
         {
-          "id": "PATIENTENRECHNUNG_1_0_0",
-          "include": ["KBV_2023_07_01"],
+          "id": "de.gematik.erezept-workflow.r4-1.4",
+          "include": ["de.gematik.epa.medication-1.0.3"],
+          "match": [
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_.*"                     , "version": "1.4" },
+            { "url": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_VS_DocumentType"           , "version": "1.4" },
+            { "url": "https://gematik.de/fhir/erp/ValueSet/GEM_ERP_VS_.*"                       , "version": "1.4" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_.*"            , "version": "1.4" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PAR_OUT_OP_Accept", "version": "1.4" },
+            { "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*"            , "version": "1.4" }
+          ]
+        },
+        {
+          "id": "de.gematik.erezept-patientenrechnung.r4-1.0",
+          "include": ["kbv.ita.erp-1.1.0"],
           "match": [
             { "url": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType", "version": "1.0" },
             { "url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_.*", "version": "1.0" },
@@ -304,25 +386,121 @@
           ]
         },
         {
-          "id": "ABGABEDATENBASIS_1_3_1",
-          "include": ["KBV_2023_07_01"],
+          "id": "de.abda.erezeptabgabedatenbasis-1.3&de.abda.erezeptabgabedatenbasis-1.4",
           "match": [
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-.*"          , "version": "1.3" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-.*" , "version": "1.3" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-.*", "version": "1.3" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-.*"  , "version": "1.3" },
-            { "url": "http://fhir.abda.de/StructureDefinition/DAV-PR-ERP-AbgabedatenMeta"       , "version": "1.3" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-.*"            , "version": "1.3" }
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-CompositionTypes" , "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-InvoiceTyp" , "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-MedicationDispenseTyp" , "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-RueckspracheArzt" , "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-DEUEV-Anlage-8" , "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-InvoiceTyp", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-MedicationDispenseTyp", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-VS-ERP-RueckspracheArzt", "version": "1.3"}
           ]
         },
         {
-          "id": "ABGABEDATENPKV_1_2_0",
-          "include": ["ABGABEDATENBASIS_1_3_1"],
+          "id": "de.abda.erezeptabgabedatenbasis-1.3",
+          "include": ["de.abda.erezeptabgabedatenbasis-1.3&de.abda.erezeptabgabedatenbasis-1.4", "de.basisprofil.r4-1.3.2"],
           "match": [
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-.*"         , "version": "1.2" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-.*", "version": "1.2" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-.*", "version": "1.2" },
-            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-.*"           , "version": "1.2" }
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-ZusatzattributGruppe", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Abrechnungszeilen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Gesamtzuzahlung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-KostenVersicherter", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-MwStSatz", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Rezeptaenderung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Vertragskennzeichen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Zaehler", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Zusatzattribute", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenEinheit", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenFaktorkennzeichen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenHerstellung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenPreiskennzeichen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-AbgabedatenBundle", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-AbgabedatenComposition", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Abgabeinformationen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Abrechnungszeilen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Apotheke", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-ZusatzdatenEinheit", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-ZusatzdatenHerstellung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-DAVHerstellerSchluessel", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-PreisangabeEUR", "version": "1.3"},
+            { "url": "http://fhir.abda.de/StructureDefinition/DAV-PR-ERP-AbgabedatenMeta", "version": "1.3"}
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenbasis-1.4",
+          "include": ["de.abda.erezeptabgabedatenbasis-1.3&de.abda.erezeptabgabedatenbasis-1.4", "de.basisprofil.r4-1.3.2"],
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-ZusatzattributGruppe", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Abrechnungszeilen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Gesamtzuzahlung", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-KostenVersicherter", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-MwStSatz", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Rezeptaenderung", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Vertragskennzeichen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Zaehler", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Zusatzattribute", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenEinheit", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenFaktorkennzeichen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenHerstellung", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-ZusatzdatenPreiskennzeichen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-AbgabedatenBundle", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-AbgabedatenComposition", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Abgabeinformationen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Abrechnungszeilen", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-Apotheke", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-ZusatzdatenEinheit", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-Base-ZusatzdatenHerstellung", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-DAVHerstellerSchluessel", "version": "1.4"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PR-ERP-PreisangabeEUR", "version": "1.4"},
+            { "url": "http://fhir.abda.de/StructureDefinition/DAV-PR-ERP-AbgabedatenMeta", "version": "1.4"}
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenpkv-1.2&de.abda.erezeptabgabedatenpkv-1.3",
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-AbrechnungsTyp", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-KostenVersicherterKategorie", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-ZusatzattributSchluesselAutidemAustausch", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-ZusatzdatenEinheitFaktorkennzeichen", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-AbrechnungsTyp", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-KostenVersicherterKategorie", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-ZusatzattributSchluesselAutidemAustausch", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-ZusatzdatenEinheitFaktorkennzeichen", "version": "1.2"}
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenpkv-1.2",
+          "include": ["de.abda.erezeptabgabedatenbasis-1.3", "de.abda.erezeptabgabedatenpkv-1.2&de.abda.erezeptabgabedatenpkv-1.3"],
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-ArtRezeptaenderung", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-AbrechnungsTyp", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-Bankverbindung", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenComposition", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abgabeinformationen", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abrechnungszeilen", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Apotheke", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-ZusatzdatenEinheit", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-ZusatzdatenHerstellung", "version": "1.2"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-ArtRezeptaenderung", "version": "1.2"}
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenpkv-1.3",
+          "include": ["de.abda.erezeptabgabedatenbasis-1.4", "de.abda.erezeptabgabedatenpkv-1.2&de.abda.erezeptabgabedatenpkv-1.3"],
+          "match": [
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-ArtRezeptaenderung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-AbrechnungsTyp", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-EX-ERP-Bankverbindung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenBundle", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-AbgabedatenComposition", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abgabeinformationen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Abrechnungszeilen", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-Apotheke", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-ZusatzdatenEinheit", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-ZusatzdatenHerstellung", "version": "1.3"},
+            { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-ArtRezeptaenderung", "version": "1.3"}
           ]
         }
       ],
@@ -332,13 +510,11 @@
           "env-name": "ERP_DARREICHUNGSFORM_1_13",
           "valid-until": "2024-09-30",
           "groups": [
-            "KBV_2023_07_01",
-            "WORKFLOW_1_2_0",
-            "ABGABEDATENPKV_1_2_0",
-            "PATIENTENRECHNUNG_1_0_0",
-            "KBV_schluesseltabellen_common",
-            "DMP_1_05",
-            "DARREICHUNGSFORM_1_13"
+            "kbv.ita.erp-1.1.0",
+            "KBV-Schluesseltabellen-Q3/24",
+            "de.gematik.erezept-workflow.r4-1.2",
+            "de.abda.erezeptabgabedatenpkv-1.2",
+            "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
         {
@@ -346,13 +522,11 @@
           "env-name": "ERP_2024_10_01",
           "valid-from": "2024-10-01",
           "groups": [
-            "KBV_2023_07_01",
-            "WORKFLOW_1_2_0",
-            "ABGABEDATENPKV_1_2_0",
-            "PATIENTENRECHNUNG_1_0_0",
-            "KBV_schluesseltabellen_common",
-            "DMP_1_06",
-            "DARREICHUNGSFORM_1_14"
+            "kbv.ita.erp-1.1.0",
+            "KBV-Schluesseltabellen-Q4/24-Q1/25",
+            "de.gematik.erezept-workflow.r4-1.2",
+            "de.abda.erezeptabgabedatenpkv-1.2",
+            "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
         {
@@ -360,13 +534,29 @@
           "env-name": "ERP_2024_11_01",
           "valid-from": "2024-11-01",
           "groups": [
-            "KBV_2023_07_01",
-            "WORKFLOW_1_3_1",
-            "ABGABEDATENPKV_1_2_0",
-            "PATIENTENRECHNUNG_1_0_0",
-            "KBV_schluesseltabellen_common",
-            "DMP_1_06",
-            "DARREICHUNGSFORM_1_14"
+            "kbv.ita.erp-1.1.0",
+            "KBV-Schluesseltabellen-Q4/24-Q1/25",
+            "de.gematik.erezept-workflow.r4-1.3",
+            "de.abda.erezeptabgabedatenpkv-1.2",
+            "de.gematik.erezept-patientenrechnung.r4-1.0"
+          ]
+        },
+        {
+          "id": "GEM_2025-01-15",
+          "env-name": "ERP_GEM_2025_01_15",
+          "valid-from": "2025-01-15",
+          "groups": [
+            "de.gematik.erezept-workflow.r4-1.4",
+            "KBV-Schluesseltabellen-Q4/24-Q1/25"
+          ]
+        },
+        {
+          "id": "DAV_2025_01_15",
+          "env-name": "ERP_DAV_2025_01_15",
+          "valid-from": "2025-01-15",
+          "groups": [
+            "de.abda.erezeptabgabedatenpkv-1.3",
+            "KBV-Schluesseltabellen-Q4/24-Q1/25"
           ]
         }
       ]

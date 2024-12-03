@@ -6,7 +6,7 @@
  */
 
 #include "erp/model/Binary.hxx"
-#include "erp/model/Parameters.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 
 #include <gtest/gtest.h>
 

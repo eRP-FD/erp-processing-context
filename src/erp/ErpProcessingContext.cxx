@@ -7,8 +7,8 @@
 
 #include "erp/ErpProcessingContext.hxx"
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/pc/ProfessionOid.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ProfessionOid.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/CommunicationDeleteHandler.hxx"
 #include "erp/service/CommunicationGetHandler.hxx"
@@ -35,7 +35,7 @@
 #include "erp/service/consent/ConsentGetHandler.hxx"
 #include "erp/service/consent/ConsentDeleteHandler.hxx"
 #include "erp/service/consent/ConsentPostHandler.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 
 namespace ErpProcessingContext
 {
@@ -112,11 +112,13 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                                      oid_krankenhaus, oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
     A_19026.finish();
     // ... 6.1.2.7 C_11574
+    // GEMREQ-start A_24279
     A_24279.start("Register the allowed professionOIDs");
     handlerManager.onPostDo("/Task/{id}/$dispense",
             std::make_unique<DispenseTaskHandler>(
                     oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
     A_24279.finish();
+    // GEMREQ-end A_24279
 
     // For GET /MedicationDispense see gemSpec_FD_eRp_V1.1.1, 6.2.1
     // GEMREQ-start A_19405

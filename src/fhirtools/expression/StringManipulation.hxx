@@ -120,6 +120,20 @@ public:
     using BinaryExpression::BinaryExpression;
     Collection eval(const Collection& collection) const override;
 };
+
+// https://build.fhir.org/ig/HL7/FHIRPath/#splitseparator-string--collection
+// STU: Date of Approval: 2024-07-24
+class StringManipSplit : public UnaryExpression
+{
+public:
+    static constexpr auto IDENTIFIER = "split";
+    using UnaryExpression::UnaryExpression;
+    Collection eval(const Collection& collection) const override;
+private:
+    void split(Collection& result, std::string_view str, std::string_view delimiter) const;
+    void chars(Collection& result, std::string_view str) const;
+};
+
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_FHIRTOOLS_EXPRESSION_STRINGMANIPULATION_HXX

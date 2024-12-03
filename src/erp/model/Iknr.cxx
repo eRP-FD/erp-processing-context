@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/Iknr.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/Mod10.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Mod10.hxx"
 
 #include <regex>
 #include <sstream>

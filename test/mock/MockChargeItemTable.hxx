@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCK_CHARGE_ITEM_TABLE_HXX
 #define ERP_PROCESSING_CONTEXT_MOCK_CHARGE_ITEM_TABLE_HXX
 
-#include "erp/database/DatabaseModel.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
 
 #include <list>
 

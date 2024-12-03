@@ -6,11 +6,11 @@
  */
 
 #include "SubscriptionPostHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/crypto/Jws.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/Jws.hxx"
 #include "erp/model/Subscription.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 
 #include <boost/format.hpp>
 #include <sw/redis++/redis++.h>

@@ -9,7 +9,7 @@
 #define TEST_ERP_PROCESSING_CONTEXT_UT_TSL_MOCKOCSPSERVER_HXX
 
 #include "erp/server/HttpsServer.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/util/Configuration.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "test/util/StaticData.hxx"

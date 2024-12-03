@@ -10,7 +10,7 @@
 
 #include <ostream>
 #include "test/erp/database/PostgresDatabaseTest.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 
 struct PostgresDatabaseMedicationDispenseTestParams
 {

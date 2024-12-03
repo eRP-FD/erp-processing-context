@@ -8,13 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEE_ERPTEEPROTOCOL_HXX
 #define ERP_PROCESSING_CONTEXT_TEE_ERPTEEPROTOCOL_HXX
 
-#include "erp/util/SafeString.hxx"
+#include "shared/util/SafeString.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
-#include "erp/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "OuterTeeResponse.hxx"
 
 #include <string>
-#include <erp/server/response/ServerResponse.hxx>
 
 class HsmPool;
 class OuterTeeRequest;

@@ -8,29 +8,30 @@
 #ifndef ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 #define ERP_PROCESSING_CONTEXT_ERPMAIN_HXX
 
-#include <memory>
+#include "shared/MainState.hxx"
+
 #include <functional>
+#include <memory>
 
 class ApplicationHealth;
 class ApplicationHealthAndRegistrationUpdater;
 class BlobCache;
 class BlobDatabase;
-template <typename>
-class Condition;
+class DatabaseConnectionTimerHandler;
 class HsmClient;
 class HsmFactory;
 class HsmPool;
+class HttpsServer;
 class PcServiceContext;
 template<typename>
 class PeriodicTimer;
 class RedisInterface;
 class SeedTimerHandler;
-class TslManager;
 class ThreadPool;
-struct Factories;
-class HttpsServer;
+class TslManager;
 class XmlValidator;
-class DatabaseConnectionTimerHandler;
+
+struct Factories;
 
 using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 using DatabaseConnectionTimer = PeriodicTimer<DatabaseConnectionTimerHandler>;
@@ -43,27 +44,11 @@ using DatabaseConnectionTimer = PeriodicTimer<DatabaseConnectionTimerHandler>;
 class ErpMain
 {
 public:
-
-
     static Factories createProductionFactories();
-
-    /**
-     * This set of states is primarily intended for tests so that a test can wait for a certain state to be
-     * reached. See ErpMainTest.cxx for an example.
-     */
-    enum class State
-    {
-        Unknown,
-        Initializing,
-        WaitingForTermination,
-        Terminating,
-        Terminated
-    };
-    using StateCondition = Condition<State>;
 
     static int runApplication (
         Factories&& factories,
-        StateCondition& state,
+        MainStateCondition& state,
         const std::function<void(PcServiceContext&)>& postInitializationCallback = {});
 
 private:
@@ -74,8 +59,6 @@ private:
         HsmPool& randomSource);
 
     static std::unique_ptr<DatabaseConnectionTimer> setupDatabaseTimer(PcServiceContext& serviceContext);
-
-    static std::shared_ptr<TslManager> setupTslManager (const std::shared_ptr<XmlValidator>& xmlValidator);
 
     static bool waitForHealthUp (PcServiceContext& serviceContext);
 

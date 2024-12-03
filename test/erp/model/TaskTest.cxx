@@ -13,13 +13,13 @@
 #include <rapidjson/pointer.h>
 #include <thread>// for std::this_thread::sleep_for
 
-#include "erp/ErpConstants.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/ModelException.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/ErpConstants.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ModelException.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test_config.h"
 
@@ -177,7 +177,7 @@ TEST_F(TaskTest, SetUuids)//NOLINT(readability-function-cognitive-complexity)
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     model::Task task(id, model::PrescriptionType::apothekenpflichigeArzneimittel,
                      model::Timestamp::now(), model::Timestamp::now(),
-                     model::Task::Status::completed);
+                     model::Task::Status::completed, model::Timestamp::now());
     const auto uuid1 = id.deriveUuid(1);
     const auto uuid2 = id.deriveUuid(2);
     const auto uuid3 = id.deriveUuid(3);

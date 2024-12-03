@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MOCKACCOUNTTABLE_HXX
 #define ERP_PROCESSING_CONTEXT_MOCKACCOUNTTABLE_HXX
 
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/hsm/HsmClient.hxx"
+#include "erp/database/ErpDatabaseModel.hxx"
+#include "shared/hsm/HsmClient.hxx"
 
 #include <map>
 

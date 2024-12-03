@@ -7,7 +7,7 @@
 
 #include "erp/service/chargeitem/ChargeItemHandlerBase.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/util/ByteHelper.hxx"
 
 
 namespace

@@ -5,25 +5,27 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/KeyDerivation.hxx"
-#include "erp/model/AuditData.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/Task.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/compression/ZStd.hxx"
+#include "shared/database/DatabaseModel.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/KeyDerivation.hxx"
+#include "shared/model/AuditData.hxx"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
-#include <erp/compression/ZStd.hxx>
 #include <gtest/gtest.h>
-#include <test/util/ResourceTemplates.hxx>
 
 class DatabaseEncryptionTest : public PostgresDatabaseTest
 {
@@ -56,13 +58,15 @@ protected:
         task.setOwner(owner);
         model::PrescriptionId prescriptionId = db.storeTask(task);
         task.setPrescriptionId(prescriptionId);
-        db.activateTask(task, model::Binary{binId, binData});
+        task.updateLastMedicationDispense();
+        db.activateTask(task, model::Binary{binId, binData}, JwtBuilder::testBuilder().makeJwtArzt());
         auto erxReceipt =
             model::ErxReceipt::fromJsonNoValidation(ResourceManager::instance().getStringResource(erxBundleResource));
         std::vector<model::MedicationDispense> medicationDispenses;
         medicationDispenses.emplace_back(model::MedicationDispense::fromXmlNoValidation(
             ResourceTemplates::medicationDispenseXml({.kvnr = InsurantA, .telematikId = owner})));
-        db.updateTaskMedicationDispenseReceipt(task, medicationDispenses, erxReceipt);
+        db.updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}}, erxReceipt,
+                                               JwtBuilder::testBuilder().makeJwtApotheke());
         db.updateTaskStatusAndSecret(task);
         db.commitTransaction();
         return std::make_tuple(std::move(task), std::move(erxReceipt), std::move(medicationDispenses.at(0)));
@@ -130,6 +134,10 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
             medication_dispense_bundle,
             owner,
             last_medication_dispense,
+            medication_dispense_salt,
+            doctor_identity,
+            pharmacy_identity,
+            last_status_updated,
             COUNT
         };
     };
@@ -138,7 +146,7 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
     auto row = txn.exec_params1("SELECT * FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
-    ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have 20 columns.";
+    ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have " << col::index::COUNT << " columns";
     txn.commit();
     db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
     BlobId blobId = gsl::narrow<BlobId>(row[col::task_key_blob_id].as<int32_t>());
@@ -223,6 +231,24 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
     ASSERT_NO_THROW(decryptedOwner = getDBCodec().decode(encryptedOwner, taskKey));
     EXPECT_EQ(decryptedOwner, owner);
     // 20: last_medication_dispense
+    //     not encrypted
+    // 21:  medication_dispense_salt
+    //     not encrypted
+    // 22: doctor_identity
+    db_model::EncryptedBlob encryptedDoctorIdentity{row[col::doctor_identity].as<db_model::postgres_bytea>()};
+    SafeString decryptedDoctorIdentity;
+    ASSERT_NO_THROW(decryptedDoctorIdentity = getDBCodec().decode(encryptedDoctorIdentity, taskKey));
+    SafeString expectedDoctorIdentity{
+        R"({"id": "0123456789", "name": "Institutions- oder Organisations-Bezeichnung", "oid": "1.2.276.0.76.4.30"})"};
+    EXPECT_EQ(decryptedDoctorIdentity, expectedDoctorIdentity);
+    // 23: pharmacy_identity
+    db_model::EncryptedBlob encryptedPharmacyIdentity{row[col::pharmacy_identity].as<db_model::postgres_bytea>()};
+    SafeString decryptedPharmacyIdentity;
+    ASSERT_NO_THROW(decryptedPharmacyIdentity = getDBCodec().decode(encryptedPharmacyIdentity, taskKey));
+    SafeString expectedPharmacyIdentity{
+        R"({"id": "3-SMC-B-Testkarte-883110000120312", "name": "Institutions- oder Organisations-Bezeichnung", "oid": "1.2.276.0.76.4.54"})"};
+    EXPECT_EQ(decryptedPharmacyIdentity, expectedPharmacyIdentity);
+    // 24:  last_status_update date
     //     not encrypted
     A_19688.finish();
 }

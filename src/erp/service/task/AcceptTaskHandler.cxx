@@ -6,23 +6,23 @@
  */
 
 #include "erp/service/task/AcceptTaskHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/common/MimeType.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
 #include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
-#include "erp/model/Bundle.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/PrescriptionId.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/server/response/ServerResponse.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/server/response/ServerResponse.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <date/tz.h>
 

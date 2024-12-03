@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
 */
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"

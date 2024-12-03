@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="icd-10-gm-mehrfachcodierungs-kennzeichen"/>
+  <meta>
+    <profile value="http://hl7.org/fhir/StructureDefinition/shareablevalueset"/>
+  </meta>
+  <url value="http://fhir.de/ValueSet/icd-10-gm-mehrfachcodierungs-kennzeichen"/>
+  <version value="1.5.0"/>
+  <name value="MehrfachkodierungsKennzeichen"/>
+  <title value="Mehrfachkodierungs-Kennzeichen ICD10GM ValueSet"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="Zusatzkennzeichen für postkoordinierte ICD-10-gm-Codes "/>
+  <compose>
+    <include>
+      <system value="http://fhir.de/CodeSystem/icd-10-gm-mehrfachcodierungs-kennzeichen"/>
+    </include>
+  </compose>
+</ValueSet>

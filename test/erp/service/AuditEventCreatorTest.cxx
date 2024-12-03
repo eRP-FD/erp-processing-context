@@ -5,12 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/service/AuditEventCreator.hxx"
+#include "shared/audit/AuditEventCreator.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/service/AuditEventTextTemplates.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/audit/AuditEventTextTemplates.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test/util/JwtBuilder.hxx"
-
 #include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>

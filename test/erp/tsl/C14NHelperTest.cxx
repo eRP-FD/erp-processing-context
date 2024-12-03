@@ -5,17 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/tsl/C14NHelper.hxx"
+#include "shared/tsl/C14NHelper.hxx"
 
 #include <gtest/gtest.h>
 
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/String.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/String.hxx"
 
-#include "erp/xml/XmlDocument.hxx"
+#include "shared/xml/XmlDocument.hxx"
 #include "test_config.h"
 
 

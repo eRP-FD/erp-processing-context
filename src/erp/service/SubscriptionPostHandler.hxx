@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SUBSCRIPTIONPOSTHANDLER_HXX
 
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/model/TelematikId.hxx"
+#include "shared/model/TelematikId.hxx"
 
 class PcServiceContext;
 class SessionContext;

@@ -7,8 +7,8 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/util/Base64.hxx"
-#include "erp/util/Random.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Random.hxx"
 
 #include <stdexcept>
 #include <string>
@@ -70,13 +70,14 @@ TEST_F(Base64Test, encodeString)
 
 TEST_F(Base64Test, encodePadding)//NOLINT(readability-function-cognitive-complexity)
 {
-    EXPECT_EQ("", Base64::encode(""));
-    EXPECT_EQ("Zg==", Base64::encode("f"));
-    EXPECT_EQ("Zm8=", Base64::encode("fo"));
-    EXPECT_EQ("Zm9v", Base64::encode("foo"));
-    EXPECT_EQ("Zm9vYg==", Base64::encode("foob"));
-    EXPECT_EQ("Zm9vYmE=", Base64::encode("fooba"));
-    EXPECT_EQ("Zm9vYmFy", Base64::encode("foobar"));
+    using namespace std::string_view_literals;
+    EXPECT_EQ("", Base64::encode(""sv));
+    EXPECT_EQ("Zg==", Base64::encode("f"sv));
+    EXPECT_EQ("Zm8=", Base64::encode("fo"sv));
+    EXPECT_EQ("Zm9v", Base64::encode("foo"sv));
+    EXPECT_EQ("Zm9vYg==", Base64::encode("foob"sv));
+    EXPECT_EQ("Zm9vYmE=", Base64::encode("fooba"sv));
+    EXPECT_EQ("Zm9vYmFy", Base64::encode("foobar"sv));
 }
 
 

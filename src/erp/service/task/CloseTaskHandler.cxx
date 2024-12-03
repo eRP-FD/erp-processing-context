@@ -6,8 +6,8 @@
  */
 
 #include "erp/service/task/CloseTaskHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/common/MimeType.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/network/message/MimeType.hxx"
 #include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
@@ -18,23 +18,24 @@
 #include "erp/model/KbvMedicationFreeText.hxx"
 #include "erp/model/KbvMedicationIngredient.hxx"
 #include "erp/model/KbvMedicationPzn.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/NumberAsStringParserWriter.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/Signature.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Demangle.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Demangle.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/Uuid.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 
@@ -90,6 +91,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "Task not found for prescription id");
     auto& task = taskAndKey->task;
     const auto taskStatus = task.status();
+    const auto inProgressDate = task.lastStatusChangeDate();
 
     ErpExpect(taskStatus != model::Task::Status::cancelled, HttpStatus::Gone, "Task has already been deleted");
 
@@ -115,26 +117,28 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
-    std::vector<model::MedicationDispense> medicationDispenses;
-    if(session.request.getBody().empty())
+    model::MedicationsAndDispenses medicationsAndDispenses;
+    if (!session.request.getBody().empty())
+    {
+        medicationsAndDispenses = parseBody(session, Operation::POST_Task_id_close);
+    }
+    if(medicationsAndDispenses.medicationDispenses.empty())
     {
         A_24287.start("Aufruf ohne MedicationDispense im Request Body");
         model::MedicationDispenseId medicationDispenseId(prescriptionId, 0);
-        auto medicationDispense = databaseHandle->retrieveMedicationDispense(kvnr.value(), medicationDispenseId);
-        ErpExpect(medicationDispense.has_value(), HttpStatus::Forbidden, "Medication dispense does not exist.");
+        auto retrieved = databaseHandle->retrieveMedicationDispense(kvnr.value(), medicationDispenseId);
+        ErpExpect(!retrieved.medicationDispenses.empty(), HttpStatus::Forbidden, "Medication dispense does not exist.");
         A_24287.finish();
-        medicationDispenses.push_back(std::move(medicationDispense.value()));
     }
     else
     {
-        medicationDispenses = medicationDispensesFromBody(session);
-        checkMedicationDispenses(medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
+        checkMedicationDispenses(medicationsAndDispenses.medicationDispenses, prescriptionId, kvnr.value(),
+                                 telematikIdFromAccessToken.value());
         task.updateLastMedicationDispense();
     }
 
     A_19233_05.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
-    const auto inProgressDate = task.lastModifiedDate();
     const auto completedTimestamp = model::Timestamp::now();
     ErpExpect(inProgressDate < completedTimestamp, HttpStatus::InternalServerError, "in-progress date later than completed time.");
     const auto linkBase = getLinkBase();
@@ -198,11 +202,21 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     A_20513.finish();
 
     // store in DB:
-    A_19248_02.start("Save modified Task and MedicationDispense / Receipt objects");
+    A_19248_05.start("Save modified Task and MedicationDispense / Receipt objects");
     task.updateLastUpdate();
     ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing key for task");
-    databaseHandle->updateTaskMedicationDispenseReceipt(task, *taskAndKey->key, medicationDispenses, responseReceipt);
-    A_19248_02.finish();
+    if (medicationsAndDispenses.medicationDispenses.empty())
+    {
+        // body was empty so we don't override medicationDispense
+        databaseHandle->updateTaskReceipt(task, responseReceipt, *taskAndKey->key, session.request.getAccessToken());
+    }
+    else
+    {
+        databaseHandle->updateTaskMedicationDispenseReceipt(task, *taskAndKey->key,
+                                                            createBundle(medicationsAndDispenses), responseReceipt,
+                                                            session.request.getAccessToken());
+    }
+    A_19248_05.finish();
 
     A_19514.start("HttpStatus 200 for successful POST");
     makeResponse(session, HttpStatus::OK, &responseReceipt);

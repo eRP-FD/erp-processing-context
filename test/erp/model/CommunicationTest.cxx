@@ -5,10 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/ResourceFactory.hxx"
-#include "erp/model/ResourceNames.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test_config.h"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/JsonTestUtils.hxx"
@@ -937,7 +938,6 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
 {
     std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                            .setPrescriptionId("160.123.456.789.123.58")
-                           .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
                            .setRecipient(ActorRole::Pharmacists, "PharmacyX")
                            .setPayload("Some change request payload")
                            .createJsonString();
@@ -981,7 +981,6 @@ TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
 {
     std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
     .setPrescriptionId("160.123.456.789.123.58")
-    .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
     .setSender(ActorRole::Pharmacists, "PharmacyX")
     .setRecipient(ActorRole::Insurant, InsurantA)
     .setPayload("Some change request payload")

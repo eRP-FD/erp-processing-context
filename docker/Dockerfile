@@ -59,17 +59,30 @@ RUN CC=gcc-${GCC_VERSION} CXX=g++-${GCC_VERSION} cmake \
     cmake --install . --strip --component production &&\
     cp install_manifest_production.txt install_manifest.txt
 
-COPY docker/manifest.template /erp/bin/erp-processing-context.manifest
-COPY docker/manifest.release.kubernetes.template /erp/bin/erp-processing-context-kubernetes.manifest
-COPY docker/create_graphene_manifest.sh /build/erp-processing-context/release
+COPY docker/manifest.erp.release.template /erp/bin/erp-processing-context.manifest
+COPY docker/manifest.erp.release.kubernetes.template /erp/bin/erp-processing-context-kubernetes.manifest
 
-RUN chmod 755 /build/erp-processing-context/release/create_graphene_manifest.sh && \
-    /build/erp-processing-context/release/create_graphene_manifest.sh \
+COPY docker/manifest.exporter.release.template /erp/bin/exporter.manifest
+COPY docker/manifest.exporter.release.kubernetes.template /erp/bin/exporter-kubernetes.manifest
+
+COPY docker/create_gramine_manifest.bash /build/erp-processing-context/release
+
+# Create signed manifest files for erp-processing-context.
+RUN chmod 755 /build/erp-processing-context/release/create_gramine_manifest.bash && \
+    /build/erp-processing-context/release/create_gramine_manifest.bash \
     /build/erp-processing-context/release/install_manifest.txt \
     /erp/bin/erp-processing-context.manifest
-RUN /build/erp-processing-context/release/create_graphene_manifest.sh \
+RUN /build/erp-processing-context/release/create_gramine_manifest.bash \
     /build/erp-processing-context/release/install_manifest.txt \
     /erp/bin/erp-processing-context-kubernetes.manifest
+
+# Create signed manifest files for medication-exporter.
+RUN /build/erp-processing-context/release/create_gramine_manifest.bash \
+    /build/erp-processing-context/release/install_manifest.txt \
+    /erp/bin/exporter.manifest
+RUN /build/erp-processing-context/release/create_gramine_manifest.bash \
+    /build/erp-processing-context/release/install_manifest.txt \
+    /erp/bin/exporter-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context.tar.gz /erp
 
@@ -89,17 +102,30 @@ RUN CC=gcc-12 CXX=g++-12 cmake \
     cmake --install . --strip --component production &&\
     cp install_manifest_production.txt install_manifest.txt
 
-COPY docker/manifest.reldeb.template /debug/erp/bin/erp-processing-context.manifest
-COPY docker/manifest.kubernetes.template /debug/erp/bin/erp-processing-context-kubernetes.manifest
-COPY docker/create_graphene_manifest.sh /build/erp-processing-context/reldeb
+COPY docker/manifest.erp.reldeb.template /debug/erp/bin/erp-processing-context.manifest
+COPY docker/manifest.erp.reldeb.kubernetes.template /debug/erp/bin/erp-processing-context-kubernetes.manifest
 
-RUN chmod 755 /build/erp-processing-context/reldeb/create_graphene_manifest.sh && \
-    /build/erp-processing-context/reldeb/create_graphene_manifest.sh \
+COPY docker/manifest.exporter.reldeb.template /debug/erp/bin/exporter.manifest
+COPY docker/manifest.exporter.reldeb.kubernetes.template /debug/erp/bin/exporter-kubernetes.manifest
+
+COPY docker/create_gramine_manifest.bash /build/erp-processing-context/reldeb
+
+# Create signed manifest files for erp-processing-context.
+RUN chmod 755 /build/erp-processing-context/reldeb/create_gramine_manifest.bash && \
+    /build/erp-processing-context/reldeb/create_gramine_manifest.bash \
     /build/erp-processing-context/reldeb/install_manifest.txt \
     /debug/erp/bin/erp-processing-context.manifest
-RUN /build/erp-processing-context/reldeb/create_graphene_manifest.sh \
+RUN /build/erp-processing-context/reldeb/create_gramine_manifest.bash \
     /build/erp-processing-context/reldeb/install_manifest.txt \
     /debug/erp/bin/erp-processing-context-kubernetes.manifest
+
+# Create signed manifest files for medication-exporter.
+RUN /build/erp-processing-context/reldeb/create_gramine_manifest.bash \
+    /build/erp-processing-context/reldeb/install_manifest.txt \
+    /debug/erp/bin/exporter.manifest
+RUN /build/erp-processing-context/reldeb/create_gramine_manifest.bash \
+    /build/erp-processing-context/reldeb/install_manifest.txt \
+    /debug/erp/bin/exporter-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
@@ -121,6 +147,11 @@ RUN cd /debug/erp/bin && gramine-sgx-sign \
     --output   /debug/erp/bin/erp-processing-context-kubernetes.manifest.sgx \
     --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
     --key      /enclave-dummy-key.pem
+RUN cd /debug/erp/bin && gramine-sgx-sign \
+    --manifest /debug/erp/bin/exporter-kubernetes.manifest \
+    --output   /debug/erp/bin/exporter-kubernetes.manifest.sgx \
+    --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
+    --key      /enclave-dummy-key.pem
 
 WORKDIR /erp
 COPY --from=release_build /build/erp-processing-context/release/erp-processing-context.tar.gz .
@@ -132,9 +163,14 @@ RUN cd /erp/bin && gramine-sgx-sign \
     --output   /erp/bin/erp-processing-context-kubernetes.manifest.sgx \
     --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
     --key      /enclave-dummy-key.pem
+RUN cd /erp/bin && gramine-sgx-sign \
+    --manifest /erp/bin/exporter-kubernetes.manifest \
+    --output   /erp/bin/exporter-kubernetes.manifest.sgx \
+    --libpal   /usr/lib/x86_64-linux-gnu/gramine/sgx/libpal.so \
+    --key      /enclave-dummy-key.pem
 
 WORKDIR /
-COPY docker/start_erp.sh /start_erp.sh
-RUN chmod 755 /start_erp.sh
+COPY docker/start.bash /start.bash
+RUN chmod 755 /start.bash
 
-ENTRYPOINT ["/start_erp.sh"]
+ENTRYPOINT ["/start.bash"]

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ValueSet xmlns="http://hl7.org/fhir">
+  <id value="HealthcareSpecialtyTypeVS"/>
+  <url value="https://gematik.de/fhir/directory/ValueSet/HealthcareSpecialtyTypeVS"/>
+  <version value="0.11.12"/>
+  <name value="HealthcareServiceSpecialtyVS"/>
+  <title value="ValueSet of HealthcareService specialities"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="HealthcareService specialities"/>
+  <compose>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/PharmacyHealthcareSpecialtyCS"/>
+    </include>
+    <include>
+      <system value="https://gematik.de/fhir/directory/CodeSystem/HealthcareServiceSpecialtyCS"/>
+    </include>
+    <include>
+      <system value="http://terminology.hl7.org/CodeSystem/service-type"/>
+    </include>
+  </compose>
+</ValueSet>

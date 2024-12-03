@@ -6,10 +6,10 @@
  */
 
 #include "erp/model/Subscription.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/RapidjsonDocument.hxx"
-#include "erp/util/String.hxx"
-#include "erp/util/UrlHelper.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
+#include "shared/util/String.hxx"
+#include "shared/util/UrlHelper.hxx"
 
 namespace model
 {

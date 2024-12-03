@@ -5,11 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/HsmSession.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/production/HsmRawSession.hxx"
-#include "erp/hsm/HsmSessionExpiredException.hxx"
-#include "erp/hsm/production/HsmProductionClient.hxx"
+#include "shared/hsm/HsmSession.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/production/HsmRawSession.hxx"
+#include "shared/hsm/HsmSessionExpiredException.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
 
 #include "mock/hsm/HsmMockClient.hxx"
 #include "test/mock/MockBlobDatabase.hxx"

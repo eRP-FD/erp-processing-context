@@ -6,8 +6,8 @@
  */
 
 #include "RegistrationMock.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/health/ApplicationHealth.hxx"
+#include "shared/util/TLog.hxx"
+#include "src/shared/util/health/ApplicationHealth.hxx"
 
 #include <gtest/gtest.h>
 

@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/model/ModelException.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ModelException.hxx"
 
 #include <gtest/gtest.h>
 

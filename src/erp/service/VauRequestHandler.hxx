@@ -8,13 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_VAUREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_VAUREQUESTHANDLER_HXX
 
-#include "erp/crypto/OpenSslHelper.hxx"
-
-#include "erp/crypto/Jwt.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/handler/RequestHandlerManager.hxx"
-#include "erp/server/response/ServerResponse.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "erp/server/RequestHandler.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/server/handler/RequestHandlerManager.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 
 
 class AccessLog;

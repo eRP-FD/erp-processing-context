@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <gtest/gtest.h>
 

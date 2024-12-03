@@ -8,8 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_DATABASECONNECTIONTIMER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_DATABASE_DATABASECONNECTIONTIMER_HXX
 
-#include "erp/util/PeriodicTimer.hxx"
+#include "shared/util/PeriodicTimer.hxx"
 
+class DatabaseBackend;
 class ThreadPool;
 class PcServiceContext;
 

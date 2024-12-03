@@ -5,12 +5,12 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/common/Header.hxx"
-#include "erp/compression/Deflate.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/compression/Deflate.hxx"
+#include "shared/network/message/Header.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/RuntimeConfiguration.hxx"
+#include "src/shared/enrolment/VsdmHmacKey.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <gtest/gtest.h>

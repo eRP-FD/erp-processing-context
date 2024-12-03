@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/util/RapidjsonDocument.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 
 #include <gtest/gtest.h>
 

@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_MOCK_URLREQUESTSENDERMOCK_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_MOCK_URLREQUESTSENDERMOCK_HXX
 
-#include "erp/client/UrlRequestSender.hxx"
-#include "erp/crypto/Certificate.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
+#include "shared/crypto/Certificate.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 
 #include <mutex>

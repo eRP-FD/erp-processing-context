@@ -9,11 +9,11 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/database/DatabaseModel.hxx"
+#include "shared/database/DatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/util/Configuration.hxx"
 #include "test_config.h"
 
 class TransactionTest : public PostgresDatabaseTest
@@ -35,7 +35,7 @@ TEST_F(TransactionTest, rollback)
         PostgresBackend database;
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
-                                                               model::Timestamp::now())));
+                                                               model::Timestamp::now(), model::Timestamp::now())));
         database.updateTask(
             *prescriptionId,
             db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),
@@ -64,7 +64,7 @@ TEST_F(TransactionTest, commit)
         PostgresBackend database;
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
-                                                               model::Timestamp::now())));
+                                                               model::Timestamp::now(), model::Timestamp::now())));
         database.updateTask(
             *prescriptionId,
             db_model::EncryptedBlob(db_model::postgres_bytea_view(reinterpret_cast<const std::byte*>("accessCode"))),

@@ -6,17 +6,17 @@
  */
 
 #include "erp/service/chargeitem/ChargeItemPostHandler.hxx"
-#include "erp/server/request/ServerRequest.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/model/ModelException.hxx"
+#include "shared/model/ModelException.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <pqxx/except>
 

@@ -7,11 +7,11 @@
 
 #include "TpmTestHelper.hxx"
 #if !defined __APPLE__ && !defined _WIN32
-#include "erp/tpm/TpmProduction.hxx"
+#include "shared/tpm/TpmProduction.hxx"
 #endif
-#include "erp/hsm/BlobCache.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/hsm/BlobCache.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Expect.hxx"
 #include "mock/tpm/TpmMock.hxx"
 #include "mock/util/MockConfiguration.hxx"
 

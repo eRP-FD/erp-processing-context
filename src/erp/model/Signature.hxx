@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_SIGNATURE_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_SIGNATURE_HXX
 
-#include "erp/model/Resource.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <rapidjson/document.h>
 #include <optional>

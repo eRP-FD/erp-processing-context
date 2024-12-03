@@ -1,0 +1,89 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2024
+# (C) Copyright IBM Corp. 2021, 2024
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+libos.entrypoint                    = "erp-medication-exporter"
+libos.check_invalid_pointers        = false
+
+loader.entrypoint                   = "file:/usr/lib/x86_64-linux-gnu/gramine/libsysdb.so"
+loader.log_level                    = "warning"                   # none error warning debug trace all
+loader.log_file                     = "/var/log/erp/gramine-exporter.log"
+loader.insecure__use_cmdline_argv   = false
+loader.argv0_override               = "erp-medication-exporter"
+loader.insecure__use_host_env       = true
+loader.env.LD_LIBRARY_PATH          = "/erp/lib:/lib:/lib/x86_64-linux-gnu:/usr/lib/x86_64-linux-gnu"
+
+sgx.enclave_size                    = "4096M"
+sgx.nonpie_binary                   = false
+sgx.max_threads                     = 210
+sgx.preheat_enclave                 = true
+sys.enable_sigterm_injection        = true         # Allow for injecting SIGTERM signal from the host.
+sys.insecure__allow_eventfd         = true
+
+fs.mounts = [
+    {type = "chroot", uri = "file:/usr/lib/x86_64-linux-gnu/gramine/runtime/glibc/", path = "/lib" },
+    {type = "chroot", uri = "file:/erp", path = "/erp" },
+    {type = "chroot", uri = "file:/lib/x86_64-linux-gnu", path = "/lib/x86_64-linux-gnu" },
+    {type = "chroot", uri = "file:/usr/lib/x86_64-linux-gnu", path = "/usr/lib/x86_64-linux-gnu" },
+    {type = "chroot", uri = "file:/etc", path = "/etc" },
+    {type = "chroot", uri = "file:/etc/host.conf", path = "/etc/host.conf" },
+    {type = "chroot", uri = "file:/tmp", path = "/tmp" },
+    {type = "chroot", uri = "file:/var/log/erp", path = "/var/log/erp" },
+    {type = "chroot", uri = "file:/var/config", path = "/var/config" },
+    {type = "chroot", uri = "file:/dev/tpmrm0", path = "/dev/tpmrm0" },
+    {type = "chroot", uri = "file:/dev/tpm0", path = "/dev/tpm0" },
+    {type = "chroot", uri = "file:/usr/share/zoneinfo/", path = "/usr/share/zoneinfo/" }
+]
+fs.start_dir = "/erp/bin"
+
+# Allowed files can be read/written from within the gramine environment.
+sgx.allowed_files = [
+# Allow some host OS resources for proper operation.
+"file:/etc/nsswitch.conf",
+"file:/etc/ethers",
+"file:/etc/hosts",
+"file:/etc/group",
+"file:/etc/passwd",
+"file:/etc/host.conf",
+"file:/etc/resolv.conf",
+# getaddrinfo(3) configuration file. Glibc reads this file to correctly find network addresses. For more info, see 'man gai.conf'.
+"file:/etc/gai.conf",
+"file:/etc/ld.so.cache",
+"file:/etc/localtime",
+"file:/etc/ssl/openssl.cnf",
+# TPM/TSS runtime generated binary files.
+"file:/erp/bin/h80fffffe.bin",
+"file:/erp/bin/h80ffffff.bin",
+"file:/erp/bin/hp80fffffe.bin",
+"file:/erp/bin/hp80ffffff.bin",
+"file:/erp/bin/h01c0000a.bin",
+"file:/erp/bin/nvp01c0000a.bin",
+"file:/erp/bin/h80fffffd.bin",
+"file:/erp/bin/hp80fffffd.bin",
+"file:/erp/bin/h03000000.bin",
+"file:/erp/bin/h03000001.bin",
+# ERP auxiliary configuration
+"file:/var/config/erp/tsl/tsl-ca.der",
+"file:/var/config/erp/config/POSTGRES_CERTIFICATE",
+"file:/var/config/erp/config/POSTGRES_SSL_CERTIFICATE",
+"file:/var/config/erp/config/POSTGRES_SSL_KEY",
+"file:/var/config/erp/config/sslRootCaPath",
+"file:/var/config/erp/config/TSL_SSL_cert_chain.pem",
+"file:/var/config/erp/hsm/work-keyspec",
+"file:/var/config/haproxy/secrets/ca.crt"
+]
+
+# Trusted files are signed and can only be read from within the gramine environment.
+sgx.trusted_files = [
+"file:/usr/share/zoneinfo/",
+# Host OS library locations
+"file:/lib/x86_64-linux-gnu/",
+"file:/usr/lib/x86_64-linux-gnu/",
+"file:/usr/lib/x86_64-linux-gnu/gramine/",
+# ERP files
+"file:/var/log/erp/",
+__ADDITIONAL_TRUST_FILES__
+]

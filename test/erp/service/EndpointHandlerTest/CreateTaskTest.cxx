@@ -1,8 +1,8 @@
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 
-#include "erp/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "test/util/TestUtils.hxx"
 
 class CreateTaskTest : public EndpointHandlerTest {

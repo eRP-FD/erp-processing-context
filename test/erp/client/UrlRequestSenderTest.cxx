@@ -5,13 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/client/UrlRequestSender.hxx"
-#include "erp/common/Constants.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
+#include "shared/common/Constants.hxx"
 #include "erp/server/HttpsServer.hxx"
-#include "erp/server/handler/RequestHandlerInterface.hxx"
-#include "erp/server/response/ServerResponse.hxx"
+#include "erp/server/RequestHandler.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
-#include "erp/util/Expect.hxx"
+#include "shared/util/Expect.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -115,7 +116,8 @@ TEST_F(UrlRequestSenderTest, testHttpsReadTimeout)//NOLINT(readability-function-
     ASSERT_NE(server, nullptr) << "Server must be created";
     server->serve(1, "test");
 
-    UrlRequestSender urlRequestSender({}, 1, Constants::resolveTimeout, false);
+    UrlRequestSender urlRequestSender(Configuration::instance().getStringValue(ConfigurationKey::SERVER_CERTIFICATE), 1,
+                                      Constants::resolveTimeout);
     std::stringstream url;
     url << "https://127.0.0.1:" << port << "/test_path";
     EXPECT_ANY_THROW(urlRequestSender.send(url.str(), HttpMethod::POST, EXPECTED_BODY));

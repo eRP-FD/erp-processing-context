@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/client/UrlRequestSender.hxx"
-#include "erp/common/Constants.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/GLog.hxx"
-#include "erp/util/GLogConfiguration.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/GLog.hxx"
+#include "shared/util/GLogConfiguration.hxx"
 
 
 int main (int argc, char** argv)
@@ -41,7 +41,7 @@ int main (int argc, char** argv)
                 TLOG(INFO) << "Using no certificates";
             }
 
-            UrlRequestSender requestSender(SafeString{std::move(certificates)}, 30 /*connectionTimeoutSeconds*/,
+            UrlRequestSender requestSender(std::move(certificates), 30 /*connectionTimeoutSeconds*/,
                 Constants::resolveTimeout);
 
             ClientResponse response = requestSender.send(

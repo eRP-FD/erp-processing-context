@@ -7,11 +7,11 @@
 
 #include "erp/service/CommunicationDeleteHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 
-#include "erp/common/MimeType.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/network/message/MimeType.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/FileHelper.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
 

@@ -5,16 +5,24 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
-#include "erp/util/ByteHelper.hxx"
+#include "shared/model/OperationOutcome.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTest.hxx"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockDatabase.hxx"
+#include "test/util/CryptoHelper.hxx"
+#include "test/util/ErpMacros.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
-#include <erp/model/OperationOutcome.hxx>
 
 class AcceptTaskTest : public EndpointHandlerTest
 {
@@ -49,9 +57,10 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-
-    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
-    ASSERT_NO_THROW(resultBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
+    std::optional<model::UnspecifiedResource> unspec;
+    ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody())));
+    ASSERT_NO_THROW(testutils::bestEffortValidate(*unspec)) << serverResponse.getBody();
+    ASSERT_NO_THROW(resultBundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument()));
     ASSERT_EQ(resultBundle->getResourceCount(), numOfExpectedResources);
 
     const auto tasks = resultBundle->getResourcesByType<model::Task>("Task");
@@ -155,7 +164,7 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
     const auto healthCarePrescriptionBundle =
         model::Binary(healthCarePrescriptionUuid, CryptoHelper::toCadesBesSignature(kbvBundle));
     task.setStatus(model::Task::Status::ready);
-    db->activateTask(task, healthCarePrescriptionBundle);
+    db->activateTask(task, healthCarePrescriptionBundle, mJwtBuilder->makeJwtArzt());
     db->commitTransaction();
     db.reset();
 

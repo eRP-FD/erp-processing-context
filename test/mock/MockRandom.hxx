@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_MOCK_MOCKHSM_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_MOCK_MOCKHSM_HXX
 
-#include "erp/crypto/RandomSource.hxx"
-#include "erp/util/SafeString.hxx"
+#include "shared/crypto/RandomSource.hxx"
+#include "shared/util/SafeString.hxx"
 
 class MockRandom
     : public RandomSource

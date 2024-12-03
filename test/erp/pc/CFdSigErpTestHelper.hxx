@@ -1,8 +1,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_PC_CFDSIGERPTESTHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_PC_CFDSIGERPTESTHELPER_HXX
 
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Hash.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
 #include "test_config.h"
 #include "test/util/ResourceManager.hxx"
 #include "mock/util/MockConfiguration.hxx"

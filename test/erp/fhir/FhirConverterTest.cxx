@@ -7,9 +7,11 @@
 
 #include <gtest/gtest.h>
 
-#include "erp/fhir/Fhir.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/XmlMemory.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -157,7 +159,7 @@ INSTANTIATE_TEST_SUITE_P(
     SampleFiles{"task_create_parameters.xml"        , "task_create_parameters.json"},
     SampleFiles{"task.xml"                          , "task.json"},
     SampleFiles{"task_no_secret.xml"                , "task_no_secret.json"},
-    SampleFiles{"task_empty_meta_element.xml"       , "task_empty_meta_element.json"},
+    SampleFiles{"task_empty_meta_element.xml"       , "task_empty_meta_element.json", "Not valid FHIR"},
     SampleFiles{"patient_empty_adress_array.xml"    , "patient_empty_adress_array.json"}// clang-format on
         ));
 
@@ -178,6 +180,7 @@ INSTANTIATE_TEST_SUITE_P(fhirSpecialCases , FhirConverterTest,
     SampleFiles{"ERP-8395-primary-without-value-null-extension.xml" , "ERP-8395-primary-without-value-null-extension.json"},
     SampleFiles{"ERP-8395-primary-without-value-null-value.xml"     , "ERP-8395-primary-without-value-null-value.json"},
     SampleFiles{"ERP-8395-primary-without-value-null-mixed.xml"     , "ERP-8395-primary-without-value-null-mixed.json"},
-    SampleFiles{"ERP-10031-basisprofil-de-r4.xml"                   , "ERP-10031-basisprofil-de-r4.json"}
+    SampleFiles{"ERP-10031-basisprofil-de-r4.xml"                   , "ERP-10031-basisprofil-de-r4.json"},
+    SampleFiles{"ERP-23311-CodeSystem-HCPCS-all-codes.xml"          , "ERP-23311-CodeSystem-HCPCS-all-codes.json"}
     // clang-format on
 ));

@@ -171,6 +171,131 @@
               </TSPService>
             </TSPServices>
           </TrustServiceProvider>
+          <TrustServiceProvider>
+            <TSPInformation>
+                <TSPName>
+                    <Name xml:lang="DE">achelos GmbH</Name>
+                </TSPName>
+                <TSPTradeName>
+                    <Name xml:lang="DE">achelos ECC Test</Name>
+                </TSPTradeName>
+                <TSPAddress>
+                    <PostalAddresses>
+                        <PostalAddress xml:lang="DE">
+                            <StreetAddress>Vatmannstraße 1</StreetAddress>
+                            <Locality>Paderborn</Locality>
+                            <StateOrProvince>NRW</StateOrProvince>
+                            <PostalCode>33100</PostalCode>
+                            <CountryName>DE</CountryName>
+                        </PostalAddress>
+                    </PostalAddresses>
+                    <ElectronicAddress>
+                        <URI>mailto:not.valid@test.only.achelos.de</URI>
+                    </ElectronicAddress>
+                </TSPAddress>
+                <TSPInformationURI>
+                    <URI xml:lang="DE">https://www.achelos.de/</URI>
+                </TSPInformationURI>
+            </TSPInformation>
+            <TSPServices>
+              <TSPService>
+                    <ServiceInformation>
+                        <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP</ServiceTypeIdentifier>
+                        <ServiceName>
+                            <Name xml:lang="DE">CN=ACLOS.OCSP-FD1 NOT-VALID,O=achelos GmbH TEST-ONLY,C=DE</Name>
+                        </ServiceName>
+                        <ServiceDigitalIdentity>
+                            <DigitalId>
+                                <X509Certificate>MIIDBDCCAqqgAwIBAgIQDFNnzw3sRImipu/kfzZPpjAKBggqhkjOPQQDAjCBmTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxSDBGBgNVBAsMP0ZhY2hhbndlbmR1bmdzc3BlemlmaXNjaGVyIERpZW5zdC1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UEAwwWQUNMT1MuRkQtQ0ExIFRFU1QtT05MWTAeFw0yMjAxMzAyMzAwMDBaFw0yNzAxMzEyMzAwMDBaMFExCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggVEVTVC1PTkxZMSEwHwYDVQQDDBhBQ0xPUy5PQ1NQLUZEMSBOT1QtVkFMSUQwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEJl+TPxTAfdpP9WUQGoqatGXMZ9/5jPwjDHYH5+5+qa1nLwUmYQ+7GpT5EUIIJmyMEFW1Yvr3TkWsVatUBR68Z6OCARgwggEUMB0GA1UdDgQWBBSJmD5dBnNd6DRmcyv/+kyi/47x0jAOBgNVHQ8BAf8EBAMCBkAwDAYDVR0TAQH/BAIwADBGBgNVHSAEPzA9MDsGCCqCFABMBIEjMC8wLQYIKwYBBQUHAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qub2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBR7DFUnTuWmL10dEdexG/Z7ueFFJTATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgkrBgEFBQcwAQUEAgUAMAoGCCqGSM49BAMCA0gAMEUCIQCmrzKJigu5aEjI6U4Oh+qSejGka41lowyzNeiMBhV9iQIgToJT+PQ3edUdJhXMn7+G/vUCRFFmyg5Qms+WcaYa68Q=</X509Certificate>
+                            </DigitalId>
+                        </ServiceDigitalIdentity>
+                        <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
+                        <StatusStartingTime>2022-01-30T23:00:00Z</StatusStartingTime>
+                        <ServiceSupplyPoints>
+                            <ServiceSupplyPoint>http://ocsp00.gematik.invalid/not-used</ServiceSupplyPoint>
+                        </ServiceSupplyPoints>
+                        <ServiceInformationExtensions>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.124</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_tsl_placeholder</ns:ExtensionValue>
+                            </Extension>
+                        </ServiceInformationExtensions>
+                    </ServiceInformation>
+                </TSPService>
+                <TSPService>
+                    <ServiceInformation>
+                        <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/PKC</ServiceTypeIdentifier>
+                        <ServiceName>
+                            <Name xml:lang="DE">CN=ACLOS.FD-CA4 TEST-ONLY,OU=Fachanwendungsspezifischer Dienst-CA der Telematikinfrastruktur,O=achelos GmbH NOT-VALID,C=DE</Name>
+                        </ServiceName>
+                        <ServiceDigitalIdentity>
+                            <DigitalId>
+                                <X509Certificate>MIIDFjCCArygAwIBAgIQf/f+8IZMRraEHyUXN9tSXzAKBggqhkjOPQQDAjCBgjELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxNDAyBgNVBAsMK1plbnRyYWxlIFJvb3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHDAaBgNVBAMME0FDTE9TLlJDQSBURVNULU9OTFkwHhcNMjQwODA4MjIwMDAwWhcNMjYwODA3MjIwMDAwWjCBmTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxSDBGBgNVBAsMP0ZhY2hhbndlbmR1bmdzc3BlemlmaXNjaGVyIERpZW5zdC1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UEAwwWQUNMT1MuRkQtQ0E0IFRFU1QtT05MWTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABMwRQ5mbWy9TNDSIebClKLaot6n28Jc0R3RaPEjg/PVb1V7l1dNj0V+CFbhBKbGRjoiG7IdRrseNhnRVKAu0TD6jgfowgfcwHQYDVR0OBBYEFAkD0JaFFxaD+l5sWfmxXSXXu42vMA4GA1UdDwEB/wQEAwIBBjASBgNVHRMBAf8ECDAGAQH/AgEAMFIGA1UdIARLMEkwRwYIKoIUAEwEgSMwOzA5BggrBgEFBQcCARYtaHR0cDovL3d3dy5hY2hlbG9zLmRlL3BvbGljaWVzL0VFX3BvbGljeS5odG1sMD0GCCsGAQUFBwEBBDEwLzAtBggrBgEFBQcwAYYhaHR0cDovL29jc3AuYWNoZWxvcy5kZTo4MDgwL29jc3AvMB8GA1UdIwQYMBaAFCz5pNTiT/uzz8qEYjj484LrkBmiMAoGCCqGSM49BAMCA0gAMEUCIQCmdU/T1mjClupHLB8lsmtiqs35xukbvQZoPdrqYyICQAIgB6mCTU52JbGSkKIc/Rhcg9sxPeoCtzCpJ3PRLgeXh/w=</X509Certificate>
+                            </DigitalId>
+                        </ServiceDigitalIdentity>
+                        <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
+                        <StatusStartingTime>2024-08-08T22:00:00Z</StatusStartingTime>
+                        <ServiceSupplyPoints>
+                            <ServiceSupplyPoint>http://ocsp-test.ocsp.telematik-test:8080/</ServiceSupplyPoint>
+                        </ServiceSupplyPoints>
+                        <ServiceInformationExtensions>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.175</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_cm_tls_c</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.168</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_c</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.169</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_s</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.155</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_aut</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.203</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_sig</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.202</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_enc</ns:ExtensionValue>
+                            </Extension>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.283</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_osig</ns:ExtensionValue>
+                            </Extension>
+                        </ServiceInformationExtensions>
+                    </ServiceInformation>
+                </TSPService>
+                <TSPService>
+                    <ServiceInformation>
+                        <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP</ServiceTypeIdentifier>
+                        <ServiceName>
+                            <Name xml:lang="DE">CN=ACLOS.OCSP-FD4 NOT-VALID,O=achelos GmbH TEST-ONLY,C=DE</Name>
+                        </ServiceName>
+                        <ServiceDigitalIdentity>
+                            <DigitalId>
+                                <X509Certificate>MIIDBDCCAqqgAwIBAgIRANXJ9ZaDyEiRuWvZAfKTuHkwCgYIKoZIzj0EAwIwgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBNCBURVNULU9OTFkwHhcNMjQwODA4MjIwMDAwWhcNMjYwODA3MjIwMDAwWjBRMQswCQYDVQQGEwJERTEfMB0GA1UECgwWYWNoZWxvcyBHbWJIIFRFU1QtT05MWTEhMB8GA1UEAwwYQUNMT1MuT0NTUC1GRDQgTk9ULVZBTElEMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwzyUzmG/EhTg2OstO2dwW4C9zUtTNUc+VO1jfc2FiibpKPX+zlRzqK01U5DeOeGEhBfta83BgWm/xkFn3SmjvqOCARgwggEUMB0GA1UdDgQWBBRh3/KZ0WC1lWoQ9+f/FgHB5GBupjAOBgNVHQ8BAf8EBAMCBkAwDAYDVR0TAQH/BAIwADBGBgNVHSAEPzA9MDsGCCqCFABMBIEjMC8wLQYIKwYBBQUHAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qub2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBQJA9CWhRcWg/pebFn5sV0l17uNrzATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgkrBgEFBQcwAQUEAgUAMAoGCCqGSM49BAMCA0gAMEUCIHSd2GZth5ABsTllajZhLH1Vin6obeF73aTleLDIqhtCAiEA00SImPYU8eR5CPaIKzwgUnJW9m83B0z4BHDS10jNNaI=</X509Certificate>
+                            </DigitalId>
+                        </ServiceDigitalIdentity>
+                        <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
+                        <StatusStartingTime>2024-08-08T22:00:00Z</StatusStartingTime>
+                        <ServiceSupplyPoints>
+                            <ServiceSupplyPoint>http://ocsp00.gematik.invalid/not-used</ServiceSupplyPoint>
+                        </ServiceSupplyPoints>
+                        <ServiceInformationExtensions>
+                            <Extension Critical="false">
+                                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.124</ns:ExtensionOID>
+                                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_tsl_placeholder</ns:ExtensionValue>
+                            </Extension>
+                        </ServiceInformationExtensions>
+                    </ServiceInformation>
+                </TSPService>
+            </TSPServices>
+        </TrustServiceProvider>
     </TrustServiceProviderList>
     <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
         <ds:SignedInfo>

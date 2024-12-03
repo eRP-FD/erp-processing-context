@@ -6,7 +6,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "erp/crypto/SecureRandomGenerator.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
 
 
 class SecureRandomGeneratorTest

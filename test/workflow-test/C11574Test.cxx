@@ -41,7 +41,9 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
     ASSERT_TRUE(secret.has_value());
 
 
-    const auto dispenseBody = medicationDispense(kvnr, prescriptionId.toString(), model::Timestamp::now().toGermanDate());
+    const auto dispenseBody =
+        dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, kvnr,
+                                prescriptionId.toString(), model::Timestamp::now().toGermanDate(), 1);
 
     const JWT jwt{ jwtApotheke() };
 

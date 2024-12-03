@@ -6,22 +6,22 @@
  */
 
 #include "erp/service/MedicationDispenseHandler.hxx"
-#include "erp/ErpRequirements.hxx"
-#include "erp/crypto/SecureRandomGenerator.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SecureRandomGenerator.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/Parameters.hxx"
+#include "shared/model/Parameters.hxx"
 #include "erp/model/Patient.hxx"
-#include "erp/model/ResourceNames.hxx"
-#include "erp/model/TelematikId.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/model/TelematikId.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/FileHelper.hxx"
-#include "erp/util/Uuid.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
@@ -88,6 +88,8 @@ protected:
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings)
     {
+        bool whenPreparedIsDateOnly = ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4;
+
         for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
         {
             auto kvnrPatient = std::get<0>(patientAndPharmacy);
@@ -114,7 +116,14 @@ protected:
             ASSERT_EQ(medicationDispenses[0].whenHandedOver().localDay(), Timestamp::now().localDay());
 
             std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispenses[0].whenPrepared();
-            ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
+            if (whenPreparedIsDateOnly && medicationDispenseWhenPrepared.has_value() && whenPrepared.has_value())
+            {
+                ASSERT_EQ(medicationDispenseWhenPrepared->localDay(), whenPrepared->localDay());
+            }
+            else
+            {
+                ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
+            }
 
             for (size_t i = 0; i  < GetParam(); ++i)
             {

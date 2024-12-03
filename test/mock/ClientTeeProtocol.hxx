@@ -9,12 +9,12 @@
 #define ERP_PROCESSING_CONTEXT_TEST_MOCK_CLIENTTEEPROTOCOL_HXX
 
 
-#include <erp/client/response/ClientResponse.hxx>
-#include "erp/client/request/ClientRequest.hxx"
+#include "shared/network/client/response/ClientResponse.hxx"
+#include "shared/network/client/request/ClientRequest.hxx"
 
-#include "erp/util/SafeString.hxx"
+#include "shared/util/SafeString.hxx"
 
-#include "erp/crypto/OpenSslHelper.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
 
 
 class Certificate;

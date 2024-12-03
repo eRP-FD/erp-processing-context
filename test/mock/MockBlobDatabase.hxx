@@ -8,7 +8,7 @@
 #ifndef ERP_MOCK_HSM_MOCKBLOBDATABASE_HXX
 #define ERP_MOCK_HSM_MOCKBLOBDATABASE_HXX
 
-#include "erp/hsm/BlobDatabase.hxx"
+#include "shared/hsm/BlobDatabase.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 
 #include <mutex>

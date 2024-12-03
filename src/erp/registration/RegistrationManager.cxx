@@ -6,13 +6,12 @@
  */
 
 #include "erp/registration/RegistrationManager.hxx"
+#include "erp/database/RedisClient.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+#include "shared/util/health/ApplicationHealth.hxx"
 
 #include <chrono>
-
-#include "erp/database/RedisClient.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
-#include "erp/util/health/ApplicationHealth.hxx"
 
 using namespace std::chrono;
 

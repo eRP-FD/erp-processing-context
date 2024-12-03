@@ -6,7 +6,7 @@
  */
 
 #include "erp/pc/SeedTimer.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 
 SeedTimerHandler::SeedTimerHandler(ThreadPool& pool, HsmPool& hsmPool,

@@ -3,11 +3,11 @@ TEE processing context für den Dienst **eR**eze**p**t (erp).
 
 TEE = trusted execution environment oder deutsch VAU = vertrauenswürdige Ausführungsumgebung.
 
-# Project Setup
+# Projekt-Setup
 
 Siehe [hier](doc/ProjectSetup.md)
 
-# Bau des Projectes
+# Bau des Projekts
 
 Siehe [hier](doc/Building.md) für Einzelheiten zur Erstellung des Projekts und zur Aktualisierung der erforderlichen Testressourcen einschließlich `TSL_valid.xml` und `BNA_valid.xml`.
 

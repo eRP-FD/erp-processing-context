@@ -1,10 +1,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_PC_CFDSIGERPMANAGER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_PC_CFDSIGERPMANAGER_HXX
 
-#include "erp/crypto/Certificate.hxx"
-#include "erp/hsm/ErpTypes.hxx"
-#include "erp/util/TimerJobBase.hxx"
-#include "erp/util/Timer.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/hsm/ErpTypes.hxx"
+#include "shared/deprecated/TimerJobBase.hxx"
+#include "shared/deprecated/Timer.hxx"
 
 #include <mutex>
 

@@ -8,7 +8,7 @@
 #ifndef FHIR_TOOLS_SAXPARSER_HXX
 #define FHIR_TOOLS_SAXPARSER_HXX
 
-#include "erp/validation/XmlValidator.hxx"
+#include "shared/validation/XmlValidator.hxx"
 
 #include <filesystem>
 #include <libxml/tree.h>

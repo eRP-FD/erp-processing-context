@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_ABGABEDATENPKVBUNDLE_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_MODEL_ABGABEDATENPKVBUNDLE_HXX
 
-#include "erp/model/Bundle.hxx"
+#include "shared/model/Bundle.hxx"
 
 namespace model
 {

@@ -7,9 +7,9 @@
 #define FHIR_TOOLS_PROFILESETVALIDATOR_HXX
 
 
+#include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/validator/internal/ProfileValidator.hxx"
 #include "fhirtools/validator/internal/ReferenceContext.hxx"
-#include "fhirtools/repository/FhirSlicing.hxx"
 
 #include <map>
 #include <memory>
@@ -88,7 +88,7 @@ public:
 
     ValidationResults results() const;
 
-    void finalize(std::string_view elementFullPath);
+    void finalize(std::string_view elementFullPath, const std::shared_ptr<const Element>& element);
 
     const ValidatorOptions& options() const;
 
@@ -100,7 +100,7 @@ private:
     using SolverDataValue = SolverDataMap::value_type;
     explicit ProfileSetValidator(ProfileSetValidator* parent, ProfiledElementTypeInfo rootPointer);
     void createCounters(const ProfileValidator::Map& profileValidatorMap);
-    void incrementCounters();
+    void incrementCounters(const Element& element);
     void createSliceCheckersAndCounters();
     void createSliceCounters(const ProfileValidator& profVal, const FhirSlicing& slicing);
     SolverDataValue createSolverDataValue(const fhirtools::FhirStructureRepository& repo,
@@ -110,8 +110,8 @@ private:
                                           std::string_view elementFullPath);
     ProfileValidator::Map process(ProfileValidator::Map::value_type& profVal, const Element& element,
                                   std::string_view elementFullPath);
-    void finalizeChildCounters(std::string_view elementFullPath);
-    void finalizeSliceCheckers(std::string_view elementFullPath);
+    void finalizeChildCounters(std::string_view elementFullPath, const std::shared_ptr<const Element>& element);
+    void finalizeSliceCheckers(std::string_view elementFullPath, const std::shared_ptr<const Element>& element);
     std::set<ProfileValidator::MapKey> initialFailed() const;
     void propagateFailures();
     bool hasMostSlices(const ProfiledElementTypeInfo&) const;

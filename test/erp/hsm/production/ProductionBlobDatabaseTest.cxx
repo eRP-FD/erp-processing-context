@@ -5,16 +5,16 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
 
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/database/PostgresConnection.hxx"
-#include "erp/util/Configuration.hxx"
+#include "shared/database/PostgresConnection.hxx"
+#include "shared/util/Configuration.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include "test_config.h"
-#include "erp/erp-serverinfo.hxx"
+#include "shared/erp-serverinfo.hxx"
 
 #include <gtest/gtest.h>
 
@@ -125,7 +125,8 @@ INSTANTIATE_TEST_SUITE_P(
              std::tuple<BlobType, bool, bool>{BlobType::AuditLogKeyDerivation,      false, false},
              std::tuple<BlobType, bool, bool>{BlobType::KvnrHashKey,                false, false},
              std::tuple<BlobType, bool, bool>{BlobType::TelematikIdHashKey,         false, false},
-             std::tuple<BlobType, bool, bool>{BlobType::VauSig,                     false, false}
+             std::tuple<BlobType, bool, bool>{BlobType::VauSig,                     false, false},
+             std::tuple<BlobType, bool, bool>{BlobType::VauAut,                     false, false}
 ));
 
 // Pretty names for individual test cases.

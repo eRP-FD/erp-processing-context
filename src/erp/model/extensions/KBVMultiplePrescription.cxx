@@ -6,8 +6,9 @@
  */
 
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "erp/model/Timestamp.hxx"
-#include "erp/util/TLog.hxx"
+#include "shared/model/Extension.txx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/util/TLog.hxx"
 
 
 using model::KBVMultiplePrescription;
@@ -73,3 +74,9 @@ std::optional<model::Timestamp> model::KBVMultiplePrescription::endDateTime() co
     auto zeitraum = getExtension<Zeitraum>();
     return zeitraum ? zeitraum->valuePeriodEnd(Timestamp::GermanTimezone) : std::nullopt;
 }
+
+template class model::Extension<KBVMultiplePrescription>;
+template class model::Extension<KBVMultiplePrescription::Kennzeichen>;
+template class model::Extension<KBVMultiplePrescription::Nummerierung>;
+template class model::Extension<KBVMultiplePrescription::Zeitraum>;
+template class model::Extension<KBVMultiplePrescription::ID>;

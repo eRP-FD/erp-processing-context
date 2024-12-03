@@ -7,10 +7,10 @@
 
 #include "test/erp/database/PostgresDatabaseCommunicationTest.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 
 #include "test/util/JsonTestUtils.hxx"
@@ -133,24 +133,6 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
     return search;
 }
 
-std::string PostgresDatabaseCommunicationTest::taskFile() const
-{
-    const std::string gematikVersion{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
-
-    switch (GetParam())
-    {
-        case PrescriptionType::apothekenpflichigeArzneimittel:
-            return "task160_" + gematikVersion + ".json";
-        case PrescriptionType::direkteZuweisung:
-            return "task169_" + gematikVersion + ".json";
-        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            return "task200_" + gematikVersion + ".json";
-        case PrescriptionType::direkteZuweisungPkv:
-            return "task209_" + gematikVersion + ".json";
-    }
-    Fail("Invalid prescription type");
-}
-
 
 TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
 {
@@ -162,9 +144,9 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -200,9 +182,9 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationReply)
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+            .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -238,9 +220,9 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationDispReq)
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+            .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -277,9 +259,9 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationRepresentative)
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+            .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -316,8 +298,9 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
@@ -457,8 +440,9 @@ TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOL
     // Make sure that there are no leftovers from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
@@ -537,8 +521,9 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NO
     // Make sure that there are no leftovers from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task1 = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId1 = insertTask(task1);
     Task task2 = Task::fromJsonNoValidation(jsonString);
@@ -626,8 +611,9 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
@@ -691,8 +677,9 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
@@ -817,8 +804,9 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_filterOnRecipie
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId = insertTask(task);
     const std::string kvnrInsurant = task.kvnr().value().id();
@@ -870,9 +858,9 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_communicationId
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -930,9 +918,9 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_sent)//NOLINT(r
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -996,9 +984,9 @@ TEST_P(PostgresDatabaseCommunicationTest, retrieveCommunications_received)
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
 
@@ -1058,9 +1046,9 @@ TEST_P(PostgresDatabaseCommunicationTest, countRepresentativeCommunications)//NO
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
     const auto kvnrInsurantB = model::Kvnr{InsurantB};
@@ -1146,9 +1134,9 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
     // Make sure that there are no left overs from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
-    Task task = Task::fromJsonNoValidation(jsonString);
+    Task task = Task::fromJsonNoValidation(
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)}));
     PrescriptionId prescriptionId = insertTask(task);
     const auto kvnrInsurant = task.kvnr().value();
     const auto kvnrInsurantB = model::Kvnr{InsurantB};
@@ -1221,13 +1209,14 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
         GTEST_SKIP();
     }
 
-    A_19027_04.test("Deletion of task related communications from database");
+    A_19027_06.test("Deletion of task related communications from database");
 
     // Make sure that there are no leftovers from previous tests.
     verifyDatabaseIsTidy();
 
-    std::string dataPath = std::string(TEST_DATA_DIR) + "/EndpointHandlerTest";
-    std::string jsonString = FileHelper::readFileAsString(dataPath + "/" + taskFile());
+    auto jsonString =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready,
+                                     .prescriptionId = model::PrescriptionId::fromDatabaseId(GetParam(), 4711)});
     Task task1 = Task::fromJsonNoValidation(jsonString);
     PrescriptionId prescriptionId1 = insertTask(task1);
     Task task2 = Task::fromJsonNoValidation(jsonString);

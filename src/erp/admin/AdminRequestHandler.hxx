@@ -8,9 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINREQUESTHANDLER_HXX
 
-#include "erp/server/handler/RequestHandlerInterface.hxx"
+#include "erp/server/RequestHandler.hxx"
+#include "erp/server/ServerSession.hxx"
+#include "shared/server/handler/RequestHandlerInterface.hxx"
 
 #include <memory>
+
+class SessionContext;
 
 class AdminRequestHandlerBase : public RequestHandlerBasicAuthentication
 {

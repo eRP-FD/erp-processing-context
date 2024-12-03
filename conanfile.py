@@ -40,7 +40,8 @@ class ErpProcessingContext(ConanFile):
     exports_sources = "."
     build_requires = []
     requires = ['antlr4-cppruntime/4.13.1',
-                'boost/1.84.0',
+                'boost/1.86.0',
+                "botan/3.4.0",
                 'date/3.0.1',  # date can be removed as soon as we use C++20
                 'glog/0.7.0',
                 'gsl-lite/0.41.0',
@@ -48,7 +49,7 @@ class ErpProcessingContext(ConanFile):
                 'openssl/3.1.5@erp/stable-1',
                 'rapidjson/cci.20220822',
                 'magic_enum/0.9.5',
-                'libpqxx/7.9.0',
+                'libpqxx/7.9.2',
                 'libpq/14.9',
                 'libunwind/1.8.0',
                 'zstd/1.5.5',  # database compression
@@ -61,7 +62,7 @@ class ErpProcessingContext(ConanFile):
         if self.options.with_tpmclient:
             self.requires('tpmclient/0.15.0-B37')
         if self.options.with_hsmclient:
-            self.requires('hsmclient/2.9.0-B81')
+            self.requires('hsmclient/2.13.0-B00')
 
     def build_requirements(self):
         if self.options.with_sbom:

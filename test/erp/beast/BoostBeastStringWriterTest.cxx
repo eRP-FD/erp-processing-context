@@ -5,10 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/beast/BoostBeastStringWriter.hxx"
+#include "shared/beast/BoostBeastStringWriter.hxx"
 
-#include "erp/common/Header.hxx"
-#include "erp/common/HttpStatus.hxx"
+#include "shared/network/message/Header.hxx"
+#include "shared/network/message/HttpStatus.hxx"
 
 #include <gtest/gtest.h>
 

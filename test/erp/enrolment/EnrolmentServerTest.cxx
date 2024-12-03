@@ -12,30 +12,30 @@
 #pragma GCC diagnostic pop
 #endif
 
-#include "erp/enrolment/EnrolmentServer.hxx"
-#include "erp/client/HttpsClient.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/enrolment/EnrolmentModel.hxx"
-#include "erp/enrolment/EnrolmentRequestHandler.hxx"
-#include "erp/enrolment/VsdmHmacKey.hxx"
-#include "erp/erp-serverinfo.hxx"
-#include "erp/crypto/EllipticCurve.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/production/ProductionBlobDatabase.hxx"
-#include "erp/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
-#include "erp/hsm/TeeTokenUpdater.hxx"
 #include "erp/tee/OuterTeeResponse.hxx"
-#include "erp/tee/OuterTeeRequest.hxx"
-#include "erp/tpm/Tpm.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/enrolment/EnrolmentModel.hxx"
+#include "shared/enrolment/EnrolmentRequestHandler.hxx"
+#include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/enrolment/VsdmHmacKey.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/TeeTokenUpdater.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/tee/OuterTeeRequest.hxx"
+#include "shared/tpm/Tpm.hxx"
 #if !defined __APPLE__ && !defined _WIN32
-#include "erp/tpm/TpmProduction.hxx"
+#include "shared/tpm/TpmProduction.hxx"
 #endif
-#include "erp/util/Base64.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Hash.hxx"
-#include "erp/util/Random.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/Random.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
@@ -121,9 +121,16 @@ public:
     HttpsClient createClient (void)
     {
         const auto& config = Configuration::instance();
-        return HttpsClient(
-            "127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT)),
-            30 /*connectionTimeoutSeconds*/, std::chrono::milliseconds{1000} /*resolveTimeout*/, false /*enforceServerAuthentication*/);
+
+        return HttpsClient(ConnectionParameters{
+            .hostname = "127.0.0.1",
+            .port = config.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
+            .connectionTimeoutSeconds = 30,
+            .resolveTimeout = std::chrono::milliseconds{1000},
+            .tlsParameters = TlsConnectionParameters{
+                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+            }
+        });
     }
 
     Header createHeader(const HttpMethod method, std::string&& target)
@@ -324,7 +331,7 @@ public:
         {
             if (parent.usePostgres)
             {
-                pqxx::connection conn{PostgresBackend::defaultConnectString()};
+                pqxx::connection conn{PostgresConnection::defaultConnectString()};
                 pqxx::work txn{conn};
                 txn.exec_params0("DELETE FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
                 txn.commit();
@@ -341,7 +348,7 @@ public:
         {
             if (parent.usePostgres)
             {
-                pqxx::connection conn{PostgresBackend::defaultConnectString()};
+                pqxx::connection conn{PostgresConnection::defaultConnectString()};
                 pqxx::work txn{conn};
                 txn.exec_params0("DELETE FROM erp.auditevent WHERE id = $1", std::string{eventId});
                 txn.commit();
@@ -357,10 +364,10 @@ public:
         void useTaskDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
         {
             auto db = parent.database();
-            auto& backend = db->getBackend();
+            auto& backend = dynamic_cast<ErpDatabaseBackend&>(db->getBackend());
             auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                           model::Task::Status::draft, now, now);
+                                           model::Task::Status::draft, now, now, now);
             backend.updateTask(std::get<0>(task), {}, blobId, {});
             backend.commitTransaction();
             releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task)]
@@ -370,20 +377,23 @@ public:
         void useCommunicationDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
         {
             auto db = parent.database();
-            auto& backend = db->getBackend();
+            auto& backend = dynamic_cast<ErpDatabaseBackend&>(db->getBackend());
             auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                           model::Task::Status::draft, now, now);
-            auto comm = backend.insertCommunication(std::get<model::PrescriptionId>(task),
-                                                    now, model::Communication::MessageType::DispReq,
-                                                    dummyHashedKvnr(),
-                                                    dummyHashedTelematikId(), blobId, {}, blobId, {});
+                                           model::Task::Status::draft, now, now, now);
+            db_model::EncryptedBlob messageForSender{};
+            messageForSender.append("messag encrypted for sender.");
+            db_model::EncryptedBlob messageForRecipient{};
+            messageForRecipient.append("message encrypted for recipient");
+            auto comm = backend.insertCommunication(
+                std::get<model::PrescriptionId>(task), now, model::Communication::MessageType::DispReq,
+                dummyHashedKvnr(), dummyHashedTelematikId(), blobId, messageForSender, blobId, messageForRecipient);
             backend.commitTransaction();
             Expect3(comm.has_value(), "Failed to create Communication message.", std::logic_error);
             releaseKeyBlob = [&parent, id = std::get<model::PrescriptionId>(task), commId = *comm]
                 {
                     auto db = parent.database();
-                    auto& backend = db->getBackend();
+                    auto& backend = dynamic_cast<ErpDatabaseBackend&>(db->getBackend());
                     backend.deleteCommunication(commId , dummyHashedKvnr());
                     backend.commitTransaction();
                     deleteTask(parent, id);
@@ -393,10 +403,10 @@ public:
         void useAuditLogDerivationKey(EnrolmentServerTest& parent, BlobId blobId)
         {
             auto db = parent.database();
-            auto& backend = db->getBackend();
+            auto& backend = dynamic_cast<ErpDatabaseBackend&>(db->getBackend());
             auto now = model::Timestamp::now();
             auto task = backend.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                           model::Task::Status::draft, now, now);
+                                           model::Task::Status::draft, now, now, now);
             db_model::AuditData auditEvent(model::AuditEvent::AgentType::machine, model::AuditEventId::GET_Task,
                                            std::make_optional<db_model::EncryptedBlob>(),
                                            model::AuditEvent::Action::read, dummyHashedKvnr(), 4711,
@@ -412,16 +422,33 @@ public:
 
         void useChargeItemDerivationKey(::EnrolmentServerTest& parent, ::BlobId blobId)
         {
+            static constexpr auto encBlob = [](const auto& data){
+                const auto* begin = reinterpret_cast<const std::byte*>(data);
+                return db_model::EncryptedBlob{begin, begin + std::size(data)};
+            };
             ::db_model::ChargeItem chargeItem{::model::PrescriptionId::fromDatabaseId(
                 ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 0)};
+            chargeItem.enterer = encBlob("enterer");
+            chargeItem.markingFlags = encBlob("markingFlags");
             chargeItem.blobId = blobId;
+            chargeItem.salt = encBlob("salt");
+            chargeItem.accessCode = encBlob("accessCode");
+            chargeItem.kvnr =  encBlob("kvnr");
+            chargeItem.prescription =  encBlob("prescription");
+            chargeItem.prescriptionJson =  encBlob("prescriptionJson");
+            chargeItem.receiptXml = encBlob("receiptXml");
+            chargeItem.receiptJson = encBlob("receiptJson");
+            chargeItem.billingData = encBlob("billingData");
+            chargeItem.billingDataJson = encBlob("billingDataJson");
             auto db = parent.database();
-            auto& backend = db->getBackend();
+            auto& backend = dynamic_cast<ErpDatabaseBackend&>(db->getBackend());
             backend.storeChargeInformation(chargeItem, ::db_model::HashedKvnr::fromKvnr(model::Kvnr{"X123456788"}, ::SafeString{}));
             backend.commitTransaction();
 
             releaseKeyBlob = [&parent, id = chargeItem.prescriptionId] {
-                parent.database()->getBackend().deleteChargeInformation(id);
+                auto db = parent.database();
+                dynamic_cast<ErpDatabaseBackend&>(db->getBackend()).deleteChargeInformation(id);
+                db->commitTransaction();
             };
         }
 
@@ -450,6 +477,7 @@ public:
                 case BlobType::Quote:
                 case BlobType::EciesKeypair:
                 case BlobType::PseudonameKey:
+                case BlobType::VauAut:
                     Fail2("BlobType not supported by UseKeyBlobGuard", std::logic_error);
                     break;
             }
@@ -1321,6 +1349,61 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-c
     ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::NoContent));
     ASSERT_EQ(response.getBody(), "");
     ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauSig, ErpVector::create("123")));
+}
+
+TEST_P(EnrolmentServerTest, PostVauAut_success)
+{
+    const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+    auto model = EnrolmentModel(body);
+    const auto pemCert = Certificate::fromBase64(std::string{tpm::vauAutCertificate_base64}).toPem();
+    model.set("/certificate", Base64::encode(pemCert));
+    auto response = createClient().send(
+        ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));
+    checkResponseHeader(response, HttpStatus::Created);
+    ASSERT_EQ(response.getBody(), "");
+    const auto entry = blobCache->getBlob(BlobType::VauAut, ErpVector::create("123"));
+    ASSERT_EQ(entry.name, ErpVector::create("123"));
+    ASSERT_EQ(entry.blob.data, SafeString("black box blob data"));
+    ASSERT_EQ(entry.blob.generation, static_cast<ErpBlob::GenerationId>(11));
+    ASSERT_TRUE(entry.certificate.has_value());
+    ASSERT_EQ(entry.certificate.value(), pemCert);
+}
+
+TEST_P(EnrolmentServerTest, PostVauAutInvalid)
+{
+    const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+    auto model = EnrolmentModel(body);
+    model.set("/certificate", tpm::vauAutCertificate_base64);
+    auto response = createClient().send(
+        ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));
+    checkResponseHeader(response, HttpStatus::BadRequest);
+}
+
+
+TEST_P(EnrolmentServerTest, DeleteVauAut_success)//NOLINT(readability-function-cognitive-complexity)
+{
+    // Set up a hash key that can be deleted.
+    {
+        const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
+        auto model = EnrolmentModel(body);
+        const auto pemCert = Certificate::fromBase64(std::string{tpm::vauAutCertificate_base64}).toPem();
+        model.set("/certificate", Base64::encode(pemCert));
+        auto response = createClient().send(
+            ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));
+        ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::Created));
+        ASSERT_EQ(response.getBody(), "");
+        ASSERT_NO_THROW(blobCache->getBlob(BlobType::VauAut, ErpVector::create("123")));
+    }
+
+    // And delete it.
+    auto response = createClient().send(
+        ClientRequest(
+            createHeader(HttpMethod::DELETE, "/Enrolment/VauAut"),
+            createDeleteBody("123")));
+
+    ASSERT_NO_FATAL_FAILURE(checkResponseHeader(response, HttpStatus::NoContent));
+    ASSERT_EQ(response.getBody(), "");
+    ASSERT_ANY_THROW(blobCache->getBlob(BlobType::VauAut, ErpVector::create("123")));
 }
 
 TEST_P(EnrolmentServerTest, PostVsdmKey_success)//NOLINT(readability-function-cognitive-complexity)

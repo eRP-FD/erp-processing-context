@@ -47,6 +47,16 @@
             </numerator>
             <denominator>
                 <value value="1"/>
+                <system>
+                  <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
+                    <valueCode value="unknown"/>
+                  </extension>
+                </system>
+                <code>
+                  <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
+                    <valueCode value="unknown"/>
+                  </extension>
+                </code>
             </denominator>
         </strength>
     </ingredient>

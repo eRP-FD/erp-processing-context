@@ -7,7 +7,7 @@
 
 #include "mock/hsm/HsmMockFactory.hxx"
 
-#include "erp/hsm/BlobCache.hxx"
+#include "shared/hsm/BlobCache.hxx"
 
 
 HsmMockFactory::HsmMockFactory (

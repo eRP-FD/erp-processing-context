@@ -6,39 +6,41 @@
  */
 
 #include "erp/database/DatabaseFrontend.hxx"
-
-#include <boost/algorithm/string.hpp>
-
-#include "erp/ErpRequirements.hxx"
-#include "erp/compression/ZStd.hxx"
-#include "erp/crypto/CMAC.hxx"
-#include "erp/database/DatabaseBackend.hxx"
-#include "erp/database/DatabaseConnectionInfo.hxx"
-#include "erp/database/DatabaseModel.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/model/AuditData.hxx"
+#include "erp/database/ErpDatabaseBackend.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/PrescriptionId.hxx"
-#include "erp/model/Task.hxx"
 #include "erp/model/Identity.hxx"
-#include "erp/util/Expect.hxx"
-#include "erp/util/TLog.hxx"
+#include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
+#include "erp/model/MedicationDispenseId.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
+#include "erp/model/Task.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/compression/ZStd.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "shared/database/CommonPostgresBackend.hxx"
+#include "shared/database/DatabaseConnectionInfo.hxx"
+#include "shared/database/DatabaseModel.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/model/AuditData.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+
+#include <boost/algorithm/string.hpp>
 
 using namespace model;
 using namespace ::std::literals;
 
-DatabaseFrontend::DatabaseFrontend(std::unique_ptr<DatabaseBackend>&& backend,
-                                   HsmPool& hsmPool,
+DatabaseFrontend::DatabaseFrontend(std::unique_ptr<ErpDatabaseBackend>&& backend, HsmPool& hsmPool,
                                    KeyDerivation& keyDerivation)
     : mBackend{std::move(backend)}
+    , mCommonDatabaseFrontend(std::make_unique<CommonDatabaseFrontend>(hsmPool, keyDerivation))
     , mHsmPool{hsmPool}
     , mDerivation{keyDerivation}
     , mCodec{compressionInstance()}
@@ -71,17 +73,14 @@ std::optional<DatabaseConnectionInfo> DatabaseFrontend::getConnectionInfo() cons
     return mBackend->getConnectionInfo();
 }
 
-std::vector<model::MedicationDispense>
-DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
-                                                 const std::optional<UrlArguments>& search)
+model::MedicationsAndDispenses
+DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
 
-    const auto encryptedResult =
-        mBackend->retrieveAllMedicationDispenses(hashedKvnr, {}, search);
+    const auto encryptedResult = mBackend->retrieveAllMedicationDispenses(hashedKvnr, {}, search);
 
-    std::vector<model::MedicationDispense> resultSet;
-    resultSet.reserve(gsl::narrow<size_t>(encryptedResult.size()));
+    model::MedicationsAndDispenses resultSet;
 
     std::map<BlobId, SafeString> keys;
 
@@ -90,26 +89,21 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
         auto key = keys.find(res.blobId);
         if (key == keys.end())
         {
-            auto salt = mBackend->retrieveSaltForAccount(hashedKvnr,
-                                                         db_model::MasterKeyType::medicationDispense,
-                                                         res.blobId);
+            auto salt =
+                mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::medicationDispense, res.blobId);
             Expect(salt, "Salt not found in database.");
             std::tie(key, std::ignore) =
-                    keys.emplace(res.blobId, mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt));
+                keys.emplace(res.blobId, mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt));
         }
-        auto unspecified = model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key->second));
+        auto unspecified =
+            model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key->second));
         if (unspecified.getResourceType() == model::MedicationDispense::resourceTypeName)
         {
-            resultSet.emplace_back(model::MedicationDispense::fromJson(unspecified.jsonDocument()));
+            resultSet.medicationDispenses.emplace_back(model::MedicationDispense::fromJson(unspecified.jsonDocument()));
         }
         else if (unspecified.getResourceType() == model::Bundle::resourceTypeName)
         {
-            auto bundle = model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument());
-            auto medications = bundle.getResourcesByType<model::MedicationDispense>();
-            for (auto&& medication : medications)
-            {
-                resultSet.emplace_back(std::move(medication));
-            }
+            resultSet.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
         }
         else
         {
@@ -119,52 +113,44 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr,
     return resultSet;
 }
 
-std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
-                                                                               const model::MedicationDispenseId& id)
+model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
+                                                                            const model::MedicationDispenseId& id)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
 
-    const auto& encryptedResult =
-        mBackend->retrieveAllMedicationDispenses(hashedKvnr, id.getPrescriptionId(), {});
+    const auto& encryptedResult = mBackend->retrieveAllMedicationDispenses(hashedKvnr, id.getPrescriptionId(), {});
 
     Expect(encryptedResult.size() <= 1,
            "invalid number of results of Medication Dispenses: " + std::to_string(encryptedResult.size()));
 
-    if(encryptedResult.empty())
+    if (encryptedResult.empty())
     {
         return {};
     }
 
     const auto& res = encryptedResult[0];
 
-    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr,
-                                                 db_model::MasterKeyType::medicationDispense,
-                                                 res.blobId);
+    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::medicationDispense, res.blobId);
     Expect(salt, "Salt not found in database.");
     auto key = mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt);
 
     auto unspecified = model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key));
     if (unspecified.getResourceType() == model::MedicationDispense::resourceTypeName)
     {
-        auto medication = model::MedicationDispense::fromJson(unspecified.jsonDocument());
-        if (medication.id() == id)
+        auto medicationDispense = model::MedicationDispense::fromJson(unspecified.jsonDocument());
+        if (medicationDispense.id() == id)
         {
-            return medication;
+            model::MedicationsAndDispenses result;
+            result.medicationDispenses.emplace_back(std::move(medicationDispense));
+            return result;
         }
         return {};
     }
     else if (unspecified.getResourceType() == model::Bundle::resourceTypeName)
     {
-        auto bundle = model::Bundle::fromJson(unspecified.jsonDocument());
-        auto medications = bundle.getResourcesByType<model::MedicationDispense>();
-        for (auto&& medication : medications)
-        {
-            if (medication.id() == id)
-            {
-                return std::move(medication);
-            }
-        }
-        return {}; // not found
+        model::MedicationsAndDispenses fromBundle;
+        fromBundle.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
+        return std::move(fromBundle).filter(id);
     }
     else
     {
@@ -172,15 +158,16 @@ std::optional<MedicationDispense> DatabaseFrontend::retrieveMedicationDispense(c
     }
 }
 
-CmacKey DatabaseFrontend::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType, RandomSource& randomSource)
+CmacKey DatabaseFrontend::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType,
+                                      RandomSource& randomSource)
 {
     return mBackend->acquireCmac(validDate, cmacType, randomSource);
 }
 
 PrescriptionId DatabaseFrontend::storeTask(const Task& task)
 {
-    auto [prescriptionId, authoredOn] =
-            mBackend->createTask(task.type(), task.status(), task.lastModifiedDate(), task.authoredOn());
+    auto [prescriptionId, authoredOn] = mBackend->createTask(task.type(), task.status(), task.lastModifiedDate(),
+                                                             task.authoredOn(), task.lastStatusChangeDate());
 
     A_19700.start("Initial key derivation for Task.");
     // use authoredOn returned from createTask to ensure we have identical rounding (see ERP-5602)
@@ -223,17 +210,19 @@ void DatabaseFrontend::updateTaskStatusAndSecret(const Task& task, const SafeStr
     A_19688.finish();
     // GEMREQ-end A_19688#encrypt-telematikid
     // GEMREQ-start A_24174#call-backend
-    mBackend->updateTaskStatusAndSecret(task.prescriptionId(), task.status(), task.lastModifiedDate(), secret, owner);
+    mBackend->updateTaskStatusAndSecret(task.prescriptionId(), task.status(), task.lastModifiedDate(), secret, owner,
+                                        task.lastStatusChangeDate());
     // GEMREQ-end A_24174#call-backend
 }
 
-void DatabaseFrontend::activateTask(const model::Task& task, const Binary& healthCareProviderPrescription)
+void DatabaseFrontend::activateTask(const model::Task& task, const Binary& healthCareProviderPrescription,
+                                    const JWT& doctorIdentity)
 {
-    activateTask(task, taskKey(task.prescriptionId()), healthCareProviderPrescription);
+    activateTask(task, taskKey(task.prescriptionId()), healthCareProviderPrescription, doctorIdentity);
 }
 
 void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& key,
-                                    const Binary& healthCareProviderPrescription)
+                                    const Binary& healthCareProviderPrescription, const JWT& doctorIdentity)
 {
     A_19688.start("encrypt kvnr and prescription.");
     const auto encryptedPrescription = mCodec.encode(healthCareProviderPrescription.serializeToJsonString(), key,
@@ -245,13 +234,18 @@ void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& k
     const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
     A_19688.finish();
 
+    const auto encryptedDoctorIdentity = mCodec.encode(db_model::AccessTokenIdentity(doctorIdentity).getJson(), key,
+                                                       Compression::DictionaryUse::Default_json);
+
     mBackend->activateTask(task.prescriptionId(), encrypedKvnr, hashedKvnr, task.status(), task.lastModifiedDate(),
-                           task.expiryDate(), task.acceptDate(), encryptedPrescription);
+                           task.expiryDate(), task.acceptDate(), encryptedPrescription, encryptedDoctorIdentity,
+                           task.lastStatusChangeDate());
 }
 
-void DatabaseFrontend::updateTaskMedicationDispense(
-    const model::Task& task, const std::vector<model::MedicationDispense>& medicationDispenses)
+void DatabaseFrontend::updateTaskMedicationDispense(const model::Task& task,
+                                                    const model::MedicationDispenseBundle& medicationDispenseBundle)
 {
+    const auto& medicationDispenses = medicationDispenseBundle.getResourcesByType<model::MedicationDispense>();
     ErpExpect(! medicationDispenses.empty(), HttpStatus::InternalServerError,
               "medication dispense bundle cannot be empty at this place");
     const auto& medicationDispense = medicationDispenses[0];
@@ -265,32 +259,51 @@ void DatabaseFrontend::updateTaskMedicationDispense(
     const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
 
     /// MedicationDispense uses same derivation master key as task:
-    auto [keyForMedicationDispense, blobId] = medicationDispenseKey(hashedKvnr);
-    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenses, keyForMedicationDispense);
-    mBackend->updateTaskMedicationDispense(task.prescriptionId(),
-                                           task.lastModifiedDate(),
-                                           value(task.lastMedicationDispense()),
-                                           encryptedMedicationDispense,
-                                           blobId,
-                                           hashedTelematikId,
-                                           whenHandedOver,
-                                           whenPrepared);
+    ErpExpect(task.lastMedicationDispense(), HttpStatus::InternalServerError,
+              "Cannot update medication dispense for task without a lastMedicationDispense timestamp.");
+    auto [keyForMedicationDispense, blobId, mediDispSalt] = medicationDispenseKey(hashedKvnr);
+    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenseBundle, keyForMedicationDispense);
+    mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
+                                           value(task.lastMedicationDispense()), encryptedMedicationDispense, blobId,
+                                           hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt);
 }
 
 void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
-    const model::Task& task, const std::vector<model::MedicationDispense>& medicationDispenses,
-    const model::ErxReceipt& receipt)
+    const model::Task& task, const model::MedicationDispenseBundle& medicationDispenseBundle,
+    const model::ErxReceipt& receipt, const JWT& pharmacyIdentity)
 {
-    updateTaskMedicationDispenseReceipt(task, taskKey(task.prescriptionId()), medicationDispenses, receipt);
+    updateTaskMedicationDispenseReceipt(task, taskKey(task.prescriptionId()), medicationDispenseBundle, receipt,
+                                        pharmacyIdentity);
 }
 
+void DatabaseFrontend::updateTaskReceipt(const model::Task& task, const model::ErxReceipt& receipt,
+                                         const SafeString& key, const JWT& pharmacyIdentity)
+{
+    A_19688.start("encrypt receipt");
+    auto encryptReceipt = mCodec.encode(receipt.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
+    A_19688.finish();
+    const auto kvnr = task.kvnr();
+    Expect3(kvnr.has_value(), "Cannot update medication dispense for task without kvnr.", std::logic_error);
+    const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
+    const auto encryptedPharmacyIdentity = mCodec.encode(db_model::AccessTokenIdentity(pharmacyIdentity).getJson(), key,
+                                                         Compression::DictionaryUse::Default_json);
+
+    /// MedicationDispense uses same derivation master key as task:
+    Expect3(task.lastMedicationDispense(),
+            "Cannot update medication dispense for task without a lastMedicationDispense timestamp.", std::logic_error);
+    mBackend->updateTaskReceipt(task.prescriptionId(), task.status(), task.lastModifiedDate(), encryptReceipt,
+                                encryptedPharmacyIdentity, task.lastStatusChangeDate());
+}
+
+
 void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
-    const model::Task& task, const SafeString& key, const std::vector<model::MedicationDispense>& medicationDispenses,
-    const model::ErxReceipt& receipt)
+    const model::Task& task, const SafeString& key, const model::MedicationDispenseBundle& medicationDispenseBundle,
+    const model::ErxReceipt& receipt, const JWT& pharmacyIdentity)
 {
     A_19688.start("encrypt medication dispense and receipt");
     auto encryptReceipt = mCodec.encode(receipt.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
     A_19688.finish();
+    const auto& medicationDispenses = medicationDispenseBundle.getResourcesByType<model::MedicationDispense>();
     ErpExpect(! medicationDispenses.empty(), HttpStatus::InternalServerError,
               "medication dispense bundle cannot be empty at this place");
     const auto& medicationDispense = medicationDispenses[0];
@@ -304,32 +317,23 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
     const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
 
     /// MedicationDispense uses same derivation master key as task:
-    auto [keyForMedicationDispense, blobId] = medicationDispenseKey(hashedKvnr);
-    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenses, keyForMedicationDispense);
-    mBackend->updateTaskMedicationDispenseReceipt(task.prescriptionId(),
-                                                  task.status(),
-                                                  task.lastModifiedDate(),
-                                                  encryptedMedicationDispense,
-                                                  blobId,
-                                                  hashedTelematikId,
-                                                  whenHandedOver,
-                                                  whenPrepared,
-                                                  encryptReceipt,
-                                                  value(task.lastMedicationDispense()));
+    ErpExpect(task.lastMedicationDispense(), HttpStatus::InternalServerError,
+              "Cannot update medication dispense for task without a lastMedicationDispense timestamp.");
+    auto [keyForMedicationDispense, blobId, mediDispSalt] = medicationDispenseKey(hashedKvnr);
+    auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenseBundle, keyForMedicationDispense);
+    const auto encryptedPharmacyIdentity = mCodec.encode(db_model::AccessTokenIdentity(pharmacyIdentity).getJson(), key,
+                                                         Compression::DictionaryUse::Default_json);
+    mBackend->updateTaskMedicationDispenseReceipt(
+        task.prescriptionId(), task.status(), task.lastModifiedDate(), encryptedMedicationDispense, blobId,
+        hashedTelematikId, whenHandedOver, whenPrepared, encryptReceipt, value(task.lastMedicationDispense()),
+        mediDispSalt, encryptedPharmacyIdentity, task.lastStatusChangeDate());
 }
 
 db_model::EncryptedBlob
-DatabaseFrontend::encryptMedicationDispense(const std::vector<model::MedicationDispense>& medicationDispenses,
+DatabaseFrontend::encryptMedicationDispense(const model::MedicationDispenseBundle& medicationDispenseBundle,
                                             const SafeString& keyForMedicationDispense)
 {
-    model::Bundle medicationDispenseBundle{model::BundleType::collection, model::FhirResourceBase::NoProfile, Uuid()};
-    for (const auto& medication : medicationDispenses)
-    {
-        medicationDispenseBundle.addResource({}, {}, {}, medication.jsonDocument());
-    }
-
-    return mCodec.encode(medicationDispenseBundle.serializeToJsonString(),
-                         keyForMedicationDispense,
+    return mCodec.encode(medicationDispenseBundle.serializeToJsonString(), keyForMedicationDispense,
                          Compression::DictionaryUse::Default_json);
 }
 
@@ -343,33 +347,14 @@ void DatabaseFrontend::updateTaskDeleteMedicationDispense(const model::Task& tas
 // GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
 void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
 {
-    mBackend->updateTaskClearPersonalData(task.prescriptionId(), task.status(), task.lastModifiedDate());
+    mBackend->updateTaskClearPersonalData(task.prescriptionId(), task.status(), task.lastModifiedDate(),
+                                          task.lastStatusChangeDate());
 }
 // GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
 
 std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 {
-    auto hashedKvnr = mDerivation.hashKvnr(auditData.insurantKvnr());
-
-    std::optional<db_model::EncryptedBlob> encryptedMeta;
-    std::optional<BlobId> auditEventBlobId;
-    if (!auditData.metaData().isEmpty())
-    {
-        auto [keyForAuditData, blobId] = auditEventKey(hashedKvnr);
-        encryptedMeta = mCodec.encode(auditData.metaData().serializeToJsonString(),
-                                      keyForAuditData,
-                                      Compression::DictionaryUse::Default_json);
-        auditEventBlobId = blobId;
-    }
-
-    db_model::AuditData dbAuditData(auditData.agentType(), auditData.eventId(), std::move(encryptedMeta),
-                                    auditData.action(), std::move(hashedKvnr), auditData.deviceId(),
-                                    auditData.prescriptionId(), auditEventBlobId);
-
-    auto id = mBackend->storeAuditEventData(dbAuditData);
-    auditData.setId(id);
-    auditData.setRecorded(dbAuditData.recorded);
-    return id;
+    return mCommonDatabaseFrontend->storeAuditEventData(*mBackend, auditData);
 }
 
 std::vector<model::AuditData>
@@ -540,12 +525,12 @@ std::vector<model::Task> DatabaseFrontend::retrieveAll160TasksWithAccessCode(con
     return allTasks;
 }
 
-uint64_t DatabaseFrontend::countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+uint64_t DatabaseFrontend::countAllTasksForPatient(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     return mBackend->countAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
 }
 
-uint64_t DatabaseFrontend::countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+uint64_t DatabaseFrontend::countAll160Tasks(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     return mBackend->countAll160Tasks(mDerivation.hashKvnr(kvnr), search);
 }
@@ -572,9 +557,9 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
     auto [recipientKey, recipientBlobId] = communicationKeyAndId(recipientIdentity, recipientHashed);
     auto messageForSender = mCodec.encode(messagePlain, senderKey, Compression::DictionaryUse::Default_json);
     auto messageForRecipient = mCodec.encode(messagePlain, recipientKey, Compression::DictionaryUse::Default_json);
-    auto uuid = mBackend->insertCommunication(prescriptionId, timeSent.value(), messageType, senderHashed, recipientHashed,
-                                              senderBlobId, messageForSender, recipientBlobId,
-                                              messageForRecipient);
+    auto uuid =
+        mBackend->insertCommunication(prescriptionId, timeSent.value(), messageType, senderHashed, recipientHashed,
+                                      senderBlobId, messageForSender, recipientBlobId, messageForRecipient);
     if (uuid)
     {
         communication.setId(*uuid);
@@ -585,8 +570,8 @@ std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communi
 uint64_t DatabaseFrontend::countRepresentativeCommunications(const model::Kvnr& insurantA, const model::Kvnr& insurantB,
                                                              const PrescriptionId& prescriptionId)
 {
-    return mBackend->countRepresentativeCommunications(mDerivation.hashKvnr(insurantA),
-                                                       mDerivation.hashKvnr(insurantB), prescriptionId);
+    return mBackend->countRepresentativeCommunications(mDerivation.hashKvnr(insurantA), mDerivation.hashKvnr(insurantB),
+                                                       prescriptionId);
 }
 
 bool DatabaseFrontend::existCommunication(const Uuid& communicationId)
@@ -626,8 +611,7 @@ std::vector<Communication> DatabaseFrontend::retrieveCommunications(const std::s
     return communications;
 }
 
-uint64_t DatabaseFrontend::countCommunications(const std::string& user,
-                                               const std::optional<UrlArguments>& search)
+uint64_t DatabaseFrontend::countCommunications(const std::string& user, const std::optional<UrlArguments>& search)
 {
     return mBackend->countCommunications(mDerivation.hashIdentity(user), search);
 }
@@ -760,17 +744,15 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
     return chargeItem.toChargeInformation(codecWithKey);
 }
 
-std::tuple<::model::ChargeInformation, BlobId, db_model::Blob> DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
+std::tuple<::model::ChargeInformation, BlobId, db_model::Blob>
+DatabaseFrontend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
     auto chargeItem = mBackend->retrieveChargeInformationForUpdate(id);
     const auto codecWithKey = DatabaseCodecWithKey{
         .codec = mCodec,
         .key = std::get<SafeString>(chargeItemKey(chargeItem.prescriptionId, chargeItem.blobId, chargeItem.salt))};
 
-    return std::make_tuple(
-        chargeItem.toChargeInformation(codecWithKey),
-        chargeItem.blobId,
-        std::move(chargeItem.salt));
+    return std::make_tuple(chargeItem.toChargeInformation(codecWithKey), chargeItem.blobId, std::move(chargeItem.salt));
 }
 
 // GEMREQ-start A_22117-01#query-call-deleteChargeInformation
@@ -809,7 +791,7 @@ uint64_t DatabaseFrontend::countChargeInformationForInsurant(const model::Kvnr& 
     return mBackend->countChargeInformationForInsurant(mDerivation.hashKvnr(kvnr), search);
 }
 
-DatabaseBackend& DatabaseFrontend::getBackend()
+ErpDatabaseBackend& DatabaseFrontend::getBackend()
 {
     return *mBackend;
 }
@@ -818,16 +800,14 @@ DatabaseFrontend::~DatabaseFrontend(void) = default;
 
 std::shared_ptr<Compression> DatabaseFrontend::compressionInstance()
 {
-    static auto theCompressionInstance =
-        std::make_shared<ZStd>(Configuration::instance().getStringValue(ConfigurationKey::ZSTD_DICTIONARY_DIR));
-    return theCompressionInstance;
+    return CommonDatabaseFrontend::compressionInstance();
 }
 
 model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const std::optional<SafeString>& key)
 {
 
     model::Task modelTask(dbTask.prescriptionId, dbTask.prescriptionId.type(), dbTask.lastModified, dbTask.authoredOn,
-                          dbTask.status);
+                          dbTask.status, dbTask.lastStatusChange);
     if (dbTask.kvnr && key)
     {
         const auto type = dbTask.prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
@@ -853,7 +833,7 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     {
         modelTask.setOwner(mCodec.decode(*dbTask.owner, *key));
     }
-    if(dbTask.lastMedicationDispense)
+    if (dbTask.lastMedicationDispense)
     {
         modelTask.updateLastMedicationDispense(dbTask.lastMedicationDispense.value());
     }
@@ -879,7 +859,8 @@ std::optional<model::Bundle> DatabaseFrontend::getReceipt(const db_model::Task& 
     return model::Bundle::fromJsonNoValidation(mCodec.decode(*dbTask.receipt, key));
 }
 
-std::optional<model::Bundle> DatabaseFrontend::getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispensItem, const SafeString& key)
+std::optional<model::Bundle>
+DatabaseFrontend::getDispenseItem(const std::optional<db_model::EncryptedBlob>& dbDispensItem, const SafeString& key)
 {
     if (! dbDispensItem.has_value())
     {
@@ -905,39 +886,37 @@ std::optional<SafeString> DatabaseFrontend::taskKey(const db_model::Task& dbTask
     }
     A_19700.start("Get key derivation information for retrievals.");
     Expect(not dbTask.salt.empty(), "missing salt in task.");
-    auto key = std::make_optional(mDerivation.taskKey(dbTask.prescriptionId, dbTask.authoredOn,
-                                                      dbTask.blobId, dbTask.salt));
+    auto key =
+        std::make_optional(mDerivation.taskKey(dbTask.prescriptionId, dbTask.authoredOn, dbTask.blobId, dbTask.salt));
     A_19700.finish();
     return key;
 }
 
-std::tuple<SafeString, BlobId> DatabaseFrontend::medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr)
+std::tuple<SafeString, BlobId, db_model::Blob>
+DatabaseFrontend::medicationDispenseKey(const db_model::HashedKvnr& hashedKvnr)
 {
     auto blobId = mHsmPool.acquire().session().getLatestTaskPersistenceId();
-    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr,
-                                                 db_model::MasterKeyType::medicationDispense,
-                                                 blobId);
+    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::medicationDispense, blobId);
     if (salt)
     {
-        return {mDerivation.medicationDispenseKey(hashedKvnr, blobId, *salt), blobId};
+        return {mDerivation.medicationDispenseKey(hashedKvnr, blobId, *salt), blobId, *salt};
     }
     else
     {
         SafeString key;
         OptionalDeriveKeyData secondCallData;
         std::tie(key, secondCallData) = mDerivation.initialMedicationDispenseKey(hashedKvnr);
-        auto dbSalt = mBackend->insertOrReturnAccountSalt(hashedKvnr,
-                                                          db_model::MasterKeyType::medicationDispense,
-                                                          secondCallData.blobId,
-                                                          db_model::Blob{std::vector<uint8_t>{secondCallData.salt}});
+        auto newSalt = db_model::Blob{std::vector<uint8_t>{secondCallData.salt}};
+        auto dbSalt = mBackend->insertOrReturnAccountSalt(hashedKvnr, db_model::MasterKeyType::medicationDispense,
+                                                          secondCallData.blobId, newSalt);
         // there was a concurrent insert so we need to derive again with the
         // salt created by the concurrent, who was first to insert the salt.
         blobId = secondCallData.blobId;
         if (dbSalt)
         {
-            return {mDerivation.medicationDispenseKey(hashedKvnr, blobId, *dbSalt), blobId};
+            return {mDerivation.medicationDispenseKey(hashedKvnr, blobId, *dbSalt), blobId, *dbSalt};
         }
-        return {std::move(key), blobId};
+        return {std::move(key), blobId, std::move(newSalt)};
     }
 }
 
@@ -952,7 +931,8 @@ DatabaseFrontend::chargeItemKey(const ::model::PrescriptionId& prescriptionId) c
 }
 
 ::std::tuple<::SafeString, ::BlobId, ::db_model::Blob>
-DatabaseFrontend::chargeItemKey(const model::PrescriptionId& prescriptionId, const BlobId& blobId, const db_model::Blob& salt) const
+DatabaseFrontend::chargeItemKey(const model::PrescriptionId& prescriptionId, const BlobId& blobId,
+                                const db_model::Blob& salt) const
 {
     A_19700.start("Get derivation key.");
     auto key = mDerivation.chargeItemKey(prescriptionId, blobId, salt);
@@ -963,39 +943,14 @@ DatabaseFrontend::chargeItemKey(const model::PrescriptionId& prescriptionId, con
 
 std::tuple<SafeString, BlobId> DatabaseFrontend::auditEventKey(const db_model::HashedKvnr& hashedKvnr)
 {
-    auto blobId = mHsmPool.acquire().session().getLatestAuditLogPersistenceId();
-    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::auditevent, blobId);
-
-    if (salt)
-    {
-        return {mDerivation.auditEventKey(hashedKvnr, blobId, *salt), blobId};
-    }
-    else
-    {
-        SafeString keyForAuditData;
-        OptionalDeriveKeyData secondCallData;
-        std::tie(keyForAuditData, secondCallData) = mDerivation.initialAuditEventKey(hashedKvnr);
-        auto dbSalt =
-            mBackend->insertOrReturnAccountSalt(hashedKvnr, db_model::MasterKeyType::auditevent, secondCallData.blobId,
-                                                db_model::Blob{std::vector<uint8_t>{secondCallData.salt}});
-        // there was a concurrent insert so we need to derive again with the
-        // salt created by the concurrent, who was first to insert the salt.
-        blobId = secondCallData.blobId;
-        if (dbSalt)
-        {
-            return {mDerivation.auditEventKey(hashedKvnr, secondCallData.blobId, *dbSalt), blobId};
-        }
-        return {std::move(keyForAuditData), blobId};
-    }
+    return mCommonDatabaseFrontend->auditEventKey(*mBackend, hashedKvnr);
 }
 
-std::tuple<SafeString, BlobId>
-DatabaseFrontend::communicationKeyAndId(const std::string_view& identity, const db_model::HashedId& identityHashed)
+std::tuple<SafeString, BlobId> DatabaseFrontend::communicationKeyAndId(const std::string_view& identity,
+                                                                       const db_model::HashedId& identityHashed)
 {
     auto blobId = mHsmPool.acquire().session().getLatestCommunicationPersistenceId();
-    auto salt = mBackend->retrieveSaltForAccount(identityHashed,
-                                                 db_model::MasterKeyType::communication,
-                                                 blobId);
+    auto salt = mBackend->retrieveSaltForAccount(identityHashed, db_model::MasterKeyType::communication, blobId);
     SafeString key;
     if (salt)
     {
@@ -1004,17 +959,15 @@ DatabaseFrontend::communicationKeyAndId(const std::string_view& identity, const 
     else
     {
         OptionalDeriveKeyData secondCallData;
-        std::tie(key, secondCallData)
-                = mDerivation.initialCommunicationKey(identity, identityHashed);
-        auto dbSalt = mBackend->insertOrReturnAccountSalt(identityHashed,
-                                                          db_model::MasterKeyType::communication,
+        std::tie(key, secondCallData) = mDerivation.initialCommunicationKey(identity, identityHashed);
+        auto dbSalt = mBackend->insertOrReturnAccountSalt(identityHashed, db_model::MasterKeyType::communication,
                                                           secondCallData.blobId,
                                                           db_model::Blob{std::vector<uint8_t>{secondCallData.salt}});
         // there was a concurrent insert so we need to derive again with the
         // salt created by the concurrent, who was first to insert the salt.
         if (dbSalt)
         {
-            key = mDerivation.communicationKey(identity,identityHashed, secondCallData.blobId, *dbSalt);
+            key = mDerivation.communicationKey(identity, identityHashed, secondCallData.blobId, *dbSalt);
         }
         blobId = secondCallData.blobId;
     }

@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/common/Header.hxx"
+#include "shared/network/message/Header.hxx"
 
 #include <gtest/gtest.h>
 

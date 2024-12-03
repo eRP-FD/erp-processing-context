@@ -6,10 +6,10 @@
  */
 
 #include "test/util/CryptoHelper.hxx"
-#include "erp/crypto/CadesBesSignature.hxx"
-#include "erp/crypto/Certificate.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/util/Base64.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/util/Base64.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include "ResourceManager.hxx"

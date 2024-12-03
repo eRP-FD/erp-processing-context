@@ -7,7 +7,7 @@
 
 #include "test/util/ResourceTemplates.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <date/tz.h>
 #include <boost/algorithm/string/replace.hpp>

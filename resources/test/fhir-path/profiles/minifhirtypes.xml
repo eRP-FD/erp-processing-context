@@ -12,7 +12,7 @@
         <name value="string"/>
         <status value="draft"/>
         <kind value="primitive-type"/>
-        <abstract value="true"/>
+        <abstract value="false"/>
         <type value="string"/>
         <snapshot>
           <element id="string">
@@ -28,14 +28,54 @@
           <element id="string.value">
             <path value="string.value"/>
             <min value="0"/>
-            <max value="*"/>
+            <max value="1"/>
             <base>
               <path value="string.value"/>
               <min value="0"/>
-              <max value="*"/>
+              <max value="1"/>
             </base>
             <type>
               <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/decimal"/>
+    <resource>
+      <StructureDefinition>
+        <id value="decimal"/>
+        <url value="http://fhir-tools.test/minifhirtypes/decimal"/>
+        <version value="4.0.1"/>
+        <name value="decimal"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="false"/>
+        <type value="decimal"/>
+        <snapshot>
+          <element id="decimal">
+            <path value="decimal"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="decimal"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="decimal.value">
+            <path value="decimal.value"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="decimal.value"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.Decimal"/>
             </type>
           </element>
         </snapshot>
@@ -64,6 +104,59 @@
               <min value="0"/>
               <max value="*"/>
             </base>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Reference"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Reference"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Reference"/>
+        <version value="4.0.1"/>
+        <name value="Reference"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="false"/>
+        <type value="Reference"/>
+        <snapshot>
+          <element id="Reference">
+            <path value="Reference"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Reference"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Reference.reference">
+            <path value="Reference.reference"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Reference.reference"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Reference.type">
+            <path value="Reference.type"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Reference.type"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
           </element>
         </snapshot>
       </StructureDefinition>
@@ -159,6 +252,22 @@
               <code value="string"/>
             </type>
           </element>
+          <element id="Extension.value[x]">
+            <path value="Extension.value[x]"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Extension.value[x]"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <type>
+              <code value="decimal"/>
+            </type>
+          </element>
         </snapshot>
       </StructureDefinition>
     </resource>
@@ -248,6 +357,30 @@
           </element>
         </snapshot>
       </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/resource-types"/>
+    <resource>
+      <CodeSystem>
+        <id value="resource-types"/>
+        <url value="http://hl7.org/fhir/resource-types"/>
+        <version value="4.0.1"/>
+        <name value="resource-types"/>
+        <status value="draft"/>
+        <concept>
+          <code value="Bundle"/>
+        </concept>
+        <concept>
+          <code value="DomainResource"/>
+        </concept>
+        <concept>
+          <code value="Parameters"/>
+        </concept>
+        <concept>
+          <code value="Resource"/>
+        </concept>
+      </CodeSystem>
     </resource>
   </entry>
 </Bundle>

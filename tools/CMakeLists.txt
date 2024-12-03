@@ -83,4 +83,11 @@ target_link_libraries(fhirvalidate
 )
 
 
-add_custom_target(tools DEPENDS make_task_id fhirconvert resources)
+add_executable(tee3send EXCLUDE_FROM_ALL tee3send/tee3send_main.cxx)
+target_link_libraries(tee3send
+    PRIVATE
+        erp-medication-exporter-files
+        CONAN_PKG::boost
+)
+
+add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate resources)

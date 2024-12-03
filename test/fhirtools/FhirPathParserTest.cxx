@@ -6,13 +6,13 @@
  */
 
 
-#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/KbvBundle.hxx"
-#include "erp/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/expression/Expression.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -31,7 +31,7 @@ public:
             ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
 
         rootElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<Element>{}, repo.findTypeById("Test"), "Test",
-                                                   &testResource);
+            &testResource);
     }
     void checkBoolResult(const Collection& result, bool expected)
     {

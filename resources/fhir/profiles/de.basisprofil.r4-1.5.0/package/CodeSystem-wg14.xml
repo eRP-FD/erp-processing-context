@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="wg14"/>
+  <url value="http://fhir.de/CodeSystem/abdata/wg14"/>
+  <name value="WG14"/>
+  <title value="WG14"/>
+  <status value="active"/>
+  <experimental value="false"/>
+  <date value="2023-11-30"/>
+  <publisher value="HL7 Deutschland e.V. (Technisches Komitee FHIR)"/>
+  <contact>
+    <telecom>
+      <system value="url"/>
+      <value value="http://hl7.de/technische-komitees/fhir/"/>
+    </telecom>
+  </contact>
+  <description value="ABDATA WG14 Platzhalter-CodeSystem"/>
+  <copyright value="ABDATA Pharma-Daten-Service der Avoxa - Mediengruppe Deutscher Apotheker GmbH"/>
+  <caseSensitive value="true"/>
+  <content value="not-present"/>
+</CodeSystem>

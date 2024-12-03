@@ -7,8 +7,11 @@
 
 #include "erp/service/task/DispenseTaskHandler.hxx"
 
-#include "erp/ErpRequirements.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/MedicationDispenseBundle.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
@@ -66,21 +69,22 @@ void DispenseTaskHandler::handleRequest(PcSessionContext& session)
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
-    auto medicationDispenses = medicationDispensesFromBody(session);
-    A_24281.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
-    checkMedicationDispenses(medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
-    A_24281.finish();
+    auto bodyData = parseBody(session, Operation::POST_Task_id_dispense);
+    A_24281_02.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
+    checkMedicationDispenses(bodyData.medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
+    A_24281_02.finish();
 
     // A_24285 Zeitpunkt des Aufrufes in Task.extension:lastMedicationDispense setzen
     task.updateLastMedicationDispense();
 
-    // store in DB:
+    A_24281_02.start("Save modified Task and MedicationDispense");
     task.updateLastUpdate();
     ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing key for task");
-    databaseHandle->updateTaskMedicationDispense(task, medicationDispenses);
+    auto bundle = MedicationDispenseHandlerBase::createBundle(bodyData);
+    databaseHandle->updateTaskMedicationDispense(task, bundle);
+    A_24281_02.finish();
 
     // Response
-    auto bundle = MedicationDispenseHandlerBase::createBundle(medicationDispenses);
     makeResponse(session, HttpStatus::OK, &bundle);
 
     // Collect Audit data

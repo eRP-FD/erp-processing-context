@@ -41,14 +41,18 @@ readargs()
 readargs "$@"
 
 if [ "$skip_build" == "no" ]; then
-    mount | grep ccache
-    ls -l /data/jenkins/.ccache
-    df -h /data/jenkins/.ccache
-    ccache --version
-    ccache -o cache_dir=/data/jenkins/.ccache
-    ccache -M 40000M
-    ccache -p
-    ccache -s
+    CCACHE_DIR=$(mount | awk '/ccache/ {print $3}')
+    if [[ -n ${CCACHE_DIR} ]]; then
+        ls -l ${CCACHE_DIR}
+        df -h ${CCACHE_DIR}
+        ccache --version
+        ccache -o cache_dir=${CCACHE_DIR}
+        ccache -M 40000M
+        ccache -p
+        ccache -s
+    else
+        echo "No ccache dir found."
+    fi
 fi
 
 test -n "${erp_build_version}" || die "missing argument --build_version="
@@ -107,7 +111,7 @@ fi
 if [ "$skip_build" == "yes" ]; then
     ninja generated_source
 else
-    ninja -l$(nproc) test production fhirtools-test
+    ninja -l$(nproc) test production fhirtools-test exporter-test
 fi
 
 if [ $repeat_without_binary_repo == 1 ]; then

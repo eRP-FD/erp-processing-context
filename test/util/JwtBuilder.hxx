@@ -8,9 +8,9 @@
 #ifndef ERP_TOOLS_JWTBUILDER_HXX
 #define ERP_TOOLS_JWTBUILDER_HXX
 
-#include "erp/crypto/Jws.hxx"
-#include "erp/crypto/Jwt.hxx"
-#include "erp/model/Kvnr.hxx"
+#include "shared/crypto/Jws.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/model/Kvnr.hxx"
 
 #include <rapidjson/document.h>
 

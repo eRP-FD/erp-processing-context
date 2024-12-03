@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSystem xmlns="http://hl7.org/fhir">
+  <id value="OrganizationProviderType"/>
+  <url value="https://gematik.de/fhir/directory/CodeSystem/OrganizationProviderType"/>
+  <version value="0.11.12"/>
+  <name value="OrganizationProviderType"/>
+  <status value="active"/>
+  <publisher value="gematik GmbH"/>
+  <description value="CodeSystem of TI Service Provider types as to be found in the gematik Directory"/>
+  <caseSensitive value="false"/>
+  <content value="complete"/>
+  <count value="4"/>
+  <concept>
+    <code value="tim-provider"/>
+    <display value="TI-Messenger-Provider"/>
+  </concept>
+  <concept>
+    <code value="kim-provider"/>
+    <display value="KIM-Provider"/>
+  </concept>
+  <concept>
+    <code value="tsp"/>
+    <display value="Trust Service Provider"/>
+  </concept>
+  <concept>
+    <code value="idp"/>
+    <display value="Identity Provider"/>
+  </concept>
+</CodeSystem>

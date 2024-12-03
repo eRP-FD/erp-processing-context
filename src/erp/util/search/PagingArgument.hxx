@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_PAGINGARGUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_PAGINGARGUMENT_HXX
 
-#include "erp/model/Timestamp.hxx"
+#include "shared/model/Timestamp.hxx"
 
 #include <optional>
 #include <string>

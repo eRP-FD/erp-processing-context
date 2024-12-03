@@ -7,14 +7,14 @@
 
 #include "mock/hsm/HsmMockClient.hxx"
 
-#include "erp/crypto/EllipticCurve.hxx"
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/util/ByteHelper.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Random.hxx"
-#include "erp/util/String.hxx"
+#include "shared/crypto/EllipticCurve.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Random.hxx"
+#include "shared/util/String.hxx"
 
-#include "erp/util/TLog.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <sstream>
 
@@ -245,6 +245,39 @@ ErpVector HsmMockClient::unwrapRawPayload(const HsmRawSession&, UnwrapRawPayload
 {
     verifyTeeToken(input.teeToken);
     return ErpVector::create(input.wrappedRawPayload.data);
+}
+
+ErpVector HsmMockClient::signWithVauAutKey(const HsmRawSession&, SignVauAutInput&& input)
+{
+    static constexpr size_t BnSize = 32;
+    verifyTeeToken(input.teeToken);
+    auto mdctx = shared_EVP_MD_CTX::make();
+    OpenSslExpect(mdctx, "Failed to make EVP_MD_CTX");
+    EVP_PKEY_CTX* pkeyctx = nullptr;
+    auto privateKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(input.vauAutKeyBlob.data);
+    OpenSslExpect(EVP_DigestSignInit(mdctx, &pkeyctx, EVP_sha256(), nullptr, privateKey.removeConst()) == 1,
+                          "EVP_DigestSignInit failed.");
+    OpenSslExpect(pkeyctx, "Failed to initialize DigestSignInit");
+    OpenSslExpect(EVP_DigestSignUpdate(mdctx, input.signableData.data(), input.signableData.size()) == 1,
+                  "EVP_DigestSignUpdate failed.");
+    size_t siglen = 0;
+    OpenSslExpect(EVP_DigestSignFinal(mdctx, nullptr, &siglen) == 1, "EVP_DigestSignFinal failed while determining length");
+    auto sig = std::make_unique<unsigned char[]>(siglen);
+    OpenSslExpect(EVP_DigestSignFinal(mdctx, sig.get(), &siglen) == 1, "EVP_DigestSignFinal failed");
+
+    const unsigned char* sigptr = sig.get();
+    EcdsaSignaturePtr ecdsaSig{d2i_ECDSA_SIG(nullptr, &sigptr, static_cast<int>(siglen))};
+    OpenSslExpect(ecdsaSig != nullptr, "Failed to read generated signature.");
+
+    const BIGNUM* r;// NOLINT(cppcoreguidelines-init-variables)
+    const BIGNUM* s;// NOLINT(cppcoreguidelines-init-variables)
+    ECDSA_SIG_get0(ecdsaSig.get(), &r, &s);
+    std::string rsBin(2 * BnSize, '\0');
+    OpenSslExpect(BN_bn2binpad(r, reinterpret_cast<unsigned char*>(rsBin.data()), BnSize) == BnSize,
+                  "Failed to get binary R.");
+    OpenSslExpect(BN_bn2binpad(s, reinterpret_cast<unsigned char*>(rsBin.data() + BnSize), BnSize) == BnSize,
+                  "Failed to get binary S.");
+    return ErpVector::create(rsBin);
 }
 
 void HsmMockClient::reconnect (HsmRawSession&)

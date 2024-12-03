@@ -8,6 +8,7 @@
 
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <optional>
 #include <set>
@@ -27,16 +28,16 @@ class FhirSlicing;
 class SlicingChecker
 {
 public:
-    explicit SlicingChecker(const FhirStructureDefinition* initBaseProfile,
-                            const FhirSlicing& slicing,
+    explicit SlicingChecker(const FhirStructureDefinition* initBaseProfile, const FhirSlicing& slicing,
+                            const fhirtools::ValidatorOptions& options,
                             std::optional<FhirSlicing::SlicingRules> ruleOverride = std::nullopt);
     ~SlicingChecker();
     void foundSliced(const FhirStructureDefinition* sliceProfile, std::string_view fullElementName);
-    void foundUnsliced(std::string_view fullElementName);
-    void finalize(std::string_view elementFullPath);
+    void foundUnsliced(const fhirtools::Element& element, std::string_view fullElementName);
+    void finalize(std::string_view elementFullPath, const std::shared_ptr<const Element>& element);
 
     ValidationResults results() &&;
-    const ValidationResults& results() const &;
+    const ValidationResults& results() const&;
     [[nodiscard]] const std::set<ProfiledElementTypeInfo>& affectedValidators() const;
     void addAffectedValidator(const ProfiledElementTypeInfo&);
 
@@ -54,6 +55,7 @@ private:
     ValidationResults mResult;
     const FhirStructureDefinition* const mBaseProfile;
     std::set<ProfiledElementTypeInfo> mAffectedValidators;
+    fhirtools::ValidatorOptions mOptions;
 };
 
 

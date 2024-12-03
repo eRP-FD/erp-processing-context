@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/crypto/EllipticCurveUtils.hxx"
-#include "erp/hsm/HsmPool.hxx"
-#include "erp/hsm/BlobCache.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/BlobCache.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
-#include "erp/util/Configuration.hxx"
-#include "erp/util/Environment.hxx"
-#include "erp/util/FileHelper.hxx"
+#include "shared/util/Configuration.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"

@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_HSMPOOLHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_HSMPOOLHELPER_HXX
 
-#include <erp/util/Expect.hxx>
-#include "erp/hsm/HsmPool.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/hsm/HsmPool.hxx"
 
 
 /**

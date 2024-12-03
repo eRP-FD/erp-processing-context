@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_MOCK_MOCKVSDMKEYBLOBDATABASE_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_MOCK_MOCKVSDMKEYBLOBDATABASE_HXX
 
-#include "erp/hsm/VsdmKeyBlobDatabase.hxx"
+#include "src/shared/hsm/VsdmKeyBlobDatabase.hxx"
 
 #include <functional>
 #include <mutex>

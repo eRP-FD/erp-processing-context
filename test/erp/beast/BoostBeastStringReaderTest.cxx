@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/beast/BoostBeastStringReader.hxx"
-#include "erp/util/ErpException.hxx"
+#include "shared/beast/BoostBeastStringReader.hxx"
+#include "shared/util/ErpException.hxx"
 
 #include <gtest/gtest.h>
 
