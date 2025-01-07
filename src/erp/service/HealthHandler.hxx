@@ -14,8 +14,9 @@
 class HealthHandler : public UnconstrainedRequestHandler
 {
 public:
-    void handleRequest(SessionContext& session) override;
-    Operation getOperation(void) const override;
+    void handleRequest(BaseSessionContext& session) override;
+    Operation getOperation() const override;
+    ~HealthHandler() override = default;
 };
 
 

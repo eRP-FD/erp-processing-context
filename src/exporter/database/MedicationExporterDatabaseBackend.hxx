@@ -35,7 +35,7 @@ public:
                                model::PrescriptionType prescriptionType) = 0;
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) = 0;
-    virtual void postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr) = 0;
+    virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) = 0;
     virtual void finalizeKvnr(const model::EventKvnr& kvnr) const = 0;
 };
 

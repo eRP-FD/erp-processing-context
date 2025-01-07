@@ -22,6 +22,7 @@ TaskEvent::TaskEvent(id_t id, const PrescriptionId& prescriptionId, Prescription
     , mState(state)
     , mKbvBundle(std::move(kbvBundle))
     , mLastModified(lastModified)
+    , mRetryCount(0)
 {
 }
 
@@ -74,6 +75,11 @@ Timestamp TaskEvent::getMedicationRequestAuthoredOn() const
 Timestamp TaskEvent::getLastModified() const
 {
     return mLastModified;
+}
+
+std::int32_t TaskEvent::getRetryCount() const
+{
+    return mRetryCount;
 }
 
 ProvidePrescriptionTaskEvent::ProvidePrescriptionTaskEvent(

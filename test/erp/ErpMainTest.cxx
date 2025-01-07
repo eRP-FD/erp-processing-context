@@ -143,7 +143,7 @@ public:
         HttpsClient client(ConnectionParameters{
             .hostname = "127.0.0.1",
             .port = "7090",
-            .connectionTimeoutSeconds = 30,
+            .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
@@ -172,7 +172,7 @@ public:
             HttpsClient client(ConnectionParameters{
             .hostname = "127.0.0.1",
             .port = std::to_string(config.serverPort()),
-            .connectionTimeoutSeconds = 30,
+            .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
@@ -191,7 +191,7 @@ public:
         HttpsClient client(ConnectionParameters{
             .hostname = "127.0.0.1",
             .port = config.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-            .connectionTimeoutSeconds = 30,
+            .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
@@ -237,7 +237,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
             HttpsClient client(ConnectionParameters{
                 .hostname = config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
                 .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
-                .connectionTimeoutSeconds = 30,
+                .connectionTimeout = std::chrono::seconds{30},
                 .resolveTimeout = Constants::resolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
                     .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
@@ -262,7 +262,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
             HttpsClient client(ConnectionParameters{
                 .hostname = config.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
                 .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
-                .connectionTimeoutSeconds = 30,
+                .connectionTimeout = std::chrono::seconds{30},
                 .resolveTimeout = Constants::resolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
                     .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});

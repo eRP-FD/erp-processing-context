@@ -26,9 +26,9 @@ add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 #
 list(
     APPEND erp-processing-context-source-files
+        Application.cxx
         ErpMain.cxx
         ErpProcessingContext.cxx
-        admin/AdminRequestHandler.cxx
         admin/AdminServer.cxx
         admin/PutRuntimeConfigHandler.cxx
         crypto/SignedPrescription.cxx
@@ -135,6 +135,8 @@ list(
         tee/InnerTeeRequest.cxx
         tee/InnerTeeResponse.cxx
         tee/OuterTeeResponse.cxx
+        util/ConfigurationFormatter.cxx
+        util/RuntimeConfiguration.cxx
         util/health/HealthCheck.cxx
         util/search/PagingArgument.cxx
         util/search/SearchArgument.cxx

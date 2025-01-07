@@ -15,7 +15,7 @@
 #include "shared/util/FileHelper.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/StaticData.hxx"
-#include "erp/server/RequestHandler.hxx"
+#include "shared/server/RequestHandler.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
@@ -54,8 +54,9 @@ namespace
         {
         }
 
-        void handleRequest (OcspSessionContext& session) override
+        void handleRequest (BaseSessionContext& baseSession) override
         {
+            auto& session = dynamic_cast<OcspSessionContext&>(baseSession);
             std::string responseBody =
                 MockOcsp::create(
                     session.request.getBody(),

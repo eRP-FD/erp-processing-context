@@ -45,7 +45,7 @@ public:
     void close (void);
 
 private:
-    const uint16_t mConnectionTimeoutSeconds;
+    std::chrono::milliseconds mConnectionTimeout;
     std::string mHostName;
     SessionContainer<StreamClass> mSessionContainer;
 };

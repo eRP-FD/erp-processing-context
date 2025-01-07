@@ -75,11 +75,11 @@ class SessionContainer<TcpStream>
 {
 public:
     SessionContainer(const ConnectionParameters& params)
-        : mTcpStream(params.hostname, params.port, params.connectionTimeoutSeconds, params.resolveTimeout)
+        : mTcpStream(params.hostname, params.port, params.connectionTimeout, params.resolveTimeout)
     {}
 
     SessionContainer(const boost::asio::ip::tcp::endpoint& ep, const ConnectionParameters& params)
-        : mTcpStream(ep, params.hostname, params.connectionTimeoutSeconds)
+        : mTcpStream(ep, params.hostname, params.connectionTimeout)
     {}
 
     TcpStream& getStream() { return mTcpStream; };

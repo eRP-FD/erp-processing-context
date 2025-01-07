@@ -17,6 +17,8 @@ class Task;
 class ResourceBase;
 class KbvMedicationGeneric;
 class TelematikId;
+class Pzn;
+class KbvMedicationCompounding;
 }
 
 namespace fhirtools
@@ -56,6 +58,10 @@ private:
                                       const std::string& actorOrganizationName,
                                       const std::string& organizationProfessionOid);
     static model::NumberAsStringParserDocument transformKbvMedication(const model::KbvMedicationGeneric& kbvMedication);
+    static void convertPZNIngredients(model::NumberAsStringParserDocument& transformedMedication,
+                                      const model::KbvMedicationCompounding& kbvMedicationCompounding);
+    static void convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
+                                     rapidjson::Value& epaIngredient, model::Pzn&& pzn, std::string_view text);
     static model::NumberAsStringParserDocument
     transformResource(const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
                       const std::vector<fhirtools::ValueMapping>& valueMappings,

@@ -9,7 +9,7 @@
 #include "shared/compression/Deflate.hxx"
 #include "shared/network/message/Header.hxx"
 #include "shared/util/Hash.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "src/shared/enrolment/VsdmHmacKey.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 

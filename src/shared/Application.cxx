@@ -6,17 +6,12 @@
  */
 
 #include "shared/Application.hxx"
-
-#include "shared/util/Configuration.hxx"
-#include "shared/util/ConfigurationFormatter.hxx"
-#include "shared/util/CrashHandler.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
-
+#include "shared/deprecated/SignalHandler.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/hsm/production/HsmProductionFactory.hxx"
-#include "shared/deprecated/SignalHandler.hxx"
+#include "shared/util/CrashHandler.hxx"
 #include "shared/util/TLog.hxx"
-#include "shared/deprecated/TerminationHandler.hxx"
 #include "shared/validation/JsonValidator.hxx"
 #include "shared/validation/XmlValidator.hxx"
 
@@ -34,23 +29,19 @@ void deactivateLibxmlLoggingToStderr()
     xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {
     });
 }
+}
 
-void processCommandLine(const int argc, const char* argv[])
+void Application::processCommandLine(const int argc, const char* argv[])
 {
     for (int i = 1; i < argc; ++i)
     {
         std::string_view arg{argv[i]};
         if (arg == "--print-configuration")
         {
-            using Flags = KeyData::ConfigurationKeyFlags;
-            const auto& config = Configuration::instance();
-            const RuntimeConfiguration runtimeConfiguration;
-            std::cout << ConfigurationFormatter::formatAsJson(config, RuntimeConfigurationGetter(runtimeConfiguration),
-                                                              Flags::all);
+            printConfiguration();
             exit(EXIT_SUCCESS);//NOLINT(concurrency-mt-unsafe)
         }
     }
-}
 }
 
 

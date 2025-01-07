@@ -26,6 +26,7 @@ add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 #
 list(
     APPEND erp-medication-exporter-source-files
+        Application.cxx
         BdeMessage.cxx
         BdeMessage.hxx
         Epa4AllTransformer.cxx
@@ -34,6 +35,7 @@ list(
         EventProcessor.cxx
         MedicationExporterMain.cxx
         VauAutTokenSigner.cxx
+        admin/PutRuntimeConfigHandler.cxx
         database/ExporterDatabaseModel.cxx
         database/MainDatabaseFrontend.cxx
         database/MainDatabaseFrontend.hxx
@@ -47,6 +49,8 @@ list(
         model/DataAbsentReason.cxx
         model/EventKvnr.cxx
         model/EpaOpCancelPrescriptionErpInputParameters.cxx
+        model/EpaMedicationPznIngredient.cxx
+        model/EpaMedicationTypeExtension.cxx
         model/EpaOpProvideDispensationErpInputParameters.cxx
         model/EpaOpProvidePrescriptionErpInputParameters.cxx
         model/EpaOpRxDispensationErpOutputParameters.cxx
@@ -54,6 +58,7 @@ list(
         model/OrganizationDirectory.cxx
         model/ResourceInstances.cxx
         model/TaskEvent.cxx
+        network/client/HttpsClientPool.cxx
         network/client/Tee3Client.cxx
         network/client/Tee3ClientPool.cxx
         network/client/Tee3ClientsForHost.cxx
@@ -67,7 +72,6 @@ list(
         eventprocessing/Outcome.cxx
         eventprocessing/ProvideDispensation.cxx
         eventprocessing/ProvidePrescription.cxx
-        VauAutTokenSigner.cxx
         model/ConsentDecisionsResponseType.cxx
         model/EpaErrorType.cxx
         model/EpaOperationOutcome.cxx
@@ -76,6 +80,8 @@ list(
         server/ServerSession.cxx
         server/SessionContext.cxx
         tee3/EpaCertificateService.cxx
+        util/ConfigurationFormatter.cxx
+        util/RuntimeConfiguration.cxx
         util/health/HealthCheck.cxx
         ../erp/crypto/SignedPrescription.cxx
         ../erp/database/ErpDatabaseModel.cxx

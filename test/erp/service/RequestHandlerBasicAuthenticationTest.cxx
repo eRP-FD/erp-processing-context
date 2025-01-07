@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/admin/AdminRequestHandler.hxx"
+#include "shared/admin/AdminRequestHandler.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "shared/enrolment/EnrolmentRequestHandler.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
@@ -22,9 +22,6 @@ class MockRequestHandlerBasicAuthentication : public RequestHandlerBasicAuthenti
 {
 public:
     void handleRequest(BaseSessionContext&) override
-    {
-    }
-    void handleRequest(PcSessionContext&) override
     {
     }
     Operation getOperation(void) const override

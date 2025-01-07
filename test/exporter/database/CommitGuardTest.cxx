@@ -59,7 +59,7 @@ TEST_F(CommitGuardTest, create_and_query)//NOLINT(readability-function-cognitive
     const std::string kvnr_str{"X000000012"};
     const model::Kvnr kvnr{kvnr_str};
     const auto hashed_kvnr = kvnrHashed(kvnr);
-    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     insertTaskKvnr(kvnr);
     insertTaskEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::cancelPrescription,
@@ -101,7 +101,7 @@ TEST_F(CommitGuardTest, exceptionstrategy_commit)//NOLINT(readability-function-c
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     std::nullopt);
 
-    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     using commitguard_t = CommitGuard<MedicationExporterPostgresBackend, commit_guard_policies::ExceptionCommitStrategy>;
     std::vector<db_model::TaskEvent> events;
@@ -135,7 +135,7 @@ TEST_F(CommitGuardTest, exceptionstrategy_abort)//NOLINT(readability-function-co
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     std::nullopt);
 
-    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     using commitguard_t = CommitGuard<MedicationExporterPostgresBackend, commit_guard_policies::ExceptionAbortStrategy>;
     std::vector<db_model::TaskEvent> events;

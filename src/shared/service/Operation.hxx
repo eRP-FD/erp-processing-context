@@ -55,7 +55,8 @@ enum class Operation
 
     POST_Admin_restart,
     GET_Admin_configuration,
-    PUT_Admin_pn3_configuration
+    PUT_Admin_pn3_configuration,
+    PUT_Admin_exporter_configuration
 };
 
 const std::string_view& toString (Operation operation);

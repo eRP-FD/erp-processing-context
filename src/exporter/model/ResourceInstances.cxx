@@ -4,6 +4,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "exporter/model/DataAbsentReason.hxx"
+#include "exporter/model/EpaMedicationPznIngredient.hxx"
+#include "exporter/model/EpaMedicationTypeExtension.hxx"
 #include "exporter/model/EpaOpCancelPrescriptionErpInputParameters.hxx"
 #include "exporter/model/EpaOpProvideDispensationErpInputParameters.hxx"
 #include "exporter/model/EpaOpProvidePrescriptionErpInputParameters.hxx"
@@ -23,4 +25,6 @@ template class Resource<EPAOpCancelPrescriptionERPInputParameters>;
 template class Resource<EPAOpProvideDispensationERPInputParameters>;
 template class Resource<EPAOpProvidePrescriptionERPInputParameters>;
 template class Resource<OrganizationDirectory>;
+template class Resource<EPAMedicationPZNIngredient>;
+template class Resource<EPAMedicationTypeExtension>;
 }

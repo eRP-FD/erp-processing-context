@@ -7,11 +7,11 @@
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "shared/server/request/ServerRequest.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/util/UrlHelper.hxx"
 
-PutRuntimeConfigHandler::PutRuntimeConfigHandler()
-    : AdminRequestHandlerBase(ConfigurationKey::ADMIN_RC_CREDENTIALS)
+PutRuntimeConfigHandler::PutRuntimeConfigHandler(ConfigurationKey adminRcCredentialsKey)
+    : AdminRequestHandlerBase(adminRcCredentialsKey)
 {
 }
 
@@ -20,8 +20,9 @@ Operation PutRuntimeConfigHandler::getOperation() const
     return Operation::PUT_Admin_pn3_configuration;
 }
 
-void PutRuntimeConfigHandler::doHandleRequest(SessionContext& session)
+void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
 {
+    auto& session = dynamic_cast<PcSessionContext&>(baseSession);
     TVLOG(1) << "PUT /admin/configuration: " << session.request.header().serializeFields();
     TVLOG(1) << "PUT /admin/configuration: " << session.request.getBody();
 
@@ -33,16 +34,16 @@ void PutRuntimeConfigHandler::doHandleRequest(SessionContext& session)
 
     auto runtimeConfig = session.serviceContext.getRuntimeConfigurationSetter();
     bool enableAcceptPn3 = runtimeConfig->isAcceptPN3Enabled();
-    model::Timestamp acceptPn3Expiry{model::Timestamp::now() + RuntimeConfiguration::accept_pn3_max_active};
+    model::Timestamp acceptPn3Expiry{model::Timestamp::now() + erp::RuntimeConfiguration::accept_pn3_max_active};
 
     for (const auto& param : params)
     {
-        if (param.first == RuntimeConfiguration::parameter_accept_pn3)
+        if (param.first == erp::RuntimeConfiguration::parameter_accept_pn3)
         {
             const auto paramValue = String::toLower(param.second);
             enableAcceptPn3 = paramValue == "true";
         }
-        else if (param.first == RuntimeConfiguration::parameter_accept_pn3_expiry)
+        else if (param.first == erp::RuntimeConfiguration::parameter_accept_pn3_expiry)
         {
             try
             {

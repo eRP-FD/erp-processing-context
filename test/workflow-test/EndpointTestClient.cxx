@@ -28,6 +28,8 @@
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/StaticData.hxx"
 
+#include <erp/util/RuntimeConfiguration.hxx>
+
 
 EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidator, Target target)
     : mMockDatabase()
@@ -52,7 +54,7 @@ void EndpointTestClient::initAdminServer()
 {
     const auto& config = Configuration::instance();
     RequestHandlerManager manager;
-    AdminServer::addEndpoints(manager);
+    AdminServer::addEndpoints(manager, std::make_shared<const erp::RuntimeConfiguration>());
     auto factories = StaticData::makeMockFactories();
     factories.adminServerFactory = &EndpointTestClient::httpsServerFactory;
     mContext = std::make_unique<PcServiceContext>(config, std::move(factories));
@@ -83,7 +85,7 @@ void EndpointTestClient::initClient()
     mHttpsClient = std::make_unique<HttpsClient>(ConnectionParameters{
         .hostname = getHostAddress(),
         .port = std::to_string(getPort()),
-        .connectionTimeoutSeconds = 30,
+        .connectionTimeout = std::chrono::seconds{30},
         .resolveTimeout = Constants::resolveTimeout,
         .tlsParameters = TlsConnectionParameters{
             .certificateVerifier = TlsCertificateVerifier::withCustomRootCertificates(serverCertificate),

@@ -5,6 +5,7 @@
  */
 
 #include "exporter/eventprocessing/EventDispatcher.hxx"
+#include "exporter/BdeMessage.hxx"
 #include "exporter/client/EpaMedicationClient.hxx"
 #include "exporter/eventprocessing/CancelPrescription.hxx"
 #include "exporter/eventprocessing/ProvideDispensation.hxx"
@@ -32,8 +33,8 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     auditDataCollector.setPrescriptionId(erpEvent.getPrescriptionId());
     auditDataCollector.setInsurantKvnr(erpEvent.getKvnr());
 
-    mMedicationClient->addLogData("prescriptionId", erpEvent.getPrescriptionId().toString());
-    mMedicationClient->addLogData("lastModifiedTimestamp", erpEvent.getLastModified());
+    mMedicationClient->addLogData(BDEMessage::prescriptionIdKey, erpEvent.getPrescriptionId().toString());
+    mMedicationClient->addLogData(BDEMessage::lastModifiedTimestampKey, erpEvent.getLastModified());
 
     std::optional<model::AuditEventId> successAuditType;
     std::optional<model::AuditEventId> failedAuditType;
@@ -80,7 +81,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     }
     catch (const std::runtime_error& re)
     {
-        outcome = Outcome::DeadLetter;
+        outcome = Outcome::Retry;
     }
     Expect(successAuditType.has_value() && failedAuditType.has_value(),
            "implementation error: successAuditType and/or failedAuditType not set");

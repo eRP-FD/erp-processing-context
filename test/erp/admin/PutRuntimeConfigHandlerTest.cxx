@@ -3,10 +3,12 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "erp/admin/PutRuntimeConfigHandler.hxx"
-#include "shared/network/message/Header.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "shared/server/AccessLog.hxx"
 #include "erp/server/context/SessionContext.hxx"
+#include "erp/util/ConfigurationFormatter.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
+#include "shared/network/message/Header.hxx"
+#include "shared/server/AccessLog.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -40,7 +42,7 @@ public:
         }
         request.setBody(std::move(body));
         SessionContext session{serviceContext, request, response, accessLog};
-        PutRuntimeConfigHandler handler;
+        PutRuntimeConfigHandler handler{ConfigurationKey::ADMIN_RC_CREDENTIALS};
         EXPECT_NO_THROW(handler.handleRequest(session));
         EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
     }
@@ -49,7 +51,9 @@ public:
     {
         ServerRequest request{Header(header)};
         SessionContext session{serviceContext, request, response, accessLog};
-        GetConfigurationHandler handler;
+        GetConfigurationHandler handler{ConfigurationKey::ADMIN_CREDENTIALS,
+                                        std::make_unique<erp::ConfigurationFormatter>(
+                                            serviceContext.getRuntimeConfiguration())};
         EXPECT_NO_THROW(handler.handleRequest(session));
         EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(session.response.getHeader().header(Header::ContentType), MimeType::json);

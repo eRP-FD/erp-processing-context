@@ -41,7 +41,9 @@ public:
         enum class Reschedule : uint8_t
         {
             Delayed,
-            Immediate
+            Throttled,
+            Immediate,
+            TemporaryError
         };
 
         RunLoop();
@@ -51,9 +53,16 @@ public:
         ThreadPool& getThreadPool();
 
     private:
+        boost::asio::awaitable<void> eventProcessingWorker(const std::weak_ptr<MedicationExporterServiceContext> serviceContext);
+        Reschedule process(const std::shared_ptr<MedicationExporterServiceContext>& serviceCtx);
+        bool checkIsPaused(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
+        bool checkIsThrottled(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
+
         ThreadPool mWorkerThreadPool;
+        std::atomic_bool mPaused{false};
+        std::atomic<std::chrono::milliseconds> mThrottleValue;
     };
 };
 
 
-#endif//ERP_PROCESSING_CONTEXT_EXPORTER_MEDICATIONEXPORTERMAIN_HXX
+#endif

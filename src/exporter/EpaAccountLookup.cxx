@@ -20,28 +20,24 @@ EpaAccountLookup::EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lo
 {
 }
 
-EpaAccountLookup::EpaAccountLookup(TlsCertificateVerifier tlsCertificateVerifier)
+EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceContext)
     : mLookupClient(std::make_unique<EpaAccountLookupClient>(
-          Configuration::instance().getIntValue(
-              ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_CONNECT_TIMEOUT_SECONDS),
-          Configuration::instance().getIntValue(
-              ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS),
+          serviceContext,
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT),
-          Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT),
-          std::move(tlsCertificateVerifier)))
+          Configuration::instance().getStringValue(
+              ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT)))
 {
 }
 
 EpaAccount EpaAccountLookup::lookup(const model::Kvnr& kvnr)
 {
     static const auto epaFqdns = [] {
-        auto fqdns =
-            Configuration::instance().getArray(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
+        auto fqdns = Configuration::instance().epaFQDNs();
         std::vector<std::tuple<std::string, uint16_t>> hostPortList;
+        hostPortList.reserve(fqdns.size());
         for (const auto& fqdn : fqdns)
         {
-            auto urlParts = UrlHelper::parseUrl(fqdn);
-            hostPortList.emplace_back(urlParts.mHost, urlParts.mPort);
+            hostPortList.emplace_back(fqdn.hostName, fqdn.port);
         }
         return hostPortList;
     }();
@@ -108,10 +104,4 @@ EpaAccount::Code EpaAccountLookup::checkConsent(const model::Kvnr& kvnr, const s
         return EpaAccount::Code::notFound;
     }
     return EpaAccount::Code::unknown;
-}
-
-EpaAccountLookup& EpaAccountLookup::addLogAttribute(const std::string& key, const std::any& value)
-{
-    mLookupClientLogContext[key] = value;
-    return *this;
 }

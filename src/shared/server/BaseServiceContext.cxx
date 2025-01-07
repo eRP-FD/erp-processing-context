@@ -15,13 +15,14 @@
 BaseServiceContext::BaseServiceContext(BaseFactories& factories)
     : mTimerManager(std::make_shared<Timer>())
     , mBlobCache(factories.blobCacheFactory())
-    , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache), factories.teeTokenUpdaterFactory, mTimerManager))
+    , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache),
+                                         factories.teeTokenUpdaterFactory, mTimerManager))
     , mVsdmKeyCache(std::make_unique<VsdmKeyCache>(factories.vsdmKeyBlobDatabaseFactory(), *mHsmPool))
     , mKeyDerivation(*mHsmPool)
     , mXmlValidator(factories.xmlValidatorFactory())
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
     , mTpmFactory(std::move(factories.tpmFactory))
-// GEMREQ-end A_20974-01
+    // GEMREQ-end A_20974-01
 {
     Expect3(mTslManager != nullptr, "mTslManager could not be initialized", std::logic_error);
     Expect3(mTpmFactory != nullptr, "mTpmFactory has been passed as nullptr to ServiceContext constructor",
@@ -53,9 +54,9 @@ const Tpm::Factory& BaseServiceContext::getTpmFactory() const
     return mTpmFactory;
 }
 
-BaseHttpsServer* BaseServiceContext::getAdminServer() const
+BaseHttpsServer& BaseServiceContext::getAdminServer() const
 {
-    return mAdminServer.get();
+    return *mAdminServer;
 }
 
 BaseHttpsServer* BaseServiceContext::getEnrolmentServer() const

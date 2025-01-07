@@ -46,11 +46,16 @@ public:
 
     virtual EpaAccount ePaAccountLookup(const model::TaskEvent& taskEvent);
 
+    virtual void scheduleRetryQueue(const model::EventKvnr& kvnr);
+    virtual void scheduleHealthRecordRelocation(const model::EventKvnr& kvnr);
+
+    static std::chrono::seconds calculateExponentialBackoffDelay(std::int32_t retry);
+
 private:
     std::function<JsonLog()> jsonLog;
     const std::shared_ptr<MedicationExporterServiceContext>& mServiceContext;
     std::chrono::seconds mRetryDelaySeconds;
-    std::chrono::seconds mConflictDelaySeconds;
+    std::chrono::minutes mHealthRecordRelocationWaitMinutes;
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
     MedicationExporterCommitGuard createMedicationExporterCommitGuard();
 };

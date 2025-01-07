@@ -11,30 +11,38 @@
 #include "shared/network/client/response/ClientResponse.hxx"
 #include "shared/model/Kvnr.hxx"
 
+#include <any>
+
+class MedicationExporterServiceContext;
+class ClientRequest;
+class HttpsClient;
+
 class IEpaAccountLookupClient
 {
 public:
     virtual ~IEpaAccountLookupClient() = default;
     virtual ClientResponse sendConsentDecisionsRequest(const model::Kvnr& kvnr, const std::string& host,
                                                        uint16_t port) = 0;
+    virtual IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) = 0;
 };
 
 class EpaAccountLookupClient : public IEpaAccountLookupClient
 {
 public:
-    EpaAccountLookupClient(uint16_t connectTimeoutSeconds, uint32_t resolveTimeoutMs,
-                           std::string_view consentDecisionsEndpoint, std::string_view userAgent,
-                           TlsCertificateVerifier tlsCertificateVerifier);
+    EpaAccountLookupClient(MedicationExporterServiceContext& serviceContext, std::string_view consentDecisionsEndpoint,
+                           std::string_view userAgent);
 
     ClientResponse sendConsentDecisionsRequest(const model::Kvnr& kvnr, const std::string& host,
                                                uint16_t port) override;
 
+    IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override;
+
 private:
-    uint16_t mConnectTimeoutSeconds;
-    uint32_t mResolveTimeoutMs;
+    ClientResponse sendWithRetry(HttpsClient& client, ClientRequest& request) const;
+    MedicationExporterServiceContext& mServiceContext;
     std::string mConsentDecisionsEndpoint;
     std::string mUserAgent;
-    TlsCertificateVerifier mTlsCertificateVerifier;
+    std::unordered_map<std::string, std::any> mLookupClientLogContext;
 };
 
 

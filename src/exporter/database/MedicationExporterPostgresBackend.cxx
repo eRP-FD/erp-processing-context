@@ -44,7 +44,7 @@ LIMIT
 FOR UPDATE SKIP LOCKED
     )
 RETURNING
-  kvnr_hashed, EXTRACT(EPOCH FROM last_consent_check), assigned_epa, state;
+  kvnr_hashed, EXTRACT(EPOCH FROM last_consent_check), assigned_epa, state, retry_count;
     )");
 
 QUERY(sqlGetAllEventsForKvnr, R"(
@@ -52,7 +52,7 @@ SELECT
   id, prescription_id, prescription_type, task_key_blob_id, salt, kvnr, kvnr_hashed, state, usecase, doctor_identity,
   pharmacy_identity,
   EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on), healthcare_provider_prescription,
-  medication_dispense_blob_id, medication_dispense_salt, medication_dispense_bundle
+  medication_dispense_blob_id, medication_dispense_salt, medication_dispense_bundle, retry_count
 FROM
   erp_event.task_event
 WHERE
@@ -87,20 +87,22 @@ DELETE FROM
 WHERE
   kvnr_hashed = $1::bytea;
     )");
-QUERY(sqlPostponeProcessing, R"(
+QUERY(sqlSetProcessingDelay, R"(
 UPDATE
   erp_event.kvnr
 SET
   state = 'pending',
-  next_export = NOW() + ($1 * interval '1 second')
+  retry_count = $1,
+  next_export = NOW() + ($2 * interval '1 second')
 WHERE
-  kvnr_hashed = $2::bytea;
+  kvnr_hashed = $3::bytea;
     )");
 QUERY(sqlFinalizeKvnr, R"(
 UPDATE
   erp_event.kvnr
 SET
-  state = 'processed'
+  state = 'processed',
+  retry_count = 0
 WHERE
   kvnr_hashed = $1::bytea AND state = 'processing';
     )");
@@ -191,8 +193,9 @@ std::optional<model::EventKvnr> MedicationExporterPostgresBackend::processNextKv
             res.at(1).is_null() ? std::nullopt : std::make_optional(model::Timestamp(res.at(1).as<double>()));
         const auto assigned_epa = res.at(2).is_null() ? std::nullopt : std::make_optional(res.at(2).as<std::string>());
         const auto state = magic_enum::enum_cast<model::EventKvnr::State>(res.at(3).as<std::string>());
+        const std::int32_t retryCount = res.at(4).is_null() ? 0 : res.at(4).as<std::int32_t>();
 
-        model::EventKvnr model(kvnr_hashed, last_consent_check, assigned_epa, state.value());
+        model::EventKvnr model(kvnr_hashed, last_consent_check, assigned_epa, state.value(), retryCount);
         return model;
     }
     else
@@ -245,7 +248,9 @@ MedicationExporterPostgresBackend::getAllEventsForKvnr(const model::EventKvnr& e
                 mapOptional<db_model::Blob, db_model::postgres_bytea>(res, idx.medicationDispenseBundleSalt),
                 mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.medicationDispenseBundle),
                 mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.doctorIdentity),
-                mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.pharmacyIdentity));
+                mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.pharmacyIdentity),
+                mapDefault<std::int32_t, std::int32_t>(res, idx.retryCount, 0)
+                );
         }
         return models;
     }
@@ -303,9 +308,9 @@ void MedicationExporterPostgresBackend::deleteAllEventsForKvnr(const model::Even
     TVLOG(2) << "got " << results.size() << " results";
 }
 
-void MedicationExporterPostgresBackend::postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr)
+void MedicationExporterPostgresBackend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr)
 {
-    const MedicationExporterPostgresBackend::QueryDefinition& sql = sqlPostponeProcessing;
+    const MedicationExporterPostgresBackend::QueryDefinition& sql = sqlSetProcessingDelay;
     checkCommonPreconditions();
     TVLOG(2) << sql.query;
 
@@ -314,7 +319,7 @@ void MedicationExporterPostgresBackend::postponeProcessing(std::chrono::seconds 
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
-    const auto results = mTransaction->exec_params(sql.query, delay.count(), kvnr.kvnrHashed());
+    const auto results = mTransaction->exec_params(sql.query, newRetry, delay.count(), kvnr.kvnrHashed());
     TVLOG(2) << "affected " << results.affected_rows() << " rows";
 }
 

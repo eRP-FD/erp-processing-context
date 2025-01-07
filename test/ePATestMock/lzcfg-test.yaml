@@ -1,0 +1,44 @@
+getConsentDecisions:
+  - kvnr: ".*"
+    code: 200
+    template: getConsentDecisions.permit.json
+getChallengeForBearerToken:
+  - ua: ".*"
+    code: 200
+    payload: "{\"freshness\": \"YSBiYXNlNjQgZW5jb2RlZCBjaGFsbGVuZ2UgKGhlYWx0aCByZWNvcmQgc3lzdGVtIHNwZWNpZmljIGNvbnRlbnQp\"}"
+sendAuthorizationRequestBearerToken:
+  - ua: ".*"
+    code: 200
+    template: sendAuthorizationRequestBearerToken_200.json
+providePrescription:
+  - kvnr: "X011300011"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 5000
+  - kvnr: "X011300012"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 5000
+  - kvnr: ".*"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json  
+cancelPrescription:
+  - kvnr: ".*"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+provideDispensation:
+  - kvnr: "X011999971"
+    code: 409
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 300
+  - kvnr: "X011300012"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 5000
+  - kvnr: ".*"
+    code: 200
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+cancelDispensation:
+  - kvnr: ".*"
+    code: 200
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json

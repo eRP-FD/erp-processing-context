@@ -15,20 +15,29 @@
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/server/BaseServiceContext.hxx"
 
+#include <unordered_map>
+
 class Configuration;
 class MedicationExporterFactories;
 class Tee3ClientPool;
+class HttpsClientPool;
 
 namespace boost::asio
 {
 class io_context;
+}
+namespace exporter
+{
+class RuntimeConfigurationGetter;
+class RuntimeConfigurationSetter;
+class RuntimeConfiguration;
 }
 
 class MedicationExporterServiceContext : public BaseServiceContext
 {
 public:
     MedicationExporterServiceContext(boost::asio::io_context& ioContext, const Configuration& configuration, MedicationExporterFactories&& factories);
-    ~MedicationExporterServiceContext(void) override = default;
+    ~MedicationExporterServiceContext() override;
 
     MedicationExporterServiceContext(const MedicationExporterServiceContext& other) = delete;
     MedicationExporterServiceContext& operator=(const MedicationExporterServiceContext& other) = delete;
@@ -43,12 +52,19 @@ public:
     boost::asio::io_context& ioContext();
 
     std::shared_ptr<Tee3ClientPool> teeClientPool();
+    std::shared_ptr<HttpsClientPool> httpsClientPool(const std::string& hostname);
+
+    std::unique_ptr<exporter::RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
+    std::unique_ptr<exporter::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
+    std::shared_ptr<const exporter::RuntimeConfiguration> getRuntimeConfiguration() const;
 
 private:
     boost::asio::io_context& mIoContext;
     MedicationExporterDatabaseFrontendInterface::Factory mExporterDatabaseFactory;
     exporter::MainDatabaseFrontend::Factory mErpDatabaseFactory;
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
+    std::unordered_map<std::string, std::shared_ptr<HttpsClientPool>> mHttpsClientPools;
+    gsl::not_null<std::shared_ptr<exporter::RuntimeConfiguration>> mRuntimeConfiguration;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_EXPORTER_MEDICATIONEXPORTERSERVICECONTEXT_HXX

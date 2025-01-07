@@ -8,6 +8,8 @@
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EVENTPROCESING_EVENTPROCESSINGBASE_HXX
 
 #include "exporter/eventprocessing/Outcome.hxx"
+#include "shared/model/PrescriptionId.hxx"
+#include "shared/util/JsonLog.hxx"
 
 #include <cstdint>
 #include <gsl/gsl-lite.hpp>
@@ -31,6 +33,12 @@ protected:
     explicit EventProcessingBase(gsl::not_null<IEpaMedicationClient*> client);
     gsl::not_null<IEpaMedicationClient*> mMedicationClient;
     static void logFailure(HttpStatus httpStatus, model::NumberAsStringParserDocument&& doc);
+
+    static JsonLog logInfo(const model::TaskEvent& event);
+    static JsonLog logWarning(const model::TaskEvent& event);
+    static JsonLog logError(const model::TaskEvent& event);
+    static JsonLog log(JsonLog::LogReceiver&& logReceiver, const model::TaskEvent& event);
+
 };
 
 }// eventprocessing

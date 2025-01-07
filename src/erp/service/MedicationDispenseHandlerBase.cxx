@@ -130,6 +130,7 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
         case Operation::POST_Admin_restart:
         case Operation::GET_Admin_configuration:
         case Operation::PUT_Admin_pn3_configuration:
+        case Operation::PUT_Admin_exporter_configuration:
             Fail2("MedicationDispenseHandlerBase: invalid operation:" + std::string{magic_enum::enum_name(operation)},
                   std::logic_error);
     }

@@ -7,11 +7,11 @@
 
 #include "erp/ErpMain.hxx"
 #include "erp/pc/PcServiceContext.hxx"
-#include "shared/Application.hxx"
+#include "erp/Application.hxx"
 
 int main(const int argc, const char* argv[], char** /*environment*/)
 {
-    return Application::MainFn(argc, argv, "erp-processing-context", [] () -> int {
+    return erp::Application{}.MainFn(argc, argv, "erp-processing-context", [] () -> int {
         MainStateCondition state(MainState::Unknown);// Only used for tests.
         return ErpMain::runApplication(ErpMain::createProductionFactories(), state);
     });

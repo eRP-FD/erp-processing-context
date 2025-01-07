@@ -15,7 +15,7 @@
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Hash.hxx"
 #include "shared/util/Random.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"

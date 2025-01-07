@@ -39,7 +39,7 @@ public:
 
     void deleteOneEventForKvnr(const model::EventKvnr& kvnr, db_model::TaskEvent::id_t id) override;
 
-    void postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr) override;
+    void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) override;
 
     void finalizeKvnr(const model::EventKvnr& kvnr) const override;
 
@@ -61,7 +61,8 @@ public:
         pqxx::row::size_type medicationDispenseBundleBlobId = 14;
         pqxx::row::size_type medicationDispenseBundleSalt = 15;
         pqxx::row::size_type medicationDispenseBundle = 16;
-                         int total = 17;
+        pqxx::row::size_type retryCount = 17;
+                         int total = 18;
     };
 
     [[nodiscard]]
@@ -103,6 +104,41 @@ private:
     {
         Expect(! resultRow[index].is_null(), errorText);
         return T{resultRow[index].as<S>()};
+    }
+
+    /**
+     * @brief return value from database field
+     *
+     * @tparam T target arithmetic type
+     * @tparam S source type in DB
+     * @param resultRow
+     * @param index at result row
+     * @param errorText if no value at result row index
+     * @return value of T
+     */
+    template<typename T, typename S = T>
+        requires(std::is_arithmetic_v<T>)
+    T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
+    {
+        return gsl::narrow<T>(resultRow[index].as<S>(defaultValue));
+    }
+
+    /**
+     * @brief creates an object from database field.
+     * Target class must have a constructor with source type.
+     *
+     * @tparam T target class
+     * @tparam S source type in DB
+     * @param resultRow
+     * @param index at result row
+     * @param errorText if no value at result row index
+     * @return object of T
+     */
+    template<typename T, typename S = T>
+        requires(not std::is_arithmetic_v<T>)
+    T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
+    {
+        return T{resultRow[index].as<S>(defaultValue)};
     }
 
     template<typename T, typename S = T>

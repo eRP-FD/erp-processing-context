@@ -60,7 +60,19 @@ public:
                                model::PrescriptionType prescriptionType) const = 0;
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const = 0;
-    virtual void postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr) const = 0;
+
+    /**
+     * Postpone processing of a KVNR by adding a delay to the export time and store the current retry count.
+     *
+     * Processing of a KVNR happens only if its export time point is reached.
+     * Setting it to now + delay will postpone the processing until the later time point ist reached.
+     * The calculation of the dleay ist likely based on the count of retries, so thie number of retries is also stored.
+     * @param newRetry new value of the retry count (likely old-retry-count+1)
+     * @param delay duration after which the KVNR shall be processed again
+     * @param kvnr KVNR to postpone for processing
+     */
+    virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                       const model::EventKvnr& kvnr) const = 0;
     virtual void finalizeKvnr(const model::EventKvnr& kvnr) const = 0;
 };
 

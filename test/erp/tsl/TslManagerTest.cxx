@@ -11,6 +11,7 @@
 #include "shared/crypto/Certificate.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "shared/tsl/OcspHelper.hxx"
 #include "shared/tsl/OcspService.hxx"
 #include "shared/tsl/TrustStore.hxx"
 #include "shared/tsl/TslService.hxx"
@@ -1344,5 +1345,61 @@ TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-com
             {}});
 
         EXPECT_TRUE(responseData.fromCache);
+    }
+}
+
+
+TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-cognitive-complexity)
+{
+    const std::string certificatePem =
+        FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
+    const Certificate certificate = Certificate::fromPem(certificatePem);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+
+    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
+        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+
+    const auto certPairValid = MockOcsp::CertificatePair{
+        .certificate = certificate,
+        .issuer = certificateCA,
+        .testMode = MockOcsp::CertificateOcspTestMode::SUCCESS
+    };
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+        {}, {}, {{"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp", {certPairValid}}});
+
+    std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)> certId(
+        OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()), OCSP_CERTID_free);
+
+    auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
+    checkDescriptor.mode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED;
+
+    auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
+    auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+    using enum MockOcsp::CertificateOcspTestMode;
+    // in this PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED mode, an outdated ocsp response is allowed
+    // and falling back to the cache/ocsp request
+    {
+        auto certPairOutdated = certPairValid;
+        certPairOutdated.testMode = WRONG_PRODUCED_AT;
+        auto response = MockOcsp::create(certId.get(), {certPairOutdated}, ocspCert, ocspKey).toDer();
+        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+        ASSERT_NE(checkDescriptor.providedOcspResponse, nullptr);
+
+        ASSERT_NO_THROW(
+            manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor));
+    }
+
+    // fail on any other error
+    for (auto testMode : {REVOKED, CERTHASH_MISMATCH, CERTHASH_MISSING, WRONG_CERTID, WRONG_THIS_UPDATE})
+    {
+        auto certPairInvalid = certPairValid;
+        certPairInvalid.testMode = testMode;
+        auto response = MockOcsp::create(certId.get(), {certPairInvalid}, ocspCert, ocspKey).toDer();
+        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+        EXPECT_THROW(
+            manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor),
+            TslError);
     }
 }

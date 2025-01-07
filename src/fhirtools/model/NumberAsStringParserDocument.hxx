@@ -141,6 +141,9 @@ public:
 
     [[nodiscard]]
     std::string serializeToJsonString() const;
+    [[nodiscard]]
+    static std::string serializeToJsonString(const rapidjson::Value& value);
+
 
     static std::string pointerToString(const rapidjson::Pointer& pointer);
 

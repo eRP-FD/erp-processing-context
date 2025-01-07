@@ -7,7 +7,7 @@
 
 #include "erp/ErpMain.hxx"
 #include "erp/ErpProcessingContext.hxx"
-#include "erp/admin/AdminRequestHandler.hxx"
+#include "shared/admin/AdminRequestHandler.hxx"
 #include "erp/admin/AdminServer.hxx"
 #include "erp/database/DatabaseConnectionTimer.hxx"
 #include "erp/database/DatabaseFrontend.hxx"

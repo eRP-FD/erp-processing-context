@@ -21,11 +21,11 @@
 #endif
 
 TcpStream::TcpStream (
-    const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds, std::chrono::milliseconds /*resolveTimeout*/)
+    const std::string& hostname, const std::string& port, std::chrono::milliseconds connectionTimeout, std::chrono::milliseconds /*resolveTimeout*/)
     : mIoContext(std::make_unique<boost::asio::io_context>())
     , mTcpStream(std::make_unique<boost::beast::tcp_stream>(*mIoContext))
 {
-    Expect(connectionTimeoutSeconds > 0, "Connection timeout must be greater than 0.");
+    Expect(connectionTimeout.count() > 0, "Connection timeout must be greater than 0.");
     boost::asio::ip::tcp::resolver resolver(*mIoContext);
     boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp> resolverResults;
     try
@@ -39,21 +39,21 @@ TcpStream::TcpStream (
         TLOG(ERROR)  << "resolving hostname failed '" << hostname << ":" << port << "', try again";
         resolverResults = resolver.resolve(hostname, port);
     }
-    establish(std::chrono::seconds(connectionTimeoutSeconds), resolverResults);
+    establish(connectionTimeout, resolverResults);
 
 }
 
 TcpStream::TcpStream(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
-                     const uint16_t connectionTimeoutSeconds)
+                     std::chrono::milliseconds connectionTimeout)
     : mIoContext(std::make_unique<boost::asio::io_context>())
     , mTcpStream(std::make_unique<boost::beast::tcp_stream>(*mIoContext))
 {
     auto resolverResults =
         boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>::create(ep, hostname, std::to_string(ep.port()));
-    establish(std::chrono::seconds(connectionTimeoutSeconds), resolverResults);
+    establish(connectionTimeout, resolverResults);
 }
 
-void TcpStream::establish(std::chrono::seconds connectionTimeout,
+void TcpStream::establish(std::chrono::milliseconds connectionTimeout,
                           const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults)
 {
     mTcpStream->expires_after(connectionTimeout);

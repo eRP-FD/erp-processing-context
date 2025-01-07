@@ -19,6 +19,8 @@
 #include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
+#include <charconv>
+#include <regex>
 #include <stdexcept>
 #include <string>
 #include <unordered_set>
@@ -87,6 +89,7 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement>
         {model::ProfileType::EPAOpRxPrescriptionERPOutputParameters, {}},
         {model::ProfileType::EPAOpRxDispensationERPOutputParameters, {}},
         {model::ProfileType::OrganizationDirectory, {}},
+        {model::ProfileType::EPAMedicationPZNIngredient, {}},
     };
 
 namespace {
@@ -462,14 +465,20 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT                     , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT"                     , "/erp-medication-exporter/epa-account-lookup/endpoint", Flags::categoryEnvironment, "Lookup endpoint on the EPA side"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT                   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT"                   , "/erp-medication-exporter/epa-account-lookup/userAgent", Flags::categoryEnvironment, "Our user agent used in lookup request"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID"   , "/erp-medication-exporter/epa-account-lookup/erpSubmissionFunctionId", Flags::categoryEnvironment, "The name of the function ID for our consent decision"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN                  , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN"                  , "/erp-medication-exporter/epa-account-lookup/epaAsFqdn", Flags::categoryEnvironment|Flags::array, "Array of EPA FQDN adresses"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_EPA_PROCESSING_OUTCOME_RETRY_DELAY_SECONDS      , {"MEDICATION_EXPORTER_EPA_ACCOUNT_PROCESSING_OUTCOME_DELAY_SECONDS"        , "/erp-medication-exporter/epa-processing-outcome/epaDelayRetrySeconds", Flags::categoryEnvironment, "Seconds to wait before retry after recoverable EPA failures (r.g. 409)"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN                  , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN"                  , "/erp-medication-exporter/epa-account-lookup/epaAsFqdn", Flags::categoryEnvironment|Flags::array, "List of EPA FQDN adresses and TEE connection count (default 8) in the format <host>`:`<port>[`+`<connections>] separated by semicolon"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN           , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN"           , "/erp-medication-exporter/epa-account-lookup/poolSizePerFqdn", Flags::categoryEnvironment, "Number of connections per ePA FQDN"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_PROCESSING_OUTCOME_RETRY_DELAY_SECONDS      , {"MEDICATION_EXPORTER_EPA_ACCOUNT_PROCESSING_OUTCOME_DELAY_SECONDS"        , "/erp-medication-exporter/epa-processing-outcome/epaDelayRetrySeconds", Flags::categoryEnvironment, "Seconds to wait before retry after recoverable EPA failures"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES                       , {"MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES"                           , "/erp-medication-exporter/epa-conflict/epaConflictWaitMinutes", Flags::categoryEnvironment, "Minutes to wait before retry after EPA conflicts HTTP 409"}},
 
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS                      , {"ERP_MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS"                      , "/erp-medication-exporter/fhir/structure-files", Flags::categoryEnvironment|Flags::array, "Array of EPA FQDN adresses"}},
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS                      , {"ERP_MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS"                      , "/erp-medication-exporter/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation and transformation in medication-exporter"}},
 
     {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE                          , {"ERP_MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE"                          , "/erp-medication-exporter/admin/server/interface", Flags::categoryEnvironment, "The network interface for the admin server binds to"}},
     {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_PORT                               , {"ERP_MEDICATION_EXPORTER_ADMIN_SERVER_PORT"                               , "/erp-medication-exporter/admin/server/port", Flags::categoryEnvironment, "The port for the admin server."}},
+    {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS            , {"ERP_MEDICATION_EXPORTER_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"            , "/erp-medication-exporter/admin/defaultShutdownDelaySeconds", Flags::categoryEnvironment, "Default delay for shutdown commands, if no delay is given in request parameter"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS                               , {"ERP_MEDICATION_EXPORTER_ADMIN_CREDENTIALS"                               , "/erp-medication-exporter/admin/credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for admin server."}},
+    {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS                            , {"ERP_MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS"                            , "/erp-medication-exporter/admin/runtime_config_credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for runtime configuration through admin server."}},
+
 
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS                    , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS",       "/erp-medication-exporter/vau-https-client/connectTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout in ms during connection attempt."}},
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_SSL_HANDSHAKE_TIMEOUT_MILLISECONDS              , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_SSL_HANDSHAKE_TIMEOUT_MILLISECONDS", "/erp-medication-exporter/vau-https-client/sslHandshakeTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout in ms during ssl handshake"}},
@@ -891,6 +900,11 @@ void Configuration::check() const
     (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
     (void) synthesizeCodesystem<ConfigurationBase::MedicationExporter>();
     (void) synthesizeValuesets<ConfigurationBase::MedicationExporter>();
+    for (const auto& epa : this->epaFQDNs())
+    {
+        LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
+                  << " connections";
+    }
 }
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
@@ -966,6 +980,56 @@ bool Configuration::timingLoggingEnabled(const std::string& category) const
     return allEnabled || configArray.contains(category);
 }
 
+std::vector<Configuration::EpaFQDN> Configuration::epaFQDNs() const
+{
+    static constexpr char formatHelp[] = " - format: <host>`:`<port>[`+`<tee connections>]";
+    static constexpr char pattern[] = R"(^(.+):(\d+)(\+(\d+))?$)";
+    static constexpr size_t hostIdx = 1;
+    static constexpr size_t portIdx = 2;
+    // index 3 is connections part including `+` required to make connections optional
+    static constexpr size_t connectionsIdx = 4;
+    static const std::regex regex{pattern};
+    const auto& key = names_.strings(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
+    const std::string envVarName{key.environmentVariable};
+    const auto convert = [&](const auto& match, auto& out, const char* fieldName)
+    {
+        std::string_view asView{match.first, match.second};
+        auto res = std::from_chars(asView.begin(), asView.end(), out);
+        Expect(res.ec == std::error_code{},
+               ("entry in " + envVarName + ": " + std::make_error_code(res.ec).message() + " for " + fieldName + ": ")
+                       .append(asView) +
+                   formatHelp);
+        Expect(res.ptr == asView.end(),
+               ("entry in " + envVarName + ": extra characters for " + fieldName + ": ").append(asView) + formatHelp);
+    };
+    std::vector<Configuration::EpaFQDN> result;
+    auto entries = getArray(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
+    result.reserve(entries.size());
+    for (const auto& entry: entries)
+    {
+        std::smatch m;
+        if (std::regex_match(entry, m, regex))
+        {
+            Expect3(m.size() == 5, ("matching entry in " + envVarName).append(" failed: ").append(entry), std::logic_error);
+            Expect(m[hostIdx].matched && m[portIdx].matched,
+                    ("entry in " + envVarName).append(" must at least have hostname and port: ").append(entry).append(formatHelp));
+            auto& r = result.emplace_back(m[hostIdx].str());
+            convert(m[portIdx], r.port, "<port>");
+            if (m[connectionsIdx].matched)
+            {
+                convert(m[connectionsIdx], r.teeConnectionCount, "<tee connections>");
+            }
+            Expect(r.port != 0, ("<port> is zero in entry of " + envVarName).append(": ").append(entry));
+            Expect(r.teeConnectionCount != 0, ("<tee connections> is zero in entry of " + envVarName).append(": ").append(entry));
+        }
+        else
+        {
+            Fail(("invalid format in entry of " + envVarName).append(": ").append(entry).append(formatHelp));
+        }
+    }
+    Expect(!result.empty(), envVarName + " doesn't contain any valid entries");
+    return result;
+}
 
 template fhirtools::Severity
     ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>::getOptional<fhirtools::Severity>(

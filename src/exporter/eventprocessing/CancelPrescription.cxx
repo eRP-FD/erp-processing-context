@@ -41,6 +41,10 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
                 case MEDICATIONSVC_OPERATION_SUCCESS:
                 case MEDICATIONSVC_PRESCRIPTION_NO_EXIST:
                 case MEDICATIONSVC_DISPENSATION_STATUS:
+                    logWarning(erpEvent)
+                        .keyValue("event", "Processing task event: Unexpected operation outcome")
+                        .keyValue("reason",
+                                  "EPAOperationOutcome code: " + std::string(magic_enum::enum_name(issue.detailsCode)));
                     break;
                 case SVC_IDENTITY_MISMATCH:
                 case MEDICATIONSVC_NO_VALID_STRUCTURE:
@@ -51,8 +55,10 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
                 case MEDICATIONSVC_MEDICATIONPLAN_NO_EXIST:
                 case MEDICATIONSCV_MEDICINAL_PRODUCT_PACKAGE_NOT_ALLOWED:
                 case GENERIC_OPERATION_OUTCOME_CODE:
-                    TLOG(ERROR) << "unexpected operation outcome from Medication Client: "
-                                << magic_enum::enum_name(issue.detailsCode);
+                    logError(erpEvent)
+                        .keyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")
+                        .keyValue("reason", "unexpected operation outcome from Medication Client: " +
+                                                std::string(magic_enum::enum_name(issue.detailsCode)));
                     outcome = Outcome::DeadLetter;
                     break;
             }

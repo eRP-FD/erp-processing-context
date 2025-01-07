@@ -3,6 +3,7 @@
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
 #include "exporter/network/client/Tee3Client.hxx"
 #include "exporter/network/client/Tee3ClientPool.hxx"
+#include "exporter/EpaAccountLookupClient.hxx"
 #include "exporter/pc/MedicationExporterFactories.hxx"
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
 #include "exporter/server/HttpsServer.hxx"
@@ -138,7 +139,7 @@ MedicationExporterFactories createProductionFactories()
 
 boost::asio::awaitable<void> setupHosts(std::shared_ptr<Tee3ClientPool> clientPool, std::string host, uint16_t port)
 {
-    co_await clientPool->addEpaHost(host, port);
+    co_await clientPool->addEpaHost(host, port, 5);
 }
 
 boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> clientPool, std::string host, std::chrono::seconds waitTime)
@@ -154,13 +155,44 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
     using boost::beast::http::verb;
     try
     {
-        auto response = co_await clientPool->sendTeeRequest(host, Tee3Client::Request{verb::get, "/epa/authz/v1/freshness", 11});
+        std::unordered_map<std::string, std::any> empty{};
+        auto response = co_await clientPool->sendTeeRequest(host, Tee3Client::Request{verb::get, "/epa/authz/v1/freshness", 11}, empty);
         LOG(INFO) << "got response after waiting " << waitTime;
     }
     catch (const std::exception& e)
     {
         LOG(ERROR) << "call failed with " << e.what();
     }
+}
+
+void testHttpsClient(MedicationExporterServiceContext& serviceContext)
+{
+    auto fqdns = Configuration::instance().epaFQDNs();
+    auto fqdn = fqdns.front();
+    model::Kvnr kvnr{"X1234567890"};
+    for (int i = 0; i < 10; ++i)
+    {
+        std::thread([&]() {
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.16.0");
+            LOG(INFO) << "sleeping... ";
+            std::this_thread::sleep_for(std::chrono::seconds{1});
+            client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
+            LOG(INFO) << "finished consent... ";
+        }).detach();
+    }
+    std::this_thread::sleep_for(std::chrono::seconds{15});
+
+    for (int i = 0; i < 10; ++i)
+    {
+        std::thread([&]() {
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.16.0");
+            LOG(INFO) << "sleeping... ";
+            std::this_thread::sleep_for(std::chrono::seconds{1});
+            client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
+            LOG(INFO) << "finished consent... ";
+        }).detach();
+    }
+    std::this_thread::sleep_for(std::chrono::seconds{10});
 }
 
 
@@ -191,6 +223,7 @@ int main(int argc, const char* argv[])
                                                                                  std::move(factories));
         // Run the tee token updater once, now, so that we have a valid Tee token.
         EnrolmentHelper::refreshTeeToken(serviceContext->getHsmPool());
+        testHttpsClient(*serviceContext);
 
         auto workGuard = boost::asio::make_work_guard(ioContext);
         auto ioThread = std::thread([&] {
@@ -204,8 +237,8 @@ int main(int argc, const char* argv[])
             }
         });
         LOG(INFO) << "setup pool";
-        auto clientPool = std::make_shared<Tee3ClientPool>(ioContext, 3, serviceContext->getHsmPool(),
-                                                           serviceContext->getTslManager());
+        auto clientPool =
+            std::make_shared<Tee3ClientPool>(ioContext, serviceContext->getHsmPool(), serviceContext->getTslManager());
         LOG(INFO) << "setup hosts";
         co_spawn(ioContext, setupHosts(clientPool, host, port), boost::asio::use_future).get();
 
@@ -216,12 +249,15 @@ int main(int argc, const char* argv[])
 
         co_spawn(ioContext, runTeeClient(clientPool, host, std::chrono::seconds{0}), boost::asio::detached);
 
-        /*auto epa = EpaMedicationClientImpl(ioContext, host, clientPool);
-        LOG(INFO) << "sending request";
-        model::Kvnr kvnr{"X1234567890"};
+        //
+        // uncomment below to use EpaMedicationClient directly
+        //
+        // auto epa = EpaMedicationClientImpl(ioContext, host, clientPool);
+        // LOG(INFO) << "sending request";
+        // model::Kvnr kvnr{"X1234567890"};
 
-        auto result = epa.sendProvideDispensation(kvnr, "test");
-        LOG(INFO) << result.body.serializeToJsonString();*/
+        // auto result = epa.sendProvideDispensation(kvnr, "test");
+        // LOG(INFO) << result.body.serializeToJsonString();
 
         clientPool.reset();
         workGuard.reset();

@@ -5,8 +5,9 @@
  */
 
 #include "exporter/eventprocessing/EventProcessingBase.hxx"
-#include "exporter/model/EpaOperationOutcome.hxx"
 #include "exporter/model/EpaErrorType.hxx"
+#include "exporter/model/EpaOperationOutcome.hxx"
+#include "exporter/model/TaskEvent.hxx"
 
 #include <gsl/gsl-lite.hpp>
 #include <utility>
@@ -33,11 +34,36 @@ void EventProcessingBase::logFailure(HttpStatus httpStatus, model::NumberAsStrin
     {
         model::EpaErrorType errorType(doc);
         TLOG(WARNING) << "ErrorType code: " << errorType.getErrorCode();
-        if (!errorType.getErrorDetail().empty())
+        if (! errorType.getErrorDetail().empty())
         {
             TLOG(WARNING) << "ErrorType detail: " << errorType.getErrorDetail();
         }
     }
 }
+
+JsonLog EventProcessingBase::logInfo(const model::TaskEvent& event)
+{
+    return log(JsonLog::makeInfoLogReceiver(), event);
+}
+
+JsonLog EventProcessingBase::logWarning(const model::TaskEvent& event)
+{
+    return log(JsonLog::makeWarningLogReceiver(), event);
+}
+
+JsonLog EventProcessingBase::logError(const model::TaskEvent& event)
+{
+    return log(JsonLog::makeErrorLogReceiver(), event);
+}
+
+JsonLog EventProcessingBase::log(JsonLog::LogReceiver&& logReceiver, const model::TaskEvent& event)
+{
+    LogId logId = LogId::INFO;
+    JsonLog log(logId, std::move(logReceiver), false);
+    log.keyValue("prescription_id", event.getPrescriptionId().toString())
+        .keyValue("usecase", magic_enum::enum_name(event.getUseCase()));
+    return log;
+}
+
 
 }

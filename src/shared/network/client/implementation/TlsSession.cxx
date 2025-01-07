@@ -45,7 +45,7 @@ namespace
                 boost::asio::error::connection_reset      != ex.code() &&
                 boost::asio::error::not_connected         != ex.code())
             {
-                TLOG(ERROR) << "Beast ex: " << ex.what();
+                TLOG(WARNING) << "Beast ex: " << ex.what();
             }
         }
         catch (const std::exception& ex)
@@ -149,7 +149,7 @@ void TlsSession::TlsSessionTicketImpl::save (const TlsSessionTicketImpl& other)
 TlsSession::TlsSession(const ConnectionParameters& params)
     : mHostName{params.hostname},
       mPort{params.port},
-      mConnectionTimeoutSeconds(params.connectionTimeoutSeconds),
+      mConnectionTimeout(params.connectionTimeout),
       mIoContext{},
       // GEMREQ-start GS-A_4385
       // GEMREQ-start GS-A_5542
@@ -161,10 +161,10 @@ TlsSession::TlsSession(const ConnectionParameters& params)
       mCertificateVerifier{params.tlsParameters.value().certificateVerifier},
       mTrustCn{params.tlsParameters.value().trustCertificateCn}
 {
-    TVLOG(1) << "Creating TLS Session, host=" << params.hostname << ", port=" << params.port << ", conn. timeout=" << params.connectionTimeoutSeconds
+    TVLOG(1) << "Creating TLS Session, host=" << params.hostname << ", port=" << params.port << ", conn. timeout=" << params.connectionTimeout
              << ", withClientCertificate=" << params.tlsParameters->clientCertificate.has_value();
 
-    Expect(mConnectionTimeoutSeconds > 0, "Connection timeout must be greater than 0.");
+    Expect(mConnectionTimeout.count() > 0, "Connection timeout must be greater than 0.");
 
     configureContext(params);
 }
@@ -186,7 +186,7 @@ void TlsSession::establish()
     /* Look up the domain name. */
     if (! mForcedEndpoint.has_value())
     {
-        resolverResults = boost::asio::ip::tcp::resolver{mIoContext}.resolve(mHostName.c_str(), mPort.c_str());
+        resolverResults = boost::asio::ip::tcp::resolver{mIoContext}.resolve(mHostName, mPort);
     }
     else
     {
@@ -363,7 +363,7 @@ void TlsSession::configureSession(const boost::asio::ip::basic_resolver_results<
         SSL_set_hostflags(mSslStream.getNativeHandle(), X509_CHECK_FLAG_NEVER_CHECK_SUBJECT);
     }
 
-    mSslStream.getLowestLayer().expires_after(std::chrono::seconds(mConnectionTimeoutSeconds));
+    mSslStream.getLowestLayer().expires_after(mConnectionTimeout);
 
     /* Make the connection on the IP address we get from a lookup. */
     boost::system::error_code errorCode =

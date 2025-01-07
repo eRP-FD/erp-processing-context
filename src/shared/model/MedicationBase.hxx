@@ -22,7 +22,8 @@ public:
     static constexpr auto resourceTypeName = "Medication";
 
 private:
-    friend Resource<MedicationBase>;
+    friend Resource<TDerivedMedication>;
+    using Resource<TDerivedMedication>::Resource;
 };
 
 

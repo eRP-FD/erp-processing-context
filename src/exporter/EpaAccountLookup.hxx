@@ -34,16 +34,18 @@ class EpaAccountLookup
 {
 public:
     explicit EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient);
-    explicit EpaAccountLookup(TlsCertificateVerifier tlsCertificateVerifier);
+    explicit EpaAccountLookup(MedicationExporterServiceContext& serviceContext);
 
     EpaAccount lookup(const model::Kvnr& kvnr);
     EpaAccount lookup(const model::Kvnr& kvnr, const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList);
     EpaAccount::Code checkConsent(const model::Kvnr& kvnr, const std::string& host, uint16_t port);
-    EpaAccountLookup& addLogAttribute(const std::string& key, const std::any& value);
+    IEpaAccountLookupClient& lookupClient()
+    {
+        return *mLookupClient;
+    }
 
 private:
     std::unique_ptr<IEpaAccountLookupClient> mLookupClient;
-    std::unordered_map<std::string, std::any> mLookupClientLogContext;
 };
 
 

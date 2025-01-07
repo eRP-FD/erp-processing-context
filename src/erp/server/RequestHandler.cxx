@@ -8,26 +8,6 @@
 #include "erp/server/RequestHandler.hxx"
 
 
-void RequestHandlerBasicAuthentication::handleBasicAuthentication(
-    const BaseSessionContext& session, ConfigurationKey credentialsKey) const
-{
-    SafeString secret(Configuration::instance().getSafeStringValue(credentialsKey));
-    ErpExpect(session.request.header().hasHeader(Header::Authorization), HttpStatus::Unauthorized,
-              "Authorization required.");
-    auto parts = String::split(session.request.header().header(Header::Authorization).value_or(""), " ");
-    if (parts.size() == 2)
-    {
-        SafeString authSecret(std::move(parts[1]));
-        ErpExpect(String::toLower(parts[0]) == "basic" && authSecret == secret, HttpStatus::Unauthorized,
-                  "Unauthorized");
-    }
-    else
-    {
-        ErpExpect(false, HttpStatus::Unauthorized, "Unauthorized (unsupported authorization content.)");
-    }
-}
-
-
 std::tuple<bool, std::optional<RequestHandlerManager::MatchingHandler>, ServerResponse>
 RequestHandler::handleRequest(ServerRequest& request, AccessLog& accessLog)
 {

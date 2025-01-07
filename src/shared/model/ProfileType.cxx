@@ -25,6 +25,7 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case CancelPrescriptionErpOp:
         case ProvideDispensationErpOp:
         case OrganizationDirectory:
+        case EPAMedicationPZNIngredient:
             return false;
         case Gem_erxAuditEvent:
         case Gem_erxBinary:

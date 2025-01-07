@@ -43,6 +43,12 @@
       }
     }
   },
+  "erp-medication-exporter": {
+    "is-production": "false",
+    "epa-account-lookup": {
+      "enforceServerAuthentication": "false"
+    }
+  },
   "debug": {
     "enable-hsm-mock": "true",
     "disable-registration": "false",

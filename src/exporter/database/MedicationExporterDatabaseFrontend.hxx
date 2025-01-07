@@ -51,7 +51,7 @@ public:
 
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const override;
 
-    void postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr) const override;
+    void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) const override;
 
     void finalizeKvnr(const model::EventKvnr& kvnr) const override;
 

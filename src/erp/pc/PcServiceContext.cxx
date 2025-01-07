@@ -14,6 +14,7 @@
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/registration/RegistrationManager.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
@@ -21,7 +22,6 @@
 #include "shared/hsm/VsdmKeyCache.hxx"
 #include "shared/server/BaseServiceContext.hxx"
 #include "shared/util/Configuration.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
 #include "shared/util/health/ApplicationHealth.hxx"
 #include "shared/validation/JsonValidator.hxx"
 
@@ -67,8 +67,8 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
     , mRegistrationInterface(
           std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(),
                                                 factories.redisClientFactory(std::chrono::seconds(0))))
-    , mRuntimeConfiguration(std::make_unique<RuntimeConfiguration>())
-// GEMREQ-end A_20974-01
+    // GEMREQ-end A_20974-01
+    , mRuntimeConfiguration(std::make_shared<erp::RuntimeConfiguration>())
 {
     Expect3(mDatabaseFactory != nullptr, "database factory has been passed as nullptr to ServiceContext constructor",
             std::logic_error);
@@ -83,7 +83,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, Factories
                                    false, configuration.getSafeStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE));
 
     RequestHandlerManager adminHandlers;
-    AdminServer::addEndpoints(adminHandlers);
+    AdminServer::addEndpoints(adminHandlers, getRuntimeConfiguration());
     mAdminServer = factories.adminServerFactory(
         configuration.getStringValue(ConfigurationKey::ADMIN_SERVER_INTERFACE),
         gsl::narrow<uint16_t>(configuration.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)), std::move(adminHandlers),
@@ -183,17 +183,18 @@ BaseHttpsServer& PcServiceContext::getTeeServer() const
 {
     return *mTeeServer;
 }
-BaseHttpsServer& PcServiceContext::getAdminServer() const
+
+std::unique_ptr<erp::RuntimeConfigurationGetter> PcServiceContext::getRuntimeConfigurationGetter() const
 {
-    return *mAdminServer;
+    return std::make_unique<erp::RuntimeConfigurationGetter>(mRuntimeConfiguration);
 }
 
-std::unique_ptr<RuntimeConfigurationGetter> PcServiceContext::getRuntimeConfigurationGetter() const
+std::unique_ptr<erp::RuntimeConfigurationSetter> PcServiceContext::getRuntimeConfigurationSetter() const
 {
-    return std::make_unique<RuntimeConfigurationGetter>(*mRuntimeConfiguration);
+    return std::make_unique<erp::RuntimeConfigurationSetter>(mRuntimeConfiguration);
 }
 
-std::unique_ptr<RuntimeConfigurationSetter> PcServiceContext::getRuntimeConfigurationSetter() const
+std::shared_ptr<const erp::RuntimeConfiguration> PcServiceContext::getRuntimeConfiguration() const
 {
-    return std::make_unique<RuntimeConfigurationSetter>(*mRuntimeConfiguration);
+    return mRuntimeConfiguration;
 }

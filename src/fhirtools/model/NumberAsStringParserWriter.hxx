@@ -40,8 +40,10 @@ public:
 
     bool String(const Ch* text, rapidjson::SizeType length, bool copy)
     {
-        RAPIDJSON_ASSERT(text != nullptr && length > 0);
-        RAPIDJSON_ASSERT(text[0] == NumberAsStringParserDocument::prefixNumber || text[0] == NumberAsStringParserDocument::prefixString);
+        ModelExpect(text != nullptr && length > 0, "text is null or empty");
+        ModelExpect(text[0] == NumberAsStringParserDocument::prefixNumber ||
+                        text[0] == NumberAsStringParserDocument::prefixString,
+                    "prefix is invalid: " + (std::string{text, length}));
         if (text[0] == NumberAsStringParserDocument::prefixNumber)
         {
             // Our base class has a RawNumber() method but that still adds double quotes around `text`.

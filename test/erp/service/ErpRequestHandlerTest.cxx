@@ -137,6 +137,7 @@ public:
             case EPAOpRxDispensationERPOutputParameters:
             case CancelPrescriptionErpOp:
             case OrganizationDirectory:
+            case EPAMedicationPZNIngredient:
                 FAIL() << "wrong SchemaType for this test";
                 break;
             case Gem_erxChargeItem:

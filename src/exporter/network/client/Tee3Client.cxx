@@ -35,19 +35,6 @@
 
 namespace
 {
-
-
-template <typename T>
-void assignIfContains(const std::unordered_map<std::string, std::any>& data,
-                      const std::string& key,
-                      T& target)
-{
-    if (data.contains(key) && data.at(key).type() == typeid(T))
-    {
-        target = std::any_cast<T>(data.at(key));
-    }
-}
-
 template<typename EndpointIteratorType>
 void increaseEndpointBackoffTime(EndpointIteratorType endpoint)
 {
@@ -87,6 +74,7 @@ TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
         config.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENFORCE_SERVER_AUTHENTICATION);
     return enforceServerAuth ? TlsCertificateVerifier::withTslVerification(
                                    tslManager, {.certificateType = CertificateType::C_FD_TLS_S,
+                                                .ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
                                                 .ocspGracePeriod = std::chrono::seconds(config.getIntValue(
                                                     ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD)),
                                                 .withSubjectAlternativeAddressValidation = true})
@@ -102,17 +90,15 @@ TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
 Tee3Client::Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3ClientsForHost*> owner)
     : mOwingClientsForHost{owner}
     , mHttpsClient{ioContext,
-                    ConnectionParameters{
-                        .hostname = owner->hostname(),
-                        .port = std::to_string(owner->port()),
-                        .connectionTimeoutSeconds = gsl::narrow<uint16_t>(
-                            Configuration::instance().getIntValue(
-                                ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS) /
-                            1000),
-                        .resolveTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
-                            ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
-                        .tlsParameters =
-                            TlsConnectionParameters{.certificateVerifier = epaTlsCertificateVerifier(owner->tslManager())}}}
+                   ConnectionParameters{
+                       .hostname = owner->hostname(),
+                       .port = std::to_string(owner->port()),
+                       .connectionTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
+                           ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS)},
+                       .resolveTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
+                           ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
+                       .tlsParameters = TlsConnectionParameters{.certificateVerifier =
+                                                                    epaTlsCertificateVerifier(owner->tslManager())}}}
     , mStrand{make_strand(ioContext)}
     , mTeeContextRefreshTimer{mStrand}
     , mCertificateService{boost::asio::use_service<EpaCertificateService>(ioContext)}
@@ -128,12 +114,13 @@ Tee3Client::Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3Cli
 
 Tee3Client::~Tee3Client() noexcept = default;
 
-boost::asio::awaitable<boost::system::error_code> Tee3Client::connect(boost::asio::ip::tcp::endpoint endpoint)
+boost::asio::awaitable<boost::system::error_code> Tee3Client::handshakeWithAuthorization()
 {
-    auto ec = co_await mHttpsClient.connectToEndpoint(endpoint);
+    auto ec = co_await tee3Handshake();
+
     if (! ec)
     {
-        ec = co_await tee3Handshake();
+        ec = co_await authorize(mOwingClientsForHost->hsmPool());
     }
 
     co_return ec;
@@ -147,7 +134,7 @@ boost::asio::awaitable<void> Tee3Client::ensureConnected()
     // below
     if (mHttpsClient.connected() && needHandshake())
     {
-        auto ec = co_await tee3Handshake();
+        auto ec = co_await handshakeWithAuthorization();
         if (ec)
         {
             co_await close();
@@ -208,11 +195,14 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tryConnect(Endpoin
         return std::ostringstream{} << "Trying connect to " << mHttpsClient.hostname() << " on "
                                     << endpointData.endpoint.address();
     });
-    auto ec = co_await connect(endpointData.endpoint);
-    if (ec)
-        co_return ec;
 
-    co_return co_await authorize(mOwingClientsForHost->hsmPool());
+    auto ec = co_await mHttpsClient.connectToEndpoint(endpointData.endpoint);
+    if (! ec)
+    {
+        ec = co_await handshakeWithAuthorization();
+    }
+
+    co_return ec;
 }
 
 const boost::asio::ip::tcp::endpoint& Tee3Client::currentEndpoint() const
@@ -270,8 +260,8 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     if (request.base().find(Header::XRequestId) != request.base().end()) {
         bde.mRequestId = std::string{ request[Header::XRequestId] };
     }
-    assignIfContains(logDataBag, "prescriptionId", bde.mPrescriptionId);
-    assignIfContains(logDataBag, "lastModifiedTimestamp", bde.mLastModified);
+    BDEMessage::assignIfContains(logDataBag, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
+    BDEMessage::assignIfContains(logDataBag, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
     auto encrypted = epa::TeeStreamFactory::createReadableEncryptingStream(
         [&contexts]() {
             return contexts.request;
@@ -288,6 +278,10 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     auto cleanup = gsl::finally([&bde, &outerResponse] {
         if (outerResponse.has_value()) {
             bde.mResponseCode = outerResponse->result_int();
+        }
+        else
+        {
+            bde.mError = outerResponse.error().message();
         }
         bde.mEndTime = model::Timestamp::now();
     });
@@ -486,6 +480,10 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool&
             return std::ostringstream{} << "Unable to perform authorization request: " << e.what();
         });
         result = boost::system::errc::make_error_code(boost::system::errc::protocol_error);
+    }
+    if (result.failed())
+    {
+        co_await close();
     }
     co_await async_immediate(executor);
     co_return result;

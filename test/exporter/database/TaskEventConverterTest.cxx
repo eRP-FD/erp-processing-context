@@ -74,7 +74,7 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEvent)
         encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
         std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescription,
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
-        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity);
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
     TaskEventConverter taskEventConverter(mCodec);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
@@ -115,7 +115,7 @@ TEST_F(TaskEventConverterTest, convert_CancelPrescriptionTaskEvent)
         encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
         std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescription,
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
-        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity);
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
     TaskEventConverter taskEventConverter(mCodec);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
@@ -162,7 +162,7 @@ TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent)
         encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
         std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescription,
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
-        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity);
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
     TaskEventConverter taskEventConverter(mCodec);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
@@ -208,7 +208,7 @@ TEST_F(TaskEventConverterTest, convert_CancelDispensationTaskEvent)
         encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
         std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescription,
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
-        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity);
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
     TaskEventConverter taskEventConverter(mCodec);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);

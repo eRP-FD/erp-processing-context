@@ -91,6 +91,7 @@ const std::string_view& toString (Operation operation)
         case Operation::POST_Admin_restart:
         case Operation::GET_Admin_configuration:
         case Operation::PUT_Admin_pn3_configuration:
+        case Operation::PUT_Admin_exporter_configuration:
             Fail2("Operation value is not supported", std::logic_error);
     }
     Fail2("Uninitialized operation enum", std::logic_error);

@@ -25,7 +25,7 @@ std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidato
         new HttpsTestClient(ConnectionParameters{
             .hostname = serverHost,
             .port = std::to_string(serverPort),
-            .connectionTimeoutSeconds = Constants::httpTimeoutInSeconds,
+            .connectionTimeout = Constants::httpConnectTimeout,
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()

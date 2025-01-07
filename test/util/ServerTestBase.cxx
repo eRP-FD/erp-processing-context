@@ -186,7 +186,7 @@ HttpsClient ServerTestBase::createClient (void)
     return HttpsClient(ConnectionParameters{
         .hostname = "127.0.0.1",
         .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
-        .connectionTimeoutSeconds = 30,
+        .connectionTimeout = std::chrono::seconds{30},
         .resolveTimeout = Constants::resolveTimeout,
         .tlsParameters = TlsConnectionParameters{
             .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()

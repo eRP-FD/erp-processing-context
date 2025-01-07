@@ -7,6 +7,7 @@
 configure_file(erp-serverinfo.cxx.in erp-serverinfo.cxx)
 
 add_library(erp-shared STATIC
+    admin/AdminRequestHandler.cxx
     audit/AuditDataCollector.cxx
     audit/AuditEventCreator.cxx
     audit/AuditEventTextTemplates.cxx
@@ -124,6 +125,7 @@ add_library(erp-shared STATIC
     server/BaseServiceContext.cxx
     server/ErrorHandler.cxx
     server/PartialRequestHandler.cxx
+    server/RequestHandler.cxx
     server/ThreadPool.cxx
     server/Worker.cxx
     server/handler/RequestHandlerContext.cxx
@@ -180,7 +182,6 @@ add_library(erp-shared STATIC
     util/JsonLog.cxx
     util/PeriodicTimer.cxx
     util/Random.cxx
-    util/RuntimeConfiguration.cxx
     util/SafeString.cxx
     util/String.cxx
     util/TimeoutHelper.cxx

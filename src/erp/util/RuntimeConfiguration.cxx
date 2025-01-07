@@ -3,9 +3,11 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "shared/ErpRequirements.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/util/Expect.hxx"
 
+namespace erp
+{
 void RuntimeConfiguration::enableAcceptPN3(const model::Timestamp& expiry)
 {
     ErpExpect(expiry <= model::Timestamp::now() + accept_pn3_max_active, HttpStatus::BadRequest,
@@ -37,47 +39,48 @@ RuntimeConfiguration::AcceptPN3Enabled::AcceptPN3Enabled(const model::Timestamp&
 }
 
 
-RuntimeConfiguration::Getter::Getter(const RuntimeConfiguration& runtimeConfiguration)
+RuntimeConfiguration::Getter::Getter(std::shared_ptr<const RuntimeConfiguration> runtimeConfiguration)
     : mRuntimeConfiguration(runtimeConfiguration)
-    , mSharedLock(mRuntimeConfiguration.mSharedMutex)
+    , mSharedLock(mRuntimeConfiguration->mSharedMutex)
 {
 }
 
 bool RuntimeConfiguration::Getter::isAcceptPN3Enabled() const
 {
     A_25200.start("Status accept PN3");
-    return mRuntimeConfiguration.isAcceptPN3Enabled();
+    return mRuntimeConfiguration->isAcceptPN3Enabled();
     A_25200.finish();
 }
 
 model::Timestamp RuntimeConfiguration::Getter::getAcceptPN3Expiry() const
 {
-    return mRuntimeConfiguration.getAcceptPN3Expiry();
+    return mRuntimeConfiguration->getAcceptPN3Expiry();
 }
 
 
-RuntimeConfiguration::Setter::Setter(RuntimeConfiguration& runtimeConfiguration)
+RuntimeConfiguration::Setter::Setter(std::shared_ptr<RuntimeConfiguration> runtimeConfiguration)
     : mRuntimeConfiguration(runtimeConfiguration)
-    , mUniqueLock(mRuntimeConfiguration.mSharedMutex)
+    , mUniqueLock(mRuntimeConfiguration->mSharedMutex)
 {
 }
 
 void RuntimeConfiguration::Setter::enableAcceptPN3(const model::Timestamp& expiry)
 {
-    mRuntimeConfiguration.enableAcceptPN3(expiry);
+    mRuntimeConfiguration->enableAcceptPN3(expiry);
 }
 
 void RuntimeConfiguration::Setter::disableAcceptPN3()
 {
-    mRuntimeConfiguration.disableAcceptPN3();
+    mRuntimeConfiguration->disableAcceptPN3();
 }
 
 bool RuntimeConfiguration::Setter::isAcceptPN3Enabled() const
 {
-    return mRuntimeConfiguration.isAcceptPN3Enabled();
+    return mRuntimeConfiguration->isAcceptPN3Enabled();
 }
 
 model::Timestamp RuntimeConfiguration::Setter::getAcceptPN3Expiry() const
 {
-    return mRuntimeConfiguration.getAcceptPN3Expiry();
+    return mRuntimeConfiguration->getAcceptPN3Expiry();
+}
 }

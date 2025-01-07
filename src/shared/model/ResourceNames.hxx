@@ -140,7 +140,8 @@ constexpr std::string_view epa_op_rx_dispensation_erp_output_parameters =
     "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-dispensation-erp-output-parameters";
 constexpr std::string_view organization_directory =
     "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory";
-
+constexpr std::string_view epa_medication_pzn_ingredient =
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-pzn-ingredient";
 } // namespace structure_definition
 
 namespace operation_definition

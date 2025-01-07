@@ -179,7 +179,7 @@ namespace
 
 
 MockOcsp MockOcsp::create (
-    const std::string& ocspRequest,
+    OCSP_CERTID* certificateId,
     const std::vector<CertificatePair>& ocspResponderKnownCertificateCaPairs,
     Certificate& certificate,
     shared_EVP_PKEY& privateKey)
@@ -190,19 +190,17 @@ MockOcsp MockOcsp::create (
     shared_ASN1_BIT_STRING key = shared_ASN1_BIT_STRING::make();
     OpenSslExpect(ASN1_BIT_STRING_set(key.get(), keybytes.data(), gsl::narrow_cast<int>(keybytes.size())), "can not set key");
 
-    std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)> certificateId =
-        getCertificateIdFromOcspRequest(ocspRequest);
-    OpenSslExpect(certificateId != nullptr, "can not create certificate id");
-
     const std::optional<MockOcsp::CertificatePair> certificateToSign =
         findCertificateById(ocspResponderKnownCertificateCaPairs, *certificateId);
     CertificateOcspTestMode testMode =
         certificateToSign.has_value() ? certificateToSign->testMode : CertificateOcspTestMode::SUCCESS;
 
+    std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)> unexpectedCertId{nullptr, OCSP_CERTID_free};
     if (testMode == CertificateOcspTestMode::WRONG_CERTID)
     {
-        certificateId = createUnexpectedCertId();
-        OpenSslExpect(certificateId != nullptr, "can not create unexpected certificate id");
+        unexpectedCertId = createUnexpectedCertId();
+        OpenSslExpect(unexpectedCertId != nullptr, "can not create unexpected certificate id");
+        certificateId = unexpectedCertId.get();
     }
 
     const auto thisUpdateTime = (testMode == CertificateOcspTestMode::WRONG_THIS_UPDATE
@@ -226,7 +224,7 @@ MockOcsp MockOcsp::create (
 
     OCSP_SINGLERESP* singleResponse =
         OCSP_basic_add1_status(basicResponse.get(),
-            certificateId.get(),
+            certificateId,
             status,
             0,
             status == V_OCSP_CERTSTATUS_REVOKED ? thisUpdate.get() : nullptr,
@@ -257,6 +255,18 @@ MockOcsp MockOcsp::create (
     OpenSslExpect(response != nullptr, "can not create OCSP response");
 
     return MockOcsp(std::move(response));
+}
+
+MockOcsp MockOcsp::create (
+    const std::string& ocspRequest,
+    const std::vector<CertificatePair>& ocspResponderKnownCertificateCaPairs,
+    Certificate& certificate,
+    shared_EVP_PKEY& privateKey)
+{
+    std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)> certificateId =
+        getCertificateIdFromOcspRequest(ocspRequest);
+    OpenSslExpect(certificateId != nullptr, "can not create certificate id");
+    return create(certificateId.get(), ocspResponderKnownCertificateCaPairs, certificate, privateKey);
 }
 
 

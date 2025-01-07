@@ -125,7 +125,7 @@ public:
         return HttpsClient(ConnectionParameters{
             .hostname = "127.0.0.1",
             .port = config.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-            .connectionTimeoutSeconds = 30,
+            .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = std::chrono::milliseconds{1000},
             .tlsParameters = TlsConnectionParameters{
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()

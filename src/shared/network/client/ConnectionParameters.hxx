@@ -69,7 +69,7 @@ struct ConnectionParameters
      */
     std::string port;
 
-    uint16_t connectionTimeoutSeconds;
+    std::chrono::milliseconds connectionTimeout;
 
     /**
      * Timeout for resolving the endpoint via DNS

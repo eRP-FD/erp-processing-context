@@ -1,7 +1,10 @@
 add_executable(exporter-test
         exporter-test.cxx
+        BDEMessageTest.cxx
         Epa4AllTransformerTest.cxx
         Epa4AllTransformerGematikTestdata.cxx
+        admin/AdminRequestHandlerTest.cxx
+        admin/PutRuntimeConfigHandlerTest.cxx
         database/CommitGuardTest.cxx
         database/PostgresDatabaseTest.cxx
         database/TaskEventConverterTest.cxx
@@ -18,10 +21,11 @@ add_executable(exporter-test
         it/EpaAccountLookupIt.cxx
         ../util/BlobDatabaseHelper.cxx
         ../mock/MockBlobDatabase.cxx
+        ../mock/MockVsdmKeyBlobDatabase.cxx
         ../util/HsmTestBase.cxx
         ../util/CryptoHelper.cxx
         ../util/JwtBuilder.cxx
-        )
+)
 
 target_link_libraries(exporter-test erp-medication-exporter-files CONAN_PKG::gtest erp-test-util-lib
         )

@@ -5,16 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/admin/AdminRequestHandler.hxx"
-#include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/context/SessionContext.hxx"
+#include "shared/admin/AdminRequestHandler.hxx"
+#include "shared/beast/BoostBeastStringWriter.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/server/BaseServiceContext.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/ConfigurationFormatter.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
 #include "shared/util/TLog.hxx"
-#include "shared/deprecated/TerminationHandler.hxx"
 #include "shared/util/UrlHelper.hxx"
 
 AdminRequestHandlerBase::AdminRequestHandlerBase(ConfigurationKey credentialsKey)
@@ -22,10 +21,11 @@ AdminRequestHandlerBase::AdminRequestHandlerBase(ConfigurationKey credentialsKey
 {
 }
 
-void AdminRequestHandlerBase::handleRequest(SessionContext& session)
+void AdminRequestHandlerBase::handleRequest(BaseSessionContext& session)
 {
     try
     {
+        TVLOG(2) << BoostBeastStringWriter::serializeRequest(session.request.header(), session.request.getBody());
         handleBasicAuthentication(session, mCredentialsKey);
         doHandleRequest(session);
         session.response.setStatus(HttpStatus::OK);
@@ -54,16 +54,16 @@ void AdminRequestHandlerBase::handleRequest(SessionContext& session)
     }
 }
 
-PostRestartHandler::PostRestartHandler()
-    : AdminRequestHandlerBase(ConfigurationKey::ADMIN_CREDENTIALS)
-    , mDefaultShutdownDelay(
-          Configuration::instance().getIntValue(ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS))
+PostRestartHandler::PostRestartHandler(ConfigurationKey adminCredentialsKey,
+                                       ConfigurationKey adminDefaultShutdownDelayKey)
+    : AdminRequestHandlerBase(adminCredentialsKey)
+    , mDefaultShutdownDelay(Configuration::instance().getIntValue(adminDefaultShutdownDelayKey))
 {
 }
 
 PostRestartHandler::~PostRestartHandler() = default;
 
-void PostRestartHandler::doHandleRequest(SessionContext& session)
+void PostRestartHandler::doHandleRequest(BaseSessionContext& session)
 {
     TVLOG(1) << "shutdown requested by: " << session.request.header().serializeFields() << "\r\n\r\n"
              << session.request.getBody();
@@ -92,13 +92,15 @@ void PostRestartHandler::doHandleRequest(SessionContext& session)
         }
     }
     ErpExpect(delay >= 0, HttpStatus::BadRequest, "Delay value " + std::to_string(delay) + " is out of range");
-    auto& ioContext = session.serviceContext.getAdminServer().getThreadPool().ioContext();
+    auto& ioContext = session.baseServiceContext.getAdminServer().getThreadPool().ioContext();
     TerminationHandler::instance().gracefulShutdown(ioContext, delay);
     session.response.setBody("shutdown in " + std::to_string(delay) + " seconds");
 }
 
-GetConfigurationHandler::GetConfigurationHandler()
-    : AdminRequestHandlerBase(ConfigurationKey::ADMIN_CREDENTIALS)
+GetConfigurationHandler::GetConfigurationHandler(ConfigurationKey adminCredentialsKey,
+                                                 gsl::not_null<std::unique_ptr<ConfigurationFormatter>> formatter)
+    : AdminRequestHandlerBase(adminCredentialsKey)
+    , mFormatter(std::move(formatter))
 {
 }
 
@@ -107,13 +109,12 @@ Operation PostRestartHandler::getOperation(void) const
     return Operation::POST_Admin_restart;
 }
 
-void GetConfigurationHandler::doHandleRequest(SessionContext& session)
+void GetConfigurationHandler::doHandleRequest(BaseSessionContext& session)
 {
     TVLOG(1) << "configuration requested by: " << session.request.header().serializeFields();
     const auto& config = Configuration::instance();
-    const auto runtimeConfig = session.serviceContext.getRuntimeConfigurationGetter();
     using Flags = KeyData::ConfigurationKeyFlags;
-    session.response.setBody(ConfigurationFormatter::formatAsJson(config, *runtimeConfig, Flags::all));
+    session.response.setBody(mFormatter->formatAsJson(config, Flags::all));
     session.response.setHeader(Header::ContentType, MimeType::json);
 }
 

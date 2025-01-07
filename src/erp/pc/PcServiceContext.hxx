@@ -20,14 +20,11 @@
 #include "shared/idp/Idp.hxx"
 #include "shared/server/BaseServiceContext.hxx"
 #include "shared/tsl/TslRefreshJob.hxx"
-#include "shared/util/Configuration.hxx"
 
 #include <functional>
 #include <memory>
 
 
-class RuntimeConfigurationSetter;
-class RuntimeConfigurationGetter;
 class BlobCache;
 class BlobDatabase;
 class VsdmKeyBlobDatabase;
@@ -41,7 +38,13 @@ class SeedTimerHandler;
 class Tpm;
 class RequestHandlerManager;
 class RegistrationManager;
+
+namespace erp
+{
 class RuntimeConfiguration;
+class RuntimeConfigurationSetter;
+class RuntimeConfigurationGetter;
+}
 
 using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 
@@ -94,10 +97,10 @@ public:
     std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
     BaseHttpsServer& getTeeServer() const;
-    BaseHttpsServer& getAdminServer() const;
 
-    std::unique_ptr<RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
-    std::unique_ptr<RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
+    std::unique_ptr<erp::RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
+    std::unique_ptr<erp::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
+    std::shared_ptr<const erp::RuntimeConfiguration> getRuntimeConfiguration() const;
 
     PcServiceContext(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
@@ -124,9 +127,7 @@ protected:
     std::shared_ptr<RegistrationInterface> mRegistrationInterface;
 
     std::unique_ptr<BaseHttpsServer> mTeeServer;
-    std::unique_ptr<BaseHttpsServer> mAdminServer;
-
-    gsl::not_null<std::unique_ptr<RuntimeConfiguration>> mRuntimeConfiguration;
+    gsl::not_null<std::shared_ptr<erp::RuntimeConfiguration>> mRuntimeConfiguration;
 };
 
 class SessionContext;

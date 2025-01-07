@@ -59,7 +59,9 @@ public:
                                const std::string& extensionUrl, bool forceSource);
     void checkIdentifier(const rapidjson::Value& resource, const std::string_view& expectedSystem,
                          const std::string_view& expectedValue);
-    void checkMedicationIngredientArray(const rapidjson::Value& source, const rapidjson::Value& target);
+    void checkMedicationIngredientArray(const rapidjson::Value& source, const rapidjson::Value& target,
+                                        bool checkTransformedPzn);
+    void checkMedicationContainedArray(const rapidjson::Value& source, const rapidjson::Value& target);
     void checkMedicationCodingArray(const rapidjson::Value& source, const rapidjson::Value& target);
 
 

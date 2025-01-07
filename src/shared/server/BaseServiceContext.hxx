@@ -5,8 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#ifndef ERP_PROCESSING_CONTEXT_EXPORTER_BASESERVICECONTEXT_HXX
-#define ERP_PROCESSING_CONTEXT_EXPORTER_BASESERVICECONTEXT_HXX
+#ifndef ERP_PROCESSING_CONTEXT_SHARED_BASESERVICECONTEXT_HXX
+#define ERP_PROCESSING_CONTEXT_SHARED_BASESERVICECONTEXT_HXX
 
 #include "shared/enrolment/EnrolmentData.hxx"
 #include "shared/hsm/BlobCache.hxx"
@@ -67,7 +67,7 @@ public:
 
     const Tpm::Factory& getTpmFactory() const;
 
-    BaseHttpsServer* getAdminServer() const;
+    BaseHttpsServer& getAdminServer() const;
 
     BaseHttpsServer* getEnrolmentServer() const;
 

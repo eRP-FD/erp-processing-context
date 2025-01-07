@@ -73,6 +73,7 @@ namespace
             case OcspCheckDescriptor::PROVIDED_ONLY:
                 return false;
             case OcspCheckDescriptor::PROVIDED_OR_CACHE:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
             case OcspCheckDescriptor::CACHED_ONLY:
                 return true;
         }

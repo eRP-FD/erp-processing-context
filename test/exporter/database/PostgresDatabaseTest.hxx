@@ -159,15 +159,15 @@ public:
         txn.commit();
     }
 
-    void insertTaskKvnr(const model::Kvnr& kvnr)
+    void insertTaskKvnr(const model::Kvnr& kvnr, std::int32_t retry = 0)
     {
         auto kvnr_hashed = kvnrHashed(kvnr);
         auto&& txn = createTransaction();
         txn.exec_params("INSERT INTO erp_event.kvnr"
-                        "(kvnr_hashed, state)"
+                        "(kvnr_hashed, state, retry_count)"
                         " VALUES "
-                        "($1, $2)",
-                        kvnr_hashed, "processing");
+                        "($1, $2, $3)",
+                        kvnr_hashed, "processing", retry);
         txn.commit();
     }
 

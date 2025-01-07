@@ -122,9 +122,14 @@ model::NumberAsStringParserDocument model::NumberAsStringParserDocument::fromJso
 
 std::string model::NumberAsStringParserDocument::serializeToJsonString() const
 {
+    return serializeToJsonString(*this);
+}
+
+std::string NumberAsStringParserDocument::serializeToJsonString(const rapidjson::Value& value)
+{
     rj::StringBuffer buffer;
     NumberAsStringParserWriter<rj::StringBuffer> writer(buffer);
-    Accept(writer);
+    value.Accept(writer);
     return {buffer.GetString()};
 }
 
@@ -139,7 +144,7 @@ std::string NumberAsStringParserDocument::pointerToString(const rj::Pointer& poi
 std::string_view NumberAsStringParserDocument::getStringValueFromValue(const rj::Value* value)
 {
     Expect3(value != nullptr, "value is nullptr", std::logic_error);
-    ModelExpect(value->IsString(), "value is not a string");
+    ModelExpect(value->IsString(), "value is not a string: " + serializeToJsonString(*value));
     ModelExpect(value->GetStringLength() > 0, "at least prefix character expected");
     ModelExpect(value->GetString()[0] == prefixString || value->GetString()[0] == prefixNumber,
         "string values must start with prefix character");

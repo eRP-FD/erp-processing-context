@@ -41,16 +41,23 @@
       "endpoint": "/information/api/v1/ehr/consentdecisions",
       "userAgent": "ERP-FD/1.16.0",
       "erpSubmissionFunctionId": "erp-submission",
-      "epaAsFqdn": ["epa-as-1-mock:443"]
+      "epaAsFqdn": ["epa-as-1-mock:443"],
+      "poolSizePerFqdn": "5"
     },
     "epa-processing-outcome": {
       "epaDelayRetrySeconds": "60"
+    },
+    "epa-conflict": {
+      "epaConflictWaitMinutes": "1440"
     },
     "admin": {
       "server": {
         "interface": "0.0.0.0",
         "port": "9999"
-      }
+      },
+      "defaultShutdownDelaySeconds": "5",
+      "credentials": "",
+      "runtime_config_credentials": ""
     },
     "fhir": {
       "structure-files": [

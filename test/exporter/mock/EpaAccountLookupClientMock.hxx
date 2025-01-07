@@ -18,6 +18,13 @@ public:
     ClientResponse sendConsentDecisionsRequest(const model::Kvnr& kvnr, const std::string& host,
                                                uint16_t port) override;
 
+    IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override
+    {
+        (void)key;
+        (void)value;
+        return *this;
+    }
+
 private:
     HttpStatus mHttpStatus{HttpStatus::OK};
     std::string mResponseBody;

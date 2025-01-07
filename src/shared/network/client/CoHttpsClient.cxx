@@ -24,13 +24,14 @@
 CoHttpsClient::CoHttpsClient(std::shared_ptr<Strand> strand, const ConnectionParameters& params)
     : mHostname{params.hostname}
     , mPort{gsl::narrow<uint16_t>(std::stoi(params.port))}
-    , mConnectionTimeout{std::chrono::milliseconds{params.connectionTimeoutSeconds * 1000}}
+    , mConnectionTimeout{params.connectionTimeout}
     , mCertificateVerifier{params.tlsParameters.value().certificateVerifier}
     , mTrustCn{params.tlsParameters.value().trustCertificateCn}
     , mSslContext{createSslContext(params.tlsParameters.value().forcedCiphers)}
     , mStrand{std::move(strand)}
 {
     Expect3(mStrand != nullptr, "strand must not be nullptr.", std::logic_error);
+    Expect(mConnectionTimeout.count() > 0, "Connection timeout must be greater than 0.");
 }
 
 CoHttpsClient::CoHttpsClient(boost::asio::io_context& ioContext, const ConnectionParameters& params)
@@ -46,7 +47,7 @@ CoHttpsClient::~CoHttpsClient() noexcept = default;
 boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<std::string>& forcedCiphers)
 {
     // A_15751-03
-    auto tlsContext = boost::asio::ssl::context{boost::asio::ssl::context::tls_client};
+    auto tlsContext = boost::asio::ssl::context{boost::asio::ssl::context::tlsv12_client};
     mCertificateVerifier.install(tlsContext);
     tlsContext.set_options(boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::no_sslv3 |
                            boost::asio::ssl::context::no_tlsv1 | boost::asio::ssl::context::no_tlsv1_1);
@@ -76,6 +77,17 @@ boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<st
         throw ExceptionWrapper<boost::beast::system_error>::create(
             {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
+    SSL_CTX_set_info_callback(tlsContext.native_handle(), [](const SSL*, int context, int value)
+    {
+        if (context & SSL_CB_ALERT)
+        {
+            TVLOG(3) << ((context & SSL_CB_WRITE) ? "wrote" : "read")
+                    << " TLS alert = "
+                    << SSL_alert_desc_string_long(value)
+                    << ", of type = "
+                    << SSL_alert_type_string_long(value);
+        }
+    });
     return tlsContext;
 }
 
@@ -93,6 +105,11 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::connectToEndpoi
     mCurrentEndpoint = endpoint;
     mSslStream = std::make_unique<SslStream>(std::move(*mTcpSocket), mSslContext);
     mTcpSocket.reset();
+    if (! SSL_clear(mSslStream->native_handle()))
+    {
+        throw ExceptionWrapper<boost::beast::system_error>::create(
+            {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
+    }
     // Set SNI Hostname (many hosts need this to handshake successfully).
     if (! SSL_set_tlsext_host_name(mSslStream->native_handle(), mHostname.c_str()))
     {

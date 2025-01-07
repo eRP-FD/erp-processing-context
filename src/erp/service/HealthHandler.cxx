@@ -11,8 +11,9 @@
 #include "erp/util/health/HealthCheck.hxx"
 
 
-void HealthHandler::handleRequest(SessionContext& session)
+void HealthHandler::handleRequest(BaseSessionContext& baseSessionContext)
 {
+    auto& session = dynamic_cast<PcSessionContext&>(baseSessionContext);
     session.accessLog.setInnerRequestOperation("/health");
 
     std::stringstream errorStream;

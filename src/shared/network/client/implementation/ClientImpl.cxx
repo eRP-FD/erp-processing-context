@@ -20,7 +20,7 @@
 
 template<>
 ClientImpl<SslStream>::ClientImpl(const ConnectionParameters& params)
-    : mConnectionTimeoutSeconds(params.connectionTimeoutSeconds)
+    : mConnectionTimeout(params.connectionTimeout)
     , mHostName(params.hostname)
     , mSessionContainer(params)
 {
@@ -28,7 +28,7 @@ ClientImpl<SslStream>::ClientImpl(const ConnectionParameters& params)
 
 template<>
 ClientImpl<SslStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, const ConnectionParameters& params)
-    : mConnectionTimeoutSeconds(params.connectionTimeoutSeconds)
+    : mConnectionTimeout(params.connectionTimeout)
     , mHostName(params.hostname)
     , mSessionContainer(ep, params)
 {
@@ -37,7 +37,7 @@ ClientImpl<SslStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, cons
 
 template<>
 ClientImpl<TcpStream>::ClientImpl(const ConnectionParameters& params)
-    : mConnectionTimeoutSeconds(params.connectionTimeoutSeconds),
+    : mConnectionTimeout(params.connectionTimeout),
       mHostName(params.hostname),
       mSessionContainer{params}
 {
@@ -45,7 +45,7 @@ ClientImpl<TcpStream>::ClientImpl(const ConnectionParameters& params)
 
 template<>
 ClientImpl<TcpStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, const ConnectionParameters& params)
-    : mConnectionTimeoutSeconds(params.connectionTimeoutSeconds)
+    : mConnectionTimeout(params.connectionTimeout)
     , mHostName(params.hostname)
     , mSessionContainer{ep, params}
 {
@@ -64,7 +64,7 @@ ClientResponse ClientImpl<StreamClass>::send (const ClientRequest& clientRequest
     {
         mSessionContainer.establish();
 
-        mSessionContainer.getStream().expiresAfter(std::chrono::seconds(mConnectionTimeoutSeconds));
+        mSessionContainer.getStream().expiresAfter(mConnectionTimeout);
         // Send the request.
         ClientRequestWriter writer(ValidatedClientRequest{clientRequest});
         writer.write(mSessionContainer.getStream());
@@ -80,13 +80,15 @@ ClientResponse ClientImpl<StreamClass>::send (const ClientRequest& clientRequest
     }
     catch(const boost::system::system_error& e)
     {
-        TLOG(ERROR) << "caught exception in ClientImpl::send(): boost system_error " << e.code() << " " << e.what()
+        TLOG(WARNING) << "caught exception in ClientImpl::send(): boost system_error " << e.code() << " " << e.what()
                    << " (" << mHostName << ")";
+        close();
         throw;
     }
     catch(const std::exception& e)
     {
         TLOG(ERROR) << "caught exception in ClientImpl()::send(): " << e.what() << " (" << mHostName << ")";
+        close();
         throw;
     }
 }

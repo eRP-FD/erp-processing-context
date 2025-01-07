@@ -279,8 +279,9 @@ VauRequestHandler::VauRequestHandler(RequestHandlerManager&& handlers)
 }
 
 
-void VauRequestHandler::handleRequest(PcSessionContext& session)
+void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
 {
+    auto& session = dynamic_cast<SessionContext&>(baseSessionContext);
     const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
 
     // Set up the duration consumer that will log spend time and call back

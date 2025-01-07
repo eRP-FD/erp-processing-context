@@ -100,6 +100,8 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::operationoutcome;
         case OrganizationDirectory:
             return sd::organization_directory;
+        case EPAMedicationPZNIngredient:
+            return sd::epa_medication_pzn_ingredient;
     }
     Fail2("invalid value for ProfileType: " + std::to_string(static_cast<uintmax_t>(profileType)), std::logic_error);
 }

@@ -14,9 +14,6 @@
 namespace model
 {
 
-/**
- * Represents the "lebenslange Arztnummer" (LANR)
- */
 class Pzn
 {
 public:

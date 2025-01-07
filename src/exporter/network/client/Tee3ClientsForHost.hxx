@@ -20,6 +20,7 @@
 #include <boost/system/result.hpp>
 #include <list>
 #include <memory>
+#include <vector>
 
 class HsmPool;
 class Tee3Client;
@@ -35,7 +36,7 @@ public:
     using Tee3ClientPtr = std::unique_ptr<Tee3Client, Tee3ClientDeleter>;
 
     Tee3ClientsForHost(const gsl::not_null<std::shared_ptr<Tee3ClientPool>>& owningPool, std::string initHostname,
-                       uint16_t initPort);
+                       uint16_t initPort, size_t connectionCount);
 
     boost::asio::awaitable<boost::system::error_code> init();
 
@@ -68,6 +69,7 @@ private:
     // available. Use a pointer, Channel seems not to be movable
     std::unique_ptr<Channel> mChannel;
     std::optional<std::string> mVauNP{};
+    size_t mConnectionCount;
 };
 
 struct Tee3ClientsForHost::Tee3ClientDeleter {

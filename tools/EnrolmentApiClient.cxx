@@ -94,7 +94,7 @@ EnrolmentApiClient::EnrolmentApiClient()
     : HttpsClient{ConnectionParameters{
           .hostname = Configuration::instance().serverHost(),
           .port = Configuration::instance().getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-          .connectionTimeoutSeconds = Constants::httpTimeoutInSeconds,
+          .connectionTimeout = Constants::httpConnectTimeout,
           .resolveTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
               ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
           .tlsParameters = TlsConnectionParameters{.certificateVerifier =

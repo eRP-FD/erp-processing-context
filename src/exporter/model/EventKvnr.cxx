@@ -8,11 +8,12 @@
 
 
 model::EventKvnr::EventKvnr(const std::basic_string<std::byte>& kvnrHashed, std::optional<Timestamp> lastConsentCheck,
-                            const std::optional<std::string>& assignedEpa, State state)
+                            const std::optional<std::string>& assignedEpa, State state, std::int32_t retryCount)
     : mKvnrHashed(kvnrHashed)
     , mLastConsentCheck(lastConsentCheck)
     , mASsignedEpa(assignedEpa)
     , mState(state)
+    , mRetryCount(retryCount)
 {
 }
 
@@ -38,4 +39,9 @@ const std::optional<std::string>& model::EventKvnr::getASsignedEpa() const
 model::EventKvnr::State model::EventKvnr::getState() const
 {
     return mState;
+}
+
+std::int32_t model::EventKvnr::getRetryCount() const
+{
+    return mRetryCount;
 }

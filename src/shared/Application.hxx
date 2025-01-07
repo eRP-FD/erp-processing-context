@@ -5,15 +5,22 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#ifndef ERP_PROCESSING_CONTEXT_APPLICATION_HXX
-#define ERP_PROCESSING_CONTEXT_APPLICATION_HXX
+#ifndef ERP_PROCESSING_CONTEXT_SRC_SHARED_APPLICATION_HXX
+#define ERP_PROCESSING_CONTEXT_SRC_SHARED_APPLICATION_HXX
 
 #include <functional>
 #include <string>
 
-class Application {
+class Application
+{
 public:
-	static int MainFn(const int argc, const char* argv[], const std::string& name, const std::function<int()>& entryPoint);
+    virtual ~Application() = default;
+    int MainFn(const int argc, const char* argv[], const std::string& name,
+               const std::function<int()>& entryPoint);
+
+private:
+    void processCommandLine(const int argc, const char* argv[]);
+    virtual void printConfiguration() = 0;
 };
 
 #endif

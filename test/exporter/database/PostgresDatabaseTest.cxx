@@ -75,7 +75,7 @@ TEST_F(PostgresDatabaseTest, getAllEventsForKvnr)//NOLINT(readability-function-c
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     mPharmacyIdentity);
 
-    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending};
+    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0};
     const auto events = database().getAllEventsForKvnr(eventKvnr);
 
     const auto prescription = ResourceTemplates::kbvBundleXml();
@@ -141,7 +141,7 @@ TEST_F(PostgresDatabaseTest,
     insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
                     model::TaskEvent::State::pending, std::nullopt, std::nullopt, mDoctorIdentity, std::nullopt);
 
-    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending};
+    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0};
     MedicationExporterDatabaseFrontendInterface::taskevents_t events;
     EXPECT_THROW(database().getAllEventsForKvnr(eventKvnr), std::exception);
     database().commitTransaction();
@@ -155,22 +155,22 @@ TEST_F(PostgresDatabaseTest, getAllEventsForKvnr_medicationDispense)//NOLINT(rea
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     std::nullopt);
 
-    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending};
+    model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0};
     EXPECT_THROW(database().getAllEventsForKvnr(eventKvnr), std::exception);
     database().commitTransaction();
 }
 
-TEST_F(PostgresDatabaseTest, postponeProcessing)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(PostgresDatabaseTest, delayProcessing)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Kvnr kvnr1{"X000000012"};
-    model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     insertTaskKvnr(kvnr1);
     insertTaskEvent(kvnr1, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     std::nullopt);
 
     model::Kvnr kvnr2{"X000000022"};
-    model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     insertTaskKvnr(kvnr2);
     insertTaskEvent(kvnr2, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
@@ -197,7 +197,7 @@ TEST_F(PostgresDatabaseTest, postponeProcessing)//NOLINT(readability-function-co
         transaction.commit();
     }
 
-    database().postponeProcessing(std::chrono::duration_cast<std::chrono::seconds>(5min), eventKvnr1);
+    database().updateProcessingDelay(0, 5min, eventKvnr1);
     database().commitTransaction();
 
     std::map<db_model::postgres_bytea, StateAndNextExport> after_eventKvnrs;
@@ -246,7 +246,7 @@ TEST_F(PostgresDatabaseTest, processNexteventKvnr)//NOLINT(readability-function-
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     std::nullopt);
 
-    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashed_kvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     const auto events = database().getAllEventsForKvnr(eventKvnr);
     EXPECT_EQ(events.size(), 1);
 
@@ -262,7 +262,7 @@ TEST_F(PostgresDatabaseTest, processNexteventKvnr)//NOLINT(readability-function-
 TEST_F(PostgresDatabaseTest, deleteOneEventForKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Kvnr kvnr1{"X000000012"};
-    model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     const auto medicationDispense = ResourceTemplates::medicationDispenseBundleXml();
     const auto medicationDispenseBundle = ::model::Bundle::fromXmlNoValidation(medicationDispense);
@@ -276,7 +276,7 @@ TEST_F(PostgresDatabaseTest, deleteOneEventForKvnr)//NOLINT(readability-function
                     medicationDispenseBundle.serializeToJsonString(), mDoctorIdentity, mPharmacyIdentity);
 
     model::Kvnr kvnr2{"X000000022"};
-    model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     insertTaskKvnr(kvnr2);
     insertTaskEvent(kvnr2, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
@@ -302,7 +302,7 @@ TEST_F(PostgresDatabaseTest, isDeadletter_no)//NOLINT(readability-function-cogni
     const std::string kvnr_str{"X000000012"};
     const model::Kvnr kvnr{kvnr_str};
     const auto hashedKvnr = kvnrHashed(kvnr);
-    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     insertTaskKvnr(kvnr);
     insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
@@ -321,7 +321,7 @@ TEST_F(PostgresDatabaseTest, isDeadletter_yes)//NOLINT(readability-function-cogn
     const std::string kvnr_str{"X000000012"};
     const model::Kvnr kvnr{kvnr_str};
     const auto hashedKvnr = kvnrHashed(kvnr);
-    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
     insertTaskKvnr(kvnr);
     insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
@@ -348,7 +348,7 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
     const std::string kvnr_str{"X000000012"};
     const model::Kvnr kvnr{kvnr_str};
     const auto hashedKvnr = kvnrHashed(kvnr);
-    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing};
+    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
 
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05");

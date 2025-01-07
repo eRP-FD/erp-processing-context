@@ -17,7 +17,7 @@
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Hash.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/util/String.hxx"
 #include "shared/xml/XmlDocument.hxx"
 

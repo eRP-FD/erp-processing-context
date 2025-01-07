@@ -48,10 +48,10 @@ namespace boost::asio
 class TcpStream
 {
 public:
-    TcpStream(const std::string& hostname, const std::string& port, const uint16_t connectionTimeoutSeconds,
+    TcpStream(const std::string& hostname, const std::string& port, std::chrono::milliseconds connectTimeout,
               std::chrono::milliseconds resolveTimeout);
     TcpStream(const boost::asio::ip::tcp::endpoint& ep, const std::string& hostname,
-              const uint16_t connectionTimeoutSeconds);
+              std::chrono::milliseconds connectTimeout);
 
     void shutdown (void);
 
@@ -75,7 +75,7 @@ private:
     std::unique_ptr<boost::asio::io_context> mIoContext;
     std::unique_ptr<boost::beast::tcp_stream> mTcpStream;
 
-    void establish(std::chrono::seconds connectionTimeout,
+    void establish(std::chrono::milliseconds connectionTimeout,
                    const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults);
 
     template<class ConstBufferSequence>

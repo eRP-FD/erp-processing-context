@@ -54,7 +54,12 @@ Collection::value_type Collection::boolean() const
 bool Collection::contains(const value_type& element) const
 {
     return std::ranges::any_of(*this, [&element](const auto& item) {
-        return item->type() == element->type() && item->compareTo(*element) == std::strong_ordering::equal;
+        if (item->type() == element->type())
+        {
+            auto res = item->equals(*element);
+            return res && *res == true;
+        }
+        return false;
     });
 }
 

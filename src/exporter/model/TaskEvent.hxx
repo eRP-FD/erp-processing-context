@@ -53,6 +53,7 @@ public:
     virtual const Bundle& getKbvBundle() const;
     virtual Timestamp getMedicationRequestAuthoredOn() const;
     virtual Timestamp getLastModified() const;
+    virtual std::int32_t getRetryCount() const;
 
 private:
     id_t mId;
@@ -64,6 +65,7 @@ private:
     State mState;
     Bundle mKbvBundle;
     model::Timestamp mLastModified;
+    std::int32_t mRetryCount;
 };
 
 

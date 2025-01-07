@@ -109,9 +109,9 @@ void MedicationExporterDatabaseFrontend::deleteAllEventsForKvnr(const model::Eve
     mBackend->deleteAllEventsForKvnr(kvnr);
 }
 
-void MedicationExporterDatabaseFrontend::postponeProcessing(std::chrono::seconds delay, const model::EventKvnr& kvnr) const
+void MedicationExporterDatabaseFrontend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) const
 {
-    mBackend->postponeProcessing(delay, kvnr);
+    mBackend->updateProcessingDelay(newRetry, delay, kvnr);
 }
 
 void MedicationExporterDatabaseFrontend::finalizeKvnr(const model::EventKvnr& kvnr) const

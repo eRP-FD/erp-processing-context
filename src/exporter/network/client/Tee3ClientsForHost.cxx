@@ -36,11 +36,12 @@ void Tee3ClientsForHost::Tee3ClientDeleter::operator()(Tee3Client* tee3Client)
 }
 
 Tee3ClientsForHost::Tee3ClientsForHost(const gsl::not_null<std::shared_ptr<Tee3ClientPool>>& owningPool,
-                                       std::string initHostname, uint16_t initPort)
+                                       std::string initHostname, uint16_t initPort, size_t connectionCount)
     : mOwningPool{owningPool}
     , mHostname{std::move(initHostname)}
     , mPort{initPort}
-    , mChannel{std::make_unique<Tee3ClientsForHost::Channel>(owningPool->mIoContext, owningPool->mConnectionsPerFqdn)}
+    , mChannel{std::make_unique<Tee3ClientsForHost::Channel>(owningPool->mIoContext)}
+    , mConnectionCount{connectionCount}
 {
 }
 
@@ -56,7 +57,8 @@ boost::asio::awaitable<boost::system::error_code> Tee3ClientsForHost::init()
     {
         co_return ec;
     }
-    for (std::size_t i = 0; i < pool->mConnectionsPerFqdn; ++i)
+    Expect3(pool->mStrand.running_in_this_thread(), "not running on strand.", std::logic_error);
+    for (std::size_t i = 0; i < mConnectionCount; ++i)
     {
         mAvailableClients.emplace_back(std::make_unique<Tee3Client>(pool->mIoContext, this));
         mChannel->async_send(boost::system::error_code{}, consign(boost::asio::detached, pool));
@@ -84,6 +86,7 @@ boost::asio::awaitable<void> Tee3ClientsForHost::refreshEndpoints()
                            [](const Resolver::results_type::endpoint_type& endpoint) -> boost::asio::ip::address {
                                return endpoint.address();
                            });
+    Expect3(pool->mStrand.running_in_this_thread(), "not running on strand.", std::logic_error);
     // if the ip address is not in our resolver list, we disconnect
     for (auto& tee3client : mAvailableClients)
     {
@@ -112,8 +115,9 @@ boost::asio::awaitable<Tee3ClientsForHost::Tee3ClientPtr> Tee3ClientsForHost::ac
         }))
     {
         TVLOG(2) << "waiting for tee client on " << mHostname;
-        co_await mChannel->async_receive(boost::asio::as_tuple(boost::asio::deferred));
+        co_await mChannel->async_receive(bind_executor(pool->mStrand, boost::asio::as_tuple(boost::asio::deferred)));
     }
+    Expect3(pool->mStrand.running_in_this_thread(), "not running on strand.", std::logic_error);
     Expect(! mAvailableClients.empty(), "No tee3 client available");
 
     auto clientIt = Random::selectRandomElement(mAvailableClients.begin(), mAvailableClients.end());

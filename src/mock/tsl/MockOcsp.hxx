@@ -59,6 +59,12 @@ public:
         Certificate& certificate,
         shared_EVP_PKEY& privateKey);
 
+    static MockOcsp create (
+        OCSP_CERTID* certId,
+        const std::vector<CertificatePair>& ocspResponderKnownCertificateCaPairs,
+        Certificate& certificate,
+        shared_EVP_PKEY& privateKey);
+
     /**
      * Convert an OCSP in PEM string representation into an OCSP_RESPONSE pointer (wrapped by MockOcsp).
      * This should work even for more complex OCSP responses.

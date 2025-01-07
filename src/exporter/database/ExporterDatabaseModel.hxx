@@ -32,7 +32,8 @@ public:
                        const std::optional<Blob>& medicationDispenseSalt,
                        const std::optional<EncryptedBlob>& medicationDispenseBundle,
                        const std::optional<EncryptedBlob>& doctorIdentity,
-                       const std::optional<EncryptedBlob>& pharmacyIdentity);
+                       const std::optional<EncryptedBlob>& pharmacyIdentity,
+                       std::int32_t retryCount);
 
     id_t id;
     model::PrescriptionId prescriptionId;
@@ -53,6 +54,7 @@ public:
     std::optional<EncryptedBlob> pharmacyIdentity;
     std::optional<EncryptedBlob> owner;
     std::optional<model::Timestamp> lastMedicationDispense;
+    std::int32_t retryCount;
 };
 
 

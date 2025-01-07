@@ -19,7 +19,7 @@ public:
     static constexpr size_t DefaultBufferSize = 8192;
 
     // Timeout in seconds by http connection
-    static constexpr int httpTimeoutInSeconds = 30;
+    static constexpr auto httpConnectTimeout = std::chrono::seconds{30};
     static constexpr auto resolveTimeout = std::chrono::milliseconds{2000};
 };
 

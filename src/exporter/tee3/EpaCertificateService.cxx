@@ -84,15 +84,11 @@ boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInt
     const auto params = ConnectionParameters{
         .hostname = hostname,
         .port = std::to_string(port),
-        .connectionTimeoutSeconds = gsl::narrow<uint16_t>(
-            config.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS) /
-            1000),
+        .connectionTimeout = std::chrono::milliseconds{config.getIntValue(
+            ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_CONNECT_TIMEOUT_MILLISECONDS)},
         .resolveTimeout = std::chrono::milliseconds{config.getIntValue(
             ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
-        .tlsParameters = TlsConnectionParameters{
-            .certificateVerifier = mTlsCertificateVerifier.value()
-        }
-    };
+        .tlsParameters = TlsConnectionParameters{.certificateVerifier = mTlsCertificateVerifier.value()}};
     auto client = CoHttpsClient{mWorkIoContext, params};
     auto ec = co_await client.resolveAndConnect();
     Expect(! ec, "Connection failure while obtaining certificate");

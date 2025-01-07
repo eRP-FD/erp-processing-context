@@ -57,7 +57,7 @@ ClientResponse ClientResponseReader::read (stream_type& stream)
     boost::beast::http::read(stream, mBuffer, mParser, ec);
     if (ec.failed() && ec != boost::asio::ssl::error::stream_truncated)
     {
-        HeaderLog::error([&] {
+        HeaderLog::warning([&] {
             return std::ostringstream{} << "clientResponseReader::readSome: " << ec.message().c_str();
         });
     }
@@ -83,8 +83,7 @@ Header ClientResponseReader::readHeader (stream_type& stream)
                                         << "'";
         });
         markStreamAsClosed();
-        throw ExceptionWrapper<std::runtime_error>::create({__FILE__, __LINE__},
-                                                           "response was only partially received");
+        throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, ec);
     }
     else if (ec)
     {
@@ -101,7 +100,7 @@ Header ClientResponseReader::readHeader (stream_type& stream)
             });
         }
         closeConnection(stream, false);
-        throw ExceptionWrapper<std::runtime_error>::create({__FILE__, __LINE__}, "read_header() failed");
+        throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, ec);
     }
 
     return convertHeader();
@@ -126,7 +125,7 @@ void ClientResponseReader::closeConnection (stream_type& stream, const bool expe
             // the stream and proper shutdown protocol may impossible to perform.
             //
             // As a result we expect an exception being thrown. And ignore it.
-            HeaderLog::error(e.what());
+            HeaderLog::warning(e.what());
         }
         else
         {

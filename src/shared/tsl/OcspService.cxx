@@ -232,7 +232,7 @@ namespace
      * @param nextUpdate is the time point, when new status information will be
      *                   available
      * @param referenceTimePoint the reference time point to use for the check
-     * @paramm gracePeriod gracePeriod for certificate
+     * @param gracePeriod gracePeriod for certificate
      *
      * @see gemSpec_PKI, § 9.1.2.2 OCSP-Response - Zeiten, GS-A_5215, (c) and (d)
      */
@@ -370,7 +370,8 @@ namespace
             const OcspCheckDescriptor::TimeSettings& timeSettings,
             const TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
-            const bool validateHashExtension)
+            const bool validateHashExtension,
+            bool validateProducedAt)
     {
         try {
             TslExpect4(response != nullptr,
@@ -399,14 +400,15 @@ namespace
             Expect(producedAt != nullptr, "can not get producedAt");
             const std::time_t now{std::time(nullptr)};
 
-            TslExpect4(checkProducedAt(
-                           producedAt,
-                           std::chrono::system_clock::to_time_t(
-                               getReferenceTimePoint(timeSettings.referenceTimePoint)),
-                           timeSettings.gracePeriod),
-                       "OCSP producedAt is not valid",
-                       TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
-                       trustStore.getTslMode());
+            if (validateProducedAt)
+            {
+                TslExpect4(checkProducedAt(producedAt,
+                                           std::chrono::system_clock::to_time_t(
+                                               getReferenceTimePoint(timeSettings.referenceTimePoint)),
+                                           timeSettings.gracePeriod),
+                           "OCSP producedAt is not valid", TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID,
+                           trustStore.getTslMode());
+            }
 
             X509* signer{checkSignatureAndGetSigner(*basicResponse)};
             TslExpect4(signer,
@@ -485,7 +487,8 @@ namespace
             const OcspCheckDescriptor::TimeSettings& timeSettings,
             TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
-            const bool validateHashExtension)
+            const bool validateHashExtension,
+            bool validateProducedAt)
     {
         auto response = parseResponse(
                 certificate,
@@ -494,7 +497,8 @@ namespace
                 timeSettings,
                 trustStore,
                 ocspSignerCertificates,
-                validateHashExtension);
+                validateHashExtension,
+                validateProducedAt);
 
         TVLOG(2) << "Returning new OCSP status: " << response.status.to_string();
         response.response = (serializedOcspResponse.has_value() ? *serializedOcspResponse
@@ -532,7 +536,9 @@ namespace
             ocspCheckDescriptor.timeSettings,
             trustStore,
             ocspSignerCertificates,
-            validateHashExtension);
+            validateHashExtension,
+            true // validateProducedAt
+        );
     }
 
 
@@ -571,7 +577,6 @@ namespace
         OcspCertidPtr certId =
             OcspCertidPtr(OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr()));
         Expect(certId, "Could not create OCSP certificate id!");
-
         switch(ocspCheckDescriptor.mode)
         {
             case OcspCheckDescriptor::FORCE_OCSP_REQUEST_STRICT:
@@ -605,11 +610,13 @@ namespace
                     throw;
                 }
                 break;
-            case OcspCheckDescriptor::PROVIDED_OR_CACHE:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE: {
                 if (ocspCheckDescriptor.providedOcspResponse != nullptr)
                 {
+                    bool validateProducedAt = (ocspCheckDescriptor.mode != OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED);
                     // if there is a provided OCSP request it must be valid or an error must be reported
-                    return requestStatus(
+                    auto ocspResponse = requestStatus(
                         std::move(certId),
                         certificate,
                         ocspCheckDescriptor.providedOcspResponse,
@@ -617,32 +624,48 @@ namespace
                         ocspCheckDescriptor.timeSettings,
                         trustStore,
                         ocspSignerCertificates,
-                        validateHashExtension);
-                }
-                else
-                {
-                    // if there is no provided OCSP request, first try the OCSP response from the cache
-                    const auto cachedOcspData =
-                        trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
-                    if (cachedOcspData.has_value())
-                    {
-                        TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
-                        return *cachedOcspData;
-                    }
-
-                    // and if there is no valid OCSP response in the cache,
-                    // send OCSP-request
-                    return sendOcspRequestAndGetStatus(
-                        certificate,
-                        std::move(certId),
-                        requestSender,
-                        ocspUrl,
-                        trustStore,
-                        ocspSignerCertificates,
                         validateHashExtension,
-                        ocspCheckDescriptor);
+                        validateProducedAt);
+                    // validate the producedAt afterwards to check if we can fall
+                    // back to cache
+                    auto now = std::chrono::system_clock::now();
+                    const auto oldestProducedAt = ocspCheckDescriptor.timeSettings.referenceTimePoint.value_or(now) -
+                                                  std::chrono::seconds{tolerance} -
+                                                  ocspCheckDescriptor.timeSettings.gracePeriod;
+                    bool producedAtValid =
+                        ocspResponse.producedAt >= oldestProducedAt && ocspResponse.producedAt <= now;
+                    if (validateProducedAt || producedAtValid)
+                    {
+                        return ocspResponse;
+                    }
+                    TVLOG(1) << "Response is valid but outdated, fallback to cache";
+                    // recreate the certId pointer which has been moved before
+                    certId = OcspCertidPtr(
+                        OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr()));
                 }
+                // if there is no provided OCSP request, or we skipped the expired response
+                // first try the OCSP response from the cache
+                const auto cachedOcspData =
+                    trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
+                if (cachedOcspData.has_value())
+                {
+                    TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
+                    return *cachedOcspData;
+                }
+
+                // and if there is no valid OCSP response in the cache,
+                // send OCSP-request
+                return sendOcspRequestAndGetStatus(
+                    certificate,
+                    std::move(certId),
+                    requestSender,
+                    ocspUrl,
+                    trustStore,
+                    ocspSignerCertificates,
+                    validateHashExtension,
+                    ocspCheckDescriptor);
                 break;
+            }
             case OcspCheckDescriptor::CACHED_ONLY:
                 {
                     const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
@@ -663,7 +686,8 @@ namespace
                     ocspCheckDescriptor.timeSettings,
                     trustStore,
                     ocspSignerCertificates,
-                    validateHashExtension);
+                    validateHashExtension,
+                    true);
         }
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckDescriptor.mode)));
     }

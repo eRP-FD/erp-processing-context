@@ -82,14 +82,12 @@ private:
             mEnrolmentApiClient = std::make_unique<EnrolmentApiClient>(ConnectionParameters{
                 .hostname = configuration.serverHost(),
                 .port = configuration.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-                .connectionTimeoutSeconds = static_cast<uint16_t>(
-                    configuration.getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
-                .resolveTimeout = std::chrono::milliseconds{
-                    configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
+                .connectionTimeout = std::chrono::seconds{configuration.getIntValue(
+                    ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+                .resolveTimeout = std::chrono::milliseconds{configuration.getIntValue(
+                    ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
                 .tlsParameters = TlsConnectionParameters{
-                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
-                }
-            });
+                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
         }
     }
 

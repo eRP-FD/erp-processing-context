@@ -8,9 +8,9 @@
 #include "exporter/MedicationExporterMain.hxx"
 #include "exporter/EventProcessor.hxx"
 #include "exporter/client/EpaMedicationClientImpl.hxx"
-#include "exporter/network/client/Tee3ClientPool.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
+#include "exporter/network/client/Tee3ClientPool.hxx"
 #include "exporter/pc/MedicationExporterFactories.hxx"
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
 #include "exporter/server/HttpsServer.hxx"
@@ -33,21 +33,20 @@
 #include "shared/tpm/TpmProduction.hxx"
 #endif
 
+#include "util/RuntimeConfiguration.hxx"
+
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/deferred.hpp>
 
 boost::asio::awaitable<void> setupEpaClientPool(MedicationExporterServiceContext& serviceContext)
 {
-    auto fqdns =
-            Configuration::instance().getArray(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
+    auto fqdns = Configuration::instance().epaFQDNs();
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
     for (const auto& fqdn : fqdns)
     {
-        auto urlParts = UrlHelper::parseUrl(fqdn);
-        co_await serviceContext.teeClientPool()->addEpaHost(urlParts.mHost, gsl::narrow<uint16_t>(urlParts.mPort));
+        co_await serviceContext.teeClientPool()->addEpaHost(fqdn.hostName, fqdn.port, fqdn.teeConnectionCount);
     }
-
 }
 
 
@@ -119,8 +118,8 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-        return std::make_unique<exporter::MainDatabaseFrontend>(
-            std::make_unique<exporter::MainPostgresBackend>(), hsmPool, keyDerivation);
+        return std::make_unique<exporter::MainDatabaseFrontend>(std::make_unique<exporter::MainPostgresBackend>(),
+                                                                hsmPool, keyDerivation);
     };
 
     factories.enrolmentServerFactory = [](const std::string_view address, uint16_t port,
@@ -150,7 +149,8 @@ int MedicationExporterMain::runApplication(
     const auto& configuration = Configuration::instance();
     configuration.check();
 
-    auto ioThreadCount = static_cast<size_t>(configuration.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_SERVER_IO_THREAD_COUNT));
+    auto ioThreadCount =
+        static_cast<size_t>(configuration.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_SERVER_IO_THREAD_COUNT));
     auto ioThreadPool = ThreadPool();
 
     ioThreadPool.setUp(ioThreadCount, "medication-exporter-io");
@@ -168,8 +168,8 @@ int MedicationExporterMain::runApplication(
     SignalHandler signalHandler(runLoop.getThreadPool().ioContext());
     signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
 
-   log << "starting admin server";
-   serviceContext->getAdminServer()->serve(1, "admin");
+    log << "starting admin server";
+    serviceContext->getAdminServer().serve(1, "admin");
 
     if (serviceContext->getEnrolmentServer())
     {
@@ -236,33 +236,87 @@ MedicationExporterMain::RunLoop::RunLoop()
 {
 }
 
-void MedicationExporterMain::RunLoop::serve(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext, const size_t threadCount)
+boost::asio::awaitable<void> MedicationExporterMain::RunLoop::eventProcessingWorker(
+    const std::weak_ptr<MedicationExporterServiceContext> serviceContext)
+{
+    using namespace std::chrono_literals;
+    boost::asio::steady_timer timer{mWorkerThreadPool.ioContext()};
+    while (! mWorkerThreadPool.ioContext().stopped())
+    {
+        Reschedule rescheduleRule{Reschedule::Delayed};
+        try
+        {
+            auto serviceCtx = serviceContext.lock();
+            if (! serviceCtx)
+            {
+                co_return;
+            }
+            if (checkIsPaused(serviceCtx))
+            {
+                serviceCtx.reset();
+                timer.expires_after(100ms);
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                continue;
+            }
+            rescheduleRule = process(serviceCtx);
+        }
+        catch (const std::exception& e)
+        {
+            rescheduleRule = Reschedule::TemporaryError;
+            std::string reason = dynamic_cast<const model::ModelException*>(&e) ? "not given" : e.what();
+            JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
+                .keyValue("event", "Processing task events: Unexpected error. Wait before trying next processing.")
+                .keyValue("reason", reason)
+                .locationFromException(e);
+        }
+        switch (rescheduleRule)
+        {
+            case Reschedule::Immediate:
+                break;
+            case Reschedule::Delayed:
+                timer.expires_after(std::chrono::seconds(5));
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+            case Reschedule::Throttled:
+                timer.expires_after(mThrottleValue.load());
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+            case Reschedule::TemporaryError:
+                // handle KVNR processing error
+                timer.expires_after(std::chrono::seconds(60));
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+        }
+    }
+}
+void MedicationExporterMain::RunLoop::serve(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext,
+                                            const size_t threadCount)
 {
     // Schedule initial job to the workers.
     for (size_t i = 0; i < threadCount; ++i)
     {
-        boost::asio::co_spawn(mWorkerThreadPool.ioContext(), [this, serviceContext = std::weak_ptr{serviceContext}]() -> boost::asio::awaitable<void> {
-            boost::asio::steady_timer timer{mWorkerThreadPool.ioContext()};
-            while (! mWorkerThreadPool.ioContext().stopped())
-            {
-                Reschedule rescheduleRule{Reschedule::Delayed};
-                {
-                    auto serviceCtx = serviceContext.lock();
-                    if (! serviceCtx)
-                    {
-                        co_return;
-                    }
+        boost::asio::co_spawn(mWorkerThreadPool.ioContext(), eventProcessingWorker(std::weak_ptr{serviceContext}),
+                              boost::asio::detached);
+    }
+}
 
-                    std::unique_ptr<EventProcessorInterface> eventProcessor = std::make_unique<EventProcessor>(serviceCtx);
-                    rescheduleRule = eventProcessor->process() ? Reschedule::Immediate : Reschedule::Delayed;
-                }
-                if (rescheduleRule == Reschedule::Delayed)
-                {
-                    timer.expires_after(std::chrono::seconds(5));
-                    co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                }
-            }
-        }, boost::asio::detached);
+MedicationExporterMain::RunLoop::Reschedule
+MedicationExporterMain::RunLoop::process(const std::shared_ptr<MedicationExporterServiceContext>& serviceCtx)
+{
+    if (EventProcessor{serviceCtx}.process())
+    {
+        if (checkIsThrottled(serviceCtx))
+        {
+            return Reschedule::Throttled;
+        }
+        else
+        {
+            return Reschedule::Immediate;
+        }
+    }
+    else
+    {
+        return Reschedule::Delayed;
     }
 }
 
@@ -279,6 +333,37 @@ bool MedicationExporterMain::RunLoop::isStopped() const
 ThreadPool& MedicationExporterMain::RunLoop::getThreadPool()
 {
     return mWorkerThreadPool;
+}
+
+bool MedicationExporterMain::RunLoop::checkIsPaused(
+    const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
+{
+    const auto paused = serviceContext->getRuntimeConfigurationGetter()->isPaused();
+    if (mPaused.exchange(paused) != paused)
+    {
+        TLOG(INFO) << (paused ? "Paused" : "Resuming");
+    }
+    return paused;
+}
+
+bool MedicationExporterMain::RunLoop::checkIsThrottled(
+    const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
+{
+    using namespace std::chrono_literals;
+    const auto throttleValue = serviceContext->getRuntimeConfigurationGetter()->throttleValue();
+    const bool throttlingActive = throttleValue > 0ms;
+    if (mThrottleValue.exchange(throttleValue) != throttleValue)
+    {
+        if (throttlingActive)
+        {
+            TLOG(INFO) << "Throttling active, value: " << throttleValue.count() << "ms";
+        }
+        else
+        {
+            TLOG(INFO) << "Throttling inactive";
+        }
+    }
+    return throttlingActive;
 }
 
 bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop, MedicationExporterServiceContext& serviceContext)
@@ -340,17 +425,15 @@ bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop, MedicationExporte
 
 bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& serviceContext)
 {
-    auto epaHostPortList =
-        Configuration::instance().getArray(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
+    auto epaHostPortList = Configuration::instance().epaFQDNs();
     Expect(! epaHostPortList.empty(), "ePA Host list must not be empty");
     for (const auto& entry : epaHostPortList)
     {
-        auto urlParts = UrlHelper::parseUrl(entry);
         auto epaClient =
-            EpaMedicationClientImpl{serviceContext.ioContext(), urlParts.mHost, serviceContext.teeClientPool()};
+            EpaMedicationClientImpl{serviceContext.ioContext(), entry.hostName, serviceContext.teeClientPool()};
         if (! epaClient.testConnection())
         {
-            TLOG(WARNING) << "Connection ePA server at " << entry << " failed";
+            TLOG(WARNING) << "Connection ePA server at " << entry.hostName << entry.port << " failed";
             return false;
         }
     }

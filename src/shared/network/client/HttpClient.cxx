@@ -12,7 +12,7 @@ HttpClient::HttpClient(const std::string& host, const uint16_t port, const uint1
                        std::chrono::milliseconds resolveTimeout)
     : ClientBase<TcpStream>(ConnectionParameters{.hostname = host,
                                                  .port = std::to_string(port),
-                                                 .connectionTimeoutSeconds = connectionTimeoutSeconds,
+                                                 .connectionTimeout = std::chrono::seconds{connectionTimeoutSeconds},
                                                  .resolveTimeout = resolveTimeout,
                                                  .tlsParameters = {}})
 {
@@ -22,7 +22,7 @@ HttpClient::HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::stri
                        const uint16_t connectionTimeoutSeconds)
     : ClientBase<TcpStream>(ep, ConnectionParameters{.hostname = host,
                                                  .port = "", // ignored when the endpoint is set
-                                                 .connectionTimeoutSeconds = connectionTimeoutSeconds,
+                                                 .connectionTimeout = std::chrono::seconds{connectionTimeoutSeconds},
                                                  .resolveTimeout = std::chrono::seconds{2},
                                                  .tlsParameters = std::nullopt})
 {

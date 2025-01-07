@@ -311,9 +311,13 @@ public:
             // setting TLSEXT_STATUSTYPE_ocsp, enabled the ocspVerifyCallback to
             // be executed after verifyCallback(), regardless whether we have
             // received an ocsp response or not
-            SSL_CTX_set_tlsext_status_type(sslContext.native_handle(), TLSEXT_STATUSTYPE_ocsp);
-            SSL_CTX_set_tlsext_status_cb(sslContext.native_handle(), &TslImplementation::ocspVerifyCallback);
-            SSL_CTX_set_tlsext_status_arg(sslContext.native_handle(), this);
+            OpenSslExpect(SSL_CTX_set_tlsext_status_type(sslContext.native_handle(), TLSEXT_STATUSTYPE_ocsp) == 1,
+                          "SSL_CTX_set_tlsext_status_type failed");
+            OpenSslExpect(
+                SSL_CTX_set_tlsext_status_cb(sslContext.native_handle(), &TslImplementation::ocspVerifyCallback) == 1,
+                "SSL_CTX_set_tlsext_status_cb failed");
+            OpenSslExpect(SSL_CTX_set_tlsext_status_arg(sslContext.native_handle(), this) == 1,
+                          "SSL_CTX_set_tlsext_status_arg failed");
         }
     }
 
@@ -337,6 +341,7 @@ protected:
         {
             SSL* ssl = static_cast<SSL*>(
                 ::X509_STORE_CTX_get_ex_data(context.native_handle(), ::SSL_get_ex_data_X509_STORE_CTX_idx()));
+            OpenSslExpect(ssl != nullptr, "Unable to obtain ssl handle");
             const auto hostname = std::string{SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)};
             if (! verifySubjectAlternativeDnsName(hostname, certificate.value()))
             {
@@ -380,6 +385,7 @@ protected:
                 return false;
             case OcspCheckDescriptor::PROVIDED_ONLY:
             case OcspCheckDescriptor::PROVIDED_OR_CACHE:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
                 return true;
         }
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckMode)));
@@ -387,12 +393,25 @@ protected:
 
     static int ocspVerifyCallback(SSL* ssl, void* arg)
     {
-        auto* self = static_cast<TslImplementation*>(arg);
-        auto certificate = X509Certificate::createFromX509Pointer(SSL_get0_peer_certificate(ssl));
-        const unsigned char* ocspResponseBuffer = nullptr;
-        long ocspResponseSize = SSL_get_tlsext_status_ocsp_resp(ssl, &ocspResponseBuffer);
-        auto providedOcspResponse = OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &ocspResponseBuffer, ocspResponseSize));
-        bool valid = self->tslVerify(certificate, std::move(providedOcspResponse));
+        bool valid = false;
+        try
+        {
+            auto* self = static_cast<TslImplementation*>(arg);
+            auto certificate = X509Certificate::createFromX509Pointer(SSL_get0_peer_certificate(ssl));
+            const unsigned char* ocspResponseBuffer = nullptr;
+            long ocspResponseSize = SSL_get_tlsext_status_ocsp_resp(ssl, &ocspResponseBuffer);
+            OcspResponsePtr providedOcspResponse = nullptr;
+            if (ocspResponseSize > 0)
+            {
+                providedOcspResponse =
+                    OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &ocspResponseBuffer, ocspResponseSize));
+            }
+            valid = self->tslVerify(certificate, std::move(providedOcspResponse));
+        }
+        catch (const std::exception& e)
+        {
+            LOG(ERROR) << "error in ocsp staping response handling: " << e.what();
+        }
         return valid ? 1 : 0;
     }
 

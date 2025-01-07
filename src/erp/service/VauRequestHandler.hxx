@@ -9,7 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_VAUREQUESTHANDLER_HXX
 
 #include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/RequestHandler.hxx"
+#include "shared/server/RequestHandler.hxx"
 #include "shared/crypto/Jwt.hxx"
 #include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/server/handler/RequestHandlerManager.hxx"
@@ -42,7 +42,7 @@ public:
 
     explicit VauRequestHandler(RequestHandlerManager&& handlers);
 
-    void handleRequest(PcSessionContext& session) override;
+    void handleRequest(BaseSessionContext& session) override;
     Operation getOperation (void) const override;
 
 private:

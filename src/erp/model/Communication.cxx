@@ -258,7 +258,8 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::EPAOpRxDispensationERPOutputParameters:
     case ProfileType::ProvideDispensationErpOp:
     case ProfileType::OrganizationDirectory:
-            ModelFail("Not a Communication Profile");
+    case ProfileType::EPAMedicationPZNIngredient:
+        ModelFail("Not a Communication Profile");
     }
     Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +
               std::to_string(static_cast<intmax_t>(profileType)),

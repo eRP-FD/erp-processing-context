@@ -5,6 +5,8 @@
  */
 
 #include "exporter/EpaAccountLookupClient.hxx"
+#include "exporter/pc/MedicationExporterServiceContext.hxx"
+#include "exporter/network/client/HttpsClientPool.hxx"
 #include "BdeMessage.hxx"
 #include "ExporterRequirements.hxx"
 #include "shared/beast/BoostBeastStringWriter.hxx"
@@ -13,14 +15,11 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/TLog.hxx"
 
-EpaAccountLookupClient::EpaAccountLookupClient(uint16_t connectTimeoutSeconds, uint32_t resolveTimeoutMs,
-                                               std::string_view consentDecisionsEndpoint, std::string_view userAgent,
-                                               TlsCertificateVerifier tlsCertificateVerifier)
-    : mConnectTimeoutSeconds(connectTimeoutSeconds)
-    , mResolveTimeoutMs(resolveTimeoutMs)
+EpaAccountLookupClient::EpaAccountLookupClient(MedicationExporterServiceContext& serviceContext,
+                                               std::string_view consentDecisionsEndpoint, std::string_view userAgent)
+    : mServiceContext(serviceContext)
     , mConsentDecisionsEndpoint(consentDecisionsEndpoint)
     , mUserAgent(userAgent)
-    , mTlsCertificateVerifier(std::move(tlsCertificateVerifier))
 {
 }
 
@@ -28,12 +27,6 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
                                                                    uint16_t port)
 {
     A_25937.start("request to epa4all.de");
-    HttpsClient client{
-        ConnectionParameters{.hostname = host,
-                             .port = std::to_string(port),
-                             .connectionTimeoutSeconds = mConnectTimeoutSeconds,
-                             .resolveTimeout = std::chrono::milliseconds{mResolveTimeoutMs},
-                             .tlsParameters = TlsConnectionParameters{.certificateVerifier = mTlsCertificateVerifier}}};
     Header header{
         HttpMethod::GET,
         std::string{mConsentDecisionsEndpoint},
@@ -45,6 +38,8 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
     TVLOG(2) << "consent decision request: "
              << BoostBeastStringWriter::serializeRequest(request.getHeader(), request.getBody());
 
+    auto client = mServiceContext.httpsClientPool(host)->acquire();
+
     BDEMessage bde;
     bde.mStartTime = model::Timestamp::now();
     bde.mInnerOperation = request.getHeader().target();
@@ -53,8 +48,10 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
     {
         bde.mRequestId = request.getHeader().header(Header::XRequestId).value();
     }
+    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
+    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
 
-    auto result = client.send(request);
+    auto result = sendWithRetry(*client, request);
     A_25937.finish();
     TVLOG(2) << "consent decision response: "
              << BoostBeastStringWriter::serializeResponse(result.getHeader(), result.getBody());
@@ -71,4 +68,37 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
     bde.mResponseCode = static_cast<unsigned int>(toNumericalValue(result.getHeader().status()));
     bde.mEndTime = model::Timestamp::now();
     return result;
+}
+
+IEpaAccountLookupClient& EpaAccountLookupClient::addLogAttribute(const std::string& key, const std::any& value)
+{
+    mLookupClientLogContext[key] = value;
+    return *this;
+}
+
+
+ClientResponse EpaAccountLookupClient::sendWithRetry(HttpsClient& client, ClientRequest& request) const
+{
+    try
+    {
+        return client.send(request);
+    }
+    catch (const boost::beast::system_error& ex)
+    {
+        // as we are using the pool and the connection may have
+        // been reset in the meantime, always retry once for closed connections
+        auto ec = ex.code();
+        if (boost::asio::ssl::error::stream_truncated == ec || boost::asio::error::connection_reset == ec ||
+            boost::asio::error::not_connected == ec || boost::beast::http::error::end_of_stream == ec)
+        {
+
+            TLOG(INFO) << "Connection closed, reconnecting..";
+            return client.send(request);
+        }
+        else
+        {
+            TLOG(WARNING) << "Unexpected error during send, will not retry: " << ec.message();
+            throw;
+        }
+    }
 }

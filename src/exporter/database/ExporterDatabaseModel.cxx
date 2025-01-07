@@ -18,7 +18,8 @@ TaskEvent::TaskEvent(id_t id, const model::PrescriptionId& prescriptionId, std::
                      const std::optional<Blob>& medicationDispenseSalt,
                      const std::optional<EncryptedBlob>& medicationDispenseBundle,
                      const std::optional<EncryptedBlob>& doctorIdentity,
-                     const std::optional<EncryptedBlob>& pharmacyIdentity)
+                     const std::optional<EncryptedBlob>& pharmacyIdentity,
+                     std::int32_t retryCount)
     : id(id)
     , prescriptionId(prescriptionId)
     , prescriptionType(prescriptionType)
@@ -36,5 +37,6 @@ TaskEvent::TaskEvent(id_t id, const model::PrescriptionId& prescriptionId, std::
     , medicationDispenseBundle(medicationDispenseBundle)
     , doctorIdentity(doctorIdentity)
     , pharmacyIdentity(pharmacyIdentity)
+    , retryCount(retryCount)
 {
 }

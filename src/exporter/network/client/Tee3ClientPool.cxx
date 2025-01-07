@@ -34,11 +34,10 @@ bool isGracefulError(boost::system::error_code ec)
 } // namespace
 
 
-Tee3ClientPool::Tee3ClientPool(boost::asio::io_context& ctx, std::size_t connectionsPerFqdn, HsmPool& hsmPool,
+Tee3ClientPool::Tee3ClientPool(boost::asio::io_context& ctx, HsmPool& hsmPool,
                                TslManager& tslManager)
     : mIoContext{ctx}
     , mStrand{make_strand(mIoContext)}
-    , mConnectionsPerFqdn{connectionsPerFqdn}
     , mHsmPool{hsmPool}
     , mTslManager{tslManager}
 {
@@ -78,10 +77,10 @@ Tee3ClientPool::sendTeeRequest(std::string hostname, Tee3Client::Request req, st
 }
 
 
-boost::asio::awaitable<void> Tee3ClientPool::addEpaHost(std::string hostname, std::uint16_t port)
+boost::asio::awaitable<void> Tee3ClientPool::addEpaHost(std::string hostname, std::uint16_t port, size_t connectionCount)
 {
     LOG(INFO) << "setup pool for hostname " << hostname;
-    auto pool = co_await setupPool(hostname, port);
+    auto pool = co_await setupPool(hostname, port, connectionCount);
     while (pool.has_error())
     {
         boost::asio::steady_timer timer{mIoContext, Tee3Client::retryTimeout};
@@ -90,16 +89,16 @@ boost::asio::awaitable<void> Tee3ClientPool::addEpaHost(std::string hostname, st
         {
             TLOG(INFO) << "tee 3 client stopping connect: " << ec.message() << ": " << hostname << ":" << port;
         }
-        pool = co_await setupPool(hostname, port);
+        pool = co_await setupPool(hostname, port, connectionCount);
     }
     mTee3Clients.emplace(hostname, std::move(pool.value()));
 }
 
 
 boost::asio::awaitable<boost::system::result<std::unique_ptr<Tee3ClientsForHost>>>
-Tee3ClientPool::setupPool(std::string hostname, std::uint16_t port)
+Tee3ClientPool::setupPool(std::string hostname, std::uint16_t port, size_t connectionCount)
 {
-    auto clientPool = std::make_unique<Tee3ClientsForHost>(shared_from_this(), hostname, port);
+    auto clientPool = std::make_unique<Tee3ClientsForHost>(shared_from_this(), hostname, port, connectionCount);
     co_await clientPool->init();
     co_return clientPool;
 }

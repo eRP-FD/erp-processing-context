@@ -51,7 +51,8 @@ enum class ProfileType
     ProvidePrescriptionErpOp,
     CancelPrescriptionErpOp,
     ProvideDispensationErpOp,
-    OrganizationDirectory
+    OrganizationDirectory,
+    EPAMedicationPZNIngredient
 };
 
 // these profiles define "meta.profile" as mandatory elements

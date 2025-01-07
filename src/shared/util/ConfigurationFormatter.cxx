@@ -7,7 +7,6 @@
 
 #include "shared/util/ConfigurationFormatter.hxx"
 #include "shared/util/Configuration.hxx"
-#include "shared/util/RuntimeConfiguration.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/util/String.hxx"
 #include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
@@ -17,8 +16,7 @@
 #include <rapidjson/writer.h>
 #include <unordered_set>
 
-std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
-                                                 const RuntimeConfigurationGetter& runtimeConfig, int flags)
+std::string ConfigurationFormatter::formatAsJson(const Configuration& config, int flags)
 {
     OpsConfigKeyNames confNames;
     rapidjson::Document document;
@@ -79,7 +77,7 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config,
     }
     if ((KeyData::ConfigurationKeyFlags::categoryRuntime & flags) != 0)
     {
-        appendRuntimeConfiguration(document, runtimeConfig);
+        appendRuntimeConfiguration(document);
     }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer writer(buffer);
@@ -154,33 +152,4 @@ std::string ConfigurationFormatter::getCategoryPath(int flags)
         return "debug/";
     }
     return {};
-}
-
-void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& document,
-                                                        const RuntimeConfigurationGetter& runtimeConfig)
-{
-    const rapidjson::Pointer acceptPN3Pointer("/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3} +
-                                              "/value");
-    acceptPN3Pointer.Set(
-        document, rapidjson::Value((runtimeConfig.isAcceptPN3Enabled() ? "true" : "false"), document.GetAllocator()),
-        document.GetAllocator());
-    if (runtimeConfig.isAcceptPN3Enabled())
-    {
-        const rapidjson::Pointer acceptPN3ExpiryPointer(
-            "/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3_expiry} + "/value");
-        acceptPN3ExpiryPointer.Set(
-            document, rapidjson::Value(runtimeConfig.getAcceptPN3Expiry().toXsDateTime(), document.GetAllocator()),
-            document.GetAllocator());
-    }
-    const rapidjson::Pointer acceptPN3MaxActive(
-        "/runtime/" + std::string{RuntimeConfiguration::parameter_accept_pn3_max_active} + "/value");
-
-    // std::chrono::hh_mm_ss::operator<< not yet implemented in gcc-12.
-    const std::chrono::hh_mm_ss hhmmss(RuntimeConfiguration::accept_pn3_max_active);
-    acceptPN3MaxActive.Set(
-        document,
-        rapidjson::Value(
-            (std::ostringstream{} << hhmmss.hours() << " " << hhmmss.minutes() << " " << hhmmss.seconds()).str(),
-            document.GetAllocator()),
-        document.GetAllocator());
 }

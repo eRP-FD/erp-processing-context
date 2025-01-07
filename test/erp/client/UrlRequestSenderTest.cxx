@@ -8,7 +8,7 @@
 #include "shared/network/client/UrlRequestSender.hxx"
 #include "shared/common/Constants.hxx"
 #include "erp/server/HttpsServer.hxx"
-#include "erp/server/RequestHandler.hxx"
+#include "shared/server/RequestHandler.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
@@ -39,8 +39,9 @@ public:
         Expect(mIsBlockedFunctor != nullptr, "the isBlockedFunctor must be set");
     }
 
-    void handleRequest (BlockingTestSessionContext& session) override
+    void handleRequest (BaseSessionContext& baseSession) override
     {
+        auto& session = dynamic_cast<BlockingTestSessionContext&>(baseSession);
         if (session.request.getBody() == EXPECTED_BODY)
         {
             mServerBlockingStatusSetter(true);

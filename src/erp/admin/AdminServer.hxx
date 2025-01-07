@@ -7,12 +7,16 @@
 
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINSERVER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINSERVER_HXX
+#include <memory>
 
 class RequestHandlerManager;
-
+namespace erp
+{
+class RuntimeConfiguration;
+}
 namespace AdminServer
 {
-void addEndpoints(RequestHandlerManager& manager);
+void addEndpoints(RequestHandlerManager& manager, std::shared_ptr<const erp::RuntimeConfiguration> runtimeConfig);
 }
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_ADMINSERVER_HXX

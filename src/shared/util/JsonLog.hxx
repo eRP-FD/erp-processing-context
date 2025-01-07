@@ -74,7 +74,7 @@ public:
 
     static constexpr bool withDetailsDefault();
 
-
+    JsonLog(JsonLog&& o) = default;
     JsonLog(LogId id, LogReceiver&& receiver, bool withDetails = withDetailsDefault());
     JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
     ~JsonLog(void);

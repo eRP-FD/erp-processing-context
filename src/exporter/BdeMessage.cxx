@@ -7,6 +7,8 @@
 #include "BdeMessage.hxx"
 #include "shared/util/JsonLog.hxx"
 
+#include <any>
+
 namespace
 {
 std::unordered_map<std::string, std::string> request_usecase_mapping =
@@ -52,7 +54,7 @@ BDEMessage::BDEMessage()
 
 BDEMessage::~BDEMessage()
 {
-	publish();
+    publish();
 }
 
 void BDEMessage::publish()
@@ -65,27 +67,28 @@ void BDEMessage::publish()
                                   ? ""
                                   : request_usecase_mapping[mInnerOperation]);
     log.keyValue("request_operation", mInnerOperation);
-    if (!mPrescriptionId.empty())
-    {
-        log.keyValue("prescription_id", mPrescriptionId);
-    }
     log.keyValue("endpoint_host", mHost);
     log.keyValue("endpoint_ip", mIp);
-    if (mCid)
-    {
-        log.keyValue("cid", mCid.value());
-    }
-    if (mInnerResponseCode)
-    {
-        log.keyValue("inner_response_code", std::to_string(mInnerResponseCode.value()));
-    }
-    log.keyValue("response_code", std::to_string(mResponseCode));
+    log.keyValue("response_code", static_cast<size_t>(mResponseCode));
 
     const auto start = std::chrono::duration_cast<std::chrono::milliseconds>(mStartTime.toChronoTimePoint().time_since_epoch()).count();
     const auto end = std::chrono::duration_cast<std::chrono::milliseconds>(mEndTime.toChronoTimePoint().time_since_epoch()).count();
     const auto lastModified  = std::chrono::duration_cast<std::chrono::milliseconds>(mLastModified.toChronoTimePoint().time_since_epoch()).count();
-    log.keyValue("response_time", std::to_string(end - start));
-    log.keyValue("duration_in_ms", std::to_string(start - lastModified));
+    log.keyValue("response_time", static_cast<size_t>(end - start));
+    log.keyValue("duration_in_ms", static_cast<size_t>(start - lastModified));
 
     log.keyValue("error", mError);
+
+    if (! mPrescriptionId.empty())
+    {
+        log.keyValue("prescription_id", mPrescriptionId);
+    }
+    if (mInnerResponseCode)
+    {
+        log.keyValue("inner_response_code", static_cast<size_t>(mInnerResponseCode.value()));
+    }
+    if (mCid)
+    {
+        log.keyValue("cid", mCid.value());
+    }
 }

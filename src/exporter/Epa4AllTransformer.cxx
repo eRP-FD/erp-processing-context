@@ -20,12 +20,14 @@
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
+#include "model/EpaMedicationPznIngredient.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Coding.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/model/ResourceNames.hxx"
 
+#include <erp/model/KbvMedicationCompounding.hxx>
 #include <unordered_set>
 
 namespace
@@ -383,7 +385,84 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
     F_015.start("Medication.code.coding allowlist");
     removeMedicationCodeCodingsByAllowlist(transformedMedication);
     F_015.finish();
+    if (kbvMedication.getProfile() == model::ProfileType::KBV_PR_ERP_Medication_Compounding)
+    {
+        F_017.start("convert Medication.ingredient to Medication.contained");
+        const auto kbvMedicationCompounding = model::KbvMedicationCompounding::fromJson(kbvMedication.jsonDocument());
+        convertPZNIngredients(transformedMedication, kbvMedicationCompounding);
+        F_017.finish();
+    }
     return transformedMedication;
+}
+
+void Epa4AllTransformer::convertPZNIngredients(model::NumberAsStringParserDocument& transformedMedication,
+                                               const model::KbvMedicationCompounding& kbvMedicationCompounding)
+{
+    static const rapidjson::Pointer ingredientArrayPointer(model::resource::ElementName::path("ingredient"));
+    const auto* kbvIngredients = kbvMedicationCompounding.ingredientArray();
+    Expect(kbvIngredients && kbvIngredients->IsArray(),
+           "Ingredients array in KBV_PR_ERP_Medication_Compounding defective");
+    auto* epaIngredients = ingredientArrayPointer.Get(transformedMedication);
+    Expect(epaIngredients && epaIngredients->IsArray(), "Ingredients array in transformed epa-medication defective");
+    Expect(kbvIngredients->Size() == epaIngredients->Size(),
+           "Ingredient arrays in source and target have different sizes after transformation");
+
+    for (rapidjson::SizeType i = 0; i < epaIngredients->Size(); ++i)
+    {
+        const auto& kbvIngredient = kbvIngredients->GetArray()[i];
+        auto& epaIngredient = epaIngredients->GetArray()[i];
+        static const rapidjson::Pointer systemPointer(
+            model::resource::ElementName::path("itemCodeableConcept", "coding", 0, "system"));
+        static const rapidjson::Pointer codePointer(
+            model::resource::ElementName::path("itemCodeableConcept", "coding", 0, "code"));
+        const auto* kbvIngredientSystem = systemPointer.Get(kbvIngredient);
+        const auto* kbvIngredientCode = codePointer.Get(kbvIngredient);
+        if (kbvIngredientSystem && kbvIngredientCode)
+        {
+            static const rapidjson::Pointer textPointer(
+                model::resource::ElementName::path("itemCodeableConcept", "text"));
+            const auto* kbvIngredientText = textPointer.Get(kbvIngredient);
+            const auto* epaIngredientText = textPointer.Get(epaIngredient);
+            Expect(kbvIngredientText != nullptr && epaIngredientText != nullptr,
+                   "itemCodeableConcept.text is mandatory but missing");
+            const auto kbvIngredientTextString =
+                model::NumberAsStringParserDocument::getStringValueFromValue(kbvIngredientText);
+            const auto epaIngredientTextString =
+                model::NumberAsStringParserDocument::getStringValueFromValue(epaIngredientText);
+            Expect(kbvIngredientTextString == epaIngredientTextString,
+                   "Difference in value of itemCodeableConcept.text between KBV and transformed.");
+            Expect(kbvIngredientSystem->IsString(), "ingredient.itemCodeableConcept.coding.system defective");
+            Expect(kbvIngredientCode->IsString(), "ingredient.itemCodeableConcept.coding.code defective");
+            Expect(model::NumberAsStringParserDocument::getStringValueFromValue(kbvIngredientSystem) ==
+                       model::resource::code_system::pzn,
+                   "ingredient.itemCodeableConcept.coding.code expected to be http://fhir.de/CodeSystem/ifa/pzn");
+            convertPZNIngredient(
+                transformedMedication, epaIngredient,
+                model::Pzn{model::NumberAsStringParserDocument::getStringValueFromValue(kbvIngredientCode)},
+                kbvIngredientTextString);
+            remove(epaIngredient, rapidjson::Pointer{model::resource::ElementName::path("itemCodeableConcept")});
+        }
+    }
+}
+
+void Epa4AllTransformer::convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
+                                              rapidjson::Value& epaIngredient, model::Pzn&& pzn, std::string_view text)
+{
+    model::EPAMedicationPZNIngredient containedMedication{std::move(pzn), text};
+
+    static const rapidjson::Pointer itemReferencePointer(
+        model::resource::ElementName::path("itemReference", "reference"));
+    const auto containedMedicationIdOpt = containedMedication.getId();
+    Expect(containedMedicationIdOpt.has_value(), "missing ID in contained medication");
+    transformedMedication.setKeyValue(epaIngredient, itemReferencePointer,
+                                      "#" + std::string{*containedMedicationIdOpt});
+
+    static const rapidjson::Pointer containedArrayPointer(
+        model::resource::ElementName::path(model::resource::elements::contained));
+    rapidjson::Value rjObject{rapidjson::kObjectType};
+    // Need to have the right Allocator in the object, cannot simply add containedMedication.jsonDocument() to array:
+    rjObject.CopyFrom(containedMedication.jsonDocument(), transformedMedication.GetAllocator());
+    transformedMedication.addToArray(containedArrayPointer, std::move(rjObject));
 }
 
 model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(

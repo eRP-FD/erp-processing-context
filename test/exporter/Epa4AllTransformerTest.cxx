@@ -178,7 +178,6 @@ std::vector<std::string> propertyValuesNotInTarget {
 "Medication.amount.denominator.unit", 
 "Medication.amount.numerator.comparator", 
 "Medication.amount.numerator.value", 
-"Medication.contained",
 "Medication.form.coding.1",
 "Medication.form.coding.2",
 "Medication.identifier",
@@ -387,8 +386,9 @@ void Epa4AllTransformerTest::checkMedicationCompounding(const rapidjson::Value& 
     auto mappedExtensions = EpaMedication::KbvCompounding::mappedExtensions;
     std::ranges::copy(EpaMedication::mappedExtensions, std::back_inserter(mappedExtensions));
     checkExtensions(source, target, mappedExtensions);
-    checkMedicationIngredientArray(source, target);
+    checkMedicationIngredientArray(source, target, true);
     checkMedicationCodingArray(source, target);
+    checkMedicationContainedArray(source, target);
 
     A_25946.test("KBV_PR_ERP_Medication_Compounding: Keine Übernahme von \"extension:Kategorie\"-Elementen");
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
@@ -404,7 +404,7 @@ void Epa4AllTransformerTest::checkMedicationFreeText(const rapidjson::Value& sou
     checkPropertiesNotInTarget(target, EpaMedication::propertyValuesNotInTarget);
     auto mappedExtensions = EpaMedication::mappedExtensions;
     checkExtensions(source, target, mappedExtensions);
-    checkMedicationIngredientArray(source, target);
+    checkMedicationIngredientArray(source, target, false);
     checkMedicationCodingArray(source, target);
 
     validate(
@@ -419,7 +419,7 @@ void Epa4AllTransformerTest::checkMedicationIngredient(const rapidjson::Value& s
     auto mappedExtensions = EpaMedication::KbvIngredient::mappedExtensions;
     std::ranges::copy(EpaMedication::mappedExtensions, std::back_inserter(mappedExtensions));
     checkExtensions(source, target, mappedExtensions);
-    checkMedicationIngredientArray(source, target);
+    checkMedicationIngredientArray(source, target, false);
     checkMedicationCodingArray(source, target);
 
     validate(
@@ -439,7 +439,7 @@ void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, 
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
 
     checkMappedValues(target, EpaMedication::KbvPzn::mappedValues);
-    checkMedicationIngredientArray(source, target);
+    checkMedicationIngredientArray(source, target, false);
     checkMedicationCodingArray(source, target);
 
     validate(
@@ -595,50 +595,128 @@ void Epa4AllTransformerTest::checkIdentifier(const rapidjson::Value& resource, c
     EXPECT_TRUE(found) << "Telematik-ID not found in Organization.identifiers array";
 }
 void Epa4AllTransformerTest::checkMedicationIngredientArray(const rapidjson::Value& source,
-                                                            const rapidjson::Value& target)
+                                                            const rapidjson::Value& target, bool checkTransformedPzn)
 {
     static const rapidjson::Pointer ingredientArrayPtr{"/ingredient"};
-    const auto* sourceArray = ingredientArrayPtr.Get(source);
-    const auto* targetArray = ingredientArrayPtr.Get(target);
-    ASSERT_EQ(sourceArray != nullptr, targetArray != nullptr);
-    if (sourceArray)
+    const auto* sourceIngredientArray = ingredientArrayPtr.Get(source);
+    const auto* targetIngredientArray = ingredientArrayPtr.Get(target);
+    ASSERT_EQ(sourceIngredientArray != nullptr, targetIngredientArray != nullptr);
+    if (sourceIngredientArray)
     {
-        ASSERT_EQ(sourceArray->GetArray().Size(), targetArray->GetArray().Size());
-        for (unsigned int i = 0; i < sourceArray->GetArray().Size(); ++i)
+        ASSERT_EQ(sourceIngredientArray->GetArray().Size(), targetIngredientArray->GetArray().Size());
+        for (unsigned int i = 0; i < sourceIngredientArray->GetArray().Size(); ++i)
         {
-            const auto& sourceItem = sourceArray->GetArray()[i];
-            const auto& targetItem = targetArray->GetArray()[i];
+            const auto& sourceIngredientItem = sourceIngredientArray->GetArray()[i];
+            const auto& targetIngredientItem = targetIngredientArray->GetArray()[i];
             static const rapidjson::Pointer textPtr{"/itemCodeableConcept/text"};
-            const auto sourceText = model::NumberAsStringParserDocument::getOptionalStringValue(sourceItem, textPtr);
-            const auto targetText = model::NumberAsStringParserDocument::getOptionalStringValue(targetItem, textPtr);
-            EXPECT_EQ(sourceText, targetText);
-            static const rapidjson::Pointer codingArrayPtr{"/coding"};
-            const auto* sourceCodingArray = codingArrayPtr.Get(source);
-            const auto* targetCodingArray = codingArrayPtr.Get(target);
+            const auto sourceText =
+                model::NumberAsStringParserDocument::getOptionalStringValue(sourceIngredientItem, textPtr);
+            static const rapidjson::Pointer codingArrayPtr{"/itemCodeableConcept/coding"};
+            const auto* sourceCodingArray = codingArrayPtr.Get(sourceIngredientItem);
             if (sourceCodingArray)
             {
-                for (const auto& item : sourceCodingArray->GetArray())
+                for (const auto& sourceCodingItem : sourceCodingArray->GetArray())
                 {
                     static const rapidjson::Pointer systemPtr{"/system"};
                     static const rapidjson::Pointer codePtr{"/code"};
-                    const auto system = model::NumberAsStringParserDocument::getOptionalStringValue(item, systemPtr);
+                    const auto system =
+                        model::NumberAsStringParserDocument::getOptionalStringValue(sourceCodingItem, systemPtr);
                     ASSERT_TRUE(system);
+                    const auto* targetCodingArray = codingArrayPtr.Get(targetIngredientItem);
                     if (system != "http://fhir.de/CodeSystem/ifa/pzn")
                     {
                         ASSERT_TRUE(targetCodingArray);
-                        const auto* targetCodingItem =
-                            model::NumberAsStringParserDocument::findMemberInArray(targetArray, systemPtr, *system);
+                        const auto targetText =
+                            model::NumberAsStringParserDocument::getOptionalStringValue(targetIngredientItem, textPtr);
+                        EXPECT_EQ(sourceText, targetText);
+                        const auto* targetCodingItem = model::NumberAsStringParserDocument::findMemberInArray(
+                            targetCodingArray, systemPtr, *system);
                         ASSERT_TRUE(targetCodingItem);
                         const auto targetCode =
                             model::NumberAsStringParserDocument::getOptionalStringValue(*targetCodingItem, codePtr);
                         const auto sourceCode =
-                            model::NumberAsStringParserDocument::getOptionalStringValue(item, codePtr);
+                            model::NumberAsStringParserDocument::getOptionalStringValue(sourceCodingItem, codePtr);
                         EXPECT_EQ(targetCode, sourceCode) << *system;
                     }
                     else
                     {
-                        EXPECT_FALSE(
-                            model::NumberAsStringParserDocument::findMemberInArray(targetArray, systemPtr, *system));
+                        if (targetCodingArray)
+                        {
+                            EXPECT_FALSE(model::NumberAsStringParserDocument::findMemberInArray(targetCodingArray,
+                                                                                                systemPtr, *system));
+                        }
+                        if (checkTransformedPzn)
+                        {
+                            static const rapidjson::Pointer itemReferencePtr{"/itemReference/reference"};
+                            const auto itemReference = model::NumberAsStringParserDocument::getOptionalStringValue(
+                                targetIngredientItem, itemReferencePtr);
+                            ASSERT_TRUE(itemReference);
+                            checkExpression(
+                                (std::stringstream{} << "ingredient[" << i << "].itemReference.reference.resolve()")
+                                    .str(),
+                                fhirtools::DefinitionKey{
+                                    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
+                                &target);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+void Epa4AllTransformerTest::checkMedicationContainedArray(const rapidjson::Value& source,
+                                                           const rapidjson::Value& target)
+{
+    static const rapidjson::Pointer ingredientArrayPtr{"/ingredient"};
+    const auto* sourceIngredientArray = ingredientArrayPtr.Get(source);
+    const auto* targetIngredientArray = ingredientArrayPtr.Get(target);
+    ASSERT_EQ(sourceIngredientArray != nullptr, targetIngredientArray != nullptr);
+    if (sourceIngredientArray)
+    {
+        ASSERT_EQ(sourceIngredientArray->GetArray().Size(), targetIngredientArray->GetArray().Size());
+        for (unsigned int i = 0; i < sourceIngredientArray->GetArray().Size(); ++i)
+        {
+            const auto& sourceIngredientItem = sourceIngredientArray->GetArray()[i];
+            static const rapidjson::Pointer textPtr{"/itemCodeableConcept/text"};
+            static const rapidjson::Pointer codingArrayPtr{"/itemCodeableConcept/coding"};
+            const auto* sourceCodingArray = codingArrayPtr.Get(sourceIngredientItem);
+            if (sourceCodingArray)
+            {
+                for (const auto& sourceCodingItem : sourceCodingArray->GetArray())
+                {
+                    static const rapidjson::Pointer systemPtr{"/system"};
+                    static const rapidjson::Pointer codePtr{"/code"};
+                    const auto system =
+                        model::NumberAsStringParserDocument::getOptionalStringValue(sourceCodingItem, systemPtr);
+                    ASSERT_TRUE(system);
+                    const auto sourceCode =
+                        model::NumberAsStringParserDocument::getOptionalStringValue(sourceCodingItem, codePtr);
+                    if (system == "http://fhir.de/CodeSystem/ifa/pzn")
+                    {
+                        const rapidjson::Pointer containedArrayPtr{"/contained"};
+                        const auto* targetContainedArray = containedArrayPtr.Get(target);
+                        EXPECT_TRUE(targetContainedArray);
+                        if (targetContainedArray)
+                        {
+                            int matchingCount = 0;
+                            for (const auto& targetContainedItem : targetContainedArray->GetArray())
+                            {
+                                const rapidjson::Pointer extensionPtr{"/extension"};
+                                const auto* targetExtensionArray = extensionPtr.Get(targetContainedItem);
+                                ASSERT_TRUE(targetExtensionArray);
+                                EXPECT_TRUE(targetExtensionArray->IsArray());
+                                const rapidjson::Pointer codeCodingPtr{"/code/coding"};
+                                const auto* targetCodeCodingArray = codeCodingPtr.Get(targetContainedItem);
+                                ASSERT_TRUE(targetCodeCodingArray);
+                                const auto* targetCodingItem = model::NumberAsStringParserDocument::findMemberInArray(
+                                    targetCodeCodingArray, rapidjson::Pointer{"/code"}, *sourceCode);
+                                if (targetCodingItem)
+                                {
+                                    ++matchingCount;
+                                }
+                            }
+                            EXPECT_EQ(matchingCount, 1);
+                        }
                     }
                 }
             }

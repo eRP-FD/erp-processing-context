@@ -78,8 +78,8 @@ private:
 
     [[nodiscard]] boost::asio::awaitable<boost::system::error_code> authorize(HsmPool& hsmPool);
 
-    /// connect to the given endpoint and perform a tee3 handshake
-    boost::asio::awaitable<boost::system::error_code> connect(boost::asio::ip::tcp::endpoint endpoint);
+    /// perform a tee3 handshake followed by authorization calls
+    boost::asio::awaitable<boost::system::error_code> handshakeWithAuthorization();
 
     // try to connect to one of endpoints associated to the hostname
     /// @returns VAU-NP on success

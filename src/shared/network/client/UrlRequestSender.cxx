@@ -151,7 +151,7 @@ ClientResponse UrlRequestSender::doSend(
         auto params = ConnectionParameters{
                 .hostname =  url.mHost,
                 .port = std::to_string(url.mPort),
-                .connectionTimeoutSeconds = mConnectionTimeoutSeconds,
+                .connectionTimeout = std::chrono::seconds{mConnectionTimeoutSeconds},
                 .resolveTimeout = mResolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
                     .certificateVerifier = mTlsCertificateVerifier,

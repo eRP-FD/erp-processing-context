@@ -26,7 +26,7 @@
     "hsm": {
       "device": "9000@localhost",
       "work-username": "ERP_WORK",
-      "work-password": "password"
+      "work-password": "password",
       "max-session-count" : "5",
       "tee-token" :{
           "update-seconds" : "1200",
