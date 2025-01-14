@@ -63,8 +63,6 @@ class Epa4AllTransformerGematikTestdataPrescription : public Epa4AllTransformerT
 TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
 {
     const auto inputResourceXmlString = ResourceManager::instance().getStringResource(GetParam().inputFile().string());
-    const auto outputResourceXmlString =
-        ResourceManager::instance().getStringResource(GetParam().outputFile().string());
 
     const auto kbvInputBundle = model::Bundle::fromXmlNoValidation(inputResourceXmlString);
     auto kbvMedication = kbvInputBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();

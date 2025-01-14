@@ -8,7 +8,10 @@
 #ifndef ERP_EXPORTER_POSTGRESDATABASETEST_HXX
 #define ERP_EXPORTER_POSTGRESDATABASETEST_HXX
 
+#include "erp/database/DatabaseFrontend.hxx"
+#include "erp/database/PostgresBackend.hxx"
 #include "erp/database/ErpDatabaseModel.hxx"
+#include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -39,6 +42,10 @@
 class PostgresDatabaseTest : public ::testing::Test
 {
 public:
+
+    using MedicationExporterDatabaseBackendCommitGuard = CommitGuard<MedicationExporterDatabaseBackend, commit_guard_policies::ExceptionAbortStrategy>;
+    using MedicationExporterDatabaseFrontendCommitGuard = CommitGuard<MedicationExporterDatabaseFrontend, commit_guard_policies::ExceptionAbortStrategy>;
+
     PostgresDatabaseTest();
 
     virtual void cleanup()
@@ -46,6 +53,7 @@ public:
         if (usePostgres())
         {
             clearTables();
+            clearErpTables();
         }
     }
 
@@ -65,11 +73,31 @@ public:
         {
             mDatabase.reset();
         }
+        if (mErpDatabase)
+        {
+            mErpDatabase.reset();
+        }
         cleanup();
         if (mConnection)
         {
             mConnection.reset();
         }
+        if (mErpDbConnection)
+        {
+            mErpDbConnection.reset();
+        }
+    }
+
+    MedicationExporterDatabaseBackendCommitGuard createDbBackendCommitGuard()
+    {
+        auto db = std::make_unique<MedicationExporterPostgresBackend>();
+        return MedicationExporterDatabaseBackendCommitGuard(std::move(db));
+    }
+
+    MedicationExporterDatabaseFrontendCommitGuard createDbFrontendCommitGuard()
+    {
+        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation);
+        return MedicationExporterDatabaseFrontendCommitGuard(std::move(db));
     }
 
     MedicationExporterDatabaseFrontend& database()
@@ -179,6 +207,13 @@ public:
         deleteTxn.commit();
     }
 
+    void clearErpTables()
+    {
+        auto deleteTxn = createErpDbTransaction();
+        deleteTxn.exec("DELETE FROM erp.auditevent");
+        deleteTxn.commit();
+    }
+
     static bool usePostgres()
     {
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false);
@@ -202,6 +237,28 @@ protected:
         return *mConnection;
     }
 
+    bool databaseNeedsCommit()
+    {
+        return mDatabase && not mDatabase->getBackend().isCommitted();
+    }
+
+    pqxx::work createTransaction()
+    {
+        Expect3(! databaseNeedsCommit(), "previous transaction not completed", std::logic_error);
+        return pqxx::work{getConnection()};
+    }
+
+    DatabaseFrontend& erpDatabase()
+    {
+        if (! mErpDatabase || mErpDatabase->getBackend().isCommitted())
+        {
+            Expect(usePostgres(), "database support is disabled, database should not be used");
+            mErpDatabase = std::make_unique<DatabaseFrontend>(
+                std::make_unique<PostgresBackend>(), *mHsmPool, *mKeyDerivation);
+        }
+        return *mErpDatabase;
+    }
+
     pqxx::connection& getErpDbConnection()
     {
         Expect(usePostgres(), "database support is disabled, database should not be used");
@@ -212,15 +269,15 @@ protected:
         return *mErpDbConnection;
     }
 
-    bool databaseNeedsCommit()
+    bool erpDatabaseNeedsCommit()
     {
-        return mDatabase && not mDatabase->getBackend().isCommitted();
+        return mErpDatabase && not mErpDatabase->getBackend().isCommitted();
     }
 
-    pqxx::work createTransaction()
+    pqxx::work createErpDbTransaction()
     {
-        Expect3(! databaseNeedsCommit(), "previous transaction not completed", std::logic_error);
-        return pqxx::work{getConnection()};
+        Expect3(! erpDatabaseNeedsCommit(), "previous transaction not completed", std::logic_error);
+        return pqxx::work{getErpDbConnection()};
     }
 
     std::tuple<db_model::Blob, db_model::EncryptedBlob> prepareNewTask(const model::PrescriptionId prescriptionId,
@@ -234,6 +291,7 @@ protected:
     }
 
     std::unique_ptr<MedicationExporterDatabaseFrontend> mDatabase;
+    std::unique_ptr<DatabaseFrontend> mErpDatabase;
     std::unique_ptr<pqxx::connection> mConnection;
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;

@@ -151,12 +151,17 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
     co_await timer.async_wait(boost::asio::deferred);
     auto teeClient = co_await clientPool->acquire(host);
     teeClient.reset();
-
+    model::Kvnr kvnr{"X1234567890"};
     using boost::beast::http::verb;
     try
     {
         std::unordered_map<std::string, std::any> empty{};
-        auto response = co_await clientPool->sendTeeRequest(host, Tee3Client::Request{verb::get, "/epa/authz/v1/freshness", 11}, empty);
+        auto req = Tee3Client::Request{verb::post, "/epa/medication/api/v1/fhir/$provide-dispensation-erp", 11};
+        req.set(Header::Tee3::XInsurantId, kvnr.id());
+        req.set(Header::XRequestId, Uuid().toString());
+        req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
+        req.body() = "test";
+        auto response = co_await clientPool->sendTeeRequest(host, req, empty);
         LOG(INFO) << "got response after waiting " << waitTime;
     }
     catch (const std::exception& e)
@@ -242,10 +247,10 @@ int main(int argc, const char* argv[])
         LOG(INFO) << "setup hosts";
         co_spawn(ioContext, setupHosts(clientPool, host, port), boost::asio::use_future).get();
 
-        // for (int i = 1; i < 10; ++i)
-        // {
-        //     co_spawn(ioContext, runTeeClient(clientPool, host, std::chrono::seconds{i * 40}), boost::asio::detached);
-        // }
+        for (int i = 1; i < 10; ++i)
+        {
+            co_spawn(ioContext, runTeeClient(clientPool, host, std::chrono::seconds{i * 40}), boost::asio::detached);
+        }
 
         co_spawn(ioContext, runTeeClient(clientPool, host, std::chrono::seconds{0}), boost::asio::detached);
 

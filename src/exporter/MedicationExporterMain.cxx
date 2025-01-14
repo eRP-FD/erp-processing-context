@@ -390,11 +390,9 @@ bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop, MedicationExporte
             try
             {
                 serviceContext.getHsmPool().getTokenUpdater().healthCheck();
+                healthCheckIsUp = true;
                 // validate ePA endpoints
-                if (testEpaEndpoints(serviceContext))
-                {
-                    healthCheckIsUp = true;
-                }
+                testEpaEndpoints(serviceContext);
             }
             catch (...)
             {
@@ -427,6 +425,7 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
 {
     auto epaHostPortList = Configuration::instance().epaFQDNs();
     Expect(! epaHostPortList.empty(), "ePA Host list must not be empty");
+    bool allUp = true;
     for (const auto& entry : epaHostPortList)
     {
         auto epaClient =
@@ -434,8 +433,8 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
         if (! epaClient.testConnection())
         {
             TLOG(WARNING) << "Connection ePA server at " << entry.hostName << entry.port << " failed";
-            return false;
+            allUp = false;
         }
     }
-    return true;
+    return allUp;
 }

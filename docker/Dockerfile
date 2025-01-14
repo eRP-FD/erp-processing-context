@@ -132,7 +132,7 @@ RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.7 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.8 AS runtime
 
 # Dummy key required for the signing steps.
 RUN openssl genrsa -3 -out /enclave-dummy-key.pem 3072

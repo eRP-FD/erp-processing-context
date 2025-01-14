@@ -95,6 +95,8 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
         }
         case Outcome::DeadLetter:
         case Outcome::Retry:
+        case Outcome::Conflict:
+        case Outcome::ConsentRevoked:
             // no audit event
             logFailure(response.httpStatus, std::move(response.body));
             break;

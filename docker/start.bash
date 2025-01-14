@@ -26,9 +26,16 @@ else
     cd /erp/bin
 fi
 
-# Replace launching shell with erp-pc by calling with exec:
-if [ -z "$ERP_STANDALONE" ] || [ "$ERP_STANDALONE" = 0 ]; then
-    exec gramine-direct $BINARY-kubernetes
+if [ -n "$ERP_LAUNCHER" ]; then
+    if ! command -v "$ERP_LAUNCHER" >/dev/null 2>&1; then
+        echo "Error: ERP_LAUNCHER='$ERP_LAUNCHER' not found in PATH."
+        exit 1
+    fi
+    exec "$ERP_LAUNCHER" $ERP_LAUNCHER_ARGS "$BINARY"
 else
-    exec ./$BINARY
+    if [ -z "$ERP_STANDALONE" ] || [ "$ERP_STANDALONE" = "0" ]; then
+        exec gramine-direct "$BINARY"-kubernetes
+    else
+        exec "./$BINARY"
+    fi
 fi

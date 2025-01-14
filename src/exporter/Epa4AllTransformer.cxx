@@ -7,7 +7,9 @@
 #include "exporter/Epa4AllTransformer.hxx"
 #include "erp/model/KbvComposition.hxx"
 #include "erp/model/KbvMedicationBase.hxx"
+#include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationFreeText.hxx"
+#include "erp/model/KbvMedicationPzn.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/KbvOrganization.hxx"
 #include "erp/model/KbvPractitioner.hxx"
@@ -21,13 +23,13 @@
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
 #include "model/EpaMedicationPznIngredient.hxx"
+#include "model/EpaMedicationTypeExtension.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Coding.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/model/ResourceNames.hxx"
 
-#include <erp/model/KbvMedicationCompounding.hxx>
 #include <unordered_set>
 
 namespace
@@ -392,6 +394,16 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
         convertPZNIngredients(transformedMedication, kbvMedicationCompounding);
         F_017.finish();
     }
+    if (kbvMedication.getProfile() == model::ProfileType::KBV_PR_ERP_Medication_PZN)
+    {
+        F_018_01.start("for Medication.form.code = KPG add data-absent to Medication.ingredient.itemReference");
+        const auto kbvMedicationPzn = model::KbvMedicationPzn::fromJson(kbvMedication.jsonDocument());
+        if (kbvMedicationPzn.isKPG())
+        {
+            checkSetAbsentReason(transformedMedication, "/ingredient/0/itemReference");
+        }
+        F_018_01.finish();
+    }
     return transformedMedication;
 }
 
@@ -459,10 +471,7 @@ void Epa4AllTransformer::convertPZNIngredient(model::NumberAsStringParserDocumen
 
     static const rapidjson::Pointer containedArrayPointer(
         model::resource::ElementName::path(model::resource::elements::contained));
-    rapidjson::Value rjObject{rapidjson::kObjectType};
-    // Need to have the right Allocator in the object, cannot simply add containedMedication.jsonDocument() to array:
-    rjObject.CopyFrom(containedMedication.jsonDocument(), transformedMedication.GetAllocator());
-    transformedMedication.addToArray(containedArrayPointer, std::move(rjObject));
+    transformedMedication.copyToArray(containedArrayPointer, containedMedication.jsonDocument());
 }
 
 model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(

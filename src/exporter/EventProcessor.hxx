@@ -37,6 +37,7 @@ public:
 
     bool process() override;
     virtual void processOne(const model::EventKvnr& kvnr);
+    virtual void checkRetryCount(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent);
 
     virtual void processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount& epaAccount,
                                    const MedicationExporterDatabaseFrontendInterface::taskevents_t& events);
@@ -48,16 +49,18 @@ public:
 
     virtual void scheduleRetryQueue(const model::EventKvnr& kvnr);
     virtual void scheduleHealthRecordRelocation(const model::EventKvnr& kvnr);
+    virtual void scheduleHealthRecordConflict(const model::EventKvnr& kvnr);
 
     static std::chrono::seconds calculateExponentialBackoffDelay(std::int32_t retry);
 
 private:
+    void writeAuditEvent(const AuditDataCollector& auditDataCollector);
+    MedicationExporterCommitGuard createMedicationExporterCommitGuard();
     std::function<JsonLog()> jsonLog;
     const std::shared_ptr<MedicationExporterServiceContext>& mServiceContext;
     std::chrono::seconds mRetryDelaySeconds;
     std::chrono::minutes mHealthRecordRelocationWaitMinutes;
-    void writeAuditEvent(const AuditDataCollector& auditDataCollector);
-    MedicationExporterCommitGuard createMedicationExporterCommitGuard();
+    int mMaxRetryAttempts;
 };
 
 #endif//#ifndef ERP_PROCESSING_CONTEXT_EXPORTER_EVENTPROCESSOR_HXX

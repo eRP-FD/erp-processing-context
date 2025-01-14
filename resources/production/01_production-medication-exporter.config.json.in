@@ -44,11 +44,12 @@
       "epaAsFqdn": ["epa-as-1-mock:443"],
       "poolSizePerFqdn": "5"
     },
-    "epa-processing-outcome": {
-      "epaDelayRetrySeconds": "60"
-    },
     "epa-conflict": {
       "epaConflictWaitMinutes": "1440"
+    },
+    "retries": {
+      "maximumRetriesBeforeDeadletter": "8",
+      "rescheduleDelaySeconds": "60"
     },
     "admin": {
       "server": {

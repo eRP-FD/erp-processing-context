@@ -17,12 +17,14 @@ Outcome fromHttpStatus(HttpStatus httpStatus)
         case HttpStatus::OK:
             return Outcome::Success;
         case HttpStatus::BadRequest:
-        case HttpStatus::Forbidden:
             return Outcome::DeadLetter;
-        case HttpStatus::Conflict:
+        case HttpStatus::Forbidden:
         case HttpStatus::InternalServerError:
-        case HttpStatus::Locked:
             return Outcome::Retry;
+        case HttpStatus::Locked:
+            return Outcome::ConsentRevoked;
+        case HttpStatus::Conflict:
+            return Outcome::Conflict;
         default:
             break;
     }

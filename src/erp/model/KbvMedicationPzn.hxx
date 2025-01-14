@@ -25,6 +25,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> amountNumeratorSystem() const;
     [[nodiscard]] std::optional<std::string_view> amountNumeratorCode() const;
     [[nodiscard]] Pzn pzn() const;
+    [[nodiscard]] bool isKPG() const;
 
 private:
     friend Resource<KbvMedicationPzn>;

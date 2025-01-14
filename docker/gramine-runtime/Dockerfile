@@ -13,7 +13,7 @@ FROM ubuntu:jammy AS runtime
 # binutils provides 'readelf' which is required for gramine-sgx-sign
 RUN apt-get update --fix-missing && \
     apt-get install -y software-properties-common \
-    binutils \
+    binutils gdb gdbserver screen \
     gnupg && \
     rm -rf /var/lib/apt/lists/*
 

@@ -195,45 +195,8 @@ CREATE TABLE erp.auditevent202109 PARTITION OF erp.auditevent FOR VALUES FROM ( 
 CREATE TABLE erp.auditevent202110 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2021-10-01 00:00:00+02')) TO (erp.gen_suuid_low('2021-11-01 00:00:00+01'));
 CREATE TABLE erp.auditevent202111 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2021-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2021-12-01 00:00:00+01'));
 CREATE TABLE erp.auditevent202112 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2021-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-01-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202201 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-02-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202202 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-03-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202203 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-04-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202204 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-05-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202205 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-06-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202206 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-07-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202207 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-08-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202208 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-09-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202209 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-10-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202210 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-11-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202211 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-12-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202212 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2022-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-01-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202301 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-02-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202302 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-03-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202303 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-04-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202304 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-05-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202305 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-06-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202306 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-07-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202307 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-08-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202308 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-09-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202309 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-10-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202310 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-11-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202311 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-12-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202312 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2023-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-01-01 00:00:00+01'));
 
-CREATE TABLE erp.auditevent202401 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-02-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202402 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-03-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202403 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-04-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202404 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-05-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202405 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-06-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202406 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-07-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202407 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-08-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202408 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-09-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202409 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-10-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202410 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-11-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202411 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-12-01 00:00:00+01'));
-CREATE TABLE erp.auditevent202412 PARTITION OF erp.auditevent FOR VALUES FROM ( erp.gen_suuid_low('2024-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2025-01-01 00:00:00+01'));
-
-
+SELECT pg_temp.create_partitions('auditevent', '2022-01-01', '2027-01-01');
 
 SET default_table_access_method = heap;
 
@@ -271,43 +234,9 @@ CREATE TABLE erp.communication202109 PARTITION OF erp.communication FOR VALUES F
 CREATE TABLE erp.communication202110 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2021-10-01 00:00:00+02')) TO (erp.gen_suuid_low('2021-11-01 00:00:00+01'));
 CREATE TABLE erp.communication202111 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2021-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2021-12-01 00:00:00+01'));
 CREATE TABLE erp.communication202112 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2021-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-01-01 00:00:00+01'));
-CREATE TABLE erp.communication202201 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-02-01 00:00:00+01'));
-CREATE TABLE erp.communication202202 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-03-01 00:00:00+01'));
-CREATE TABLE erp.communication202203 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-04-01 00:00:00+01'));
-CREATE TABLE erp.communication202204 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-05-01 00:00:00+01'));
-CREATE TABLE erp.communication202205 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-06-01 00:00:00+01'));
-CREATE TABLE erp.communication202206 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-07-01 00:00:00+01'));
-CREATE TABLE erp.communication202207 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-08-01 00:00:00+01'));
-CREATE TABLE erp.communication202208 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-09-01 00:00:00+01'));
-CREATE TABLE erp.communication202209 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-10-01 00:00:00+01'));
-CREATE TABLE erp.communication202210 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-11-01 00:00:00+01'));
-CREATE TABLE erp.communication202211 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2022-12-01 00:00:00+01'));
-CREATE TABLE erp.communication202212 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2022-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-01-01 00:00:00+01'));
-CREATE TABLE erp.communication202301 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-02-01 00:00:00+01'));
-CREATE TABLE erp.communication202302 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-03-01 00:00:00+01'));
-CREATE TABLE erp.communication202303 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-04-01 00:00:00+01'));
-CREATE TABLE erp.communication202304 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-05-01 00:00:00+01'));
-CREATE TABLE erp.communication202305 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-06-01 00:00:00+01'));
-CREATE TABLE erp.communication202306 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-07-01 00:00:00+01'));
-CREATE TABLE erp.communication202307 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-08-01 00:00:00+01'));
-CREATE TABLE erp.communication202308 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-09-01 00:00:00+01'));
-CREATE TABLE erp.communication202309 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-10-01 00:00:00+01'));
-CREATE TABLE erp.communication202310 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-11-01 00:00:00+01'));
-CREATE TABLE erp.communication202311 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2023-12-01 00:00:00+01'));
-CREATE TABLE erp.communication202312 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2023-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-01-01 00:00:00+01'));
 
-CREATE TABLE erp.communication202401 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-01-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-02-01 00:00:00+01'));
-CREATE TABLE erp.communication202402 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-02-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-03-01 00:00:00+01'));
-CREATE TABLE erp.communication202403 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-03-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-04-01 00:00:00+01'));
-CREATE TABLE erp.communication202404 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-04-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-05-01 00:00:00+01'));
-CREATE TABLE erp.communication202405 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-05-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-06-01 00:00:00+01'));
-CREATE TABLE erp.communication202406 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-06-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-07-01 00:00:00+01'));
-CREATE TABLE erp.communication202407 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-07-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-08-01 00:00:00+01'));
-CREATE TABLE erp.communication202408 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-08-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-09-01 00:00:00+01'));
-CREATE TABLE erp.communication202409 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-09-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-10-01 00:00:00+01'));
-CREATE TABLE erp.communication202410 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-10-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-11-01 00:00:00+01'));
-CREATE TABLE erp.communication202411 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-11-01 00:00:00+01')) TO (erp.gen_suuid_low('2024-12-01 00:00:00+01'));
-CREATE TABLE erp.communication202412 PARTITION OF erp.communication FOR VALUES FROM ( erp.gen_suuid_low('2024-12-01 00:00:00+01')) TO (erp.gen_suuid_low('2025-01-01 00:00:00+01'));
+SELECT pg_temp.create_partitions('communication', '2022-01-01', '2027-01-01');
+
 
 --
 -- Name: vau_cmac; Type: TABLE; Schema: erp; Owner: -

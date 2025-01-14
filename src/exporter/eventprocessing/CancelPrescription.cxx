@@ -64,8 +64,10 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
             }
             break;
         }
-        case Outcome::Retry:
         case Outcome::DeadLetter:
+        case Outcome::Retry:
+        case Outcome::Conflict:
+        case Outcome::ConsentRevoked:
             logFailure(response.httpStatus, std::move(response.body));
             break;
     }

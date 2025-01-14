@@ -439,7 +439,28 @@ void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, 
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
 
     checkMappedValues(target, EpaMedication::KbvPzn::mappedValues);
-    checkMedicationIngredientArray(source, target, false);
+
+    F_018_01.test("for Medication.form.code = KPG add data-absent to Medication.ingredient.itemReference");
+    static const rapidjson::Pointer ingredientArrayPtr{"/ingredient"};
+    static const rapidjson::Pointer formCoding0CodePtr{"/form/coding/0/code"};
+    const auto* sourceIngredientArray = ingredientArrayPtr.Get(source);
+    const auto* targetIngredientArray = ingredientArrayPtr.Get(target);
+    ASSERT_EQ(sourceIngredientArray, nullptr);
+    auto formCode = model::NumberAsStringParserDocument::getStringValueFromValue(formCoding0CodePtr.Get(source));
+    if (formCode == "KPG")
+    {
+        ASSERT_NE(targetIngredientArray, nullptr);
+        static const rapidjson::Pointer dataAbsentPtr{"/ingredient/0/itemReference/extension/0/url"};
+        std::string_view urlValue;
+        ASSERT_NO_FATAL_FAILURE(
+            urlValue = model::NumberAsStringParserDocument::getStringValueFromValue(dataAbsentPtr.Get(target)));
+        EXPECT_EQ(urlValue, "http://hl7.org/fhir/StructureDefinition/data-absent-reason");
+    }
+    else
+    {
+        ASSERT_EQ(targetIngredientArray, nullptr);
+    }
+
     checkMedicationCodingArray(source, target);
 
     validate(
@@ -542,10 +563,13 @@ void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, con
                 if (mapping.targetUrl == str(*url))
                 {
                     foundMapping = true;
-                    const auto* sourceExtension = findExtension(source, mapping.sourceUrl);
-                    ASSERT_NE(sourceExtension, nullptr)
-                        << "Extension not found in source, mapping definition in test must be wrong";
-                    checkRetainedProperties(*sourceExtension, extension, mapping.retainedValues);
+                    if (!mapping.sourceUrl.empty())
+                    {
+                        const auto* sourceExtension = findExtension(source, mapping.sourceUrl);
+                        ASSERT_NE(sourceExtension, nullptr)
+                            << "Extension not found in source, mapping definition in test must be wrong";
+                        checkRetainedProperties(*sourceExtension, extension, mapping.retainedValues);
+                    }
                     checkPropertiesNotInTarget(extension, mapping.emptyInTarget);
                     checkMappedValues(extension, mapping.mappedValues);
                     mapping.found = true;
@@ -556,7 +580,7 @@ void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, con
     }
     for (auto& mapping : mappings)
     {
-        EXPECT_EQ(mapping.found, findExtension(source, mapping.sourceUrl) != nullptr)
+        EXPECT_EQ(mapping.found, (mapping.sourceUrl.empty() || findExtension(source, mapping.sourceUrl) != nullptr))
             << "extension not found in target: " << mapping.targetUrl;
     }
 }

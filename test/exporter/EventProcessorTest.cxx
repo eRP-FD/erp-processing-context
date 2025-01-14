@@ -56,13 +56,16 @@ public:
         /*
          * Requirements to execute the different EventProcessorTest's tests successfully:
          * - X011999971 must be configured as 409/Conflict on provideDispensation
+         * - X011999972 must be configured as 500/InternalServerError on provideDispensation
+         * - X011999973 must be configured as 403/Forbidden
+         * - X011300022 must be configured as 423/Locked
          * - X011300011 must be configured to have a 5s delay on providePrescription (processOne_epa_timeout_retry_first_event)
          * - X011300012 must be configured to have a 5s delay on providePrescription and provideDispensation (processOne_epa_timeout_retry and processOne_epa_timeout_retry_two_events)
          * - X011300013 must be configured to have a 5s delay provideDispensation (processOne_epa_timeout_retry_second_event)
          * - X011300021 must be configured to be responded with template: prescription- and dispensationoutput_MEDICATIONSVC_NO_VALID_STRUCTURE.json for providePrescription and -Dispensation
          * The required config for the epa-test-mock is given in test/ePATestMock/lzcfg.yaml.
          */
-        bool preparedEpaForTests = false;
+        bool preparedEpaForTests = !false;
         if (! preparedEpaForTests)
         {
             GTEST_SKIP() << "EventProcessorTest skipped. Unskip if KVNRs are prepared to run the tests successfully.";
@@ -190,6 +193,136 @@ TEST_F(EventProcessorTest, processOne)
     }
 }
 
+
+TEST_F(EventProcessorTest, checkRetryCount)
+{
+    model::Kvnr kvnr1{"X000000012"};
+    model::EventKvnr eventKvnr1(kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+
+    insertTaskKvnr(kvnr1, eventKvnr1.getRetryCount());
+    insertTaskEvent(kvnr1, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr1, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    model::Kvnr kvnr2{"X000000022"};
+    model::EventKvnr eventKvnr2(kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 9);
+
+    insertTaskKvnr(kvnr2, eventKvnr2.getRetryCount());
+    insertTaskEvent(kvnr2, prescriptionId2.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr2, prescriptionId2.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    const auto events1 = createDbFrontendCommitGuard().db().getAllEventsForKvnr(eventKvnr1);
+    const auto events2 = createDbFrontendCommitGuard().db().getAllEventsForKvnr(eventKvnr2);
+    ASSERT_EQ(events1.size(), 2);
+
+    EventProcessor eventProcessor(serviceContext);
+    eventProcessor.checkRetryCount(eventKvnr1, *events1.front());
+
+    auto transaction = createTransaction();
+    {
+        const auto results = transaction.exec_params("SELECT usecase, state FROM erp_event.task_event WHERE kvnr_hashed = $1 "
+                                               "ORDER BY prescription_id ASC, last_modified ASC",
+                                               eventKvnr1.kvnrHashed());
+        ASSERT_EQ(results.size(), 2);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::providePrescription);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 1).as<std::string>()),
+                  model::TaskEvent::State::pending);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::provideDispensation);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 1).as<std::string>()),
+                  model::TaskEvent::State::pending);
+    }
+
+    auto erpDbTransaction = createErpDbTransaction();
+    const auto numberOfAuditEvents = erpDbTransaction.exec_params("SELECT COUNT(*) FROM erp.auditevent");
+    EXPECT_EQ(numberOfAuditEvents.at(0, 0).as<std::int32_t>(), 0);
+
+    const auto next_export_before = model::Timestamp::now();
+    eventProcessor.checkRetryCount(eventKvnr2, *events2.front());
+    {
+        const auto numberOfAuditEvents2 = erpDbTransaction.exec_params("SELECT COUNT(*) FROM erp.auditevent");
+        EXPECT_EQ(numberOfAuditEvents2.at(0, 0).as<std::int32_t>(), 1);
+
+        const auto kvnrResult = transaction.exec_params("SELECT state, EXTRACT(EPOCH FROM next_export), retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1 ", eventKvnr2.kvnrHashed());
+        EXPECT_EQ( magic_enum::enum_cast<model::EventKvnr::State>( kvnrResult.at(0, 0).as<std::string>()), model::EventKvnr::State::pending);
+        EXPECT_EQ( kvnrResult.at(0, 2).as<std::int16_t>(), 0);
+
+        const auto next_export_after = model::Timestamp(kvnrResult.at(0, 1).as<double>());
+        const auto expectedDelay = 1min;
+        const auto maxDelayByDbProcessing = 30s;
+        EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
+
+        const auto results = transaction.exec_params("SELECT usecase, state FROM erp_event.task_event WHERE kvnr_hashed = $1 "
+                                               "ORDER BY prescription_id ASC, last_modified ASC",
+                                               eventKvnr2.kvnrHashed());
+        ASSERT_EQ(results.size(), 2);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::providePrescription);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 1).as<std::string>()),
+                  model::TaskEvent::State::deadLetterQueue);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::provideDispensation);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 1).as<std::string>()),
+                  model::TaskEvent::State::deadLetterQueue);
+    }
+}
+
+TEST_F(EventProcessorTest, process_checkRetryCount)
+{
+    model::Kvnr kvnr1{"X000000012"};
+    model::EventKvnr eventKvnr1(kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 9);
+
+    insertTaskKvnr(kvnr1, eventKvnr1.getRetryCount());
+    insertTaskEvent(kvnr1, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr1, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    const auto events1 = createDbFrontendCommitGuard().db().getAllEventsForKvnr(eventKvnr1);
+    ASSERT_EQ(events1.size(), 2);
+
+    EventProcessor eventProcessor(serviceContext);
+    eventProcessor.processOne(eventKvnr1);
+
+    auto transaction = createTransaction();
+
+    const auto next_export_before = model::Timestamp::now();
+    eventProcessor.checkRetryCount(eventKvnr1, *events1.front());
+    {
+        const auto kvnrResult = transaction.exec_params("SELECT state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr WHERE kvnr_hashed = $1 ", eventKvnr1.kvnrHashed());
+        EXPECT_EQ( magic_enum::enum_cast<model::EventKvnr::State>( kvnrResult.at(0, 0).as<std::string>()), model::EventKvnr::State::pending);
+
+        const auto next_export_after = model::Timestamp(kvnrResult.at(0).at(1).as<double>());
+        const auto expectedDelay = 1min;
+        const auto maxDelayByDbProcessing = 30s;
+        EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
+
+        const auto results = transaction.exec_params("SELECT usecase, state FROM erp_event.task_event WHERE kvnr_hashed = $1 "
+                                               "ORDER BY prescription_id ASC, last_modified ASC",
+                                               eventKvnr1.kvnrHashed());
+        ASSERT_EQ(results.size(), 2);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::providePrescription);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 1).as<std::string>()),
+                  model::TaskEvent::State::deadLetterQueue);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 0).as<std::string>()),
+                  model::TaskEvent::UseCase::provideDispensation);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 1).as<std::string>()),
+                  model::TaskEvent::State::deadLetterQueue);
+    }
+}
+
+
 TEST_F(EventProcessorTest, processOne_jsonlog_failure_providePrescription)
 {
     model::Kvnr kvnr{"X011300021"};
@@ -225,16 +358,156 @@ TEST_F(EventProcessorTest, calculateExponentialBackoffDelay)
     EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(1), std::chrono::minutes(3));
     EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(2), std::chrono::minutes(9));
     EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(3), std::chrono::minutes(27));
-    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(4), std::chrono::minutes(81)); // 1:21 hours
-    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(5), std::chrono::minutes(243)); // 4:03 hours
-    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(6), std::chrono::minutes(729)); // 12:09 hours
-    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(7), std::chrono::minutes(2187)); // 1,5 days
-    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(10), std::chrono::minutes(59049)); // > 41 days
+    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(4), std::chrono::minutes(81));    // 1:21 hours
+    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(5), std::chrono::minutes(243));   // 4:03 hours
+    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(6), std::chrono::minutes(729));   // 12:09 hours
+    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(7), std::chrono::minutes(2187));  // 1,5 days
+    EXPECT_EQ(EventProcessor::calculateExponentialBackoffDelay(10), std::chrono::minutes(59049));// > 41 days
 }
 
-TEST_F(EventProcessorTest, processOne_retry)
+TEST_F(EventProcessorTest, processOne_Conflict)
 {
-    model::Kvnr kvnr{"X011999971"};
+    model::Kvnr kvnr{"X011300023"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+    insertTaskKvnr(kvnr);
+
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    EventProcessor eventProcessor(serviceContext);
+
+    const auto next_export_before = model::Timestamp::now();
+    eventProcessor.processOne(eventKvnr);
+
+    {// verify: provideDescription event removed, provideDispensation not removed, kvnr pending
+        auto transaction = createTransaction();
+        {
+            const auto results =
+                transaction.exec_params("SELECT prescription_id, usecase, state FROM erp_event.task_event WHERE "
+                                        "kvnr_hashed = $1 ORDER BY prescription_id ASC, last_modified ASC",
+                                        eventKvnr.kvnrHashed());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results.at(0, 0).as<std::int64_t>(), prescriptionId1.toDatabaseId());
+            EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 1).as<std::string>()),
+                      model::TaskEvent::UseCase::provideDispensation);
+            EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 2).as<std::string>()).value(),
+                      model::TaskEvent::State::pending);
+        }
+        {
+            const auto results = transaction.exec_params("SELECT state, retry_count, EXTRACT(EPOCH FROM next_export)  "
+                                                         "FROM erp_event.kvnr WHERE kvnr_hashed = $1",
+                                                         eventKvnr.kvnrHashed());
+            EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(results.at(0, 0).as<std::string>()).value(),
+                      model::EventKvnr::State::pending);
+            EXPECT_EQ(results.at(0, 1).as<std::int32_t>(), 0);
+
+            const auto next_export_after = model::Timestamp(results.at(0).at(2).as<double>());
+            // next_export shall be 2^0 minutes (+ some short add. delay introduced by the processing in the DB)
+            const auto expectedDelay = 24h;
+            const auto maxDelayByDbProcessing = 30s;
+            EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
+        }
+        transaction.commit();
+    }
+}
+
+
+TEST_F(EventProcessorTest, processOne_Locked)
+{
+    model::Kvnr kvnr{"X011300022"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+    insertTaskKvnr(kvnr);
+
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    EventProcessor eventProcessor(serviceContext);
+
+    eventProcessor.processOne(eventKvnr);
+
+    {// verify: provideDescription event removed, provideDispensation not removed, kvnr pending
+        auto transaction = createTransaction();
+        {
+            const auto results =
+                transaction.exec_params("SELECT prescription_id, usecase, state FROM erp_event.task_event WHERE "
+                                        "kvnr_hashed = $1 ORDER BY prescription_id ASC, last_modified ASC",
+                                        eventKvnr.kvnrHashed());
+            ASSERT_EQ(results.size(), 0);
+        }
+        {
+            const auto results = transaction.exec_params("SELECT state, retry_count, EXTRACT(EPOCH FROM next_export)  "
+                                                         "FROM erp_event.kvnr WHERE kvnr_hashed = $1",
+                                                         eventKvnr.kvnrHashed());
+            EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(results.at(0, 0).as<std::string>()).value(),
+                      model::EventKvnr::State::processed);
+            EXPECT_EQ(results.at(0, 1).as<std::int32_t>(), 0);
+        }
+        transaction.commit();
+    }
+}
+
+
+TEST_F(EventProcessorTest, processOne_retry_403)
+{
+    model::Kvnr kvnr{"X011999972"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+    insertTaskKvnr(kvnr);
+
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    EventProcessor eventProcessor(serviceContext);
+
+    const auto next_export_before = model::Timestamp::now();
+    eventProcessor.processOne(eventKvnr);
+
+    {// verify: provideDescription event removed, provideDispensation not removed, kvnr pending
+        auto transaction = createTransaction();
+        {
+            const auto results =
+                transaction.exec_params("SELECT prescription_id, usecase, state FROM erp_event.task_event WHERE "
+                                        "kvnr_hashed = $1 ORDER BY prescription_id ASC, last_modified ASC",
+                                        eventKvnr.kvnrHashed());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results.at(0, 0).as<std::int64_t>(), prescriptionId1.toDatabaseId());
+            EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 1).as<std::string>()),
+                      model::TaskEvent::UseCase::provideDispensation);
+            EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 2).as<std::string>()).value(),
+                      model::TaskEvent::State::pending);
+        }
+        {
+            const auto results = transaction.exec_params("SELECT state, retry_count, EXTRACT(EPOCH FROM next_export)  "
+                                                         "FROM erp_event.kvnr WHERE kvnr_hashed = $1",
+                                                         eventKvnr.kvnrHashed());
+            EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(results.at(0, 0).as<std::string>()).value(),
+                      model::EventKvnr::State::pending);
+            EXPECT_EQ(results.at(0, 1).as<std::int32_t>(), 1);
+
+            const auto next_export_after = model::Timestamp(results.at(0).at(2).as<double>());
+            // next_export shall be 2^0 minutes (+ some short add. delay introduced by the processing in the DB)
+            const auto expectedDelay = 1min;
+            const auto maxDelayByDbProcessing = 30s;
+            EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
+        }
+        transaction.commit();
+    }
+}
+
+TEST_F(EventProcessorTest, processOne_retry_500)
+{
+    model::Kvnr kvnr{"X011999972"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
 

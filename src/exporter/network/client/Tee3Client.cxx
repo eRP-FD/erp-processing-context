@@ -35,15 +35,104 @@
 
 namespace
 {
+struct CborMessage
+{
+    std::string MessageType{};
+    int ErrorCode{};
+    std::string ErrorMessage{};
+
+    template<typename Processor>
+    constexpr void processMembers(Processor& processor)
+    {
+        processor("/MessageType", MessageType);
+        processor("/ErrorCode", ErrorCode);
+        processor("/ErrorMessage", ErrorMessage);
+    }
+};
+
+std::optional<std::string> logCbor(const std::string& body)
+{
+    try
+    {
+        auto buf = epa::BinaryBuffer(body);
+        const CborMessage m = epa::CborDeserializer::deserialize<CborMessage>(buf);
+        return m.ErrorMessage;
+    }
+    catch (const epa::CborError& error)
+    {
+        TLOG(ERROR) << "Couldn't decode cbor message, cbor error.";
+    }
+    catch (const std::runtime_error& error)
+    {
+        TLOG(ERROR) << "Couldn't decode cbor message, runtime error.";
+    }
+    return std::nullopt;
+}
+
+std::optional<std::string> logJson(const std::string& bodyText)
+{
+    static const std::string ErrorMessageKey{"ErrorMessage"};
+    static const std::string ErrorCodeKey{"errorCode"};
+    rapidjson::Document document;
+    document.Parse(bodyText.c_str());
+    const auto fn = [] (rapidjson::Document& document, const std::string& key)-> std::optional<std::string>
+    {
+        if (document.HasMember(key) && document[key].IsString())
+        {
+            return std::string(document[key].GetString(), document[ErrorMessageKey].GetStringLength());
+        };
+        return std::nullopt;
+    };
+    if (!document.HasParseError())
+    {
+        return fn(document, ErrorMessageKey).value_or( fn(document, ErrorCodeKey).value_or("unknown") );
+    }
+    return std::nullopt;
+}
+
+void logDetails(
+    const boost::system::result<boost::beast::http::message<false, boost::beast::http::basic_string_body<char>>>& outerResponse)
+{
+    const auto contentType = outerResponse->base().at(Header::ContentType);
+    std::optional<std::string> errorMessage{};
+    if (contentType == MimeType::cbor)
+    {
+        errorMessage = logCbor(outerResponse->body());
+    }
+    else if (contentType == MimeType::json)
+    {
+        errorMessage = logJson(outerResponse->body());
+    }
+    else
+    {
+        TLOG(ERROR) << "Unexpected content type in outer response.";
+        return;
+    }
+    if (errorMessage.has_value())
+    {
+        BDEMessage bde;
+        bde.mError = *errorMessage;
+        TLOG(ERROR) << bde.mError;
+    }
+}
+
 template<typename EndpointIteratorType>
-void increaseEndpointBackoffTime(EndpointIteratorType endpoint)
+void increaseEndpointBackoffTime(EndpointIteratorType endpoint, std::string_view hostname)
 {
     endpoint->retryCount++;
     auto jitter = std::chrono::seconds{Random::randomIntBetween(0, 10)};
-    auto backoffDuration = static_cast<long int>(std::pow(2, endpoint->retryCount)) * Tee3Client::retryTimeout;
+    auto backoffDuration = std::min(static_cast<long int>(std::pow(2, endpoint->retryCount)) * Tee3Client::retryTimeout,
+                                    Tee3Client::maxRetryTimeout) +
+                           jitter;
 
-    endpoint->nextRetry =
-        std::chrono::steady_clock::now() + std::min(backoffDuration, Tee3Client::maxRetryTimeout) + jitter;
+    if (backoffDuration >= Tee3Client::maxRetryTimeout)
+    {
+        TLOG(WARNING) << "ePA down on " << hostname << ":" << endpoint->endpoint.port() << " ("
+                      << endpoint->endpoint.address() << "), backing off for "
+                      << backoffDuration << ", retryCount = " << endpoint->retryCount;
+    }
+
+    endpoint->nextRetry = std::chrono::steady_clock::now() + backoffDuration;
 }
 
 template<bool isRequest>
@@ -137,7 +226,8 @@ boost::asio::awaitable<void> Tee3Client::ensureConnected()
         auto ec = co_await handshakeWithAuthorization();
         if (ec)
         {
-            co_await close();
+            closeTeeSession();
+            co_await closeTlsSession();
         }
     }
     // If its not connected, select a random endpoint, connect via TLS and do a tee3 handshake.
@@ -165,7 +255,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tryConnectLoop()
         // errors
         if (result != boost::system::errc::resource_unavailable_try_again)
         {
-            increaseEndpointBackoffTime(randomEndpoint);
+            increaseEndpointBackoffTime(randomEndpoint, mHttpsClient.hostname());
         }
         randomEndpoint = Random::selectRandomElement(availableEndpoints.begin(), availableEndpoints.end());
         result = co_await tryConnect(*randomEndpoint);
@@ -197,7 +287,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tryConnect(Endpoin
     });
 
     auto ec = co_await mHttpsClient.connectToEndpoint(endpointData.endpoint);
-    if (! ec)
+    if (! ec && needHandshake())
     {
         ec = co_await handshakeWithAuthorization();
     }
@@ -210,14 +300,18 @@ const boost::asio::ip::tcp::endpoint& Tee3Client::currentEndpoint() const
     return mHttpsClient.currentEndpoint();
 }
 
-boost::asio::awaitable<void> Tee3Client::close()
+boost::asio::awaitable<void> Tee3Client::closeTlsSession()
 {
     auto executor = co_await boost::asio::this_coro::executor;
     co_await boost::asio::dispatch(boost::asio::bind_executor(mStrand, boost::asio::deferred));
-    mTee3Context.reset();
-    mTeeContextRefreshTimer.cancel();
     co_await mHttpsClient.close();
     co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
+}
+
+void Tee3Client::closeTeeSession()
+{
+    mTee3Context.reset();
+    mTeeContextRefreshTimer.cancel();
 }
 
 Tee3ClientsForHost* Tee3Client::owningClientsForHost()
@@ -287,7 +381,7 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     });
     if (outerResponse.has_error())
     {
-        co_await close();
+        co_await closeTlsSession();
         co_return outerResponse;
     }
     HeaderLog::vlog(3, [&] {
@@ -295,7 +389,9 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     });
     if (outerResponse->result() != boost::beast::http::status::ok)
     {
-        co_await close();
+        closeTeeSession();
+        co_await closeTlsSession();
+        logDetails(outerResponse);
         co_return error::outer_response_status_not_ok;
     }
     if (outerResponse.value()[Header::ContentType] == ContentMimeType::cbor)
@@ -306,7 +402,7 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
                "response KeyId doesn't match request.");
         if (message.messageType == epa::Tee3Protocol::messageRestartName)
         {
-            co_await close();
+            closeTeeSession();
             co_return error::restart;
         }
     }
@@ -327,7 +423,7 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     }
     else
     {
-        co_await close();
+        closeTeeSession();
     }
     co_return response;
 }
@@ -374,6 +470,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         bde.mEndTime = model::Timestamp::now();
         if (m2response.has_error())
         {
+            co_await closeTlsSession();
             HeaderLog::info([&] {
                 return std::ostringstream{} << "tee3 handshake failed in message 1: " << m2response.error().message()
                                             << ": connecting to " << mHttpsClient.hostname() << " on "
@@ -419,6 +516,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         bde3.mEndTime = model::Timestamp::now();
         if (m4response.has_error())
         {
+            co_await closeTlsSession();
             HeaderLog::info([&] {
                 return std::ostringstream{} << "tee3 handshake failed in message 3: " << m4response.error().message()
                                             << ": connecting to " << mHttpsClient.hostname() << " on "
@@ -483,7 +581,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool&
     }
     if (result.failed())
     {
-        co_await close();
+        closeTeeSession();
     }
     co_await async_immediate(executor);
     co_return result;

@@ -609,22 +609,40 @@ const rj::Value* NumberAsStringParserDocument::getMemberInArray(const rj::Pointe
     return &(*array)[static_cast<rj::SizeType>(index)];
 }
 
-std::size_t NumberAsStringParserDocument::addToArray(const rj::Pointer& pointerToArray, rj::Value&& object)
+namespace
 {
-    rj::Value* array = pointerToArray.Get(*this);
+rj::Value& getOrCreateArray(NumberAsStringParserDocument* doc, const rj::Pointer& pointerToArray)
+{
+    rj::Value* array = pointerToArray.Get(*doc);
     if (array == nullptr)
     {
-        array = &pointerToArray.Create(*this).SetArray();
+        array = &pointerToArray.Create(*doc).SetArray();
     }
-    ModelExpect(array->IsArray(), pointerToString(pointerToArray) + " must be array");
-    array->PushBack(std::move(object), GetAllocator());
-    return array->Size() - 1;
+    ModelExpect(array->IsArray(), doc->pointerToString(pointerToArray) + " must be array");
+    return *array;
+}
+}
+
+std::size_t NumberAsStringParserDocument::addToArray(const rj::Pointer& pointerToArray, rj::Value&& object)
+{
+    auto& array = getOrCreateArray(this, pointerToArray);
+    array.PushBack(std::move(object), GetAllocator());
+    return array.Size() - 1;
 }
 
 std::size_t NumberAsStringParserDocument::addToArray(rj::Value& array, rj::Value&& object)
 {
     ModelExpect(array.IsArray(), "Element must be array");
     array.PushBack(std::move(object), GetAllocator());
+    return array.Size() - 1;
+}
+
+std::size_t NumberAsStringParserDocument::copyToArray(const rapidjson::Pointer& pointerToArray, const rj::Value& object)
+{
+    auto& array = getOrCreateArray(this, pointerToArray);
+    auto newObj = createEmptyObject();
+    newObj.CopyFrom(object, GetAllocator());
+    array.PushBack(std::move(newObj), GetAllocator());
     return array.Size() - 1;
 }
 

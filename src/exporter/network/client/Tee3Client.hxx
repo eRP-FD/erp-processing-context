@@ -60,13 +60,14 @@ public:
 
     [[nodiscard]] const boost::asio::ip::tcp::endpoint& currentEndpoint() const;
 
-    [[nodiscard]] boost::asio::awaitable<void> close();
+    [[nodiscard]] boost::asio::awaitable<void> closeTlsSession();
+    void closeTeeSession();
 
     Tee3ClientsForHost* owningClientsForHost();
 
     struct EndpointData {
         Resolver::endpoint_type endpoint;
-        std::size_t retryCount;
+        std::size_t retryCount = 0;
         std::chrono::steady_clock::time_point nextRetry;
     };
 

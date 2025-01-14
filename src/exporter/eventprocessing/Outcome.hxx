@@ -16,7 +16,9 @@ enum class Outcome : uint8_t
 {
     Success,
     Retry,
-    DeadLetter
+    DeadLetter,
+    Conflict,
+    ConsentRevoked
 };
 
 Outcome fromHttpStatus(HttpStatus httpStatus);

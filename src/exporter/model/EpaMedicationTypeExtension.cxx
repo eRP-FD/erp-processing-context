@@ -5,14 +5,13 @@
 #include "exporter/model/EpaMedicationTypeExtension.hxx"
 namespace model
 {
-EPAMedicationTypeExtension::EPAMedicationTypeExtension()
+EPAMedicationTypeExtension::EPAMedicationTypeExtension(std::string_view code, std::string_view display)
 {
     using namespace resource::elements;
     setValue(rapidjson::Pointer{resource::ElementName::path(resource::elements::url)}, url);
     setValue(rapidjson::Pointer{resource::ElementName::path(valueCoding, system)}, resource::code_system::sct);
-    setValue(rapidjson::Pointer{resource::ElementName::path(valueCoding, code)}, "781405001");
-    setValue(rapidjson::Pointer{resource::ElementName::path(valueCoding, display)},
-             "Medicinal product package (product)");
+    setValue(rapidjson::Pointer{resource::ElementName::path(valueCoding, resource::elements::code)}, code);
+    setValue(rapidjson::Pointer{resource::ElementName::path(valueCoding, resource::elements::display)}, display);
 }
 
 template class Extension<EPAMedicationTypeExtension>;

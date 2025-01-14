@@ -272,8 +272,12 @@ public:
         size_t index) const;
 
     // Returns position of added element:
+    // Only use, if the object.Allocator is the same as this Document.Allocator!
     std::size_t addToArray(const rapidjson::Pointer& pointerToArray, rapidjson::Value&& object);
+    // Only use, if the object.Allocator is the same as this Document.Allocator!
     std::size_t addToArray(rapidjson::Value& array, rapidjson::Value&& object);
+    // Otherwise use this copy operation:
+    std::size_t copyToArray(const rapidjson::Pointer& pointerToArray, const rapidjson::Value& object);
     void addMemberToArrayEntry(const ::rapidjson::Pointer& pointerToArray, ::std::size_t index,
                                ::rapidjson::Value&& key, ::rapidjson::Value&& value);
 

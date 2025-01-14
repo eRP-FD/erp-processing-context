@@ -17,7 +17,8 @@ EPAMedicationPZNIngredient::EPAMedicationPZNIngredient(const Pzn& pzn, std::stri
     setResourceType("Medication");
     using namespace resource::elements;
     setId(Uuid{}.toString());
-    EPAMedicationTypeExtension typeExtension{};
+    EPAMedicationTypeExtension typeExtension{EPAMedicationTypeExtension::MedicinalProductPackageCode,
+                                             EPAMedicationTypeExtension::MedicinalProductPackageDisplay};
     setValue(rapidjson::Pointer{resource::ElementName::path(extension, 0)}, typeExtension.jsonDocument());
     setValue(rapidjson::Pointer{resource::ElementName::path(code, coding, 0, system)}, resource::code_system::pzn);
     setValue(rapidjson::Pointer{resource::ElementName::path(code, coding, 0, code)}, pzn.id());

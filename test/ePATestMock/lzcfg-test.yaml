@@ -11,6 +11,10 @@ sendAuthorizationRequestBearerToken:
     code: 200
     template: sendAuthorizationRequestBearerToken_200.json
 providePrescription:
+  - kvnr: "X011300021"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_NO_VALID_STRUCTURE.json
+    delay: 500
   - kvnr: "X011300011"
     code: 200
     template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
@@ -19,6 +23,10 @@ providePrescription:
     code: 200
     template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
     delay: 5000
+  - kvnr: "X011300022"
+    code: 423
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 300
   - kvnr: ".*"
     code: 200
     template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json  
@@ -27,18 +35,42 @@ cancelPrescription:
     code: 200
     template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
 provideDispensation:
+  - kvnr: "X011300021"
+    code: 200
+    template: dispensationoutput_MEDICATIONSVC_NO_VALID_STRUCTURE.json
+    delay: 500
   - kvnr: "X011999971"
     code: 409
     template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
     delay: 300
+  - kvnr: "X011999972"
+    code: 500
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 300
+  - kvnr: "X011999973"
+    code: 403
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 300
   - kvnr: "X011300012"
     code: 200
-    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
     delay: 5000
+  - kvnr: "X011300013"
+    code: 200
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 5000
+  - kvnr: "X011300023"
+    code: 409
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
+    delay: 300
   - kvnr: ".*"
     code: 200
     template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
 cancelDispensation:
+  - kvnr: "X011300021"
+    code: 200
+    template: prescriptionoutput_MEDICATIONSVC_NO_VALID_STRUCTURE.json
+    delay: 500
   - kvnr: ".*"
     code: 200
     template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json

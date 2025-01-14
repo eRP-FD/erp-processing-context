@@ -92,7 +92,7 @@ boost::asio::awaitable<void> Tee3ClientsForHost::refreshEndpoints()
     {
         if (! addresses.contains(tee3client->currentEndpoint().address()))
         {
-            co_spawn(pool->mStrand, tee3client->close(), consign(boost::asio::detached, pool));
+            co_spawn(pool->mStrand, tee3client->closeTlsSession(), consign(boost::asio::detached, pool));
         }
     }
     auto now = std::chrono::steady_clock::now();
@@ -134,7 +134,7 @@ boost::asio::awaitable<void> Tee3ClientsForHost::release(std::shared_ptr<Tee3Cli
         mEndpoints.end())
     {
         // refreshEndpoints has removed the instances endpoint
-        co_await instance->close();
+        co_await instance->closeTlsSession();
     }
     Expect3(pool->mStrand.running_in_this_thread(), "not running on strand.", std::logic_error);
     mAvailableClients.push_back(std::move(instance));

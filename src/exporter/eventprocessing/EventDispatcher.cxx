@@ -96,6 +96,10 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
         case Outcome::DeadLetter:
             auditDataCollector.setEventId(*failedAuditType);
             break;
+        case Outcome::Conflict:
+        case Outcome::ConsentRevoked:
+            // no audit event
+            break;
     }
     A_19296_03.finish();
 

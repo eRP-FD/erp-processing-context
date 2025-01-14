@@ -38,9 +38,16 @@ std::optional<std::string_view> KbvMedicationPzn::amountNumeratorCode() const
 
 model::Pzn KbvMedicationPzn::pzn() const
 {
-    static const rapidjson::Pointer pznPointer(resource::ElementName::path(
-        resource::elements::code, resource::elements::coding, 0, resource::elements::code));
+    static const rapidjson::Pointer pznPointer(
+        resource::ElementName::path(resource::elements::code, resource::elements::coding, 0, resource::elements::code));
     return model::Pzn{getStringValue(pznPointer)};
 }
 
-} // namespace model
+bool KbvMedicationPzn::isKPG() const
+{
+    static const rapidjson::Pointer formCoding0CodePtr(
+        resource::ElementName::path(resource::elements::form, resource::elements::coding, 0, resource::elements::code));
+    return getStringValue(formCoding0CodePtr) == "KPG";
+}
+
+}// namespace model

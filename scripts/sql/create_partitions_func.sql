@@ -34,3 +34,35 @@ CREATE OR REPLACE PROCEDURE pg_temp.set_task_partitions_permissions(table_name r
         END LOOP;
     END
 $$;
+
+CREATE OR REPLACE FUNCTION pg_temp.create_partitions(
+    tablename  text,
+    start_date date,
+    end_date   date
+)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    current    DATE := start_date;
+    next_month DATE;
+    part_name TEXT;
+BEGIN
+    WHILE current < end_date LOOP
+        next_month := current + interval '1 month';
+        part_name := tablename || to_char(current, 'YYYYMM');
+
+        EXECUTE format($stmt$
+            CREATE TABLE erp.%I
+            PARTITION OF erp.%I
+            FOR VALUES FROM (
+                erp.gen_suuid_low('%s 00:00:00+01')
+            ) TO (
+                erp.gen_suuid_low('%s 00:00:00+01')
+            )
+        $stmt$, part_name, tablename, current, next_month);
+
+        current := next_month;
+    END LOOP;
+END;
+$$;
