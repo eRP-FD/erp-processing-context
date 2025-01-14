@@ -35,34 +35,33 @@
 
 namespace
 {
-struct CborMessage
+struct ClientTeeError
 {
-    std::string MessageType{};
-    int ErrorCode{};
-    std::string ErrorMessage{};
+    const std::string_view messageType = "Error";
+    int errorCode{};
+    std::string errorMessage{};
 
     template<typename Processor>
     constexpr void processMembers(Processor& processor)
     {
-        processor("/MessageType", MessageType);
-        processor("/ErrorCode", ErrorCode);
-        processor("/ErrorMessage", ErrorMessage);
+        processor("/MessageType", messageType);
+        processor("/ErrorCode", errorCode);
+        processor("/ErrorMessage", errorMessage);
     }
 };
 
-std::optional<std::string> logCbor(const std::string& body)
+template<typename CborMessage>
+std::optional<CborMessage> tryDeserializeCbor(const std::string& body)
 {
     try
     {
-        auto buf = epa::BinaryBuffer(body);
-        const CborMessage m = epa::CborDeserializer::deserialize<CborMessage>(buf);
-        return m.ErrorMessage;
+        return epa::CborDeserializer::deserialize<CborMessage>(epa::BinaryBuffer{body});
     }
-    catch (const epa::CborError& error)
+    catch (const epa::CborError&)
     {
         TLOG(ERROR) << "Couldn't decode cbor message, cbor error.";
     }
-    catch (const std::runtime_error& error)
+    catch (const std::runtime_error&)
     {
         TLOG(ERROR) << "Couldn't decode cbor message, runtime error.";
     }
@@ -90,14 +89,17 @@ std::optional<std::string> logJson(const std::string& bodyText)
     return std::nullopt;
 }
 
-void logDetails(
-    const boost::system::result<boost::beast::http::message<false, boost::beast::http::basic_string_body<char>>>& outerResponse)
+void logDetails(const boost::system::result<Tee3Client::Response>& outerResponse, BDEMessage& bde)
 {
     const auto contentType = outerResponse->base().at(Header::ContentType);
     std::optional<std::string> errorMessage{};
     if (contentType == MimeType::cbor)
     {
-        errorMessage = logCbor(outerResponse->body());
+        auto err = tryDeserializeCbor<ClientTeeError>(outerResponse->body());
+        if (err.has_value())
+        {
+            errorMessage = err->errorMessage;
+        }
     }
     else if (contentType == MimeType::json)
     {
@@ -110,7 +112,6 @@ void logDetails(
     }
     if (errorMessage.has_value())
     {
-        BDEMessage bde;
         bde.mError = *errorMessage;
         TLOG(ERROR) << bde.mError;
     }
@@ -203,6 +204,7 @@ Tee3Client::Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3Cli
 
 Tee3Client::~Tee3Client() noexcept = default;
 
+//NOLINTNEXTLINE[misc-no-recursion]
 boost::asio::awaitable<boost::system::error_code> Tee3Client::handshakeWithAuthorization()
 {
     auto ec = co_await tee3Handshake();
@@ -312,6 +314,7 @@ void Tee3Client::closeTeeSession()
 {
     mTee3Context.reset();
     mTeeContextRefreshTimer.cancel();
+    mIsAuthorized = false;
 }
 
 Tee3ClientsForHost* Tee3Client::owningClientsForHost()
@@ -319,7 +322,7 @@ Tee3ClientsForHost* Tee3Client::owningClientsForHost()
     return mOwingClientsForHost;
 }
 
-Tee3Client::Request Tee3Client::createOuterRequest(boost::beast::http::verb verb, std::string_view target,
+Tee3Client::Request Tee3Client::prepareOuterRequest(boost::beast::http::verb verb, std::string_view target,
                                                    const MimeType& mimeType, std::string_view userAgent)
 {
     Request result{verb, target, 11};
@@ -330,6 +333,27 @@ Tee3Client::Request Tee3Client::createOuterRequest(boost::beast::http::verb verb
     return result;
 }
 
+
+Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerRequest, epa::Tee3SessionContext& requestContext)
+{
+    using boost::beast::http::verb;
+    std::ostringstream serialized;
+    serialized << innerRequest;
+    HeaderLog::vlog(2, [&] {
+        return std::ostringstream{} << "sending inner request: " << serialized.view();
+    });
+
+    auto encrypted = epa::TeeStreamFactory::createReadableEncryptingStream(
+        [&requestContext]() {
+            return requestContext;
+        },
+        epa::StreamFactory::makeReadableStream(serialized.str()));
+    Request outerRequest = prepareOuterRequest(verb::post, mTee3Context->vauCid.toString(), MimeType::binary,
+                                              innerRequest[Header::Tee3::XUserAgent]);
+    outerRequest.body() = encrypted.readAll().toString();
+    return outerRequest;
+}
+
 boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::sendInner(Request request, std::unordered_map<std::string, std::any>& logDataBag)
 {
     auto executor = co_await boost::asio::this_coro::executor;
@@ -338,12 +362,8 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     Expect3(mTee3Context != nullptr, "sendInner called but no tee 3 context available.", std::logic_error);
     using boost::beast::http::verb;
     mHttpsClient.setMandatoryFields(request);
-    std::ostringstream serialized;
-    serialized << request;
-    HeaderLog::vlog(2, [&] {
-        return std::ostringstream{} << "sending inner request: " << serialized.view();
-    });
-    auto contexts = mTee3Context->createSessionContexts();
+
+    auto contexts = std::make_optional(mTee3Context->createSessionContexts());
 
     BDEMessage bde;
     bde.mStartTime = model::Timestamp::now();
@@ -352,23 +372,46 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     bde.mHost = mHttpsClient.hostname();
     bde.mIp = mHttpsClient.currentEndpoint().address().to_string();
     if (request.base().find(Header::XRequestId) != request.base().end()) {
-        bde.mRequestId = std::string{ request[Header::XRequestId] };
+        bde.mRequestId = std::string{request[Header::XRequestId]};
     }
     BDEMessage::assignIfContains(logDataBag, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
     BDEMessage::assignIfContains(logDataBag, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
-    auto encrypted = epa::TeeStreamFactory::createReadableEncryptingStream(
-        [&contexts]() {
-            return contexts.request;
-        },
-        epa::StreamFactory::makeReadableStream(std::move(serialized).str()));
-    Request outerRequest = createOuterRequest(verb::post, mTee3Context->vauCid.toString(), MimeType::binary,
-                                              request[Header::Tee3::XUserAgent]);
-    outerRequest.body() = encrypted.readAll().toString();
+    Request outerRequest = createEncryptedOuterRequest(request, contexts->request);
     co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
     HeaderLog::vlog(3, [&] {
         return std::ostringstream{} << "sending outer request: " << Base64::encode(to_string(outerRequest));
     });
-    auto outerResponse = co_await mHttpsClient.send(outerRequest);
+
+    auto outerResponse = co_await sendOuter(outerRequest);
+
+    // retry once immediately if we're not during authorization requests
+    if (outerResponse.error() == error::unknown_cid && mIsAuthorized)
+    {
+        TLOG(INFO) << "Detected unknown CID, retrying handshake";
+        auto ec = co_await handshakeWithAuthorization();
+        if (ec)
+        {
+            co_return ec;
+        }
+        co_await boost::asio::dispatch(boost::asio::bind_executor(mStrand, boost::asio::deferred));
+        Expect3(mTee3Context != nullptr, "Tee 3 context is gone.", std::logic_error);
+        contexts.emplace(mTee3Context->createSessionContexts());
+        outerRequest = createEncryptedOuterRequest(request, contexts->request);
+        bde.mCid = mTee3Context->vauCid.toString();
+        bde.mStartTime = model::Timestamp::now();
+        co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
+        outerResponse = co_await sendOuter(outerRequest);
+    }
+
+    if (outerResponse.has_error())
+    {
+        if (outerResponse.error() == error::outer_response_status_not_ok)
+        {
+            logDetails(outerResponse, bde);
+        }
+        co_return outerResponse;
+    }
+
     auto cleanup = gsl::finally([&bde, &outerResponse] {
         if (outerResponse.has_value()) {
             bde.mResponseCode = outerResponse->result_int();
@@ -379,37 +422,24 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
         }
         bde.mEndTime = model::Timestamp::now();
     });
-    if (outerResponse.has_error())
-    {
-        co_await closeTlsSession();
-        co_return outerResponse;
-    }
-    HeaderLog::vlog(3, [&] {
-        return std::ostringstream{} << "received outer response: " << Base64::encode(to_string(outerResponse.value()));
-    });
-    if (outerResponse->result() != boost::beast::http::status::ok)
-    {
-        closeTeeSession();
-        co_await closeTlsSession();
-        logDetails(outerResponse);
-        co_return error::outer_response_status_not_ok;
-    }
+
     if (outerResponse.value()[Header::ContentType] == ContentMimeType::cbor)
     {
-        const auto message =
-            epa::CborDeserializer::deserialize<epa::TeeMessageRestart>(epa::BinaryBuffer{outerResponse->body()});
-        Expect(epa::KeyId::fromBinaryView(message.keyId) == contexts.response.keyId,
+        const auto message = tryDeserializeCbor<epa::TeeMessageRestart>(outerResponse->body());
+        Expect(message.has_value(), "Malformed cbor message");
+        Expect(epa::KeyId::fromBinaryView(message->keyId) == contexts->response.keyId,
                "response KeyId doesn't match request.");
-        if (message.messageType == epa::Tee3Protocol::messageRestartName)
+        if (message->messageType == epa::Tee3Protocol::messageRestartName)
         {
             closeTeeSession();
             co_return error::restart;
         }
     }
+
     auto decrypted = epa::TeeStreamFactory::createReadableDecryptingStream(
         [&contexts](const epa::KeyId& keyId) {
-            Expect(keyId == contexts.response.keyId, "response KeyId doesn't match request.");
-            return contexts.response;
+            Expect(keyId == contexts->response.keyId, "response KeyId doesn't match request.");
+            return contexts->response;
         },
         epa::StreamFactory::makeReadableStream(outerResponse->body()));
     std::string innerResponseData = decrypted.readAll().toString();
@@ -428,6 +458,40 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     co_return response;
 }
 
+boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::sendOuter(Request outerRequest)
+{
+    auto outerResponse = co_await mHttpsClient.send(outerRequest);
+
+    if (outerResponse.has_error())
+    {
+        co_await closeTlsSession();
+        co_return outerResponse;
+    }
+    HeaderLog::vlog(3, [&] {
+        return std::ostringstream{} << "received outer response: " << Base64::encode(to_string(outerResponse.value()));
+    });
+
+    const auto contentType = outerResponse->base().at(Header::ContentType);
+    if (outerResponse->result() == boost::beast::http::status::forbidden && contentType == MimeType::cbor)
+    {
+        auto cborError = tryDeserializeCbor<ClientTeeError>(outerResponse->body());
+        if (cborError.has_value() && cborError->errorCode == static_cast<int>(epa::TeeError::Code::UnknownCid))
+        {
+            closeTeeSession();
+            co_return error::unknown_cid;
+        }
+    }
+
+    if (outerResponse->result() != boost::beast::http::status::ok)
+    {
+        closeTeeSession();
+        co_await closeTlsSession();
+        co_return error::outer_response_status_not_ok;
+    }
+
+    co_return outerResponse;
+}
+
 
 boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
 {
@@ -435,7 +499,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
     {
         mTeeContextRefreshTimer.cancel();
         using boost::beast::http::verb;
-        Request request = createOuterRequest(verb::post, "/VAU", MimeType::cbor, mDefaultUserAgent);
+        Request request = prepareOuterRequest(verb::post, "/VAU", MimeType::cbor, mDefaultUserAgent);
         bool isPU = Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
         epa::ClientTeeHandshake handshake{std::bind_front(&Tee3Client::provideCertificate, this),
                                           mOwingClientsForHost->tslManager(), isPU};
@@ -500,7 +564,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         }
         handshake.setVauCid(epa::Tee3Protocol::VauCid{vauCid->value()});
         auto target = handshake.vauCid().toString();
-        request = createOuterRequest(verb::post, target, MimeType::cbor, mDefaultUserAgent);
+        request = prepareOuterRequest(verb::post, target, MimeType::cbor, mDefaultUserAgent);
         request.body() = handshake.createMessage3(epa::BinaryBuffer{m2response->body()}).toString();
         HeaderLog::vlog(3, [&] {
             return std::ostringstream{} << "Sending Message 3 to: " << target;
@@ -569,6 +633,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool&
     {
         auto freshness = co_await getFreshness();
         auto vauNP = co_await sendAuthorizationRequest(hsmPool, std::move(freshness));
+        mIsAuthorized = true;
         co_await async_immediate(mStrand);
         mOwingClientsForHost->vauNP(vauNP);
     }
@@ -651,6 +716,8 @@ public:
                 return "Extra bytes in decrypted inner response.";
             case error::restart:
                 return "TEE Server requested restart";
+            case error::unknown_cid:
+                return "unknown CID";
         }
         return "invalid Tee3Client::error: " + std::to_string(static_cast<uintmax_t>(err));
     }

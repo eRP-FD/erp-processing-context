@@ -88,9 +88,9 @@ namespace
                 AND (id = ANY($1::uuid[]))
                 AND (recipient = $3))
         )--")
-// GEMREQ-start A_19027-03#query-deleteCommunicationsForTask
+// GEMREQ-start A_19027-06#query-deleteCommunicationsForTask
     QUERY(deleteCommunicationsForTaskStatement,  "DELETE FROM erp.communication WHERE prescription_id = $1 AND prescription_type = $2")
-// GEMREQ-end A_19027-03#query-deleteCommunicationsForTask
+// GEMREQ-end A_19027-06#query-deleteCommunicationsForTask
 
 // GEMREQ-start A_22157#query-deleteChargeItemCommunicationsForKvnrStatement
     QUERY(deleteChargeItemCommunicationsForKvnrStatement,
@@ -355,7 +355,7 @@ void PostgresBackend::updateTaskDeleteMedicationDispense(const model::Prescripti
     getTaskBackend(taskId.type()).updateTaskDeleteMedicationDispense(*mTransaction, taskId, lastModified);
 }
 
-// GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-start A_19027-06#query-call-updateTaskClearPersonalData
 void PostgresBackend::updateTaskClearPersonalData(const model::PrescriptionId& taskId,
                                                    model::Task::Status taskStatus,
                                                    const model::Timestamp& lastModified,
@@ -365,7 +365,7 @@ void PostgresBackend::updateTaskClearPersonalData(const model::PrescriptionId& t
     getTaskBackend(taskId.type())
         .updateTaskClearPersonalData(*mTransaction, taskId, taskStatus, lastModified, lastStatusUpdate);
 }
-// GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
 std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         const db_model::HashedKvnr& kvnr,
@@ -776,7 +776,7 @@ void PostgresBackend::markCommunicationsAsRetrieved (
     TVLOG(2) << "got " << result.size() << " results";
 }
 
-// GEMREQ-start A_19027-03#query-call-deleteCommunicationsForTask
+// GEMREQ-start A_19027-06#query-call-deleteCommunicationsForTask
 void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& taskId)
 {
     checkCommonPreconditions();
@@ -788,7 +788,7 @@ void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& 
                                                   static_cast<int16_t>(magic_enum::enum_integer(taskId.type())));
     TVLOG(2) << "got " << result.size() << " results";
 }
-// GEMREQ-end A_19027-03#query-call-deleteCommunicationsForTask
+// GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
 
 void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
 {

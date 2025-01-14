@@ -126,16 +126,16 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         WHERE prescription_id = $1
         )--")
 
-// GEMREQ-start A_24286#sql-updateTaskDeleteMedicationDispense
+// GEMREQ-start A_24286-02#sql-updateTaskDeleteMedicationDispense
     QUERY(updateTask_deleteMedicationDispense, R"--(
         UPDATE )--" + taskTableName() + R"--(
         SET last_modified = $2, when_handed_over = NULL, when_prepared = NULL, last_medication_dispense = NULL,
             performer = NULL, medication_dispense_blob_id = NULL, medication_dispense_bundle = NULL
         WHERE prescription_id = $1
         )--")
-// GEMREQ-end A_24286#sql-updateTaskDeleteMedicationDispense
+// GEMREQ-end A_24286-02#sql-updateTaskDeleteMedicationDispense
 
-// GEMREQ-start A_19027-03#query-updateTaskClearPersonalData
+// GEMREQ-start A_19027-06#query-updateTaskClearPersonalData
     QUERY(updateTask_deletePersonalData, R"--(
         UPDATE )--" + taskTableName() + R"--(
         SET status = $2, last_modified = $3, kvnr = NULL, salt = NULL, access_code = NULL,
@@ -145,7 +145,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
             doctor_identity = NULL, pharmacy_identity=NULL, last_status_update = $4
         WHERE prescription_id = $1
         )--")
-// GEMREQ-end A_19027-03#query-updateTaskClearPersonalData
+// GEMREQ-end A_19027-06#query-updateTaskClearPersonalData
 
 #undef QUERY
 }
@@ -354,7 +354,7 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
 }
 
 
-// GEMREQ-start A_24286#query-call-updateTaskDeleteMedicationDispense
+// GEMREQ-start A_24286-02#query-call-updateTaskDeleteMedicationDispense
 void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                                       const model::Timestamp& lastModified) const
 {
@@ -369,9 +369,9 @@ void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::work& transac
 
     Expect(result.empty(), "Expected an empty result");
 }
-// GEMREQ-end A_24286#query-call-updateTaskDeleteMedicationDispense
+// GEMREQ-end A_24286-02#query-call-updateTaskDeleteMedicationDispense
 
-// GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-start A_19027-06#query-call-updateTaskClearPersonalData
 void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
                                                       model::Task::Status taskStatus,
                                                       const model::Timestamp& lastModified,
@@ -390,7 +390,7 @@ void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, c
 
     Expect(result.empty(), "Expected an empty result");
 }
-// GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
 
 std::optional<db_model::Task> PostgresBackendTask::retrieveTaskForUpdate(pqxx::work& transaction,

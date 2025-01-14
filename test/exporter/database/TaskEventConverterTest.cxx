@@ -94,7 +94,8 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEvent)
         const auto& providePrescription = dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(*event);
         EXPECT_EQ(providePrescription.getKbvBundle().getId(), prescription.getId());
 
-        EXPECT_EQ(providePrescription.getQesDoctorId().id(), "1-HBA-Testkarte-883110000129084");
+        ASSERT_TRUE(providePrescription.getQesDoctorId());
+        EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "1-HBA-Testkarte-883110000129084");
         EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
         EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
@@ -183,7 +184,8 @@ TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent)
         EXPECT_EQ(provideDispensation.getKbvBundle().getId(), prescription.getId());
         EXPECT_EQ(provideDispensation.getMedicationDispenseBundle().getId(), medicationDispense.getId());
 
-        EXPECT_EQ(provideDispensation.getQesDoctorId().id(), "1-HBA-Testkarte-883110000129084");
+        ASSERT_TRUE(provideDispensation.getQesDoctorId());
+        EXPECT_EQ(provideDispensation.getQesDoctorId()->id(), "1-HBA-Testkarte-883110000129084");
         EXPECT_EQ(provideDispensation.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(provideDispensation.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
         EXPECT_EQ(provideDispensation.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");

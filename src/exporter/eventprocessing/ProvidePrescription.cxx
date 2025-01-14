@@ -32,12 +32,16 @@ ProvidePrescription::ProvidePrescription(gsl::not_null<IEpaMedicationClient*> me
 Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent& taskEvent) const
 {
     const auto& kbvBundle = taskEvent.getKbvBundle();
+    if (!taskEvent.getQesDoctorId().has_value())
+    {
+        return Outcome::DeadLetter;
+    }
     const auto& telematikIdFromQes = taskEvent.getQesDoctorId();
     const auto& telematikIdFromJwt = taskEvent.getJwtDoctorId();
     const auto& organizationNameFromJwt = taskEvent.getJwtDoctorOrganizationName();
     const auto& organizationProfessionOidFromJwt = taskEvent.getJwtDoctorProfessionOid();
     auto providePrescriptionErpOp = Epa4AllTransformer::transformPrescription(
-        kbvBundle, telematikIdFromQes, telematikIdFromJwt, organizationNameFromJwt, organizationProfessionOidFromJwt);
+        kbvBundle, *telematikIdFromQes, telematikIdFromJwt, organizationNameFromJwt, organizationProfessionOidFromJwt);
 
     auto response = mMedicationClient->sendProvidePrescription(taskEvent.getKvnr(),
                                                                providePrescriptionErpOp.serializeToJsonString());

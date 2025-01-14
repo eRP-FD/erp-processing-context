@@ -606,12 +606,23 @@ std::optional<model::Timestamp> CadesBesSignature::getSigningTime() const
                          static_cast<size_t>(digestAsn1Type.value.octet_string->length)};
 }
 
-model::TelematikId CadesBesSignature::getTelematikId() const
+std::optional<model::TelematikId> CadesBesSignature::getTelematikId() const
 {
     auto certificate = getSignerInfoCertificate(*mCmsHandle.removeConst(), getSignerInfo(*mCmsHandle.removeConst()));
     auto telematikIdOpt = certificate.getTelematikId();
-    Expect(telematikIdOpt.has_value(), "Telematik-ID not found in QES Signature!");
-    return model::TelematikId{*telematikIdOpt};
+    // Expect(telematikIdOpt.has_value(), "Telematik-ID not found in QES Signature!");
+    if (!telematikIdOpt.has_value()) {
+        JsonLog log(LogId::INTERNAL_WARNING, JsonLog::makeInfoLogReceiver(), false);
+        try
+        {
+            log.keyValue("event", "Certificate has no telematikId.").keyValue("issuer", certificate.getIssuer());
+        } catch (const std::exception& e)
+        {
+            log.keyValue("event", "Certificate has no telematikId and bad issuer.");
+        }
+        return std::nullopt;
+    }
+    return std::make_optional(model::TelematikId{*telematikIdOpt});
 }
 
 

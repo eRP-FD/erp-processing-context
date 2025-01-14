@@ -84,7 +84,7 @@ std::int32_t TaskEvent::getRetryCount() const
 
 ProvidePrescriptionTaskEvent::ProvidePrescriptionTaskEvent(
     id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
-    std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, const TelematikId& qesDoctorId,
+    std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, const std::optional<TelematikId>& qesDoctorId,
     const TelematikId& jwtDoctorId, const std::string& jwtDoctorOrganizationName,
     const std::string& jwtDoctorProfessionOid, Bundle&& kbvBundle, const model::Timestamp& lastModified)
     : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, useCase, state, std::move(kbvBundle),
@@ -96,7 +96,7 @@ ProvidePrescriptionTaskEvent::ProvidePrescriptionTaskEvent(
 {
 }
 
-const TelematikId& ProvidePrescriptionTaskEvent::getQesDoctorId() const
+const std::optional<TelematikId>& ProvidePrescriptionTaskEvent::getQesDoctorId() const
 {
     return mQesDoctorId;
 }
@@ -120,7 +120,7 @@ const std::string& ProvidePrescriptionTaskEvent::getJwtDoctorProfessionOid() con
 
 ProvideDispensationTaskEvent::ProvideDispensationTaskEvent(
     id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
-    std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, const TelematikId& qesDocotorId,
+    std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, const std::optional<TelematikId>& qesDocotorId,
     const TelematikId& jwtDoctorId, const std::string& jwtDoctorOrganizationName,
     const std::string& jwtDoctorProfessionOid, const TelematikId& jwtPharmacyId,
     const std::string& jwtPharmacyOrganizationName, const std::string& jwtPharmacyProfessionOid, Bundle&& kbvBundle,

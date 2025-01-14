@@ -92,7 +92,8 @@ TEST_F(PostgresDatabaseTest, getAllEventsForKvnr)//NOLINT(readability-function-c
         EXPECT_EQ(providePrescription.getMedicationRequestAuthoredOn().toGermanDate(),
                   model::Timestamp::now().toGermanDate());
 
-        EXPECT_EQ(providePrescription.getQesDoctorId().id(), "1-HBA-Testkarte-883110000129084");
+        ASSERT_TRUE(providePrescription.getQesDoctorId());
+        EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "1-HBA-Testkarte-883110000129084");
         EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
         EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");

@@ -1201,7 +1201,7 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
 }
 
 
-// GEMREQ-start A_19027-03
+// GEMREQ-start A_19027-06
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 {
     if (!usePostgres())
@@ -1283,7 +1283,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
     uint64_t communicationsCountCurr = countCommunications();
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev);
 }
-// GEMREQ-end A_19027-03
+// GEMREQ-end A_19027-06
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
                          testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,

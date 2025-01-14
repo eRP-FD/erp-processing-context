@@ -139,7 +139,7 @@ MedicationExporterFactories createProductionFactories()
 
 boost::asio::awaitable<void> setupHosts(std::shared_ptr<Tee3ClientPool> clientPool, std::string host, uint16_t port)
 {
-    co_await clientPool->addEpaHost(host, port, 5);
+    co_await clientPool->addEpaHost(host, port, 1);
 }
 
 boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> clientPool, std::string host, std::chrono::seconds waitTime)
@@ -228,7 +228,7 @@ int main(int argc, const char* argv[])
                                                                                  std::move(factories));
         // Run the tee token updater once, now, so that we have a valid Tee token.
         EnrolmentHelper::refreshTeeToken(serviceContext->getHsmPool());
-        testHttpsClient(*serviceContext);
+        // testHttpsClient(*serviceContext);
 
         auto workGuard = boost::asio::make_work_guard(ioContext);
         auto ioThread = std::thread([&] {

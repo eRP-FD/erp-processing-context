@@ -75,18 +75,18 @@ class ProvidePrescriptionTaskEvent : public TaskEvent
 public:
     ProvidePrescriptionTaskEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType,
                                  const Kvnr& kvnr, std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state,
-                                 const TelematikId& qesDoctorId, const TelematikId& jwtDoctorId,
+                                 const std::optional<TelematikId>& qesDoctorId, const TelematikId& jwtDoctorId,
                                  const std::string& jwtDoctorOrganizationName,
                                  const std::string& jwtDoctorProfessionOid, Bundle&& kbvBundle,
                                  const model::Timestamp& lastModified);
 
-    virtual const TelematikId& getQesDoctorId() const;
+    virtual const std::optional<TelematikId>& getQesDoctorId() const;
     virtual const TelematikId& getJwtDoctorId() const;
     virtual const std::string& getJwtDoctorOrganizationName() const;
     virtual const std::string& getJwtDoctorProfessionOid() const;
 
 private:
-    TelematikId mQesDoctorId;
+    std::optional<TelematikId> mQesDoctorId;
     TelematikId mJwtDoctorId;
     std::string mJwtDoctorOrganizationName;
     std::string mJwtDoctorOrganizationOid;
@@ -99,7 +99,7 @@ class ProvideDispensationTaskEvent : public ProvidePrescriptionTaskEvent
 public:
     ProvideDispensationTaskEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType,
                                  const Kvnr& kvnr, std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state,
-                                 const TelematikId& qesDocotorId, const TelematikId& jwtDoctorId,
+                                 const std::optional<TelematikId>& qesDocotorId, const TelematikId& jwtDoctorId,
                                  const std::string& jwtDoctorOrganizationName,
                                  const std::string& jwtDoctorProfessionOid, const TelematikId& jwtPharmacyId,
                                  const std::string& jwtPharmacyOrganizationName,

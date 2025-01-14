@@ -131,7 +131,7 @@ void TaskAbortHandlerTest::checkResultingData(
 }
 
 
-// GEMREQ-start A_19027-03
+// GEMREQ-start A_19027-06
 TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     A_19027_06.test("Check deletion of personal data and Task related communications");
@@ -172,7 +172,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
     // Check database data after abort call
     ASSERT_NO_FATAL_FAILURE(checkResultingData(task.prescriptionId(), telematicId, communicationIds));
 }
-// GEMREQ-end A_19027-03
+// GEMREQ-end A_19027-06
 
 
 TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-function-cognitive-complexity)

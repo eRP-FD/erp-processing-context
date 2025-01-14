@@ -819,7 +819,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
         }
     }
 
-    // Cancelled tasks can also be retrieved since requirement A_19027_03
+    // Cancelled tasks can also be retrieved since requirement A_19027_06
     auto bundle = taskGet(kvnr).value();
     EXPECT_EQ(bundle.getResourcesByType<model::Task>("Task").size(), taskNum);
     EXPECT_EQ(bundle.getTotalSearchMatches(), taskNum);

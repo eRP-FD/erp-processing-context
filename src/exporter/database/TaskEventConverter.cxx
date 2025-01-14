@@ -78,7 +78,7 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convertProvidePrescriptionTaskEvent(
     const db_model::TaskEvent& dbTaskEvent, const SafeString& key, model::PrescriptionType prescriptionType,
     const model::Kvnr& kvnr, const std::string& hashedKvnr, model::TaskEvent::UseCase usecase,
-    model::TaskEvent::State state, const model::TelematikId& qesDoctorId, model::Bundle&& kbvBundle) const
+    model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId, model::Bundle&& kbvBundle) const
 {
     Expect(dbTaskEvent.doctorIdentity, "no doctor identity in task event.");
     const auto decryptedDoctorIdentity = mCodec.decode(*dbTaskEvent.doctorIdentity, key);
@@ -104,7 +104,7 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convertCancelPrescriptionT
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convertProvideDispensationTaskEvent(
     const db_model::TaskEvent& dbTaskEvent, const SafeString& key, const SafeString& medicationDispenseKey,
     model::PrescriptionType prescriptionType, const model::Kvnr& kvnr, const std::string& hashedKvnr,
-    model::TaskEvent::UseCase usecase, model::TaskEvent::State state, const model::TelematikId& qesDoctorId,
+    model::TaskEvent::UseCase usecase, model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId,
     model::Bundle&& kbvBundle) const
 {
     Expect(dbTaskEvent.medicationDispenseBundle && dbTaskEvent.medicationDispenseBundleBlobId,

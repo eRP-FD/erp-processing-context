@@ -25,7 +25,7 @@ private:
     std::unique_ptr<model::TaskEvent> convertProvidePrescriptionTaskEvent(
         const db_model::TaskEvent& dbTaskEvent, const SafeString& key, model::PrescriptionType prescriptionType,
         const model::Kvnr& kvnr, const std::string& hashedKvnr, model::TaskEvent::UseCase usecase,
-        model::TaskEvent::State state, const model::TelematikId& qesDoctorId, model::Bundle&& kbvBundle) const;
+        model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId, model::Bundle&& kbvBundle) const;
 
     std::unique_ptr<model::TaskEvent>
     convertCancelPrescriptionTaskEvent(const db_model::TaskEvent& dbTaskEvent, model::PrescriptionType prescriptionType,
@@ -36,7 +36,7 @@ private:
     std::unique_ptr<model::TaskEvent> convertProvideDispensationTaskEvent(
         const db_model::TaskEvent& dbTaskEvent, const SafeString& key, const SafeString& medicationDispenseKey,
         model::PrescriptionType prescriptionType, const model::Kvnr& kvnr, const std::string& hashedKvnr,
-        model::TaskEvent::UseCase usecase, model::TaskEvent::State state, const model::TelematikId& qesDoctorId,
+        model::TaskEvent::UseCase usecase, model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId,
         model::Bundle&& kbvBundle) const;
 
     std::unique_ptr<model::TaskEvent>

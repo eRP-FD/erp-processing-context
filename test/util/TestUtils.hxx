@@ -28,9 +28,10 @@ namespace testutils
 {
 
 template<typename T>
-static void waitFor(T predicate)
+static void waitFor(T predicate, const std::chrono::milliseconds& timeout = std::chrono::milliseconds(2000))
 {
-    for (size_t retries = 0; retries < 100; ++retries)
+    auto end = timeout / std::chrono::milliseconds(20);
+    for (decltype(end) retries = 0; retries < end; ++retries)
     {
         if (predicate())
         {

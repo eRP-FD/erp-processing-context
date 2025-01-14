@@ -156,10 +156,10 @@ TEST_F(RejectTaskTest, MedicationDispenseDeleted)
 
     testTask([](model::Task& savedTask)
     {
-        // GEMREQ-start A_24286#test1
+        // GEMREQ-start A_24286-02#test1
         A_24286_02.test("task.lastMedicationDispense has been deleted");
         EXPECT_FALSE(savedTask.lastMedicationDispense().has_value());
-        // GEMREQ-end A_24286#test1
+        // GEMREQ-end A_24286-02#test1
     });
 
 }

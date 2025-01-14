@@ -153,7 +153,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     A_19121.finish();
     task.updateLastUpdate();
 
-    // GEMREQ-start A_19027-03
+    // GEMREQ-start A_19027-06
     A_19027_06.start("Delete personal data");
     // Delete Task related Communications
     databaseHandle->deleteCommunicationsForTask(task.prescriptionId());
@@ -161,7 +161,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     // Receipt, MedicationDispense, etc.:
     databaseHandle->updateTaskClearPersonalData(task);
     A_19027_06.finish();
-    // GEMREQ-end A_19027-03
+    // GEMREQ-end A_19027-06
 
     A_19514.start("HttpStatus 204 for successful POST");
     makeResponse(session, HttpStatus::NoContent, nullptr/*body*/);

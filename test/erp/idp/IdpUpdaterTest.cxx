@@ -9,13 +9,14 @@
 
 #include "shared/idp/IdpUpdater.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "mock/tsl/MockOcsp.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "shared/tsl/error/TslError.hxx"
 #include "shared/util/Base64.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
-#include "mock/tsl/MockOcsp.hxx"
-#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/TestUtils.hxx"
 
 
 class IdpUpdaterTest : public testing::Test
@@ -618,7 +619,17 @@ TEST_F(IdpUpdaterTest, secondaryTimerTest) // NOLINT(readability-function-cognit
     idpRequestSender->setResponse("https://idp.lu.erezepttest.net:443/.well-known/openid-configuration", idpResponseJwk);
 
     using namespace std::chrono_literals;
-    std::this_thread::sleep_for(2s);
+    testutils::waitFor([&] {
+        try
+        {
+            const auto& cert [[maybe_unused]] = idp.getCertificate();
+        }
+        catch (const std::exception&)
+        {
+            return false;
+        }
+        return true;
+    }, std::chrono::milliseconds(20000));
 
     // ... the certificate is set.
     ASSERT_NO_THROW(idp.getCertificate());

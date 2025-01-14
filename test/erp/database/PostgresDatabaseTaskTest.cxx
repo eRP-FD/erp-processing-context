@@ -671,7 +671,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     }
 }
 
-// GEMREQ-start A_19027-03
+// GEMREQ-start A_19027-06
 TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readability-function-cognitive-complexity)
 {
     if (!usePostgres())
@@ -783,7 +783,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
         ASSERT_TRUE(result.front().at(row++).is_null()); // last_medication_dispense
     }
 }
-// GEMREQ-end A_19027-03
+// GEMREQ-end A_19027-06
 
 TEST_P(PostgresDatabaseTaskTest, SearchTasksStatus)//NOLINT(readability-function-cognitive-complexity)
 {

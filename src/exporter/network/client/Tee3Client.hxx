@@ -19,6 +19,7 @@ namespace epa
 class BinaryBuffer;
 class ClientTeeHandshake;
 struct Tee3Context;
+class Tee3SessionContext;
 }
 
 class Certificate;
@@ -41,10 +42,11 @@ public:
     // other boost::asio error codes related to tcp and ssl can also occur
     enum class error
     {
-        tee3_handshake_failed,
+        tee3_handshake_failed = 1,
         outer_response_status_not_ok,
         extra_bytes_in_decrypted_inner_response,
         restart,
+        unknown_cid,
     };
 
     Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3ClientsForHost*> owner);
@@ -95,8 +97,11 @@ private:
     boost::asio::awaitable<std::string> getFreshness();
     boost::asio::awaitable<std::string> sendAuthorizationRequest(HsmPool& hsmPool, std::string freshness);
 
-    static Request createOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType,
+    [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendOuter(Request request);
+
+    static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType,
                                       std::string_view userAgent);
+    Request createEncryptedOuterRequest(Request& innerRequest, epa::Tee3SessionContext& requestContexts);
 
     Certificate provideCertificate(const epa::BinaryBuffer& hash, uint64_t version);
     class TimeoutHelper;
@@ -109,6 +114,7 @@ private:
     boost::asio::steady_timer mTeeContextRefreshTimer;
     EpaCertificateService& mCertificateService;
     std::string mDefaultUserAgent;
+    bool mIsAuthorized = false;
 };
 
 namespace boost::system

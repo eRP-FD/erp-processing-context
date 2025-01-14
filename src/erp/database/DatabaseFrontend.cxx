@@ -337,20 +337,20 @@ DatabaseFrontend::encryptMedicationDispense(const model::MedicationDispenseBundl
                          Compression::DictionaryUse::Default_json);
 }
 
-// GEMREQ-start A_24286#query-call-updateTaskDeleteMedicationDispense
+// GEMREQ-start A_24286-02#query-call-updateTaskDeleteMedicationDispense
 void DatabaseFrontend::updateTaskDeleteMedicationDispense(const model::Task& task)
 {
     mBackend->updateTaskDeleteMedicationDispense(task.prescriptionId(), task.lastModifiedDate());
 }
-// GEMREQ-end A_24286#query-call-updateTaskDeleteMedicationDispense
+// GEMREQ-end A_24286-02#query-call-updateTaskDeleteMedicationDispense
 
-// GEMREQ-start A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-start A_19027-06#query-call-updateTaskClearPersonalData
 void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
 {
     mBackend->updateTaskClearPersonalData(task.prescriptionId(), task.status(), task.lastModifiedDate(),
                                           task.lastStatusChangeDate());
 }
-// GEMREQ-end A_19027-03#query-call-updateTaskClearPersonalData
+// GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
 std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 {
@@ -636,12 +636,12 @@ void DatabaseFrontend::markCommunicationsAsRetrieved(const std::vector<Uuid>& co
     return mBackend->markCommunicationsAsRetrieved(communicationIds, retrieved, mDerivation.hashIdentity(recipient));
 }
 
-// GEMREQ-start A_19027-03#query-call-deleteCommunicationsForTask
+// GEMREQ-start A_19027-06#query-call-deleteCommunicationsForTask
 void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
     return mBackend->deleteCommunicationsForTask(taskId);
 }
-// GEMREQ-end A_19027-03#query-call-deleteCommunicationsForTask
+// GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
 
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
