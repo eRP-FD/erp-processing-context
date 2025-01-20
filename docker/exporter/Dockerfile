@@ -74,7 +74,7 @@ RUN CC=gcc-12 CXX=g++-12 cmake \
     -DERP_WARNING_AS_ERROR=ON \
     -DCMAKE_INSTALL_PREFIX=/debug/erp-exporter .. && \
     ninja -l$(nproc) production && \
-    cmake --install . --strip --component production && \
+    cmake --install . --component production && \
     cp install_manifest_production.txt install_manifest.txt
 
 RUN tar -czf ./erp-medication-exporter-debug.tar.gz /debug/erp-exporter

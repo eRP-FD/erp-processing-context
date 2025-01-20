@@ -103,23 +103,31 @@ const std::string& Tee3Protocol::VauCid::toString() const
 }
 
 
+// GEMREQ-start A_24622
 void Tee3Protocol::VauCid::verify() const
 {
-    // Currently the cluster domain name is used to identify the cluster,
-    // as result the VAU-CID can be easily bigger than 200 characters.
-    // TODO: reactivate when we have a solution for the long URLs that are caused
-    // by including cluster and node names.
-    // Assert(mValue.size() <= 200);                 // A_24608, A_24622
-    LOG(DEBUG1) << "VAU-CID is " << mValue;
     Assert(! mValue.empty()) // A_24622
-        << "VAU-CID is empty" << assertion::exceptionType<TeeError>(TeeError::Code::DecodingError);
-    Assert(mValue[0] == '/') // A_24622
+        << "VAU-CID must not be empty"
+        << assertion::exceptionType<TeeError>(TeeError::Code::DecodingError);
+
+    Assert(mValue.starts_with('/')) // A_24622
         << "VAU-CID '" << mValue << "' does not start with '/'"
         << assertion::exceptionType<TeeError>(TeeError::Code::DecodingError);
-    Assert(boost::regex_match(mValue, mVauCidRegex))
-        << "VAU-CID '" << mValue << "' does match regexp " << mVauCidRegex
+
+    Assert(mValue.size() <= 200) // A_24608, A_24622
+        << "VAU-CID '" << mValue << "' exceeds maximum length"
         << assertion::exceptionType<TeeError>(TeeError::Code::DecodingError);
+
+    static const boost::regex vauCidRegex("/[a-zA-Z0-9/-]*");
+    Assert(boost::regex_match(mValue, vauCidRegex))
+        << "VAU-CID '" << mValue << "' is not matched by regexp " << vauCidRegex
+        << assertion::exceptionType<TeeError>(TeeError::Code::DecodingError);
+
+    // (Note: We don't need to check for '//' in the URL path, that is valid according to RFC3986.
+    // Reference: https://stackoverflow.com/a/20524044)
 }
+// GEMREQ-end A_24622
+
 
 
 Tee3Protocol::Keypairs Tee3Protocol::Keypairs::generate()

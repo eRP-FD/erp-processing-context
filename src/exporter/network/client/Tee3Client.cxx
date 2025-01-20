@@ -8,6 +8,7 @@
 #include "exporter/BdeMessage.hxx"
 #include "exporter/network/client/Tee3ClientsForHost.hxx"
 #include "exporter/tee3/EpaCertificateService.hxx"
+#include "exporter/VauAutTokenSigner.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/model/ProfessionOid.hxx"
@@ -31,7 +32,6 @@
 #include <boost/asio/immediate.hpp>
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/write.hpp>
-#include <exporter/VauAutTokenSigner.hxx>
 
 namespace
 {
@@ -68,30 +68,13 @@ std::optional<CborMessage> tryDeserializeCbor(const std::string& body)
     return std::nullopt;
 }
 
-std::optional<std::string> logJson(const std::string& bodyText)
-{
-    static const std::string ErrorMessageKey{"ErrorMessage"};
-    static const std::string ErrorCodeKey{"errorCode"};
-    rapidjson::Document document;
-    document.Parse(bodyText.c_str());
-    const auto fn = [] (rapidjson::Document& document, const std::string& key)-> std::optional<std::string>
-    {
-        if (document.HasMember(key) && document[key].IsString())
-        {
-            return std::string(document[key].GetString(), document[ErrorMessageKey].GetStringLength());
-        };
-        return std::nullopt;
-    };
-    if (!document.HasParseError())
-    {
-        return fn(document, ErrorMessageKey).value_or( fn(document, ErrorCodeKey).value_or("unknown") );
-    }
-    return std::nullopt;
-}
-
 void logDetails(const boost::system::result<Tee3Client::Response>& outerResponse, BDEMessage& bde)
 {
-    const auto contentType = outerResponse->base().at(Header::ContentType);
+    if (! outerResponse.has_value())
+    {
+        return;
+    }
+    const auto contentType = (*outerResponse)[Header::ContentType];
     std::optional<std::string> errorMessage{};
     if (contentType == MimeType::cbor)
     {
@@ -103,7 +86,7 @@ void logDetails(const boost::system::result<Tee3Client::Response>& outerResponse
     }
     else if (contentType == MimeType::json)
     {
-        errorMessage = logJson(outerResponse->body());
+        errorMessage = outerResponse->body();
     }
     else
     {
@@ -113,7 +96,7 @@ void logDetails(const boost::system::result<Tee3Client::Response>& outerResponse
     if (errorMessage.has_value())
     {
         bde.mError = *errorMessage;
-        TLOG(ERROR) << bde.mError;
+        TLOG(ERROR) << "Error returned from outer response: " << bde.mError;
     }
 }
 
@@ -172,6 +155,38 @@ TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
                                        return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
                                    })
                              : TlsCertificateVerifier::withVerificationDisabledForTesting();
+}
+
+boost::system::result<epa::Tee3Protocol::VauCid> getVauCidChecked(const Tee3Client::Response& m2response,
+                                                                  BDEMessage& bde,
+                                                                  const std::string hostname,
+                                                                  const boost::asio::ip::tcp::endpoint& endpoint)
+{
+    auto vauCidHeader = m2response.find(Header::Tee3::VauCid);
+    if (vauCidHeader == m2response.end())
+    {
+        HeaderLog::info([&] {
+            return std::ostringstream{} << "missing header '" << Header::Tee3::VauCid << "' in response: connecting to "
+                                        << hostname << " on " << endpoint;
+        });
+        bde.mError = "missing header";
+        return Tee3Client::error::tee3_handshake_failed;
+    }
+    const epa::Tee3Protocol::VauCid vauCid{vauCidHeader->value()};
+    try
+    {
+        vauCid.verify();
+    }
+    catch (const epa::TeeError& ex)
+    {
+        HeaderLog::info([&] {
+            return std::ostringstream{} << "invalid header '" << Header::Tee3::VauCid << "' in response: connecting to "
+                                        << hostname << " on " << endpoint << ": " << ex.what();
+        });
+        bde.mError = "invalid header: " + Header::Tee3::VauCid;
+        return Tee3Client::error::tee3_handshake_failed;
+    }
+    return vauCid;
 }
 
 } // namespace
@@ -385,9 +400,10 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     auto outerResponse = co_await sendOuter(outerRequest);
 
     // retry once immediately if we're not during authorization requests
-    if (outerResponse.error() == error::unknown_cid && mIsAuthorized)
+    if (outerResponse.has_value() && outerResponse->result() != boost::beast::http::status::ok && mIsAuthorized)
     {
-        TLOG(INFO) << "Detected unknown CID, retrying handshake";
+        TLOG(INFO) << "Detected error in outer response, retrying handshake";
+        closeTeeSession();
         auto ec = co_await handshakeWithAuthorization();
         if (ec)
         {
@@ -405,10 +421,6 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
 
     if (outerResponse.has_error())
     {
-        if (outerResponse.error() == error::outer_response_status_not_ok)
-        {
-            logDetails(outerResponse, bde);
-        }
         co_return outerResponse;
     }
 
@@ -422,6 +434,13 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
         }
         bde.mEndTime = model::Timestamp::now();
     });
+
+    if (outerResponse->result() != boost::beast::http::status::ok)
+    {
+        closeTeeSession();
+        logDetails(outerResponse, bde);
+        co_return error::outer_response_status_not_ok;
+    }
 
     if (outerResponse.value()[Header::ContentType] == ContentMimeType::cbor)
     {
@@ -465,28 +484,12 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     if (outerResponse.has_error())
     {
         co_await closeTlsSession();
-        co_return outerResponse;
     }
-    HeaderLog::vlog(3, [&] {
-        return std::ostringstream{} << "received outer response: " << Base64::encode(to_string(outerResponse.value()));
-    });
-
-    const auto contentType = outerResponse->base().at(Header::ContentType);
-    if (outerResponse->result() == boost::beast::http::status::forbidden && contentType == MimeType::cbor)
+    else
     {
-        auto cborError = tryDeserializeCbor<ClientTeeError>(outerResponse->body());
-        if (cborError.has_value() && cborError->errorCode == static_cast<int>(epa::TeeError::Code::UnknownCid))
-        {
-            closeTeeSession();
-            co_return error::unknown_cid;
-        }
-    }
-
-    if (outerResponse->result() != boost::beast::http::status::ok)
-    {
-        closeTeeSession();
-        co_await closeTlsSession();
-        co_return error::outer_response_status_not_ok;
+        HeaderLog::vlog(3, [&] {
+            return std::ostringstream{} << "received outer response: " << outerResponse.value();
+        });
     }
 
     co_return outerResponse;
@@ -547,22 +550,13 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         bde.mInnerResponseCode = m2response->result_int();
         Expect(m2response->result() == boost::beast::http::status::ok,
                "Message 1 request returned status: " + std::to_string(static_cast<uintmax_t>(m2response->result())));
-        auto vauCid = m2response->find(Header::Tee3::VauCid);
-        if (vauCid == m2response->end())
+        auto vauCid = getVauCidChecked(m2response.value(), bde, mHttpsClient.hostname(), mHttpsClient.currentEndpoint());
+        if (vauCid.has_error())
         {
-            HeaderLog::info([&] {
-                return std::ostringstream{} << "missing header '" << Header::Tee3::VauCid
-                                            << "' in response: connecting to " << mHttpsClient.hostname() << " on "
-                                            << mHttpsClient.currentEndpoint();
-            });
-            bde.mError = "missing header";
-            co_return error::tee3_handshake_failed;
+            co_return vauCid.error();
         }
-        else
-        {
-            bde.mCid = vauCid->value();
-        }
-        handshake.setVauCid(epa::Tee3Protocol::VauCid{vauCid->value()});
+        bde.mCid = vauCid.value().toString();
+        handshake.setVauCid(vauCid.value());
         auto target = handshake.vauCid().toString();
         request = prepareOuterRequest(verb::post, target, MimeType::cbor, mDefaultUserAgent);
         request.body() = handshake.createMessage3(epa::BinaryBuffer{m2response->body()}).toString();
@@ -716,8 +710,6 @@ public:
                 return "Extra bytes in decrypted inner response.";
             case error::restart:
                 return "TEE Server requested restart";
-            case error::unknown_cid:
-                return "unknown CID";
         }
         return "invalid Tee3Client::error: " + std::to_string(static_cast<uintmax_t>(err));
     }

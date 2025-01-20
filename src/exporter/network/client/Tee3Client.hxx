@@ -46,7 +46,6 @@ public:
         outer_response_status_not_ok,
         extra_bytes_in_decrypted_inner_response,
         restart,
-        unknown_cid,
     };
 
     Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3ClientsForHost*> owner);

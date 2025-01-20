@@ -5,8 +5,6 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-BEGIN;
-
 --
 -- Name: tg_insert_event; Type: TRIGGER; Schema: erp; Owner: -
 --
@@ -45,6 +43,3 @@ CREATE OR REPLACE TRIGGER tg_create_task_event_209
     AFTER UPDATE ON erp.task_209
     FOR EACH ROW
     EXECUTE FUNCTION erp_event.f_create_task_event(209);
-
-
-COMMIT;

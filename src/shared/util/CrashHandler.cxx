@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <csignal>
 #include <cstdlib>
+#include <cstring>
 #include <string>
 
 
@@ -24,13 +25,17 @@ namespace
     void* stackInfo[SIGNAL_STACK_SIZE];
     const int size = backtrace(stackInfo, SIGNAL_STACK_SIZE);
 
-    std::string message = "\nError: signal " + std::to_string(signalNum) + ", call stack:\n";
-    const auto res = write(STDERR_FILENO, message.data(), message.size());
+    const auto* str1 = "\nError: signal ";
+    const auto* str2 = sigabbrev_np(signalNum);
+    const auto* str3 = ", call stack:\n";
+    auto res = write(STDERR_FILENO, str1, strlen(str1));
+    res = write(STDERR_FILENO, str2, strlen(str2));
+    res = write(STDERR_FILENO, str3, strlen(str3));
     (void) res;
 
     backtrace_symbols_fd(stackInfo, size, STDERR_FILENO);
 
-    exit(1); //NOLINT(concurrency-mt-unsafe)
+    _exit(1);
 }
 }// namespace
 

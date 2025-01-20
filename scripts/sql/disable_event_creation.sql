@@ -5,8 +5,6 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-BEGIN;
-
 --
 -- Name: tg_insert_event; Type: TRIGGER; Schema: erp; Owner: -
 --
@@ -33,6 +31,3 @@ DROP TRIGGER IF EXISTS tg_create_task_event_200 ON erp.task_200;
 --
 
 DROP TRIGGER IF EXISTS tg_create_task_event_209 ON erp.task_209;
-
-
-COMMIT;
