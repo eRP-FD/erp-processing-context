@@ -18,6 +18,8 @@ set(RESOURCE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/resources")
 set(RESOURCE_BINARY_DIR "${CMAKE_BINARY_DIR}/bin/resources")
 set(RESOURCE_OUTPUT_DIR "${CMAKE_BINARY_DIR}/resources")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/util/tool_config.hxx.in" "${CMAKE_CURRENT_BINARY_DIR}/tool_config.hxx")
+configure_file("${CMAKE_SOURCE_DIR}/resources/test/telematiklookup/empty.csv"
+        "${CMAKE_BINARY_DIR}/resources/test/telematiklookup/empty.csv")
 
 set(ERP_TEST_UTIL_SOURCES
         util/TestConfiguration.cxx

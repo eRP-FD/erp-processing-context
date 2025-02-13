@@ -610,6 +610,7 @@ namespace
                     throw;
                 }
                 break;
+            // GEMREQ-start A_24913#outdatedResponse
             case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
             case OcspCheckDescriptor::PROVIDED_OR_CACHE: {
                 if (ocspCheckDescriptor.providedOcspResponse != nullptr)
@@ -666,6 +667,7 @@ namespace
                     ocspCheckDescriptor);
                 break;
             }
+            // GEMREQ-end A_24913#outdatedResponse
             case OcspCheckDescriptor::CACHED_ONLY:
                 {
                     const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());

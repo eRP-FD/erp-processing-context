@@ -81,6 +81,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     }
     catch (const std::runtime_error& re)
     {
+        TLOG(INFO) << "Event dispatch failed: " << re.what();
         outcome = Outcome::Retry;
     }
     Expect(successAuditType.has_value() && failedAuditType.has_value(),

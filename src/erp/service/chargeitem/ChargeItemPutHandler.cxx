@@ -47,15 +47,20 @@ void checkChargeItemConsistency(
                       "Entered date in provided ChargeItem does not match the one from the ChargeItem to update");
             const auto existingReceiptBundleRef =
                 existingChargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle);
+            ErpExpect(receiptRef.has_value() == existingReceiptBundleRef.has_value(), HttpStatus::BadRequest,
+                      "Receipt reference in provided ChargeItem does not match the one from the ChargeItem to update");
             ErpExpect(receiptRef == existingReceiptBundleRef ||
-                          (existingReceiptBundleRef.has_value() &&
+                          (receiptRef.has_value() &&
                            ("Bundle/" + std::string{receiptRef->data()}) == existingReceiptBundleRef),
                       HttpStatus::BadRequest,
                       "Receipt reference in provided ChargeItem does not match the one from the ChargeItem to update");
             auto existingPrescriptionBundleRef = existingChargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
             ErpExpect(
+                prescriptionRef.has_value() == existingPrescriptionBundleRef.has_value(), HttpStatus::BadRequest,
+                "Prescription reference in provided ChargeItem does not match the one from the ChargeItem to update");
+            ErpExpect(
                 prescriptionRef == existingPrescriptionBundleRef ||
-                    (existingPrescriptionBundleRef.has_value() &&
+                    (prescriptionRef.has_value() &&
                      ("Bundle/" + std::string{prescriptionRef->data()}) == existingPrescriptionBundleRef),
                 HttpStatus::BadRequest,
                 "Prescription reference in provided ChargeItem does not match the one from the ChargeItem to update");

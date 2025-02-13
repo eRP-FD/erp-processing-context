@@ -35,6 +35,8 @@ PostgresDatabaseTest::PostgresDatabaseTest()
                         R"(", "name": ")" + mJwtPharmacyIdentity.stringForClaim(JWT::organizationNameClaim).value() +
                         R"(", "oid": ")" + mJwtPharmacyIdentity.stringForClaim(JWT::professionOIDClaim).value() +
                         R"("})")
+    , mTelematikLookupEntries("")
+    , mTelematikLookup(mTelematikLookupEntries)
 {
     mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
     mHsmPool = std::make_unique<HsmPool>(

@@ -17,11 +17,13 @@
 #include "shared/util/Configuration.hxx"
 
 MedicationExporterDatabaseFrontend::MedicationExporterDatabaseFrontend(
-    std::unique_ptr<MedicationExporterDatabaseBackend>&& backend, HsmPool& hsmPool, KeyDerivation& keyDerivation)
+    std::unique_ptr<MedicationExporterDatabaseBackend>&& backend, HsmPool& hsmPool, KeyDerivation& keyDerivation,
+    const TelematikLookup& lookup)
     : mBackend(std::move(backend))
     , mHsmPool(hsmPool)
     , mDerivation(keyDerivation)
     , mCodec(compressionInstance())
+    , mTelematikLookup(lookup)
 {
 }
 
@@ -79,7 +81,7 @@ MedicationExporterDatabaseFrontend::getAllEventsForKvnr(const model::EventKvnr& 
         SafeString keyForMedicationDispense{
             dbTaskEvent.medicationDispenseBundle.has_value() ? medicationDispenseKey(dbTaskEvent) : SafeString{}};
         allTaskEvents.emplace_back(
-            TaskEventConverter(mCodec).convert(dbTaskEvent, keyForTask, keyForMedicationDispense));
+            TaskEventConverter(mCodec, mTelematikLookup).convert(dbTaskEvent, keyForTask, keyForMedicationDispense));
     }
     return allTaskEvents;
 }

@@ -9,7 +9,7 @@
 
 namespace epa
 {
-
+// GEMREQ-start A_24629
 Tee3Context::Tee3Context(
     const Tee3Protocol::SymmetricKeys& k2ApplicationData,
     const KeyId& keyId,
@@ -24,6 +24,7 @@ Tee3Context::Tee3Context(
     messageCounter(initialMessageCounter)
 {
 }
+// GEMREQ-end A_24629
 
 
 Tee3Context::Tee3Context(const Tee3Context& other)
@@ -53,7 +54,7 @@ bool Tee3Context::isSet() const
     return ! k2ApplicationData.clientToServer.empty() && ! k2ApplicationData.serverToClient.empty();
 }
 
-
+// GEMREQ-start A_24629#incrementCounter
 Tee3Context::SessionContexts Tee3Context::createSessionContexts()
 {
     // The message counter is fixed to the next/increased message counter value.
@@ -81,7 +82,7 @@ Tee3Context::SessionContexts Tee3Context::createSessionContexts()
             .direction = Tee3SessionContext::Direction::ServerToClient},
     };
 }
-
+// GEMREQ-end A_24629#incrementCounter
 
 Tee3Context::SessionContexts Tee3Context::getCurrentSessionContexts() const
 {

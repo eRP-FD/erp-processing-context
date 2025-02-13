@@ -625,6 +625,20 @@ std::optional<model::TelematikId> CadesBesSignature::getTelematikId() const
     return std::make_optional(model::TelematikId{*telematikIdOpt});
 }
 
+std::string CadesBesSignature::getSignerSerialNumber() const
+{
+    auto certificate = getSignerInfoCertificate(*mCmsHandle.removeConst(), getSignerInfo(*mCmsHandle.removeConst()));
+    auto sn = certificate.getSerialNumberFromSubject();
+    return sn;
+}
+
+std::string CadesBesSignature::getIssuer() const
+{
+    auto certificate = getSignerInfoCertificate(*mCmsHandle.removeConst(), getSignerInfo(*mCmsHandle.removeConst()));
+    auto issuer = certificate.getIssuer();
+    return issuer;
+}
+
 
 void CadesBesSignature::setSigningTime(const model::Timestamp& signingTime)
 {

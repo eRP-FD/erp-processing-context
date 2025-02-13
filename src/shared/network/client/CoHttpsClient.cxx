@@ -46,11 +46,11 @@ CoHttpsClient::~CoHttpsClient() noexcept = default;
 
 boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<std::string>& forcedCiphers)
 {
-    // A_15751-03
     auto tlsContext = boost::asio::ssl::context{boost::asio::ssl::context::tlsv12_client};
     mCertificateVerifier.install(tlsContext);
     tlsContext.set_options(boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::no_sslv3 |
                            boost::asio::ssl::context::no_tlsv1 | boost::asio::ssl::context::no_tlsv1_1);
+    // GEMREQ-start A_15751-03
     if (1 != SSL_CTX_set_cipher_list(tlsContext.native_handle(),
                                      forcedCiphers
                                          .value_or("ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES128-GCM-SHA256:"
@@ -77,6 +77,7 @@ boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<st
         throw ExceptionWrapper<boost::beast::system_error>::create(
             {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
+    // GEMREQ-end A_15751-03
     SSL_CTX_set_info_callback(tlsContext.native_handle(), [](const SSL*, int context, int value)
     {
         if (context & SSL_CB_ALERT)
@@ -95,16 +96,17 @@ boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<st
 boost::asio::awaitable<boost::system::error_code> CoHttpsClient::connectToEndpoint(boost::asio::ip::tcp::endpoint endpoint)
 {
     mTcpSocket = std::make_unique<TcpSocket>(*mStrand);
-    TimeoutHelper timeout{*mStrand, mConnectionTimeout};
-    auto [ec] = co_await mTcpSocket->async_connect(endpoint, timeout(boost::asio::as_tuple(boost::asio::deferred)));
-    timeout.done();
-    if (ec) {
-        TLOG(INFO) << "Connection to " << endpoint.address() << ":" << endpoint.port() << " failed: " << ec.message();
-        co_return timeout ? boost::asio::error::timed_out : ec;
+    auto timeout = std::make_shared<TimeoutHelper>(*mStrand, mConnectionTimeout);
+    auto [ec] = co_await mTcpSocket->async_connect(endpoint, (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
+    timeout->done();
+    if (ec)
+    {
+        TLOG(INFO) << "Connection to " << endpoint.address() << ":" << endpoint.port() << " failed: " << ec.message()
+                   << ", timeout: " << timeout->timedOut();
+        co_return timeout->timedOut() ? boost::asio::error::timed_out : ec;
     }
     mCurrentEndpoint = endpoint;
     mSslStream = std::make_unique<SslStream>(std::move(*mTcpSocket), mSslContext);
-    mTcpSocket.reset();
     if (! SSL_clear(mSslStream->native_handle()))
     {
         throw ExceptionWrapper<boost::beast::system_error>::create(
@@ -138,7 +140,7 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::connectToEndpoi
         TLOG(ERROR) << "Error during TLS handshake on " << mHostname << ":" << mPort << " (" << endpoint.address()
                     << "): " << ec.message();
     }
-    co_return timeout ? boost::asio::error::timed_out : ec;
+    co_return ec;
 }
 
 boost::asio::awaitable<boost::system::error_code> CoHttpsClient::resolveAndConnect()
@@ -205,14 +207,14 @@ boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsCl
     // send request
     {
         setMandatoryFields(request);
-        TimeoutHelper timeout{*mStrand, fullMessageSendTimeout};
+        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, fullMessageSendTimeout);
         boost::system::error_code ec;
         std::tie(ec, std::ignore) =
-            co_await async_write(*mSslStream, request, timeout(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout.done();
+            co_await async_write(*mSslStream, request, (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
+        timeout->done();
         if (ec.failed())
         {
-            if (timeout)
+            if (timeout->timedOut())
             {
                 ec = boost::asio::error::timed_out;
             }
@@ -225,16 +227,16 @@ boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsCl
     // receive response
     Response response;
     {
-        TimeoutHelper timeout{*mStrand, fullMessageReceiveTimeout};
+        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, fullMessageReceiveTimeout);
         boost::system::error_code ec;
         std::string buffer;
         boost::asio::dynamic_string_buffer dynBuf{buffer};
         std::tie(ec, std::ignore) = co_await async_read(*mSslStream, dynBuf, response,
-                                                        timeout(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout.done();
+                                                        (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
+        timeout->done();
         if (ec.failed())
         {
-            if (timeout)
+            if (timeout->timedOut())
             {
                 ec = boost::asio::error::timed_out;
             }
@@ -252,9 +254,9 @@ boost::asio::awaitable<void> CoHttpsClient::close()
     {
         TVLOG(2) << "shutdown TLS session";
         mSslStream->next_layer().cancel();
-        TimeoutHelper timeout{*mStrand, std::chrono::seconds{1}};
-        co_await mSslStream->async_shutdown(timeout(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout.done();
+        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, std::chrono::seconds{1});
+        co_await mSslStream->async_shutdown((*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
+        timeout->done();
         TVLOG(2) << "Closing socket";
         mSslStream->next_layer().close();
         mSslStream.reset();

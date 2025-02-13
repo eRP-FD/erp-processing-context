@@ -8,6 +8,7 @@
 #ifndef ERP_EXPORTER_TASKEVENTCONVERTER_HXX
 #define ERP_EXPORTER_TASKEVENTCONVERTER_HXX
 
+#include "exporter/TelematikLookup.hxx"
 #include "exporter/database/ExporterDatabaseModel.hxx"
 #include "exporter/model/TaskEvent.hxx"
 
@@ -16,7 +17,7 @@
 class TaskEventConverter
 {
 public:
-    TaskEventConverter(const DataBaseCodec& codec);
+    TaskEventConverter(const DataBaseCodec& codec, const TelematikLookup& lookup);
 
     std::unique_ptr<model::TaskEvent> convert(const db_model::TaskEvent& dbTaskEvent, const SafeString& key,
                                               const SafeString& medicationDispenseKey) const;
@@ -46,6 +47,7 @@ private:
                                        model::Bundle&& kbvBundle) const;
 
     const DataBaseCodec& mCodec;
+    const TelematikLookup& mTelematikLookup;
 };
 
 #endif// ERP_EXPORTER_DATABASEMODEL_HXX

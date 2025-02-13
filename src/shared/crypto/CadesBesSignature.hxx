@@ -73,6 +73,8 @@ public:
     [[nodiscard]] ::std::string getMessageDigest() const;
 
     std::optional<model::TelematikId> getTelematikId() const;
+    std::string getSignerSerialNumber() const;
+    std::string getIssuer() const;
 
 private:
     using CmsVerifyFunction = std::function<int(CMS_ContentInfo&, BIO&)>;

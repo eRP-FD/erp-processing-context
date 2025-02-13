@@ -37,10 +37,13 @@ public:
         = 3*1   // version, isPU, direction
           + 8   // message counter
           + 32; // KeyID
+
+    // GEMREQ-start A_24619#encryptionOverhead
     constexpr static size_t encryptionOverhead
         = headerSize
           + 12  // IV
           + 16; // AES-GCM tag
+    // GEMREQ-end A_24619#encryptionOverhead
     // clang-format on
 
     /**

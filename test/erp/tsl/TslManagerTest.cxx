@@ -1375,6 +1375,7 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
     auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
     checkDescriptor.mode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED;
 
+// GEMREQ-start A_24913
     auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
     auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
     using enum MockOcsp::CertificateOcspTestMode;
@@ -1402,4 +1403,5 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
             manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor),
             TslError);
     }
+// GEMREQ-end A_24913
 }

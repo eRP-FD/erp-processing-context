@@ -9,9 +9,11 @@
 #include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/model/Binary.hxx"
 #include "shared/crypto/Jwt.hxx"
+#include "shared/util/JsonLog.hxx"
 
-TaskEventConverter::TaskEventConverter(const DataBaseCodec& codec)
+TaskEventConverter::TaskEventConverter(const DataBaseCodec& codec, const TelematikLookup& telematikLookup)
     : mCodec(codec)
+    , mTelematikLookup(telematikLookup)
 {
 }
 
@@ -44,7 +46,48 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
     Expect(viewData.has_value(), "bad healthcareProviderPrescription in task event.");
 
     const auto cadesBesSignature = SignedPrescription::fromBinNoVerify(std::string(*viewData));
-    const auto qesTelematikId = cadesBesSignature.getTelematikId();
+    auto qesTelematikId = cadesBesSignature.getTelematikId();
+    if (! qesTelematikId.has_value())
+    {
+        try
+        {
+            const auto sn = cadesBesSignature.getSignerSerialNumber();
+
+            if (! sn.empty())
+            {
+                if (mTelematikLookup.hasSerialNumber(sn))
+                {
+                    qesTelematikId = std::make_optional(mTelematikLookup.serialNumber2TelematikId(sn));
+                }
+                else
+                {
+                    LogId logId = LogId::INFO;
+                    JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
+                    log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                        .keyValue("event",
+                                  "For the given subject serial number of prescription signature certificate, no "
+                                  "mapping is defined in SerNo2TID.")
+                        .keyValue("issuer", cadesBesSignature.getIssuer());
+                }
+            }
+            else
+            {
+                LogId logId = LogId::INFO;
+                JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
+                log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                    .keyValue("event", "No subject serial number present in the prescription signature certificate.")
+                    .keyValue("issuer", cadesBesSignature.getIssuer());
+            }
+        }
+        catch (std::exception& e)
+        {
+            LogId logId = LogId::INFO;
+            JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
+            log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                .keyValue("event", "Error encountered during extraction or mapping of SerialNumber.")
+                .keyValue("issuer", cadesBesSignature.getIssuer());
+        }
+    }
     const auto& prescription = cadesBesSignature.payload();
     model::Bundle bundle = model::Bundle::fromXmlNoValidation(prescription);
 
@@ -78,7 +121,8 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convertProvidePrescriptionTaskEvent(
     const db_model::TaskEvent& dbTaskEvent, const SafeString& key, model::PrescriptionType prescriptionType,
     const model::Kvnr& kvnr, const std::string& hashedKvnr, model::TaskEvent::UseCase usecase,
-    model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId, model::Bundle&& kbvBundle) const
+    model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId,
+    model::Bundle&& kbvBundle) const
 {
     Expect(dbTaskEvent.doctorIdentity, "no doctor identity in task event.");
     const auto decryptedDoctorIdentity = mCodec.decode(*dbTaskEvent.doctorIdentity, key);
@@ -104,8 +148,8 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convertCancelPrescriptionT
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convertProvideDispensationTaskEvent(
     const db_model::TaskEvent& dbTaskEvent, const SafeString& key, const SafeString& medicationDispenseKey,
     model::PrescriptionType prescriptionType, const model::Kvnr& kvnr, const std::string& hashedKvnr,
-    model::TaskEvent::UseCase usecase, model::TaskEvent::State state, const std::optional<model::TelematikId>& qesDoctorId,
-    model::Bundle&& kbvBundle) const
+    model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
+    const std::optional<model::TelematikId>& qesDoctorId, model::Bundle&& kbvBundle) const
 {
     Expect(dbTaskEvent.medicationDispenseBundle && dbTaskEvent.medicationDispenseBundleBlobId,
            "no medication dispense in task event");

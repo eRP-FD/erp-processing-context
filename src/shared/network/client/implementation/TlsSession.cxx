@@ -105,7 +105,7 @@ TlsSession::TlsSessionTicketImpl::TlsSessionTicketImpl (const SslStream& sslStre
     /* Do not use `mSslStream` in this constructor as the internal stream is not yet created. */
 }
 
-
+// GEMREQ-start A_21269#ticketUseSave
 void TlsSession::TlsSessionTicketImpl::use ()
 {
     if (mSslSessionHandle && SSL_SESSION_is_resumable(mSslSessionHandle.get()))
@@ -132,6 +132,7 @@ void TlsSession::TlsSessionTicketImpl::save ()
         mSslSessionHandle.reset(SSL_get1_session(mSslStream.getNativeHandle()));
     }
 }
+// GEMREQ-end A_21269#ticketUseSave
 
 
 void TlsSession::TlsSessionTicketImpl::save (const TlsSessionTicketImpl& other)
@@ -199,6 +200,7 @@ void TlsSession::establish()
     {
         try
         {
+            // GEMREQ-start A_21269#ticketUse
             mSslStream = SslStream::create(mIoContext, mSslContext);
             mTicket = std::make_unique<TlsSessionTicketImpl>(mSslStream);
 
@@ -209,6 +211,7 @@ void TlsSession::establish()
             mSslStream.handshake(boost::asio::ssl::stream_base::client);
 
             mTicket->save();
+            // GEMREQ-end A_21269#ticketUse
 
             break;
         }

@@ -391,6 +391,7 @@ protected:
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckMode)));
     }
 
+    // GEMREQ-start A_24913#ocsp-callback
     static int ocspVerifyCallback(SSL* ssl, void* arg)
     {
         bool valid = false;
@@ -407,6 +408,7 @@ protected:
                     OcspResponsePtr(d2i_OCSP_RESPONSE(nullptr, &ocspResponseBuffer, ocspResponseSize));
             }
             valid = self->tslVerify(certificate, std::move(providedOcspResponse));
+            // GEMREQ-end A_24913#ocsp-callback
         }
         catch (const std::exception& e)
         {

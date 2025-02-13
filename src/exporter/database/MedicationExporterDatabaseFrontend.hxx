@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MEDICATIONEXPORTERDATABASEFRONTEND_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MEDICATIONEXPORTERDATABASEFRONTEND_HXX
 
+#include "exporter/TelematikLookup.hxx"
 #include "exporter/database/ExporterDatabaseModel.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontendInterface.hxx"
 #include "shared/database/DatabaseCodec.hxx"
@@ -21,7 +22,7 @@ class MedicationExporterDatabaseFrontend : public MedicationExporterDatabaseFron
 {
 public:
     MedicationExporterDatabaseFrontend(std::unique_ptr<MedicationExporterDatabaseBackend>&& backend, HsmPool& hsmPool,
-                                       KeyDerivation& keyDerivation);
+                                       KeyDerivation& keyDerivation, const TelematikLookup& lookup);
 
     ~MedicationExporterDatabaseFrontend(void) override = default;
 
@@ -64,6 +65,7 @@ private:
     HsmPool& mHsmPool;
     KeyDerivation& mDerivation;
     DataBaseCodec mCodec;
+    const TelematikLookup& mTelematikLookup;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MEDICATIONEXPORTERDATABASEFRONTEND_HXX

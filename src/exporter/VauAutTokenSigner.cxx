@@ -21,11 +21,13 @@ namespace
 const rapidjson::Pointer claimIat("/iat");
 const rapidjson::Pointer claimChallenge("/challenge");
 
+// GEMREQ-start A_25935#define-sub
 constexpr std::string_view payloadTemplate = R"--({
   "type":"ePA-Authentisierung über PKI",
   "sub":"9-E-Rezept-Fachdienst"
 })--";
 }// namespace
+// GEMREQ-end A_25935#define-sub
 
 VauAutTokenSigner::VauAutTokenSigner()
 {
@@ -34,10 +36,12 @@ VauAutTokenSigner::VauAutTokenSigner()
     ErpExpect(! mPayloadDocument.HasParseError(), HttpStatus::BadRequest, "text is not valid JSON");
 }
 
+// GEMREQ-start A_24771#sign
 std::string VauAutTokenSigner::signAuthorizationToken(HsmSession& hsmSession, const std::string& freshness)
 {
     using namespace std::chrono_literals;
     A_25165_03.start("Generate AUT-Certificate signed Bearer token");
+    // GEMREQ-start A_25935#sign
     const auto header = JoseHeader(JoseHeader::Algorithm::ES256)
                             .setType("JWT")
                             .setX509Certificate(hsmSession.getVauAutCertificate(), false);
@@ -55,7 +59,9 @@ std::string VauAutTokenSigner::signAuthorizationToken(HsmSession& hsmSession, co
 
     const auto signature = hsmSession.signWithVauAutKey(ErpVector::create(payloadToBeSigned));
     const auto signatureB64 = Base64::toBase64Url(Base64::encode(signature));
+    // GEMREQ-end A_25935#sign
     A_25165_03.finish();
 
     return payloadToBeSigned + "." + signatureB64;
 }
+// GEMREQ-end A_24771#sign

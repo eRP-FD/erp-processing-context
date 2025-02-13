@@ -29,6 +29,7 @@ namespace epa
 
 namespace
 {
+   // GEMREQ-start A_24624-01#verifySignature
    bool verifySignature(
        const BinaryBuffer& signature,
        const BinaryBuffer& signedData,
@@ -48,6 +49,7 @@ namespace
             return false;
         }
    }
+   // GEMREQ-end A_24624-01#verifySignature
 }
 
 
@@ -66,6 +68,7 @@ ClientTeeHandshake::ClientTeeHandshake(CertificateProvider certificateProvider, 
 }
 
 
+// GEMREQ-start A_24428#createMessage1
 BinaryBuffer ClientTeeHandshake::createMessage1()
 {
     Assert(mState == State::NotStarted);
@@ -91,6 +94,7 @@ BinaryBuffer ClientTeeHandshake::createMessage1()
 
     return serialized;
 }
+// GEMREQ-end A_24428#createMessage1
 
 
 void ClientTeeHandshake::setVauCid(const Tee3Protocol::VauCid& vauCid)
@@ -99,6 +103,7 @@ void ClientTeeHandshake::setVauCid(const Tee3Protocol::VauCid& vauCid)
 }
 
 
+// GEMREQ-start A_24623#step1
 BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMessage2)
 {
     Assert(mState == State::Message1Created);
@@ -126,7 +131,9 @@ BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMe
     const auto k1 = hkdf(kemResult1);
     report("K1_c2s", *k1.clientToServer);
     report("K1_s2c", *k1.serverToClient);
+    // GEMREQ-end A_24623#step1
 
+    // GEMREQ-start A_24623#step2
     // A_24623: Use K1_s2c to decrypt ciphertext AEAD_ct.
     const auto serializedPublicServerKeys =
         aeadDecrypt(k1.serverToClient, message2.aeadCipherText, "AEAD_ct");
@@ -134,7 +141,7 @@ BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMe
     const auto publicServerKeys =
         CborDeserializer::deserialize<Tee3Protocol::SignedPublicKeys>(serializedPublicServerKeys);
 
-    // A_24624: Verify the signed public keys.
+    // A_24958: Retrieve certificate data, and A_24624-01: verify the public keys.
     verifyPublicKeys(publicServerKeys);
     // Deserialize the public keys.
     const auto publicKeys =
@@ -154,7 +161,9 @@ BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMe
         *kemResult2.sharedKeys.ecdhSharedSecret,       // ss_s_ecdh
         *kemResult2.sharedKeys.kyber768SharedSecret)); // ss_s_kyber768
     report("ss", *sharedSecret);
+    // GEMREQ-end A_24623#step2
 
+    // GEMREQ-start A_24623#step3
     // A_24623: Derive 4 keys and 1 KeyId, 256 Bit each = 5 * 32 Bytes = 160 Bytes.
     const auto k2 = hkdf(sharedSecret);
     mK2KeyConfirmation = k2.keyConfirmation;
@@ -165,6 +174,9 @@ BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMe
     report("K2_s2c_key_confirmation", *mK2KeyConfirmation.serverToClient);
     report("K2_s2c_app_data", *mK2ApplicationData.serverToClient);
     report("KeyID", mKeyId->toHexString());
+    // GEMREQ-end A_24623#step3
+
+    // GEMREQ-start A_24623#step4
 
     // For message m2 the ECDH_pk field has been clarified to contain the ecdh public key as
     // nested structure. So that is what we will be using here as well.
@@ -207,8 +219,10 @@ BinaryBuffer ClientTeeHandshake::createMessage3(const BinaryBuffer& serializedMe
 
     return serializedMessage3;
 }
+// GEMREQ-end A_24623#step4
 
 
+// GEMREQ-start A_24627#processMessage4
 void ClientTeeHandshake::processMessage4(const BinaryBuffer& serializedMessage4)
 {
     Assert(mState == State::Message3Created);
@@ -236,20 +250,23 @@ void ClientTeeHandshake::processMessage4(const BinaryBuffer& serializedMessage4)
     }
     catch (const std::runtime_error&)
     {
-        // A_24624: If the decryption failed or the hashes do not match, abort the handshake with
+        // A_24627: If the decryption failed or the hashes do not match, abort the handshake with
         // and error.
 
         mState = State::Error;
         throw;
     }
 }
+// GEMREQ-end A_24627#processMessage4
 
 
+// GEMREQ-start A_24627#context
 std::shared_ptr<Tee3Context> ClientTeeHandshake::context() const
 {
     Assert(mState == State::Finished);
     return std::make_shared<Tee3Context>(mK2ApplicationData, mKeyId.value(), mVauCid, "", mIsPU);
 }
+// GEMREQ-end A_24627#context
 
 
 const Tee3Protocol::VauCid& ClientTeeHandshake::vauCid() const
@@ -268,6 +285,7 @@ void ClientTeeHandshake::verifyPublicKeys(const Tee3Protocol::SignedPublicKeys& 
     const auto vauKeys =
         CborDeserializer::deserialize<Tee3Protocol::VauKeys>(publicKeys.signedPublicKeys);
 
+    // GEMREQ-start A_24624-01#1-2
     // A_24624, 1: Verify TI certificate with the ocsp response. The OCSP response
     // must not be older than 24 hours.
     // A_24624, 2a: Check the valid time range
@@ -276,6 +294,8 @@ void ClientTeeHandshake::verifyPublicKeys(const Tee3Protocol::SignedPublicKeys& 
         .mode = OcspCheckDescriptor::PROVIDED_ONLY,
         .timeSettings = {.referenceTimePoint = std::nullopt, .gracePeriod = std::chrono::hours{24}},
         .providedOcspResponse = OcspHelper::binaryBufferToOcspResponse(publicKeys.ocspResponse)};
+
+    // GEMREQ-start A_24958#tsl
     try
     {
         mTslManager.verifyCertificate(
@@ -286,7 +306,9 @@ void ClientTeeHandshake::verifyPublicKeys(const Tee3Protocol::SignedPublicKeys& 
         isValid = false;
         LOG(DEBUG1) << "certificate validation with Tsl Manager failed:" << e.what();
     }
+    // GEMREQ-end A_24958#tsl,A_24624-01#1-2
 
+    // GEMREQ-start A_24624#role
     // A_24624, 3: the certificate must come from the component PKI of TI and have role
     //          "oid_epa_vau".
     if (! vauTi.checkRoles({TslService::oid_epa_vau}))
@@ -294,28 +316,34 @@ void ClientTeeHandshake::verifyPublicKeys(const Tee3Protocol::SignedPublicKeys& 
         isValid = false;
         LOG(DEBUG1) << "certificate does not have role oid_epa_vau";
     }
-   auto printPubkey = [](const X509Certificate& cert) -> std::string {
-       auto key = shared_EVP_PKEY::make(cert.getPublicKey());
-       auto [x, y] = EllipticCurveUtils::getPublicKeyCoordinatesHex(key);
-       key.release();
-       return "x=" + x + ", y=" + y;
-   };
-   // A_24624, 4: Verify that "signature-ES256" must be a valid signature that matches data in
-   // "signed_pub_keys".
-   Assert(verifySignature(
-       publicKeys.signatureES256, publicKeys.signedPublicKeys, vauTi.getPublicKey()))
-       << "signature of signed_pub_keys can not be verified "
-       << "(signature=" << ByteHelper::toHex(publicKeys.signatureES256) << ", "
-       << "signedData=" << ByteHelper::toHex(publicKeys.signedPublicKeys) << ", "
-       << "pubkey=[" << printPubkey(vauTi) << "], "
-       << "certHash=" << ByteHelper::toHex(publicKeys.certificateHash) << ", "
-       << "cdv=" << publicKeys.cdv
-       << ")";
+    // GEMREQ-end A_24624#role
+    auto printPubkey = [](const X509Certificate& cert) -> std::string {
+        auto key = shared_EVP_PKEY::make(cert.getPublicKey());
+        auto [x, y] = EllipticCurveUtils::getPublicKeyCoordinatesHex(key);
+        key.release();
+        return "x=" + x + ", y=" + y;
+    };
 
+    // GEMREQ-start A_24624#signature
+    // A_24624, 4: Verify that "signature-ES256" must be a valid signature that matches data in
+    // "signed_pub_keys".
+    Assert(verifySignature(
+        publicKeys.signatureES256, publicKeys.signedPublicKeys, vauTi.getPublicKey()))
+        << "signature of signed_pub_keys can not be verified "
+        << "(signature=" << ByteHelper::toHex(publicKeys.signatureES256) << ", "
+        << "signedData=" << ByteHelper::toHex(publicKeys.signedPublicKeys) << ", "
+        << "pubkey=[" << printPubkey(vauTi) << "], "
+        << "certHash=" << ByteHelper::toHex(publicKeys.certificateHash) << ", "
+        << "cdv=" << publicKeys.cdv << ")";
+    // GEMREQ-end A_24624#signature
+
+    // GEMREQ-start A_24624#pubkeys
     // A_24624, 5: The ECC key in "signed_pub_keys" has to be valid P-256 key and "Kyber768_PK"
     // must contain a valid Kyber768 key.
     TeeHandshakeBase::verifyVauKeys(vauKeys.ecdhPublicKey, vauKeys.kyber768PublicKey);
+    // GEMREQ-end A_24624#pubkeys
 
+    // GEMREQ-start A_24624#expiry
     // A_24624, 6: The time in "signed_pub_keys.exp" must not be expired.
     // Note that the names that are defined in gemSpec_Krypt are a bit confusing. See A_24425.
     const auto nowSinceEpoch = std::chrono::system_clock::now().time_since_epoch();
@@ -326,6 +354,7 @@ void ClientTeeHandshake::verifyPublicKeys(const Tee3Protocol::SignedPublicKeys& 
         << " seconds";
 
     Assert(isValid);
+    // GEMREQ-end A_24624#expiry
 }
 
 

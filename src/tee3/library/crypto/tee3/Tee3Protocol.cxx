@@ -129,7 +129,7 @@ void Tee3Protocol::VauCid::verify() const
 // GEMREQ-end A_24622
 
 
-
+// GEMREQ-start A_24428
 Tee3Protocol::Keypairs Tee3Protocol::Keypairs::generate()
 {
     // Note that prime256v1 == secp256r1 == P-256
@@ -150,5 +150,6 @@ Tee3Protocol::Keypairs Tee3Protocol::Keypairs::generate()
     };
     // clang-format on
 }
+// GEMREQ-end A_24428
 
 } // namespace epa

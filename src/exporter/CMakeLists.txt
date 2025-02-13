@@ -34,6 +34,8 @@ list(
         EpaAccountLookupClient.cxx
         EventProcessor.cxx
         MedicationExporterMain.cxx
+        TelematikLookup.cxx
+        TelematikLookup.hxx
         VauAutTokenSigner.cxx
         admin/PutRuntimeConfigHandler.cxx
         database/ExporterDatabaseModel.cxx

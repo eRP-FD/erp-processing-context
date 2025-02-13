@@ -18,6 +18,7 @@ add_executable(exporter-test
         EventProcessorTest.cxx
         ExporterConfigurationTest.cxx
         VauAutTokenSignerTest.cxx
+        TelematikLookupTest.cxx
         it/EpaAccountLookupIt.cxx
         ../util/BlobDatabaseHelper.cxx
         ../mock/MockBlobDatabase.cxx

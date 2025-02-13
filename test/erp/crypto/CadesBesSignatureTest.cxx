@@ -763,3 +763,14 @@ TEST_F(CadesBesSignatureTest, getTelematikId2)
         EXPECT_EQ(telematikId->id(), referenceTelematikId.id());
     }
 }
+
+TEST_F(CadesBesSignatureTest, getSignerSerialNumber)
+{
+    const auto content = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/qes.pem");
+    auto cert = Certificate::fromPem(content);
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{content.c_str()});
+
+    std::string_view myText = "The text to be signed";
+    CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}};
+    EXPECT_EQ(cadesBesSignature.getSignerSerialNumber(), "80276883110000129084");
+}

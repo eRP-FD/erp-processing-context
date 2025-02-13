@@ -91,6 +91,7 @@ namespace
             StreamBuffers&& additionalAuthenticationData);
     };
 
+    // GEMREQ-start A_24630#assertDirection
     void assertDirection(
         const uint8_t givenDirection,
         const Tee3SessionContext::Direction expectedDirection)
@@ -110,9 +111,11 @@ namespace
             }
         }
     }
+    // GEMREQ-end A_24630#assertDirection
 }
 
 
+// GEMREQ-start A_24628-01#wrapRequestHeaderAndBody
 std::tuple<size_t, Stream> TeeStreamFactory::wrapRequestHeaderAndBody(
     const Header& header,
     size_t bodyLength,
@@ -140,6 +143,7 @@ std::tuple<size_t, Stream> TeeStreamFactory::wrapRequestHeaderAndBody(
     auto concatenatingStream = StreamFactory::makeReadableStream(std::move(streams));
     return {headerLength + bodyLength, std::move(concatenatingStream)};
 }
+// GEMREQ-end A_24628-01#wrapRequestHeaderAndBody
 
 
 Stream TeeStreamFactory::createReadableEncryptingStream(
@@ -236,6 +240,7 @@ namespace
         return mMode == Writable;
     }
 
+    // GEMREQ-start A_24628-01#doRead
     StreamBuffers TeeEncryptingStreamImplementation::doRead()
     {
         if (mIsProcessingBody)
@@ -256,7 +261,7 @@ namespace
             return header;
         }
     }
-
+    // GEMREQ-end A_24628-01#doRead
 
     void TeeEncryptingStreamImplementation::doWrite(StreamBuffers&& plaintextBuffers)
     {
@@ -272,7 +277,7 @@ namespace
         mDelegate.write(std::move(plaintextBuffers));
     }
 
-
+    // GEMREQ-start A_24628-01#createHeader, A_24632#createHeader
     StreamBuffers TeeEncryptingStreamImplementation::createHeader(const Tee3SessionContext& context)
     {
         Assert(context.keyId.bytes.size() == 32);
@@ -290,8 +295,9 @@ namespace
 
         return StreamBuffers::from(reinterpret_cast<const char*>(buffer), sizeof(buffer), false);
     }
+    // GEMREQ-end A_24628-01#createHeader, A_24632#createHeader
 
-
+    // GEMREQ-start A_24619, A_24628-01#activateEncryption, A_24631#activateEncryption, A_24632#activateEncryption
     void TeeEncryptingStreamImplementation::activateEncryption(
         StreamBuffers&& additionalAuthenticationData,
         const Tee3SessionContext& context)
@@ -308,7 +314,7 @@ namespace
             },
             [aad]() mutable { return StreamBuffers::from(*aad); });
     }
-
+    // GEMREQ-end A_24619, A_24628-01#activateEncryption, A_24631#activateEncryption, A_24632#activateEncryption
 
     TeeDecryptingStreamImplementation::TeeDecryptingStreamImplementation(
         TeeStreamFactory::TeeContextProviderForKeyId contextProvider,
@@ -339,7 +345,7 @@ namespace
         return mMode == Writable;
     }
 
-
+    // GEMREQ-start A_24633#doRead
     StreamBuffers TeeDecryptingStreamImplementation::doRead()
     {
         if (! mIsProcessingBody)
@@ -353,7 +359,7 @@ namespace
         // stream that is wrapped around the original delegate.
         return mDelegate.read();
     }
-
+    // GEMREQ-end A_24633#doRead
 
     void TeeDecryptingStreamImplementation::doWrite(StreamBuffers&& buffers)
     {
@@ -382,7 +388,7 @@ namespace
         mDelegate.write(std::move(buffers));
     }
 
-
+    // GEMREQ-start A_24478, A_24628-01#processTeeHeader, A_24630, A_24633#processTeeHeader, A_24632
     void TeeDecryptingStreamImplementation::processTeeHeader(StreamBuffers&& buffers)
     {
         try
@@ -401,12 +407,13 @@ namespace
 
             // Look up the associated TEE context.
             auto context = mTeeContextProvider(keyId);
+            // GEMREQ-end A_24632
 
             Assert(version == context.version) << "invalid version";
             Assert(isPU == (context.isPU ? 1 : 0))
                 << assertion::exceptionType<TeeError>(TeeError::Code::PuNonPuFailure);
             assertDirection(direction, context.direction);
-
+            // GEMREQ-end A_24630
             // Extract and store the message counter.
             mMessageCounter = Serialization::uint64::read(buffer + 3, buffer + 11);
 
@@ -414,11 +421,13 @@ namespace
             // The `buffers` object, which contains the TEE header, is also used as AES GCM additional
             // authentication data.
             activateDecryption(context, std::move(buffers));
+            // GEMREQ-end A_24628-01#processTeeHeader, A_24633#processTeeHeader
         }
         catch (const TeeError&)
         {
             throw;
         }
+        // GEMREQ-end A_24478
         catch (const std::runtime_error& e)
         {
             // Every exception that is not explicitly specified as a TeeError is forwarded as a
@@ -427,7 +436,7 @@ namespace
         }
     }
 
-
+    // GEMREQ-start A_24630#activateDecryption, A_24633#activateDecryption
     void TeeDecryptingStreamImplementation::activateDecryption(
         const Tee3SessionContext& context,
         StreamBuffers&& additionalAuthenticationData)
@@ -456,6 +465,7 @@ namespace
                 }
             });
     }
+    // GEMREQ-end A_24630#activateDecryption, A_24633#activateDecryption
 } // end of anonymous namespace
 
 } // namespace epa

@@ -10,10 +10,10 @@ void TimeoutHelper::handler(boost::system::error_code ec)
     }
 }
 
-TimeoutHelper::TimeoutHelper(Strand& strand, std::chrono::_V2::steady_clock::duration timeout)
-    : mTimer{strand, timeout}
+TimeoutHelper::TimeoutHelper(Strand& strand, std::chrono::steady_clock::duration timeout)
+    : mTimer{strand}
+    , mTimeout{timeout}
 {
-    mTimer.async_wait(std::bind_front(&TimeoutHelper::handler, this));
 }
 
 void TimeoutHelper::done()

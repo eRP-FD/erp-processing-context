@@ -151,24 +151,25 @@ uint16_t Tee3ClientsForHost::port() const
     return mPort;
 }
 
-boost::asio::awaitable<std::vector<Tee3Client::EndpointData>> Tee3ClientsForHost::async_endpoints() const
-{
-    co_return mEndpoints;
-}
-
-std::vector<Tee3Client::EndpointData> Tee3ClientsForHost::endpoints() const
+boost::asio::awaitable<std::vector<Tee3Client::EndpointData>> Tee3ClientsForHost::endpoints() const
 {
     if (auto pool = mOwningPool.lock())
     {
         if (pool->mStrand.running_in_this_thread())
         {
-            return mEndpoints;
+            co_return mEndpoints;
         }
-        return co_spawn(pool->mStrand, async_endpoints(), boost::asio::use_future).get();
+        co_return co_await co_spawn(
+            pool->mStrand,
+            [this]() -> boost::asio::awaitable<std::vector<Tee3Client::EndpointData>> {
+                co_return mEndpoints;
+            },
+            bind_executor(co_await boost::asio::this_coro::executor));
     }
     LOG(WARNING) << "endpoint called during shutdown.";
-    return {};
+    co_return std::vector<Tee3Client::EndpointData>{};
 }
+
 
 std::optional<std::string> Tee3ClientsForHost::vauNP() const
 {

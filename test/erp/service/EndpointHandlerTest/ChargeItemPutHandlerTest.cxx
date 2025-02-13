@@ -370,3 +370,20 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(reada
     ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
                                                       inputChargeItem, pkvTaskId, HttpStatus::OK));
 }
+
+TEST_F(ChargeItemPutHandlerTest, PutChargeItemErp23745)
+{
+    auto chargeItemStr = ResourceManager::instance().getStringResource("test/issues/ERP-23745/ChargeItem.xml");
+    auto inputChargeItem = model::ChargeItem::fromXml(chargeItemStr, *StaticData::getXmlValidator());
+    inputChargeItem.setAccessCode("b79e5bca8b072113f08c43ce22aa1dded4db61ef21571b37911b6dfc852004f6");
+    const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757"));
+
+    auto pkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
+    const ContentMimeType contentType = ContentMimeType::fhirXmlUtf8;
+    std::optional<model::ChargeItem> resultChargeItem;
+
+    // Expect BadRequest supportingInformation/Prescription is missing, was previously SEGV
+    ASSERT_NO_FATAL_FAILURE(checkPutChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, contentType,
+                                                      inputChargeItem, pkvTaskId, HttpStatus::BadRequest));
+}

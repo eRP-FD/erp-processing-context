@@ -69,6 +69,7 @@ Certificate EpaCertificateService::provideCertificate(const std::string& hostnam
     return Certificate(fut.get());
 }
 
+// GEMREQ-start A_24958#provideCertificateInternal
 boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInternal(std::string hostname,
                                                                                       uint16_t port, CertId certId)
 {
@@ -111,6 +112,7 @@ boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInt
                << R"("})";
     co_return teeCert.toX509();
 }
+// GEMREQ-end A_24958#provideCertificateInternal
 
 std::ostream& operator<<(std::ostream& out, const EpaCertificateService::CertId& certId)
 {

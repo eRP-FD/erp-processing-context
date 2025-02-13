@@ -948,7 +948,6 @@ TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
 
     EventProcessor eventProcessor(serviceContext);
 
-    TaskEventConverter converter(mCodec);
     auto originalEvents = createDbFrontendCommitGuard().db().getAllEventsForKvnr(eventKvnr);
     auto& originalEvent = dynamic_cast<model::ProvidePrescriptionTaskEvent&>(*originalEvents.at(0));
 

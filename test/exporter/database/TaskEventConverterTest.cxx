@@ -40,7 +40,22 @@ TaskEventConverterTest::TaskEventConverterTest()
     , signedPrescription{::model::Binary{prescription.getId().toString(),
                                          ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString()),
                                          binaryProfile}}
+    , signedPrescriptionNoQes{::model::Binary{
+          prescription.getId().toString(),
+          ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString(), "test/no-qes.pem"), binaryProfile}}
+    , signedPrescriptionNoQesNoMapping{::model::Binary{
+          prescription.getId().toString(),
+          ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString(), "test/no-qes-no-serno2tid.pem"), binaryProfile}}
+    , signedPrescriptionNoQesNoSerno{::model::Binary{
+          prescription.getId().toString(),
+          ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString(), "test/no-serno.pem"), binaryProfile}}
     , encryptedBlobPrescription{mCodec.encode(signedPrescription.serializeToJsonString(), key,
+                                              Compression::DictionaryUse::Default_json)}
+    , encryptedBlobPrescriptionNoQes{mCodec.encode(signedPrescriptionNoQes.serializeToJsonString(), key,
+                                              Compression::DictionaryUse::Default_json)}
+    , encryptedBlobPrescriptionNoQesNoMapping{mCodec.encode(signedPrescriptionNoQesNoMapping.serializeToJsonString(), key,
+                                              Compression::DictionaryUse::Default_json)}
+    , encryptedBlobPrescriptionNoQesNoSerno{mCodec.encode(signedPrescriptionNoQesNoSerno.serializeToJsonString(), key,
                                               Compression::DictionaryUse::Default_json)}
     , keyAndDerivationDataMedicationDispense(
           mKeyDerivation->initialMedicationDispenseKey(mKeyDerivation->hashKvnr(kvnr)))
@@ -54,6 +69,8 @@ TaskEventConverterTest::TaskEventConverterTest()
     , encryptedBlobMedicationDispense{mCodec.encode(signedMedicationDispensePrescription.serializeToJsonString(),
                                                     keyMedicationDispense, Compression::DictionaryUse::Default_json)}
     , jwtBuilder{MockCryptography::getIdpPrivateKey()}
+    , telematikLookupEntries("80276883531000000202;qes-from-lookup-80276883531000000202")
+    , telematikLookup(telematikLookupEntries)
 
 {
 }
@@ -76,7 +93,7 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEvent)
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
         encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
-    TaskEventConverter taskEventConverter(mCodec);
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
 
     ASSERT_TRUE(event);
@@ -104,6 +121,134 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEvent)
     }
 }
 
+TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEventNoQes)
+{
+    const JWT jwtDoctorIdentity = jwtBuilder.makeJwtArzt();
+    encryptedBlobDoctorIdentity =
+        mCodec.encode(R"({"id": ")" + jwtDoctorIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::organizationNameClaim).value() + R"(", "oid": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::professionOIDClaim).value() + R"("})",
+                      key, Compression::DictionaryUse::Default_json);
+    usecase = model::TaskEvent::UseCase::providePrescription;
+
+    const db_model::TaskEvent dbTaskEvent(
+        .0, model::PrescriptionId::fromString("160.000.100.000.001.05"),
+        static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())), derivationData.blobId, salt,
+        encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
+        std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescriptionNoQes,
+        derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
+
+
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
+    const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
+
+    ASSERT_TRUE(event);
+    {
+        EXPECT_EQ(event->getPrescriptionId(), prescriptionId);
+        EXPECT_EQ(event->getPrescriptionType(), prescriptionId.type());
+        EXPECT_EQ(event->getKvnr(), kvnr);
+        EXPECT_EQ(event->getHashedKvnr(),
+                  std::string(reinterpret_cast<const char*>(hashedKvnr.data()), hashedKvnr.size()));
+        EXPECT_EQ(event->getUseCase(), usecase);
+        EXPECT_EQ(event->getState(), state);
+    }
+    {
+        EXPECT_EQ(event->getUseCase(), model::TaskEvent::UseCase::providePrescription);
+        const auto& providePrescription = dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(*event);
+        EXPECT_EQ(providePrescription.getKbvBundle().getId(), prescription.getId());
+
+        ASSERT_TRUE(providePrescription.getQesDoctorId());
+        EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "qes-from-lookup-80276883531000000202");
+        EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
+        EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
+        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
+        EXPECT_EQ(providePrescription.getMedicationRequestAuthoredOn().toGermanDate(),
+                  model::Timestamp::now().toGermanDate());
+    }
+}
+
+TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEventNoQesNoMapping)
+{
+    const JWT jwtDoctorIdentity = jwtBuilder.makeJwtArzt();
+    encryptedBlobDoctorIdentity =
+        mCodec.encode(R"({"id": ")" + jwtDoctorIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::organizationNameClaim).value() + R"(", "oid": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::professionOIDClaim).value() + R"("})",
+                      key, Compression::DictionaryUse::Default_json);
+    usecase = model::TaskEvent::UseCase::providePrescription;
+
+    const db_model::TaskEvent dbTaskEvent(
+        .0, model::PrescriptionId::fromString("160.000.100.000.001.05"),
+        static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())), derivationData.blobId, salt,
+        encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
+        std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescriptionNoQesNoMapping,
+        derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
+
+
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
+    const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
+
+    ASSERT_TRUE(event);
+    {
+        EXPECT_EQ(event->getPrescriptionId(), prescriptionId);
+        EXPECT_EQ(event->getPrescriptionType(), prescriptionId.type());
+        EXPECT_EQ(event->getKvnr(), kvnr);
+        EXPECT_EQ(event->getHashedKvnr(),
+                  std::string(reinterpret_cast<const char*>(hashedKvnr.data()), hashedKvnr.size()));
+        EXPECT_EQ(event->getUseCase(), usecase);
+        EXPECT_EQ(event->getState(), state);
+    }
+    {
+        EXPECT_EQ(event->getUseCase(), model::TaskEvent::UseCase::providePrescription);
+        const auto& providePrescription = dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(*event);
+        EXPECT_EQ(providePrescription.getKbvBundle().getId(), prescription.getId());
+
+        EXPECT_FALSE(providePrescription.getQesDoctorId());
+    }
+}
+
+TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEventNoQesNoSerno)
+{
+    const JWT jwtDoctorIdentity = jwtBuilder.makeJwtArzt();
+    encryptedBlobDoctorIdentity =
+        mCodec.encode(R"({"id": ")" + jwtDoctorIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::organizationNameClaim).value() + R"(", "oid": ")" +
+                          jwtDoctorIdentity.stringForClaim(JWT::professionOIDClaim).value() + R"("})",
+                      key, Compression::DictionaryUse::Default_json);
+    usecase = model::TaskEvent::UseCase::providePrescription;
+
+    const db_model::TaskEvent dbTaskEvent(
+        .0, model::PrescriptionId::fromString("160.000.100.000.001.05"),
+        static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())), derivationData.blobId, salt,
+        encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
+        std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescriptionNoQesNoSerno,
+        derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
+
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
+    const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
+
+    ASSERT_TRUE(event);
+    {
+        EXPECT_EQ(event->getPrescriptionId(), prescriptionId);
+        EXPECT_EQ(event->getPrescriptionType(), prescriptionId.type());
+        EXPECT_EQ(event->getKvnr(), kvnr);
+        EXPECT_EQ(event->getHashedKvnr(),
+                  std::string(reinterpret_cast<const char*>(hashedKvnr.data()), hashedKvnr.size()));
+        EXPECT_EQ(event->getUseCase(), usecase);
+        EXPECT_EQ(event->getState(), state);
+    }
+    {
+        EXPECT_EQ(event->getUseCase(), model::TaskEvent::UseCase::providePrescription);
+        const auto& providePrescription = dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(*event);
+        EXPECT_EQ(providePrescription.getKbvBundle().getId(), prescription.getId());
+
+        EXPECT_FALSE(providePrescription.getQesDoctorId());
+    }
+}
+
 TEST_F(TaskEventConverterTest, convert_CancelPrescriptionTaskEvent)
 {
     encryptedBlobDoctorIdentity =
@@ -118,7 +263,7 @@ TEST_F(TaskEventConverterTest, convert_CancelPrescriptionTaskEvent)
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
         encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
-    TaskEventConverter taskEventConverter(mCodec);
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
 
     ASSERT_TRUE(event);
@@ -165,7 +310,7 @@ TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent)
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
         encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
-    TaskEventConverter taskEventConverter(mCodec);
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
 
     ASSERT_TRUE(event);
@@ -212,7 +357,7 @@ TEST_F(TaskEventConverterTest, convert_CancelDispensationTaskEvent)
         derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedBlobMedicationDispense,
         encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
 
-    TaskEventConverter taskEventConverter(mCodec);
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
     const auto event = taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense);
 
     ASSERT_TRUE(event);

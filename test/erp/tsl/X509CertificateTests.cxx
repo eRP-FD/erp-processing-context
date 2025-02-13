@@ -120,6 +120,31 @@ namespace
         "NkCSoXj9yzyfDsCETMPti5vXiamFtoqAdZiw+PK8Bd1JV5jfnJc9RDGCa42bnsAjrWJR+p+wU8"
     };
 
+    const std::string SUBJECT_SERIAL_NUMBER_CERTIFICATE_PEM{
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIDpDCCA0ugAwIBAgIHAIdnUk67xjAKBggqhkjOPQQDAjCBqTELMAkGA1UEBhMC\n"
+        "REUxHzAdBgNVBAoMFmdlbWF0aWsgR21iSCBOT1QtVkFMSUQxIDAeBgNVBGEMF1VT\n"
+        "dC1JZE5yLiBERSAwMDk5NzQ1OTMzMTYwNAYDVQQLDC1RdWFsaWZpemllcnRlciBW\n"
+        "REEgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkdFTS5IQkEt\n"
+        "cUNBNiBURVNULU9OTFkwHhcNMjAwNjEwMDAwMDAwWhcNMjUwNjA5MjM1OTU5WjBw\n"
+        "MQswCQYDVQQGEwJERTFhMAwGA1UEBAwFT3TDrXMwFAYDVQQqDA1Hw7xudGhlciBH\n"
+        "cmFmMBsGA1UEBRMUODAyNzY4ODMxMTAwMDAxMjkwODQwHgYDVQQDDBdHw7xudGhl\n"
+        "ciBPdMOtc1RFU1QtT05MWTBaMBQGByqGSM49AgEGCSskAwMCCAEBBwNCAARWlKcf\n"
+        "W0m68/TET8EeRTIDKz6jg8W5gO53LgcGVuH2OUgkSG3+K8uPnKnBCB1uJh7ZR4Cn\n"
+        "GVKBlspDNCOt7qsYo4IBkzCCAY8wGwYJKwYBBAHAbQMFBA4wDAYKKwYBBAHAbQMF\n"
+        "ATAiBggrBgEFBQcBAwQWMBQwCAYGBACORgEBMAgGBgQAjkYBBDAMBgNVHRMBAf8E\n"
+        "AjAAMB8GA1UdIwQYMBaAFCTZChFbJmvfkp4YpIn0uEodL2NsMB0GA1UdDgQWBBRa\n"
+        "+NF9ioAMs/XDGMH0zuzpvAYqYzAOBgNVHQ8BAf8EBAMCBkAwOQYDVR0gBDIwMDAJ\n"
+        "BgcqghQATARIMAkGBwQAi+xAAQIwCgYIKoIUAEwEgREwDAYKKwYBBAGCzTMBATA4\n"
+        "BggrBgEFBQcBAQQsMCowKAYIKwYBBQUHMAGGHGh0dHA6Ly9laGNhLmdlbWF0aWsu\n"
+        "ZGUvb2NzcC8weQYFKyQIAwMEcDBupCgwJjELMAkGA1UEBhMCREUxFzAVBgNVBAoM\n"
+        "DmdlbWF0aWsgQmVybGluMEIwQDA+MDwwDgwMw4RyenRpbi9Bcnp0MAkGByqCFABM\n"
+        "BB4THzEtSEJBLVRlc3RrYXJ0ZS04ODMxMTAwMDAxMjkwODQwCgYIKoZIzj0EAwID\n"
+        "RwAwRAIgOnPRGFiOQwW7yl0rRvd48ZufBhAlTCUNQ7vNy5jbt+sCIBc/kta/QHQd\n"
+        "gnuTkANjPgdWAOX9rL6rxuan+s+OpXwU\n"
+        "-----END CERTIFICATE-----"
+    };
+
     // role OIDs
     // cf. gemSpec_OID Tab_PKI_402
     constexpr const char* oid_versicherter{"1.2.276.0.76.4.49"};
@@ -199,6 +224,16 @@ TEST_F(X509CertificateTests, SerialNumberExpectedValue)
     EXPECT_EQ(certificate.getSerialNumber(), serial);
 }
 
+TEST_F(X509CertificateTests, SubjectSerialNumberExpectedValue)
+{
+    const std::string certificatePem =
+        FileHelper::readFileAsString(
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
+
+    const X509Certificate certificateWithSubjectSerialNumber =
+        X509Certificate::createFromPem(SUBJECT_SERIAL_NUMBER_CERTIFICATE_PEM);
+    EXPECT_EQ(certificateWithSubjectSerialNumber.getSerialNumberFromSubject(), "80276883110000129084");
+}
 
 TEST_F(X509CertificateTests, CertificateValidity)//NOLINT(readability-function-cognitive-complexity)
 {

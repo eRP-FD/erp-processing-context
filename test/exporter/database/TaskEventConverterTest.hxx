@@ -9,6 +9,7 @@
 #define ERP_EXPORTER_TASKEVENTEXPORTERTEST_HXX
 
 #include "erp/model/Binary.hxx"
+#include "exporter/TelematikLookup.hxx"
 #include "exporter/database/ExporterDatabaseModel.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/hsm/HsmPool.hxx"
@@ -62,7 +63,13 @@ protected:
 
     model::Bundle prescription;
     model::Binary signedPrescription;
+    model::Binary signedPrescriptionNoQes;
+    model::Binary signedPrescriptionNoQesNoMapping;
+    model::Binary signedPrescriptionNoQesNoSerno;
     db_model::EncryptedBlob encryptedBlobPrescription;
+    db_model::EncryptedBlob encryptedBlobPrescriptionNoQes;
+    db_model::EncryptedBlob encryptedBlobPrescriptionNoQesNoMapping;
+    db_model::EncryptedBlob encryptedBlobPrescriptionNoQesNoSerno;
 
     std::tuple<SafeString, OptionalDeriveKeyData> keyAndDerivationDataMedicationDispense;
     SafeString& keyMedicationDispense;
@@ -76,6 +83,9 @@ protected:
 
     std::optional<db_model::EncryptedBlob> encryptedBlobDoctorIdentity;
     std::optional<db_model::EncryptedBlob> encryptedBlobPharmacyIdentity;
+
+    std::stringstream telematikLookupEntries;
+    TelematikLookup telematikLookup;
 };
 
 #endif

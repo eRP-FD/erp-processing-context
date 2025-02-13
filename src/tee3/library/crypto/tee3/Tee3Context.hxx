@@ -29,11 +29,13 @@ namespace epa
  * Implementation details: due to atomic_uint64_t not having an applicable copy
  * constructor, we have to provide our own.
  */
-struct Tee3Context
+ // GEMREQ-start A_15549-01#secureDeletion, A_15547-01#aesKeys
+ struct Tee3Context
 {
     Tee3Protocol::SymmetricKeys k2ApplicationData;
     KeyId keyId;
     Tee3Protocol::VauCid vauCid;
+    // GEMREQ-end A_15549-01#secureDeletion, A_15547-01#aesKeys
 
     /**
      * The channel id is a value that identifies a VAU channel so that the second TEE handshake
@@ -49,16 +51,19 @@ struct Tee3Context
     const uint8_t version;
 
     /**
-     * The isPU value is not a variable but is compiled-in.
+     * The isPU value with which this context was created.
      */
     const bool isPU;
 
+    // GEMREQ-start A_24629, A_24631
     /**
      * The message counter is the only variable value in this structure. It is increased for
      * every request.
      */
     static constexpr uint64_t initialMessageCounter = 0;
     std::atomic_uint64_t messageCounter;
+    // GEMREQ-end A_24629, A_24631
+
 
 
     Tee3Context(

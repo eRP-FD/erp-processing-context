@@ -9,8 +9,9 @@
 #define ERP_EXPORTER_POSTGRESDATABASETEST_HXX
 
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/database/PostgresBackend.hxx"
 #include "erp/database/ErpDatabaseModel.hxx"
+#include "erp/database/PostgresBackend.hxx"
+#include "exporter/TelematikLookup.hxx"
 #include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
@@ -96,7 +97,7 @@ public:
 
     MedicationExporterDatabaseFrontendCommitGuard createDbFrontendCommitGuard()
     {
-        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation);
+        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation, mTelematikLookup);
         return MedicationExporterDatabaseFrontendCommitGuard(std::move(db));
     }
 
@@ -105,8 +106,7 @@ public:
         if (! mDatabase || mDatabase->getBackend().isCommitted())
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
-            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>(
-                std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation);
+            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>( std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation, mTelematikLookup);
         }
         return *mDatabase;
     }
@@ -307,6 +307,9 @@ protected:
     std::unique_ptr<pqxx::connection> mErpDbConnection;
 
     std::size_t mEventIdCounter = 0;
+
+    std::stringstream mTelematikLookupEntries;
+    TelematikLookup mTelematikLookup;
 };
 
 #endif

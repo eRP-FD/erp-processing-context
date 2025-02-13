@@ -489,6 +489,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS                             , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS",                "/erp-medication-exporter/vau-https-client/retriesPerAddress", Flags::categoryEnvironment, "Maximum connect attempts per address"}},
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS                    , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS",       "/erp-medication-exporter/vau-https-client/resolveTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout for resolving DNS entries."}},
     {ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD                                            , {"MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD"                              , "/erp-medication-exporter/ocsp/gracePeriodEpa", Flags::categoryFunctionalStatic, "OCSP-Grace period in seconds for OCSP-response of ePA Servier Certificate"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_PATH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_PATH"                                     , "/erp-medication-exporter/serno2tid/path", Flags::categoryEnvironment, "Mapping file path to lookup TID by S/N"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_HASH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_HASH"                                     , "/erp-medication-exporter/serno2tid/hash", Flags::categoryEnvironment, "Hash value do validate mapping file"}},
     // */
     });
     // clang-format on

@@ -27,9 +27,13 @@ class Tee3Protocol
 {
 public:
     static constexpr std::string_view message1Name = "M1";
+    // GEMREQ-start A_24608
     static constexpr std::string_view message2Name = "M2";
+    // GEMREQ-end A_24608
     static constexpr std::string_view message3Name = "M3";
+    // GEMREQ-start A_24626
     static constexpr std::string_view message4Name = "M4";
+    // GEMREQ-end A_24626
     static constexpr std::string_view messageRestartName = "Restart";
 
     struct EcdhPublicKey
@@ -229,6 +233,7 @@ public:
     /**
      * Successor to library/crypto/tee/SymmetricKeys, but with more fitting data types for the keys.
      */
+    // GEMREQ-start A_15549-01#secureDeletion
     struct SymmetricKeys
     {
         SensitiveDataGuard clientToServer;
@@ -236,6 +241,7 @@ public:
 
         bool operator==(const SymmetricKeys& other) const = default;
     };
+    // GEMREQ-end A_15549-01#secureDeletion
 
     class Exception : public std::runtime_error
     {

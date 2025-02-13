@@ -19,7 +19,10 @@
 #include "shared/fhir/Fhir.hxx"
 #include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "shared/util/Hash.hxx"
 
 #if WITH_HSM_MOCK > 0
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -52,6 +55,16 @@ boost::asio::awaitable<void> setupEpaClientPool(MedicationExporterServiceContext
 
 MedicationExporterFactories MedicationExporterMain::createProductionFactories()
 {
+    const auto ser2tidGivendHash = Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_HASH);
+    const auto ser2tidFile = Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_PATH);
+    const auto ser2tidContent = FileHelper::readFileAsString(ser2tidFile);
+    const auto ser2tidComputedHashSum = ByteHelper::toHex(Hash::sha256(ser2tidContent));
+    Expect(ser2tidComputedHashSum == ser2tidGivendHash, "Failed loading SerNo2TID.csv with hash "+ser2tidComputedHashSum+" - mismatched hash. Expected: "+ser2tidGivendHash);
+
+    std::stringstream ser2tidStream(ser2tidContent);
+    static TelematikLookup telematikLookup(ser2tidStream);
+    TLOG(INFO) << "Successfully loaded SerNo2TID.csv with hash " << ser2tidComputedHashSum << " and " << telematikLookup.size() << " entries.";
+
     MedicationExporterFactories factories;
 
     factories.blobCacheFactory = [] {
@@ -114,7 +127,7 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
 
     factories.exporterDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
         return std::make_unique<MedicationExporterDatabaseFrontend>(
-            std::make_unique<MedicationExporterPostgresBackend>(), hsmPool, keyDerivation);
+            std::make_unique<MedicationExporterPostgresBackend>(), hsmPool, keyDerivation, telematikLookup);
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -438,3 +451,4 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
     }
     return allUp;
 }
+

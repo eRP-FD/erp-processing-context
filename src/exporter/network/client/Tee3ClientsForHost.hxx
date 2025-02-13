@@ -47,7 +47,7 @@ public:
     std::string hostname() const;
     uint16_t port() const;
 
-    std::vector<Tee3Client::EndpointData> endpoints() const;
+    boost::asio::awaitable<std::vector<Tee3Client::EndpointData>> endpoints() const;
 
     [[nodiscard]] std::optional<std::string> vauNP() const;
 
@@ -57,7 +57,6 @@ public:
     TslManager& tslManager();
 
 private:
-    boost::asio::awaitable<std::vector<Tee3Client::EndpointData>> async_endpoints() const;
     boost::asio::awaitable<void> release(std::shared_ptr<Tee3ClientPool> pool, std::unique_ptr<Tee3Client> instance);
 
     std::weak_ptr<Tee3ClientPool> mOwningPool;

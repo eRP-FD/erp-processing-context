@@ -25,11 +25,14 @@
 
 namespace {
 
+// GEMREQ-start A_24773#restart-graceful
 bool isGracefulError(boost::system::error_code ec)
 {
     return ec == Tee3Client::error::restart || ec == boost::asio::ssl::error::stream_truncated ||
-           ec == boost::beast::http::error::end_of_stream;
+           ec == boost::beast::http::error::end_of_stream || ec == boost::asio::error::connection_reset ||
+           ec == boost::asio::error::not_connected;
 }
+// GEMREQ-end A_24773#restart-graceful
 
 } // namespace
 
@@ -68,11 +71,13 @@ Tee3ClientPool::sendTeeRequest(std::string hostname, Tee3Client::Request req, st
     auto teeClient = co_await acquire(hostname);
     boost::system::result<Tee3Client::Response> resp;
 
+    // GEMREQ-start A_24773#reconnect
     while (isGracefulError((resp = co_await teeClient->sendInner(req, logDataBag)).error()))
     {
         teeClient.reset();
         teeClient = co_await acquire(hostname);
     }
+    // GEMREQ-end A_24773#reconnect
     co_return resp;
 }
 

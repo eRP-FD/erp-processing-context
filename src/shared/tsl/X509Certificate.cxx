@@ -48,6 +48,7 @@ namespace
                                                      decltype(&ADMISSION_SYNTAX_free)>;
 
     const std::string teletrustAdmissionSyntaxOid = "1.3.36.8.3.3";
+    const std::regex notEmptyRegex{".+"};
 
     std::string asn1StringToUtf8(const ASN1_IA5STRING* string)
     {
@@ -343,6 +344,38 @@ namespace
 
         return true;
     }
+
+    std::string findStringInName(const X509_NAME& name, int nid, const std::regex& pattern)
+    {
+        int index = -1;
+        // the look must end, because index is provided to the X509_NAME_get_index_by_NID
+        // and thus there can not be more iterations than number of elements in the name
+        for (;;)
+        {
+            // Find index within X509_NAME.
+            index = X509_NAME_get_index_by_NID(&name, nid, index);
+            if (index == -1)
+                return std::string{};
+
+            // Get the ASN.1 string for this field (not necessarily UTF-8).
+            const X509_NAME_ENTRY* entryData = X509_NAME_get_entry(&name, index);
+            Expect(entryData != nullptr, "can not get name entry");
+            const ASN1_STRING* string = X509_NAME_ENTRY_get_data(entryData);
+            Expect(string != nullptr, "can not get name entry data");
+
+            // Convert the ASN.1 string to UTF-8.
+            unsigned char* utf8Bytes = nullptr;
+            auto size = ASN1_STRING_to_UTF8(&utf8Bytes, string);
+            if (size < 0)
+                return std::string{};
+            std::string candidateString{reinterpret_cast<char*>(utf8Bytes),
+                                        gsl::narrow<std::string::size_type>(size)};
+            OPENSSL_free(utf8Bytes);
+
+            if (std::regex_match(candidateString, pattern))
+                return candidateString;
+        }
+    }
 }
 
 
@@ -509,6 +542,22 @@ std::string X509Certificate::getSerialNumber() const
     shared_BIO mem = shared_BIO::make();
     Expect(i2a_ASN1_INTEGER(mem, serial) > 0, "Conversion from serial to string failed");
     return bioToString(mem.get());
+}
+
+std::string X509Certificate::getSerialNumberFromSubject() const
+{
+    if (pCert == nullptr)
+    {
+        return {};
+    }
+
+    X509_NAME* name = X509_get_subject_name(pCert.get());
+    if (name == nullptr)
+    {
+        Fail2("Could not retrieve X509 subject name", CryptoFormalError);
+    }
+
+    return findStringInName(*name, NID_serialNumber, notEmptyRegex);
 }
 
 bool X509Certificate::isCaCert (void) const
@@ -784,47 +833,16 @@ X509Certificate::IdentifierInformation X509Certificate::extractIdentifierInforma
         Fail2("Could not retrieve X509 subject name", CryptoFormalError);
     }
 
-    auto findString = [name] (int nid, const std::regex& pattern)
-    {
-        int index = -1;
-        for (;;)
-        {
-            // Find index within X509_NAME.
-            index = X509_NAME_get_index_by_NID(name, nid, index);
-            if (index == -1)
-                return std::string{};
-
-            // Get the ASN.1 string for this field (not necessarily UTF-8).
-            const X509_NAME_ENTRY* entryData = X509_NAME_get_entry(name, index);
-            Expect(entryData != nullptr, "can not get name entry");
-            const ASN1_STRING* string = X509_NAME_ENTRY_get_data(entryData);
-            Expect(string != nullptr, "can not get name entry data");
-
-            // Convert the ASN.1 string to UTF-8.
-            unsigned char* utf8Bytes = nullptr;
-            auto size = ASN1_STRING_to_UTF8(&utf8Bytes, string);
-            if (size < 0)
-                return std::string{};
-            std::string candidateString{reinterpret_cast<char*>(utf8Bytes),
-                                        gsl::narrow<std::string::size_type>(size)};
-            OPENSSL_free(utf8Bytes);
-
-            if (std::regex_match(candidateString, pattern))
-                return candidateString;
-        }
-    };
-
-    static const std::regex notEmptyRegex{".+"};
     static const std::regex kvnrRegex{"[A-Z]{1}[0-9]{9}"};
     static const std::regex institutionIdRegex{"[0-9]{9}"};
 
     // These three fields must be filled according to gemSpec_PK_eG_V1.2.0, item Card-G2-A_3853
     // organizationalUnitName, givenName, surname
     return {
-        findString(NID_organizationalUnitName, kvnrRegex),
-        findString(NID_givenName, notEmptyRegex),
-        findString(NID_surname, notEmptyRegex),
-        findString(NID_organizationalUnitName, institutionIdRegex)};
+        findStringInName(*name, NID_organizationalUnitName, kvnrRegex),
+        findStringInName(*name, NID_givenName, notEmptyRegex),
+        findStringInName(*name, NID_surname, notEmptyRegex),
+        findStringInName(*name, NID_organizationalUnitName, institutionIdRegex)};
 }
 
 std::vector<std::string> X509Certificate::getOcspUrls() const {

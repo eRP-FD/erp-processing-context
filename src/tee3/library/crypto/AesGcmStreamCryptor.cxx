@@ -69,7 +69,7 @@ namespace
 // "VAU-Protokoll: Client, verschlüsselte Kommunikation (1)"
 // GEMREQ-start A_16945-02
 // GEMREQ-start A_17220, A_17221-01
-// A_24628
+// GEMREQ-start A_24628-01, A_24619#createSemiRandomIV
 AesGcmStreamCryptor::InitializationVector AesGcmStreamCryptor::createSemiRandomIV(
     const uint64_t messageCounter)
 {
@@ -88,6 +88,7 @@ AesGcmStreamCryptor::InitializationVector AesGcmStreamCryptor::createSemiRandomI
 
     return iv;
 }
+// GEMREQ-end A_24628-01, A_24619#createSemiRandomIV
 // GEMREQ-end A_16945-02
 
 
@@ -241,6 +242,7 @@ AesGcmStreamCryptor::Encryptor::Encryptor(const Encryptor& other)
 }
 
 
+// GEMREQ-start A_24619
 StreamBuffers AesGcmStreamCryptor::Encryptor::operator()(StreamBuffers buffers)
 {
     Assert(mState != State::Finished) << "AES-GCM already finished";
@@ -276,6 +278,7 @@ StreamBuffers AesGcmStreamCryptor::Encryptor::operator()(StreamBuffers buffers)
 
     return result;
 }
+// GEMREQ-end A_24619
 
 
 StreamBuffer AesGcmStreamCryptor::Encryptor::start()
@@ -372,6 +375,7 @@ StreamBuffer AesGcmStreamCryptor::Encryptor::finalize()
 }
 
 
+// GEMREQ-start A_24619#authTag
 StreamBuffer AesGcmStreamCryptor::Encryptor::getHashBuffer()
 {
     char hash[HashLength];
@@ -381,6 +385,7 @@ StreamBuffer AesGcmStreamCryptor::Encryptor::getHashBuffer()
 
     return StreamBuffer::from(hash, HashLength, StreamBuffer::IsLast);
 }
+// GEMREQ-end A_24619#authTag
 
 
 // ===== Decryptor ===========================================================

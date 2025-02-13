@@ -73,7 +73,8 @@ sgx.allowed_files = [
 "file:/var/config/erp/config/sslRootCaPath",
 "file:/var/config/erp/config/TSL_SSL_cert_chain.pem",
 "file:/var/config/erp/hsm/work-keyspec",
-"file:/var/config/haproxy/secrets/ca.crt"
+"file:/var/config/haproxy/secrets/ca.crt",
+"file:/var/config/erp/config/SerNo2TID.csv"
 ]
 
 # Trusted files are signed and can only be read from within the gramine environment.

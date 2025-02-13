@@ -18,6 +18,7 @@
 namespace epa
 {
 
+// GEMREQ-start A_24624-01#verifyVauKeys, A_24608#verifyVauKeys
 void TeeHandshakeBase::verifyVauKeys(
     const Tee3Protocol::EcdhPublicKey& ecdhPublicKey,
     const BinaryBuffer& kyber768PublicKey)
@@ -43,8 +44,10 @@ void TeeHandshakeBase::verifyVauKeys(
         throw TeeError(TeeError::Code::FailedPublicKeyVerification, "");
     }
 }
+// GEMREQ-end A_24624-01#verifyVauKeys, A_24608#verifyVauKeys
 
 
+// GEMREQ-start A_24623#encapsulate, A_24608#encapsulate
 Tee3Protocol::Encapsulation TeeHandshakeBase::encapsulate(
     const Tee3Protocol::EcdhPublicKey& ecdhPublicKey,
     const BinaryBuffer& kyber768PublicKey)
@@ -72,8 +75,10 @@ Tee3Protocol::Encapsulation TeeHandshakeBase::encapsulate(
         .cipherTexts = Tee3Protocol::CipherTexts{
             .ecdhCipherText = std::move(ecdhCipherText), .kyber768CipherText = kyber768CipherText}};
 }
+// GEMREQ-end A_24623#encapsulate, A_24608#encapsulate
 
 
+// GEMREQ-start A_24623#decapsulate, A_24626#decapsulate
 Tee3Protocol::SharedKeys TeeHandshakeBase::decapsulate(
     const Tee3Protocol::CipherTexts& ciphertexts,
     const Tee3Protocol::PrivateKeys& privateKeys)
@@ -107,8 +112,10 @@ Tee3Protocol::SharedKeys TeeHandshakeBase::decapsulate(
         .ecdhSharedSecret = SensitiveDataGuard(ecdhSharedSecret),
         .kyber768SharedSecret = kyber768SharedSecret};
 }
+// GEMREQ-end A_24623#decapsulate, A_24626#decapsulate
 
 
+// GEMREQ-start A_24623#hkdf1, A_24608#hkdf1
 Tee3Protocol::SymmetricKeys TeeHandshakeBase::hkdf(const Tee3Protocol::SharedKeys& kemResult1)
 {
     Assert(! kemResult1.ecdhSharedSecret.empty());
@@ -131,8 +138,10 @@ Tee3Protocol::SymmetricKeys TeeHandshakeBase::hkdf(const Tee3Protocol::SharedKey
 
     // tmp is of type SensitiveDataGuard and will safely delete its temporary content on exit.
 }
+// GEMREQ-end A_24623#hkdf1, A_24608#hkdf1
 
 
+// GEMREQ-start A_24623#hkdf2, A_24626#hkdf2
 TeeHandshakeBase::HkdfResult TeeHandshakeBase::hkdf(const SensitiveDataGuard& sharedSecret)
 {
     // 4 * 256-Bit-AES-Keys + 1 * 256-Bit KeyID = 5 * 256 Bit = 5 * 32 Bytes
@@ -154,8 +163,9 @@ TeeHandshakeBase::HkdfResult TeeHandshakeBase::hkdf(const SensitiveDataGuard& sh
         .keyId = KeyId::fromBinaryView(toBinaryView(tmp.data() + 128, 32)) // item 4
     };
 }
+// GEMREQ-end A_24623#hkdf2, A_24626#hkdf2
 
-
+// GEMREQ-start A_24623#aeadEncrypt, A_24608#aeadEncrypt, A_24626#aeadEncrypt
 BinaryBuffer TeeHandshakeBase::aeadEncrypt(
     const SensitiveDataGuard& key,
     const BinaryBuffer& plaintext)
@@ -178,8 +188,10 @@ BinaryBuffer TeeHandshakeBase::aeadEncrypt(
 
     return ciphertext;
 }
+// GEMREQ-end A_24623#aeadEncrypt, A_24608#aeadEncrypt, A_24626#aeadEncrypt
 
 
+// GEMREQ-start A_24623#aeadDecrypt, A_24623#aeadDecrypt
 BinaryBuffer TeeHandshakeBase::aeadDecrypt(
     const SensitiveDataGuard& key,
     const BinaryBuffer& ciphertext,
@@ -208,6 +220,7 @@ BinaryBuffer TeeHandshakeBase::aeadDecrypt(
         throw TeeError(TeeError::Code::GcmDecryptionFailure, std::string(description));
     }
 }
+// GEMREQ-end A_24623#aeadDecrypt, A_24623#aeadDecrypt
 
 
 void TeeHandshakeBase::report(std::string_view, const BinaryBuffer&)

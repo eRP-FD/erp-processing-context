@@ -158,6 +158,11 @@ public:
      */
     std::string getSerialNumber() const;
 
+    /**
+     * Get the serial number from the subject
+     */
+    std::string getSerialNumberFromSubject() const;
+
     bool isCaCert (void) const;
 
     std::string getSubjectKeyIdentifier () const;
