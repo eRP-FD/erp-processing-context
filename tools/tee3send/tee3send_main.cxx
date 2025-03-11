@@ -1,9 +1,10 @@
+#include "exporter/EpaAccountLookupClient.hxx"
+#include "exporter/TelematikLookup.hxx"
 #include "exporter/client/EpaMedicationClientImpl.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
 #include "exporter/network/client/Tee3Client.hxx"
 #include "exporter/network/client/Tee3ClientPool.hxx"
-#include "exporter/EpaAccountLookupClient.hxx"
 #include "exporter/pc/MedicationExporterFactories.hxx"
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
 #include "exporter/server/HttpsServer.hxx"
@@ -37,6 +38,7 @@
 #include <filesystem>
 #include <iostream>
 #include <ranges>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -106,9 +108,11 @@ MedicationExporterFactories createProductionFactories()
                                              enforceClientAuthentication, caCertificates);
     };
 
-    factories.exporterDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+    std::stringstream ss;
+    static TelematikLookup telematikLookup(ss);
+    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation) {
         return std::make_unique<MedicationExporterDatabaseFrontend>(
-            std::make_unique<MedicationExporterPostgresBackend>(), hsmPool, keyDerivation);
+            std::make_unique<MedicationExporterPostgresBackend>(), keyDerivation, telematikLookup);
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -179,7 +183,7 @@ void testHttpsClient(MedicationExporterServiceContext& serviceContext)
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.16.0");
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.17.0");
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
             client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
@@ -191,7 +195,7 @@ void testHttpsClient(MedicationExporterServiceContext& serviceContext)
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.16.0");
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.17.0");
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
             client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
@@ -204,14 +208,15 @@ void testHttpsClient(MedicationExporterServiceContext& serviceContext)
 
 int main(int argc, const char* argv[])
 {
+    auto args = std::span(argv, size_t(argc));
     try
     {
-        GLogConfiguration::init_logging(argv[0]);
+        GLogConfiguration::initLogging(args[0]);
 
         Expect3(argc < 3, "too many arguments", ShowHelp);
         Expect3(argc >= 2, "missing argument", ShowHelp);
 
-        std::string_view hostPort{argv[1]};
+        std::string_view hostPort{args[1]};
         size_t colon = hostPort.find(':');
         Expect3(colon != std::string_view::npos, "missing colon in <host>:<port>", ShowHelp);
         std::string host{hostPort.substr(0, colon)};
@@ -275,7 +280,7 @@ int main(int argc, const char* argv[])
     catch (const ShowHelp& sh)
     {
         std::cerr << sh.what() << "\n\n";
-        std::cerr << "usage: " << argv[0] << " <host>:<port>"
+        std::cerr << "usage: " << args[0] << " <host>:<port>"
                   << "\n";
         return 1;
     }

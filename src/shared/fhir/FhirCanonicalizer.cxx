@@ -290,7 +290,7 @@ bool FhirCanonicalizer::elementHasToBeRemoved(
     // - The narrative (Resource.text) is omitted.
     // - In addition to narrative (Resource.text), the Resource.meta element is removed.
     // - Also the signature element has to be removed.
-    A_19029_05.start("Resource.meta nur im 'root-Element' entfernen");
+    A_19029_06.start("Resource.meta nur im 'root-Element' entfernen");
     if( immersionDepth == 1 && objectStructDef.kind() == FhirStructureDefinition::Kind::resource)
     {
         static const std::map<std::string, std::string>
@@ -310,7 +310,7 @@ bool FhirCanonicalizer::elementHasToBeRemoved(
             }
         }
     }
-    A_19029_05.finish();
+    A_19029_06.finish();
     return false;
 }
 

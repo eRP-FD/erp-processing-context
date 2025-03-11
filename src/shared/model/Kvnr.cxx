@@ -125,9 +125,11 @@ bool Kvnr::verificationIdentity() const
     }
     catch (const std::invalid_argument&)
     {
+        return false;
     }
     catch (const std::out_of_range&)
     {
+        return false;
     }
     A_20751.finish();
     return false;

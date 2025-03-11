@@ -24,7 +24,7 @@ namespace model
 namespace
 {
 
-constexpr std::string_view operation_outcome_template = R"(
+constexpr const auto* operation_outcome_template = R"(
 {
   "resourceType": "OperationOutcome",
   "meta": {
@@ -43,7 +43,7 @@ RapidjsonNumberAsStringParserDocument<OperationOutcomeTemplateMark> operationOut
 
 void initTemplates()
 {
-    rj::StringStream s1(operation_outcome_template.data());
+    rj::StringStream s1(operation_outcome_template);
     operationOutcomeTemplate->ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s1);
 }
 
@@ -66,14 +66,14 @@ std::string OperationOutcome::Issue::typeToString(OperationOutcome::Issue::Type 
 {
     std::string result = std::string(magic_enum::enum_name(type));
     ModelExpect(! result.empty(), "Invalid issue code type " + std::to_string(static_cast<int>(type)));
-    std::replace(result.begin(), result.end(), '_', '-');
+    std::ranges::replace(result, '_', '-');
     return result;
 }
 
 //static
 OperationOutcome::Issue::Type OperationOutcome::Issue::stringToType(std::string str)
 {
-    std::replace(str.begin(), str.end(), '-', '_');
+    std::ranges::replace(str, '-', '_');
     const auto result = magic_enum::enum_cast<OperationOutcome::Issue::Type>(str);
     ModelExpect(result.has_value(), "Invalid issue type enum value " + str);
     return result.value();
@@ -192,6 +192,12 @@ OperationOutcome::Issue::Type OperationOutcome::httpCodeToOutcomeIssueType(HttpS
             return Issue::Type::invalid;
         case HttpStatus::Unauthorized:
             return Issue::Type::unknown;
+        case HttpStatus::NotAcceptPN3:
+        case HttpStatus::RejectMissingKvnr:
+        case HttpStatus::KvnrMismatch:
+        case HttpStatus::RejectMissingHcv:
+        case HttpStatus::RejectHcvMismatch:
+        case HttpStatus::Locked:
         case HttpStatus::Forbidden:
             return Issue::Type::forbidden;
         case HttpStatus::NotFound:

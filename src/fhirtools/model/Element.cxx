@@ -939,6 +939,7 @@ std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
     }
     catch (const std::exception&)
     {
+        return false;
     }
     return false;
 }
@@ -988,7 +989,7 @@ Element::QuantityType::QuantityType(const std::string_view& valueAndUnit)
 {
     size_t idx = 0;
     (void) std::stod(std::string(valueAndUnit), &idx);
-    mValue = DecimalType(std::string_view{valueAndUnit.data(), idx});
+    mValue = DecimalType(std::string_view{valueAndUnit.begin(), idx});
     mUnit = boost::trim_copy(std::string(valueAndUnit.substr(idx)));
 }
 

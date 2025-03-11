@@ -16,7 +16,7 @@ class C11574Test : public ErpWorkflowTestP
 TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace ResourceTemplates;
-    if(Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3)
+    if (Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3 || isDiga(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -94,7 +94,4 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
 }
 
 INSTANTIATE_TEST_SUITE_P(C11574TestInst, C11574Test,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung,
-                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));

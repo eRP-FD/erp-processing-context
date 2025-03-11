@@ -65,7 +65,7 @@ private:
     State mState;
     Bundle mKbvBundle;
     model::Timestamp mLastModified;
-    std::int32_t mRetryCount;
+    std::int32_t mRetryCount{0};
 };
 
 

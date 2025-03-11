@@ -54,17 +54,17 @@ RedisClient::RedisClient(std::chrono::milliseconds socketTimeout) {
     const auto sentinelHosts = configuration.getOptionalStringValue(ConfigurationKey::REDIS_SENTINEL_HOSTS);
     const auto caCert = configuration.getStringValue(ConfigurationKey::REDIS_CERTIFICATE_PATH);
 
-    TVLOG(2) << "redis config:" << std::endl
-        << "database=" << configuration.getIntValue(ConfigurationKey::REDIS_DATABASE) << std::endl
-        << "port=" << configuration.getIntValue(ConfigurationKey::REDIS_PORT) << std::endl
-        << "host=" << configuration.getStringValue(ConfigurationKey::REDIS_HOST) << std::endl
-        << "sentinelHosts=" << (sentinelHosts ? *sentinelHosts : "<not set>") << std::endl
-        << "sentinelMasterName="
-        << configuration.getOptionalStringValue(ConfigurationKey::REDIS_SENTINEL_MASTER_NAME, "<not set>") << std::endl
-        << "user=" << configuration.getStringValue(ConfigurationKey::REDIS_USER) << std::endl
-        << "password=<password>" << std::endl
-        << "connectionPoolSize=" << configuration.getIntValue(ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE) << std::endl
-        << "cert_path=" << caCert;
+    TVLOG(2) << "redis config:";
+    TVLOG(2) << "database=" << configuration.getIntValue(ConfigurationKey::REDIS_DATABASE);
+    TVLOG(2) << "port=" << configuration.getIntValue(ConfigurationKey::REDIS_PORT);
+    TVLOG(2) << "host=" << configuration.getStringValue(ConfigurationKey::REDIS_HOST);
+    TVLOG(2) << "sentinelHosts=" << (sentinelHosts ? *sentinelHosts : "<not set>");
+    TVLOG(2) << "sentinelMasterName="
+             << configuration.getOptionalStringValue(ConfigurationKey::REDIS_SENTINEL_MASTER_NAME, "<not set>");
+    TVLOG(2) << "user=" << configuration.getStringValue(ConfigurationKey::REDIS_USER);
+    TVLOG(2) << "password=<password>";
+    TVLOG(2) << "connectionPoolSize=" << configuration.getIntValue(ConfigurationKey::REDIS_CONNECTIONPOOL_SIZE);
+    TVLOG(2) << "cert_path=" << caCert;
 
     using namespace sw::redis;
     sw::redis::tls::disable_auto_init();
@@ -171,4 +171,18 @@ void RedisClient::publish(const std::string_view& channel, const std::string_vie
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
         DurationConsumer::categoryRedis, String::concatenateItems("Redis:publish(", channel, ")"));
     mConnection->publish(channel, message);
+}
+
+int64_t RedisClient::getIntValue(std::string_view key)
+{
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:getIntValue()"));
+    return std::strtoll(mConnection->get(key).value_or("0").c_str(), nullptr, 10);
+}
+
+void RedisClient::flushdb()
+{
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
+        DurationConsumer::categoryRedis, String::concatenateItems("Redis:flushdb()"));
+    mConnection->flushdb();
 }

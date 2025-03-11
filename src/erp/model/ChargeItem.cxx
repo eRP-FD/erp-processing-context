@@ -49,7 +49,7 @@ const rapidjson::Pointer identifierPointer(ElementName::path(elements::identifie
 const rapidjson::Pointer identifierEntrySystemPointer(ElementName::path(elements::system));
 const rapidjson::Pointer identifierEntrySystemValuePointer(ElementName::path(elements::value));
 
-constexpr ::std::string_view charge_item_template = R"--(
+constexpr const auto* charge_item_template = R"--(
 {
     "resourceType": "ChargeItem",
     "meta": {
@@ -67,7 +67,7 @@ constexpr ::std::string_view charge_item_template = R"--(
 }
 )--";
 
-constexpr std::string_view identifierEntryTemplate = R"--(
+constexpr const auto* identifierEntryTemplate = R"--(
 {
   "system": "",
   "value": ""
@@ -84,10 +84,10 @@ RapidjsonNumberAsStringParserDocument<IdentifierEntryTemplate> IdentifierEntryTe
 
 void initTemplates ()
 {
-    ::rapidjson::StringStream stream(charge_item_template.data());
+    ::rapidjson::StringStream stream(charge_item_template);
     chargeItemTemplate->ParseStream<::rapidjson::kParseNumbersAsStringsFlag, ::rapidjson::CustomUtf8>(stream);
 
-    rapidjson::StringStream stringStream{identifierEntryTemplate.data()};
+    rapidjson::StringStream stringStream{identifierEntryTemplate};
     IdentifierEntryTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(stringStream);
 }
 

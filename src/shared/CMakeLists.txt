@@ -6,6 +6,9 @@
 
 configure_file(erp-serverinfo.cxx.in erp-serverinfo.cxx)
 
+# Helper macros to manage transition away from error_code return values.
+add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
+
 add_library(erp-shared STATIC
     admin/AdminRequestHandler.cxx
     audit/AuditDataCollector.cxx
@@ -222,21 +225,22 @@ target_compile_definitions(erp-shared
 target_include_directories(erp-shared PUBLIC "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(erp-shared
     PUBLIC
+        LibXml2::LibXml2
+        ZLIB::ZLIB
+        boost::boost
+        date::date
         fhirtools
-        CONAN_PKG::boost
-        CONAN_PKG::date
-        CONAN_PKG::glog
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::libpq
-        CONAN_PKG::libpqxx
-        CONAN_PKG::libxml2
-        CONAN_PKG::magic_enum
-        CONAN_PKG::openssl
-        CONAN_PKG::redis-plus-plus
-        CONAN_PKG::zstd
-        CONAN_PKG::zlib
+        glog::glog
+        gsl::gsl-lite
+        libpq::pq
+        libpqxx::pqxx
+        magic_enum::magic_enum
+        openssl::openssl
+        rapidjson
+        redis++::redis++_static
+        zstd::libzstd_static
         $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:hsmclient::hsmclient>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:tpmclient::tpmclient>
         $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
     )

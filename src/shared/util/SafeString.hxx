@@ -56,25 +56,34 @@ public:
     // convert for example SafeString->const char*->std::string
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator const char* (void) const;
+    [[nodiscard]] operator const char* (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator const unsigned char* (void) const;
+    [[nodiscard]] operator const unsigned char* (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
+    //NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     [[nodiscard]] operator std::string_view (void) const;
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
+    //NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
     [[nodiscard]] operator std::basic_string_view<std::byte> (void) const;
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator gsl::span<const char> (void) const;
+    [[nodiscard]] operator gsl::span<const char> (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator char* (void);
+    [[nodiscard]] operator char* (void); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] explicit operator std::byte* (void);
+    [[nodiscard]] explicit operator std::byte* (void); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    operator std::string& () = delete;
+
+    /// @return const pointer to the managed memory, terminating \0 is guaranteed
+    [[nodiscard]] char* c_str();
+
+    /// @return const pointer to the managed memory, terminating \0 is guaranteed
+    [[nodiscard]] const char* c_str() const;
 
     /// @return the size of the string, excluding the terminating \0
     [[nodiscard]] size_t size (void) const;
@@ -129,14 +138,14 @@ SafeString::SafeString(InputT&& in) // NOLINT(bugprone-forwarding-reference-over
 template<typename InputT, decltype(std::declval<InputT>().clear()) *>
 void SafeString::clear(InputT && in, special_)
 {
-    in.clear();
+    std::forward<InputT>(in).clear();
 }
 
 template<typename InputT>
 auto SafeString::clear(InputT && in, SafeString::general_)
     -> std::enable_if_t<std::is_default_constructible_v<InputT> && std::is_move_assignable_v<InputT>>
 {
-    in = InputT{};
+    std::forward<InputT>(in) = InputT{};
 }
 
 

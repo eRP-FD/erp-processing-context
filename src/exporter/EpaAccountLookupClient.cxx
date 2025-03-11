@@ -50,6 +50,7 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
     }
     BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
     BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
+    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::hashedKvnrKey, bde.mHashedKvnr);
 
     auto result = sendWithRetry(*client, request);
     A_25937.finish();
@@ -61,7 +62,6 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const model::
         os << "got response code " << result.getHeader().status() << " from account lookup to " << host
            << ":" << port;
         bde.mError = os.str();
-        TLOG(WARNING) << bde.mError;
     }
     const std::string code = result.getHeader().header(Header::InnerResponseCode).value_or("0");
     bde.mInnerResponseCode = static_cast<unsigned int>(std::strtoul(code.c_str(), nullptr, 10));

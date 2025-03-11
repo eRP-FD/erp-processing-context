@@ -5,12 +5,14 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/crypto/VsdmProof.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/network/message/Header.hxx"
 #include "shared/util/Hash.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
 #include "src/shared/enrolment/VsdmHmacKey.hxx"
+#include "test/util/ErpMacros.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <gtest/gtest.h>
@@ -27,7 +29,7 @@ using namespace std::chrono_literals;
 namespace
 {
 
-std::string makePz(const model::Kvnr& kvnr, const model::Timestamp& timestamp,
+std::string makePzV1(const model::Kvnr& kvnr, const model::Timestamp& timestamp,
                    const std::optional<VsdmHmacKey>& keyPackage = std::nullopt)
 {
     std::string output;
@@ -123,6 +125,7 @@ public:
 
 protected:
     model::Kvnr kvnr{""};
+    std::string hcv = VsdmProof2::makeHcv("20250101", "Hauptstr");
 };
 
 
@@ -168,7 +171,11 @@ TEST_F(GetTaskByPharmacyWfTest, TimestampTooOld)
     std::optional<model::PrescriptionId> prescriptionId{};
     createActivatedTask(prescriptionId);
 
-    const auto pz = makePz(kvnr, model::Timestamp::now() - 31min);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    std::optional<VsdmHmacKey> vsdmKey{keys[0]};
+
+    const auto pz = makePzV1(kvnr, model::Timestamp::now() - 31min, vsdmKey);
     const auto pnw = createEncodedPnw(pz);
 
     std::optional<model::Bundle> tasks{};
@@ -187,37 +194,20 @@ TEST_F(GetTaskByPharmacyWfTest, TimestampTooOld)
         {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
 }
 
-
-TEST_F(GetTaskByPharmacyWfTest, TimestampInvalid)
-{
-    A_23450.test("PNW with invalid timestamp causes error message with code 403");
-    std::optional<model::PrescriptionId> prescriptionId{};
-    createActivatedTask(prescriptionId);
-    auto pzBin = Base64::decodeToString(makePz(kvnr, model::Timestamp::now()));
-    // first 10 chars are kvnr, followed by timestamp
-    pzBin[10] = '-';
-    const auto pnw = createEncodedPnw(Base64::encode(pzBin));
-
-    std::optional<model::Bundle> tasks{};
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
-                                            model::OperationOutcome::Issue::Type::forbidden,
-                                            "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden "
-                                            "(Zeitliche Gültigkeit des Anwesenheitsnachweis überschritten).",
-                                            pnw));
-    ASSERT_FALSE(tasks);
-}
-
 TEST_F(GetTaskByPharmacyWfTest, KvnrInvalid)
 {
     std::optional<model::PrescriptionId> prescriptionId{};
     createActivatedTask(prescriptionId);
-    auto pzBin = Base64::decodeToString(makePz(kvnr, model::Timestamp::now()));
-    // first 10 chars are kvnr
-    pzBin[2] = 'A';
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    std::optional<VsdmHmacKey> vsdmKey{keys[0]};
+    auto pzBin = Base64::decodeToString(makePzV1(kvnr, model::Timestamp::now(), vsdmKey));
     const auto pnw = createEncodedPnw(Base64::encode(pzBin));
 
+    const model::Kvnr kvnrInvalid{"AA235678"};
+
     std::optional<model::Bundle> tasks{};
-    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnrInvalid.id(), std::string{}, HttpStatus::Forbidden,
                                             model::OperationOutcome::Issue::Type::forbidden, "Invalid Kvnr", pnw));
     ASSERT_FALSE(tasks);
 }
@@ -251,7 +241,7 @@ TEST_F(GetTaskByPharmacyWfTest, Success)
     ASSERT_FALSE(keys.empty());
     std::optional<VsdmHmacKey> vsdmKey{keys[0]};
 
-    const auto pz = makePz(kvnr, model::Timestamp::now(), vsdmKey);
+    const auto pz = makePzV1(kvnr, model::Timestamp::now(), vsdmKey);
     const auto pnw = createEncodedPnw(pz);
 
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::OK, std::nullopt, std::nullopt, pnw));
@@ -264,6 +254,122 @@ TEST_F(GetTaskByPharmacyWfTest, Success)
         {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
         {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
 }
+
+TEST_F(GetTaskByPharmacyWfTest, PN2Success)
+{
+    const auto startTime = model::Timestamp::now();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    std::optional<model::Bundle> tasks{};
+    createActivatedTask(prescriptionId);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    auto encryptedProof = VsdmProof2::encrypt(
+        vsdmKey,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr});
+
+    auto pz = encryptedProof.serialize();
+    const auto pnw = createEncodedPnw(pz) + "&hcv=" + Base64::toBase64Url(Base64::encode(hcv));
+
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::OK, std::nullopt, std::nullopt, pnw));
+    ASSERT_TRUE(tasks);
+    ASSERT_EQ(tasks->getResourceCount(), 1);
+    const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+        {prescriptionId, prescriptionId, std::nullopt}, kvnr.id(), "en", startTime,
+        {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
+        {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, PN2TimestampOutdated)
+{
+    const auto startTime = model::Timestamp::now();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    createActivatedTask(prescriptionId);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    auto encryptedProof = VsdmProof2::encrypt(
+        vsdmKey,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now() - 31min, .kvnr = kvnr});
+
+    auto pz = encryptedProof.serialize();
+    const auto pnw = createEncodedPnw(pz) + "&hcv=" + Base64::toBase64Url(Base64::encode(hcv));
+
+    std::optional<model::Bundle> tasks{};
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
+                                            model::OperationOutcome::Issue::Type::forbidden,
+                                            "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden "
+                                            "(Zeitliche Gültigkeit des Anwesenheitsnachweis überschritten).",
+                                            pnw));
+    ASSERT_FALSE(tasks);
+
+    const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+        {prescriptionId, prescriptionId, std::nullopt}, kvnr.id(), "en", startTime,
+        {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
+        {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, PN2HcvMismatch)
+{
+    const auto startTime = model::Timestamp::now();
+    std::optional<model::PrescriptionId> prescriptionId{};
+    createActivatedTask(prescriptionId);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    auto encryptedProof = VsdmProof2::encrypt(
+        vsdmKey,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr});
+
+    auto pz = encryptedProof.serialize();
+    const auto pnw = createEncodedPnw(pz) + "&hcv=" +  Base64::toBase64Url(Base64::encode(VsdmProof2::makeHcv("20240101", "Nebenstr.")));
+
+    std::optional<model::Bundle> tasks{};
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::RejectHcvMismatch,
+                                            model::OperationOutcome::Issue::Type::forbidden,
+                                            "HCV Validierung fehlgeschlagen.",
+                                            pnw));
+    ASSERT_FALSE(tasks);
+
+    const auto telematikIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
+    const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(checkAuditEvents(
+        {prescriptionId, prescriptionId, std::nullopt}, kvnr.id(), "en", startTime,
+        {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
+        {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, PN2KvnrMismatch)
+{
+    std::optional<model::PrescriptionId> prescriptionId{};
+    createActivatedTask(prescriptionId);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    const model::Kvnr kvnr2{"X123456788"};
+    auto encryptedProof = VsdmProof2::encrypt(
+        vsdmKey,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr2});
+
+    auto pz = encryptedProof.serialize();
+    const auto pnw = createEncodedPnw(pz) + "&hcv=" + Base64::encode(Base64::toBase64Url(hcv));
+
+    std::optional<model::Bundle> tasks{};
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::KvnrMismatch,
+                                            model::OperationOutcome::Issue::Type::forbidden,
+                                            "KVNR Überprüfung fehlgeschlagen.",
+                                            pnw));
+    ASSERT_FALSE(tasks);
+}
+
 
 TEST_F(GetTaskByPharmacyWfTest, SuccessAcceptPN3)
 {
@@ -324,4 +430,41 @@ TEST_F(GetTaskByPharmacyWfTest, recoverSecret)
     std::optional<model::Bundle> bundle;
     ASSERT_NO_FATAL_FAILURE(bundle = taskGetId(*prescriptionId, telematikIdPharmacy, accessCode, std::nullopt,
                                                HttpStatus::OK, std::nullopt, false, "GET /Task/<id>?ac"));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, RateLimit_PN2HcvMismatch)
+{
+    EnvironmentVariableGuard limit{ConfigurationKey::SERVICE_TASK_GET_RATE_LIMIT, "3"};
+
+    client->getContext()->getRedisClient()->flushdb();
+
+    std::optional<model::PrescriptionId> prescriptionId{};
+    createActivatedTask(prescriptionId);
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    auto encryptedProof = VsdmProof2::encrypt(
+        vsdmKey,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr});
+
+    auto pz = encryptedProof.serialize();
+    const auto pnw = createEncodedPnw(pz) + "&hcv=" +  Base64::toBase64Url(Base64::encode(VsdmProof2::makeHcv("20240101", "Nebenstr.")));
+
+    for (int i = 0; i < 3; ++i)
+    {
+        std::optional<model::Bundle> tasks{};
+        ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::RejectHcvMismatch,
+                                                model::OperationOutcome::Issue::Type::forbidden,
+                                                "HCV Validierung fehlgeschlagen.",
+                                                pnw));
+        ASSERT_FALSE(tasks);
+    }
+
+    {
+        std::optional<model::Bundle> tasks{};
+        ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{},
+                                                HttpStatus::Locked,
+                                                model::OperationOutcome::Issue::Type::forbidden, "TelematikId blocked for today.", pnw));
+    }
 }

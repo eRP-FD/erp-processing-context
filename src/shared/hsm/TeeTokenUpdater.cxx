@@ -141,7 +141,7 @@ void TeeTokenUpdater::healthCheck() const
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeTokenUpdaterFactory (void)
 {
 #if WITH_HSM_TPM_PRODUCTION > 0
-    return [](auto& hsmPool, std::shared_ptr<Timer> timerManager)
+    return [](auto& hsmPool, const std::shared_ptr<Timer>& timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
             hsmPool,
@@ -158,7 +158,7 @@ TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createProductionTeeToke
 
 TeeTokenUpdater::TeeTokenUpdaterFactory TeeTokenUpdater::createMockTeeTokenUpdaterFactory (void)
 {
-    return [](auto& hsmPool, std::shared_ptr<Timer> timerManager)
+    return [](auto& hsmPool, const std::shared_ptr<Timer>& timerManager)
     {
         return std::make_unique<TeeTokenUpdater>(
             hsmPool,

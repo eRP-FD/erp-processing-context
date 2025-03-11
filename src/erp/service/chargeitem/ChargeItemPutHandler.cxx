@@ -51,7 +51,7 @@ void checkChargeItemConsistency(
                       "Receipt reference in provided ChargeItem does not match the one from the ChargeItem to update");
             ErpExpect(receiptRef == existingReceiptBundleRef ||
                           (receiptRef.has_value() &&
-                           ("Bundle/" + std::string{receiptRef->data()}) == existingReceiptBundleRef),
+                           ("Bundle/" + std::string{*receiptRef}) == existingReceiptBundleRef),
                       HttpStatus::BadRequest,
                       "Receipt reference in provided ChargeItem does not match the one from the ChargeItem to update");
             auto existingPrescriptionBundleRef = existingChargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
@@ -61,7 +61,7 @@ void checkChargeItemConsistency(
             ErpExpect(
                 prescriptionRef == existingPrescriptionBundleRef ||
                     (prescriptionRef.has_value() &&
-                     ("Bundle/" + std::string{prescriptionRef->data()}) == existingPrescriptionBundleRef),
+                     ("Bundle/" + std::string{*prescriptionRef}) == existingPrescriptionBundleRef),
                 HttpStatus::BadRequest,
                 "Prescription reference in provided ChargeItem does not match the one from the ChargeItem to update");
 

@@ -49,12 +49,15 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case KBV_PR_ERP_Medication_PZN:
         case KBV_PR_ERP_PracticeSupply:
         case KBV_PR_ERP_Prescription:
+        case KBV_PR_EVDGA_Bundle:
+        case KBV_PR_EVDGA_HealthAppRequest:
         case KBV_PR_FOR_Coverage:
         case KBV_PR_FOR_Organization:
         case KBV_PR_FOR_Patient:
         case KBV_PR_FOR_Practitioner:
         case KBV_PR_FOR_PractitionerRole:
-        case Gem_erxMedicationDispense:
+        case GEM_ERP_PR_MedicationDispense:
+        case GEM_ERP_PR_MedicationDispense_DiGA:
         case MedicationDispenseBundle:
         case Gem_erxReceiptBundle:
         case Gem_erxTask:

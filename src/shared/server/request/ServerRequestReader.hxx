@@ -45,7 +45,7 @@ private:
     SslStream& mStream;
     boost::beast::flat_static_buffer<ErpConstants::DefaultBufferSize> mBuffer;
     boost::beast::http::request_parser<boost::beast::http::string_body> mParser;
-    bool mIsStreamClosed;
+    bool mIsStreamClosed{false};
 
     Header readHeader (void);
     void markStreamAsClosed (void);

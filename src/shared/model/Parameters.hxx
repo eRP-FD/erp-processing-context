@@ -199,7 +199,7 @@ std::string_view Parameters<ParametersT>::getValueDate(const rapidjson::Value& p
 template<typename ParametersT>
 NumberAsStringParserDocument Parameters<ParametersT>::getResourceDoc(const rapidjson::Value& part) const
 {
-    auto resource = getResource(part);
+    const auto* resource = getResource(part);
     ModelExpect(resource, "Resource not found in parameter part");
     NumberAsStringParserDocument doc;
     doc.CopyFrom(*resource, doc.GetAllocator());

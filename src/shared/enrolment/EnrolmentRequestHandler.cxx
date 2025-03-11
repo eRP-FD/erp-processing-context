@@ -124,7 +124,6 @@ namespace
             return false;
         }
     }
-}
 
 enum ResourceType
 {
@@ -133,7 +132,6 @@ enum ResourceType
     AuditLog,
     ChargeItem
 };
-
 
 BlobType getBlobTypeForResourceType (const ResourceType resourceType)
 {
@@ -146,7 +144,7 @@ BlobType getBlobTypeForResourceType (const ResourceType resourceType)
     }
     Fail("unsupported resource type");
 }
-
+}
 
 Operation EnrolmentRequestHandlerBase::getOperation (void) const
 {
@@ -766,6 +764,7 @@ EnrolmentModel PostVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
         ErpVector unwrappedEntry = hsmSession.unwrapRawPayload(vsdmBlob);
         std::string_view vsdmPackage{reinterpret_cast<const char*>(unwrappedEntry.data()), unwrappedEntry.size()};
 
+        // GEMREQ-start A-27299#store
         A_23492.start("decrypt vsdm key and store it");
         VsdmHmacKey storedVsdmPackage{vsdmPackage};
         // get and validate the passed hmac key by testing it
@@ -785,6 +784,7 @@ EnrolmentModel PostVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
         vsdmKeyBlobEntry.createdDateTime = std::chrono::system_clock::now();
         session.baseServiceContext.getVsdmKeyBlobDatabase().storeBlob(std::move(vsdmKeyBlobEntry));
         A_23492.finish();
+        // GEMREQ-end A-27299#store
         session.response.setStatus(HttpStatus::Created);
     }
     catch (const ErpException& exception)

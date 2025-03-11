@@ -192,6 +192,7 @@ private:
     thread_local static PostgresConnection mConnection;
 
     PostgresBackendTask mBackendTask;
+    PostgresBackendTask mBackendTask162;
     PostgresBackendTask mBackendTask169;
     PostgresBackendTask mBackendTask200;
     PostgresBackendTask mBackendTask209;

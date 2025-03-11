@@ -55,7 +55,9 @@ FileNameAndLineNumber ExceptionWrapperBase::getRootLocation(const FileNameAndLin
             return currentWrapper.location.rootLocation;
         }
         catch(...)
-        {}
+        {
+            return location;
+        }
     }
     return location;
 }

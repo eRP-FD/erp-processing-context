@@ -58,47 +58,47 @@ void ExceptionHelper::extractInformationAndRethrow (
         if (e.status() == HttpStatus::BadRequest)
             detail << ": " << e.what();
 
-        consumer(detail.str(), getLocationString(e));
+        std::move(consumer)(detail.str(), getLocationString(e));
         throw;
     }
     catch (const JwtInvalidRfcFormatException& e)
     {
-        consumer("JwtInvalidRfcFormatException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtInvalidRfcFormatException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtExpiredException& e)
     {
-        consumer("JwtExpiredException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtExpiredException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtInvalidFormatException& e)
     {
-        consumer("JwtInvalidFormatException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtInvalidFormatException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtInvalidSignatureException& e)
     {
-        consumer("JwtInvalidSignatureException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtInvalidSignatureException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtRequiredClaimException& e)
     {
-        consumer("JwtRequiredClaimException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtRequiredClaimException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtInvalidAudClaimException& e)
     {
-        consumer("JwtInvalidAudClaimException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtInvalidAudClaimException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const JwtException& e)
     {
-        consumer("JwtException(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("JwtException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const HsmException& e)
     {
-        consumer("HsmException(" + std::string(e.what())
+        std::move(consumer)("HsmException(" + std::string(e.what())
 #if WITH_HSM_TPM_PRODUCTION > 0
                      + "," + HsmProductionClient::hsmErrorDetails(e.errorCode)
 #endif
@@ -107,35 +107,35 @@ void ExceptionHelper::extractInformationAndRethrow (
     }
     catch (const sw::redis::Error& e)
     {
-        consumer("sw::redis::Error(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("sw::redis::Error(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::runtime_error& e)
     {
         const std::string typeinfo = util::demangle(typeid(e).name());
-        consumer("std::runtime_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("std::runtime_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::logic_error& e)
     {
         const std::string typeinfo = util::demangle(typeid(e).name());
-        consumer("std::logic_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("std::logic_error(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const std::exception& e)
     {
         const std::string typeinfo = util::demangle(typeid(e).name());
-        consumer("std::exception(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
+        std::move(consumer)("std::exception(" + typeinfo + ")(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const boost::exception& e)
     {
-        consumer("boost::exception(" + boost::diagnostic_information(e) + ")", getLocationString(e));
+        std::move(consumer)("boost::exception(" + boost::diagnostic_information(e) + ")", getLocationString(e));
         throw;
     }
     catch(...)
     {
-        consumer("unknown exception", "unknown location");
+        std::move(consumer)("unknown exception", "unknown location");
         throw;
     }
 }
@@ -149,7 +149,7 @@ void ExceptionHelper::extractInformation (
     {
         extractInformationAndRethrow(std::move(consumer), std::move(exception));
     }
-    catch(...)
+    catch(...) //NOLINT(bugprone-empty-catch)
     {
         // Caller does not want the exception to be thrown beyond this function, so ignore it
     }

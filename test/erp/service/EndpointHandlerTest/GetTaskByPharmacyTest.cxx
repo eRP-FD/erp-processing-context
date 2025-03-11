@@ -1,21 +1,23 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/crypto/VsdmProof.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/hsm/VsdmKeyBlobDatabase.hxx"
 #include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Hash.hxx"
 #include "shared/util/Random.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
@@ -34,7 +36,7 @@ using namespace std::chrono_literals;
 namespace
 {
 
-std::string makePz(const model::Kvnr& kvnr, const model::Timestamp& timestamp, char updateReason,
+std::string makePzV1(const model::Kvnr& kvnr, const model::Timestamp& timestamp, char updateReason,
                    const VsdmHmacKey& keyPackage)
 {
     std::string output;
@@ -65,6 +67,7 @@ std::string makePz(const model::Kvnr& kvnr, const model::Timestamp& timestamp, c
     std::copy(calculatedHash.begin(), calculatedHash.begin() + 24, pzIt);
     return Base64::encode(output);
 }
+
 
 std::string createEncodedPnw(std::optional<std::string> pnwPzNumberInput = std::nullopt)
 {
@@ -130,7 +133,9 @@ public:
         vsdmBlobDb.storeBlob(std::move(blobEntry));
     }
 
-    void callHandler(const std::string& pnw, ServerResponse& serverResponse, std::optional<model::Kvnr> kvnr = std::nullopt )
+    void callHandler(const std::string& pnw, ServerResponse& serverResponse,
+                     std::optional<model::Kvnr> kvnr = std::nullopt, std::optional<std::string> hcv = std::nullopt,
+                     std::optional<int> count = std::nullopt, std::optional<std::string> encodedHcv = std::nullopt)
     {
         GetAllTasksHandler handler({});
 
@@ -138,14 +143,24 @@ public:
         Header requestHeader{HttpMethod::GET, "/Task", 0, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{std::move(requestHeader)};
         serverRequest.setAccessToken(jwtPharmacy);
-        if(kvnr.has_value())
+        ServerRequest::QueryParametersType params{{"pnw", pnw}};
+        if (kvnr.has_value())
         {
-            serverRequest.setQueryParameters({{"pnw", pnw}, {"kvnr", kvnr.value().id()}});
+            params.emplace_back("kvnr", kvnr.value().id());
         }
-        else
+        if (count.has_value())
         {
-            serverRequest.setQueryParameters({{"pnw", pnw}, {"_count", "10"}});
+            params.emplace_back("_count", std::to_string(count.value()));
         }
+        if (hcv.has_value())
+        {
+            params.emplace_back("hcv", Base64::toBase64Url(Base64::encode(hcv.value())));
+        }
+        if (encodedHcv.has_value())
+        {
+            params.emplace_back("hcv", encodedHcv.value());
+        }
+        serverRequest.setQueryParameters(params);
         AccessLog accessLog;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
@@ -179,10 +194,8 @@ public:
         auto runtimeConfig = mServiceContext.getRuntimeConfigurationSetter();
         if (enable)
         {
-            runtimeConfig->enableAcceptPN3(expiry.has_value()?
-               expiry.value():
-               model::Timestamp::now() + std::chrono::hours{1}
-            );
+            runtimeConfig->enableAcceptPN3(expiry.has_value() ? expiry.value()
+                                                              : model::Timestamp::now() + std::chrono::hours{1});
         }
         else
         {
@@ -200,7 +213,7 @@ public:
     void validateLink(const model::Bundle &bundle, const model::Link::Type type, const std::string &expectPath)
     {
         const auto link = bundle.getLink(type);
-        EXPECT_TRUE(link.has_value());
+        ASSERT_TRUE(link.has_value());
         const auto url = link.value();
         const auto pathStart = url.find("/Task");
         ASSERT_NE(pathStart, std::string::npos);
@@ -230,16 +243,189 @@ public:
     }
 
 protected:
-    VsdmHmacKey keyPackage{'!', '1'};
+    VsdmHmacKey keyPackage{'A', '1'};
     model::Kvnr kvnr{"X123456788"};
+    std::string hcv = VsdmProof2::makeHcv("20250101", "Hauptstr");
 };
+
+
+TEST_F(GetTasksByPharmacyTest, PN2_success)
+{
+    auto encryptedProof = VsdmProof2::encrypt(
+        keyPackage,
+        VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr});
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, hcv));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    verifyTasksReady(serverResponse);
+}
+
+TEST_F(GetTasksByPharmacyTest, PN2_rejectMissingHcv)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    EnvironmentVariableGuard guardHcvCheck(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK, "true");
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::RejectMissingHcv,
+                                      "Ein Prüfnachweis ohne HCV wird nicht akzeptiert.");
+}
+
+
+TEST_F(GetTasksByPharmacyTest, PN2_rejectRevoked)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = true,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::Forbidden,
+                                      "eGK gesperrt");
+}
+
+
+TEST_F(GetTasksByPharmacyTest, PN2_kvnrMismatch)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = model::Kvnr("Y123456788"),
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::KvnrMismatch,
+                                      "KVNR Überprüfung fehlgeschlagen.");
+}
+
+TEST_F(GetTasksByPharmacyTest, PN2_hcvMismatch)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = VsdmProof2::makeHcv("20250101", "Nebenstr"),
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    // even when the force check is off, the validation has to be executed
+    EnvironmentVariableGuard guardHcvCheck(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK, "false");
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::RejectHcvMismatch,
+                                      "HCV Validierung fehlgeschlagen.");
+}
+
+TEST_F(GetTasksByPharmacyTest, PN2_hcvBase64Error)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto encodedHcv = Base64::toBase64Url(Base64::encode(hcv)) + "====";// invalid excessive padding
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    // even when the force check is off, the validation has to be executed
+    EnvironmentVariableGuard guardHcvCheck(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK, "false");
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, std::nullopt, std::nullopt, encodedHcv),
+                                      HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.");
+}
+
+TEST_F(GetTasksByPharmacyTest, PN2_missingKey)
+{
+    // use the same key, but with a different identifier
+    VsdmHmacKey keyPackage2{gsl::narrow<char>(keyPackage.operatorId() + 1), keyPackage.version()};
+    keyPackage2.setPlainTextKey(keyPackage.plainTextKey());
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage2, VsdmProof2::DecryptedProof{
+                                                               .revoked = false,
+                                                               .hcv = hcv,
+                                                               .iat = model::Timestamp::now(),
+                                                               .kvnr = kvnr,
+                                                           });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::Forbidden,
+                                      "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (VSDM "
+                                      "Schlüssel nicht vorhanden oder Inhalte nicht entschlüsselbar).");
+}
+
+
+TEST_F(GetTasksByPharmacyTest, PN2_outdatedTimestamp)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now() - 1min,
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "0");
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::Forbidden,
+                                      "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
+                                      "Gültigkeit des Anwesenheitsnachweis überschritten).");
+}
+
+
+TEST_F(GetTasksByPharmacyTest, PN2_timestampTooNew)
+{
+    auto encryptedProof = VsdmProof2::encrypt(keyPackage, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now() + 2min,
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    ServerResponse serverResponse;
+    EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "60");
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, hcv), HttpStatus::Forbidden,
+                                      "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
+                                      "Gültigkeit des Anwesenheitsnachweis überschritten).");
+}
+
 
 TEST_F(GetTasksByPharmacyTest, success)
 {
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
-    ASSERT_NO_THROW(callHandler(pnw, serverResponse));
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr));
 
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     verifyTasksReady(serverResponse);
@@ -262,7 +448,7 @@ TEST_F(GetTasksByPharmacyTest, invalidResult)
     auto pnw = createEncodedPnwWithError("5");
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Prüfziffer "
                                       "fehlt im VSDM Prüfungsnachweis oder ungültiges Ergebnis im Prüfungsnachweis).");
 }
@@ -278,15 +464,19 @@ TEST_F(GetTasksByPharmacyTest, notAcceptPn3)
                                       "Es wird kein Prüfnachweis mit Ergebnis 3 (ohne Prüfziffer) akzeptiert.");
 }
 
-TEST_F(GetTasksByPharmacyTest, notAcceptPn3WithoutKvnr)
+TEST_F(GetTasksByPharmacyTest, RejectMissingKvnr)
 {
-    A_25208.test("no 'pz' in xml, no 'kvnr' in URL and accept PN3");
+    A_25208_01.test("For pharmacy, reject calls to endpoint GET /Task without query parameter `kvnr`.");
     setAcceptPN3(true, std::nullopt);
     auto pnw = createEncodedPnw();
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::NotAcceptPN3WithoutKVNR,
-                                      "Ein Prüfnachweis mit Ergebnis '3' ohne KVNR wird nicht akzeptiert.");
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::RejectMissingKvnr,
+                                      "Ein Prüfnachweis ohne KVNR wird nicht akzeptiert.");
+
+    setAcceptPN3(false, std::nullopt);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::RejectMissingKvnr,
+                                      "Ein Prüfnachweis ohne KVNR wird nicht akzeptiert.");
 }
 
 TEST_F(GetTasksByPharmacyTest, successAcceptPN3expired)
@@ -310,11 +500,11 @@ TEST_F(GetTasksByPharmacyTest, outdatedData)
 {
     using namespace std::chrono_literals;
     EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "0");
-    auto pz = makePz(kvnr, model::Timestamp::now() - 1min, 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now() - 1min, 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
                                       "Gültigkeit des Anwesenheitsnachweis überschritten).");
 }
@@ -324,11 +514,11 @@ TEST_F(GetTasksByPharmacyTest, dateTooNew)
     A_23451_01.test("PNW with timestamp too new minutes causes error message with code 403");
     using namespace std::chrono_literals;
     EnvironmentVariableGuard guardTimestamp(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS, "60");
-    auto pz = makePz(kvnr, model::Timestamp::now() + 2min, 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now() + 2min, 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche "
                                       "Gültigkeit des Anwesenheitsnachweis überschritten).");
 }
@@ -378,10 +568,10 @@ TEST_F(GetTasksByPharmacyTest, notExpired)
         model::Timestamp::now() +96h
     );
 
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
-    ASSERT_NO_THROW(callHandler(pnw, serverResponse));
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr));
 
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
@@ -394,11 +584,11 @@ TEST_F(GetTasksByPharmacyTest, unknownKey)
 {
     VsdmHmacKey newKeyPackage{'$', '1'};
     newKeyPackage.setPlainTextKey(keyPackage.plainTextKey());
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', newKeyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', newKeyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Fehler bei "
                                       "Prüfung der HMAC-Sicherung).");
 }
@@ -408,11 +598,11 @@ TEST_F(GetTasksByPharmacyTest, differentKey)
 {
     const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
     keyPackage.setPlainTextKey(Base64::encode(key));
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                       "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Fehler bei "
                                       "Prüfung der HMAC-Sicherung).");
 }
@@ -420,25 +610,35 @@ TEST_F(GetTasksByPharmacyTest, differentKey)
 
 TEST_F(GetTasksByPharmacyTest, pzTooShort)
 {
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pzBin = Base64::decode(pz);
     pzBin.resize(46);
-    auto pnw = createEncodedPnw(Base64::encode(pz));
+    auto pnw = createEncodedPnw(Base64::encode(pzBin));
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                           "Failed parsing PNW XML.", "Invalid size of Prüfziffer");
+}
+
+TEST_F(GetTasksByPharmacyTest, kvnrMismatch)
+{
+    auto pz = makePzV1(model::Kvnr("Y123456788"), model::Timestamp::now(), 'U', keyPackage);
+    auto pnw = createEncodedPnw(pz);
+    ServerResponse serverResponse;
+
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr), HttpStatus::KvnrMismatch,
+                                      "KVNR Überprüfung fehlgeschlagen.");
 }
 
 TEST_F(GetTasksByPharmacyTest, pzTooLong)
 {
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pzBin = Base64::decode(pz);
     pzBin.push_back('A');
-    auto pnw = createEncodedPnw(Base64::encode(pz));
+    auto pnw = createEncodedPnw(Base64::encode(pzBin));
     ServerResponse serverResponse;
 
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(callHandler(pnw, serverResponse), HttpStatus::Forbidden,
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden,
                                           "Failed parsing PNW XML.", "Invalid size of Prüfziffer");
 }
 
@@ -450,7 +650,7 @@ TEST_F(GetTasksByPharmacyTest, invalidXml)
     ServerResponse serverResponse;
 
     EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
-        callHandler(pnw, serverResponse), HttpStatus::Forbidden, "Failed parsing PNW XML.",
+        callHandler(pnw, serverResponse, kvnr), HttpStatus::Forbidden, "Failed parsing PNW XML.",
         "xml could not be parsed, error 4, at line 1, message: Start tag expected, '<' not found");
 }
 
@@ -523,14 +723,21 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
                                 telematikID, accessCode, std::nullopt, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(bundle.emplace(model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator())))
-        << serverResponse.getBody();
+    const auto& fhirInstance = Fhir::instance();
+    const auto* backend = std::addressof(fhirInstance.backend());
+    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now())
+    .match(backend, std::string{model::resource::structure_definition::task},
+           ResourceTemplates::Versions::GEM_ERP_current());
+    auto factory = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), {});
+    auto validationResults = factory.validateGeneric(*repoView, {}, {});
+    ASSERT_TRUE(validationResults.highestSeverity() < fhirtools::Severity::error) << serverResponse.getBody();
+    ASSERT_NO_THROW(bundle.emplace(std::move(factory).getNoValidation()));
     auto tasks = bundle->getResourcesByType<model::Task>();
     ASSERT_EQ(tasks.size(), 1);
     A_24179.test("Returned Task has secret");
     auto taskSecret = tasks[0].secret();
     ASSERT_TRUE(taskSecret.has_value());
-    EXPECT_STREQ(taskSecret->data(), secret);
+    EXPECT_EQ(*taskSecret, secret);
 
     A_24179.test("Returned Bundle contains prescription");
     auto prescriptionBinaryUuid = tasks[0].healthCarePrescriptionUuid();
@@ -751,9 +958,9 @@ TEST_F(GetTaskByIdByPharmacyTestErp17667, erp17667TaskStatusDataRace)
     Header requestHeader{HttpMethod::GET, "/Task", 0, {}, HttpStatus::Unknown};
     ServerRequest serverRequest{std::move(requestHeader)};
     serverRequest.setAccessToken(jwtPharmacy);
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
-    serverRequest.setQueryParameters({{"pnw", pnw}});
+    serverRequest.setQueryParameters({{"pnw", pnw}, {"kvnr", kvnr.id()}});
     AccessLog accessLog;
     ServerResponse serverResponse;
     SessionContext sessionContext{mErp17667ServiceContext, serverRequest, serverResponse, accessLog};
@@ -764,7 +971,7 @@ TEST_F(GetTaskByIdByPharmacyTestErp17667, erp17667TaskStatusDataRace)
 
 TEST_F(GetTasksByPharmacyTest, Paging)
 {
-    const auto expiry = model::Timestamp::now() +48h;
+    const auto expiry = model::Timestamp::now() + 48h;
     const int64_t databaseId = 202830;
     for (int64_t i = 0; i < 30; i++)
     {
@@ -792,10 +999,10 @@ TEST_F(GetTasksByPharmacyTest, Paging)
         );
     }
 
-    auto pz = makePz(kvnr, model::Timestamp::now(), 'U', keyPackage);
+    auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
-    ASSERT_NO_THROW(callHandler(pnw, serverResponse));
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, std::nullopt, 10));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
@@ -803,8 +1010,8 @@ TEST_F(GetTasksByPharmacyTest, Paging)
     const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
     EXPECT_EQ(tasks.size(), 10);
 
-    const auto today = model::Timestamp::now().toGermanDate();
-    const auto self = "/Task?pnw=" + UrlHelper::escapeUrl(pnw) + "&_sort=authored-on";
+    const auto self = "/Task?pnw=" + UrlHelper::escapeUrl(pnw) + "&kvnr=" + kvnr.id() + "&_sort=authored-on";
+
     validateLink(taskBundle, model::Link::Type::Self, self + "&_count=10&__offset=0");
     validateLink(taskBundle, model::Link::Type::Next, self + "&_count=10&__offset=10");
     validateLink(taskBundle, model::Link::Type::Last, self + "&_count=10&__offset=30");

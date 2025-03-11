@@ -62,7 +62,8 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     handlerManager.onGetDo("/Task",
             std::make_unique<GetAllTasksHandler>(oids{
                     oid_versicherter,
-                    oid_oeffentliche_apotheke}));
+                    oid_oeffentliche_apotheke,
+                    oid_krankenhausapotheke}));
     A_21558_01.finish();
 
     A_19113_01.start("Register the allowed professionOIDs");
@@ -87,23 +88,37 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                     oids{oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut, oid_krankenhaus}));
     A_19022.finish();
     // ... 6.1.2.3
-    A_19166.start("Register the allowed professionOIDs");
+    A_19166_01.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19166-01
+    std::unordered_set acceptEndpointOIDsWf162{oid_kostentraeger};
+    std::unordered_set acceptEndpointOIDsWfOther{oid_oeffentliche_apotheke, oid_krankenhausapotheke};
+    using OIDsWf = ErpRequestHandler::OIDsByWorkflow;
+    using model::PrescriptionType;
     handlerManager.onPostDo("/Task/{id}/$accept",
-            std::make_unique<AcceptTaskHandler>(
-                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
-    A_19166.finish();
+                            std::make_unique<AcceptTaskHandler>(OIDsWf{
+                                {PrescriptionType::apothekenpflichigeArzneimittel, acceptEndpointOIDsWfOther},
+                                {PrescriptionType::digitaleGesundheitsanwendungen, acceptEndpointOIDsWf162},
+                                {PrescriptionType::direkteZuweisung, acceptEndpointOIDsWfOther},
+                                {PrescriptionType::apothekenpflichtigeArzneimittelPkv, acceptEndpointOIDsWfOther},
+                                {PrescriptionType::direkteZuweisungPkv, acceptEndpointOIDsWfOther}}));
+    // GEMREQ-end A_19166-01
+    A_19166_01.finish();
     // ... 6.1.2.4
-    A_19170_01.start("Register the allowed professionOIDs");
+    A_19170_02.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19170-02
     handlerManager.onPostDo("/Task/{id}/$reject",
             std::make_unique<RejectTaskHandler>(
-                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
-    A_19170_01.finish();
+                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke, oid_kostentraeger}));
+    // GEMREQ-end A_19170-02
+    A_19170_02.finish();
     // ... 6.1.2.5
-    A_19230.start("Register the allowed professionOIDs");
+    A_19230_01.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19230-01
     handlerManager.onPostDo("/Task/{id}/$close",
             std::make_unique<CloseTaskHandler>(
-                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
-    A_19230.finish();
+                    oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke, oid_kostentraeger}));
+    // GEMREQ-end A_19230-01
+    A_19230_01.finish();
     // ... 6.1.2.6
     A_19026.start("Register the allowed professionOIDs");
     handlerManager.onPostDo("/Task/{id}/$abort",
@@ -133,8 +148,10 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
 
 
     // For GET /Communication see gemSpec_FD_eRp_V1.1.1, 6.3.1
-    A_19446_01.start("Register the allowed professionOIDs");
-    const oids communicationEndpointOIDs{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke};
+    // GEMREQ-start A_19446
+    A_19446_02.start("Register the allowed professionOIDs");
+    const oids communicationEndpointOIDs{oid_versicherter, oid_oeffentliche_apotheke, oid_krankenhausapotheke,
+                                         oid_kostentraeger};
     handlerManager.onGetDo("/Communication",
             std::make_unique<CommunicationGetAllHandler>(communicationEndpointOIDs));
     handlerManager.onGetDo("/Communication/{id}",
@@ -147,7 +164,8 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     // For DELETE /Communication see gemSpec_FD_eRp_V1.1.1, 6.3.3
     handlerManager.onDeleteDo("/Communication/{id}",
             std::make_unique<CommunicationDeleteHandler>(communicationEndpointOIDs));
-    A_19446_01.finish();
+    A_19446_02.finish();
+    // GEMREQ-end A_19446
 
 
     A_19395.start("Register the allowed professionOIDs");
@@ -172,10 +190,13 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     A_20171.finish();
 
     // For POST /Subscription
-    A_22362.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_22362
+    A_22362_01.start("Register the allowed professionOIDs");
     handlerManager.onPostDo("/Subscription",
-            std::make_unique<SubscriptionPostHandler>(oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke}));
-    A_22362.finish();
+                            std::make_unique<SubscriptionPostHandler>(
+                                oids{oid_oeffentliche_apotheke, oid_krankenhausapotheke, oid_kostentraeger}));
+    A_22362_01.finish();
+    // GEMREQ-end A_22362
 
     // PKV endpoints:
 

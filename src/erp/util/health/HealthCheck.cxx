@@ -197,7 +197,7 @@ void HealthCheck::handleException(
         [service, &context]
         (std::string&& details, std::string&& location)
         {
-            context.applicationHealth().down(service, details + " at " + location);
+            context.applicationHealth().down(service, std::move(details) + " at " + std::move(location));
         },
         std::current_exception());
 }

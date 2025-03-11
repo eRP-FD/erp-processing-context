@@ -714,6 +714,7 @@ public:
     virtual JWT jwtVersicherter() const { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }
     virtual JWT jwtArzt() const { return JwtBuilder::testBuilder().makeJwtArzt(); }
     virtual JWT jwtApotheke() const { return JwtBuilder::testBuilder().makeJwtApotheke(); }
+    virtual JWT jwtKostentraeger() const { return JwtBuilder::testBuilder().makeJwtKostentraeger(); }
 
     JWT defaultJwt() const { return jwtVersicherter(); }
 

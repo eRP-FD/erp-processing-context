@@ -36,6 +36,7 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
     switch(GetParam())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::direkteZuweisung:
             A_22731.test("wrong flow type for ChargeItem");
             ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
@@ -56,7 +57,4 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
 }
 
 INSTANTIATE_TEST_SUITE_P(Erp10081TestInst, Erp10081Test,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung,
-                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));

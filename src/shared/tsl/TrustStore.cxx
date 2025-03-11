@@ -132,7 +132,6 @@ namespace
 TrustStore::TrustStore (const TslMode mode, std::vector<std::string> initialTslUrls)
     : mMutex{}
     , mMode(mode)
-    , mTslStored{false}
     , mTslHashValue{}
     , mId{}
     , mSequenceNumber{}

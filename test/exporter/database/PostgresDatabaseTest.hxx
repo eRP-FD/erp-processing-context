@@ -97,7 +97,7 @@ public:
 
     MedicationExporterDatabaseFrontendCommitGuard createDbFrontendCommitGuard()
     {
-        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation, mTelematikLookup);
+        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mKeyDerivation, mTelematikLookup);
         return MedicationExporterDatabaseFrontendCommitGuard(std::move(db));
     }
 
@@ -106,7 +106,7 @@ public:
         if (! mDatabase || mDatabase->getBackend().isCommitted())
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
-            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>( std::make_unique<MedicationExporterPostgresBackend>(), *mHsmPool, *mKeyDerivation, mTelematikLookup);
+            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>( std::make_unique<MedicationExporterPostgresBackend>(), *mKeyDerivation, mTelematikLookup);
         }
         return *mDatabase;
     }

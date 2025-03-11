@@ -5,6 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include <algorithm>
+
 #include "CMAC.hxx"
 
 #include "shared/crypto/OpenSslHelper.hxx"
@@ -22,7 +24,7 @@ CmacSignature CmacSignature::fromBin(const std::string_view& binString)
 {
     CmacSignature sig{};
     Expect(binString.size() == sig.size(), "Wrong CMAC-Signature size");
-    std::copy(binString.cbegin(), binString.cend(), sig.mSignature.data());
+    std::ranges::copy(binString, sig.mSignature.data());
     return sig;
 
 }
@@ -67,7 +69,7 @@ CmacKey CmacKey::fromBin(const std::string_view& binString)
 {
     CmacKey cmac{};
     Expect(binString.size() == cmac.size(), "Wrong CMAC-Key size");
-    std::copy(binString.cbegin(), binString.cend(), cmac.mKey.data());
+    std::ranges::copy(binString, cmac.mKey.data());
     return cmac;
 
 }

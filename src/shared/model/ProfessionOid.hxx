@@ -147,7 +147,8 @@ namespace profession_oid
         {
             return inner_request_role_doctor;
         }
-        else if (professionOid == oid_oeffentliche_apotheke || professionOid == oid_krankenhausapotheke)
+        else if (professionOid == oid_oeffentliche_apotheke || professionOid == oid_krankenhausapotheke ||
+                 professionOid == oid_kostentraeger)
         {
             return inner_request_role_pharmacy;
         }

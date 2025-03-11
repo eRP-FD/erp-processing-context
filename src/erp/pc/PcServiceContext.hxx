@@ -72,7 +72,7 @@ struct Factories : BaseFactories {
 class PcServiceContext : public BaseServiceContext
 {
 public:
-    PcServiceContext(const Configuration& configuration, Factories&& factories);
+    PcServiceContext(const Configuration& configuration, const Factories& factories);
     ~PcServiceContext(void) override;
 
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);

@@ -29,8 +29,8 @@ namespace epa
  * Implementation details: due to atomic_uint64_t not having an applicable copy
  * constructor, we have to provide our own.
  */
- // GEMREQ-start A_15549-01#secureDeletion, A_15547-01#aesKeys
- struct Tee3Context
+// GEMREQ-start A_15549-01#secureDeletion, A_15547-01#aesKeys
+struct Tee3Context
 {
     Tee3Protocol::SymmetricKeys k2ApplicationData;
     KeyId keyId;
@@ -64,6 +64,8 @@ namespace epa
     std::atomic_uint64_t messageCounter;
     // GEMREQ-end A_24629, A_24631
 
+    static constexpr uint64_t initialRequestCounter = 0;
+    std::atomic_uint64_t requestCounter;
 
 
     Tee3Context(
@@ -117,7 +119,7 @@ namespace epa
      * The method returns objects without references to the original context to allow multiple
      * server threads to call this method for multiple sessions without interference between them.
      */
-    SessionContexts createSessionContexts();
+    SessionContexts createSessionContexts(const std::optional<uint64_t>& requestCounter = {});
 
     /**
      * Returns the current snapshot of Session Contexts in Tee3Context.

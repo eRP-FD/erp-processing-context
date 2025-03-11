@@ -287,9 +287,6 @@ TEST_F(ErpMainTest, runProcessingContext_initialTslDownloadFails)
 {
     Factories factories = StaticData::makeMockFactoriesWithServers();
     factories.tslManagerFactory = [](auto) {
-        const std::string tslContent =
-            ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-        const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
         const auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
         const auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
         const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());

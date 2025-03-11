@@ -20,10 +20,10 @@ bool model::KBVMultiplePrescription::isMultiplePrescription() const
     return res && res.value();
 }
 
-std::optional<std::string_view> model::KBVMultiplePrescription::mvoId() const
+std::optional<std::string> model::KBVMultiplePrescription::mvoId() const
 {
     auto id = getExtension<ID>();
-    return id ? id->valueIdentifierValue() : std::nullopt;
+    return id ? std::make_optional<std::string>(*id->valueIdentifierValue()) : std::nullopt;
 }
 
 std::optional<int> model::KBVMultiplePrescription::numerator() const

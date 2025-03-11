@@ -65,7 +65,7 @@ namespace util
 
 
 template <typename HeadT, typename ...TailT>
-auto util::concatenateBuffers(HeadT&& head, TailT&&... tail)
+auto util::concatenateBuffers(HeadT&& head, TailT&&... tail) // NOLINT(cppcoreguidelines-missing-std-forward)
 {
     // this function only works with rvalue reference parameters because
     // otherwise it would become less obvious when it is moving from params and when not

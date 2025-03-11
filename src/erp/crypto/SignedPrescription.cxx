@@ -10,35 +10,34 @@
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/util/Expect.hxx"
 
-SignedPrescription SignedPrescription::fromBin(const std::string& content, TslManager& tslManager)
+// GEMREQ-start A_20159-03#fromBin
+SignedPrescription SignedPrescription::fromBin(const std::string& content, TslManager& tslManager,
+                                               const std::vector<std::string_view>& professionOids)
 {
-    return doUnpackCadesBesSignature(content, &tslManager);
+    return doUnpackCadesBesSignature(content, &tslManager, professionOids);
 }
+// GEMREQ-end A_20159-03#fromBin
 
 SignedPrescription SignedPrescription::fromBinNoVerify(const std::string& content)
 {
-    return doUnpackCadesBesSignature(content, nullptr);
+    return doUnpackCadesBesSignature(content, nullptr, {});
 }
 
 
 // GEMREQ-start A_20159-03#doUnpackCadesBesSignature
 SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
-                                                               TslManager* tslManager)
+                                                                 TslManager* tslManager,
+                                                                 const std::vector<std::string_view>& professionOids)
 {
     try
     {
         if (tslManager)
         {
-            A_19025_02.start("verify the QES signature");
+            A_19025_03.start("verify the QES signature");
             A_20159.start("verify HBA Signature Certificate ");
-            return {cadesBesSignatureFile,
-                *tslManager,
-                false,
-                {profession_oid::oid_arzt,
-                    profession_oid::oid_zahnarzt,
-                    profession_oid::oid_arztekammern}};
-                    A_20159.finish();
-                    A_19025_02.finish();
+            return {cadesBesSignatureFile, *tslManager, false, professionOids};
+            A_20159.finish();
+            A_19025_03.finish();
         }
         else
         {
@@ -62,9 +61,11 @@ SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::stri
     }
     catch (const CadesBesSignature::UnexpectedProfessionOidException& ex)
     {
-        A_19225.start("Report 400 because of unexpected ProfessionOIDs in QES certificate.");
+        A_19225_02.start("Report 400 because of unexpected ProfessionOIDs in QES certificate.");
+        A_25990.start("Report 400 because of unexpected QES certificate.");
         VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_prescription, ex.what());
-        A_19225.finish();
+        A_25990.finish();
+        A_19225_02.finish();
     }
     catch (const CadesBesSignature::VerificationException& ex)
     {

@@ -38,7 +38,9 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
     std::optional<Communication> communication1;
     const auto& fhirInstance = Fhir::instance();
     const auto* backend = std::addressof(fhirInstance.backend());
-    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now())
+        .match(backend, std::string{structure_definition::communicationInfoReq},
+               ResourceTemplates::Versions::GEM_ERP_current());
     ASSERT_NO_THROW(communication1 = model::ResourceFactory<Communication>::fromJson(
                                          bodyRequest, *StaticData::getJsonValidator(), {})
                                          .getValidated(ProfileType::Gem_erxCommunicationInfoReq, repoView));
@@ -982,7 +984,7 @@ TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
     std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
     .setPrescriptionId("160.123.456.789.123.58")
     .setSender(ActorRole::Pharmacists, "PharmacyX")
-    .setRecipient(ActorRole::Insurant, InsurantA)
+    .setRecipient(ActorRole::PkvInsurant, InsurantA)
     .setPayload("Some change request payload")
     .createJsonString();
 
@@ -1013,7 +1015,7 @@ TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
     EXPECT_EQ(json.getStringValueFromPointer(Communication::basedOn0ReferencePointer), "ChargeItem/160.123.456.789.123.58");
     EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierSystemPointer), naming_system::telematicID);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierValuePointer), "PharmacyX");
-    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::gkvKvid10);
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::pkvKvid10);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationChargChangeReply} + '|' +

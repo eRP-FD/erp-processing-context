@@ -15,6 +15,7 @@ readargs()
 {
     clang_tidy_bin="$(which clang-tidy)" >&/dev/null ||:
     clang_tidy_args=()
+    clang_tidy_config=".clang-tidy"
     output=
     change_target=
     git_commit=
@@ -37,6 +38,9 @@ readargs()
                 ;;
             --git-commit=*)
                 git_commit="${1#*=}"
+                ;;
+              --clang-tidy-config=*)
+                clang_tidy_config="${1#*=}"
                 ;;
             *)
                 clang_tidy_args=("${clang_tidy_args[@]}" "$1")
@@ -80,9 +84,23 @@ changedFiles() {
   local target_commit
   target_commit=$(cd "$source_path" && git merge-base "remotes/origin/${change_target}" ${git_commit})
   echo "change_target=${change_target} git_commit=${git_commit} target_commit=${target_commit}"
-  check_files=$(cd "$source_path" && git diff --name-only --diff-filter=d ${target_commit} ${git_commit} | grep '\.[ch]xx' | grep -v '\.inc\.hxx' ) || true
+  check_files=$(cd "$source_path" && git diff --name-only --diff-filter=d ${target_commit} ${git_commit} | grep '\.[cht]xx' | grep -v '\.inc\.hxx' ) || true
   echo "check_files=${check_files}"
 }
+
+prepareClangTidyConfig() {
+  if [ "${clang_tidy_config}" != ".clang-tidy" ]; then
+      if [ -f "${clang_tidy_config}" ]; then
+          cp ".clang-tidy" ".clang-tidy.bak"
+          cp "${clang_tidy_config}" ".clang-tidy"
+      else
+          die "Specified clang-tidy config file '${clang_tidy_config}' does not exist!"
+      fi
+  fi
+  echo "using clang-tidy config: '${clang_tidy_config}'"
+}
+
+eval prepareClangTidyConfig
 
 if [ -z "${change_target}" ] || [ "${change_target}" == "null" ] || [ -z "${git_commit}" ]; then
   eval allFiles

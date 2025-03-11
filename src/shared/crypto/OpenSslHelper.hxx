@@ -20,7 +20,7 @@ template<class C, void(*deleter)(C*)>
 class OpensslUniquePtr : public std::unique_ptr<C, decltype(deleter)>
 {
 public:
-    OpensslUniquePtr(const std::nullptr_t&)
+    OpensslUniquePtr(const std::nullptr_t&) //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
         : std::unique_ptr<C, decltype(deleter)>(nullptr, deleter)
     {
     }
@@ -92,8 +92,8 @@ public:
     void reset (void);
 
     self_t& operator= (self_t other) noexcept; // NOLINT(cppcoreguidelines-c-copy-assignment-signature,misc-unconventional-assign-operator)
-    operator C* (void);
-    operator const C* (void) const;
+    operator C* (void); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    operator const C* (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
     C* get (void);
     C** getP (void);
     const C* get (void) const;

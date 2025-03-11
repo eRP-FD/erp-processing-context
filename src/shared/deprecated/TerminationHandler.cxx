@@ -192,7 +192,7 @@ void TerminationHandler::setRawInstance (std::unique_ptr<TerminationHandler>&& n
 
 bool TerminationHandler::isShuttingDown() const
 {
-    switch(mState)
+    switch(mState.load())
     {
         case State::Running:
             return false;

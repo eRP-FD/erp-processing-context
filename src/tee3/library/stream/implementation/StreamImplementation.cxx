@@ -50,7 +50,7 @@ StreamBuffers StreamImplementation::readAll()
     return buffers;
 }
 
-
+// GEMREQ-start A_24633#readExactly
 StreamBuffers StreamImplementation::read(const size_t length, const ReadMode mode)
 {
     if (! isReadSupported())
@@ -78,6 +78,7 @@ StreamBuffers StreamImplementation::read(const size_t length, const ReadMode mod
         }
         buffers.pushBack(doRead());
     }
+    // GEMREQ-end A_24633#readExactly
 
     if (buffers.size() > length && (mode == ReadMode::AtMost || mode == ReadMode::Exact))
     {

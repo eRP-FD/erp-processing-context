@@ -145,8 +145,11 @@ TEST_F(RegressionTest, Erp11142)
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "parsing / validation error",
-        "missing version on meta.profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle"));
+        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
+        ";Bundle.meta.profile[0]: error: value must match fixed value: "
+        "\"https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0\" (but is "
+        "\"https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle\") (from profile: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0)"));
 
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml =
@@ -256,4 +259,23 @@ TEST_F(RegressionTest, Erp16393)
             toCadesBesSignature(kbvBundleXml, model::Timestamp::fromXsDateTime("2023-09-29T08:44:35.864+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
             expectedDiagnostics));
+}
+
+TEST_F(RegressionTest, Erp20654InvalidTargetEscape)
+{
+    ClientResponse serverResponse;
+    ClientResponse outerResponse;
+
+    JWT jwt{jwtArzt()};
+
+    RequestArguments args = RequestArguments{HttpMethod::POST, "/Task/$create/%xy", "body", "application/fhir+xml"}
+                                .withJwt(jwt)
+                                .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                .withExpectedInnerStatus(HttpStatus::BadRequest);
+    args.overrideExpectedInnerOperation = "UNKNOWN";
+    args.overrideExpectedInnerRole = "XXX";
+    args.overrideExpectedInnerClientId = "XXX";
+    args.overrideExpectedLeips = "XXX";
+
+    ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, serverResponse) = send(args));
 }

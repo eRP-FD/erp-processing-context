@@ -42,7 +42,7 @@ public:
 private:
     boost::beast::flat_static_buffer<ErpConstants::DefaultBufferSize> mBuffer;
     boost::beast::http::response_parser<boost::beast::http::string_body> mParser;
-    bool mIsStreamClosed;
+    bool mIsStreamClosed{false};
 
     void markStreamAsClosed (void);
     Header convertHeader (void);

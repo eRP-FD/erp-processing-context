@@ -20,11 +20,11 @@
 
 MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::io_context& ioContext,
                                                                    const Configuration& configuration,
-                                                                   MedicationExporterFactories&& factories)
+                                                                   const MedicationExporterFactories& factories)
     : BaseServiceContext(factories)
     , mIoContext{ioContext}
-    , mExporterDatabaseFactory(std::move(factories.exporterDatabaseFactory))
-    , mErpDatabaseFactory(std::move(factories.erpDatabaseFactory))
+    , mExporterDatabaseFactory(factories.exporterDatabaseFactory)
+    , mErpDatabaseFactory(factories.erpDatabaseFactory)
     , mTeeClientPool{std::make_shared<Tee3ClientPool>(ioContext, *mHsmPool, *mTslManager)}
     , mRuntimeConfiguration(std::make_unique<exporter::RuntimeConfiguration>())
 {
@@ -65,19 +65,15 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
 
     auto fqdns = configuration.epaFQDNs();
 
-    auto enforceServerAuth =
-        configuration.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENFORCE_SERVER_AUTHENTICATION);
     TlsCertificateVerifier verifier =
-        enforceServerAuth
-            ? TlsCertificateVerifier::withTslVerification(
-                  getTslManager(), {.certificateType = CertificateType::C_FD_TLS_S,
+        TlsCertificateVerifier::withTslVerification(getTslManager(),
+                                                    {.certificateType = CertificateType::C_FD_TLS_S,
                                                      .ocspGracePeriod = std::chrono::seconds(configuration.getIntValue(
                                                          ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD)),
                                                      .withSubjectAlternativeAddressValidation = true})
-                  .withAdditionalCertificateCheck([](const X509Certificate& cert) -> bool {
-                      return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
-                  })
-            : TlsCertificateVerifier::withVerificationDisabledForTesting();
+            .withAdditionalCertificateCheck([](const X509Certificate& cert) -> bool {
+                return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
+            });
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
     auto poolSize = configuration.getIntValue(
               ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN);
@@ -101,7 +97,7 @@ MedicationExporterServiceContext::~MedicationExporterServiceContext() = default;
 std::unique_ptr<MedicationExporterDatabaseFrontendInterface>
 MedicationExporterServiceContext::medicationExporterDatabaseFactory()
 {
-    return mExporterDatabaseFactory(*mHsmPool, mKeyDerivation);
+    return mExporterDatabaseFactory(mKeyDerivation);
 }
 
 std::unique_ptr<exporter::MainDatabaseFrontend> MedicationExporterServiceContext::erpDatabaseFactory()

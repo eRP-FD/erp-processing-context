@@ -60,6 +60,16 @@ makeMockTaskTable(MockAccountTable& accounts, model::PrescriptionType type)
     return std::make_pair(type, MockTaskTable{accounts, type});
 }
 
+std::map<model::PrescriptionType, MockTaskTable> makeMockTaskTables(MockAccountTable& accounts)
+{
+    std::map<model::PrescriptionType, MockTaskTable> result;
+    for (auto type : magic_enum::enum_values<model::PrescriptionType>())
+    {
+        result.emplace(makeMockTaskTable(accounts, type));
+    }
+    return result;
+}
+
 } // anonymous namespace
 
 
@@ -71,20 +81,14 @@ std::unique_ptr<Database> MockDatabase::createMockDatabase(HsmPool& hsmPool, Key
 using namespace model;
 
 
-
 MockDatabase::MockDatabase(HsmPool& hsmPool)
     : mAccounts{}
-    , mTasks({
-        makeMockTaskTable(mAccounts, PrescriptionType::apothekenpflichigeArzneimittel),
-        makeMockTaskTable(mAccounts, PrescriptionType::direkteZuweisung),
-        makeMockTaskTable(mAccounts, PrescriptionType::apothekenpflichtigeArzneimittelPkv),
-        makeMockTaskTable(mAccounts, PrescriptionType::direkteZuweisungPkv)})
+    , mTasks(makeMockTaskTables(mAccounts))
     , mCommunications{mAccounts}
     , mDerivation{hsmPool}
     , mHsmPool{hsmPool}
     , mCodec{compressionInstance()}
 {
-
 }
 
 std::tuple<BlobId, db_model::Blob, model::Timestamp>
@@ -712,6 +716,21 @@ void MockDatabase::fillWithStaticData ()
                         ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId6.toString()))},
                 optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
             mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
+
+        // DIGA
+        const auto taskIdDiga1 =
+            model::PrescriptionId::fromDatabaseId(PrescriptionType::digitaleGesundheitsanwendungen, 6001);
+        const auto taskDiga1 = Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = taskIdDiga1, .kvnr = kvnr}));
+        insertTask(taskDiga1);
+        const auto taskIdDiga2 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+        const auto taskDiga2 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = taskIdDiga2,
+             .timestamp = model::Timestamp::fromFhirDateTime("2021-02-02T16:18:43.036+00:00")}));
+        const auto& kbvBundleDiga2 = CryptoHelper::toCadesBesSignature(ResourceTemplates::evdgaBundleXml({.prescriptionId = taskIdDiga2.toString()}));
+        const auto prescriptionUuidDiga2 = taskDiga2.healthCarePrescriptionUuid().value();
+        const auto prescriptionBundleDiga2 = model::Binary(prescriptionUuidDiga2, kbvBundleDiga2).serializeToJsonString();
+        insertTask(taskDiga2, std::nullopt, prescriptionBundleDiga2);
     }
 
 }
@@ -764,7 +783,7 @@ void MockDatabase::updateTaskStatusAndSecret(const model::PrescriptionId& taskId
                                              const std::optional<db_model::EncryptedBlob>& owner,
                                              const model::Timestamp& lastStatusUpdate)
 {
-    return mTasks.at(taskId.type())
+    mTasks.at(taskId.type())
         .updateTaskStatusAndSecret(taskId, taskStatus, lastModifiedDate, taskSecret, owner, lastStatusUpdate);
 }
 

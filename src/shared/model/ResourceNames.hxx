@@ -74,6 +74,8 @@ constexpr std::string_view origin = "https://gematik.de/fhir/directory/CodeSyste
 namespace structure_definition
 {
 constexpr std::string_view parameters = "http://hl7.org/fhir/StructureDefinition/Parameters";
+constexpr std::string_view create_task_parameters ="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input";
+constexpr std::string_view activate_task_parameters = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_ActivateOperation_Input";
 constexpr std::string_view subscription = "http://hl7.org/fhir/StructureDefinition/Subscription";
 constexpr std::string_view operationoutcome = "http://hl7.org/fhir/StructureDefinition/OperationOutcome";
 
@@ -102,6 +104,7 @@ constexpr std::string_view kbvExErpStatusCoPayment = "https://fhir.kbv.de/Struct
 constexpr std::string_view markingFlag = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag";
 constexpr std::string_view medication = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication";
 constexpr std::string_view medicationDispense = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense";
+constexpr std::string_view medicationDispenseDiga = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense_DiGA";
 constexpr std::string_view medicationDispenseBundle = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle";
 constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PrescriptionId";
 constexpr std::string_view prescriptionType = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType";
@@ -127,6 +130,9 @@ constexpr std::string_view kbv_for_patient = "https://fhir.kbv.de/StructureDefin
 constexpr std::string_view kbv_for_practitioner = "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Practitioner";
 constexpr std::string_view kbv_for_practitioner_role =
     "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_PractitionerRole";
+constexpr std::string_view kbv_pr_evdga_bundle = "https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Bundle";
+constexpr std::string_view kbv_pr_evdga_health_app_request =
+    "https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_HealthAppRequest";
 
 constexpr std::string_view epa_op_provide_prescription_erp_input_parameters =
     "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-provide-prescription-erp-input-parameters";
@@ -187,12 +193,12 @@ class ElementName
 {
 public:
     template <typename T>
-    static std::string path(T nodeName)
+    static std::string path(const T& nodeName)
     {
         return node(nodeName);
     }
     template <typename First, typename ... Rest>
-    static std::string path(First first, Rest ... rest)
+    static std::string path(const First& first, const Rest& ... rest)
     {
         return path(first) + path(rest ...);
     }
@@ -206,7 +212,7 @@ public:
     }
     [[nodiscard]] operator std::string_view () const
     {
-        return mName.c_str();
+        return mName;
     }
 private:
     static std::string node(const std::string& node)
@@ -233,6 +239,7 @@ const ElementName author{ "author" };
 const ElementName basedOn{ "basedOn" };
 const ElementName category{ "category" };
 const ElementName code{ "code" };
+const ElementName codeCodeableConcept{ "codeCodeableConcept" };
 const ElementName coding{ "coding" };
 const ElementName contained{ "contained" };
 const ElementName contact{ "contact" };

@@ -26,8 +26,7 @@ public:
         const std::string& kvnr,
         std::vector<std::optional<model::PrescriptionId>>& prescriptionIds,  // Ids of created Tasks/ChargeItems
         std::vector<std::optional<model::Communication>>& chargeItem1RelatedComm, // Comm. related to ChargeItem 1
-        std::vector<std::optional<model::Communication>>& chargeItem2RelatedComm, // Comm. related to ChargeItem 2
-        std::vector<std::optional<model::Communication>>& chargeItemUnrelatedComm) // Comm. unrelated to ChargeItems
+        std::vector<std::optional<model::Communication>>& chargeItem2RelatedComm) // Comm. related to ChargeItem 2
     {
         const auto now = model::Timestamp::now();
         // Create consent
@@ -62,13 +61,13 @@ public:
         ASSERT_NO_FATAL_FAILURE(
             chargeItem1RelatedComm[0] = communicationPost(
                 model::Communication::MessageType::ChargChangeReq, *closedTasks[0],
-                ActorRole::Insurant, kvnr, ActorRole::Pharmacists, telematikId, "Test request 1"));
+                ActorRole::PkvInsurant, kvnr, ActorRole::Pharmacists, telematikId, "Test request 1"));
         ASSERT_TRUE(chargeItem1RelatedComm[0].has_value());
         ASSERT_TRUE(chargeItem1RelatedComm[0]->id().has_value());
         ASSERT_NO_FATAL_FAILURE(
             chargeItem1RelatedComm[1] = communicationPost(
                 model::Communication::MessageType::ChargChangeReply, *closedTasks[0],
-                ActorRole::Pharmacists, telematikId, ActorRole::Insurant, kvnr, "Test reply 1"));
+                ActorRole::Pharmacists, telematikId, ActorRole::PkvInsurant, kvnr, "Test reply 1"));
         ASSERT_TRUE(chargeItem1RelatedComm[1].has_value());
         ASSERT_TRUE(chargeItem1RelatedComm[1]->id().has_value());
 
@@ -77,22 +76,9 @@ public:
         ASSERT_NO_FATAL_FAILURE(
             chargeItem2RelatedComm[0] = communicationPost(
                 model::Communication::MessageType::ChargChangeReq, *closedTasks[1],
-                ActorRole::Insurant, kvnr, ActorRole::Pharmacists, telematikId, "Test request 2"));
+                ActorRole::PkvInsurant, kvnr, ActorRole::Pharmacists, telematikId, "Test request 2"));
         ASSERT_TRUE(chargeItem2RelatedComm[0].has_value());
         ASSERT_TRUE(chargeItem2RelatedComm[0]->id().has_value());
-
-        using namespace std::chrono_literals;
-        std::this_thread::sleep_for(1s);
-
-        // The following communication is not related to charging information:
-        chargeItemUnrelatedComm.resize(1);
-        ASSERT_NO_FATAL_FAILURE(
-            chargeItemUnrelatedComm[0] =
-                communicationPost(model::Communication::MessageType::DispReq, *closedTasks[0], ActorRole::Insurant,
-                                  kvnr, ActorRole::Pharmacists, telematikId,
-                                  R"({"version":1, "supplyOptionsType": "onPremise", "hint": "Test info request 1"})"));
-        ASSERT_TRUE(chargeItemUnrelatedComm[0].has_value());
-        ASSERT_TRUE(chargeItemUnrelatedComm[0]->id().has_value());
     }
 // GEMREQ-end createChargeItemsWithCommunication
 
@@ -464,7 +450,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     ASSERT_NO_FATAL_FAILURE(
         chargeItemsBundle = chargeItemGetId(jwtApotheke(), ContentMimeType::fhirJsonUtf8,
                                             std::get<model::ChargeItem>(chargeItem2Changed2).id().value(),
-                                            *chargeItems[0].accessCode(), kbvBundles[1], closeReceipts[1]));
+                                            chargeItems[0].accessCode(), kbvBundles[1], closeReceipts[1]));
     chargeItems = chargeItemsBundle->getResourcesByType<model::ChargeItem>("ChargeItem");
     EXPECT_EQ(chargeItems.size(), 1);
     // GEMREQ-end A_22615-02#verifyAccessCode
@@ -741,9 +727,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDeleteCommunications)//NOLINT(readabili
     std::vector<std::optional<model::PrescriptionId>> prescriptionIds;  // Ids of created Tasks/ChargeItems
     std::vector<std::optional<model::Communication>> chargeItem1RelatedComm;
     std::vector<std::optional<model::Communication>> chargeItem2RelatedComm;
-    std::vector<std::optional<model::Communication>> chargeItemUnrelatedComm;
     ASSERT_NO_FATAL_FAILURE(createChargeItemsWithCommunication(
-        kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm, chargeItemUnrelatedComm));
+        kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm));
 
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     // Delete first charge item
@@ -757,11 +742,63 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDeleteCommunications)//NOLINT(readabili
     // Check communication, all entries related to first ChargeItem must be deleted
     std::optional<model::Bundle> commBundle;
     ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant, "_sort=sent"));
-    ASSERT_EQ(commBundle->getResourceCount(), 2);
+    ASSERT_EQ(commBundle->getResourceCount(), 1);
     auto communications =  commBundle->getResourcesByType<model::Communication>("Communication");
-    ASSERT_EQ(communications.size(), 2);
+    ASSERT_EQ(communications.size(), 1);
     ASSERT_EQ(communications[0].id(), chargeItem2RelatedComm.at(0)->id());  // related to second ChargeItem;
-    ASSERT_EQ(communications[1].id(), chargeItemUnrelatedComm.at(0)->id()); // not related to any ChargeItem;
+}
+
+TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDeleteCommunications_DoesNotRemoveOtherCommunications)//NOLINT(readability-function-cognitive-complexity)
+{
+    const auto kvnr = generateNewRandomKVNR().id();
+
+    // Create test data
+    std::vector<std::optional<model::PrescriptionId>> prescriptionIds;  // Ids of created Tasks/ChargeItems
+    std::vector<std::optional<model::Communication>> chargeItem1RelatedComm;
+    std::vector<std::optional<model::Communication>> chargeItem2RelatedComm;
+    std::vector<std::optional<model::Communication>> chargeItemUnrelatedComm;
+    ASSERT_NO_FATAL_FAILURE(createChargeItemsWithCommunication(
+        kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm));
+
+    const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+
+    // Create a ready task:
+    std::optional<model::PrescriptionId> createdId;
+    std::string createdAccessCode;
+    model::PrescriptionType prescriptionType = GetParam();
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(createdId, createdAccessCode, prescriptionType));
+    ASSERT_TRUE(createdId.has_value());
+
+    std::tuple<std::string, std::string> qesBundle;
+    model::KbvBundle usedKbvBundle;
+    std::optional<model::Task> task;
+    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
+    ASSERT_NO_THROW(usedKbvBundle = model::KbvBundle::fromXmlNoValidation(std::get<1>(qesBundle)));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*createdId, createdAccessCode, std::get<0>(qesBundle)));
+    ASSERT_TRUE(task);
+
+    chargeItemUnrelatedComm.resize(1);
+    auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemUnrelatedComm[0] =
+            communicationPost(model::Communication::MessageType::DispReq, *task, ActorRole::Insurant,
+                              kvnr, ActorRole::Pharmacists, telematikId,
+                              R"({"version":1, "supplyOptionsType": "onPremise", "hint": "Test info request 1"})"));
+    ASSERT_TRUE(chargeItemUnrelatedComm[0].has_value());
+    ASSERT_TRUE(chargeItemUnrelatedComm[0]->id().has_value());
+
+    // Delete first charge item
+    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds.at(0), jwtInsurant));
+    // Delete second charge item
+    ASSERT_NO_FATAL_FAILURE(chargeItemDelete(*prescriptionIds.at(1), jwtInsurant));
+
+    // Check communication, all entries related to first and second ChargeItem must be deleted
+    std::optional<model::Bundle> commBundle;
+    ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant, "_sort=sent"));
+    ASSERT_EQ(commBundle->getResourceCount(), 1);
+    auto communications =  commBundle->getResourcesByType<model::Communication>("Communication");
+    ASSERT_EQ(communications.size(), 1);
+    ASSERT_EQ(communications[0].id(), chargeItemUnrelatedComm.at(0)->id()); // not related to any ChargeItem;
 }
 // GEMREQ-end A_22117-01
 
@@ -929,7 +966,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     ASSERT_NO_FATAL_FAILURE(commChangeChargeItemReq = communicationPost(
                                 model::Communication::MessageType::ChargChangeReq,
                                 *task,
-                                ActorRole::Insurant,
+                                ActorRole::PkvInsurant,
                                 kvnr,
                                 ActorRole::Pharmacists,
                                 *telematikId,
@@ -948,9 +985,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
     std::vector<std::optional<model::PrescriptionId>> prescriptionIds;  // Ids of created Tasks/ChargeItems
     std::vector<std::optional<model::Communication>> chargeItem1RelatedComm;
     std::vector<std::optional<model::Communication>> chargeItem2RelatedComm;
-    std::vector<std::optional<model::Communication>> chargeItemUnrelatedComm;
     ASSERT_NO_FATAL_FAILURE(createChargeItemsWithCommunication(
-        kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm, chargeItemUnrelatedComm));
+        kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm));
 
     // Delete consent
     ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr));
@@ -971,6 +1007,52 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
     // Check communication, only info request which is not related to consent should remain
     A_22157.test("All ChargeItem related communication resources for this kvnr are deleted");
     std::optional<model::Bundle> commBundle;
+    ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant));
+    ASSERT_EQ(commBundle->getResourceCount(), 0);
+}
+
+TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications_DoesNotRemoveOtherCommunications)
+{
+    const auto kvnr = generateNewRandomKVNR().id();
+    const auto now = model::Timestamp::now();
+    // Create consent
+    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+
+    // Create test data
+    std::vector<std::optional<model::Communication>> chargeItemUnrelatedComm;
+
+    // Create a ready task:
+    std::optional<model::PrescriptionId> createdId;
+    std::string createdAccessCode;
+    model::PrescriptionType prescriptionType = GetParam();
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(createdId, createdAccessCode, prescriptionType));
+    ASSERT_TRUE(createdId.has_value());
+
+    std::tuple<std::string, std::string> qesBundle;
+    model::KbvBundle usedKbvBundle;
+    std::optional<model::Task> task;
+    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
+    ASSERT_NO_THROW(usedKbvBundle = model::KbvBundle::fromXmlNoValidation(std::get<1>(qesBundle)));
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*createdId, createdAccessCode, std::get<0>(qesBundle)));
+    ASSERT_TRUE(task);
+
+    chargeItemUnrelatedComm.resize(1);
+    auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    ASSERT_NO_FATAL_FAILURE(
+        chargeItemUnrelatedComm[0] =
+            communicationPost(model::Communication::MessageType::DispReq, *task, ActorRole::Insurant,
+                              kvnr, ActorRole::Pharmacists, telematikId,
+                              R"({"version":1, "supplyOptionsType": "onPremise", "hint": "Test info request 1"})"));
+    ASSERT_TRUE(chargeItemUnrelatedComm[0].has_value());
+    ASSERT_TRUE(chargeItemUnrelatedComm[0]->id().has_value());
+
+    // Delete consent
+    ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr));
+
+    // Check communication, dispense requests are preeserved
+    A_22157.test("All ChargeItem related communication resources for this kvnr are deleted");
+    std::optional<model::Bundle> commBundle;
+    const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant));
     ASSERT_EQ(commBundle->getResourceCount(), 1);
     auto communications =  commBundle->getResourcesByType<model::Communication>("Communication");

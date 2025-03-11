@@ -106,11 +106,11 @@ CFdSigErpManager::internalGetOcspResponseData(const Certificate& certificate, co
                 x509Certificate,
                 {CertificateType::C_FD_SIG, CertificateType::C_FD_OSIG},
                 {
-                    forceOcspRequest
+                    .mode=forceOcspRequest
                         ? OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_ALLOW_CACHE
                         : OcspCheckDescriptor::OcspCheckMode::CACHED_ONLY,
-                    {std::nullopt, mOcspRequestGracePeriod},
-                    {}});
+                    .timeSettings={std::nullopt, mOcspRequestGracePeriod},
+                    .providedOcspResponse={}});
 
         Expect(responseData.status.certificateStatus == CertificateStatus::good,
                "TslManager::getCertificateOcspResponse() must only return in case of good ocsp status.");

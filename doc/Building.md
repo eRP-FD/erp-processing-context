@@ -1,4 +1,5 @@
-#Building (public repository)
+# Building (public repository)
+
 This section describes how to build the `erp-processing-context` from the public github repository.
 The build is performed using mock implementations of HSM and TPM, building against the production HSM and TPM
 libraries is also possible, but requires additional dependencies, that are not in the scope of this how-to.
@@ -6,83 +7,68 @@ libraries is also possible, but requires additional dependencies, that are not i
 Make sure to use the patched openssl, provided in this repository.
 Export the recipe, that will apply the patch, from within the folder `conan-recipes/openssl`:
 ```
-conan export . openssl/3.1.4@erp/stable-1
+conan export --user erp --channel stable-1 --version 3.1.5 .
 ```
 
 Afterwards enter the erp-processing-context folder, and roughly follow these steps:
-```
-mkdir build
-cd build
-cmake -DERP_WITH_HSM_MOCK=ON -DERP_WITH_HSM_TPM_PRODUCTION=OFF ..
-make
+```sh
+conan build .\
+  -s '&:build_type=Debug' \
+  -o '&:with_hsm_tpm_production=False' \
+  -o '&:with_hsm_mock=True' \
+  --build missing \
+  -c tools.cmake.cmaketoolchain:generator=Ninja
 ```
 
-To use a conan profile other than the default, add `-DERP_CONAN_PROFILE=<profile-name>` to the CMake step.
-
-The following output should be generated:
-- `bin/erp-processing-context`: The ERP server process.
+The in the subfolder `build/Debug` following executables should be generated:
+- `bin/erp-processing-context`: The eRP server process.
+- `bin/erp-exporter`: The eRP to ePA prescription exporter
 - `bin/erp-test`: Unit Tests with compiled-in erp-processing-context
+- `bin/exporter-test`: Unit Tests for `erp-exporter`
+- `bin/fhirtools-test`: Unit Tests for FHIR-Validator and Converter
 - `bin/erp-integration-test`: Tests, that can be executed against a running erp-processing-context
 
-Running the erp-test test should work out of the box, starting the erp-processing-context needs a postgres database
-up and running. The database tables can be initialized using the script `scripts/reset_database.sh`
+Running the tests should work out of the box, starting the erp-processing-context needs two postgres database
+up and running.
+The database tables can be initialized using the scripts:
+ * `scripts/reset_database.sh`
+ * `reset_event_database.sh`
 
-You might encounter the following error, while starting the `erp-processing-context`, which comes from the fact, that
-the Telematik-Infrastructure is needed at this point:
-```
-E1122 14:59:31.457191 10514 TslManager.cxx:36] ../src/erp/tsl/TslManager.cxx:88, can not initialize TslManager, TslError:
-E1122 14:59:31.457212 10514 TslManager.cxx:37] {"id":268435458,"compType":"eRP:PKI","errorData":[{"errorCode":"TSL_INIT_ERROR","message":"TSL file is outdated and no update is possible."},{"errorCode":"TSL_DOWNLOAD_ERROR","message":"Can not download hash value of TrustServiceStatusList."}]}
-E1122 14:59:31.457254 10514 ErpMain.cxx:410] Can not create TslManager, TslError: {"id":268435458,"compType":"eRP:PKI","errorData":[{"errorCode":"TSL_INIT_ERROR","message":"TSL file is outdated and no update is possible."},{"errorCode":"TSL_DOWNLOAD_ERROR","message":"Can not download hash value of TrustServiceStatusList."}]}
-E1122 14:59:31.495510 10514 erp-main.cxx:110] Unexpected exception: Dynamic exception type: ExceptionWrapper<TslError>
-std::exception::what: {"id":268435458,"compType":"eRP:PKI","errorData":[{"errorCode":"TSL_INIT_ERROR","message":"TSL file is outdated and no update is possible."},{"errorCode":"TSL_DOWNLOAD_ERROR","message":"Can not download hash value of TrustServiceStatusList."}]}
-W1122 14:59:31.497331 10514 erp-main.cxx:113] exiting erp-processing-context with exit code 1
-```
-There sadly currently is no good workaround for this issue, other than commenting the `throw` in `ErpMain.cxx:411`
+Adapt configuration according to your database setup and run:
+```sh
+ DEBUG_ENABLE_MOCK_TSL_MANAGER=true \
+ DEBUG_ENABLE_HSM_MOCK=true \
+ DEBUG_DISABLE_REGISTRATION=true \
+ DEBUG_DISABLE_DOS_CHECK=true \
+ ERP_SERVER_HOST=127.0.0.1 \
+ ./erp-processing-context
+ ```
+
+_NOTE: It is not a development priority to support runing the project outside the target infrastructure, therefore it might not be possible to run all services properly._
 
 # Building (IBM internal)
-We use conan as package manager, so the build should be as simple as
-```
-mkdir build
-cd build
-cmake ..
-make
-```
-when you start in the top level directory of the project.
-
-As some of the conan packages reside on a local Nexus and pull in local git repositories you first have to
-- get an account for the local nexus `https://nexus.epa-dev.net/repository/erp-conan-internal`. Ask Devops.
-- add the remote conan servers with
-    ```
-    conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy
-    conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal
-    ```
-- set up an SSH key for the local github repository
+First set up an SSH key for the local github repository
   - The process is explained here: https://docs.github.com/en/github/authenticating-to-github/adding-a-new-ssh-key-to-your-github-account
   - The keys have to be added here: https://github.ibmgcloud.net/settings/keys
 
-## Updating TSL.xml for the tests
-
-Some tests require a TSL.xml file with a special set of CAs that is not expired. Since the specification explicitly requires that a TSL-file may not be valid longer than 30 days, a regular update of TSL-test-data is necessary.
-
-The TSL files are generated by cmake and is available by the path `${CMAKE_BINARY_DIR}/resources/test/generated_pki/tsl/TSL*.xml`.
-
-Important for running of the scipt on Mac:
-- bash version 4 or later is necessary (`brew install bash`) to execute the script successfully, after that either the bash should be referenced in the first line of the script or the original mac bash should be replaced with the new version
-- coreutils package must be installed (`brew install coreutils`) to support `realpath` utility
-- libxmlsec1 package must be installed (`brew install libxmlsec1`)
-
-More details can be found [here](resources/test/generated_pki_input/README.txt).
-
-## Gematik TSL
-The Gematik testing TSL can be downloaded using the following command
-```
-curl https://download-ref.tsl.ti-dienste.de/ECC/ECC-RSA_TSL-ref.xml -o ECC-RSA_TSL-ref.xml
+As some of the conan packages reside on a local Nexus, pull in local git repositories as follows:
+- get an account for the local nexus `https://artifactory-cpp-ce.ihc-devops.net/`. Ask Devops.
+- generate a token for the conan command line tool in your account settings or by selecting the desired repository under _Arrtifactory -> Artefacts_ and using the _Set Me Up_ button on the top right.
+- add the remote conan servers with
+```sh
+conan remote add erp-conan-2 https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-2
+conan remote add erp-conan-internal https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-internal
+conan remote auth erp-conan-2
+conan remote auth erp-conan-internal
 ```
 
-## BNetzA-VL update
-BNetzA-VL must be in sync with TSL. In some rare cases the BNetzA-VL should be updated,
-in this case the new version of BNetzA-VL should also be downloaded with the following command
+When you start in the top level directory of the project it should be a simple:
 ```
-curl https://download-testref.tsl.ti-dienste.de/P-BNetzA/Pseudo-BNetzA-VL.xml -o Pseudo-BNetzA-VL.xml
+conan build .\
+  -s '&:build_type=Debug' \
+  -o '&:with_hsm_mock=True' \
+  --build missing \
+  -c tools.cmake.cmaketoolchain:generator=Ninja
 ```
-and replace the file `./resources/test/tsl/BNA_valid.xml`.
+
+This will create a subfolder `build/Debug` and build the project there.

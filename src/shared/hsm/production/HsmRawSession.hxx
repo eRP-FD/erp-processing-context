@@ -23,9 +23,9 @@ class HsmRawSession
 {
 public:
     hsmclient::HSMSession rawSession;
-    HsmIdentity::Identity identity;
+    HsmIdentity::Identity identity{HsmIdentity::Identity::Work};
 
-    HsmRawSession (void);
+    HsmRawSession ();
     HsmRawSession (const HsmRawSession& other) = delete;
     HsmRawSession (HsmRawSession&& other) noexcept;
     ~HsmRawSession (void);

@@ -23,7 +23,7 @@ namespace
 {
 using namespace std::string_literals;
 
-constexpr std::string_view prescriptionid_template = R"--(
+constexpr const auto* prescriptionid_template = R"--(
 {
   "system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
   "value":""
@@ -38,7 +38,7 @@ RapidjsonNumberAsStringParserDocument<PrescriptionIdTemplateMark> prescriptionId
 
 void initTemplates()
 {
-    rapidjson::StringStream s2(prescriptionid_template.data());
+    rapidjson::StringStream s2(prescriptionid_template);
     prescriptionIdTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s2);
 }
 

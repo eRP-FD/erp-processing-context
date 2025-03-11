@@ -77,8 +77,8 @@ namespace
         /// writen buffers until we have the complete header.
         StreamBuffers mHeaderBuffer;
         const ReadableOrWritable mMode;
-        /// The message counter will be initialized from the outer TEE header.
-        uint64_t mMessageCounter;
+        /// The request counter will be initialized from the outer TEE header.
+        uint64_t mRequestCounter;
 
         void processTeeHeader(StreamBuffers&& buffers);
 
@@ -290,7 +290,7 @@ namespace
         buffer[0] = context.version;
         buffer[1] = context.isPU ? 1 : 0;
         buffer[2] = static_cast<uint8_t>(context.direction);
-        Serialization::uint64::write(context.messageCounter, buffer + 3, buffer + 11);
+        Serialization::uint64::write(context.requestCounter, buffer + 3, buffer + 11);
         std::copy(context.keyId.bytes.data(), context.keyId.bytes.data() + 32, buffer + 11);
 
         return StreamBuffers::from(reinterpret_cast<const char*>(buffer), sizeof(buffer), false);
@@ -325,7 +325,7 @@ namespace
         mIsProcessingBody(false),
         mHeaderBuffer(StreamBuffer::NotLast),
         mMode(mode),
-        mMessageCounter() // Will be set when the value is read from the outer header
+        mRequestCounter() // Will be set when the value is read from the outer header
     {
         // Note that mDelegate at this point is the original delegate stream. That is because
         // we have to read the outer header, which is not encrypted. When the header has been read,
@@ -402,11 +402,11 @@ namespace
             const uint8_t version = buffer[0];
             const uint8_t isPU = buffer[1];
             const uint8_t direction = buffer[2];
+            mRequestCounter = Serialization::uint64::read(buffer + 3, buffer + 11);
             auto keyId = KeyId::fromBinaryView(BinaryView(buffer + 11, 32));
-            mMessageCounter = Serialization::uint64::read(buffer + 3, buffer + 11);
 
             // Look up the associated TEE context.
-            auto context = mTeeContextProvider(keyId);
+            auto context = mTeeContextProvider(keyId, mRequestCounter);
             // GEMREQ-end A_24632
 
             Assert(version == context.version) << "invalid version";
@@ -414,8 +414,11 @@ namespace
                 << assertion::exceptionType<TeeError>(TeeError::Code::PuNonPuFailure);
             assertDirection(direction, context.direction);
             // GEMREQ-end A_24630
-            // Extract and store the message counter.
-            mMessageCounter = Serialization::uint64::read(buffer + 3, buffer + 11);
+            if (context.direction == Tee3SessionContext::Direction::ServerToClient)
+            {
+                Assert(mRequestCounter == context.requestCounter)
+                    << "response request counter mismatch";
+            }
 
             // Now we have the TEE context and with it the K2 message keys. Activate the decryption.
             // The `buffers` object, which contains the TEE header, is also used as AES GCM additional

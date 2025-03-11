@@ -182,11 +182,11 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     // GEMREQ-start A_22137#storeChargeItem, A_22135-01#storeChargeItem, A_22134#storeChargeItem
     model::Binary dispenseItemBinary = model::Binary{*rawDispenseItem->id(), dispenseItemWithOcsp};
     auto chargeInformation = model::ChargeInformation{.chargeItem = std::move(chargeItem),
-                                                      .prescription = std::move(prescription.value()),
+                                                      .prescription = std::move(prescription),
                                                       .unsignedPrescription = std::move(prescriptionBundle),
                                                       .dispenseItem = std::move(dispenseItemBinary),
                                                       .unsignedDispenseItem = std::move(dispenseItemBundle),
-                                                      .receipt = std::move(receipt.value())};
+                                                      .receipt = std::move(receipt)};
 
     try
     {

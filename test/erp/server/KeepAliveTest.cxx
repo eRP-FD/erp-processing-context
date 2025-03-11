@@ -19,7 +19,7 @@ namespace {
         {
             throw std::runtime_error("simulated error in request handler implementation");
         }
-        [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
+        [[nodiscard]] bool allowedForProfessionOID(std::string_view, const std::optional<std::string>&) const override
         {
             return true;
         }

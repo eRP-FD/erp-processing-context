@@ -36,7 +36,8 @@ class RuntimeConfiguration;
 class MedicationExporterServiceContext : public BaseServiceContext
 {
 public:
-    MedicationExporterServiceContext(boost::asio::io_context& ioContext, const Configuration& configuration, MedicationExporterFactories&& factories);
+    MedicationExporterServiceContext(boost::asio::io_context& ioContext, const Configuration& configuration,
+                                     const MedicationExporterFactories& factories);
     ~MedicationExporterServiceContext() override;
 
     MedicationExporterServiceContext(const MedicationExporterServiceContext& other) = delete;

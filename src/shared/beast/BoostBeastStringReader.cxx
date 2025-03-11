@@ -60,9 +60,17 @@ std::tuple<Header,std::string> BoostBeastStringReader::parseRequest (const std::
     auto header = BoostBeastHeader::fromBeastRequestParser(parser);
     auto& body = parser.get().body();
 
-    // The boost beast parser only works if there are no spaces in the request URL. That means that unescaping these
-    // spaces, and other escaped characters, could not be done earlier.
-    header.setTarget(UrlHelper::unescapeUrl(header.target()));
+    try
+    {
+        // The boost beast parser only works if there are no spaces in the request URL. That means that unescaping these
+        // spaces, and other escaped characters, could not be done earlier.
+        header.setTarget(UrlHelper::unescapeUrl(header.target()));
+    }
+    catch (const std::runtime_error& re)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Failed to unescape URL",
+                               "what(): " + std::string{re.what()} + " URL=" + header.target());
+    }
 
     TVLOG(1) << "User-Agent: " << header.header("User-Agent").value_or("<not set>");
 

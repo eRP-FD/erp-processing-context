@@ -231,6 +231,8 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsMultipleTaskTest)//N
 INSTANTIATE_TEST_SUITE_P(MultipleMedicationDispensesTestPInst, MultipleMedicationDispensesTestP,
                          testing::Values(Params{model::PrescriptionType::apothekenpflichigeArzneimittel, 1},
                                          Params{model::PrescriptionType::apothekenpflichigeArzneimittel, 7},
+                                         Params{model::PrescriptionType::digitaleGesundheitsanwendungen, 2},
+                                         Params{model::PrescriptionType::digitaleGesundheitsanwendungen, 3},
                                          Params{model::PrescriptionType::direkteZuweisung, 2},
                                          Params{model::PrescriptionType::direkteZuweisung, 4},
                                          Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 5},

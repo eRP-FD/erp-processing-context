@@ -40,7 +40,7 @@ RuntimeConfiguration::AcceptPN3Enabled::AcceptPN3Enabled(const model::Timestamp&
 
 
 RuntimeConfiguration::Getter::Getter(std::shared_ptr<const RuntimeConfiguration> runtimeConfiguration)
-    : mRuntimeConfiguration(runtimeConfiguration)
+    : mRuntimeConfiguration(std::move(runtimeConfiguration))
     , mSharedLock(mRuntimeConfiguration->mSharedMutex)
 {
 }
@@ -59,7 +59,7 @@ model::Timestamp RuntimeConfiguration::Getter::getAcceptPN3Expiry() const
 
 
 RuntimeConfiguration::Setter::Setter(std::shared_ptr<RuntimeConfiguration> runtimeConfiguration)
-    : mRuntimeConfiguration(runtimeConfiguration)
+    : mRuntimeConfiguration(std::move(runtimeConfiguration))
     , mUniqueLock(mRuntimeConfiguration->mSharedMutex)
 {
 }

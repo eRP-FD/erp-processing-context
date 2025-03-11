@@ -44,7 +44,7 @@ template<typename TInto>
 void parsePart(const std::string_view& str, const std::string_view& timeStr, TInto& into)
 {
     const auto* endPtr = str.data() + str.size();
-    const auto fromCharsResult = std::from_chars(str.data(), endPtr, into);
+    const auto fromCharsResult = std::from_chars(str.begin(), endPtr, into);
     FPExpect(fromCharsResult.ptr == endPtr && fromCharsResult.ec == std::errc(),
              "invalid time string: " + std::string{timeStr});
 }
@@ -165,7 +165,7 @@ std::optional<std::strong_ordering> Time::compareTo(const Time& other) const
 
 Date::Date(const std::string& dateStr)
 {
-    const auto separators = std::count(dateStr.begin(), dateStr.end(), '-');
+    const auto separators = std::ranges::count(dateStr, '-');
     FPExpect(separators <= 2, "invalid date string: " + dateStr);
     std::istringstream iss(dateStr);
     if (separators == 0)

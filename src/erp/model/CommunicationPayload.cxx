@@ -81,7 +81,8 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
         if (pickUpCodeHRPointer.Get(payloadDoc) || pickUpCodeDMCPointer.Get(payloadDoc))
         {
             std::string supplyOptionsTypeValue = supplyOptionsTypePointer.Get(payloadDoc)->GetString();
-            ModelExpect(supplyOptionsTypeValue == "onPremise", "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'");
+            ModelExpect(supplyOptionsTypeValue == "onPremise",
+                        "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'");
         }
         auto* urlValue = urlPointer.Get(payloadDoc);
         if (urlValue)
@@ -89,11 +90,18 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
             try
             {
                 auto urlParts = UrlHelper::parseUrl(urlValue->GetString());
-                ModelExpect(!urlParts.mProtocol.empty() && !urlParts.mHost.empty(), "Invalid payload: URL not valid.");
-            } catch (const std::runtime_error& e)
+                ModelExpect(! urlParts.mProtocol.empty() && ! urlParts.mHost.empty(),
+                            "Invalid payload: URL not valid.");
+            }
+            catch (const std::runtime_error& e)
             {
                 ModelFail("Invalid payload: URL not valid.");
             }
         }
     }
+}
+
+bool CommunicationPayload::empty() const
+{
+    return mPayloadValue == nullptr || mLength == 0;
 }

@@ -22,7 +22,7 @@ public:
         ASSERT_TRUE(task.has_value());
     }
 
-    void TestStep(Requirement& requirement, const std::string& description)
+    void TestStep(const Requirement& requirement, const std::string& description)
     {
         requirement.test(description.c_str());
         RecordProperty("Description", description);
@@ -430,7 +430,7 @@ class MVO_A_19445Test : public Mehrfachverordnung
 TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 {
     using namespace date::literals;
-    TestStep(A_19445_08, "ERP-A_19445-08.01 signing date + 365 days");
+    TestStep(A_19445_10, "ERP-A_19445-08.01 signing date + 365 days");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = authoredOn,
                                                   .redeemPeriodStart = authoredOn.toGermanDate(),
@@ -447,7 +447,7 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 
 TEST_F(MVO_A_19445Test, ExpiryAcceptDateEndDate)
 {
-    TestStep(A_19445_08, "ERP-A_19445-08.02 signing date given");
+    TestStep(A_19445_10, "ERP-A_19445-08.02 signing date given");
     auto startDate = authoredOn + date::days{3};
     auto endDate = authoredOn + date::days{10};
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
@@ -628,6 +628,10 @@ TEST_F(MVO_A_24901Test, InvalidMvoIdCheckEnabled)
 TEST_F(MVO_A_24901Test, InvalidMvoIdCheckDisabled)
 {
     TestStep(A_23539_01, "ERP-A_24901.02 MVO-ID ungültig, Prüfung abgeschaltet");
+    if (runsInCloudEnv())
+    {
+        GTEST_SKIP_("Cannot control environment in cloud env");
+    }
 
     EnvironmentVariableGuard mvoCheckDisabler(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE, "disable");
 

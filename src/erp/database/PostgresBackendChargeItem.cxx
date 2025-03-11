@@ -301,21 +301,23 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work
     {
         chargeItem.enterer = ::db_model::EncryptedBlob{row.at(QueryIndices::enterer).as<::db_model::postgres_bytea>()};
         chargeItem.accessCode = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::access_code).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::access_code)}).as<::db_model::postgres_bytea>()};
         chargeItem.kvnr = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::kvnr).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::kvnr)}).as<::db_model::postgres_bytea>()};
         chargeItem.prescription = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::prescription).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.prescriptionJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::prescription_json).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::prescription)}).as<::db_model::postgres_bytea>()};
+        chargeItem.prescriptionJson =
+            ::db_model::EncryptedBlob{row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::prescription_json)})
+                                          .as<::db_model::postgres_bytea>()};
         chargeItem.receiptXml = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::receipt_xml).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::receipt_xml)}).as<::db_model::postgres_bytea>()};
         chargeItem.receiptJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::receipt_json).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::receipt_json)}).as<::db_model::postgres_bytea>()};
         chargeItem.billingData = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::billing_data).data()).as<::db_model::postgres_bytea>()};
-        chargeItem.billingDataJson = ::db_model::EncryptedBlob{
-            row.at(::magic_enum::enum_name(QueryIndices::billing_data_json).data()).as<::db_model::postgres_bytea>()};
+            row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::billing_data)}).as<::db_model::postgres_bytea>()};
+        chargeItem.billingDataJson =
+            ::db_model::EncryptedBlob{row.at(pqxx::zview{::magic_enum::enum_name(QueryIndices::billing_data_json)})
+                                          .as<::db_model::postgres_bytea>()};
     }
     return chargeItem;
 }

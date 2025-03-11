@@ -19,6 +19,12 @@ readargs()
     erp_build_version=
     erp_release_version=
     skip_build=no
+    conan_args=()
+    build_type=RelWithDebInfo
+    with_ccache=false
+    output_folder="."
+    source_folder="."
+    with_hsm_mock="False"
     while [ $# -gt 0 ] ; do
         case "$1" in
             --build_version=*)
@@ -27,8 +33,23 @@ readargs()
             --release_version=*)
                 erp_release_version="${1#*=}"
                 ;;
+            --build_type=*)
+                build_type="${1#*=}"
+                ;;
+            --source_folder=*)
+                source_folder="${1#*=}"
+                ;;
+            --output_folder=*)
+                output_folder="${1#*=}"
+                ;;
+            --with_ccache)
+                with_ccache=true
+                ;;
             --skip-build)
                 skip_build=yes
+                ;;
+            --with_hsm_mock)
+                with_hsm_mock="True"
                 ;;
             *)
                 die "Unknown option: $1"
@@ -40,7 +61,7 @@ readargs()
 
 readargs "$@"
 
-if [ "$skip_build" == "no" ]; then
+if "${with_ccache}" ; then
     CCACHE_DIR=$(mount | awk '/ccache/ {print $3}')
     if [[ -n ${CCACHE_DIR} ]]; then
         ls -l ${CCACHE_DIR}
@@ -53,67 +74,81 @@ if [ "$skip_build" == "no" ]; then
     else
         echo "No ccache dir found."
     fi
+    conan_args+=(--options "&:with_ccache=True")
 fi
 
 test -n "${erp_build_version}" || die "missing argument --build_version="
 test -n "${erp_release_version}" || die "missing argument --release_version="
 
-mkdir -p jenkins-build-debug
-cd jenkins-build-debug
-pip3 install "conan<2.0" --upgrade
+pip3 install "conan<3" --upgrade
 pip3 install --user packageurl-python
 export CONAN_TRACE_FILE=$(pwd)/conan_trace.log
 conan --version
-conan remote clean
-conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
-conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
-conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
+
+conan_remote_add() {
+    if ! ( conan remote list | grep -qE "^$1" ; ) ; then
+        conan remote add "$1" "$2"
+    fi
+}
+
+conan_remote_add erp-conan-2 https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-2
+conan_remote_add erp-conan-internal https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-internal
+
+set +x
+conan_auth() {
+    set +x
+    CONAN_LOGIN_USERNAME="$1" CONAN_PASSWORD="$2" conan remote auth erp-conan-2
+    CONAN_LOGIN_USERNAME="$1" CONAN_PASSWORD="$2" conan remote auth erp-conan-internal
+}
+conan_auth "${NEXUS_USERNAME:-${CONAN_LOGIN_USERNAME}}" "${NEXUS_PASSWORD:-${CONAN_PASSWORD}}"
 set -x
 
 export GCC_VERSION=12
 export CC=gcc-${GCC_VERSION}
 export CXX=g++-${GCC_VERSION}
-# Add credentials for IBM internal nexus
-conan user -r erp -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
-conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
-conan profile new --detect default
-conan profile update env.CC=${CC} default
-conan profile update env.CXX=${CXX} default
-conan profile update settings.compiler.version=${GCC_VERSION} default
-set +x
-repeat_without_binary_repo=0
-cmake -GNinja \
-      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-      -DERP_BUILD_VERSION=${erp_build_version} \
-      -DERP_RELEASE_VERSION=${erp_release_version} \
-      -DERP_WITH_HSM_MOCK=ON \
-      -DERP_WARNING_AS_ERROR=ON \
-      -DERP_CONAN_ARGS="-o with_sbom=True" \
-      -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-      .. || repeat_without_binary_repo=1
 
-if [ $repeat_without_binary_repo == 1 ]; then
-  conan remote remove conan-center-binaries
-  conan remove -f '*'
-  cmake -GNinja \
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-        -DERP_BUILD_VERSION=${erp_build_version} \
-        -DERP_RELEASE_VERSION=${erp_release_version} \
-        -DERP_WITH_HSM_MOCK=ON \
-        -DERP_WARNING_AS_ERROR=ON \
-        -DERP_CONAN_ARGS="-o with_sbom=True" \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
-        ..
-  conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force
-  conan user -r conan-center-binaries -p "${NEXUS_PASSWORD}" "${NEXUS_USERNAME}"
-fi
+cmake_version="$(cmake --version | grep -m1 -oE '[^ ]*$')"
+
+mkdir -p "$(conan config home)/profiles"
+
+tee "$(conan config home)/profiles/default" <<EOF
+[settings]
+arch=x86_64
+build_type=Release
+compiler=gcc
+compiler.cppstd=20
+compiler.libcxx=libstdc++11
+compiler.version=${GCC_VERSION}
+os=Linux
+[buildenv]
+CC=${CC}
+CXX=${CXX}
+[platform_tool_requires]
+cmake/${cmake_version}
+EOF
+
+lib_build_type=RelWithDebInfo
+
+conan_args+=(
+    -s "&:build_type=${build_type}"
+    -s "build_type=${lib_build_type}"
+    --build missing
+    --output-folder "${output_folder}"
+    --version "${erp_build_version}"
+    --options "&:release_version=${erp_release_version}"
+    --options "&:with_hsm_mock=${with_hsm_mock}"
+    --options "&:with_hsm_tpm_production=True"
+    --options "&:with_sbom=True"
+    --options "&:with_warning_as_error=True"
+    -c tools.cmake.cmaketoolchain:generator=Ninja
+    -cc core:non_interactive=True
+)
+
+conan install "${source_folder}" "${conan_args[@]}"
+cmake "${source_folder}" --preset "conan-${build_type,,}"
 
 if [ "$skip_build" == "yes" ]; then
-    ninja generated_source
+    cmake --build "${output_folder}/build/${build_type}" --target generated_source
 else
-    ninja -l$(nproc) test production fhirtools-test exporter-test
-fi
-
-if [ $repeat_without_binary_repo == 1 ]; then
-  exit 2
+    cmake --build "${output_folder}/build/${build_type}" --target test --target production -- -l$(nproc)
 fi

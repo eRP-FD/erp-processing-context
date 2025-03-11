@@ -11,7 +11,6 @@
 
 DROP TRIGGER IF EXISTS tg_create_task_event ON erp.task;
 
-
 --
 -- Name: tg_insert_event_169; Type: TRIGGER; Schema: erp; Owner: -
 --

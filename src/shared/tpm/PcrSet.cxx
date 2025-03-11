@@ -77,7 +77,7 @@ std::vector<size_t> PcrSet::toPcrList (void) const
 {
     std::vector<size_t> list;
     list.reserve(mRegisters.size());
-    std::copy(mRegisters.begin(), mRegisters.end(), std::back_inserter(list));
+    std::ranges::copy(mRegisters, std::back_inserter(list));
     return list;
 }
 

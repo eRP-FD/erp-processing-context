@@ -14,7 +14,7 @@
 class AcceptTaskHandler : public TaskHandlerBase
 {
 public:
-    AcceptTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
+    AcceptTaskHandler(const OIDsByWorkflow& allowedProfessionOiDsByWorkflow);
     void handleRequest (PcSessionContext& session) override;
 
 private:

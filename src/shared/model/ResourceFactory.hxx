@@ -174,7 +174,7 @@ ResourceFactory<ResourceT> model::ResourceFactory<ResourceT>::fromXml(std::strin
 
 template<typename ResourceT>
 ResourceFactory<ResourceT>::ResourceFactory(NumberAsStringParserDocument&& jsonDoc, XmlDocCache xmlDoc, Options opt)
-    : ResourceFactoryBase{xmlDoc, opt}
+    : ResourceFactoryBase{std::move(xmlDoc), opt}
     , mResource(ResourceType::fromJson(std::move(jsonDoc)))
 {
 }

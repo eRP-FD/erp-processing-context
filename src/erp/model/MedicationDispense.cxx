@@ -73,6 +73,15 @@ MedicationDispense::MedicationDispense(NumberAsStringParserDocument&& jsonTree)
 {
 }
 
+ProfileType MedicationDispense::profileType() const
+{
+    auto profileName = getProfileName();
+    ModelExpect(profileName.has_value(), "Profile missing in MedicationDispense resource.");
+    auto profileType = findProfileType(*profileName);
+    ModelExpect(profileType.has_value(), "Invalid Profile type in MedicationDispense resource.");
+    return *profileType;
+}
+
 PrescriptionId MedicationDispense::prescriptionId() const
 {
     std::string_view id = getStringValue(prescriptionIdValuePointer);

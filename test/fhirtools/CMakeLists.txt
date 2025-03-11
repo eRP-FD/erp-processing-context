@@ -23,5 +23,6 @@ add_executable(fhirtools-test
         ValueMatchingTest.cxx
         )
 
-target_link_libraries(fhirtools-test fhirtools CONAN_PKG::gtest erp-processing-context-files erp-test-util-lib
+target_link_libraries(fhirtools-test fhirtools gtest::gtest erp-processing-context-files erp-test-util-lib
         )
+add_dependencies(test fhirtools-test)

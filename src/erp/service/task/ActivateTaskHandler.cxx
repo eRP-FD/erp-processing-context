@@ -6,42 +6,42 @@
  */
 
 #include "erp/service/task/ActivateTaskHandler.hxx"
-#include "shared/ErpRequirements.hxx"
 #include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Binary.hxx"
 #include "erp/model/Composition.hxx"
+#include "erp/model/EvdgaBundle.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvCoverage.hxx"
 #include "erp/model/KbvMedicationBase.hxx"
 #include "erp/model/KbvMedicationCompounding.hxx"
 #include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/WorkflowParameters.hxx"
 #include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/tsl/error/TslError.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/TLog.hxx"
 #include "shared/util/Uuid.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <date/date.h>
 #include <date/tz.h>
 #include <ranges>
 
 
-ActivateTaskHandler::ActivateTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
-        : TaskHandlerBase(Operation::POST_Task_id_activate, allowedProfessionOiDs)
+ActivateTaskHandler::ActivateTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
+    : TaskHandlerBase(Operation::POST_Task_id_activate, allowedProfessionOiDs)
 {
 }
 
-void ActivateTaskHandler::handleRequest (PcSessionContext& session)
+void ActivateTaskHandler::handleRequest(PcSessionContext& session)
 {
-    const auto& config = Configuration::instance();
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
 
@@ -79,13 +79,37 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     A_19020.start("check PKCS#7 for structural validity");
     A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid "
                   "prescription has been transmitted");
-    const auto cadesBesSignature = SignedPrescription::fromBin(cadesBesSignatureFile, session.serviceContext.getTslManager());
+    // GEMREQ-start A_20159-03#fromBinCall
+    const auto cadesBesSignature =
+        SignedPrescription::fromBin(cadesBesSignatureFile, session.serviceContext.getTslManager(),
+                                    allowedProfessionOidsForQesSignature(task.type()));
+    // GEMREQ-end A_20159-03#fromBinCall
     A_20704.finish();
     A_19020.finish();
 
+
+    switch (task.type())
+    {
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            handleDigaRequest(session, *taskAndKey, cadesBesSignature);
+            return;
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            handlePrescriptionRequest(session, *taskAndKey, cadesBesSignature);
+            return;
+    }
+    ErpFail(HttpStatus::BadRequest, "Invalid task type: " + std::to_string(static_cast<uintmax_t>(task.type())));
+}
+
+void ActivateTaskHandler::handlePrescriptionRequest(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
+                                                    const SignedPrescription& cadesBesSignature)
+{
     const auto& prescription = cadesBesSignature.payload();
 
-    auto [responseStatus, prescriptionBundle] = prescriptionBundleFromXml(session.serviceContext, prescription);
+    auto [responseStatus, prescriptionBundle] =
+        prescriptionBundleFromXml<model::KbvBundle>(session.serviceContext, prescription);
 
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
     ErpExpect(compositions.size() == 1, HttpStatus::BadRequest,
@@ -101,60 +125,53 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
     std::optional<date::year_month_day> mvoEndDate = medicationRequest.mvoEndDate();
     const auto mvoExtension = medicationRequest.getExtension<model::KBVMultiplePrescription>();
     session.fillMvoBdeV2(mvoExtension);
-    checkMultiplePrescription(mvoExtension, prescriptionId.type(), legalBasisCode, medicationRequest.authoredOn());
+    auto& task = taskAndKey.task;
+    checkMultiplePrescription(mvoExtension, task.type(), legalBasisCode, medicationRequest.authoredOn());
 
     A_22231.start("check narcotics and Thalidomid");
     checkNarcoticsMatches(prescriptionBundle);
     A_22231.finish();
 
-    std::optional<model::PrescriptionId> bundlePrescriptionId;
-    try {
-        bundlePrescriptionId.emplace(prescriptionBundle.getIdentifier());
-    }
-    catch (const model::ModelException& ex)
+    if (isMvo)
     {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest,
-                               "Error while extracting prescriptionId from QES-Bundle", ex.what());
+        const auto signingTime = cadesBesSignature.getSigningTime();
+        ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
+        date::year_month_day signingDay{signingTime->localDay()};
+        setMvoExpiryAcceptDates(task, mvoEndDate, signingDay);
     }
-    ErpExpect(bundlePrescriptionId.has_value(), HttpStatus::BadRequest,
-              "Failed to extract prescriptionId from QES-Bundle");
 
-    A_21370.start("compare the task flowtype against the prefix of the prescription-id");
-    ErpExpect(bundlePrescriptionId->type() == task.type(), HttpStatus::BadRequest,
-              "Flowtype mismatch between Task and QES-Bundle");
-    A_21370.finish();
+    handleGeneric(session, taskAndKey, cadesBesSignature, prescriptionBundle, responseStatus, isMvo, legalBasisCode);
+}
 
-    if (! config.getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
-    {
-        A_21370.start("compare the prescription id of the QES bundle with the task");
-        ErpExpect(*bundlePrescriptionId == task.prescriptionId(), HttpStatus::BadRequest,
-                    "PrescriptionId mismatch between Task and QES-Bundle");
-        A_21370.finish();
-    }
-    else
-    {
-        TLOG(ERROR) << "PrescriptionId check of QES-Bundle is disabled";
-    }
+template<typename KbvOrEvdgaBundle>
+void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
+                                        const SignedPrescription& cadesBesSignature,
+                                        const KbvOrEvdgaBundle& kbvOrEvdgaBundle, HttpStatus responseStatus, bool isMvo,
+                                        std::optional<model::KbvStatusKennzeichen> legalBasisCode)
+{
+    auto& task = taskAndKey.task;
+    checkBundlePrescriptionId(task, kbvOrEvdgaBundle);
 
     const auto signingTime = cadesBesSignature.getSigningTime();
     ErpExpect(signingTime.has_value(), HttpStatus::BadRequest, "No signingTime in PKCS7 file");
 
     try
     {
-        checkAuthoredOnEqualsSigningDate(medicationRequest, *signingTime);
+        checkAuthoredOnEqualsSigningDate(kbvOrEvdgaBundle, *signingTime);
     }
     catch (const model::ModelException& m)
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "error checking authoredOn==signature date", m.what());
     }
 
-    checkValidCoverage(prescriptionBundle, prescriptionId.type());
+    checkValidCoverage(kbvOrEvdgaBundle, task.type());
 
-    if (! checkPractitioner(prescriptionBundle, session))
+    if (! checkPractitioner(kbvOrEvdgaBundle, session))
     {
         A_24031.start("Use configuration value for ANR handling");
         const auto* errorMessage = "Ungültige Arztnummer (LANR oder ZANR): Die übergebene Arztnummer entspricht nicht "
                                    "den Prüfziffer-Validierungsregeln.";
+        const auto& config = Configuration::instance();
         switch (config.anrChecksumValidationMode())
         {
             case Configuration::AnrChecksumValidationMode::warning:
@@ -172,60 +189,41 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
         A_24031.finish();
     }
 
-    A_19025_02.start("3. reference the PKCS7 file in task");
+    A_19025_03.start("3. reference the PKCS7 file in task");
     task.setHealthCarePrescriptionUuid();
     task.setPatientConfirmationUuid();
-    const model::Binary healthCareProviderPrescriptionBinary(
-        *task.healthCarePrescriptionUuid(),
-        cadesBesSignature.getBase64());
-    A_19025_02.finish();
+    const model::Binary healthCareProviderPrescriptionBinary(*task.healthCarePrescriptionUuid(),
+                                                             cadesBesSignature.getBase64());
+    A_19025_03.finish();
 
     A_19999.start("enrich the task with ExpiryDate and AcceptDate from prescription bundle");
     date::year_month_day signingDay{signingTime->localDay()};
-    if (isMvo)
-    {
-        setMvoExpiryAcceptDates(task, mvoEndDate, signingDay);
-    }
-    else
+    if (! isMvo)
     {
         // A_19445 Part 1 and 4 are in $create
-        A_19445_08.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
+        A_19445_10.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
         auto expiryDate = signingDay + date::months{3};
         if (! expiryDate.ok())
         {
             expiryDate = expiryDate.year() / expiryDate.month() / date::last;
         }
         task.setExpiryDate(model::Timestamp{date::sys_days{expiryDate}});
-        A_19445_08.finish();
-        A_19445_08.start("3. Task.AcceptDate = <Date of QES Creation + 28 days");
+        A_19445_10.finish();
+        const auto& config = Configuration::instance();
+        A_19445_10.start(
+            "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 162, 200 and 209)>");
         A_19517_02.start("different validity duration (accept date) for different types");
         task.setAcceptDate(*signingTime, legalBasisCode,
-                            config.getIntValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
+                           config.getIntValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
         A_19517_02.finish();
-        A_19445_08.finish();
+        A_19445_10.finish();
     }
     A_19999.finish();
 
     // GEMREQ-start A_19127-01
     A_19127_01.start("store KVNR from prescription bundle in task");
-    const auto patients = prescriptionBundle.getResourcesByType<model::Patient>("Patient");
-    ErpExpect(patients.size() == 1, HttpStatus::BadRequest,
-              "Expected exactly one Patient in prescription bundle, got: " + std::to_string(patients.size()));
-    std::optional<model::Kvnr> kvnr;
-    try
-    {
-        kvnr = patients[0].kvnr();
-        A_23890.start("Validate Kvnr Checksum");
-        ErpExpect(kvnr->validChecksum(), HttpStatus::BadRequest,
-                  "Ungültige Versichertennummer (KVNR): Die übergebene Versichertennummer des Patienten entspricht "
-                  "nicht den Prüfziffer-Validierungsregeln.");
-        A_23890.finish();
-    }
-    catch (const model::ModelException& ex)
-    {
-        ErpFail(HttpStatus::BadRequest, ex.what());
-    }
-    task.setKvnr(*kvnr);
+    const auto kvnr = getKvnrFromPatientResource(kbvOrEvdgaBundle);
+    task.setKvnr(kvnr);
     A_19127_01.finish();
     // GEMREQ-end A_19127-01
 
@@ -235,43 +233,52 @@ void ActivateTaskHandler::handleRequest (PcSessionContext& session)
 
     task.updateLastUpdate();
 
-    A_19025_02.start("2. store the PKCS7 file in database");
-    databaseHandle = session.database();
-    ErpExpect(taskAndKey->key.has_value(), HttpStatus::InternalServerError, "Missing task key.");
-    databaseHandle->activateTask(taskAndKey->task, *taskAndKey->key, healthCareProviderPrescriptionBinary,
+    A_19025_03.start("2. store the PKCS7 file in database");
+    auto* databaseHandle = session.database();
+    ErpExpect(taskAndKey.key.has_value(), HttpStatus::InternalServerError, "Missing task key.");
+    databaseHandle->activateTask(taskAndKey.task, *taskAndKey.key, healthCareProviderPrescriptionBinary,
                                  session.request.getAccessToken());
-    A_19025_02.finish();
+    A_19025_03.finish();
 
     makeResponse(session, responseStatus, &task);
 
     // Collect audit data:
     session.auditDataCollector()
         .setEventId(model::AuditEventId::POST_Task_activate)
-        .setInsurantKvnr(*kvnr)
+        .setInsurantKvnr(kvnr)
         .setAction(model::AuditEvent::Action::update)
-        .setPrescriptionId(prescriptionId);
+        .setPrescriptionId(task.prescriptionId());
+}
+
+void ActivateTaskHandler::handleDigaRequest(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
+                                            const SignedPrescription& cadesBesSignature)
+{
+    const auto& evdgaPayload = cadesBesSignature.payload();
+
+    auto [responseStatus, evdgaBundle] =
+        prescriptionBundleFromXml<model::EvdgaBundle>(session.serviceContext, evdgaPayload);
+
+    handleGeneric(session, taskAndKey, cadesBesSignature, evdgaBundle, responseStatus, false, std::nullopt);
 }
 
 void ActivateTaskHandler::setMvoExpiryAcceptDates(model::Task& task,
                                                   const std::optional<date::year_month_day>& mvoEndDate,
-                                                  const date::year_month_day& signingDay) const
+                                                  const date::year_month_day& signingDay)
 {
     if (mvoEndDate)
     {
-        A_19445_08.start(
-            "2. Task.ExpiryDate = "
-            "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
+        A_19445_10.start("2. Task.ExpiryDate = "
+                         "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
         task.setExpiryDate(model::Timestamp{date::sys_days{*mvoEndDate}});
-        A_19445_08.start(
-            "2. Task.AcceptDate = "
-            "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
+        A_19445_10.start("2. Task.AcceptDate = "
+                         "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
         task.setAcceptDate(model::Timestamp{date::sys_days{*mvoEndDate}});
     }
     else
     {
-        A_19445_08.start("Task.ExpiryDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
+        A_19445_10.start("Task.ExpiryDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
         task.setExpiryDate(model::Timestamp{date::sys_days{signingDay} + date::days{365}});
-        A_19445_08.start("Task.AcceptDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
+        A_19445_10.start("Task.AcceptDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
         task.setAcceptDate(model::Timestamp{date::sys_days{signingDay} + date::days{365}});
     }
 }
@@ -284,39 +291,40 @@ void ActivateTaskHandler::checkNarcoticsMatches(const model::KbvBundle& bundle)
     const auto& medicationRequests = bundle.getResourcesByType<model::KbvMedicationGeneric>();
     for (const auto& mr : medicationRequests)
     {
-        ErpExpect(!mr.isNarcotics(), HttpStatus::BadRequest, "BTM und Thalidomid nicht zulässig");
+        ErpExpect(! mr.isNarcotics(), HttpStatus::BadRequest, "BTM und Thalidomid nicht zulässig");
     }
     A_22231.finish();
 }
 
-void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const model::KbvMedicationRequest& medicationRequest,
+template<typename KbvOrEvdgaBundle>
+void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const KbvOrEvdgaBundle& kbvOrEvdgaBundle,
                                                            const model::Timestamp& signingTime)
 {
     A_22487.start("check equality of signing day and authoredOn");
     // using German timezone was decided, but sadly did not make it into the requirement
     // date::local_days is a date not bound to any timezone.
     const date::local_days signingDay{signingTime.localDay()};
-    const date::local_days authoredOn{medicationRequest.authoredOn().localDay()};
+    const date::local_days authoredOn{kbvOrEvdgaBundle.authoredOn().localDay()};
 
     if (signingDay != authoredOn)
     {
         std::ostringstream oss;
         oss << "KBVBundle.signature.signingDay=" << signingDay
-            << " != KBVBundle.MedicationRequest.authoredOn=" << authoredOn;
+            << " != KBVBundle/EVDGABundle.MedicationRequest/DeviceRequest.authoredOn=" << authoredOn;
         TVLOG(1) << oss.str();
         ErpFailWithDiagnostics(
             HttpStatus::BadRequest,
-            "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein",
-            oss.str());
+            "Ausstellungsdatum und Signaturzeitpunkt weichen voneinander ab, müssen aber taggleich sein", oss.str());
     }
     A_22487.finish();
 }
 
-std::tuple<HttpStatus, model::KbvBundle>
+template<typename KbvOrEvdgaBundle>
+std::tuple<HttpStatus, KbvOrEvdgaBundle>
 ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext, std::string_view prescription)
 {
     using namespace std::string_literals;
-    using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
+    using KbvBundleFactory = model::ResourceFactory<KbvOrEvdgaBundle>;
     using OnUnknownExtension = Configuration::OnUnknownExtension;
 
     const auto& config = Configuration::instance();
@@ -337,19 +345,20 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
         {
             factory.genericValidationMode(model::GenericValidationMode::require_success);
         }
-        const auto valOpts = config.defaultValidatorOptions(model::ProfileType::KBV_PR_ERP_Bundle);
+        const auto valOpts = config.defaultValidatorOptions(factory.profileType());
         factory.validatorOptions(valOpts);
-        A_23384.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
+        A_23384_01.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
         const gsl::not_null view = factory.getValidationView();
-        factory.validate(model::ProfileType::KBV_PR_ERP_Bundle, view);
-        A_23384.finish();
+        TVLOG(1) << "using view " << view->id() << " for " <<  factory.getProfileName().value_or("UNKNOWN");
+        factory.validate(factory.profileType(), view);
+        A_23384_01.finish();
         auto status = HttpStatus::OK;
         if (onUnknownExtension != OnUnknownExtension::ignore)
         {
             status = checkExtensions(factory, onUnknownExtension, *view, valOpts);
         }
-        std::tuple<HttpStatus, model::KbvBundle> result{status, std::move(factory).getNoValidation()};
-        get<model::KbvBundle>(result).additionalValidation();
+        std::tuple<HttpStatus, KbvOrEvdgaBundle> result{status, std::move(factory).getNoValidation()};
+        get<KbvOrEvdgaBundle>(result).additionalValidation();
         return result;
     }
     catch (const model::ModelException& er)
@@ -391,8 +400,10 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
         A_24901.finish();
 
         A_23164.start("Fehlercode 400 wenn das Ende der Einlösefrist vor dem Beginn liegt.");
-        if (mPExt->endDate().has_value()) {
-            ErpExpect(mPExt->startDate() <= mPExt->endDate(), HttpStatus::BadRequest, "Ende der Einlösefrist liegt vor Beginn der Einlösefrist");
+        if (mPExt->endDate().has_value())
+        {
+            ErpExpect(mPExt->startDate() <= mPExt->endDate(), HttpStatus::BadRequest,
+                      "Ende der Einlösefrist liegt vor Beginn der Einlösefrist");
         }
         A_23164.finish();
         A_22627_01.start("Fehlercode 400 wenn Flowtype ungleich 160, 169, 200 oder 209");
@@ -403,12 +414,13 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
             case model::PrescriptionType::direkteZuweisung:
             case model::PrescriptionType::direkteZuweisungPkv:
                 break;
-            // Error message for future FlowTypes that do not support MVO.
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
                 ErpFailWithDiagnostics(
                     HttpStatus::BadRequest,
                     "Mehrfachverordnungen nur für die Verordnungen von apothekenpflichtigen Arzneimittel zulässig",
                     "Invalid FlowType " + std::string(model::PrescriptionTypeDisplay.at(prescriptionType)) +
                         " for MVO");
+                break;
         }
         A_22627_01.finish();
 
@@ -468,19 +480,20 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
                   "Einlösefrist liegt zeitlich vor dem Ausstellungsdatum");
         A_23537.finish();
     }
-    else // if (mPExt->isMultiplePrescription())
+    else// if (mPExt->isMultiplePrescription())
     {
         A_22631.start(
             "Fehlercode 400 wenn Kennzeichen = false, aber eine Extension Nummerierung oder Zeitraum vorhanden");
         ErpExpect(! mPExt->getExtension<model::KBVMultiplePrescription::Nummerierung>().has_value(),
                   HttpStatus::BadRequest, "Nummerierung darf nur bei MVO angegeben werden");
-        ErpExpect(! mPExt->getExtension<model::KBVMultiplePrescription::Zeitraum>().has_value(),
-                  HttpStatus::BadRequest, "Zeitraum darf nur bei MVO angegeben werden");
+        ErpExpect(! mPExt->getExtension<model::KBVMultiplePrescription::Zeitraum>().has_value(), HttpStatus::BadRequest,
+                  "Zeitraum darf nur bei MVO angegeben werden");
         A_22631.finish();
     }
 }
 
-HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<model::KbvBundle>& factory,
+template<typename KbvOrEvdgaBundle>
+HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<KbvOrEvdgaBundle>& factory,
                                                 Configuration::OnUnknownExtension onUnknownExtension,
                                                 const fhirtools::FhirStructureRepository& fhirStructureRepo,
                                                 const fhirtools::ValidatorOptions& valOpts)
@@ -514,49 +527,49 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<mod
     return HttpStatus::OK;
 }
 
-
-void ActivateTaskHandler::checkValidCoverage(const model::KbvBundle& bundle, const model::PrescriptionType prescriptionType)
+template<typename KbvOrEvdgaBundle>
+void ActivateTaskHandler::checkValidCoverage(const KbvOrEvdgaBundle& bundle,
+                                             const model::PrescriptionType prescriptionType)
 {
     A_22222.start("Check for allowed coverage type");
-    const auto& coverage = bundle.getResourcesByType<model::KbvCoverage>("Coverage");
-    ErpExpect(coverage.size() <= 1, HttpStatus::BadRequest, "Unexpected number of Coverage Resources in KBV Bundle");
+    const std::vector<model::KbvCoverage> coverage = bundle.template getResourcesByType<model::KbvCoverage>("Coverage");
+    ErpExpect(coverage.size() <= 1, HttpStatus::BadRequest,
+              "Unexpected number of Coverage Resources in KBV/EVDGA Bundle");
     bool pkvCovered = false;
     for (const auto& currentCoverage : coverage)
     {
         const auto coverageType = currentCoverage.typeCodingCode();
         pkvCovered = (coverageType == "PKV");
-        ErpExpect((coverageType == "GKV")
-                  || (coverageType == "SEL")
-                  || (coverageType == "BG")
-                  || (coverageType == "UK")
-                  || pkvCovered,
-                  HttpStatus::BadRequest,
-                  "Kostenträger nicht zulässig");
+        ErpExpect((coverageType == "GKV") || (coverageType == "SEL") || (coverageType == "BG") ||
+                      (coverageType == "UK") || pkvCovered,
+                  HttpStatus::BadRequest, "Kostenträger nicht zulässig");
     }
     A_22222.finish();
 
     // PKV related: check PKV coverage
     A_22347_01.start("Check coverage type for flowtype 200/209 (PKV prescription)");
-    A_23443.start("Check coverage type for flowtype 160/169");
+    A_23443_01.start("Check coverage type for flowtype 160/162/169");
     switch (prescriptionType)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::direkteZuweisung:
-            ErpExpect(!pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not allowed for flowtype 160/169");
+            ErpExpect(! pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not allowed for flowtype 160/162/169");
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
             ErpExpect(pkvCovered, HttpStatus::BadRequest, "Coverage \"PKV\" not set for flowtype 200/209");
             break;
     }
-    A_23443.finish();
+    A_23443_01.finish();
     A_22347_01.finish();
 }
 
-
-bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle, PcSessionContext& session)
+template<typename KbvOrEvdgaBundle>
+bool ActivateTaskHandler::checkPractitioner(const KbvOrEvdgaBundle& bundle, PcSessionContext& session)
 {
-    const auto kbvPractitioners = bundle.getResourcesByType<model::KbvPractitioner>();
+    const std::vector<model::KbvPractitioner> kbvPractitioners =
+        bundle.template getResourcesByType<model::KbvPractitioner>();
     for (const auto& practitioner : kbvPractitioners)
     {
         A_23891.start("Validate Practitioner Checksum");
@@ -583,3 +596,85 @@ bool ActivateTaskHandler::checkPractitioner(const model::KbvBundle& bundle, PcSe
     }
     return true;
 }
+
+// GEMREQ-start A_19127-01#getKvnrFromPatientResource
+template<typename KbvOrEvdgaBundle>
+model::Kvnr ActivateTaskHandler::getKvnrFromPatientResource(const KbvOrEvdgaBundle& bundle)
+{
+    const std::vector<model::Patient> patients = bundle.template getResourcesByType<model::Patient>("Patient");
+    ErpExpect(patients.size() == 1, HttpStatus::BadRequest,
+              "Expected exactly one Patient in prescription bundle, got: " + std::to_string(patients.size()));
+    try
+    {
+        auto kvnr = patients[0].kvnr();
+        A_23890.start("Validate Kvnr Checksum");
+        ErpExpect(kvnr.validChecksum(), HttpStatus::BadRequest,
+                  "Ungültige Versichertennummer (KVNR): Die übergebene Versichertennummer des Patienten entspricht "
+                  "nicht den Prüfziffer-Validierungsregeln.");
+        A_23890.finish();
+        return kvnr;
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFail(HttpStatus::BadRequest, ex.what());
+    }
+    ErpFail(HttpStatus::BadRequest, "Failed to get KVNR from Bundle.entry:Patient");
+}
+// GEMREQ-end A_19127-01#getKvnrFromPatientResource
+
+template<typename KbvOrEvdgaBundle>
+void ActivateTaskHandler::checkBundlePrescriptionId(const model::Task& task, const KbvOrEvdgaBundle& bundle)
+{
+    std::optional<model::PrescriptionId> bundlePrescriptionId;
+    try
+    {
+        bundlePrescriptionId.emplace(bundle.getIdentifier());
+    }
+    catch (const model::ModelException& ex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Error while extracting prescriptionId from QES-Bundle",
+                               ex.what());
+    }
+    ErpExpect(bundlePrescriptionId.has_value(), HttpStatus::BadRequest,
+              "Failed to extract prescriptionId from QES-Bundle");
+
+    A_21370.start("compare the task flowtype against the prefix of the prescription-id");
+    ErpExpect(bundlePrescriptionId->type() == task.type(), HttpStatus::BadRequest,
+              "Flowtype mismatch between Task and QES-Bundle");
+    A_21370.finish();
+
+    const auto& config = Configuration::instance();
+    if (! config.getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK, false))
+    {
+        A_21370.start("compare the prescription id of the QES bundle with the task");
+        ErpExpect(*bundlePrescriptionId == task.prescriptionId(), HttpStatus::BadRequest,
+                  "PrescriptionId mismatch between Task and QES-Bundle");
+        A_21370.finish();
+    }
+    else
+    {
+        TLOG(ERROR) << "PrescriptionId check of QES-Bundle is disabled";
+    }
+}
+
+// GEMREQ-start A_20159-03#allowedProfessionOidsForQesSignature
+std::vector<std::string_view>
+ActivateTaskHandler::allowedProfessionOidsForQesSignature(model::PrescriptionType prescriptionType)
+{
+    A_19225_02.start("Return professionOIDs allowed for QES Signature - Flowtype 160/169/200/209");
+    A_25990.start("Return professionOIDs allowed for QES Signature - Flowtype 162");
+    switch (prescriptionType)
+    {
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            return {profession_oid::oid_arzt, profession_oid::oid_zahnarzt, profession_oid::oid_psychotherapeut,
+                    profession_oid::oid_ps_psychotherapeut, profession_oid::oid_kuj_psychotherapeut};
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return {profession_oid::oid_arzt, profession_oid::oid_zahnarzt};
+    }
+    Fail("Invalid professionOID type: " + std::to_string(static_cast<uintmax_t>(prescriptionType)));
+    return {};
+}
+// GEMREQ-end A_20159-03#allowedProfessionOidsForQesSignature

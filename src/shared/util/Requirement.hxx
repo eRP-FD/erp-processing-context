@@ -7,6 +7,7 @@
 
 #ifndef E_LIBRARY_UTIL_REQUIREMENT_HXX
 #define E_LIBRARY_UTIL_REQUIREMENT_HXX
+// NOLINTBEGIN(readability-convert-member-functions-to-static)
 
 /**
  * This implementation is intended to provide IDE navigation.
@@ -15,63 +16,52 @@
 class Requirement
 {
 public:
-    enum State
-    {
-        Partial,
-        Complete
-    };
-
     /**
      * Define requirements as static variables in erp/Requirements.hxx.
      */
-    constexpr explicit Requirement (const char* title, State state = Partial);
+    constexpr explicit Requirement (const char* title);
 
     /**
      * Mark the start of (a part of) a gematik requirement.
      */
-    constexpr bool start (const char* description);
+    constexpr void start(const char* description) const;
 
-    /**
-     * Mark the start of (a part of) a gematik requirement that is currently disabled.
-     */
-    constexpr void startDisabled (const char* description);
+    constexpr bool implements(const char* description) const;
 
     /**
      * Mark the end of (a part of) a gematik requirement.
      */
-    constexpr bool finish (void);
+    constexpr void finish () const;
 
     /**
      * Mark a test a gematik requirement.
      */
-    constexpr void test (const char* description);
+    constexpr void test (const char* description) const;
 };
 
 
-constexpr Requirement::Requirement (const char*, State)
+constexpr Requirement::Requirement (const char*)
 {
 }
 
 
-constexpr bool Requirement::start (const char*)
+constexpr void Requirement::start(const char*) const
+{
+}
+
+constexpr bool Requirement::implements(const char*) const
 {
     return true;
 }
 
-
-constexpr void Requirement::startDisabled (const char*)
+constexpr void Requirement::finish () const
 {
 }
 
 
-constexpr bool Requirement::finish (void)
-{
-    return false;
-}
-
-
-constexpr void Requirement::test (const char*)
+constexpr void Requirement::test (const char*) const
 {
 }
 
+// NOLINTEND(readability-convert-member-functions-to-static)
 #endif

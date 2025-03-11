@@ -873,7 +873,7 @@ TslService::checkSignerCertificate (const X509Certificate& signerCertificate,
                 return;
         }
 
-        TslExpect(std::find(expectedSignerCertificates.begin(), expectedSignerCertificates.end(), signerCertificate) !=
+        TslExpect(std::ranges::find(expectedSignerCertificates, signerCertificate) !=
                   expectedSignerCertificates.end(),
                   "TSL signer certificate is not signed with expected CA",
                   TslErrorCode::CERTIFICATE_NOT_VALID_MATH);
@@ -883,7 +883,7 @@ TslService::checkSignerCertificate (const X509Certificate& signerCertificate,
     {
         // if already accepted expected signed certificates are provided,
         // the signer certificate must be in the list
-        TslExpect(std::find(expectedSignerCertificates.begin(), expectedSignerCertificates.end(), signerCertificate) !=
+        TslExpect(std::ranges::find(expectedSignerCertificates, signerCertificate) !=
                       expectedSignerCertificates.end(),
                   "Unexpected signer certificate.",
                   TslErrorCode::CERTIFICATE_NOT_VALID_MATH);

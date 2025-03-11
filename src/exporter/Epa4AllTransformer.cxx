@@ -458,9 +458,9 @@ void Epa4AllTransformer::convertPZNIngredients(model::NumberAsStringParserDocume
 }
 
 void Epa4AllTransformer::convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
-                                              rapidjson::Value& epaIngredient, model::Pzn&& pzn, std::string_view text)
+                                              rapidjson::Value& epaIngredient, const model::Pzn& pzn, std::string_view text)
 {
-    model::EPAMedicationPZNIngredient containedMedication{std::move(pzn), text};
+    model::EPAMedicationPZNIngredient containedMedication{pzn, text};
 
     static const rapidjson::Pointer itemReferencePointer(
         model::resource::ElementName::path("itemReference", "reference"));

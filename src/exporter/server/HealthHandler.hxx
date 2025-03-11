@@ -14,7 +14,7 @@
 class HealthHandler : public RequestHandlerInterface
 {
 public:
-    [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
+    [[nodiscard]] bool allowedForProfessionOID(std::string_view, const std::optional<std::string>&) const override
     {
         return true;
     }

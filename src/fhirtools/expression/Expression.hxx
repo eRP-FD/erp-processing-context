@@ -159,6 +159,10 @@ class UtilityTimeOfDay : public Expression
 // http://hl7.org/fhirpath/N1/#today-date
 class UtilityToday : public Expression
 {
+public:
+    static constexpr auto IDENTIFIER = "today";
+    using Expression::Expression;
+    Collection eval(const Collection& collection) const override;
 };
 
 

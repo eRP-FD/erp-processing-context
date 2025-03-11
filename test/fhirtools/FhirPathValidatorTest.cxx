@@ -410,8 +410,8 @@ public:
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_ITA_WOP_V1.00.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DMP_V1.05.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.01.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DMP_V1.06.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_PKV_TARIFF_V1.01.xml",
@@ -422,15 +422,15 @@ public:
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_ITA_WOP_V1.00.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DMP_V1.05.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.01.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DMP_V1.06.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.02.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_NORMGROESSE_V1.00.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_PKV_TARIFF_V1.01.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN_V1.01.xml",
             "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml",
-            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.xml",
+            "fhir/profiles/fhir.kbv.de/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.xml",
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_CS_FOR_Berufsbezeichnung.xml",
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_CS_FOR_Payor_Type_KBV.xml",
             "fhir/profiles/kbv.ita.for-1.1.0/package/KBV_CS_FOR_Qualification_Type.xml",
@@ -875,7 +875,7 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
         EXPECT_TRUE(valueSet->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
     }
     {
-        const auto* valueSet = repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP", "1.05"_ver});
+        const auto* valueSet = repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP", "1.06"_ver});
         ASSERT_TRUE(valueSet);
         EXPECT_TRUE(valueSet->canValidate());
         EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
@@ -890,6 +890,12 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
         EXPECT_TRUE(valueSet->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
         EXPECT_TRUE(valueSet->containsCode("10", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
         EXPECT_TRUE(valueSet->containsCode("11", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        // New in 1.106
+        EXPECT_TRUE(valueSet->containsCode("12", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(valueSet->containsCode("30", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        // ...
+        EXPECT_TRUE(valueSet->containsCode("57", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(valueSet->containsCode("58", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
     }
     {
         const auto* valueSet =
@@ -943,7 +949,7 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
     }
     {
         const auto* valueSet =
-            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", "1.13"_ver});
+            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", "1.15"_ver});
         ASSERT_TRUE(valueSet);
         EXPECT_TRUE(valueSet->canValidate());
         EXPECT_TRUE(valueSet->containsCode("AEO", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
@@ -951,6 +957,24 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
         // ...
         EXPECT_TRUE(valueSet->containsCode("PFT", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
         EXPECT_TRUE(valueSet->containsCode("ZPA", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        // New in 1.14:
+        EXPECT_TRUE(valueSet->containsCode("IID", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(valueSet->containsCode("LIV", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        // New in 1.15:
+        EXPECT_TRUE(valueSet->containsCode("LYE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(valueSet->containsCode("PUE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+    }
+    {
+        const auto* valueSet =
+            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART", "1.02"_ver});
+        ASSERT_TRUE(valueSet);
+        EXPECT_TRUE(valueSet->canValidate());
+        EXPECT_TRUE(valueSet->containsCode("e010", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(valueSet->containsCode("e011", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(valueSet->containsCode("e012", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(valueSet->containsCode("e013", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(valueSet->containsCode("e16A", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(valueSet->containsCode("e16D", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
     }
 }
 

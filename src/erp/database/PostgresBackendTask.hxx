@@ -20,6 +20,7 @@ class PostgresBackendTask
 public:
 
     static constexpr const char* TASK_160_TABLE_NAME = "erp.task";
+    static constexpr const char* TASK_162_TABLE_NAME = "erp.task_162";
     static constexpr const char* TASK_169_TABLE_NAME = "erp.task_169";
     static constexpr const char* TASK_200_TABLE_NAME = "erp.task_200";
     static constexpr const char* TASK_209_TABLE_NAME = "erp.task_209";

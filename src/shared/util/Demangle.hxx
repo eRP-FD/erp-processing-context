@@ -14,7 +14,7 @@
 namespace util
 {
 
-std::string demangle(std::string_view mangledName);
+std::string demangle(const std::string& mangledName);
 
 } // namespace util
 

@@ -1,0 +1,172 @@
+# Disabled checks (note: comments can't be added in the list below):
+#
+# bugprone-macro-parentheses:
+#     LOG and Assert macros intentionally don't use parentheses.
+# cert-dcl21-cpp:
+#     Requires postfix operator ++/-- to return const, which clashes with
+#     readability-const-return-type.
+# clang-analyzer-optin.core.EnumCastOutOfRange:
+#     This analyzer considers it an error to use enum classes as bit flags. This causes issues with boost::regex, which
+#     does just that. https://github.com/llvm/llvm-project/issues/76208
+# clang-analyzer-optin.performance.Padding:
+#     We do not want to optimize our classes and structs for optimal padding right now, only for readability.
+# concurrency-mt-unsafe:
+#     We use getenv(), getopt_long(), and exit(), but not in a way that is problematic respectively
+#     which we can do anything about.
+# cppcoreguidelines-avoid-capture-default-when-capturing-this:
+#     This rule does not match the C++ Core Guideline because it also highlights the [&] default:
+#     https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#f54-when-writing-a-lambda-that-captures-this-or-any-class-data-member-dont-use--default-capture
+#     It is also hard to find documentation for this rule, so maybe it is still a work in progress.
+# cppcoreguidelines-avoid-const-or-ref-data-members:
+#     We have decided in a team discussion that both const and reference members are acceptable in
+#     noncopyable types, and maybe in other circumstances as well.
+# cppcoreguidelines-avoid-do-while:
+#     I genuinely do not understand the problem with the given example, and all the instances that were flagged by this
+#     rule looked like sane code to me.
+#     https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#es75-avoid-do-statements
+# cppcoreguidelines-use-default-member-init:
+#     We want to allow people to initialize values in the constructor initialization list, typically in the CXX file,
+#     instead of forcing them to do so in the header.
+# hicpp-use-emplace, modernize-use-emplace:
+#     This warning does not allow to use emplace_back instead of push_back in code like
+#     container.push_back(MyStruct{.x = 1, .y = 2}), because then it complains about the unnecessary temporary.
+#     Also, it makes otherwise explicit conversions implicit, e.g. vector<Oid> vec; vec.emplace_back("1.2.3"),
+#     leading to less type-safe code.
+# performance-avoid-endl:
+#     We do not use IO streams in performance critical code.
+# performance-enum-size:
+#     We do not typically use enums in places where space efficiency is relevant.
+InheritParentConfig: true
+Checks: >-
+    *,
+    -abseil-*,
+    -altera-*,
+    -android-*,
+    -bugprone-bool-pointer-implicit-conversion,
+    -bugprone-crtp-constructor-accessibility,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-exception-escape,
+    -bugprone-macro-parentheses,
+    -bugprone-reserved-identifier,
+    -bugprone-suspicious-semicolon,
+    -bugprone-unchecked-optional-access,
+    -cert-dcl16-c,
+    -cert-dcl21-cpp,
+    -cert-dcl37-c,
+    -cert-dcl50-cpp,
+    -cert-dcl51-cpp,
+    -cert-dcl59-cpp,
+    -cert-env33-c,
+    -cert-err58-cpp,
+    -clang-analyzer-optin.core.EnumCastOutOfRange,
+    -clang-analyzer-optin.performance.Padding,
+    -concurrency-mt-unsafe,
+    -cppcoreguidelines-avoid-c-arrays,
+    -cppcoreguidelines-avoid-capture-default-when-capturing-this,
+    -cppcoreguidelines-avoid-const-or-ref-data-members,
+    -cppcoreguidelines-avoid-do-while,
+    -cppcoreguidelines-avoid-goto,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-avoid-non-const-global-variables,
+    -cppcoreguidelines-explicit-virtual-functions,
+    -cppcoreguidelines-macro-usage,
+    -cppcoreguidelines-no-malloc,
+    -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-owning-memory,
+    -cppcoreguidelines-prefer-member-initializer,
+    -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+    -cppcoreguidelines-pro-bounds-constant-array-index,
+    -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+    -cppcoreguidelines-pro-type-const-cast,
+    -cppcoreguidelines-pro-type-cstyle-cast,
+    -cppcoreguidelines-pro-type-reinterpret-cast,
+    -cppcoreguidelines-pro-type-union-access,
+    -cppcoreguidelines-pro-type-vararg,
+    -cppcoreguidelines-special-member-functions,
+    -cppcoreguidelines-use-default-member-init,
+    -fuchsia-*,
+    -google-*,
+    google-explicit-constructor,
+    google-runtime-operator,
+    -hicpp-avoid-c-arrays,
+    -hicpp-avoid-goto,
+    -hicpp-braces-around-statements,
+    -hicpp-function-size,
+    -hicpp-named-parameter,
+    -hicpp-no-array-decay,
+    -hicpp-no-assembler,
+    -hicpp-no-malloc,
+    -hicpp-signed-bitwise,
+    -hicpp-special-member-functions,
+    -hicpp-uppercase-literal-suffix,
+    -hicpp-use-emplace,
+    -hicpp-vararg,
+    -llvm-*,
+    -llvmlibc-*,
+    -misc-bool-pointer-implicit-conversion,
+    -misc-const-correctness,
+    -misc-definitions-in-headers,
+    -misc-include-cleaner,
+    -misc-non-private-member-variables-in-classes,
+    -misc-unused-alias-decls,
+    -misc-unused-parameters,
+    -misc-unused-using-decls,
+    -modernize-avoid-c-arrays,
+    -modernize-concat-nested-namespaces,
+    -modernize-pass-by-value,
+    -modernize-return-braced-init-list,
+    -modernize-use-default-member-init,
+    -modernize-use-emplace,
+    -modernize-use-trailing-return-type,
+    -modernize-use-nodiscard,
+    -modernize-use-using,
+    -objc-*,
+    -openmp-exception-escape,
+    -performance-avoid-endl,
+    -performance-enum-size,
+    -readability-avoid-const-params-in-decls,
+    -readability-braces-around-statements,
+    -readability-else-after-return,
+    -readability-function-cognitive-complexity,
+    -readability-function-size,
+    -readability-identifier-length,
+    -readability-implicit-bool-conversion,
+    -readability-isolate-declaration,
+    -readability-magic-numbers,
+    -readability-misleading-indentation,
+    -readability-named-parameter,
+    -readability-redundant-member-init,
+    -readability-redundant-preprocessor,
+    -readability-simplify-boolean-expr,
+    -readability-uppercase-literal-suffix,
+    -readability-use-anyofallof,
+    -zircon-*,
+    -modernize-use-designated-initializers,
+    -readability-redundant-casting,
+    -misc-use-internal-linkage,
+    -boost-use-ranges,
+    -modernize-use-ranges,
+    -readability-use-std-min-max,
+    -modernize-redundant-void-arg
+CheckOptions:
+    # Allow casting to (void) to ignore return values, e.g. (void) my_unique_ptr.release();
+    - { key: bugprone-unused-return-value.AllowCastToVoid,         value: true }
+    - { key: cppcoreguidelines-rvalue-reference-param-not-moved.AllowPartialMove, value: true }
+    # Warn to use auto only when the type name gets fairly long. 12 still allows std::string.
+    - { key: hicpp-use-auto.MinTypeNameLength,                     value: 12         }
+    - { key: modernize-use-auto.MinTypeNameLength,                 value: 12         }
+    - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
+    # Allow class names like I_Document_Management, I_Account_Management_Test etc. which are used for SOAP interfaces.
+    - { key: readability-identifier-naming.ClassIgnoredRegexp,     value: '^I(_[A-Z][A-Za-z0-9]+)+$' }
+    - { key: readability-identifier-naming.FunctionCase,           value: camelBack  }
+    - { key: readability-identifier-naming.FunctionIgnoredRegexp,  value: '^to_string|SetupForTest|TearDownForTest$' }
+    - { key: readability-identifier-naming.GlobalConstantCase,     value: aNy_CasE   }
+    - { key: readability-identifier-naming.MemberCase,             value: camelBack  }
+    - { key: readability-identifier-naming.NamespaceCase,          value: lower_case }
+    - { key: readability-identifier-naming.ParameterCase,          value: camelBack  }
+    - { key: readability-identifier-naming.PrivateMemberPrefix,    value: m          }
+    - { key: readability-identifier-naming.StaticConstantCase,     value: aNy_CasE   }
+    - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
+    - { key: readability-identifier-naming.StructIgnoredRegexp,    value: '^soap$'   }
+    - { key: readability-identifier-naming.TypedefCase,            value: CamelCase  }
+    - { key: readability-identifier-naming.VariableCase,           value: camelBack  }

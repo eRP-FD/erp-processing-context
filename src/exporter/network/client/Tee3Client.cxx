@@ -149,9 +149,7 @@ boost::system::result<CoHttpsClient::Response> responseFromString(const std::str
 TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
 {
     const auto& config = Configuration::instance();
-    auto enforceServerAuth =
-        config.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENFORCE_SERVER_AUTHENTICATION);
-    return enforceServerAuth ? TlsCertificateVerifier::withTslVerification(
+    return TlsCertificateVerifier::withTslVerification(
                                    tslManager, {.certificateType = CertificateType::C_FD_TLS_S,
                                                 .ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
                                                 .ocspGracePeriod = std::chrono::seconds(config.getIntValue(
@@ -159,8 +157,7 @@ TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
                                                 .withSubjectAlternativeAddressValidation = true})
                                    .withAdditionalCertificateCheck([](const X509Certificate& cert) -> bool {
                                        return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
-                                   })
-                             : TlsCertificateVerifier::withVerificationDisabledForTesting();
+                                   });
 }
 // GEMREQ-end A_24913#TLS-params
 
@@ -179,7 +176,7 @@ boost::system::result<epa::Tee3Protocol::VauCid> getVauCidChecked(const Tee3Clie
         bde.mError = "missing header";
         return Tee3Client::error::tee3_handshake_failed;
     }
-    const epa::Tee3Protocol::VauCid vauCid{vauCidHeader->value()};
+    epa::Tee3Protocol::VauCid vauCid{vauCidHeader->value()};
     try
     {
         vauCid.verify();
@@ -233,7 +230,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::handshakeWithAutho
 
     if (! ec)
     {
-        ec = co_await authorize(mOwingClientsForHost->hsmPool());
+        ec = co_await authorize(&mOwingClientsForHost->hsmPool());
     }
 
     co_return ec;
@@ -357,7 +354,7 @@ Tee3Client::Request Tee3Client::prepareOuterRequest(boost::beast::http::verb ver
 }
 
 
-Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerRequest, epa::Tee3SessionContext& requestContext)
+Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerRequest, epa::Tee3Context::SessionContexts& sessionContexts)
 {
     using boost::beast::http::verb;
     // GEMREQ-start A_24628-01#serializeInner
@@ -369,8 +366,8 @@ Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerReques
     });
     // GEMREQ-start A_24619#encryptInner
     auto encrypted = epa::TeeStreamFactory::createReadableEncryptingStream(
-        [&requestContext]() {
-            return requestContext;
+        [&sessionContexts]() {
+            return sessionContexts.request;
         },
         epa::StreamFactory::makeReadableStream(serialized.str()));
     // GEMREQ-end A_24619#encryptInner
@@ -378,11 +375,21 @@ Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerReques
     Request outerRequest = prepareOuterRequest(verb::post, mTee3Context->vauCid.toString(), MimeType::binary,
                                               innerRequest[Header::Tee3::XUserAgent]);
     // GEMREQ-end A_24628-01#sendOuterUseCID, A_24622#sendOuterUseCID
+#ifdef ENABLE_DEBUG_LOG
+    // GEMREQ-start A_24477
+    if (! mTee3Context->isPU)
+    {
+        outerRequest.set(Header::Tee3::VauNonPuTracing, Base64::encode(*sessionContexts.request.k2Key) + ' ' +
+                                                            Base64::encode(*sessionContexts.response.k2Key));
+    }
+    // GEMREQ-end A_24477
+#endif
     outerRequest.body() = encrypted.readAll().toString();
     return outerRequest;
 }
 
-boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::sendInner(Request request, std::unordered_map<std::string, std::any>& logDataBag)
+boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
+Tee3Client::sendInner(Request request, std::unordered_map<std::string, std::any> logDataBag) //NOLINT(misc-no-recursion)
 {
     auto executor = co_await boost::asio::this_coro::executor;
     co_await boost::asio::dispatch(boost::asio::bind_executor(mStrand, boost::asio::deferred));
@@ -392,7 +399,7 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     mHttpsClient.setMandatoryFields(request);
 
     // GEMREQ-start A_24628-01#createSessionContexts, A_24629callCreateSessionContexts
-    auto contexts = std::make_optional(mTee3Context->createSessionContexts());
+    auto contexts = std::make_optional(mTee3Context->createSessionContexts(mRequestCounter.fetch_add(1)));
     // GEMREQ-end A_24628-01#createSessionContexts, A_24629callCreateSessionContexts
 
     BDEMessage bde;
@@ -406,8 +413,9 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     }
     BDEMessage::assignIfContains(logDataBag, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
     BDEMessage::assignIfContains(logDataBag, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
+    BDEMessage::assignIfContains(logDataBag, BDEMessage::hashedKvnrKey, bde.mHashedKvnr);
     // GEMREQ-start A_24628-01#encryptInner
-    Request outerRequest = createEncryptedOuterRequest(request, contexts->request);
+    Request outerRequest = createEncryptedOuterRequest(request, *contexts);
     // GEMREQ-end A_24628-01#encryptInner
     co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
     HeaderLog::vlog(3, [&] {
@@ -428,8 +436,8 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
         }
         co_await boost::asio::dispatch(boost::asio::bind_executor(mStrand, boost::asio::deferred));
         Expect3(mTee3Context != nullptr, "Tee 3 context is gone.", std::logic_error);
-        contexts.emplace(mTee3Context->createSessionContexts());
-        outerRequest = createEncryptedOuterRequest(request, contexts->request);
+        contexts.emplace(mTee3Context->createSessionContexts(mRequestCounter.fetch_add(1)));
+        outerRequest = createEncryptedOuterRequest(request, *contexts);
         bde.mCid = mTee3Context->vauCid.toString();
         bde.mStartTime = model::Timestamp::now();
         co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
@@ -477,8 +485,8 @@ boost::asio::awaitable<boost::system::result<Tee3Client::Response>> Tee3Client::
     // GEMREQ-end A_24773#restart
     // GEMREQ-start A_24633#decryptInner
     auto decrypted = epa::TeeStreamFactory::createReadableDecryptingStream(
-        [&contexts](const epa::KeyId& keyId) {
-            Expect(keyId == contexts->response.keyId, "response KeyId doesn't match request.");
+        [&contexts](const epa::KeyId& keyId, const std::uint64_t) {
+            Expect(keyId == contexts->request.keyId, "response KeyId doesn't match request.");
             return contexts->response;
         },
         epa::StreamFactory::makeReadableStream(outerResponse->body()));
@@ -628,6 +636,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         HeaderLog::vlog(1, [&] {
             return std::ostringstream{} << "Tee 3 handshake complete";
         });
+        // GEMREQ-start A_15549
         mTee3Context = handshake.context();
         mTeeContextRefreshTimer.expires_after(teeContextTimeout);
         mTeeContextRefreshTimer.async_wait([this](const boost::system::error_code& ec) {
@@ -637,6 +646,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
                 mTee3Context.reset();
             }
         });
+        // GEMREQ-end A_15549
     }
     catch (const std::exception&)
     {
@@ -656,7 +666,8 @@ Certificate Tee3Client::provideCertificate(const epa::BinaryBuffer& hash, uint64
                                                   {ByteHelper::toHex(hash.getString()), version});
 }
 
-boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool& hsmPool)
+//NOLINTNEXTLINE(misc-no-recursion)
+boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(gsl::not_null<HsmPool*> hsmPool)
 {
     auto executor = co_await boost::asio::this_coro::executor;
     boost::system::error_code result{};
@@ -665,7 +676,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool&
         // GEMREQ-start A_24771#freshness
         auto freshness = co_await getFreshness();
         // GEMREQ-start A_24757#storeVauNP
-        auto vauNP = co_await sendAuthorizationRequest(hsmPool, std::move(freshness));
+        auto vauNP = co_await sendAuthorizationRequest(std::move(hsmPool), std::move(freshness));
         // GEMREQ-end A_24771#freshness
         mIsAuthorized = true;
         co_await async_immediate(mStrand);
@@ -688,7 +699,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(HsmPool&
 }
 
 // GEMREQ-start A_24771#getFreshness
-boost::asio::awaitable<std::string> Tee3Client::getFreshness()
+boost::asio::awaitable<std::string> Tee3Client::getFreshness() //NOLINT(misc-no-recursion)
 {
     using boost::beast::http::verb;
     std::unordered_map<std::string, std::any> empty{};
@@ -708,11 +719,13 @@ boost::asio::awaitable<std::string> Tee3Client::getFreshness()
 
 
 // GEMREQ-start A_24757#sendAuthorizationRequest,A_24771#sendAuthorizationRequest
-boost::asio::awaitable<std::string> Tee3Client::sendAuthorizationRequest(HsmPool& hsmPool, std::string freshness)
+//NOLINTNEXTLINE(misc-no-recursion)
+boost::asio::awaitable<std::string> Tee3Client::sendAuthorizationRequest(gsl::not_null<HsmPool*> hsmPool,
+                                                                         std::string freshness)
 {
     using boost::beast::http::verb;
     VauAutTokenSigner signer;
-    const auto vauAutToken = signer.signAuthorizationToken(hsmPool.acquire().session(), freshness);
+    const auto vauAutToken = signer.signAuthorizationToken(hsmPool->acquire().session(), freshness);
 
     auto authorizationReq = Tee3Client::Request(verb::post, "/epa/authz/v1/send_authorization_request_bearertoken", 11);
     using namespace std::string_literals;

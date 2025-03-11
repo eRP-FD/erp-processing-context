@@ -240,7 +240,7 @@ namespace {
     template<typename First, typename ... Rest>
     void outputItems (std::ostream& out, First&& first, Rest&& ... rest)
     {
-        out << first;
+        out << std::forward<First>(first);
         outputItems(out, std::forward<Rest>(rest)...);
     }
 }

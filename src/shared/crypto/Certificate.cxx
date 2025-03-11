@@ -424,8 +424,7 @@ Certificate::Builder& Certificate::Builder::withSubjectAlternateName (const std:
     std::unique_ptr<GENERAL_NAME, decltype(&GENERAL_NAME_free)> generalName{
         GENERAL_NAME_new(), &GENERAL_NAME_free};
     throwIfNot(generalName != nullptr, "can not create general name");
-    GENERAL_NAME_set0_value(generalName.get(), GEN_DNS, asn1String.get());
-    (void) asn1String.release();
+    GENERAL_NAME_set0_value(generalName.get(), GEN_DNS, asn1String.release());
 
     std::unique_ptr<GENERAL_NAMES, decltype(&GENERAL_NAMES_free)> subjectAltName{
         GENERAL_NAMES_new(), &GENERAL_NAMES_free};
@@ -433,7 +432,7 @@ Certificate::Builder& Certificate::Builder::withSubjectAlternateName (const std:
 
     throwIfNot(1 == sk_GENERAL_NAME_push(subjectAltName.get(), generalName.get()),
                "can not extend SAN stack of general names");
-    (void) generalName.release();
+    (void) generalName.release(); // NOLINT(*-unused-return-value)
 
     throwIfNot(1 == X509_add1_ext_i2d(
                     mX509Certificate, NID_subject_alt_name, subjectAltName.get(), 0, X509V3_ADD_APPEND),

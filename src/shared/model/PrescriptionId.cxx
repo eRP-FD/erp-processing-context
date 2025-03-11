@@ -51,9 +51,9 @@ PrescriptionId PrescriptionId::fromStringNoValidation (const std::string_view pr
         ModelExpect(type.has_value(), "Unsupported prescription type " + parts[0]);
 
 
-        int64_t id = std::stoll(parts[1]) * 1'000'000'000
-                + std::stoll(parts[2]) * 1'000'000
-                + std::stoll(parts[3]) * 1'000
+        int64_t id = (std::stoll(parts[1]) * 1'000'000'000)
+                + (std::stoll(parts[2]) * 1'000'000)
+                + (std::stoll(parts[3]) * 1'000)
                 + std::stoll(parts[4]);
 
         const uint8_t checksum = static_cast<uint8_t>(std::stoi(parts[5]));
@@ -150,14 +150,14 @@ PrescriptionType PrescriptionId::type() const
 
 bool PrescriptionId::isPkv() const
 {
-    return IsPkv(mPrescriptionType);
+    return model::isPkv(mPrescriptionType);
 }
 
 void PrescriptionId::validateChecksum (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)
 {
     A_19218.start("Validate the incoming checksum");
-    int64_t toBeChecked = static_cast<int64_t>(prescriptionType) * 100'000'000'000'000
-            + id * 100
+    int64_t toBeChecked = (static_cast<int64_t>(prescriptionType) * 100'000'000'000'000)
+            + (id * 100)
             + checksum;
 
     if (toBeChecked % 97 != 1)
@@ -174,16 +174,6 @@ uint8_t PrescriptionId::calculateChecksum (const PrescriptionType prescriptionTy
     A_19217_01.start("Checksum according to [ISO 7064]");
     const auto type = static_cast<int64_t>(prescriptionType) * 1'000'000'000'000;
     return gsl::narrow<uint8_t>(98 - (((type + id) * 100) % 97));
-}
-
-bool PrescriptionId::operator==(const PrescriptionId& rhs) const
-{
-    return mPrescriptionType == rhs.mPrescriptionType && mId == rhs.mId && mChecksum == rhs.mChecksum;
-}
-
-bool PrescriptionId::operator!=(const PrescriptionId& rhs) const
-{
-    return ! (rhs == *this);
 }
 
 }

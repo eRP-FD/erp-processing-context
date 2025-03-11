@@ -47,7 +47,7 @@ private:
     std::mutex mMutex;
     JobToken mNextToken;
     boost::asio::io_context mIoContext;
-    boost::asio::io_context::work mWork;
+    boost::asio::executor_work_guard<boost::asio::io_context::executor_type> mWork;
     std::thread mTimerThread;
     class TimerJob;
     std::unordered_map<JobToken,std::shared_ptr<TimerJob>> mJobMap;

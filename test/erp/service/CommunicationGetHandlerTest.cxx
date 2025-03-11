@@ -1450,7 +1450,6 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
 
 TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
 {
-    std::string kvnrInsurant = InsurantA;
     std::string pharmacy1 = "3-SMC-B-Testkarte-883110000120312";
 
     const auto task = addTaskToDatabase({ model::Task::Status::ready, InsurantA });

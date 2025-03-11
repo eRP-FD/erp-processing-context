@@ -36,9 +36,9 @@
 | KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT_V1.00.zip |
 | KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.zip |
 | KBV_CS_SFHIR_ITA_WOP_V1.00.xml                | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ITA_WOP_V1.00.zip                |
-| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.zip   |
-| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.xml   | 1.14     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.zip   |
-| KBV_CS_SFHIR_KBV_DMP_V1.05.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.05.zip                |
+| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.zip   |
+| KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.xml   | 1.14     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.zip   |
+| KBV_CS_SFHIR_KBV_DMP_V1.06.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.06.zip                |
 | KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.xml        | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.zip        |
 | KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml     | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.zip     |
 | KBV_CS_SFHIR_KBV_PKV_TARIFF_V1.01.xml         | 1.01     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PKV_TARIFF_V1.01.zip         |
@@ -46,15 +46,16 @@
 | KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.zip |
 | KBV_VS_SFHIR_ICD_SEITENLOKALISATION_V1.00.xml | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ICD_SEITENLOKALISATION_V1.00.zip |
 | KBV_VS_SFHIR_ITA_WOP_V1.00.xml                | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_ITA_WOP_V1.00.zip                |
-| KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.13.zip   |
 | KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.14.zip   |
-| KBV_VS_SFHIR_KBV_DMP_V1.05.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.05.zip                |
+| KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.xml   | 1.13     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.15.zip   |
 | KBV_VS_SFHIR_KBV_DMP_V1.06.xml                | 1.05     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.06.zip                |
 | KBV_VS_SFHIR_KBV_NORMGROESSE_V1.00.xml        | 1.00     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_NORMGROESSE_V1.00.zip        |
 | KBV_VS_SFHIR_KBV_PERSONENGRUPPE_V1.02.xml     | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PERSONENGRUPPE_V1.02.zip     |
 | KBV_VS_SFHIR_KBV_PKV_TARIFF_V1.01.xml         | 1.01     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_PKV_TARIFF_V1.01.zip         |
 | KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN_V1.01.xml  | 1.01     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN_V1.01.zip  |
 | KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.xml | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS_V1.02.zip |
+| KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.xml       | 1.02     | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.zip       |
+| KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.02.xml       | 1.02     | https://applications.kbv.de/fhir4/KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.02.zip       |
 
 # Zusätzliche CodeSysteme von terminology.hl7.org
 Die CodeSysteme und ValueSets sind aus dem archive entnommen, das unter https://terminology.hl7.org/hl7.terminology.r4.tgz heruntergeladen werden kann.

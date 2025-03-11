@@ -47,7 +47,7 @@ ChargeItemMarkingFlags::MarkingContainer ChargeItemMarkingFlags::getAllMarkings(
 //static
 bool ChargeItemMarkingFlags::isMarked(const MarkingContainer& markings)
 {
-    return std::find_if(markings.begin(), markings.end(),
+    return std::ranges::find_if(markings,
                         [](const auto& elem){ return elem.second; }) != markings.end();
 }
 

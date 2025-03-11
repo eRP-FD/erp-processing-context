@@ -20,7 +20,7 @@ class MedicationExporterServiceContext;
 class TslManager;
 class XmlValidator;
 
-boost::asio::awaitable<void> setupEpaClientPool(MedicationExporterServiceContext& serviceContext);
+boost::asio::awaitable<void> setupEpaClientPool(std::shared_ptr<MedicationExporterServiceContext> serviceContext);
 
 class MedicationExporterMain
 {
@@ -32,7 +32,8 @@ public:
     runApplication(MedicationExporterFactories&& factories, MainStateCondition& state,
                    const std::function<void(MedicationExporterServiceContext&)>& postInitializationCallback = {});
 
-    static bool waitForHealthUp(RunLoop& runLoop, MedicationExporterServiceContext& serviceContext);
+    static bool waitForHealthUp(RunLoop& runLoop,
+                                const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
     static bool testEpaEndpoints(MedicationExporterServiceContext& serviceContext);
 
     class RunLoop

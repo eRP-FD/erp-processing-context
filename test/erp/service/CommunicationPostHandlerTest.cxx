@@ -1210,6 +1210,251 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentAttachment_notAllowed
               R"---( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1); )---");
 }
 
+TEST_F(CommunicationPostHandlerTest, DispReq_A26320_task_must_be_ready)
+{
+    A_26320.test("task must be ready for DispReq");
+
+    // Create a client
+    auto client = createClient();
+
+    // DispReq requests are only allowed on ready Tasks, so the states onprogress, completed and cancelled are checked
+    // (draft Tasks do not even have a KVNR)
+
+    // State: inprogress
+    {
+        auto task = addTaskToDatabase({ Task::Status::inprogress, InsurantA, {}, TaskAccessCode });
+
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+        EXPECT_EQ(outcome.value().issues().size(), 1);
+        EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Task has invalid status.");
+    }
+    // State: completed
+    {
+        auto task = addTaskToDatabase({ Task::Status::completed, InsurantA, {}, TaskAccessCode });
+
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+        EXPECT_EQ(outcome.value().issues().size(), 1);
+        EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Task has invalid status.");
+    }
+    // State: cancelled
+    {
+        // to check for a cancelled Task we need to first add the Task...
+        auto task = addTaskToDatabase({ Task::Status::inprogress, InsurantA, {}, TaskAccessCode });
+        // and afterward abort the Task
+        abortTask(task);
+        EXPECT_EQ(task.status(), Task::Status::cancelled);
+
+
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+        EXPECT_EQ(outcome.value().issues().size(), 1);
+        EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Task has invalid status.");
+    }
+}
+
+TEST_F(CommunicationPostHandlerTest, DispReq_A26321_expiry_date_is_greater_equal_now)
+{
+    using namespace std::chrono_literals;
+
+    A_26321.test("task expiry date must be later than now");
+
+    // Create a client
+    auto client = createClient();
+
+    {
+        auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode,  model::PrescriptionType::apothekenpflichigeArzneimittel, Timestamp::now()});
+
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+    }
+
+    {
+        const auto yesterday = Timestamp::fromGermanDate((Timestamp::now()-24h).toGermanDate());
+        auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode,  model::PrescriptionType::apothekenpflichigeArzneimittel, yesterday });
+
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+        EXPECT_EQ(outcome.value().issues().size(), 1);
+        EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Task is expired.");
+    }
+}
+
+TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
+{
+    using namespace std::chrono_literals;
+
+    A_26327.test("Task MVO must have valid start date");
+
+    // Create a client
+    auto client = createClient();
+
+    { // begin yesterday
+        const auto authoredOn = Timestamp::now() - 24h;
+        Task task = createTask(TaskAccessCode, PrescriptionType::apothekenpflichigeArzneimittel);
+        ResourceTemplates::KbvBundleMvoOptions mvoOptions {
+            .authoredOn = authoredOn,
+            .redeemPeriodStart = authoredOn.toGermanDate(),
+            .redeemPeriodEnd = authoredOn.toGermanDate()
+        };
+        activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
+    }
+
+    { // begin today
+        const auto authoredOn = Timestamp::fromGermanDate(Timestamp::now().toGermanDate());
+        Task task = createTask(TaskAccessCode, PrescriptionType::apothekenpflichigeArzneimittel);
+        ResourceTemplates::KbvBundleMvoOptions mvoOptions {
+            .authoredOn = authoredOn,
+            .redeemPeriodStart = authoredOn.toGermanDate(),
+            .redeemPeriodEnd = authoredOn.toGermanDate()
+        };
+        activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
+    }
+
+    { // begin tomorrow
+        const auto authoredOn = Timestamp::now() + 24h;
+        Task task = createTask(TaskAccessCode, PrescriptionType::apothekenpflichigeArzneimittel);
+        ResourceTemplates::KbvBundleMvoOptions mvoOptions {
+            .authoredOn = authoredOn,
+            .redeemPeriodStart = authoredOn.toGermanDate(),
+            .redeemPeriodEnd = authoredOn.toGermanDate()
+        };
+        activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
+                                     .setPrescriptionId(task.prescriptionId().toString())
+                                     .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
+                                     .setAccessCode(std::string{task.accessCode()})
+                                     .setPayload(DispReqMessage).createJsonString();
+
+        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
+        // Create the inner request
+        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
+
+        // Send the request.
+        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
+
+        // Verify and decrypt the outer response. Also the generic part of the inner response.
+        auto innerResponse = verifyOuterResponse(outerResponse);
+        EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+        std::optional<OperationOutcome> outcome;
+        ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
+        EXPECT_EQ(outcome.value().issues().size(), 1);
+        EXPECT_EQ(outcome.value().issues().at(0).detailsText.value(), "Prescription is not fillable yet.");
+    }
+}
 
 TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -1996,7 +2241,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
     std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
                                  .setPrescriptionId(task.prescriptionId().toString())
                                  .setSender(ActorRole::Pharmacists, telematikId)
-                                 .setRecipient(ActorRole::Insurant, task.kvnr().value().id())
+                                 .setRecipient(ActorRole::PkvInsurant, task.kvnr().value().id())
                                  .setPayload("ChargeChangeReply")
                                  .createJsonString();
 

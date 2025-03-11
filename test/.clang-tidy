@@ -7,4 +7,16 @@ Checks:
   -performance-unnecessary-value-param,
   -cppcoreguidelines-pro-type-const-cast,
   -cppcoreguidelines-pro-bounds-constant-array-index,
-  -clang-diagnostic-unused-result
+  -clang-diagnostic-unused-result,
+  -modernize-*,
+  -misc-use-internal-linkage,
+  -bugprone-empty-catch,
+  -boost-*,
+  -misc-use-anonymous-namespace,
+  -readability-*,
+  -performance-*,
+  -cppcoreguidelines-use-default-member-init,
+  -cppcoreguidelines-avoid-magic-numbers,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-type-reinterpret-cast

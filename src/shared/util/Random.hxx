@@ -53,7 +53,7 @@ public:
      * @return iterator to the random element
      */
     template<typename Iterator>
-    static Iterator selectRandomElement(Iterator begin, Iterator end) {
+    static Iterator selectRandomElement(Iterator begin, const Iterator& end) {
         std::advance(begin, randomIntBetween(0L, std::distance(begin, end)));
         return begin;
     }

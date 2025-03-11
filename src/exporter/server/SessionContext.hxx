@@ -30,7 +30,7 @@ public:
                    AccessLog& log, model::Timestamp initSessionTime = model::Timestamp::now());
 
     MedicationExporterServiceContext& serviceContext; // Specialized type (identical to BaseSessionContext::baseServiceContext)
-    bool callerWantsJson;
+    bool callerWantsJson{false};
     std::chrono::microseconds backendDuration{0};
 
     const model::Timestamp& sessionTime() const;

@@ -23,7 +23,6 @@ static constexpr uint8_t uuidFeatureReceipt = 3;
 static constexpr uint8_t uuidFeatureDispenseItem = 4;
 
 
-// NOLINTNEXTLINE(bugprone-exception-escape)
 class PrescriptionId
 {
 public:
@@ -51,8 +50,13 @@ public:
 
     bool isPkv() const;
 
-    bool operator==(const PrescriptionId& rhs) const;
-    bool operator!=(const PrescriptionId& rhs) const;
+    bool operator==(const PrescriptionId& rhs) const = default;
+
+    PrescriptionId() = delete;
+    PrescriptionId(const PrescriptionId&) noexcept = default;
+    // cannot assign due to const members:
+    PrescriptionId& operator = (const PrescriptionId&) = delete;
+    PrescriptionId& operator = (PrescriptionId&&) = delete;
 
 private:
     PrescriptionId (PrescriptionType prescriptionType, int64_t id, uint8_t checksum);

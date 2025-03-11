@@ -1,14 +1,13 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
 
 macro(install_libs_for target install_component)
     message(STATUS "Will install libs for ${target} with component ${install_component}")
-    install(CODE "set(CMAKE_INSTALL_FULL_LIBDIR ${CMAKE_INSTALL_FULL_LIBDIR})" COMPONENT "${install_component}")
-    install(CODE "set(CONAN_LIB_DIRS ${CONAN_LIB_DIRS})" COMPONENT "${install_component}")
+    install(CODE "set(CMAKE_INSTALL_LIBDIR ${CMAKE_INSTALL_LIBDIR})" COMPONENT "${install_component}")
     install(CODE "set(library \"\$<TARGET_FILE:${target}>\")" COMPONENT "${install_component}")
     install(CODE [[
         message(STATUS "Warnings about dependency resolution in search directory can be ignored.")
@@ -26,7 +25,7 @@ macro(install_libs_for target install_component)
             list(GET conflicts_${conflict_lib} 0 depend_library)
 
             file(INSTALL
-                DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}"
+                DESTINATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
                 TYPE SHARED_LIBRARY
                 FOLLOW_SYMLINK_CHAIN
                 FILES "${depend_library}"
@@ -34,7 +33,7 @@ macro(install_libs_for target install_component)
         endforeach()
         foreach(depend_library ${deps})
             file(INSTALL
-                DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}"
+                DESTINATION "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}"
                 TYPE SHARED_LIBRARY
                 FOLLOW_SYMLINK_CHAIN
                 FILES "${depend_library}"

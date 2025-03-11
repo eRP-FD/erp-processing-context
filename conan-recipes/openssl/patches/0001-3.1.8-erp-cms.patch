@@ -1,4 +1,4 @@
-From 94c7b8007411e0bb2251143bc32de04727ee50ad Mon Sep 17 00:00:00 2001
+From 1cc52408e2fc7c231507ccdf8c903fda462001b7 Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
 Date: Mon, 20 Nov 2023 12:10:22 +0100
 Subject: [PATCH 1/2] 3.1.4-erp-cms.patch
@@ -11,10 +11,10 @@ Subject: [PATCH 1/2] 3.1.4-erp-cms.patch
  4 files changed, 82 insertions(+), 1 deletion(-)
 
 diff --git a/crypto/cms/cms_asn1.c b/crypto/cms/cms_asn1.c
-index ebbc8e1bcd..3ac03cefb4 100644
+index d393cbcfe3..cd948a1dbc 100644
 --- a/crypto/cms/cms_asn1.c
 +++ b/crypto/cms/cms_asn1.c
-@@ -68,7 +68,8 @@ ASN1_SEQUENCE_cb(CMS_SignerInfo, cms_si_cb) = {
+@@ -69,7 +69,8 @@ ASN1_SEQUENCE_cb(CMS_SignerInfo, cms_si_cb) = {
  ASN1_SEQUENCE(CMS_OtherRevocationInfoFormat) = {
          ASN1_SIMPLE(CMS_OtherRevocationInfoFormat, otherRevInfoFormat, ASN1_OBJECT),
          ASN1_OPT(CMS_OtherRevocationInfoFormat, otherRevInfo, ASN1_ANY)
@@ -25,10 +25,10 @@ index ebbc8e1bcd..3ac03cefb4 100644
  ASN1_CHOICE(CMS_RevocationInfoChoice) = {
          ASN1_SIMPLE(CMS_RevocationInfoChoice, d.crl, X509_CRL),
 diff --git a/crypto/cms/cms_lib.c b/crypto/cms/cms_lib.c
-index 4cc7e3cb61..974059a5dd 100644
+index 6e66f0ecf2..0c2fb3d9f9 100644
 --- a/crypto/cms/cms_lib.c
 +++ b/crypto/cms/cms_lib.c
-@@ -623,6 +623,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
+@@ -610,6 +610,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
      return 0;
  }
  
@@ -55,7 +55,7 @@ index 4cc7e3cb61..974059a5dd 100644
  STACK_OF(X509) *CMS_get1_certs(CMS_ContentInfo *cms)
  {
      STACK_OF(X509) *certs = NULL;
-@@ -675,6 +695,57 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
+@@ -662,6 +682,57 @@ STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms)
      return crls;
  }
  
@@ -114,7 +114,7 @@ index 4cc7e3cb61..974059a5dd 100644
  {
      int ret;
 diff --git a/crypto/cms/cms_local.h b/crypto/cms/cms_local.h
-index c262a906f8..ec2fd9742a 100644
+index 0434cb7919..d79c695518 100644
 --- a/crypto/cms/cms_local.h
 +++ b/crypto/cms/cms_local.h
 @@ -492,6 +492,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
@@ -145,5 +145,5 @@ index da20ddf2f4..cb24d8238e 100644
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                                  X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 -- 
-2.39.3
+2.45.2
 

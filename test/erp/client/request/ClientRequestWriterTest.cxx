@@ -60,11 +60,11 @@ TEST_F(ClientRequestWriterTest, toString)//NOLINT(readability-function-cognitive
         // though is not predictable.
         for (size_t idxReqFld = 1; idxReqFld < rspFields.size()-2; ++idxReqFld)
         {
-            auto req = reqFields[idxReqFld];
+            const auto& req = reqFields[idxReqFld];
             int cnt = 0;
             for (size_t idxRspFld = 1; idxRspFld < rspFields.size()-2; ++idxRspFld)
             {
-                auto rsp = rspFields[idxRspFld];
+                const auto& rsp = rspFields[idxRspFld];
                 if(req == rsp)
                 {
                     ++cnt;

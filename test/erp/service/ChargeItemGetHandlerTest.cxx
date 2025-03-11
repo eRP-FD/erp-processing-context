@@ -752,7 +752,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
             ASSERT_TRUE(sig.has_value());
             auto prescriptionSigData = sig->data();
             ASSERT_TRUE(prescriptionSigData.has_value());
-            EXPECT_NO_THROW(CadesBesSignature(std::string(prescriptionSigData.value().data()), *tslMgr, false));
+            EXPECT_NO_THROW(CadesBesSignature(std::string(prescriptionSigData.value()), *tslMgr, false));
             EXPECT_FALSE(sig->whoReference().has_value());
             ASSERT_TRUE(sig->whoDisplay().has_value());
             EXPECT_EQ(sig->whoDisplay().value(), "Arzt");
@@ -765,7 +765,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
             ASSERT_TRUE(sig.has_value());
             auto dispenseItemSigData = sig->data();
             ASSERT_TRUE(dispenseItemSigData.has_value());
-            EXPECT_NO_THROW(CadesBesSignature(std::string(dispenseItemSigData.value().data()), *tslMgr, false));
+            EXPECT_NO_THROW(CadesBesSignature(std::string(dispenseItemSigData.value()), *tslMgr, false));
             EXPECT_FALSE(sig->whoReference().has_value());
             ASSERT_TRUE(sig->whoDisplay().has_value());
             EXPECT_EQ(sig->whoDisplay().value(), "Apotheke");

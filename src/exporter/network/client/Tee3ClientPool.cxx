@@ -66,7 +66,8 @@ boost::asio::awaitable<Tee3ClientPool::Tee3ClientPtr> Tee3ClientPool::acquire(st
 
 
 boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
-Tee3ClientPool::sendTeeRequest(std::string hostname, Tee3Client::Request req, std::unordered_map<std::string, std::any>& logDataBag)
+Tee3ClientPool::sendTeeRequest(std::string hostname, Tee3Client::Request req,
+                               std::unordered_map<std::string, std::any> logDataBag)
 {
     auto teeClient = co_await acquire(hostname);
     boost::system::result<Tee3Client::Response> resp;

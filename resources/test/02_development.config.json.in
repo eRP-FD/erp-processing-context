@@ -46,7 +46,6 @@
   "erp-medication-exporter": {
     "is-production": "false",
     "epa-account-lookup": {
-      "enforceServerAuthentication": "false"
     },
     "serno2tid": {
       "path": "@CMAKE_BINARY_DIR@/test/telematiklookup/empty.csv",

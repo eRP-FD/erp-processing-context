@@ -31,7 +31,7 @@ namespace
 {
 bool hasNonNullElement(const rapidjson::Value::ConstArray& array)
 {
-    return std::find_if(array.begin(), array.end(), [](const auto& val){ return !val.IsNull();}) != array.end();
+    return std::ranges::find_if(array, [](const auto& val){ return !val.IsNull();}) != array.end();
 }
 
 bool hasValue(const rapidjson::Value& val)
@@ -298,7 +298,6 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
             {
                 continue;
             }
-            std::string elementId = makeElementId(*element, attribute.localname());
             const auto fieldTypeAndElement = getTypeAndElement(type, nullptr, *element, attribute.localname());
             const auto& fieldType = std::get<const FhirStructureDefinition&>(fieldTypeAndElement);
             const auto& fieldElement = std::get<std::shared_ptr<const FhirElement>>(fieldTypeAndElement);
@@ -527,7 +526,7 @@ auto FhirSaxHandler::asJsonValue(T&& value)-> decltype(rapidjson::Value{std::for
 
 rapidjson::Value FhirSaxHandler::asJsonValue(const std::string_view& value)
 {
-    return rapidjson::Value{value.data(), gsl::narrow<rapidjson::SizeType>(value.size()), mResult.GetAllocator()};
+    return rapidjson::Value{value.begin(), gsl::narrow<rapidjson::SizeType>(value.size()), mResult.GetAllocator()};
 }
 
 rapidjson::Value FhirSaxHandler::asJsonValue(const xmlChar* value)
@@ -652,7 +651,7 @@ void FhirSaxHandler::startXHTMLElement(const XmlStringView localname,
         const auto& attr = attributes.get(i);
         const auto* attrName = reinterpret_cast<const xmlChar*>(attr.localname().data());
         std::unique_ptr<xmlChar, xmlFreeFunc> value{
-                xmlCharStrndup(attr.value().data(), gsl::narrow<int>(attr.value().size())), xmlFree};
+                xmlCharStrndup(attr.value().begin(), gsl::narrow<int>(attr.value().size())), xmlFree};
         xmlNsPtr xmlNs = nullptr;
         if (auto prefix = attr.prefix())
         {

@@ -62,12 +62,15 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::KBV_PR_ERP_Medication_PZN, {}},
     {model::ProfileType::KBV_PR_ERP_PracticeSupply, {}},
     {model::ProfileType::KBV_PR_ERP_Prescription, {}},
+    {model::ProfileType::KBV_PR_EVDGA_Bundle, {{"EVDGA_2025_01_15"}}},
+    {model::ProfileType::KBV_PR_EVDGA_HealthAppRequest, {{"EVDGA_2025_01_15"}}},
     {model::ProfileType::KBV_PR_FOR_Coverage, {}},
     {model::ProfileType::KBV_PR_FOR_Organization, {}},
     {model::ProfileType::KBV_PR_FOR_Patient, {}},
     {model::ProfileType::KBV_PR_FOR_Practitioner, {}},
     {model::ProfileType::KBV_PR_FOR_PractitionerRole, {}},
-    {model::ProfileType::Gem_erxMedicationDispense, {}},
+    {model::ProfileType::GEM_ERP_PR_MedicationDispense, {}},
+    {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, {{"GEM_2025-01-15"}}},
     {model::ProfileType::MedicationDispenseBundle, {}},
     {model::ProfileType::Gem_erxReceiptBundle, {}},
     {model::ProfileType::Gem_erxTask, {}},
@@ -248,7 +251,7 @@ namespace {
 
     uint16_t determineServerPort()
     {
-        const auto portStr = Environment::get(ConfigurationBase::ServerPortEnvVar.data());
+        const auto portStr = Environment::get(ConfigurationBase::ServerPortEnvVar);
         if (portStr.has_value())
         {
             size_t pos = 0;
@@ -267,9 +270,9 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
     : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, std::filesystem::current_path()))
     , mServerPort(determineServerPort())
 {
-    auto serverHost = Environment::get(ServerHostEnvVar.data());
+    auto serverHost = Environment::get(ServerHostEnvVar);
     Expect(serverHost.has_value(),
-           std::string("Environment variable \"") + ServerHostEnvVar.data() + "\" must be set.");
+           std::string("Environment variable \"") + ServerHostEnvVar + "\" must be set.");
     mServerHost = serverHost.value();
 
     if (! mDocument.IsObject())
@@ -353,6 +356,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE             ,{"ERP_SERVICE_TASK_CLOSE_DEVICE_REF_TYPE" , "/erp/service/task/close/deviceRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE" , "/erp/service/task/close/prescriptionDigestRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID", "/erp/service/task/close/prescriptionDigestMetaVersionId", Flags::categoryFunctional, "Value for Meta.versionId in Prescription-Digest Binary-Resource. If not provided, the field will not be included."}},
+    {ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK             , {"ERP_SERVICE_TASK_GET_ENFORCE_HCV_CHECK"             , "/erp/service/task/get/enforceHcvCheck", Flags::categoryFunctional, "Enforce hcv check for pnv2"}},
+    {ConfigurationKey::SERVICE_TASK_GET_RATE_LIMIT                    , {"ERP_SERVICE_TASK_GET_RATE_LIMIT"                    , "/erp/service/task/get/rateLimit", Flags::categoryFunctional, "Max. calls for a telematik ID within a day"}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount", Flags::categoryFunctional, "Maximum number of communication messages per task and representative"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey", Flags::credential|Flags::categoryEnvironment, "Key to sign the header and payload of an incoming subscription"}},
     {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set", Flags::categoryEnvironment, "PCR register set to be used to calculate quote (TPM)"}},
@@ -408,6 +413,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS,                 {"ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS"                , "/erp/fhir/reference-time-offset-days", Flags::categoryEnvironment, "Offset valid-from and valid-until for all fhir views"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds", Flags::categoryEnvironment, "Blob and VSDM++ Key Cache refresh time. Blobs and VSDM Keys are re-read from database in the given interval."}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device", Flags::categoryEnvironment, "Comma separated list of the HSM devices. Format: \"<port>@<IP address>,<port>@<IP address>,...\""}},
     {ConfigurationKey::HSM_MAX_SESSION_COUNT                          , {"ERP_HSM_MAX_SESSION_COUNT"                          , "/erp/hsm/max-session-count", Flags::categoryEnvironment, "Maximum number of parallel connections to HSM"}},
@@ -461,7 +467,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_CONNECT_TIMEOUT_SECONDS      , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_CONNECT_TIMEOUT_SECONDS"      , "/erp-medication-exporter/epa-account-lookup/connectTimeoutSeconds", Flags::categoryEnvironment, "HTTPs Client configuration"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS" , "/erp-medication-exporter/epa-account-lookup/resolveTimeoutMilliseconds", Flags::categoryEnvironment, "HTTPs Client configuration"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENFORCE_SERVER_AUTHENTICATION, {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENFORCE_SERVER_AUTHENTICATION", "/erp-medication-exporter/epa-account-lookup/enforceServerAuthentication", Flags::categoryEnvironment, "HTTPs Client configuration"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT                     , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT"                     , "/erp-medication-exporter/epa-account-lookup/endpoint", Flags::categoryEnvironment, "Lookup endpoint on the EPA side"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT                   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT"                   , "/erp-medication-exporter/epa-account-lookup/userAgent", Flags::categoryEnvironment, "Our user agent used in lookup request"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID"   , "/erp-medication-exporter/epa-account-lookup/erpSubmissionFunctionId", Flags::categoryEnvironment, "The name of the function ID for our consent decision"}},
@@ -505,8 +510,8 @@ DevConfigKeyNames::DevConfigKeyNames()
     {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock", Flags::categoryDebug, "Use HSM mock"}},
     {ConfigurationKey::DEBUG_DISABLE_REGISTRATION,            {"DEBUG_DISABLE_REGISTRATION",        "/debug/disable-registration", Flags::categoryDebug, "Disable VAU registration"}},
     {ConfigurationKey::DEBUG_DISABLE_DOS_CHECK,               {"DEBUG_DISABLE_DOS_CHECK",           "/debug/disable-dos-check", Flags::categoryDebug, "Disable DOS check"}},
-    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check", Flags::categoryDebug, "In activateTask, disable validation of "}},
-    {ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER,         {"DEBUG_ENABLE_MOCK_TSL_MANAGER",     "/debug/enable-mock-tsl-manager", Flags::categoryDebug, "Enable TSL mock"}}
+    {ConfigurationKey::DEBUG_DISABLE_QES_ID_CHECK,            {"DEBUG_DISABLE_QES_ID_CHECK",        "/debug/disable-qes-id-check", Flags::categoryDebug, "In activateTask, disable validation of prescription id in QES bundle with task id"}},
+    {ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER,         {"DEBUG_ENABLE_MOCK_TSL_MANAGER",     "/debug/enable-mock-tsl-manager", Flags::categoryDebug, "Enable TSL mock"}},
     });
     // clang-format on
 }
@@ -527,7 +532,7 @@ std::optional<int> ConfigurationBase::getIntValueInternal(KeyData key) const
                 return asInt;
             }
         }
-        catch(const std::logic_error&)
+        catch(const std::logic_error&) //NOLINT(bugprone-empty-catch)
         {
         }
         throw ExceptionWrapper<InvalidConfigurationException>::create({__FILE__, __LINE__},
@@ -585,11 +590,7 @@ std::string ConfigurationBase::getOptionalStringValue (const KeyData key, const 
 
 std::optional<std::string> ConfigurationBase::getOptionalStringValue (const KeyData key) const
 {
-    const auto value = getStringValueInternal(key);
-    if (value.has_value())
-        return value.value();
-    else
-        return std::nullopt;
+    return getStringValueInternal(key);
 }
 
 
@@ -737,7 +738,7 @@ std::vector<std::string> ConfigurationBase::getOptionalArrayFromJson(KeyData key
 
 std::optional<std::string> ConfigurationBase::getStringValueInternal (KeyData key) const
 {
-    const auto& value = Environment::get(key.environmentVariable.data());
+    const auto& value = Environment::get(std::string{key.environmentVariable});
     if (value)
         return value;
 
@@ -790,7 +791,7 @@ ConfigurationBase::resourceList(const std::string& jsonPath) const
 
 std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const KeyData key) const
 {
-    const char* value = Environment::getCharacterPointer(key.environmentVariable.data());
+    const char* value = Environment::getCharacterPointer(std::string{key.environmentVariable});
     if (value != nullptr)
         return SafeString(value);
 
@@ -811,7 +812,9 @@ void configureXmlValidator(XmlValidator& xmlValidator)
     xmlValidator.loadSchemas(configuration.getArray(ConfigurationKey::XML_SCHEMA_MISC));
 }
 
-static std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
+namespace
+{
+std::optional<uint16_t> getPortFromConfiguration (const Configuration& configuration, const ConfigurationKey key)
 {
     const auto port = configuration.getOptionalIntValue(key);
     if (port.has_value())
@@ -821,6 +824,7 @@ static std::optional<uint16_t> getPortFromConfiguration (const Configuration& co
     }
     else
         return {};
+}
 }
 
 std::optional<uint16_t> getEnrolementServerPort (
@@ -853,7 +857,7 @@ fhirtools::ValidatorOptions Configuration::defaultValidatorOptions(model::Profil
         config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
     options.levels.unreferencedContainedResource =
         config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
-    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle)
+    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle || profileType == model::ProfileType::KBV_PR_EVDGA_Bundle)
     {
         options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAuthorRefMode::allow;
         switch (config.kbvValidationOnUnknownExtension())
@@ -955,8 +959,10 @@ fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfigur
 {
     static const auto* views =
     getJsonValue(KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceViews, .flags = 0, .description = ""});
+    auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
 
-    return fhirtools::FhirResourceViewConfiguration{fhirResourceGroupConfiguration<ProcessT>(), views};
+    return fhirtools::FhirResourceViewConfiguration{fhirResourceGroupConfiguration<ProcessT>(), views,
+                                                    date::days{globalOffset}};
 }
 
 template <config::ProcessType ProcessT>

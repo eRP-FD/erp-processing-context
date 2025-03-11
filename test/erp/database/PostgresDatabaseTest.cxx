@@ -236,16 +236,16 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
         database().activateTask(task, prescriptionDummy, mJwtBuilder.makeJwtArzt());
     }
     database().commitTransaction();
-    EXPECT_EQ(taskCount(), 4);
+    EXPECT_EQ(taskCount(), 5);
     UrlArguments ready{{paramStatus}};
     ready.parse({{"status", "ready"}}, getKeyDerivation());
-    EXPECT_EQ(taskCount(ready), 4);
+    EXPECT_EQ(taskCount(ready), 5);
     auto& task = tasks.front();
     task.setStatus(model::Task::Status::inprogress);
     task.setSecret("secret");
     database().updateTaskStatusAndSecret(task);
-    EXPECT_EQ(taskCount(), 4);
-    EXPECT_EQ(taskCount(ready), 3);
+    EXPECT_EQ(taskCount(), 5);
+    EXPECT_EQ(taskCount(ready), 4);
 }
 
 TEST_F(PostgresDatabaseTest, predefinedExpiryDate_notOverwritten)

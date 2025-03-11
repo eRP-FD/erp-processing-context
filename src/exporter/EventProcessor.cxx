@@ -44,11 +44,9 @@ bool EventProcessor::process()
         catch (const std::exception& e)
         {
             std::string reason = dynamic_cast<const model::ModelException*>(&e) ? "not given" : e.what();
-            jsonLog()
-                .keyValue("event", "Processing task events: Unexpected error. Rescheduling KVNR")
-                .keyValue("kvnr", kvnr->getLoggingId())
-                .keyValue("reason", reason)
-                .locationFromException(e);
+            jsonLog().locationFromException(e)
+                << *kvnr << KeyValue("event", "Processing task events: Unexpected error. Rescheduling KVNR")
+                << KeyValue("retryCount", std::to_string(kvnr->getRetryCount())) << KeyValue("reason", reason);
             scheduleRetryQueue(*kvnr);
         }
         return true;
@@ -62,9 +60,8 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
     // Workflow step 2
     const auto events = createMedicationExporterCommitGuard().db().getAllEventsForKvnr(kvnr);
 
-    jsonLog()
-        .keyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events")
-        .keyValue("kvnr", kvnr.getLoggingId());
+    jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+              << KeyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events");
     if (! events.empty())
     {
         const auto& firstEvent = *events.front();
@@ -145,12 +142,12 @@ void EventProcessor::checkRetryCount(const model::EventKvnr& kvnr, const model::
         }
         const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
             kvnr, taskEvent.getPrescriptionId(), taskEvent.getPrescriptionType());
-        jsonLog()
-            .keyValue("event", "Put all events for task in dead letter queue: " + std::to_string(skipped))
-            .keyValue("prescription_id", taskEvent.getPrescriptionId().toString())
-            .keyValue("reason", "Max retry count reached");
+        jsonLog() << kvnr
+                  << KeyValue("event", "Put all events for task in dead letter queue: " + std::to_string(skipped))
+                  << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+                  << KeyValue("prescription_id", taskEvent.getPrescriptionId().toString())
+                  << KeyValue("reason", "Max retry count reached");
         writeAuditEvent(auditDataCollector);
-        scheduleRetryQueue(kvnr);
         createMedicationExporterCommitGuard().db().updateProcessingDelay(0, mRetryDelaySeconds, kvnr);
     }
 }
@@ -178,18 +175,16 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
             const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
                 kvnr, event->getPrescriptionId(), event->getPrescriptionType());
             TVLOG(1) << "marked events as deadletterQueue: " << skipped;
-            jsonLog()
-                .keyValue("event", "Setting all events for task in dead letter queue")
-                .keyValue("prescription_id", event->getPrescriptionId().toString());
+            jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+                      << KeyValue("prescription_id", event->getPrescriptionId().toString());
             continue;
         }
 
         // Workflow step 7 - check usecase of event (and execute step 8,9 or 10)
-        jsonLog()
-            .keyValue("event", "Processing event")
-            .keyValue("prescription_id", event->getPrescriptionId().toString())
-            .keyValue("usecase", magic_enum::enum_name(event->getUseCase()))
-            .keyValue("epa", epaAccount.host);
+        jsonLog() << kvnr << KeyValue("event", "Processing event")
+                  << KeyValue("prescription_id", event->getPrescriptionId().toString())
+                  << KeyValue("usecase", magic_enum::enum_name(event->getUseCase()))
+                  << KeyValue("epa", epaAccount.host);
         auto outcome = dispatcher.dispatch(*event, auditDataCollector);
 
         A_25962.start("Write audit event to database");
@@ -204,18 +199,16 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         {
             case eventprocessing::Outcome::Success: {// Workflow step 11a - Success -> Workflow step 15
                 // Workflow step 12 - delete successfully transmitted event
-                jsonLog()
-                    .keyValue("event", "Deleting event after successful transmission")
-                    .keyValue("prescription_id", event->getPrescriptionId().toString());
+                jsonLog() << kvnr << KeyValue("event", "Deleting event after successful transmission")
+                          << KeyValue("prescription_id", event->getPrescriptionId().toString());
                 createMedicationExporterCommitGuard().db().deleteOneEventForKvnr(kvnr, event->getId());
             }
             break;
             case eventprocessing::Outcome::Retry:// Workflow step 11c - RetryQueue -> Workflow step 15
                 // Workflow step 15 - set kvnr to pending and reschedule it
                 {
-                    jsonLog()
-                        .keyValue("event", "Technical error occurred. Rescheduling KVNR")
-                        .keyValue("kvnr", kvnr.getLoggingId());
+                    jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+                              << KeyValue("event", "Technical error occurred. Rescheduling KVNR");
                     scheduleRetryQueue(kvnr);
                     return;// break transmission of remaining events of this KVNR
                 }
@@ -231,15 +224,14 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
                     kvnr, event->getPrescriptionId(), event->getPrescriptionType());
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
-                jsonLog()
-                    .keyValue("event", "Setting all events for task in dead letter queue")
-                    .keyValue("prescription_id", event->getPrescriptionId().toString());
+                jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+                          << KeyValue("prescription_id", event->getPrescriptionId().toString());
                 break;
         }
     }
     // Workflow step 13 - set kvnr to procesesd
     createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
-    jsonLog().keyValue("event", "KVNR processed").keyValue("kvnr", kvnr.getLoggingId());
+    jsonLog() << kvnr << KeyValue("event", "KVNR processed");
 }
 
 void EventProcessor::processEpaDeniedOrNotFound(const model::EventKvnr& kvnr)
@@ -249,7 +241,7 @@ void EventProcessor::processEpaDeniedOrNotFound(const model::EventKvnr& kvnr)
     // Workflow step 14 - delete kvnr events
     createMedicationExporterCommitGuard().db().deleteAllEventsForKvnr(kvnr);
 
-    jsonLog().keyValue("event", "Delete all Task Events for KVNR").keyValue("kvnr", kvnr.getLoggingId());
+    jsonLog() << kvnr << KeyValue("event", "Delete all Task Events for KVNR");
 
     // Workflow step 13 - set kvnr to procesesd
     createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
@@ -259,14 +251,15 @@ void EventProcessor::processEpaConflict(const model::EventKvnr& kvnr)
 {
     TVLOG(1) << "account lookup conflict with given kvnr";
     scheduleHealthRecordRelocation(kvnr);
-    jsonLog()
-        .keyValue("event", "Information service responded with conflict (Aktenumzug) for KVNR. Reschedule KVNR in 24h.")
-        .keyValue("kvnr", kvnr.getLoggingId());
+    jsonLog() << kvnr
+              << KeyValue("event",
+                          "Information service responded with conflict (Aktenumzug) for KVNR. Reschedule KVNR in 24h.");
 }
 
 void EventProcessor::processEpaUnknown(const model::EventKvnr& kvnr)
 {
-    jsonLog().keyValue("event", "Technical error occurred. Rescheduling KVNR").keyValue("kvnr", kvnr.getLoggingId());
+    jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+              << KeyValue("event", "Technical error occurred. Rescheduling KVNR");
     scheduleRetryQueue(kvnr);
 }
 
@@ -296,7 +289,8 @@ EpaAccount EventProcessor::ePaAccountLookup(const model::TaskEvent& taskEvent)
     auto accountLookup = EpaAccountLookup(*mServiceContext);
     accountLookup.lookupClient()
         .addLogAttribute(BDEMessage::lastModifiedTimestampKey, taskEvent.getLastModified())
-        .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString());
+        .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString())
+        .addLogAttribute(BDEMessage::hashedKvnrKey,  std::make_optional<model::HashedKvnr>(taskEvent.getHashedKvnr()));
     return accountLookup.lookup(taskEvent.getKvnr());
 }
 

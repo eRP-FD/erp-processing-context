@@ -12,7 +12,7 @@
 
 #include <filesystem>
 #include <memory>
-#include <ranges>
+#include <span>
 
 void usage(std::string_view command, std::ostream& out)
 {
@@ -32,10 +32,10 @@ void usage(std::string_view command, std::ostream& out)
             out << "               " << v->mId << "\n";
         }
     }
-    catch (std::runtime_error&)
+    catch (std::runtime_error&) // NOLINT(bugprone-empty-catch)
     {
     }
-    catch (std::logic_error&)
+    catch (std::logic_error&) // NOLINT(bugprone-empty-catch)
     {
     }
 }
@@ -68,19 +68,19 @@ std::shared_ptr<const fhirtools::FhirStructureRepository> getView(std::string_vi
 int main(int argc, char* argv[])
 {
     using namespace std::string_view_literals;
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
     Environment::set("ERP_SERVER_HOST", "none");
     try
     {
         auto owd = std::filesystem::current_path();
-        auto here = std::filesystem::path(argv[0]).remove_filename().native();
+        auto here = std::filesystem::path(args[0]).remove_filename().native();
         chdir(here.c_str());
         Expect(argc > 2, "Missing argument");
-        auto view = getView(argv[1]);
-        Expect(view != nullptr, "no such view: " + std::string{argv[1]});
-        for (int i = 2; i < argc; ++i)
+        auto view = getView(args[1]);
+        Expect(view != nullptr, "no such view: " + std::string{args[1]});
+        for (std::filesystem::path origPath : args.subspan(2))
         {
-            std::filesystem::path origPath{argv[i]};
             auto inFilePath = origPath;
             if (inFilePath.is_relative())
             {
@@ -114,7 +114,7 @@ int main(int argc, char* argv[])
     catch (const std::exception& e)
     {
         TLOG(ERROR) << "ERROR: " << e.what() << std::endl;
-        usage(argv[0], std::cerr);
+        usage(args[0], std::cerr);
     }
     return EXIT_FAILURE;
 }

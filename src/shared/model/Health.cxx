@@ -135,10 +135,10 @@ const rapidjson::Pointer tslHashPointer("/data/hash");
 const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 
 RapidjsonNumberAsStringParserDocument<struct HealthMark>
-stringViewToRapidjson(std::string_view source)
+stringToRapidjson(const std::string& source)
 {
     RapidjsonNumberAsStringParserDocument<struct HealthMark> hT;
-    rapidjson::StringStream ss(source.data());
+    rapidjson::StringStream ss(source.c_str());
     hT->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(ss);
     Expect3(! hT->HasParseError(), "error parsing json template for health model", std::logic_error);
     return hT;
@@ -147,7 +147,7 @@ stringViewToRapidjson(std::string_view source)
 
 Health::Health()
     : ResourceBase([]() {
-        return stringViewToRapidjson(health_template);
+        return stringToRapidjson(health_template);
     }().instance())
 {
     setValue(startupPointer, startupTimestamp);
@@ -298,7 +298,7 @@ void Health::setStatusInChecksArray(const std::string_view& name, const std::str
         auto it = templateMap.find(name);
         if (it != templateMap.end()) {
             std::string_view source = it->second;
-            auto tmpl = stringViewToRapidjson(source);
+            auto tmpl = stringToRapidjson(std::string{source});
             auto v = copyValue(*tmpl);
             addToArray(checksPointer, std::move(v));
             arrayEntry = findMemberInArray(checksPointer, namePointer, name);

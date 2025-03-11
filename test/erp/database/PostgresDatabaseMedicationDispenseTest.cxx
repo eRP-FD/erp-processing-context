@@ -1093,6 +1093,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseMedicationDispenseTestInst, PostgresDatabaseMedicationDispenseTest,
                          testing::Values(PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::apothekenpflichigeArzneimittel},
+                                         PostgresDatabaseMedicationDispenseTestParams{2, model::PrescriptionType::digitaleGesundheitsanwendungen},
                                          PostgresDatabaseMedicationDispenseTestParams{4, model::PrescriptionType::direkteZuweisung},
                                          PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichigeArzneimittel},
                                          PostgresDatabaseMedicationDispenseTestParams{3, model::PrescriptionType::direkteZuweisungPkv}));

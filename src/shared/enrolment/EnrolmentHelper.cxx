@@ -52,27 +52,27 @@ namespace
         destination.BlobLength = source.data.size();
         const auto* p = static_cast<const char*>(source.data);
         Expect(source.data.size()<=MAX_BUFFER, "data does not fit inside an HSM blob");
-        std::copy(p, p+source.data.size(), destination.BlobData);
+        std::copy_n(p, source.data.size(), destination.BlobData);
     }
 
     void writeVector (const std::vector<uint8_t>& source, uint8_t* destinationBuffer, size_t& destinationSize)
     {
         destinationSize = source.size();
         Expect(source.size() <= MAX_BUFFER, "vector is too large");
-        std::copy(source.begin(), source.end(), destinationBuffer);
+        std::ranges::copy(source, destinationBuffer);
     }
 
     void writeVector (const std::string& source, uint8_t* destinationBuffer, size_t& destinationSize)
     {
         destinationSize = source.size();
         Expect(source.size() <= MAX_BUFFER, "vector is too large");
-        std::copy(source.begin(), source.end(), destinationBuffer);
+        std::ranges::copy(source, destinationBuffer);
     }
 
     template<size_t N>
     void writeArray (const std::array<uint8_t,N>& source, uint8_t* destinationBuffer)
     {
-        std::copy(source.begin(), source.end(), destinationBuffer);
+        std::ranges::copy(source, destinationBuffer);
     }
 
 
@@ -81,7 +81,7 @@ namespace
         ErpArray<TpmObjectNameLength> array;
         auto decoded = Base64::decode(base64);
         Expect(decoded.size() == TpmObjectNameLength, "decoded ak name has wrong length");
-        std::copy(decoded.begin(), decoded.end(), array.begin());
+        std::ranges::copy(decoded, array.begin());
         return array;
     }
 
@@ -264,7 +264,7 @@ ErpBlob EnrolmentHelper::trustTpmMfr (const uint32_t generation)
         const auto certificateString = FileHelper::readFileAsString(mCertificateFilename);
         Expect(certificateString.size() <= MAX_BUFFER, "content of cacertecc.crt is too long to fit into input of ERP_TrustTPMMfr");
         input.certLength = certificateString.size();
-        std::copy(certificateString.begin(), certificateString.end(), input.certData);
+        std::ranges::copy(certificateString, input.certData);
     }
 
     hsmclient::SingleBlobOutput output = ERP_TrustTPMMfr(mHsmSession.rawSession, input);

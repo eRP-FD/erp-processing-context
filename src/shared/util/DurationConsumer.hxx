@@ -114,7 +114,7 @@ private:
 class DurationConsumerGuard
 {
 public:
-    DurationConsumerGuard (
+    explicit DurationConsumerGuard (
         const std::string& sessionIdentifier,
         DurationTimer::Receiver&& receiver = nullptr);
 

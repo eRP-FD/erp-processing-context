@@ -544,8 +544,6 @@ TEST_F(IdpUpdaterTest, initializeFailedWithForcedRetries) // NOLINT(readability-
     // After the initial update ...
     const std::string idpResponseJson = FileHelper::readFileAsString(
         std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponse.json");
-    const std::string idpResponseJwk = FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/idpResponseJwk.txt");
     std::shared_ptr<UrlRequestSenderMock> idpRequestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"https://idp.lu.erezepttest.net:443/certs/puk_idp_sig.json", idpResponseJson}});

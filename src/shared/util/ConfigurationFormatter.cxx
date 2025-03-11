@@ -106,7 +106,10 @@ void ConfigurationFormatter::processConfOption(rapidjson::Document& document,
     {
         const std::string descriptionPath = key + "/description";
         auto descPointer = rapidjson::Pointer(rapidjson::StringRef(descriptionPath.data(), descriptionPath.size()));
-        descPointer.Set(document, rapidjson::Value(confOption.description.data(), document.GetAllocator()),
+        descPointer.Set(document,
+                        rapidjson::Value(confOption.description.begin(),
+                                         gsl::narrow<rapidjson::SizeType>(confOption.description.size()),
+                                         document.GetAllocator()),
                         document.GetAllocator());
     }
     {

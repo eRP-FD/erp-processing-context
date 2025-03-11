@@ -34,6 +34,10 @@ TaskHandlerBase::TaskHandlerBase(const Operation operation,
     : ErpRequestHandler(operation, allowedProfessionOIDs)
 {
 }
+TaskHandlerBase::TaskHandlerBase(Operation operation, const OIDsByWorkflow& allowedProfessionOiDsByWorkflow)
+    : ErpRequestHandler(operation, allowedProfessionOiDsByWorkflow)
+{
+}
 
 void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Task& task,
                                          const std::optional<model::KbvBundle>& patientConfirmation,
@@ -56,7 +60,7 @@ void TaskHandlerBase::addToPatientBundle(model::Bundle& bundle, const model::Tas
 model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Binary& healthcareProviderPrescription,
                                                                const Uuid& uuid, PcServiceContext& serviceContext)
 {
-    A_19029_05.start("1. convert prescription bundle to JSON");
+    A_19029_06.start("1. convert prescription bundle to JSON");
     Expect3(healthcareProviderPrescription.data().has_value(), "healthcareProviderPrescription unexpected empty Binary",
             std::logic_error);
 
@@ -66,17 +70,17 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
 
     // this comes from the database and has already been validated when initially received
     auto bundle = model::KbvBundle::fromXmlNoValidation(cadesBesSignature.payload());
-    A_19029_05.finish();
+    A_19029_06.finish();
 
-    A_19029_05.start("assign identifier");
+    A_19029_06.start("assign identifier");
     bundle.setId(uuid);
-    A_19029_05.finish();
+    A_19029_06.finish();
 
-    A_19029_05.start("2. serialize to normalized JSON");
+    A_19029_06.start("2. serialize to normalized JSON");
     auto normalizedJson = bundle.serializeToCanonicalJsonString();
-    A_19029_05.finish();
+    A_19029_06.finish();
 
-    A_19029_05.start("3. sign the JSON bundle using C.FD.SIG");
+    A_19029_06.start("3. sign the JSON bundle using C.FD.SIG");
     JoseHeader joseHeader(JoseHeader::Algorithm::BP256R1);
     joseHeader.setX509Certificate(serviceContext.getCFdSigErp());
     joseHeader.setType(ContentMimeType::jose);
@@ -84,16 +88,16 @@ model::KbvBundle TaskHandlerBase::convertToPatientConfirmation(const model::Bina
 
     const Jws jsonWebSignature(joseHeader, normalizedJson, serviceContext.getCFdSigErpPrv());
     const auto signatureData = jsonWebSignature.compactDetachedSerialized();
-    A_19029_05.finish();
+    A_19029_06.finish();
 
-    A_19029_05.start("store the signature in the bundle");
+    A_19029_06.start("store the signature in the bundle");
     model::Signature signature(Base64::encode(signatureData), model::Timestamp::now(),
                                model::Device::createReferenceUrl(getLinkBase()));
     signature.setTargetFormat(MimeType::fhirJson);
     signature.setSigFormat(MimeType::jose);
     signature.setType(model::Signature::jwsSystem, model::Signature::jwsCode);
     bundle.setSignature(signature);
-    A_19029_05.finish();
+    A_19029_06.finish();
 
     return bundle;
 }

@@ -153,6 +153,7 @@ public:
         static const std::string XUserAgent;
         static const std::string XInsurantId;
         static const std::string VauNP;
+        static const std::string VauNonPuTracing;
     };
 
 

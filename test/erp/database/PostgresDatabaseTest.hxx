@@ -89,19 +89,14 @@ public:
     std::shared_ptr<BlobCache> blobCache() { return mBlobCache; }
 
 
-protected:
-    class Query {
-    public:
-        std::string const name;
-        std::string const query;
-    };
-
-    std::string taskTableName(model::PrescriptionType type) const
+    static std::string taskTableName(model::PrescriptionType type)
     {
         switch (type)
         {
             case model::PrescriptionType::apothekenpflichigeArzneimittel:
                 return "erp.task";
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+                return "erp.task_162";
             case model::PrescriptionType::direkteZuweisung:
                 return "erp.task_169";
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -111,6 +106,13 @@ protected:
         }
         Fail("invalid prescription type: " + std::to_string(uintmax_t(type)));
     }
+protected:
+    class Query {
+    public:
+        std::string const name;
+        std::string const query;
+    };
+
 
     pqxx::connection& getConnection()
     {
@@ -150,10 +152,10 @@ protected:
     {
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp.communication");
-        deleteTxn.exec("DELETE FROM erp.task");
-        deleteTxn.exec("DELETE FROM erp.task_169");
-        deleteTxn.exec("DELETE FROM erp.task_200");
-        deleteTxn.exec("DELETE FROM erp.task_209");
+        for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>())
+        {
+            deleteTxn.exec("DELETE FROM " + taskTableName(prescriptionType));
+        }
         deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.commit();

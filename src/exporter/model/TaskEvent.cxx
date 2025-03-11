@@ -22,7 +22,6 @@ TaskEvent::TaskEvent(id_t id, const PrescriptionId& prescriptionId, Prescription
     , mState(state)
     , mKbvBundle(std::move(kbvBundle))
     , mLastModified(lastModified)
-    , mRetryCount(0)
 {
 }
 

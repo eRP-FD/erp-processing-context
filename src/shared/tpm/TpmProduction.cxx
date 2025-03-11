@@ -173,7 +173,7 @@ std::vector<uint8_t> TpmProduction::provideAkKeyPairBlob (
             newEntry.blob.generation = 1;
             TVLOG(logLevel) << "TPM: got attestation key pair blob of size " << newEntry.blob.data.size();
 
-            const auto hash = ::Hash::sha256(newEntry.blob.data);
+            const auto hash = ::Hash::sha256(gsl::span<const char>{newEntry.blob.data});
             newEntry.name = ::ErpVector(hash.begin(), hash.end());
             const auto id = blobCache.storeBlob(::std::move(newEntry));
             entry = blobCache.getBlob(id);
@@ -242,7 +242,7 @@ Tpm::AuthenticateCredentialOutput TpmProduction::authenticateCredential (
 
     tpmclient::PublicKeyName ak;
     Expect(akName.size() == ak.size(), "attestation key name has wrong length");
-    std::copy(akName.begin(), akName.end(), ak.begin());
+    std::ranges::copy(akName, ak.begin());
 
     tpmclient::Buffer plainTextCredential;
     try

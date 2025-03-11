@@ -20,7 +20,7 @@ namespace model
 namespace
 {
 
-constexpr std::string_view signature_template = R"--(
+constexpr const auto* signature_template = R"--(
 {
   "type":[
     {
@@ -42,7 +42,7 @@ RapidjsonNumberAsStringParserDocument<SignatureTemplateMark> signatureTemplate;
 
 void initTemplates ()
 {
-    rapidjson::StringStream s(signature_template.data());
+    rapidjson::StringStream s(signature_template);
     signatureTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s);
 }
 

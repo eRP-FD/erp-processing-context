@@ -352,8 +352,8 @@ void MockTaskTable::deleteChargeItemSupportingInformation(const ::model::Prescri
             break;
         }
         case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
-            [[fallthrough]];
         case ::model::PrescriptionType::direkteZuweisung:
+        case ::model::PrescriptionType::digitaleGesundheitsanwendungen:
             break;
     }
 }
@@ -379,8 +379,8 @@ void MockTaskTable::clearAllChargeItemSupportingInformation(const ::db_model::Ha
             break;
         }
         case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
-            [[fallthrough]];
         case ::model::PrescriptionType::direkteZuweisung:
+        case ::model::PrescriptionType::digitaleGesundheitsanwendungen:
             break;
     }
 }

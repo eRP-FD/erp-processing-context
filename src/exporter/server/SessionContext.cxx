@@ -17,7 +17,6 @@ SessionContext::SessionContext(
     model::Timestamp initSessionTime)
     : BaseSessionContext(serviceContext, request, response, log)
     , serviceContext(serviceContext)
-    , callerWantsJson(false)
     , mSessionTime(initSessionTime)
 {
 }

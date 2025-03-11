@@ -642,6 +642,10 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
     {
         return fun<Resolve>();
     }
+    else if (identifier == UtilityToday::IDENTIFIER)
+    {
+        return fun<UtilityToday>();
+    }
     FPFail("unhandled function in visitFunction: " + identifier);
     return nullptr;
 }

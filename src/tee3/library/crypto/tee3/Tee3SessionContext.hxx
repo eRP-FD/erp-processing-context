@@ -41,6 +41,7 @@ public:
     const uint8_t version;
     const bool isPU;
     const uint64_t messageCounter;
+    const uint64_t requestCounter;
     const Direction direction;
 };
 

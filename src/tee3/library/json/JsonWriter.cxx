@@ -68,7 +68,7 @@ void JsonWriter::makeStringValue(std::string_view value)
     {
         // Special case: If we are writing an object key, we have to call Key() instead of String().
         if (mWriter)
-            mWriter->writer.Key(value.data(), gsl::narrow<rapidjson::SizeType>(value.length()));
+            mWriter->writer.Key(value.begin(), gsl::narrow<rapidjson::SizeType>(value.length()));
         else
             mBinDoc->addKey(std::string(value));
         mDataType = SINGLE_VALUE;
@@ -78,7 +78,7 @@ void JsonWriter::makeStringValue(std::string_view value)
     Assert(mDataType == UNDECIDED) << "Cannot write plain value, JsonWriter already has content";
     mDataType = SINGLE_VALUE;
     if (mWriter)
-        mWriter->writer.String(value.data(), gsl::narrow<rapidjson::SizeType>(value.length()));
+        mWriter->writer.String(value.begin(), gsl::narrow<rapidjson::SizeType>(value.length()));
     else
         mBinDoc->addString(std::string(value));
 }

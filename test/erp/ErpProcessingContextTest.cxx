@@ -41,9 +41,11 @@ public:
         mAllProfessionOIDs.insert("hallo welt");
         mAllProfessionOIDs.insert({});
     }
+    static const std::set<model::PrescriptionType> allWorkflows;
 
     // GEMREQ-start checkAllOids
-    void checkAllOids (const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs)//NOLINT(readability-function-cognitive-complexity)
+    void checkAllOids(const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs,
+                      std::set<model::PrescriptionType> allowedWorkflows = allWorkflows)
     {
         auto matchingHandler = mRequestHandlerManager.findMatchingHandler(method, target);
         ASSERT_TRUE(matchingHandler.handlerContext);
@@ -51,13 +53,19 @@ public:
 
         for (const auto& oid : mAllProfessionOIDs)
         {
-            if (allowedOIDs.count(oid) > 0)
+            for (auto workflow : allowedWorkflows)
             {
-                ASSERT_TRUE(matchingHandler.handlerContext->handler->allowedForProfessionOID(oid)) << "This OID is falsely not allowed: " << oid;
-            }
-            else
-            {
-                ASSERT_FALSE(matchingHandler.handlerContext->handler->allowedForProfessionOID(oid)) << "This OID is falsely allowed: " << oid;
+                auto id = model::PrescriptionId::fromDatabaseId(workflow, 1).toString();
+                if (allowedOIDs.contains(oid))
+                {
+                    ASSERT_TRUE(matchingHandler.handlerContext->handler->allowedForProfessionOID(oid, id))
+                        << "This OID is falsely not allowed: " << oid << " for " << workflow;
+                }
+                else
+                {
+                    ASSERT_FALSE(matchingHandler.handlerContext->handler->allowedForProfessionOID(oid, id))
+                        << "This OID is falsely allowed: " << oid << " for " << workflow;
+                }
             }
         }
     }
@@ -66,7 +74,9 @@ public:
     RequestHandlerManager mRequestHandlerManager;
     std::set<std::string> mAllProfessionOIDs;
 };
-
+const std::set<model::PrescriptionType> ErpProcessingContextTest::allWorkflows{
+    magic_enum::enum_values<model::PrescriptionType>().begin(),
+    magic_enum::enum_values<model::PrescriptionType>().end()};
 
 TEST_F(ErpProcessingContextTest, GetAllTasks_ProfessionOIDs)
 {
@@ -74,6 +84,7 @@ TEST_F(ErpProcessingContextTest, GetAllTasks_ProfessionOIDs)
     checkAllOids(HttpMethod::GET, "/Task", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
     });
 }
 
@@ -113,23 +124,45 @@ TEST_F(ErpProcessingContextTest, PostTaskActivate_ProfessionOIDs)
     });
 }
 
-TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDs)
+// GEMREQ-start A_19166-test1
+TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWfOther)
 {
-    A_19166.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::POST, "/Task/{id}/$accept", {
-            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
-            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
-    });
+    A_19166_01.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$accept",
+                 {
+                     "1.2.276.0.76.4.54",// oid_oeffentliche_apotheke
+                     "1.2.276.0.76.4.55",// oid_krankenhausapotheke
+                 },
+                 {model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::direkteZuweisung,
+                  model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                  model::PrescriptionType::direkteZuweisungPkv});
 }
+// GEMREQ-end A_19166-test1
 
+// GEMREQ-start A_25993-test1
+TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWf162)
+{
+    A_19166_01.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$accept",
+                 {
+                     "1.2.276.0.76.4.59",// oid_kostentraeger
+                 },
+                 {model::PrescriptionType::digitaleGesundheitsanwendungen});
+}
+// GEMREQ-end A_25993-test1
+
+// GEMREQ-start A_19170-02-test1
 TEST_F(ErpProcessingContextTest, PostTaskReject_ProfessionOIDs)
 {
-    A_19170_01.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::POST, "/Task/{id}/$reject", {
-            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
-            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
-    });
+    A_19170_02.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$reject",
+                 {
+                     "1.2.276.0.76.4.54",// oid_oeffentliche_apotheke
+                     "1.2.276.0.76.4.55",// oid_krankenhausapotheke
+                     "1.2.276.0.76.4.59",// oid_kostentraeger
+                 });
 }
+// GEMREQ-end A_19170-02-test1
 
 // GEMREQ-start A_24279
 TEST_F(ErpProcessingContextTest, PostTaskDispense_ProfessionOIDs)
@@ -142,14 +175,18 @@ TEST_F(ErpProcessingContextTest, PostTaskDispense_ProfessionOIDs)
 }
 // GEMREQ-end A_24279
 
+// GEMREQ-start A_19230-01-test1
 TEST_F(ErpProcessingContextTest, PostTaskClose_ProfessionOIDs)
 {
-    A_19230.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::POST, "/Task/{id}/$close", {
-            "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
-            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
-    });
+    A_19230_01.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$close",
+                 {
+                     "1.2.276.0.76.4.54",// oid_oeffentliche_apotheke
+                     "1.2.276.0.76.4.55",// oid_krankenhausapotheke
+                     "1.2.276.0.76.4.59",// oid_kostentraeger
+                 });
 }
+// GEMREQ-end A_19230-01-test1
 
 TEST_F(ErpProcessingContextTest, PostTaskAbort_ProfessionOIDs)
 {
@@ -185,45 +222,51 @@ TEST_F(ErpProcessingContextTest, GetMedicationDispense_ProfessionOIDs)
 }
 // GEMREQ-end A_19405
 
+// GEMREQ-start A_19446-test1
 TEST_F(ErpProcessingContextTest, GetAllCommunications_ProfessionOIDs)
 {
-    A_19446_01.test("Unit test of allowedForProfessionOID() function");
+    A_19446_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/Communication", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.59",// oid_kostentraeger
     });
 }
 
 TEST_F(ErpProcessingContextTest, GetCommunication_ProfessionOIDs)
 {
-    A_19446_01.test("Unit test of allowedForProfessionOID() function");
+    A_19446_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/Communication/{id}", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.59",// oid_kostentraeger
     });
 }
 
 TEST_F(ErpProcessingContextTest, PostCommunication_ProfessionOIDs)
 {
-    A_19446_01.test("Unit test of allowedForProfessionOID() function");
+    A_19446_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Communication", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.59",// oid_kostentraeger
     });
 }
 
 TEST_F(ErpProcessingContextTest, DeleteCommunication_ProfessionOIDs)
 {
-    A_19446_01.test("Unit test of allowedForProfessionOID() function");
+    A_19446_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::DELETE, "/Communication/{id}", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.59",// oid_kostentraeger
     });
 }
+// GEMREQ-end A_19446-test1
 
 TEST_F(ErpProcessingContextTest, GetAllAuditEvents_ProfessionOIDs)
 {
@@ -357,3 +400,16 @@ TEST_F(ErpProcessingContextTest, PostVAU_ProfessionOIDs)
             mAllProfessionOIDs // unconstrained
     );
 }
+
+// GEMREQ-start A_22362-test1
+TEST_F(ErpProcessingContextTest, PostSubscription_ProfessionOIDs)
+{
+    A_22362_01.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Subscription",
+                 {
+                     "1.2.276.0.76.4.54",// oid_oeffentliche_apotheke
+                     "1.2.276.0.76.4.55",// oid_krankenhausapotheke
+                     "1.2.276.0.76.4.59",// oid_kostentraeger
+                 });
+}
+// GEMREQ-end A_22362-test1

@@ -92,7 +92,7 @@ model::Task EndpointHandlerTest::addTaskToDatabase(SessionContext& sessionContex
     if (taskStatus != model::Task::Status::draft)
     {
         task.setHealthCarePrescriptionUuid();
-        const std::optional<std::string_view> healthCarePrescriptionUuid = task.healthCarePrescriptionUuid().value();
+        const std::optional<std::string_view> healthCarePrescriptionUuid = task.healthCarePrescriptionUuid();
         const auto& kbvBundle = ResourceTemplates::kbvBundleXml();
         const model::Binary healthCarePrescriptionBundle{healthCarePrescriptionUuid.value(),
                                                          CryptoHelper::toCadesBesSignature(kbvBundle)};

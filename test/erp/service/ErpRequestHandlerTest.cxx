@@ -52,27 +52,22 @@ public:
         ServerResponse serverResponse;
         AccessLog accessLog;
         SessionContext sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
+        std::string profileTypeStr = TModel::resourceTypeName;
+        if constexpr (model::FhirValidatableProfileConstexpr<TModel>)
+        {
+            profileTypeStr = magic_enum::enum_name(TModel::profileType);
+        }
         if (expectFail)
         {
             ASSERT_ANY_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext))
-                << "failed with " << contentMimeType << ", " << magic_enum::enum_name(TModel::profileType)
+                << "failed with " << contentMimeType << ", " << profileTypeStr
                 << " expectFail=true";
         }
         else
         {
-            if constexpr (std::is_same_v<TModel, model::Communication>)
-            {
-                ASSERT_NO_THROW(
-                    (void) parseAndValidateRequestBody<TModel>(sessionContext, model::Timestamp::now(), false))
-                    << "failed with " << contentMimeType << ", " << magic_enum::enum_name(TModel::profileType)
-                    << " expectFail=false";
-            }
-            else
-            {
-                ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext))
-                    << "failed with " << contentMimeType << ", " << magic_enum::enum_name(TModel::profileType)
-                    << " expectFail=false";
-            }
+            ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext))
+                << "failed with " << contentMimeType << ", " << profileTypeStr
+                << " expectFail=false";
         }
 
     }
@@ -91,7 +86,8 @@ public:
             case Gem_erxCommunicationRepresentative:
                 // parseAndValidateRequestBody not used for Communication
                 break;
-            case Gem_erxMedicationDispense:
+            case GEM_ERP_PR_MedicationDispense:
+            case GEM_ERP_PR_MedicationDispense_DiGA:
                 testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, expectFail);
                 break;
             case MedicationDispenseBundle:
@@ -115,6 +111,8 @@ public:
             case KBV_PR_ERP_Medication_PZN:
             case KBV_PR_ERP_PracticeSupply:
             case KBV_PR_ERP_Prescription:
+            case KBV_PR_EVDGA_Bundle:
+            case KBV_PR_EVDGA_HealthAppRequest:
             case KBV_PR_FOR_Coverage:
             case KBV_PR_FOR_Organization:
             case KBV_PR_FOR_Practitioner:
@@ -156,7 +154,7 @@ struct SampleFile {
     std::string_view xmlSample;
     std::string_view jsonSample;
     model::ProfileType profileType;
-    std::optional<std::string_view> skipReason = {};
+    std::optional<std::string> skipReason = {};
 };
 
 static std::ostream& operator << (std::ostream& out, const SampleFile& sample)

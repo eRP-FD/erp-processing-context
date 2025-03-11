@@ -48,7 +48,6 @@ std::string JsonCanonicalizationTest::readExpectedOutput(const std::string& file
 TEST_F(JsonCanonicalizationTest, Empty)
 {
     std::string jsonStringIn;
-    std::string jsonStringOutExpected;
     EXPECT_THROW(JsonCanonicalizationTestModel::fromJson(jsonStringIn), model::ModelException);
 }
 

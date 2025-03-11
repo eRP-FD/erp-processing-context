@@ -69,13 +69,14 @@ void DispenseTaskHandler::handleRequest(PcSessionContext& session)
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
 
-    auto bodyData = parseBody(session, Operation::POST_Task_id_dispense);
+    auto bodyData = parseBody(session, Operation::POST_Task_id_dispense, prescriptionId.type());
     A_24281_02.start("Check provided MedicationDispense object, especially PrescriptionID, KVNR and TelematikID");
     checkMedicationDispenses(bodyData.medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
     A_24281_02.finish();
 
-    // A_24285 Zeitpunkt des Aufrufes in Task.extension:lastMedicationDispense setzen
+    A_24285_01.start("Zeitpunkt des Aufrufes in Task.extension:lastMedicationDispense setzen");
     task.updateLastMedicationDispense();
+    A_24285_01.finish();
 
     A_24281_02.start("Save modified Task and MedicationDispense");
     task.updateLastUpdate();

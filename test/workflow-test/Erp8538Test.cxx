@@ -34,7 +34,8 @@ TEST_P(Erp8538Test, PostOperationWithInvalidPrescriptionId)
 
     const auto& [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
-    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
+    HttpStatus expected = GetParam().operation == "$accept" ? HttpStatus::Forbidden : HttpStatus::NotFound;
+    EXPECT_EQ(innerResponse.getHeader().status(), expected);
 }
 
 INSTANTIATE_TEST_SUITE_P(

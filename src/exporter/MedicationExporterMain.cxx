@@ -42,16 +42,15 @@
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/deferred.hpp>
 
-boost::asio::awaitable<void> setupEpaClientPool(MedicationExporterServiceContext& serviceContext)
+boost::asio::awaitable<void> setupEpaClientPool(std::shared_ptr<MedicationExporterServiceContext> serviceContext)
 {
     auto fqdns = Configuration::instance().epaFQDNs();
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
     for (const auto& fqdn : fqdns)
     {
-        co_await serviceContext.teeClientPool()->addEpaHost(fqdn.hostName, fqdn.port, fqdn.teeConnectionCount);
+        co_await serviceContext->teeClientPool()->addEpaHost(fqdn.hostName, fqdn.port, fqdn.teeConnectionCount);
     }
 }
-
 
 MedicationExporterFactories MedicationExporterMain::createProductionFactories()
 {
@@ -83,7 +82,7 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
         factories.hsmClientFactory = []() {
             return std::make_unique<HsmMockClient>();
         };
-        factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>&&, std::shared_ptr<BlobCache> blobCache) {
+        factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>, std::shared_ptr<BlobCache> blobCache) {
             MockBlobCache::setupBlobCache(MockBlobCache::MockTarget::MockedHsm, *blobCache);
             return std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(blobCache));
         };
@@ -125,9 +124,9 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
                                              enforceClientAuthentication, caCertificates);
     };
 
-    factories.exporterDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation) {
         return std::make_unique<MedicationExporterDatabaseFrontend>(
-            std::make_unique<MedicationExporterPostgresBackend>(), hsmPool, keyDerivation, telematikLookup);
+            std::make_unique<MedicationExporterPostgresBackend>(), keyDerivation, telematikLookup);
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -179,7 +178,7 @@ int MedicationExporterMain::runApplication(
 
     log << "setting up signal handler";
     SignalHandler signalHandler(runLoop.getThreadPool().ioContext());
-    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
+    signalHandler.registerSignalHandlers({SIGINT, SIGTERM}); // Note that SIGPIPE is ignored when calling this method.
 
     log << "starting admin server";
     serviceContext->getAdminServer().serve(1, "admin");
@@ -212,7 +211,7 @@ int MedicationExporterMain::runApplication(
 
     runLoop.getThreadPool().setUp(threadCount, "medication-exporter");
 
-    if (waitForHealthUp(runLoop, *serviceContext))
+    if (waitForHealthUp(runLoop, serviceContext))
     {
         log << "complete";
         std::cout << "press CTRL-C to stop" << std::endl;
@@ -250,7 +249,7 @@ MedicationExporterMain::RunLoop::RunLoop()
 }
 
 boost::asio::awaitable<void> MedicationExporterMain::RunLoop::eventProcessingWorker(
-    const std::weak_ptr<MedicationExporterServiceContext> serviceContext)
+    std::weak_ptr<MedicationExporterServiceContext> serviceContext)
 {
     using namespace std::chrono_literals;
     boost::asio::steady_timer timer{mWorkerThreadPool.ioContext()};
@@ -379,7 +378,8 @@ bool MedicationExporterMain::RunLoop::checkIsThrottled(
     return throttlingActive;
 }
 
-bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop, MedicationExporterServiceContext& serviceContext)
+bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop,
+                                             const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
 {
     constexpr size_t loopWaitSeconds = 1;
     constexpr size_t loopMessageInterval = 2;
@@ -402,10 +402,10 @@ bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop, MedicationExporte
             TVLOG(1) << "running health check";
             try
             {
-                serviceContext.getHsmPool().getTokenUpdater().healthCheck();
+                serviceContext->getHsmPool().getTokenUpdater().healthCheck();
                 healthCheckIsUp = true;
                 // validate ePA endpoints
-                testEpaEndpoints(serviceContext);
+                testEpaEndpoints(*serviceContext);
             }
             catch (...)
             {
@@ -451,4 +451,3 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
     }
     return allUp;
 }
-

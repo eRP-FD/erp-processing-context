@@ -80,7 +80,7 @@ public:
     void location(const FileNameAndLineNumber& loc);
 
     template<typename ValueType>
-    void keyValue (const std::string_view key, ValueType value);
+    void keyValue (const std::string_view key, ValueType&& value);
 
     void prescriptionId(const model::PrescriptionId& id);
     const std::optional<model::PrescriptionId>& getPrescriptionId() const;
@@ -94,7 +94,7 @@ private:
 
 
 template<typename ValueType>
-void AccessLog::keyValue (const std::string_view key, ValueType value)
+void AccessLog::keyValue (const std::string_view key, ValueType&& value)
 {
     mLog.keyValue(key, std::forward<ValueType>(value));
 }

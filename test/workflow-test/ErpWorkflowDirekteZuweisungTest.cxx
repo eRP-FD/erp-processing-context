@@ -5,10 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "test/util/ResourceManager.hxx"
-
+#include "exporter/eventprocessing/Outcome.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+
 
 
 class ErpWorkflowDirekteZuweisungTestP : public ErpWorkflowTestP
@@ -55,6 +56,30 @@ TEST_P(ErpWorkflowDirekteZuweisungTestP, PatientAbortOnlyCompletedTasks)//NOLINT
     // Abort is allowed for completed tasks
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(prescriptionId.value(), jwt, kvnr, accessCode, secret, {}));
 }
+
+TEST_P(ErpWorkflowDirekteZuweisungTestP, TaskRetrievalProhibitedForProxyProhibited)//NOLINT(readability-function-cognitive-complexity)
+{
+    A_26148.test("Representative may not retrieve Task with Flowtype 169/209");
+    std::optional<model::PrescriptionId> prescriptionId;
+    std::string accessCode;
+    ASSERT_NO_FATAL_FAILURE(checkTaskCreate(prescriptionId, accessCode, GetParam()));
+    ASSERT_TRUE(prescriptionId.has_value());
+
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
+    std::string qesBundle;
+    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, *prescriptionId, model::Timestamp::now())));
+
+    ASSERT_NO_FATAL_FAILURE(taskActivate(*prescriptionId,accessCode, qesBundle));
+
+    std::optional<model::Bundle> taskBundle;
+    std::string kvnrRepresentative;
+    generateNewRandomKVNR(kvnrRepresentative);
+    ASSERT_NE(kvnr, kvnrRepresentative);
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId.value(), kvnrRepresentative, accessCode, std::nullopt, HttpStatus::Forbidden, model::OperationOutcome::httpCodeToOutcomeIssueType(HttpStatus::Forbidden)));
+    ASSERT_FALSE(taskBundle.has_value());
+}
+
 
 // GEMREQ-start A_21360-01
 TEST_P(ErpWorkflowDirekteZuweisungTestP, PatientNoAccessCode)//NOLINT(readability-function-cognitive-complexity)

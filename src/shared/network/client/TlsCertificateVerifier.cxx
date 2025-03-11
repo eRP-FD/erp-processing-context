@@ -25,7 +25,7 @@ namespace
 bool verifySubjectAlternativeDnsName(const std::string& hostname, const X509Certificate& certificate)
 {
     auto dnsNames = certificate.getSubjectAlternativeNameDnsNames();
-    bool result = std::any_of(dnsNames.begin(), dnsNames.end(), [hostname](const auto& element) {
+    bool result = std::ranges::any_of(dnsNames, [hostname](const auto& element) {
         return hostname == element;
     });
     if (! result)
@@ -221,7 +221,7 @@ private:
             LOG(ERROR) << "failed to verify server certificate: " << exception.what();
         }
 
-#if 0
+#if 0 // NOLINT(readability-avoid-unconditional-preprocessor-if)
         // this callback is registered to better debug certificate verification problems,
         // it is not necessary for production and should be disabled
         logVerifyCertificateResult(preVerified, result, context, certificate);
@@ -400,7 +400,7 @@ protected:
             auto* self = static_cast<TslImplementation*>(arg);
             auto certificate = X509Certificate::createFromX509Pointer(SSL_get0_peer_certificate(ssl));
             const unsigned char* ocspResponseBuffer = nullptr;
-            long ocspResponseSize = SSL_get_tlsext_status_ocsp_resp(ssl, &ocspResponseBuffer);
+            long ocspResponseSize = SSL_get_tlsext_status_ocsp_resp(ssl, static_cast<void*>(&ocspResponseBuffer));
             OcspResponsePtr providedOcspResponse = nullptr;
             if (ocspResponseSize > 0)
             {

@@ -81,6 +81,7 @@ set(FHIR_PROFILES_DIRS
         "fhir/profiles/KBV.Basis-1.3.0"
         "fhir/profiles/kbv.ita.erp-1.1.2"
         "fhir/profiles/kbv.ita.for-1.1.0/package/"
+        "fhir/profiles/kbv.itv.evdga-1.1.0/package"
         "fhir/profiles/fhir.kbv.de"
         "fhir/profiles/terminology.hl7.org-6.0.2/package"
         )
@@ -124,63 +125,34 @@ add_custom_command (
 set(ERP_EASTER_LIST ${ERP_RUNTIME_RESOURCE_DIR}/easter.csv)
 message(STATUS "ERP_EASTER_LIST=${ERP_EASTER_LIST}")
 
-# create install script for installation
-set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/resources/01_production.config.json)
-set(ERP_CONFIGURATION_DEVEL_FILE "")
-set(ERP_CONFIGURATION_MEDICATION_EXPORTER_FILE ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json)
-set(ERP_RUNTIME_RESOURCE_DIR "${CMAKE_INSTALL_FULL_DATADIR}/${PROJECT_NAME}")
-set(ERP_CONFIGURATION_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production.config.json.in")
-set(ERP_CONFIGURATION_DEVEL_IN "")
-set(ERP_CONFIGURATION_MEDICATION_EXPORTER_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production-medication-exporter.config.json.in")
-configure_file(install-config.cmake.in install-config.cmake @ONLY)
-include(${CMAKE_CURRENT_BINARY_DIR}/install-config.cmake)
-
-# create install script for build tree
-set(ERP_CONFIGURATION_FILE ${CMAKE_BINARY_DIR}/bin/01_production.config.json)
-set(ERP_CONFIGURATION_DEVEL_FILE ${CMAKE_BINARY_DIR}/bin/02_development.config.json)
-set(ERP_CONFIGURATION_MEDICATION_EXPORTER_FILE ${CMAKE_BINARY_DIR}/bin/01_production-medication-exporter.config.json)
-set(ERP_RUNTIME_RESOURCE_DIR "${CMAKE_BINARY_DIR}/bin/resources")
-set(ERP_CONFIGURATION_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production.config.json.in")
-set(ERP_CONFIGURATION_DEVEL_IN "${CMAKE_CURRENT_SOURCE_DIR}/test/02_development.config.json.in")
-set(ERP_CONFIGURATION_MEDICATION_EXPORTER_IN "${CMAKE_CURRENT_SOURCE_DIR}/production/01_production-medication-exporter.config.json.in")
-configure_file(install-config.cmake.in install-config-devel.cmake @ONLY)
-
-add_custom_command(
-    OUTPUT ${ERP_CONFIGURATION_FILE}
-    OUTPUT ${ERP_CONFIGURATION_DEVEL_FILE}
-    DEPENDS production/01_production.config.json.in
-    DEPENDS production/01_production-medication-exporter.config.json.in
-    DEPENDS test/02_development.config.json.in
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/install-config-devel.cmake
-    COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/install-config-devel.cmake
-)
-
+include(add_erp_config)
 add_custom_target(resources ALL
     DEPENDS
         ${ERP_HL7_ORG_DEFINITIONS_FILES}
         ${SCHEMA_FILES}
-        ${ERP_CONFIGURATION_FILE}
-        ${ERP_CONFIGURATION_DEVEL_FILE}
         ${ZDICT_FILES}
         ${ERP_EASTER_LIST}
         ${FHIR_PROFILES_DIRS}
 )
 
+add_erp_config(01_production.config
+        TEMPLATE "production/01_production.config.json.in"
+        COMPONENTS production blob-db-initialization
+)
+add_erp_config(01_production-medication-exporter.config
+        TEMPLATE "production/01_production-medication-exporter.config.json.in"
+        COMPONENTS production blob-db-initialization
+)
+add_erp_config(02_development.config
+        TEMPLATE "test/02_development.config.json.in"
+        NO_INSTALL
+)
+
+
 install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/resources/
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
         COMPONENT production)
-install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
-        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
-        COMPONENT production)
-install(FILES ${CMAKE_BINARY_DIR}/resources/01_production.config.json
-        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
-        COMPONENT blob-db-initialization)
-install(FILES ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json
-        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
-        COMPONENT production)
-install(FILES ${CMAKE_BINARY_DIR}/resources/01_production-medication-exporter.config.json
-        DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
-        COMPONENT blob-db-initialization)
+
 if (NOT TARGET production)
     add_custom_target(production)
 endif()

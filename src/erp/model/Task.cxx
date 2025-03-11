@@ -71,7 +71,7 @@ const std::string task_template = R"--(
 }
 )--";
 
-constexpr std::string_view prescriptionReference_template = R"--(
+constexpr const auto* prescriptionReference_template = R"--(
 {
   "type": {
     "coding": [
@@ -87,7 +87,7 @@ constexpr std::string_view prescriptionReference_template = R"--(
 }
 )--";
 
-constexpr std::string_view secret_template = R"--(
+constexpr const auto* secret_template = R"--(
 {
   "use": "official",
   "system": "",
@@ -95,14 +95,14 @@ constexpr std::string_view secret_template = R"--(
 }
 )--";
 
-constexpr std::string_view extension_date_template = R"--(
+constexpr const auto* extension_date_template = R"--(
 {
   "url": "",
   "valueDate": ""
 }
 )--";
 
-constexpr std::string_view extension_instant_template = R"--(
+constexpr const auto* extension_instant_template = R"--(
 {
   "url": "",
   "valueInstant": ""
@@ -151,16 +151,16 @@ void initTemplates()
     rapidjson::StringStream s1(task_template.data());
     TaskTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s1);
 
-    rapidjson::StringStream s2(prescriptionReference_template.data());
+    rapidjson::StringStream s2(prescriptionReference_template);
     PrescriptionReferenceTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s2);
 
-    rapidjson::StringStream s3(secret_template.data());
+    rapidjson::StringStream s3(secret_template);
     SecretAccessCodeTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s3);
 
-    rapidjson::StringStream s4(extension_date_template.data());
+    rapidjson::StringStream s4(extension_date_template);
     ExtensionDateTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s4);
 
-    rapidjson::StringStream s5(extension_instant_template.data());
+    rapidjson::StringStream s5(extension_instant_template);
     ExtensionInstantTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s5);
 }
 
@@ -229,11 +229,11 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     A_19112.finish();
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_19445_08.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_19445_10.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_19445_08.finish();
+    A_19445_10.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
@@ -385,7 +385,7 @@ void Task::setStatus(const Task::Status newStatus)
 
 void Task::setStatus(Status newStatus, model::Timestamp lastStatusChange)
 {
-    setValue(statusPointer, StatusNames.at(newStatus).data());
+    setValue(statusPointer, StatusNames.at(newStatus));
     mLastStatusChange = lastStatusChange;
 }
 
@@ -469,10 +469,10 @@ void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatu
                 return;
         }
     }
-    A_19445_08.start(
-        "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 200)>");
+    A_19445_10.start(
+        "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 162, 200 and 209)>");
     setAcceptDateDependentPrescriptionType(baseTime);
-    A_19445_08.finish();
+    A_19445_10.finish();
 }
 
 void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
@@ -482,6 +482,7 @@ void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
     {
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
+        case PrescriptionType::digitaleGesundheitsanwendungen:
         {
             auto acceptDay = date::year_month_day{date::floor<date::days>(
                                  date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())

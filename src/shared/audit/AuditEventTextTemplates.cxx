@@ -14,7 +14,7 @@
 namespace
 {
 
-constexpr std::string_view auditEventTextTemplates = R"--(
+constexpr const auto* auditEventTextTemplates = R"--(
 {
   "languageTextTemplates": [
     {
@@ -359,7 +359,7 @@ AuditEventTextTemplates::AuditEventTextTemplates()
     using namespace model;
 
     rapidjson::Document auditResourcesDocument;
-    auditResourcesDocument.Parse(auditEventTextTemplates.data());
+    auditResourcesDocument.Parse(auditEventTextTemplates);
     Expect(!auditResourcesDocument.HasParseError(), "Error parsing audit event text templates JSON");
 
     const auto* languageTextTemplateArray = languageTextTemplatesPointer.Get(auditResourcesDocument);
@@ -406,7 +406,7 @@ AuditEventTextTemplates::TextTemplate AuditEventTextTemplates::retrieveTextTempl
     catch(std::out_of_range& )
     {
         TLOG(WARNING) << "No audit event text resource found for language \"" << language << "\" and event id "
-                      << static_cast<std::underlying_type<model::AuditEventId>::type>(eventId);
+                      << static_cast<std::underlying_type_t<model::AuditEventId>>(eventId);
         Fail2("No audit event text resource found for event id / language combination", std::logic_error);
     }
 }

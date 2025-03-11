@@ -43,7 +43,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.5'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.2.0'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -59,16 +59,18 @@ pipeline {
                         loadGithubSSHConfiguration {
                             env.BRANCH_NAME = "${BRANCH_NAME}"
                             def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                            def erp_release_version = "1.16.0"
+                            def erp_release_version = "1.17.0"
                             sh "cd /media/erp && scripts/ci-build.sh " +
+                                "--build_type=RelWithDebInfo " +
                                 "--build_version='${erp_build_version}' " +
                                 "--release_version='${erp_release_version}' " +
                                 "--skip-build"
                             sh "cd /media/erp && scripts/ci-static-analysis.sh " +
-                                    "--build-path=jenkins-build-debug " +
+                                    "--build-path=build/RelWithDebInfo " +
                                     "--source-path=. " +
-                                    "--clang-tidy-bin=clang-tidy-15 " +
-                                    "--output=clang-tidy.txt "
+                                    "--clang-tidy-bin=clang-tidy-19 " +
+                                    "--output=clang-tidy.txt " +
+                                    "--clang-tidy-config=.clang-tidy.nightly "
                             archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
                             staticAnalysis("SonarQubeeRp")
                             timeout(time: 5, unit: 'MINUTES') {

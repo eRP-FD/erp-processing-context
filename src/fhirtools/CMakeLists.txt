@@ -1,19 +1,29 @@
 
 add_library(fhirtools STATIC)
 
+find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(antlr4-runtime REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(libxml2 REQUIRED)
+find_package(magic_enum REQUIRED)
+
 target_link_libraries(fhirtools
     PRIVATE
         erp-shared
+        antlr4_static
     PUBLIC
-        CONAN_PKG::antlr4-cppruntime
-        CONAN_PKG::boost
-        CONAN_PKG::date
-        CONAN_PKG::glog
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::magic_enum
-        CONAN_PKG::rapidjson
-        CONAN_PKG::libxml2
-        CONAN_PKG::openssl # only needed because we include Expect.hxx from erp
+        boost::boost
+        date::date
+        glog::glog
+        gsl::gsl-lite
+        magic_enum::magic_enum
+        rapidjson
+        LibXml2::LibXml2
+        openssl::openssl # only needed because we include Expect.hxx from erp
     )
 
 antlr_target(fhirtools fhirpath.g4 PARSER LEXER VISITOR PACKAGE fhirtools)

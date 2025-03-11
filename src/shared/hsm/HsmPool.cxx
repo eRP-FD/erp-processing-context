@@ -11,6 +11,7 @@
 #include "shared/util/Expect.hxx"
 #include "shared/util/TLog.hxx"
 
+#include <algorithm>
 #include <iostream>
 
 
@@ -19,8 +20,6 @@ HsmPool::HsmPool(std::unique_ptr<HsmFactory>&& hsmFactory,
                  std::shared_ptr<Timer> timerManager)
     : mMutex()
     , mAvailableHsmSessions()
-    , mActiveSessionCount(0)
-    , mIsPoolReleased(false)
     , mWaitForAvailableSessionVariable()
     , mHsmFactory(std::move(hsmFactory))
     , mSessionRemover(std::make_shared<HsmPoolSessionRemover>([this](std::unique_ptr<HsmSession>&& session) {
@@ -32,7 +31,6 @@ HsmPool::HsmPool(std::unique_ptr<HsmFactory>&& hsmFactory,
           std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::HSM_IDLE_TIMEOUT_SECONDS)))
     , mMaxSessionCount(
           gsl::narrow<size_t>(Configuration::instance().getIntValue(ConfigurationKey::HSM_MAX_SESSION_COUNT)))
-    , mMaxUsedSessionCount(0)
     , mTimerManager(std::move(timerManager))
 {
     Expect3(mHsmFactory != nullptr, "HsmFactory missing", std::logic_error);
@@ -127,8 +125,7 @@ HsmPoolSession HsmPool::activateSession(void)
     auto session = HsmPoolSession(std::move(mAvailableHsmSessions.front()), mSessionRemover);
     mAvailableHsmSessions.pop_front();
     ++mActiveSessionCount;
-    if (mActiveSessionCount > mMaxUsedSessionCount)
-        mMaxUsedSessionCount = mActiveSessionCount;
+    mMaxUsedSessionCount = std::max(mActiveSessionCount, mMaxUsedSessionCount);
 
     // Furnish the session with an up-to-date tee token.
     session.session().setTeeToken(mTeeToken);

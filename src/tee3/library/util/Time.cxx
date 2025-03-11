@@ -40,7 +40,7 @@ namespace
 
 #if HAS_TIMEZONE_SUPPORT
         std::chrono::utc_clock::time_point result;
-        if (stream >> date::parse(format, result))
+        if (stream >> std::chrono::parse(format, result))
             return std::chrono::utc_clock::to_sys(result);
 #else
         SystemTime result;
@@ -64,8 +64,8 @@ namespace
         {
         };
 #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || _POSIX_SOURCE
-        localtime_r(&now, &tmLocal);
-        gmtime_r(&now, &tmGm);
+        Assert(localtime_r(&now, &tmLocal));
+        Assert(gmtime_r(&now, &tmGm));
 #elif defined _WIN32
         _localtime64_s(&tmLocal, &now);
         _gmtime64_s(&tmGm, &now);

@@ -21,7 +21,6 @@ class AuditData;
 class EventKvnr;
 }
 
-class HsmPool;
 class KeyDerivation;
 class MedicationExporterDatabaseBackend;
 
@@ -36,7 +35,7 @@ public:
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
     using Factory =
-        std::function<std::unique_ptr<MedicationExporterDatabaseFrontendInterface>(HsmPool&, KeyDerivation&)>;
+        std::function<std::unique_ptr<MedicationExporterDatabaseFrontendInterface>(KeyDerivation&)>;
 
     virtual ~MedicationExporterDatabaseFrontendInterface() = default;
 

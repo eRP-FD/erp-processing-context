@@ -25,8 +25,8 @@ namespace
         const std::string_view key,
         const std::string_view value)
     {
-        writer.Key(key.data(), gsl::narrow<rapidjson::SizeType>(key.size()));
-        writer.String(value.data(), gsl::narrow<rapidjson::SizeType>(value.size()));
+        writer.Key(key.begin(), gsl::narrow<rapidjson::SizeType>(key.size()));
+        writer.String(value.begin(), gsl::narrow<rapidjson::SizeType>(value.size()));
     }
 
     void writeKeyValue(
@@ -34,7 +34,7 @@ namespace
         const std::string_view key,
         const int64_t value)
     {
-        writer.Key(key.data(), gsl::narrow<rapidjson::SizeType>(key.size()));
+        writer.Key(key.begin(), gsl::narrow<rapidjson::SizeType>(key.size()));
         writer.Int64(value);
     }
 
@@ -43,7 +43,7 @@ namespace
         const std::string_view key,
         const uint64_t value)
     {
-        writer.Key(key.data(), gsl::narrow<rapidjson::SizeType>(key.size()));
+        writer.Key(key.begin(), gsl::narrow<rapidjson::SizeType>(key.size()));
         writer.Uint64(value);
     }
 
@@ -52,7 +52,7 @@ namespace
         const std::string_view key,
         const double value)
     {
-        writer.Key(key.data(), gsl::narrow<rapidjson::SizeType>(key.size()));
+        writer.Key(key.begin(), gsl::narrow<rapidjson::SizeType>(key.size()));
         writer.Double(value);
     }
 

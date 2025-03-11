@@ -157,9 +157,15 @@ testutils::ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const AsConf
         envGuards.emplace_back(view->mEnvName + "_VALID_FROM", std::nullopt);
         envGuards.emplace_back(view->mEnvName + "_VALID_UNTIL", std::nullopt);
     }
+    envGuards.emplace_back("ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS", std::nullopt);
 }
 
 ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& viewId, const fhirtools::Date& startDate)
+    : ShiftFhirResourceViewsGuard(calculateOffset(viewId, startDate))
+{
+}
+
+std::chrono::days ShiftFhirResourceViewsGuard::calculateOffset(const std::string& viewId, const fhirtools::Date& startDate)
 {
     std::list<gsl::not_null<std::shared_ptr<const fhirtools::FhirResourceViewConfiguration::ViewConfig>>> cleanViews;
     {
@@ -171,29 +177,17 @@ ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& view
     auto refView = std::ranges::find(cleanViews, viewId, &fhirtools::FhirResourceViewConfiguration::ViewConfig::mId);
     Expect3(refView != cleanViews.end(), "no such view: " + viewId, std::logic_error);
     date::year_month_day refStart{(*refView)->mStart.value_or(epoch)};
-    auto shift = date::sys_days{date::year_month_day{startDate}} - date::sys_days{refStart};
-    LOG(INFO) << "shift: " << startDate << " - " << refStart << " = " << shift;
-    for (const auto& viewInfo: cleanViews)
-    {
-        if (viewInfo->mStart)
-        {
-            date::year_month_day viewStart{*(viewInfo)->mStart};
-            auto shiftedStart = date::year_month_day{date::sys_days{viewStart} + shift};
-            envGuards.emplace_back(viewInfo->mEnvName + "_VALID_FROM", date::format("%Y-%m-%d", shiftedStart));
-        }
-        if (viewInfo->mEnd)
-        {
-            date::year_month_day viewEnd{*viewInfo->mEnd};
-            auto shiftedEnd = date::year_month_day{date::sys_days{viewEnd} + shift};
-            envGuards.emplace_back(viewInfo->mEnvName + "_VALID_UNTIL", date::format("%Y-%m-%d", shiftedEnd));
-        }
-    }
+    return date::sys_days{date::year_month_day{startDate}} - date::sys_days{refStart};
+}
+
+ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::chrono::days& offset)
+{
+    envGuards.emplace_back("ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS", std::to_string(offset.count()));
 }
 
 ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate)
     : ShiftFhirResourceViewsGuard{viewId, fhirtools::Date{date::year_month_day{startDate}, fhirtools::Date::Precision::day}}
 {
-
 }
 
 } // namespace testutils

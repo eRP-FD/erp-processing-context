@@ -27,7 +27,7 @@ Timer::Timer (void)
     : mMutex(),
       mNextToken(NotAJob + 1),
       mIoContext(),
-      mWork(mIoContext), // Prevent exiting mIoContext's run method unless mIoContext is explicitly shut down.
+      mWork(make_work_guard(mIoContext)), // Prevent exiting mIoContext's run method unless mIoContext is explicitly shut down.
       mTimerThread([&]{mIoContext.run();}),
       mJobMap()
 {
@@ -90,7 +90,7 @@ void Timer::runJobAndRepeat (
 
     // Schedule another run.
     Expect(outerJob != nullptr, "outerJob is empty");
-    outerJob->expires_at(outerJob->expires_at() + repeatingDelay);
+    outerJob->expires_at(outerJob->expiry() + repeatingDelay);
     outerJob->async_wait(
         [this, innerJob=std::move(innerJob), outerJob, repeatingDelay, token]
             (const boost::system::error_code& error) mutable

@@ -6,28 +6,71 @@
  */
 
 #include "CommunicationPostHandler.hxx"
-#include "shared/ErpRequirements.hxx"
-#include "shared/network/message/MimeType.hxx"
+#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/CommunicationPayload.hxx"
+#include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvMedicationBase.hxx"
-#include "shared/model/ResourceNames.hxx"
+#include "erp/model/KbvMedicationRequest.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/service/SubscriptionPostHandler.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/network/message/MimeType.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/server/response/ServerResponse.hxx"
-#include "erp/service/SubscriptionPostHandler.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/TLog.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
 
 
 
 using namespace model;
 using namespace model::resource;
+
+namespace
+{
+
+void checkTaskReadyNotExpiredAndMvoAlreadyStarted(const Task& task, const std::optional<Binary>& healthCareProviderPrescription)
+{
+    A_26320.start("task must be ready for DispReq");
+    ErpExpect(task.status() == Task::Status::ready, HttpStatus::BadRequest, "Task has invalid status.");
+    A_26320.finish();
+
+    A_26321.start("Task must not have expired.");
+    const auto today = Timestamp::fromGermanDate(Timestamp::now().toGermanDate());
+    ErpExpect(task.expiryDate() >= today, HttpStatus::BadRequest, "Task is expired.");
+    A_26321.finish();
+
+    A_26327.start("Task MVO must have valid start date");
+    if (healthCareProviderPrescription.has_value())
+    {
+        const auto cadesBesSignature =
+            SignedPrescription::fromBinNoVerify(std::string{*healthCareProviderPrescription.value().data()});
+        const auto& prescription = cadesBesSignature.payload();
+        const auto prescriptionBundle = model::KbvBundle::fromXmlNoValidation(prescription);
+        const auto& medicationRequests = prescriptionBundle.getResourcesByType<model::KbvMedicationRequest>();
+        if (! medicationRequests.empty())
+        {
+            const auto& medicationRequest = medicationRequests[0];
+            const auto mvoExtension = medicationRequest.getExtension<model::KBVMultiplePrescription>();
+
+            if (medicationRequest.isMultiplePrescription())
+            {
+                const auto start = mvoExtension->startDate();
+                ErpExpect(start.value() <= today, HttpStatus::BadRequest, "Prescription is not fillable yet.");
+            }
+        }
+    }
+    A_26327.finish();
+}
+
+}
 
 CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
     : ErpRequestHandler(Operation::POST_Communication, allowedProfessionOiDs)
@@ -35,6 +78,8 @@ CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<s
           Configuration::instance().getIntValue(ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES)))
 {
 }
+
+
 // GEMREQ-start A_19450-01#deserialize
 void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 {
@@ -85,12 +130,16 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             messageType == Communication::MessageType::Representative)
         {
             A_21371_02.start("check existence of task");
-            auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
+            auto [taskAndKey, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
             ErpExpect(taskAndKey.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
             A_21371_02.finish();
 
             task = std::move(taskAndKey->task);
             taskKvnr = task->kvnr();
+            if (messageType == Communication::MessageType::DispReq)
+            {
+                checkTaskReadyNotExpiredAndMvoAlreadyStarted(*task, healthCareProviderPrescription);
+            }
             ErpExpect(taskKvnr.has_value(), HttpStatus::BadRequest, "Referenced task does not contain a KVNR");
         }
 

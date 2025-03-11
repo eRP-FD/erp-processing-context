@@ -385,6 +385,7 @@ namespace
             }
 
             // Remember the longest path length, so that the values can be printed at the same column.
+            // NOLINTNEXTLINE(readability-use-std-min-max)
             if (maxPathLength < path.size())
                 maxPathLength = path.size();
 

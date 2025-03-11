@@ -141,11 +141,10 @@ public:
         ErpWorkflowTestTemplate<::testing::TestWithParam<bool>>::SetUp();
     }
 
-    static void forAllTaskTypes(::std::function<void(::model::PrescriptionType)>&& action)//NOLINT(readability-function-cognitive-complexity)
+    static void forAllTaskTypes(
+        ::std::function<void(::model::PrescriptionType)>&& action)//NOLINT(readability-function-cognitive-complexity)
     {
-        for (auto taskType :
-             {::model::PrescriptionType::apothekenpflichigeArzneimittel, ::model::PrescriptionType::direkteZuweisung,
-              ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv})
+        for (auto taskType : magic_enum::enum_values<::model::PrescriptionType>())
         {
             ASSERT_NO_FATAL_FAILURE(action(taskType));
         }
@@ -289,7 +288,7 @@ public:
                 break;
             }
             case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
-                [[fallthrough]];
+            case ::model::PrescriptionType::digitaleGesundheitsanwendungen:
             case ::model::PrescriptionType::direkteZuweisung:
                 break;
         }
@@ -339,7 +338,7 @@ public:
                 break;
             }
             case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
-                [[fallthrough]];
+            case ::model::PrescriptionType::digitaleGesundheitsanwendungen:
             case ::model::PrescriptionType::direkteZuweisung:
                 break;
         }

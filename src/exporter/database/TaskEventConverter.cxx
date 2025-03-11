@@ -6,10 +6,12 @@
  */
 
 #include "exporter/database/TaskEventConverter.hxx"
+#include "exporter/model/HashedKvnr.hxx"
 #include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/model/Binary.hxx"
 #include "shared/crypto/Jwt.hxx"
 #include "shared/util/JsonLog.hxx"
+
 
 TaskEventConverter::TaskEventConverter(const DataBaseCodec& codec, const TelematikLookup& telematikLookup)
     : mCodec(codec)
@@ -27,8 +29,10 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
            "missing healthproviderprescription in ProvidePrescription taskevent");
 
 
-    const auto kvnr = model::Kvnr(std::string{mCodec.decode(dbTaskEvent.kvnr, key)});
-    std::string hashedKvnr(reinterpret_cast<const char*>(dbTaskEvent.hashedKvnr.data()), dbTaskEvent.hashedKvnr.size());
+    const auto kvnr = model::Kvnr(std::string_view{mCodec.decode(dbTaskEvent.kvnr, key)});
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    std::string hashedKvnrString(reinterpret_cast<const char*>(dbTaskEvent.hashedKvnr.data()), dbTaskEvent.hashedKvnr.size());
+    model::HashedKvnr hashedKvnr(dbTaskEvent.hashedKvnr);
 
     const auto usecase = magic_enum::enum_cast<model::TaskEvent::UseCase>(dbTaskEvent.usecase);
     Expect(usecase.has_value(), "unknown usecase value");
@@ -61,31 +65,30 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
                 }
                 else
                 {
-                    LogId logId = LogId::INFO;
-                    JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
-                    log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
-                        .keyValue("event",
-                                  "For the given subject serial number of prescription signature certificate, no "
-                                  "mapping is defined in SerNo2TID.")
-                        .keyValue("issuer", cadesBesSignature.getIssuer());
+                    JsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), false)
+                        << hashedKvnr
+                        << KeyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                        << KeyValue("event",
+                                    "For the given subject serial number of prescription signature certificate, no "
+                                    "mapping is defined in SerNo2TID.")
+                        << KeyValue("issuer", cadesBesSignature.getIssuer());
                 }
             }
             else
             {
-                LogId logId = LogId::INFO;
-                JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
-                log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
-                    .keyValue("event", "No subject serial number present in the prescription signature certificate.")
-                    .keyValue("issuer", cadesBesSignature.getIssuer());
+                JsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), false)
+                    << hashedKvnr
+                    << KeyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                    << KeyValue("event", "No subject serial number present in the prescription signature certificate.")
+                    << KeyValue("issuer", cadesBesSignature.getIssuer());
             }
         }
         catch (std::exception& e)
         {
-            LogId logId = LogId::INFO;
-            JsonLog log(logId, JsonLog::makeWarningLogReceiver(), false);
-            log.keyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
-                .keyValue("event", "Error encountered during extraction or mapping of SerialNumber.")
-                .keyValue("issuer", cadesBesSignature.getIssuer());
+            JsonLog(LogId::INFO, JsonLog::makeWarningLogReceiver(), false)
+                << hashedKvnr << KeyValue("prescription_id", dbTaskEvent.prescriptionId.toString())
+                << KeyValue("event", "Error encountered during extraction or mapping of SerialNumber.")
+                << KeyValue("issuer", cadesBesSignature.getIssuer());
         }
     }
     const auto& prescription = cadesBesSignature.payload();
@@ -94,20 +97,20 @@ std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::Ta
     switch (*usecase)
     {
         case model::TaskEvent::UseCase::providePrescription:
-            result = convertProvidePrescriptionTaskEvent(dbTaskEvent, key, *prescriptionType, kvnr, hashedKvnr,
+            result = convertProvidePrescriptionTaskEvent(dbTaskEvent, key, *prescriptionType, kvnr, hashedKvnrString,
                                                          *usecase, *state, qesTelematikId, std::move(bundle));
             break;
         case model::TaskEvent::UseCase::provideDispensation:
             result =
                 convertProvideDispensationTaskEvent(dbTaskEvent, key, medicationDispenseKey, *prescriptionType, kvnr,
-                                                    hashedKvnr, *usecase, *state, qesTelematikId, std::move(bundle));
+                                                    hashedKvnrString, *usecase, *state, qesTelematikId, std::move(bundle));
             break;
         case model::TaskEvent::UseCase::cancelPrescription:
-            result = convertCancelPrescriptionTaskEvent(dbTaskEvent, *prescriptionType, kvnr, hashedKvnr, *usecase,
+            result = convertCancelPrescriptionTaskEvent(dbTaskEvent, *prescriptionType, kvnr, hashedKvnrString, *usecase,
                                                         *state, std::move(bundle));
             break;
         case model::TaskEvent::UseCase::cancelDispensation:
-            result = convertCancelDispensationTaskEvent(dbTaskEvent, *prescriptionType, kvnr, hashedKvnr, *usecase,
+            result = convertCancelDispensationTaskEvent(dbTaskEvent, *prescriptionType, kvnr, hashedKvnrString, *usecase,
                                                         *state, std::move(bundle));
             break;
     }

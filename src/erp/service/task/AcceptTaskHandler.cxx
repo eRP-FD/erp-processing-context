@@ -27,8 +27,8 @@
 #include <date/tz.h>
 
 
-AcceptTaskHandler::AcceptTaskHandler (const std::initializer_list<std::string_view>& allowedProfessionOiDs)
-    : TaskHandlerBase(Operation::POST_Task_id_accept, allowedProfessionOiDs)
+AcceptTaskHandler::AcceptTaskHandler(const OIDsByWorkflow& allowedProfessionOiDsByWorkflow)
+    : TaskHandlerBase(Operation::POST_Task_id_accept, allowedProfessionOiDsByWorkflow)
 {
 }
 
@@ -99,6 +99,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv: {

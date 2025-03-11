@@ -30,7 +30,8 @@ class TaskHandlerBase
     : public ErpRequestHandler
 {
 public:
-    TaskHandlerBase (Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOIDs);
+    TaskHandlerBase(Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOIDs);
+    TaskHandlerBase(Operation operation, const OIDsByWorkflow& allowedProfessionOiDsByWorkflow);
 
 
 protected:

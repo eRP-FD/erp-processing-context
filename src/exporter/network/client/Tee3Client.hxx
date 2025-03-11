@@ -9,6 +9,7 @@
 
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/network/client/CoHttpsClient.hxx"
+#include "library/crypto/tee3/Tee3Context.hxx"
 
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/strand.hpp>
@@ -18,8 +19,6 @@ namespace epa
 {
 class BinaryBuffer;
 class ClientTeeHandshake;
-struct Tee3Context;
-class Tee3SessionContext;
 }
 
 class Certificate;
@@ -37,7 +36,9 @@ public:
     using Resolver = CoHttpsClient::Resolver;
     static constexpr std::chrono::steady_clock::duration retryTimeout = std::chrono::minutes{1};
     static constexpr std::chrono::steady_clock::duration maxRetryTimeout = std::chrono::minutes{10};
+    // GEMREQ-start A_15549#timeoutValue
     static constexpr auto teeContextTimeout = std::chrono::hours{24};
+    // GEMREQ-end A_15549#timeoutValue
     // additional error codes that can occur in TEE 3 handshake or during sendInner
     // other boost::asio error codes related to tcp and ssl can also occur
     enum class error
@@ -54,7 +55,8 @@ public:
 
     [[nodiscard]] boost::asio::awaitable<void> ensureConnected();
 
-    [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendInner(Request request, std::unordered_map<std::string, std::any>& logDataBag);
+    [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>>
+    sendInner(Request request, std::unordered_map<std::string, std::any> logDataBag);
 
 
     static const boost::system::error_category& errorCategory();
@@ -78,7 +80,7 @@ private:
 
     bool needHandshake();
 
-    [[nodiscard]] boost::asio::awaitable<boost::system::error_code> authorize(HsmPool& hsmPool);
+    [[nodiscard]] boost::asio::awaitable<boost::system::error_code> authorize(gsl::not_null<HsmPool*> hsmPool);
 
     /// perform a tee3 handshake followed by authorization calls
     boost::asio::awaitable<boost::system::error_code> handshakeWithAuthorization();
@@ -94,13 +96,14 @@ private:
     class Tee3ErrorCategory;
 
     boost::asio::awaitable<std::string> getFreshness();
-    boost::asio::awaitable<std::string> sendAuthorizationRequest(HsmPool& hsmPool, std::string freshness);
+    boost::asio::awaitable<std::string> sendAuthorizationRequest(gsl::not_null<HsmPool*> hsmPool,
+                                                                 std::string freshness);
 
     [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendOuter(Request request);
 
     static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType,
                                       std::string_view userAgent);
-    Request createEncryptedOuterRequest(Request& innerRequest, epa::Tee3SessionContext& requestContexts);
+    Request createEncryptedOuterRequest(Request& innerRequest, epa::Tee3Context::SessionContexts& sessionContexts);
 
     Certificate provideCertificate(const epa::BinaryBuffer& hash, uint64_t version);
     class TimeoutHelper;
@@ -114,6 +117,7 @@ private:
     EpaCertificateService& mCertificateService;
     std::string mDefaultUserAgent;
     bool mIsAuthorized = false;
+    std::atomic_int64_t mRequestCounter;
 };
 
 namespace boost::system

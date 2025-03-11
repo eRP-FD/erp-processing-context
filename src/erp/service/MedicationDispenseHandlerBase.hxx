@@ -31,7 +31,8 @@ public:
     MedicationDispenseHandlerBase(Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
 protected:
-    static model::MedicationsAndDispenses parseBody(PcSessionContext& session, Operation forOperation);
+    static model::MedicationsAndDispenses parseBody(PcSessionContext& session, Operation forOperation,
+                                                    model::PrescriptionType workflow);
 
     static void checkMedicationDispenses(std::vector<model::MedicationDispense>& medicationDispenses,
                                 const model::PrescriptionId& prescriptionId, const model::Kvnr& kvnr,
@@ -45,7 +46,9 @@ private:
     static model::MedicationDispense medicationDispensesSingle(UnspecifiedResourceFactory&& unspec);
     static std::vector<model::MedicationDispense> medicationDispensesFromBundle(UnspecifiedResourceFactory&& unspec);
     static model::ProfileType parameterTypeFor(Operation operation);
-    static model::MedicationsAndDispenses medicationDispensesFromParameters(UnspecifiedResourceFactory&& unspec, Operation forOperation);
+    static model::MedicationsAndDispenses medicationDispensesFromParameters(UnspecifiedResourceFactory&& unspec,
+                                                                            Operation forOperation,
+                                                                            model::PrescriptionType workflow);
 };
 
 #endif

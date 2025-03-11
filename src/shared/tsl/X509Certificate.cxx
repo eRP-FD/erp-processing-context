@@ -355,7 +355,9 @@ namespace
             // Find index within X509_NAME.
             index = X509_NAME_get_index_by_NID(&name, nid, index);
             if (index == -1)
+            {
                 return std::string{};
+            }
 
             // Get the ASN.1 string for this field (not necessarily UTF-8).
             const X509_NAME_ENTRY* entryData = X509_NAME_get_entry(&name, index);
@@ -367,13 +369,18 @@ namespace
             unsigned char* utf8Bytes = nullptr;
             auto size = ASN1_STRING_to_UTF8(&utf8Bytes, string);
             if (size < 0)
+            {
                 return std::string{};
+            }
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
             std::string candidateString{reinterpret_cast<char*>(utf8Bytes),
                                         gsl::narrow<std::string::size_type>(size)};
             OPENSSL_free(utf8Bytes);
 
             if (std::regex_match(candidateString, pattern))
+            {
                 return candidateString;
+            }
         }
     }
 }

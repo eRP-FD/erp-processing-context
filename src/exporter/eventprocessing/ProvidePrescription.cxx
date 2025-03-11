@@ -32,7 +32,7 @@ ProvidePrescription::ProvidePrescription(gsl::not_null<IEpaMedicationClient*> me
 Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent& taskEvent) const
 {
     const auto& kbvBundle = taskEvent.getKbvBundle();
-    if (!taskEvent.getQesDoctorId().has_value())
+    if (! taskEvent.getQesDoctorId().has_value())
     {
         return Outcome::DeadLetter;
     }
@@ -61,9 +61,9 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
                 case MEDICATIONSVC_PRESCRIPTION_DUPLICATE:
                 case MEDICATIONSVC_PRESCRIPTION_STATUS:
                     logWarning(taskEvent)
-                        .keyValue("event", "Processing task event: Unexpected operation outcome")
-                        .keyValue("reason",
-                                  "EPAOperationOutcome code: " + std::string(magic_enum::enum_name(issue.detailsCode)));
+                        << KeyValue("event", "Processing task event: Unexpected operation outcome")
+                        << KeyValue("reason", "EPAOperationOutcome code: " +
+                                                  std::string(magic_enum::enum_name(issue.detailsCode)));
                     break;
                 case SVC_IDENTITY_MISMATCH:
                 case MEDICATIONSVC_NO_VALID_STRUCTURE:
@@ -75,9 +75,9 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
                 case MEDICATIONSVC_DISPENSATION_STATUS:
                 case GENERIC_OPERATION_OUTCOME_CODE:
                     logError(taskEvent)
-                        .keyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")
-                        .keyValue("reason", "unexpected operation outcome from Medication Client: " +
-                                                std::string(magic_enum::enum_name(issue.detailsCode)));
+                        << KeyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")
+                        << KeyValue("reason", "unexpected operation outcome from Medication Client: " +
+                                                  std::string(magic_enum::enum_name(issue.detailsCode)));
                     outcome = Outcome::DeadLetter;
                     break;
             }

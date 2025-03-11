@@ -53,9 +53,22 @@ JWT::JWT(std::string jwt)
     // GEMREQ-end A_20362#header
     mSignature = parts[2];
 
-    const rapidjson::ParseResult result = mClaims.Parse(Base64::decodeToString(mPayload));
-    if (result.IsError())
+    try
     {
+        const rapidjson::ParseResult result = mClaims.Parse(Base64::decodeToString(mPayload));
+        if (result.IsError())
+        {
+            Fail2("Pre-verification failed - erroneous claims document.", JwtInvalidFormatException);
+        }
+    }
+    catch (const std::runtime_error& re)
+    {
+        TVLOG(1) << re.what();
+        Fail2("Pre-verification failed - erroneous claims document.", JwtInvalidFormatException);
+    }
+    catch (const std::invalid_argument& ia)
+    {
+        TVLOG(1) << ia.what();
         Fail2("Pre-verification failed - erroneous claims document.", JwtInvalidFormatException);
     }
     A_19993_01.finish();

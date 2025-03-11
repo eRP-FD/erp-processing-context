@@ -63,7 +63,7 @@ public:
     float getQFactorWeight() const;
 
 private:
-    float mQFactorWeight;
+    float mQFactorWeight{1.f};
 };
 
 class ContentMimeType : public MimeType

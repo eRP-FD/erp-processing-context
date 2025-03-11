@@ -19,6 +19,7 @@ void MockChargeItemTable::storeChargeInformation(const ::db_model::ChargeItem& c
 
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
             Fail2("MockDatabase::storeChargeInformation(...) called with wrong prescription type: " +
                       chargeItem.prescriptionId.toString(),
                   std::logic_error);

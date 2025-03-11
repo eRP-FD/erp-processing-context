@@ -39,7 +39,7 @@ namespace {
         EncryptionResult finalize (void);
 
     private:
-        int mOffset;
+        int mOffset{0};
         std::string mCiphertext;
         unique_cipher_context mCipherContext;
     };
@@ -61,13 +61,15 @@ namespace {
         SafeString finalize (void);
 
     private:
-        int mOffset;
+        int mOffset{0};
         SafeString mPlaintext;
         unique_cipher_context mCipherContext;
     };
 }
 
 
+namespace
+{
 /**
  * The openSSL documentation does not make a statement about whether the pointer returned by EVP_aes_*_gcm has to be
  * freed. Therefore we assume that it does not.
@@ -94,6 +96,7 @@ const evp_cipher_st* encryptionCipher()
 {
     Fail("encryptionCipher() not implemented for " + std::to_string(KeyLengthBits));
 }
+}
 
 
 template <size_t KeyLengthBits>
@@ -101,8 +104,7 @@ Encryptor<KeyLengthBits>::Encryptor (
     size_t plaintextLength,
     const SafeString& symmetricKey,
     const std::string_view& iv)
-    : mOffset(0),
-      mCiphertext(plaintextLength, 'X'),
+    : mCiphertext(plaintextLength, 'X'),
       mCipherContext(createCipherContext())
 {
     Expect3(symmetricKey.size() == AesGcm<KeyLengthBits>::KeyLength,
@@ -173,8 +175,7 @@ Decryptor<KeyLengthBits>::Decryptor (
     const SafeString& symmetricKey,
     const std::string_view& iv,
     const std::string_view& authenticationTag)
-    : mOffset(0),
-      mPlaintext(std::string(plaintextLength, 'X')),
+    : mPlaintext(std::string(plaintextLength, 'X')),
       mCipherContext(createCipherContext())
 {
     Expect3(symmetricKey.size() == AesGcm<KeyLengthBits>::KeyLength,
@@ -184,7 +185,6 @@ Decryptor<KeyLengthBits>::Decryptor (
     Expect3(iv.size() == AesGcm<KeyLengthBits>::IvLength, "invalid IV length", AesGcmException);
     Expect3(authenticationTag.size() == AesGcm<KeyLengthBits>::AuthenticationTagLength,
             "authentication tag has invalid length", AesGcmException);
-
     int status = EVP_DecryptInit_ex(
         mCipherContext.get(),
         encryptionCipher<KeyLengthBits>(),

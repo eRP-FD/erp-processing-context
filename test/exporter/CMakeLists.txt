@@ -28,5 +28,10 @@ add_executable(exporter-test
         ../util/JwtBuilder.cxx
 )
 
-target_link_libraries(exporter-test erp-medication-exporter-files CONAN_PKG::gtest erp-test-util-lib
-        )
+target_link_libraries(
+    exporter-test
+        erp-medication-exporter-files
+        erp-hsm-tpm-mock
+        gtest::gtest
+        erp-test-util-lib
+)

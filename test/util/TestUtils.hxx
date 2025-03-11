@@ -62,6 +62,8 @@ public:
 
     ShiftFhirResourceViewsGuard(const AsConfiguredTag&);
     ShiftFhirResourceViewsGuard(const std::string& viewId, const fhirtools::Date& startDate);
+    static std::chrono::days calculateOffset(const std::string& viewId, const fhirtools::Date& startDate);
+    ShiftFhirResourceViewsGuard(const std::chrono::days& offset);
     ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate);
 
 private:

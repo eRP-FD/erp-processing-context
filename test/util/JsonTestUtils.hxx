@@ -25,6 +25,7 @@ std::string jsonToString(const rapidjson::Document& json);
 enum class ActorRole // see  TAB_SYSLERP_048 Fachliche Rollen in gemSysL_eRp_V1.1.0
 {
     Insurant,       // Versicherter
+    PkvInsurant,    // Versicherter
     Representative, // Vertreter
     Doctor,         // Verordnende Akteure - Arzt, Zahnarzt (here also the staff of the medical institution)
     Pharmacists     // Abgebende Akteure - Apotheker und pharmazeutisches Personal
@@ -63,6 +64,9 @@ public:
     ~CommunicationJsonStringBuilder();
 
 private:
+    std::string senderIdentifierType() const;
+    std::string receipientIdentifierType() const;
+
     model::Communication::MessageType                 mMessageType;       // ["InfoReq", "ChargChangeReq", "ChargChangeReply", "Reply", "DispReq", "Representative"]
     std::optional<std::string>                        mPrescriptionId;    // e.g. "160.123.456.789.123.58"
     std::optional<std::string>                        mAccessCode;        // e.g. "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"

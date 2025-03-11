@@ -20,7 +20,9 @@ public:
 
     virtual void preHandleRequestHook(BaseSessionContext&) {};
     virtual void handleRequest (BaseSessionContext& session) = 0;
-    [[nodiscard]] virtual bool allowedForProfessionOID(std::string_view professionOid) const = 0;
+    [[nodiscard]] virtual bool
+    allowedForProfessionOID(std::string_view professionOid,
+                            const std::optional<std::string>& optionalPathIdParameter) const = 0;
     virtual Operation getOperation (void) const = 0;
 };
 

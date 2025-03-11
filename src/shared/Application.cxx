@@ -18,6 +18,7 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <cstdlib>
 #include <iostream>
+#include <span>
 
 
 namespace
@@ -51,10 +52,11 @@ int Application::MainFn(const int argc, const char* argv[], const std::string& n
 
     try
         {
+            auto args = std::span(argv, size_t(argc));
             processCommandLine(argc, argv);
-            GLogConfiguration::init_logging(argv[0]);
+            GLogConfiguration::initLogging(args[0]);
             ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
-            CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE, SIGPIPE});
+            CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE});
 
             TLOG(INFO) << "Starting " << name << " " << ErpServerInfo::ReleaseVersion()
                        << " (build: " << ErpServerInfo::BuildVersion() << "; " << ErpServerInfo::ReleaseDate() << ")";

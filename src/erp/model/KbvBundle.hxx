@@ -27,6 +27,9 @@ public:
     void additionalValidation() const override;
 
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
+
+    // authoredOn from MedicationRequest entry
+    [[nodiscard]] model::Timestamp authoredOn() const;
 };
 
 extern template class BundleBase<KbvBundle>;

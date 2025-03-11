@@ -52,8 +52,8 @@ char VsdmHmacKey::version() const
 
 void VsdmHmacKey::deleteKeyInformation()
 {
-    rapidjson::Pointer(jsonKey::encryptedKey.data()).Erase(mDocument);
-    rapidjson::Pointer(jsonKey::clearTextKey.data()).Erase(mDocument);
+    rapidjson::Pointer(jsonKey::encryptedKey.begin(), jsonKey::encryptedKey.size()).Erase(mDocument);
+    rapidjson::Pointer(jsonKey::clearTextKey.begin(), jsonKey::clearTextKey.size()).Erase(mDocument);
 }
 
 SafeString VsdmHmacKey::decryptHmacKey(HsmSession& hsmSession, bool validate) const

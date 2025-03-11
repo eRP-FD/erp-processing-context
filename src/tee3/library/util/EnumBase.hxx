@@ -72,6 +72,7 @@ public:
     }
 
 protected:
+    EnumBase() = default;
     // Prevent anyone from deleting a derived enum instance through an EnumBase pointer.
     ~EnumBase() = default;
 };

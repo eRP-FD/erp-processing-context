@@ -19,6 +19,7 @@
 
 static constexpr int internalTerminationSignal = SIGUSR1;
 
+
 void SignalHandler::registerSignalHandlers(const std::vector<int>& signals)
 {
     for (const int signal : signals)
@@ -28,11 +29,17 @@ void SignalHandler::registerSignalHandlers(const std::vector<int>& signals)
     mSignalSet.async_wait(
         [this](boost::system::error_code const&, const int signal)
         {
+
             mSignal = signal;
             // Stop the `io_context`. This will cause `run()` to return immediately.
             std::cerr << "received signal " << signal << ", stopping io_context" << std::endl;
             mIoContext.stop();
         });
+
+    if (::signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+    {
+        TLOG(ERROR) << "SIGPIPE handler not installed.";
+    }
 }
 
 

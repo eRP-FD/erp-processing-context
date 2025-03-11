@@ -40,6 +40,9 @@ public:
     JWT makeJwtVersicherter(const model::Kvnr& kvnr);
 
     [[nodiscard]]
+    JWT makeJwtKostentraeger(const std::optional<std::string>& telematicId = std::nullopt);
+
+    [[nodiscard]]
     JWT getJWT(const rapidjson::Document& claims);
 
     [[nodiscard]]

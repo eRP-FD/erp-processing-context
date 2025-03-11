@@ -7,6 +7,15 @@
 
 project(test)
 
+find_package(Boost REQUIRED)
+find_package(GTest REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(libxml2 REQUIRED)
+find_package(magic_enum REQUIRED)
+
 include(GoogleTest)
 enable_testing()
 
@@ -31,15 +40,15 @@ set(ERP_TEST_UTIL_SOURCES
 add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
 target_link_libraries(erp-test-util-lib
         PUBLIC
-        CONAN_PKG::date
-        CONAN_PKG::glog
-        CONAN_PKG::gtest
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::libxml2
-        CONAN_PKG::rapidjson
-        CONAN_PKG::magic_enum
-        CONAN_PKG::boost
-        CONAN_PKG::openssl
+        date::date
+        glog::glog
+        GTest::gtest
+        gsl::gsl-lite
+        LibXml2::LibXml2
+        rapidjson
+        magic_enum::magic_enum
+        boost::boost
+        openssl::openssl
         )
 target_include_directories(erp-test-util-lib
         PRIVATE
@@ -112,10 +121,10 @@ target_link_libraries(erp-test-lib
     PUBLIC
         erp-tool-lib
         erp-test-util-lib
-        CONAN_PKG::glog
-        CONAN_PKG::gtest
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::rapidjson
+        glog::glog
+        GTest::gtest
+        gsl::gsl-lite
+        rapidjson
     )
 target_include_directories(erp-test-lib
     PUBLIC
@@ -167,6 +176,7 @@ list(
         erp/crypto/SecureRandomGeneratorTest.cxx
         erp/crypto/SeederTest.cxx
         erp/crypto/Sha256Test.cxx
+        erp/crypto/VsdmProof2Test.cxx
         erp/database/ConsentTableTest.cxx
         erp/database/DatabaseCodecTest.cxx
         erp/database/DatabaseEncryptionTest.cxx
@@ -210,6 +220,7 @@ list(
         erp/model/ConsentTest.cxx
         erp/model/DeviceTest.cxx
         erp/model/ErxReceiptTest.cxx
+        erp/model/EvdgaBundleTest.cxx
         erp/model/ExtensionTest.cxx
         erp/model/GemErpPrMedicationTest.cxx
         erp/model/JsonCanonicalizationTest.cxx
@@ -225,6 +236,7 @@ list(
         erp/model/ParameterTest.cxx
         erp/model/PatientTest.cxx
         erp/model/PrescriptionIdTest.cxx
+        erp/model/PrescriptionTypeTest.cxx
         erp/model/ResourceTest.cxx
         erp/model/SignatureTest.cxx
         erp/model/SubscriptionTest.cxx
@@ -390,7 +402,7 @@ target_link_libraries ( erp-test
         erp-tool-lib
         erp-processing-context-files
         enrolment-api-client
-        CONAN_PKG::gtest
+        GTest::gtest
 )
 
 add_test(
@@ -445,7 +457,7 @@ target_link_libraries (
         erp-tool-lib
         erp-processing-context-files
         enrolment-api-client
-        CONAN_PKG::gtest
+        GTest::gtest
         )
 
 add_custom_target(test DEPENDS erp-test erp-integration-test erp-connection-test exporter-test resources)

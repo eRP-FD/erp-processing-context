@@ -86,7 +86,6 @@ BaseServerSession::BaseServerSession (
     : mSslStream(SslStream::create(std::move(socket), context)),
       mResponseKeepAlive(),
       mSerializerKeepAlive(),
-      mIsStreamClosedOrClosing(false),
       mRequestHandler(std::move(requestHandler))
 {
 }
@@ -151,6 +150,8 @@ void BaseServerSession::onTlsHandshakeComplete (boost::beast::error_code ec)
                 // This is an openssl error code which is used for HTTP only (no S) requests.
                 // It is unknown if there is a symbolic definition for this error code somewhere.
                 TLOG(ERROR) << "HTTP requests without TLS are not supported";
+                break;
+            default:
                 break;
         }
         // Regard any error at this stage as not recoverable.

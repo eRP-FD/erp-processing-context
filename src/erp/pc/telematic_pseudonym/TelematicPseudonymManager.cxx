@@ -39,7 +39,7 @@ void TelematicPseudonymManager::LoadCmacs(const date::sys_days& forDay)
     const auto quarter = (static_cast<unsigned>(today.month()) + 2) / 3;
 
     // Beginning of quarter - key1 is valid.
-    mKey1Start = year_month_day(day{1} / month{quarter * 3 - 2} / today.year());
+    mKey1Start = year_month_day(day{1} / month{(quarter * 3) - 2} / today.year());
     // End of quarter - key1 and key2 are valid for last day of quarter and first day of next quarter.
     mKey1End = year_month_day(last / month{quarter * 3} / today.year());
 

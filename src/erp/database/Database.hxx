@@ -31,7 +31,7 @@ class Communication;
 class Consent;
 class ErxReceipt;
 class Kvnr;
-class MedicationDispense;
+class MedicationDispense; // NOLINT(bugprone-forward-declaration-namespace)
 class MedicationDispenseBundle;
 class MedicationDispenseId;
 class MedicationsAndDispenses;
@@ -58,7 +58,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "29";
+    static constexpr const char* expectedSchemaVersion = "30";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey

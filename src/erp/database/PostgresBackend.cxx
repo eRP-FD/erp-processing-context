@@ -157,6 +157,7 @@ thread_local PostgresConnection PostgresBackend::mConnection{PostgresConnection:
 PostgresBackend::PostgresBackend (void)
     : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
     , mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
+    , mBackendTask162(model::PrescriptionType::digitaleGesundheitsanwendungen)
     , mBackendTask169(model::PrescriptionType::direkteZuweisung)
     , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
     , mBackendTask209(model::PrescriptionType::direkteZuweisungPkv)
@@ -931,6 +932,8 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
             return mBackendTask;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            return mBackendTask162;
         case model::PrescriptionType::direkteZuweisung:
             return mBackendTask169;
         case model::PrescriptionType::direkteZuweisungPkv:

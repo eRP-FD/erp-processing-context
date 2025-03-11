@@ -129,3 +129,21 @@ TEST_F(BoostBeastStringReaderTest, parseRequest_failForOversizedHeader)
     ASSERT_ANY_THROW(
         BoostBeastStringReader::parseRequest(request));
 }
+
+TEST_F(BoostBeastStringReaderTest, parseRequestBadEscape)
+{
+    try
+    {
+        const std::string request =
+           "GET /bad/escape/sequence/%xy HTTP/1.1\r\n"
+           "Content-Type: text\r\n"
+           "Content-Length: 16\r\n"
+           "\r\n"
+           "this is the body";
+        BoostBeastStringReader::parseRequest(request);
+    } catch (const ErpException& e)
+    {
+        ASSERT_EQ(std::string{e.what()}, "Failed to unescape URL");
+        ASSERT_EQ(e.diagnostics().value(), "what(): invalid nibble value URL=/bad/escape/sequence/%xy");
+    }
+}

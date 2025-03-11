@@ -1,14 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 
 #include "erp/service/task/GetTaskHandler.hxx"
+#include "erp/crypto/VsdmProof.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/audit/AuditEventCreator.hxx"
@@ -17,9 +19,9 @@
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Hash.hxx"
-#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/util/String.hxx"
 #include "shared/xml/XmlDocument.hxx"
+#include "erp/database/redis/TaskRateLimiter.hxx"
 
 
 namespace
@@ -30,8 +32,9 @@ constexpr std::string_view xPathExpression_TSText = "/ns:PN/ns:TS/text()";
 constexpr std::string_view xPathExpression_EText = "/ns:PN/ns:E/text()";
 constexpr std::string_view xPathExpression_PZText = "/ns:PN/ns:PZ/text()";
 
+
 // GEMREQ-start proofContent
-struct ProofContent
+struct ProofContentV1
 {
     model::Kvnr kvnr{""};
     std::optional<model::Timestamp> timestamp;
@@ -39,14 +42,8 @@ struct ProofContent
     char keyVersion{};
     std::string truncatedHmac{};
     std::string validationDataForHash;
-};
 
-struct ProofInformation {
-    model::Timestamp timestamp;
-    std::string result{};
-    // Base64 encoded data
-    std::optional<std::string> proofContentBase64;
-    std::optional<ProofContent> proofContent;
+    static ProofContentV1 deserialize(std::string_view validationData);
 
     static constexpr std::size_t posVsdmKeyOperatorId = 21;
     static constexpr std::size_t posVsdmKeyVersion = 22;
@@ -59,30 +56,57 @@ struct ProofInformation {
 };
 // GEMREQ-end proofContent
 
-ProofContent extractProofContent(std::string_view proofContentBase64)
+ProofContentV1 ProofContentV1::deserialize(std::string_view validationData)
 {
-    const auto validationDataBinary = Base64::decodeToString(proofContentBase64);
-    ErpExpect(validationDataBinary.size() == ProofInformation::dataSize + ProofInformation::truncatedHmacSize,
-              HttpStatus::Forbidden, "Invalid size of Prüfziffer");
-    std::string_view validationData{validationDataBinary};
+    ProofContentV1 proofContent;
+    proofContent.kvnr = model::Kvnr{validationData.substr(0, ProofContentV1::kvnrSize)};
+    proofContent.keyOperatorId = validationData[ProofContentV1::posVsdmKeyOperatorId];
+    proofContent.keyVersion = validationData[ProofContentV1::posVsdmKeyVersion];
 
-    ProofContent proofContent;
-    proofContent.kvnr = model::Kvnr{validationData.substr(0, ProofInformation::kvnrSize)};
-    proofContent.keyOperatorId = validationData[ProofInformation::posVsdmKeyOperatorId];
-    proofContent.keyVersion = validationData[ProofInformation::posVsdmKeyVersion];
-
-    std::string_view timestampStr = validationData.substr(ProofInformation::kvnrSize, ProofInformation::timestampSize);
+    std::string_view timestampStr = validationData.substr(ProofContentV1::kvnrSize, ProofContentV1::timestampSize);
     std::uint32_t unixTimestamp{};
     const auto* endPtr = timestampStr.data() + timestampStr.size();
-    auto res = std::from_chars(timestampStr.data(), endPtr, unixTimestamp);
+    auto res = std::from_chars(timestampStr.begin(), endPtr, unixTimestamp);
     if (res.ec == std::errc() && res.ptr == endPtr)
     {
         proofContent.timestamp = model::Timestamp(static_cast<int64_t>(unixTimestamp));
     }
-    proofContent.truncatedHmac = validationData.substr(ProofInformation::dataSize, ProofInformation::truncatedHmacSize);
-    proofContent.validationDataForHash = validationData.substr(0, ProofInformation::dataSize);
-
+    proofContent.truncatedHmac = validationData.substr(ProofContentV1::dataSize, ProofContentV1::truncatedHmacSize);
+    proofContent.validationDataForHash = validationData.substr(0, ProofContentV1::dataSize);
     return proofContent;
+}
+
+
+using ProofContent = std::variant<ProofContentV1, VsdmProof2>;
+struct ProofInformation {
+    model::Timestamp timestamp;
+    std::string result;
+    // Base64 encoded data
+    std::optional<std::string> proofContentBase64;
+    std::optional<ProofContent> proofContent;
+    static constexpr auto proofContentSizeBase64 = 64;
+};
+
+
+ProofContent extractProofContent(std::string_view proofContentBase64)
+{
+    // GEMREQ-start A_27279#pzBase64
+    ErpExpect(proofContentBase64.size() == ProofInformation::proofContentSizeBase64, HttpStatus::Forbidden,
+              "Invalid size of Prüfziffer");
+    const auto validationDataBinary = Base64::decodeToString(proofContentBase64);
+    ErpExpect(validationDataBinary.size() == ProofContentV1::dataSize + ProofContentV1::truncatedHmacSize,
+              HttpStatus::Forbidden, "Invalid size of Prüfziffer");
+    std::string_view validationData{validationDataBinary};
+    if (validationData[0] >= 'A' && validationData[0] <= 'Z')
+    {
+        return ProofContentV1::deserialize(validationData);
+    }
+    if (static_cast<uint8_t>(validationData[0]) > 128) // NOLINT
+    {
+        return VsdmProof2::deserialize(validationData);
+    }
+    // GEMREQ-end A_27279#pzBase64
+    ErpFail(HttpStatus::Forbidden, "Ungültiges Format der Prüfziffer.");
 }
 
 /**
@@ -103,15 +127,15 @@ ProofInformation parseProofInformation(const SessionContext& context, const std:
             xmlValidator.getSchemaValidationContext(SchemaType::Pruefungsnachweis);
         pnwDocument.validateAgainstSchema(*validatorContext);
 
-        const auto timestamp = pnwDocument.getElementText(xPathExpression_TSText.data());
-        auto pzText = pnwDocument.getOptionalElementText(xPathExpression_PZText.data());
+        const auto timestamp = pnwDocument.getElementText(std::string{xPathExpression_TSText});
+        auto pzText = pnwDocument.getOptionalElementText(std::string{xPathExpression_PZText});
         std::optional<ProofContent> proofContent;
         if (pzText.has_value())
         {
             proofContent = extractProofContent(*pzText);
         }
         return ProofInformation{.timestamp = model::Timestamp::fromDtmDateTime(timestamp),
-                                .result = pnwDocument.getElementText(xPathExpression_EText.data()),
+                                .result = pnwDocument.getElementText(std::string{xPathExpression_EText}),
                                 .proofContentBase64 = std::move(pzText),
                                 .proofContent = std::move(proofContent)};
     }
@@ -144,26 +168,29 @@ ProofInformation proofInformationFromPnw(const SessionContext& context, const st
     return parseProofInformation(context, *ungzippedPnw);
 }
 
-void validateProof(const SessionContext& context, const ProofContent& proofContent)
+void validateProofTimestamp(const SessionContext& context, std::optional<model::Timestamp> timestamp)
 {
     A_23451_01.start("Validate the timestamp");
     // GEMREQ-start A_23451-01#validateTimestamp
     ErpExpectWithDiagnostics(
-        proofContent.timestamp.has_value(), HttpStatus::Forbidden,
+        timestamp.has_value(), HttpStatus::Forbidden,
         "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche Gültigkeit des "
         "Anwesenheitsnachweis überschritten).",
         "Timestamp could not be read");
     const auto& configuration = Configuration::instance();
     std::chrono::seconds proofValidity{configuration.getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS)};
     const auto now = context.sessionTime();
-    const auto timeDifference = std::chrono::abs(*proofContent.timestamp - now);
+    const auto timeDifference = std::chrono::abs(*timestamp - now);
 
     ErpExpect(timeDifference <= proofValidity, HttpStatus::Forbidden,
               "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (Zeitliche Gültigkeit des "
               "Anwesenheitsnachweis überschritten).");
     A_23451_01.finish();
     // GEMREQ-end A_23451-01#validateTimestamp
+}
 
+void validateProofV1(SessionContext& context, const ProofContentV1& proofContent, const model::Kvnr& urlKvnr)
+{
     // GEMREQ-start A_23456-01#calcHmac
     SafeString hmacKey;
     try
@@ -183,7 +210,7 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
     // GEMREQ-end A_23456-01#calcHmac
     // GEMREQ-start A_23456-01#compareHmac
     std::string_view truncatedCalculatedHash{reinterpret_cast<const char*>(calculatedHash.data()),
-                                             ProofInformation::truncatedHmacSize};
+                                             ProofContentV1::truncatedHmacSize};
 
     if (truncatedCalculatedHash != proofContent.truncatedHmac)
     {
@@ -195,6 +222,98 @@ void validateProof(const SessionContext& context, const ProofContent& proofConte
     // GEMREQ-end A_23456-01#compareHmac
     A_23456_01.finish();
     A_23454.finish();
+    try
+    {
+        validateProofTimestamp(context, proofContent.timestamp);
+    }
+    catch (const std::exception&)
+    {
+        context.auditDataCollector()
+            .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
+            .setAction(model::AuditEvent::Action::read)
+            .setInsurantKvnr(proofContent.kvnr);
+
+        throw;
+    }
+    ErpExpect(urlKvnr == proofContent.kvnr, HttpStatus::KvnrMismatch, "KVNR Überprüfung fehlgeschlagen.");
+}
+
+// GEMREQ-start A_27279#decrypt
+void validateProofV2(SessionContext& context, const VsdmProof2& proofContent,
+                     const std::optional<std::string>& urlHcv, const model::Kvnr& urlKvnr,
+                     const std::string& hashedTelematikId)
+{
+    SafeString sharedSecret;
+    std::optional<VsdmProof2::DecryptedProof> decryptedProof;
+    try
+    {
+        // A_27279: step 4, key exists
+        sharedSecret =
+            context.serviceContext.getVsdmKeyCache().getKey(proofContent.keyOperatorId(), proofContent.keyVersion());
+        // A_27279: step 5: can be decrypted
+        decryptedProof = proofContent.decrypt(sharedSecret);
+    }
+    catch (const std::exception& e)
+    {
+        TLOG(WARNING) << e.what();
+        ErpFail(HttpStatus::Forbidden, "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (VSDM "
+                                       "Schlüssel nicht vorhanden oder Inhalte nicht entschlüsselbar).");
+    }
+    Expect(decryptedProof.has_value(), "Decrypted proof missing");
+    // GEMREQ-end A_27279#decrypt
+    // GEMREQ-start A_27279#validate
+    try {
+        // A_27279: step 6: not revoked
+        ErpExpect(! decryptedProof->revoked, HttpStatus::Forbidden, "eGK gesperrt");
+
+        // A_27279: step 7: valid time
+        validateProofTimestamp(context, decryptedProof->iat);
+        // A_27279: step 8: hcv must be equal if passed
+        if (urlHcv.has_value())
+        {
+            std::string hcv;
+            try
+            {
+                hcv = util::bufferToString(Base64::decode(urlHcv.value()));
+            }
+            catch (const std::invalid_argument& ia)
+            {
+                TVLOG(1) << ia.what();
+                ErpFailWithDiagnostics(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.", ia.what());
+            }
+            catch (const std::runtime_error& re)
+            {
+                TVLOG(1) << re.what();
+                ErpFailWithDiagnostics(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.", re.what());
+            }
+            A_27445.start("Check for RejectHcvMismatch and update counter");
+            if (hcv != decryptedProof->hcv)
+            {
+                TaskRateLimiter::updateStatistic(*(context.serviceContext.getRedisClient()), hashedTelematikId);
+                ErpFail(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.");
+            }
+            A_27445.finish();
+        }
+    }
+    catch (const std::exception&)
+    {
+        context.auditDataCollector()
+            .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
+            .setAction(model::AuditEvent::Action::read)
+            .setInsurantKvnr(decryptedProof->kvnr);
+
+        throw;
+    }
+
+    // A_27279: step 9: kvnr is identical to url-kvnr
+    A_27445.start("Check for KvnrMismatch and update counter");
+    if (urlKvnr != decryptedProof->kvnr)
+    {
+        TaskRateLimiter::updateStatistic(*(context.serviceContext.getRedisClient()), hashedTelematikId);
+        ErpFail(HttpStatus::KvnrMismatch, "KVNR Überprüfung fehlgeschlagen.");
+    }
+    A_27445.finish();
+    // GEMREQ-end A_27279#validate
 }
 
 }// namespace
@@ -276,8 +395,31 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
 
 void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
 {
+    const auto& config = Configuration::instance();
     const std::optional<std::string> telematikId = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "No valid Telematik-ID in JWT");
+    const auto hashedTelematikId = session.serviceContext.getKeyDerivation().hashTelematikId(model::TelematikId{telematikId.value()}).toHex();
+
+    A_27446.start("Check for exceeded access counter");
+    ErpExpect(! TaskRateLimiter::isBlockedForToday(*(session.serviceContext.getRedisClient()), hashedTelematikId),
+              HttpStatus::Locked, "TelematikId blocked for today.");
+    A_27446.finish();
+
+    A_25208_01.start("Verify given kvnr parameter is given");
+    const auto kvnrQueryValue = session.request.getQueryParameter("kvnr");
+    ErpExpect(kvnrQueryValue.has_value(), HttpStatus::RejectMissingKvnr,
+              "Ein Prüfnachweis ohne KVNR wird nicht akzeptiert.");
+    A_25208_01.finish();
+    const model::Kvnr kvnr = model::Kvnr{kvnrQueryValue.value()};
+    ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
+
+    // GEMREQ-start A_27279#enforceHcvCheck
+    A_27346.start("Read hcv query parameter");
+    const auto hcvQueryValue = session.request.getQueryParameter("hcv");
+    ErpExpect(! config.getBoolValue(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK) || hcvQueryValue.has_value(),
+              HttpStatus::RejectMissingHcv, "Ein Prüfnachweis ohne HCV wird nicht akzeptiert.");
+    A_25208_01.finish();
+    // GEMREQ-end A_27279#enforceHcvCheck
 
     A_23450.start("Check provided 'pnw' value");
     // GEMREQ-start A_23451-01#pnw
@@ -303,27 +445,32 @@ void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
     // GEMREQ-end A_23451-01#proofContent, A_23456-01##proofContent
     {
         const auto& proofContent = *proofInformation.proofContent;
-        const auto& kvnr = proofContent.kvnr;
-        ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
+        // GEMREQ-start A_23451-01#validate, A_23456-01#validate
+        struct ProofValidator {
+            void operator()(const ProofContentV1& proof)
+            {
+                validateProofV1(session, proof, kvnr);
+            };
+            void operator()(const VsdmProof2& proof)
+            {
+                validateProofV2(session, proof, hcv, kvnr, hashedTelematikId);
+            };
+            PcSessionContext& session; // NOLINT(misc-non-private-member-variables-in-classes)
+            const std::optional<std::string>& hcv; // NOLINT(misc-non-private-member-variables-in-classes)
+            const model::Kvnr& kvnr; // NOLINT(misc-non-private-member-variables-in-classes)
+            const std::string hashedTelematikId; // NOLINT(misc-non-private-member-variables-in-classes)
+        };
 
-        // Now that we have a KVNR, start collecting the audit data
+        std::visit(ProofValidator{session, hcvQueryValue, kvnr, hashedTelematikId}, proofContent);
+        // GEMREQ-end A_23451-01#validate, A_23456-01#validate
+
         session
             .auditDataCollector()
-            // Default, will be overridden after successful decoding PNW
-            .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
+            .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_with_pz)
             .setAction(model::AuditEvent::Action::read)
             .setInsurantKvnr(kvnr);
 
-        // GEMREQ-start A_23451-01#validate, A_23456-01#validate
-        validateProof(session, proofContent);
-        // GEMREQ-end A_23451-01#validate, A_23456-01#validate
-
-        // Override audit event id
-        session.auditDataCollector().setEventId(
-            model::AuditEventId::GET_Tasks_by_pharmacy_with_pz
-        );
-
-       const auto response = handleRequestFromPharmacist(session, kvnr);
+        const auto response = handleRequestFromPharmacist(session, kvnr);
 
         A_19514.start("HttpStatus 200 for successful GET");
         makeResponse(session, HttpStatus::OK, &response);
@@ -331,15 +478,6 @@ void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
     }
     else
     {
-        A_25208.start("Verify given KVNR");
-        const auto kvnrQueryValue = session.request.getQueryParameter("kvnr");
-        ErpExpect(kvnrQueryValue.has_value(), HttpStatus::NotAcceptPN3WithoutKVNR,
-            "Ein Prüfnachweis mit Ergebnis '3' ohne KVNR wird nicht akzeptiert.");
-        A_25208.finish();
-
-        const model::Kvnr kvnr{kvnrQueryValue.value()};
-        ErpExpect(kvnr.validFormat(), HttpStatus::Forbidden, "Invalid Kvnr");
-
         const auto runtimeConfig = session.serviceContext.getRuntimeConfigurationGetter();
         const auto isAcceptPN3 = runtimeConfig->isAcceptPN3Enabled();
 
@@ -382,7 +520,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
         {{"status", "ready"},{"expiry-date", "ge" + model::Timestamp::now().toGermanDate()}};
     for (const auto& pair : session.request.getQueryParameters())
     {
-        if (pair.first != "pnw" || pair.first != "PNW")
+        if (pair.first != "pnw" || pair.first != "PNW" || pair.first != "kvnr")
         {
             queryParameters.emplace_back(pair.first, pair.second);
         }
@@ -404,7 +542,8 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
 
     auto argumentsResp = urlArgumentsForTasks({
         {"pnw", "pnw", SearchParameter::Type::String},
-        {"PNW", "PNW", SearchParameter::Type::String}
+        {"PNW", "PNW", SearchParameter::Type::String},
+        {"kvnr", "kvnr", SearchParameter::Type::String},
     });
     argumentsResp->parse(session.request.getQueryParameters(), session.serviceContext.getKeyDerivation());
     const auto links = argumentsResp->createBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
@@ -515,6 +654,11 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
                       "KVNR verification identities may not access information from insurants and vice versa");
         }
         A_20753.finish();
+
+        A_26148.start("Representative may not retrieve Task with Flowtype 169/209");
+        ErpExpect(!model::isDirectAssignment(task->type()), HttpStatus::Forbidden,
+                  "Insurant representatives may not access directly assigned tasks");
+        A_26148.finish();
     }
     // GEMREQ-end A_19116-01
 
@@ -537,6 +681,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
     switch (task->type())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             break;
         case model::PrescriptionType::direkteZuweisung:

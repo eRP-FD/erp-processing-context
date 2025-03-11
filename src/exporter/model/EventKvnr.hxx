@@ -12,6 +12,8 @@
 #include <string>
 #include <optional>
 
+
+class JsonLog;
 namespace model
 {
 
@@ -28,14 +30,13 @@ public:
 
     EventKvnr(const std::basic_string<std::byte>& kvnrHashed, std::optional<Timestamp> lastConsentCheck,
               const std::optional<std::string>& assignedEpa, State state, std::int32_t retryCount);
-    ~EventKvnr() = default;
 
     const std::basic_string<std::byte>& kvnrHashed() const;
     std::string getLoggingId() const;
     std::optional<Timestamp> getLastConsentCheck() const;
     const std::optional<std::string>& getASsignedEpa() const;
     State getState() const;
-    virtual std::int32_t getRetryCount() const;
+    std::int32_t getRetryCount() const;
 
 private:
     std::basic_string<std::byte> mKvnrHashed;
@@ -44,6 +45,9 @@ private:
     State mState;
     std::int32_t mRetryCount;
 };
+
+JsonLog& operator<<(JsonLog& jsonLog, const EventKvnr& kvnr);
+JsonLog&& operator<<(JsonLog&& jsonLog, const EventKvnr& kvnr);
 
 }// model
 

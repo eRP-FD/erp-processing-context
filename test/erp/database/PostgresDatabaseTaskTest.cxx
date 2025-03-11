@@ -1231,7 +1231,4 @@ TEST_P(PostgresDatabaseTaskTest, retrieveTaskWithSecretAndPrescription)
 
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseTaskTestInst, PostgresDatabaseTaskTest,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung,
-                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));

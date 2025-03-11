@@ -6,10 +6,10 @@
         <system value="urn:ietf:rfc:3986"/>
         <value value="urn:oid:1.2.276.0.76.3.1.1.5.2.15"/>
     </identifier>
-    <version value="1.13"/>
+    <version value="1.15"/>
     <name value="KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"/>
     <status value="active"/>
-    <date value="2024-07-01"/>
+    <date value="2025-04-01"/>
     <publisher value="Kassenärztliche Bundesvereinigung"/>
     <contact>
         <telecom>
@@ -330,6 +330,10 @@
         <display value="Inhalationspulver"/>
     </concept>
     <concept>
+        <code value="IID"/>
+        <display value="Injektions- und Infusionsdispersion"/>
+    </concept>
+    <concept>
         <code value="IIE"/>
         <display value="Injektions- oder Infusionslösung oder Lösung zum Einnehmen"/>
     </concept>
@@ -490,6 +494,10 @@
         <display value="Liquidum"/>
     </concept>
     <concept>
+        <code value="LIV"/>
+        <display value="Lösung zur intravesikalen Anwendung"/>
+    </concept>
+    <concept>
         <code value="LOE"/>
         <display value="Lösung"/>
     </concept>
@@ -516,6 +524,10 @@
     <concept>
         <code value="LUT"/>
         <display value="Lutschtabletten"/>
+    </concept>
+    <concept>
+        <code value="LYE"/>
+        <display value="Lyophilisat zum Einnehmen"/>
     </concept>
     <concept>
         <code value="LYO"/>
@@ -716,6 +728,10 @@
     <concept>
         <code value="PUD"/>
         <display value="Puder"/>
+    </concept>
+    <concept>
+        <code value="PUE"/>
+        <display value="Pulver zum Einnehmen"/>
     </concept>
     <concept>
         <code value="PUL"/>

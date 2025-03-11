@@ -8,7 +8,7 @@
 #ifndef E_LIBRARY_UTIL_GLOG_HXX
 #define E_LIBRARY_UTIL_GLOG_HXX
 
-//NOLINTNEXTLINE(modernize-macro-to-enum)
+//NOLINTNEXTLINE(modernize-macro-to-enum,cppcoreguidelines-macro-to-enum)
 #define GLOG_CUSTOM_PREFIX_SUPPORT 1
 
 #include <glog/logging.h>

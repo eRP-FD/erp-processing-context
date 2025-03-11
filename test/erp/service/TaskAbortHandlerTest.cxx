@@ -97,7 +97,6 @@ void TaskAbortHandlerTest::checkResultingData(
 {
     auto database = createDatabase();
 
-    std::string taskAccessCode;
     std::optional<Database::TaskAndKey> taskAndKey1;
     std::optional<model::Binary> healthcareProviderPrescription;
     std::optional<model::Task> task2;

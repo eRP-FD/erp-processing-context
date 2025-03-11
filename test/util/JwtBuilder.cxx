@@ -73,7 +73,7 @@ JWT JwtBuilder::makeValidJwt(rapidjson::Document&& claims)
     iat.Set(claims, int64_t(std::chrono::duration_cast<std::chrono::seconds>(
         (std::chrono::system_clock::now() - std::chrono::minutes(1)).time_since_epoch()).count()));
     const std::string audContent = Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_REGISTERED_FD_URI, "");
-    if (audContent.length())
+    if (!audContent.empty())
     {
         aud.Set(claims, audContent);
     }
@@ -124,4 +124,18 @@ JWT JwtBuilder::makeJwtVersicherter(const std::string& kvnr)
 JWT JwtBuilder::makeJwtVersicherter(const model::Kvnr& kvnr)
 {
     return makeJwtVersicherter(kvnr.id());
+}
+
+JWT JwtBuilder::makeJwtKostentraeger(const std::optional<std::string>& telematicId)
+{
+    static auto constexpr templateResource = "test/jwt/claims_kostentraeger.json";
+    auto& resourceManager = ResourceManager::instance();
+    const auto& claimTemplate = resourceManager.getJsonResource(templateResource);
+    rapidjson::Document claims;
+    claims.CopyFrom(claimTemplate, claims.GetAllocator());
+    if (telematicId.has_value())
+    {
+        setIdNummer(claims, telematicId.value());
+    }
+    return makeValidJwt(std::move(claims));
 }

@@ -155,7 +155,7 @@ SaxHandler::AttributeList::findAttribute(const std::string_view& localName, cons
 SaxHandler::Attribute SaxHandler::AttributeList::get(size_t index) const
 {
     Expect3(index < mSize, "Attribute list index out of range.", std::out_of_range);
-    return Attribute{mAttributes + 5 * index};
+    return Attribute{mAttributes + (5 * index)};
 }
 
 

@@ -6,6 +6,12 @@
  */
 
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
+#include "erp/model/EvdgaBundle.hxx"
+#include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/beast/BoostBeastStringWriter.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
@@ -13,16 +19,11 @@
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/model/ResourceNames.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/Mod10.hxx"
 #include "shared/util/Uuid.hxx"
 #include "shared/validation/XmlValidator.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
@@ -32,6 +33,7 @@
 #include "test/util/TestConfiguration.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <charconv>
 #include <iomanip>
 #include <random>
 #include <regex>
@@ -68,7 +70,7 @@ constexpr std::string_view markingFlagElementTemplate = R"^(
 
 std::string constructMarkingFlagElement(const std::string& extensionName, bool value)
 {
-    auto result = String::replaceAll(markingFlagElementTemplate.data(), "##EXTENSION_NAME##", extensionName);
+    auto result = String::replaceAll(std::string{markingFlagElementTemplate}, "##EXTENSION_NAME##", extensionName);
     result = String::replaceAll(result, "##VALUE_BOOLEAN##", value ? "true" : "false");
 
     return result;
@@ -199,6 +201,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
             EXPECT_EQ(task2->accessCode(), task->accessCode());
             break;
         case model::PrescriptionType::direkteZuweisung:
@@ -242,6 +245,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
     switch(task.value().type())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             break;
         case model::PrescriptionType::direkteZuweisung:
@@ -260,11 +264,15 @@ void ErpWorkflowTestBase::checkTaskActivate(
         ActorRole::Insurant, kvnr,
         "Bin krank. Musst Du Dir schicken lassen."));
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
+    std::string dispReqPayload =
+        task.value().type() == model::PrescriptionType::digitaleGesundheitsanwendungen
+            ? ""
+            : R"({"version":1,"supplyOptionsType":"delivery","hint":"Bitte schicken Sie einen Boten."})";
     ASSERT_NO_FATAL_FAILURE(communicationResponse = communicationPost(
         model::Communication::MessageType::DispReq, task.value(),
         ActorRole::Insurant, kvnr,
         ActorRole::Pharmacists, telematicId.value(),
-        R"({"version":1,"supplyOptionsType":"delivery","hint":"Bitte schicken Sie einen Boten."})"));
+        dispReqPayload));
     if (communicationResponse.has_value()) communications.emplace_back(std::move(communicationResponse.value()));
 }
 
@@ -354,9 +362,21 @@ void ErpWorkflowTestBase::checkTaskDispense(
 
     // invoke /Task/<id>/$dispense
     std::optional<model::Bundle> dispenseBundle;
+    auto lastMedicationDispenseReferenceTimestamp =
+        model::Timestamp::fromXsDateTime(model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds());
     ASSERT_NO_FATAL_FAILURE(dispenseBundle =
                                 taskDispense(prescriptionId, secret, kvnr, HttpStatus::OK, {}, numMedicationDispenses));
     ASSERT_TRUE(dispenseBundle);
+
+    std::optional<model::Bundle> taskBundle;
+    ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "X-dummy", std::nullopt, secret));
+    ASSERT_TRUE(taskBundle);
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task, *taskBundle));
+    ASSERT_TRUE(task);
+    ASSERT_TRUE(task->lastMedicationDispense().has_value());
+    A_24285_01.test("lastMedicationDispense has been updated with $dispense");
+    EXPECT_GE(*task->lastMedicationDispense(), lastMedicationDispenseReferenceTimestamp);
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -381,6 +401,27 @@ void ErpWorkflowTestBase::checkTaskClose(
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, prescriptionId), communications.size());
+
+    auto lastMedicationDispenseReferenceTimestamp =
+        model::Timestamp::fromXsDateTime(model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds());
+    if (numMedicationDispenses == 0)
+    {
+        std::optional<model::Bundle> taskBundle1;
+        ASSERT_NO_FATAL_FAILURE(taskBundle1 = taskGetId(prescriptionId, "X-dummy", std::nullopt, secret));
+        ASSERT_TRUE(taskBundle1);
+        std::optional<model::Task> task1;
+        ASSERT_NO_FATAL_FAILURE(getTaskFromBundle(task1,*taskBundle1));
+        ASSERT_TRUE(task1);
+        if (task1->lastMedicationDispense().has_value() &&
+            lastMedicationDispenseReferenceTimestamp == task1->lastMedicationDispense().value())
+        {
+            // the resolution of the lastMedicationDispense timestamp is 1sec.
+            // we need to be able to check LT below in this case (empty close task body)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            lastMedicationDispenseReferenceTimestamp =
+                model::Timestamp::fromXsDateTime(model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds());
+        }
+    }
 
     // invoke /Task/<id>/$close
     std::optional<model::ErxReceipt> closeReceipt;
@@ -442,6 +483,18 @@ void ErpWorkflowTestBase::checkTaskClose(
     ASSERT_NO_FATAL_FAILURE(medicationDispenseGetInternal(medicationDispenseForTask, kvnr, prescriptionId.toString()));
     ASSERT_TRUE(medicationDispenseForTask.has_value());
     EXPECT_EQ(medicationDispenseForTask->telematikId(), telematicId);
+    ASSERT_TRUE(task->lastMedicationDispense().has_value());
+    if (numMedicationDispenses > 0)
+    {
+        A_26337.test("lastMedicationDispense has been updated with non empty $close");
+        EXPECT_GE(*task->lastMedicationDispense(), lastMedicationDispenseReferenceTimestamp);
+    }
+    else
+    {
+        A_26337.test("lastMedicationDispense has NOT been updated with empty $close, it still has the value "
+                     "from $dispense");
+        EXPECT_LT(*task->lastMedicationDispense(), lastMedicationDispenseReferenceTimestamp);
+    }
 
     // Check deletion of task related communication objects:
     checkCommunicationsDeleted(prescriptionId, kvnr, communications);
@@ -782,7 +835,8 @@ std::string ErpWorkflowTestBase::toExpectedRole(const ErpWorkflowTestBase::Reque
     {
         return "patient";
     }
-    else if (oid == profession_oid::oid_oeffentliche_apotheke || oid == profession_oid::oid_krankenhausapotheke)
+    else if (oid == profession_oid::oid_oeffentliche_apotheke || oid == profession_oid::oid_krankenhausapotheke ||
+             oid == profession_oid::oid_kostentraeger)
     {
         return "pharmacy";
     }
@@ -949,15 +1003,20 @@ void ErpWorkflowTestBase::communicationPostInternal(
     ASSERT_TRUE(senderRole != ActorRole::Doctor) << "Invalid sender role";
     ASSERT_TRUE(recipientRole != ActorRole::Doctor) << "Invalid recipient role";
     JWT jwt;
-    if (senderRole == ActorRole::Insurant || senderRole == ActorRole::Representative)
+    switch (senderRole)
     {
-        jwt = JwtBuilder::testBuilder().makeJwtVersicherter(sender);
-    }
-    else if (senderRole == ActorRole::Pharmacists)
-    {
-        jwt = JwtBuilder::testBuilder().makeJwtApotheke(sender);
-        contentType = MimeType::fhirXml;
-        accept = MimeType::fhirXml;
+        case ActorRole::Insurant:
+        case ActorRole::PkvInsurant:
+        case ActorRole::Representative:
+            jwt = JwtBuilder::testBuilder().makeJwtVersicherter(sender);
+            break;
+        case ActorRole::Doctor:
+            break;
+        case ActorRole::Pharmacists:
+            jwt = JwtBuilder::testBuilder().makeJwtApotheke(sender);
+            contentType = MimeType::fhirXml;
+            accept = MimeType::fhirXml;
+            break;
     }
     std::string body;
     if (contentType == std::string(MimeType::fhirJson))
@@ -1069,7 +1128,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     std::string endpointPath{"/Task"};
     if (encodedPnw.has_value())
     {
-        endpointPath += "?pnw=" + *encodedPnw;
+        endpointPath += "?pnw=" + *encodedPnw + "&kvnr=" + kvnr;
     }
 
     RequestArguments args(HttpMethod::GET, endpointPath, {});
@@ -1220,14 +1279,34 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                 }
                 else
                 {
-                    using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
-                    std::optional<KbvBundleFactory> kbvBundleFactory;
-                    ASSERT_NO_THROW(kbvBundleFactory.emplace(
-                        KbvBundleFactory::fromXml(patientConfirmationOrReceipt[0].serializeToXmlString(),
-                                                  *getXmlValidator(), {.validatorOptions = kbvValidatorOptions})));
-                    std::optional<model::KbvBundle> kbvBundle;
-                    ASSERT_NO_THROW(kbvBundle.emplace(
-                        std::move(*kbvBundleFactory).getValidated(model::ProfileType::KBV_PR_ERP_Bundle)));
+                    switch (tasks[0].type())
+                    {
+                        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+                        case model::PrescriptionType::direkteZuweisung:
+                        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+                        case model::PrescriptionType::direkteZuweisungPkv: {
+                            using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
+                            std::optional<KbvBundleFactory> kbvBundleFactory;
+                            ASSERT_NO_THROW(kbvBundleFactory.emplace(KbvBundleFactory::fromXml(
+                                patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(),
+                                {.validatorOptions = kbvValidatorOptions})));
+                            std::optional<model::KbvBundle> kbvBundle;
+                            ASSERT_NO_THROW(kbvBundle.emplace(
+                                std::move(*kbvBundleFactory).getValidated(model::ProfileType::KBV_PR_ERP_Bundle)));
+                            break;
+                        }
+                        case model::PrescriptionType::digitaleGesundheitsanwendungen: {
+                            using EvdgaBundleFactory = model::ResourceFactory<model::EvdgaBundle>;
+                            std::optional<EvdgaBundleFactory> evdgaBundleFactory;
+                            ASSERT_NO_THROW(evdgaBundleFactory.emplace(EvdgaBundleFactory::fromXml(
+                                patientConfirmationOrReceipt[0].serializeToXmlString(), *getXmlValidator(),
+                                {.validatorOptions = kbvValidatorOptions})));
+                            std::optional<model::EvdgaBundle> evdgaBundle;
+                            ASSERT_NO_THROW(evdgaBundle.emplace(
+                                std::move(*evdgaBundleFactory).getValidated(model::ProfileType::KBV_PR_EVDGA_Bundle)));
+                            break;
+                        }
+                    }
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_TRUE(tasks[0].patientConfirmationUuid().has_value());
                     ASSERT_FALSE(tasks[0].receiptUuid().has_value());
@@ -1300,18 +1379,37 @@ std::string ErpWorkflowTestBase::dispenseOrCloseTaskParameters(model::ProfileTyp
         .version = gemVersion,
         .medicationDispenses = {},
     };
+    int value = 0;
+    Expect(prescriptionIdForMedicationDispense.size(),
+           "cannot get workflow type from prescription ID: " + prescriptionIdForMedicationDispense);
+    std::string_view s{prescriptionIdForMedicationDispense.c_str(), 3u};
+    std::from_chars(s.begin(), s.end(), value);
+    auto workflow = magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(value));
+    Expect(workflow.has_value(),
+           "cannot get workflow type from prescription ID: " + prescriptionIdForMedicationDispense);
     for (size_t i = 0; i < numMedicationDispenses; ++i)
     {
-        parametersOptions.medicationDispenses.emplace_back(ResourceTemplates::MedicationDispenseOptions{
-            .id = prescriptionIdForMedicationDispense + "-" + std::to_string(i),
-            .prescriptionId = prescriptionIdForMedicationDispense,
-            .kvnr = kvnr,
-            .whenHandedOver = whenHandedOver,
-            .gematikVersion = gemVersion,
-            .medication = ResourceTemplates::MedicationOptions{
-                .version = gemVersion,
-                .id = Uuid{},
-            }});
+        if (isDiga(workflow.value()))
+        {
+            parametersOptions.medicationDispensesDiGA.emplace_back(
+                ResourceTemplates::MedicationDispenseDiGAOptions{.version = gemVersion,
+                                                                 .prescriptionId = prescriptionIdForMedicationDispense,
+                                                                 .kvnr = kvnr,
+                                                                 .whenHandedOver = whenHandedOver});
+        }
+        else
+        {
+            parametersOptions.medicationDispenses.emplace_back(ResourceTemplates::MedicationDispenseOptions{
+                .id = prescriptionIdForMedicationDispense + "-" + std::to_string(i),
+                .prescriptionId = prescriptionIdForMedicationDispense,
+                .kvnr = kvnr,
+                .whenHandedOver = whenHandedOver,
+                .gematikVersion = gemVersion,
+                .medication = ResourceTemplates::MedicationOptions{
+                    .version = gemVersion,
+                    .id = Uuid{},
+                }});
+        }
     }
     return ResourceTemplates::medicationDispenseOperationParametersXml(parametersOptions);
 }
@@ -1424,12 +1522,16 @@ void ErpWorkflowTestBase::taskCloseInternal(
     const std::optional<std::string>& expectedIssueDiagnostics,
     const std::string& whenHandedOver, size_t numMedicationDispenses)
 {
-    std::string closeBody =
-        dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
-                                prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+    std::string closeBody;
+    if (numMedicationDispenses > 0)
+    {
+        closeBody =
+            dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
+                                    prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+    }
     std::string closePath = "/Task/" + prescriptionId.toString() + "/$close?secret=" + secret;
     ClientResponse serverResponse;
-    JWT jwt{ jwtApotheke() };
+    JWT jwt{isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke()};
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
         send(RequestArguments{mCloseTaskRequestArgs}.withHttpMethod(HttpMethod::POST).withVauPath(closePath).withBody(
                 closeBody).withContentType("application/fhir+xml")
@@ -1459,7 +1561,7 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
 {
     std::string acceptPath = "/Task/" + prescriptionId.toString() + "/$accept?ac=" + accessCode;
     ClientResponse serverResponse;
-    JWT jwt{ jwtApotheke() };
+    JWT jwt{isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke()};
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, serverResponse) =
         send(RequestArguments{mAcceptTaskRequestArgs}.withHttpMethod(HttpMethod::POST).withVauPath(acceptPath)
@@ -1547,6 +1649,9 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     using model::Task;
     using model::Timestamp;
     std::string create = "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
+                         "  <meta>\n"
+                         "    <profile value=\"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4\"/>\n"
+                         "  </meta>\n"
                          "  <parameter>\n"
                          "    <name value=\"workflowType\"/>\n"
                          "    <valueCoding>\n"
@@ -1558,6 +1663,9 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
             create += "160";
+            break;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            create += "162";
             break;
         case model::PrescriptionType::direkteZuweisung:
             create += "169";
@@ -1872,7 +1980,6 @@ void ErpWorkflowTestBase::chargeItemPutInternal(
 
         cadesBesSignature = CadesBesSignature{*certificate, *prvKey, newDispendeItemString, std::nullopt}.getBase64();
     }
-    const std::string binaryId{"dispense-bundle-1231"};
     chargeItemString = String::replaceAll(
         chargeItemString, "</meta>",
         "</meta><contained><Binary><id value=\"dispense-bundle-1231\"/><contentType value=\"application/pkcs7-mime\"/>"
@@ -2375,7 +2482,9 @@ void ErpWorkflowTestBase::checkTaskMeta(const rapidjson::Value& meta)
     if (lastUpdated != meta.MemberEnd())
     {
         ASSERT_TRUE(lastUpdated->value.IsString());
-        EXPECT_TRUE(regex_match(model::NumberAsStringParserDocument::getStringValueFromValue(&lastUpdated->value).data(), instantRegex));
+        EXPECT_TRUE(
+            regex_match(std::string{model::NumberAsStringParserDocument::getStringValueFromValue(&lastUpdated->value)},
+                        instantRegex));
     }
 }
 void ErpWorkflowTestBase::checkTaskSingleIdentifier(const rapidjson::Value& id)
@@ -2642,12 +2751,26 @@ std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvn
     taskGetInternal(taskBundle, kvnr, searchArguments, expectedStatus, expectedErrorCode, expectedErrorText, encodedPnw, telematikId);
     return taskBundle;
 }
-std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(
-    const std::string& kvnr,
-    const model::PrescriptionId& prescriptionId,
-    const model::Timestamp& timestamp)
+std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(const std::string& kvnr,
+                                                                        const model::PrescriptionId& prescriptionId,
+                                                                        const model::Timestamp& timestamp)
 {
-    std::string qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr});
+    std::string qesBundle;
+    switch (prescriptionId.type())
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr});
+            break;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            qesBundle = ResourceTemplates::evdgaBundleXml({.prescriptionId = prescriptionId.toString(),
+                                                           .timestamp = timestamp.toXsDateTime(),
+                                                           .kvnr = kvnr,
+                                                           .authoredOn = timestamp.toGermanDate()});
+            break;
+    }
     return std::make_tuple(toCadesBesSignature(qesBundle, timestamp), qesBundle);
 }
 std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
@@ -2732,7 +2855,7 @@ std::size_t ErpWorkflowTestBase::countTaskBasedCommunications(
     {
         const auto communications = communicationsBundle.getResourcesByType<model::Communication>("Communication");
         result = static_cast<size_t>(
-            std::count_if(communications.begin(), communications.end(), [&prescriptionId](const auto& elem) {
+            std::ranges::count_if(communications, [&prescriptionId](const auto& elem) {
                 return (elem.prescriptionId().toString() == prescriptionId.toString());
             }));
     }

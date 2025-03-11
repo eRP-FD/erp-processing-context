@@ -100,7 +100,6 @@ TEST_P(DatabaseCodecSampleTest, compressedRoundTrip) // NOLINT
 {
     using EncryptionT = DataBaseCodec::EncryptionT;
     const auto& param = GetParam();
-    auto dir = Configuration::instance().getStringValue(ConfigurationKey::ZSTD_DICTIONARY_DIR);
 
     DataBaseCodec codec(getCompression(),[&](size_t size){
         [&]{ ASSERT_EQ(param.ivHex.size() / 2, size); }();

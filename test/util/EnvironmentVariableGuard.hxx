@@ -39,7 +39,6 @@ public:
     }
 
     EnvironmentVariableGuard(EnvironmentVariableGuard&& other) noexcept
-        : mRestoreOldValue (true)
     {
         std::swap(mVariableName, other.mVariableName);
         std::swap(mPreviousValue, other.mPreviousValue);

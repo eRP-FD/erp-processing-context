@@ -76,8 +76,8 @@ public:
 
 private:
     size_t mCount;
-    size_t mOffset;
-    size_t mTotalSearchMatches;
+    size_t mOffset{0};
+    size_t mTotalSearchMatches{0};
     std::optional<std::pair<model::Timestamp, model::Timestamp>> mEntryTimestampRange;
 };
 

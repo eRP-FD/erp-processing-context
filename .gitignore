@@ -46,3 +46,5 @@ compile_commands.json
 /doc/requirements/reqmd-*/
 /doc/requirements/repositories/
 /doc/requirements/pdf/
+/CMakeUserPresets.json
+/build

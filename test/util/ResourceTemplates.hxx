@@ -43,11 +43,15 @@ struct Versions {
         using FhirVersion::FhirVersion;
         explicit DAV_PKV(FhirVersion ver);
     };
+    struct KBV_EVDGA : fhirtools::FhirVersion {
+        using FhirVersion::FhirVersion;
+    };
 
     static inline GEM_ERP GEM_ERP_1_2{"1.2"};
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
     static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
+    static inline KBV_EVDGA KBV_EVDGA_1_1_0{"1.1.0"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
@@ -56,11 +60,13 @@ struct Versions {
                                            const model::Timestamp& reference = model::Timestamp::now());
     static GEM_ERP GEM_ERP_current(const model::Timestamp& reference = model::Timestamp::now());
     static KBV_ERP KBV_ERP_current(const model::Timestamp& reference = model::Timestamp::now());
+    static KBV_EVDGA KBV_EVDGA_current(const model::Timestamp& reference = model::Timestamp::now());
     static GEM_ERPCHRG GEM_ERPCHRG_current(const model::Timestamp& reference = model::Timestamp::now());
     static DAV_PKV DAV_PKV_current(const model::Timestamp& reference = model::Timestamp::now());
 
     static std::initializer_list<GEM_ERP> GEM_ERP_all;
     static std::initializer_list<KBV_ERP> KBV_ERP_all;
+    static std::initializer_list<KBV_EVDGA> KBV_EVDGA_all;
     static std::initializer_list<GEM_ERPCHRG> GEM_ERPCHRG_all;
     static std::initializer_list<DAV_PKV> DAV_PKV_all;
 };
@@ -133,6 +139,15 @@ model::MedicationDispenseBundle medicationDispenseBundle(const MedicationDispens
 std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDispenseOptions = {});
 
 std::string medicationXml(const MedicationOptions& medicationOptions = {});
+
+struct MedicationDispenseDiGAOptions {
+    Versions::GEM_ERP version = Versions::GEM_ERP_current();
+    std::string prescriptionId = "162.000.033.491.280.78";
+    std::string kvnr = "X234567891";
+    std::string telematikId = "3-SMC-B-Testkarte-883110000120312";
+    std::string whenHandedOver = "2025-02-06";
+};
+std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& options);
 
 struct KbvBundleOptions
 {
@@ -208,11 +223,24 @@ struct MedicationDispenseOperationParametersOptions {
     Versions::GEM_ERP version = Versions::GEM_ERP_1_4;
     std::list<MedicationDispenseOptions> medicationDispenses = {
         {.gematikVersion = Versions::GEM_ERP_1_4, .medication = MedicationOptions{.version = Versions::GEM_ERP_1_4}}};
+    std::list<MedicationDispenseDiGAOptions> medicationDispensesDiGA{};
 };
 
 std::string medicationDispenseOperationParametersXml(const MedicationDispenseOperationParametersOptions& options);
 
 std::string dispenseOrCloseTaskBodyXml(const MedicationDispenseOperationParametersOptions& options);
+
+struct EvdgaBundleOptions {
+    Versions::KBV_EVDGA version = Versions::KBV_EVDGA_current();
+    std::string prescriptionId = "162.100.000.000.032.60";
+    std::string timestamp = "2023-03-26T13:12:00Z";
+    std::string kvnr = "X234567890";
+    std::string coverageSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis";
+    std::string coverageCode = "GKV";
+    std::string authoredOn = "2025-01-22";
+};
+
+std::string evdgaBundleXml(const EvdgaBundleOptions& options);
 
 } // namespace ResourceTemplates
 

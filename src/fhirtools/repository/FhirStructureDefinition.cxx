@@ -242,7 +242,7 @@ fhirtools::FhirStructureDefinition::findElementAndIndex(std::string_view element
         }
         cmpStart = typeSize;
     }
-    auto element = std::find_if(mElements.begin(), mElements.end(), [&](const std::shared_ptr<const FhirElement>& e) {
+    auto element = std::ranges::find_if(mElements, [&](const std::shared_ptr<const FhirElement>& e) {
         return e->name().compare(typeSize, std::string::npos, elementId, cmpStart) == 0;
     });
     if (element != mElements.end())
@@ -419,7 +419,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
     static const auto& ctype = std::use_facet<std::ctype<char>>(std::locale::classic());
     const auto& elementName = element->name();
     auto placeholderPos =
-        std::search(elementName.begin(), elementName.end(), typePlaceholder.begin(), typePlaceholder.end());
+        std::ranges::search(elementName, typePlaceholder).begin();
     if (placeholderPos == elementName.end())
     {
         Expect3(withTypes.size() <= 1, "More than one element type for element without placeholder: " + elementName,

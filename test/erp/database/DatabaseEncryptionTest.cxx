@@ -45,10 +45,11 @@ protected:
         }
     }
 
-    std::tuple<model::Task, model::ErxReceipt, model::MedicationDispense> createTask()
+    std::tuple<model::Task, model::ErxReceipt, model::MedicationDispense>
+    createTask(model::PrescriptionType prescriptionType)
     {
         auto& db = database();
-        model::Task task{model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode};
+        model::Task task{prescriptionType, accessCode};
         task.setAcceptDate(model::Timestamp{1.0});
         task.setExpiryDate(model::Timestamp{2.0});
         task.setKvnr(model::Kvnr{std::string{InsurantA}, model::Kvnr::Type::gkv});
@@ -102,8 +103,12 @@ protected:
     }
 };
 
+class DatabaseEncryptionTestP : public DatabaseEncryptionTest,
+                                public ::testing::WithParamInterface<model::PrescriptionType>
+{
+};
 
-TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive-complexity)
+TEST_P(DatabaseEncryptionTestP, TableViewTask)
 {
     if (!usePostgres())
     {
@@ -141,11 +146,12 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
             COUNT
         };
     };
-    const auto& [task, erxReceipt, medicationDispense] = createTask();
+    const auto& [task, erxReceipt, medicationDispense] = createTask(GetParam());
     auto prescriptionId = task.prescriptionId();
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
-    auto row = txn.exec_params1("SELECT * FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
+    auto row = txn.exec_params1("SELECT * FROM " + taskTableName(prescriptionId.type()) + " WHERE prescription_id = $1",
+                                prescriptionId.toDatabaseId());
     ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have " << col::index::COUNT << " columns";
     txn.commit();
     db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
@@ -252,6 +258,9 @@ TEST_F(DatabaseEncryptionTest, TableTask)//NOLINT(readability-function-cognitive
     //     not encrypted
     A_19688.finish();
 }
+
+INSTANTIATE_TEST_SUITE_P(TableViewTask, DatabaseEncryptionTestP,
+                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
 
 TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-cognitive-complexity)
 {

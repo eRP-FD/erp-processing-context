@@ -70,8 +70,8 @@ void FhirJsonToXmlConverter::initRoot(UniqueXmlNodePtr rootNode)
 {
     Expect3(mRootNode == nullptr, "initRoot called, but root node already initialized.",
             std::logic_error);
-    mRootNode = rootNode.get();
-    Expect3(xmlDocSetRootElement(mResultDoc.get(), rootNode.release()) == nullptr,
+    mRootNode = rootNode.release();
+    Expect3(xmlDocSetRootElement(mResultDoc.get(), mRootNode) == nullptr,
             "no previous root node expected.", std::logic_error);
     mFhirNamespace = xmlNewNs(mRootNode, fhirtools::constants::namespaceUri.xs_str(), nullptr);
 }
@@ -302,7 +302,7 @@ size_t FhirJsonToXmlConverter::convertXHTMLMember(xmlNode& targetNode, const std
     auto xhtmlString = model::NumberAsStringParserDocument::getStringValueFromValue(&jsonMember);
     UniqueXmlNodeListPtr nodes = [&] {
         xmlNodePtr resultList = nullptr;
-        auto err = xmlParseInNodeContext(&targetNode, xhtmlString.data(), gsl::narrow_cast<int>(xhtmlString.size()), XML_PARSE_NONET, &resultList);
+        auto err = xmlParseInNodeContext(&targetNode, xhtmlString.begin(), gsl::narrow_cast<int>(xhtmlString.size()), XML_PARSE_NONET, &resultList);
         ModelExpect(err == XML_ERR_OK && resultList != nullptr, "parse error in xhtml element: " + elementName);
         return UniqueXmlNodeListPtr{resultList};
     }();

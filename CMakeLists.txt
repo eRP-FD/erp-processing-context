@@ -15,6 +15,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(erp-processing-context LANGUAGES CXX)
 
+include(GNUInstallDirs)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
+
 # Perform a Debug build by default,
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
@@ -24,8 +27,6 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
-set(ERP_CONAN_PROFILE "" CACHE STRING "The conan profile to use. Leave empty for default profile.")
 
 set(ERP_WITH_HSM_TPM_PRODUCTION ON CACHE BOOL "Link against the production HSM and TPM from hsmclient and tpmclient libraries.")
 set(ERP_WITH_HSM_MOCK OFF CACHE BOOL "Link against mock implementations of HSM and TPM.")
@@ -60,84 +61,29 @@ endif()
 
 string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)
 message(NOTICE "ERP_RELEASE_DATE: ${ERP_RELEASE_DATE}")
+
+find_package(Boost REQUIRED)
+find_package(GTest REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(PostgreSQL REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(antlr4-runtime REQUIRED)
+find_package(botan REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(hiredis REQUIRED)
+find_package(libpqxx REQUIRED)
+find_package(libunwind REQUIRED)
+find_package(libxml2 REQUIRED)
+find_package(magic_enum REQUIRED)
+find_package(redis++ REQUIRED)
+find_package(zstd REQUIRED)
+
 option(WITH_PROFILING "Build binaries with profiling" OFF)
 if (WITH_PROFILING)
     find_package(GPerftools REQUIRED)
-endif()
-
-#
-# Conan: including 3rd party packages by running "conan install" on the fly
-#
-# The following conan profile settings have been used to build on ubuntu 20.04:
-# [settings]
-# os=Linux
-# os_build=Linux
-# arch=x86_64
-# arch_build=x86_64
-# compiler=gcc
-# compiler.version=9
-# compiler.libcxx=libstdc++11
-# compiler.cppstd=17
-# build_type=Release
-# [options]
-# [build_requires]
-# [env]
-
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake")
-    find_program(CONAN NAMES conan DOC "The path to the conan tool.")
-    if(NOT CONAN)
-        message(FATAL_ERROR "conan is required to manage dependencies.")
-    endif()
-    message(SYSTEM "installing conan packages")
-    if(NOT ERP_WITH_HSM_TPM_PRODUCTION)
-        set(CONAN_HSM_TPM -o with_tpmclient=False -o with_hsmclient=False)
-    else()
-        set(CONAN_HSM_TPM -o with_tpmclient=True -o with_hsmclient=True)
-    endif()
-
-    if(ERP_CONAN_PROFILE AND NOT "${ERP_CONAN_PROFILE}" STREQUAL "")
-        set(CONAN_PROFILE --profile "${ERP_CONAN_PROFILE}")
-    endif()
-
-    message(NOTICE "Installing conan packages")
-    execute_process(
-            COMMAND           "${CONAN}" remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force
-            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-    )
-    execute_process(
-            COMMAND           "${CONAN}" remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force
-            WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
-    )
-    if (DEFINED CMAKE_CXX_COMPILER_VERSION AND NOT DEFINED CONAN_COMPILER_VERSION)
-        string(REGEX REPLACE "\\..*" "" CONAN_COMPILER_VERSION "${CMAKE_CXX_COMPILER_VERSION}")
-    endif()
-    if (NOT DEFINED CONAN_COMPILER_VERSION)
-        message(FATAL_ERROR "cannot determine compiler version. Please set CONAN_COMPILER_VERSION accordingly.")
-    endif()
-
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        set(COMPILER_LIBCXX_SETTING "libc++")
-    else()
-        set(COMPILER_LIBCXX_SETTING "libstdc++11")
-    endif()
-
-    separate_arguments(ERP_CONAN_ARG_LIST NATIVE_COMMAND ${ERP_CONAN_ARGS})
-    execute_process(
-        COMMAND env CONAN_CMAKE_GENERATOR=${CMAKE_GENERATOR}
-                "${CONAN}" install
-                --build outdated
-                --install-folder "${CMAKE_BINARY_DIR}"
-                -s compiler.cppstd=${CMAKE_CXX_STANDARD}
-                -s compiler.libcxx=${COMPILER_LIBCXX_SETTING}
-                -s compiler.version=${CONAN_COMPILER_VERSION}
-                -e CXX=${CMAKE_CXX_COMPILER}
-                -e CC=${CMAKE_C_COMPILER}
-                ${CONAN_HSM_TPM}
-                ${CONAN_PROFILE}
-                ${ERP_CONAN_ARG_LIST}
-                "${CMAKE_SOURCE_DIR}"
-    )
 endif()
 
 if (NOT DEFINED ANTLR_EXECUTABLE)
@@ -155,44 +101,17 @@ if (NOT DEFINED ANTLR_EXECUTABLE)
     endif()
 endif()
 
-# Note for windows users:
-# -----------------------
-#
-# Since the hsm client is included the generated "conanbuildinfo.cmake" may no longer contain the
-# correct path to the boost header files. As a workaround the "conanbuildinfo.cmake" file may need
-# to be manually patched as follows:
-#
-# Wrongly created are the following entries:
-#
-#     set(CONAN_BOOST_ROOT "C:/Users/<User>/.conan/data/boost/1.74.0/_/_/package/524ea35a8120baabdde02483add58d81bf541327")
-#     set(CONAN_INCLUDE_DIRS_BOOST )
-#     set(CONAN_BUILD_DIRS_BOOST "C:/Users/<User>/.conan/data/boost/1.74.0/_/_/package/524ea35a8120baabdde02483add58d81bf541327/")
-#
-# Correct them with:
-#
-#     set(CONAN_BOOST_ROOT "<conan_link>")
-#     set(CONAN_INCLUDE_DIRS_BOOST "<conan_link>/include")
-#     set(CONAN_BUILD_DIRS_BOOST "<conan_link>")
-#
-#     As <conan_link> use the content of file "C:/Users/<User>/.conan/data/boost/1.74.0/_/_/package/524ea35a8120baabdde02483add58d81bf541327/.conan_link"
-#     E.g. (replacing "\" with "/"):
-#       set(CONAN_BOOST_ROOT "C:/.conan/741c2f/1")
-#       set(CONAN_INCLUDE_DIRS_BOOST "C:/.conan/741c2f/1/include")
-#       set(CONAN_BUILD_DIRS_BOOST "C:/.conan/741c2f/1")
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
-
 if (ERP_WITH_HSM_TPM_PRODUCTION)
-    if("${CONAN_HSMCLIENT_ROOT}" STREQUAL "")
-        message(FATAL_ERROR "CONAN_HSMCLIENT_ROOT not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
+    find_package(tpmclient)
+    if(NOT tpmclient_FOUND)
+        message(FATAL_ERROR "Package 'tpmclient' not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
     endif()
-    if ("${CONAN_TPMCLIENT_ROOT}" STREQUAL "")
-        message(FATAL_ERROR "CONAN_TPMCLIENT_ROOT not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
+    find_package(hsmclient)
+    if (NOT hsmclient_FOUND)
+        message(FATAL_ERROR "Package `hsmclient` not found, building against production HSM can be disabled with ERP_WITH_HSM_TPM_PRODUCTION=OFF")
     endif()
 endif()
 
-include(GNUInstallDirs)
 
 include(cmake/install_libs_for.cmake)
 
@@ -200,6 +119,7 @@ include(cmake/generate_pki_test_data.cmake)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake/antlr")
 find_package(ANTLR REQUIRED)
+
 
 #
 # build configuration for all erp build targets
@@ -257,6 +177,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_subdirectory(resources)
+add_subdirectory(scripts)
 add_subdirectory(src/shared)
 add_subdirectory(src/tee3)
 add_subdirectory(src/fhirtools)

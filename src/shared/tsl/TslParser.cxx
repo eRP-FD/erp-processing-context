@@ -174,6 +174,8 @@ namespace
 
         if (! isKeyUnique)
         {
+            // key was not inserted, should still be valid. Code not compiled-in in Release build.
+            //NOLINTNEXTLINE(bugprone-use-after-move,hicpp-invalid-access-moved)
             TVLOG(2) << "TSL parsing: certificate `" << key.toString()
                     << "` already present in trust map";
         }

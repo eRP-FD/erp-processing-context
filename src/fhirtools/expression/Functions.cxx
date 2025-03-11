@@ -114,10 +114,9 @@ Collection ExistenceDistinct::eval(const Collection& collection) const
 {
     EVAL_TRACE;
     Collection ret;
-    std::copy_if(collection.begin(), collection.end(), std::back_insert_iterator(ret),
-                 [&ret](const Collection::value_type& val) {
-                     return ! ret.contains(val);
-                 });
+    std::ranges::copy_if(collection, std::back_insert_iterator(ret), [&ret](const Collection::value_type& val) {
+        return ! ret.contains(val);
+    });
     return ret;
 }
 

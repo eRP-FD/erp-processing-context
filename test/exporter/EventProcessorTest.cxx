@@ -94,7 +94,7 @@ public:
         serviceContext = std::make_shared<MedicationExporterServiceContext>(
             ioThreadPool.ioContext(), Configuration::instance(), MedicationExporterMain::createProductionFactories());
         runLoop.getThreadPool().setUp(1, "threadpool runner");
-        co_spawn(runLoop.getThreadPool().ioContext(), setupEpaClientPool(*serviceContext), boost::asio::use_future)
+        co_spawn(runLoop.getThreadPool().ioContext(), setupEpaClientPool(serviceContext), boost::asio::use_future)
             .get();
     }
 
@@ -804,7 +804,6 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry_two_events)
             EXPECT_EQ(results.at(0, 0).as<std::int64_t>(), prescriptionId1.toDatabaseId());
             EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 1).as<std::string>()),
                       model::TaskEvent::UseCase::providePrescription);
-            auto s = results.at(0, 2).as<std::string>();
             EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 2).as<std::string>()).value(),
                       model::TaskEvent::State::pending);
 
@@ -933,6 +932,37 @@ TEST_F(EventProcessorTest, processEpaUnkown)
         database().commitTransaction();
     }
 }
+
+TEST_F(EventProcessorTest, ePaAccountLookup_kvnrIsLogged)
+{
+    EventProcessor eventProcessor(serviceContext);
+
+    model::Kvnr kvnr{"X000000012"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+
+    EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed};
+
+
+    auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
+
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    model::ProvidePrescriptionTaskEvent taskEvent(1, prescriptionId1, prescriptionId1.type(),
+                                 kvnr, "hashed-kvnr-for-test", model::TaskEvent::UseCase::providePrescription, model::TaskEvent::State::pending,
+                                 model::TelematikId{"qesDoctorId"}, model::TelematikId{"jwtDoctorId"},
+                                 "jwtDoctorOrganizationName",
+                                 "jwtDoctorProfessionOid", model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
+                                 model::Timestamp::fromGermanDate("2024-12-24"));
+
+    testing::internal::CaptureStderr();
+    const auto result =  eventProcessor.ePaAccountLookup(taskEvent);
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("kvnr":")"+String::toHexString("hashed-kvnr-for-test") + R"(")") != std::string::npos) << output;
+    EXPECT_EQ(result.lookupResult, EpaAccount::Code::allowed);
+}
+
 
 TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
 {

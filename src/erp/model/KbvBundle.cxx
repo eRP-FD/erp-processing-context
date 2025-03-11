@@ -84,6 +84,11 @@ void model::KbvBundle::additionalValidation() const
 
 std::optional<model::Timestamp> model::KbvBundle::getValidationReferenceTimestamp() const
 {
+    return authoredOn();
+}
+
+model::Timestamp model::KbvBundle::authoredOn() const
+{
     const auto medicationRequests = getResourcesByType<model::KbvMedicationRequest>();
     ErpExpect(medicationRequests.size() == 1, HttpStatus::BadRequest,
               "Expected exactly one MedicationRequest in Bundle.");

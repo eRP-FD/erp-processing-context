@@ -13,6 +13,7 @@
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"
 
+#include <rapidjson/writer.h>
 #include <algorithm>
 
 using namespace db_model;
@@ -205,7 +206,17 @@ AccessTokenIdentity::AccessTokenIdentity(const model::TelematikId& id, std::stri
 
 std::string AccessTokenIdentity::getJson() const
 {
-    return R"({"id": ")" + mId.id() + R"(", "name": ")" + mName + R"(", "oid": ")" + mOid + R"("})";
+    rapidjson::Document d;
+    d.SetObject();
+    d.AddMember("id", mId.id(), d.GetAllocator());
+    d.AddMember("name", mName, d.GetAllocator());
+    d.AddMember("oid", mOid, d.GetAllocator());
+
+    rapidjson::StringBuffer buffer;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+    d.Accept(writer);
+
+    return buffer.GetString();
 }
 
 const model::TelematikId& AccessTokenIdentity::getId() const

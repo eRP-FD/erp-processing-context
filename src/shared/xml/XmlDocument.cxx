@@ -44,7 +44,7 @@ XmlDocument::XmlDocument (const std::string_view xml)
     mDocument = std::shared_ptr<xmlDoc>(
         xmlCtxtReadMemory(
             parserContext.get(),
-            xml.data(),
+            xml.begin(),
             gsl::narrow_cast<int>(xml.size()),
             nullptr,
             nullptr,

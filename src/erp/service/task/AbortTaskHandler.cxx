@@ -133,6 +133,7 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
         {
             case model::PrescriptionType::apothekenpflichigeArzneimittel:
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
                 break;
             case model::PrescriptionType::direkteZuweisung:
             case model::PrescriptionType::direkteZuweisungPkv:

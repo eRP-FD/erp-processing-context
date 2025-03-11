@@ -80,7 +80,7 @@ Collection StringManipStartsWith::eval(const Collection& collection) const
     }
     const auto prefix = prefixResult.single()->asString();
     const auto& asString = collection.single()->asString();
-    return {makeBoolElement(asString.find(prefix) == 0)};
+    return {makeBoolElement(asString.starts_with(prefix))};
 }
 
 Collection StringManipContains::eval(const Collection& collection) const

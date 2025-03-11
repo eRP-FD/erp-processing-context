@@ -633,20 +633,20 @@ DatabaseFrontend::deleteCommunication(const Uuid& communicationId, const std::st
 void DatabaseFrontend::markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds,
                                                      const Timestamp& retrieved, const std::string& recipient)
 {
-    return mBackend->markCommunicationsAsRetrieved(communicationIds, retrieved, mDerivation.hashIdentity(recipient));
+    mBackend->markCommunicationsAsRetrieved(communicationIds, retrieved, mDerivation.hashIdentity(recipient));
 }
 
 // GEMREQ-start A_19027-06#query-call-deleteCommunicationsForTask
 void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
-    return mBackend->deleteCommunicationsForTask(taskId);
+    mBackend->deleteCommunicationsForTask(taskId);
 }
 // GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
 
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(consent.patientKvnr());
-    return mBackend->storeConsent(hashedKvnr, Timestamp::now());
+    mBackend->storeConsent(hashedKvnr, Timestamp::now());
 }
 
 std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr)
@@ -720,7 +720,7 @@ DatabaseFrontend::retrieveAllChargeItemsForInsurant(const model::Kvnr& kvnr,
     const auto dbChargeItems = mBackend->retrieveAllChargeItemsForInsurant(mDerivation.hashKvnr(kvnr), search);
 
     ::std::vector<::model::ChargeItem> result;
-    ::std::transform(::std::begin(dbChargeItems), ::std::end(dbChargeItems), ::std::back_inserter(result),
+    ::std::ranges::transform(dbChargeItems, ::std::back_inserter(result),
                      [&kvnr](const auto& item) {
                                  model::ChargeItem chargeItem = item.toChargeInformation(std::nullopt).chargeItem;
                                  if (! chargeItem.subjectKvnr().has_value())
@@ -811,7 +811,7 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     if (dbTask.kvnr && key)
     {
         const auto type = dbTask.prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
-        modelTask.setKvnr(model::Kvnr{std::string{mCodec.decode(*dbTask.kvnr, *key)}, type});
+        modelTask.setKvnr(model::Kvnr{std::string_view{mCodec.decode(*dbTask.kvnr, *key)}, type});
     }
     if (dbTask.expiryDate)
     {
@@ -835,7 +835,7 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     }
     if (dbTask.lastMedicationDispense)
     {
-        modelTask.updateLastMedicationDispense(dbTask.lastMedicationDispense.value());
+        modelTask.updateLastMedicationDispense(dbTask.lastMedicationDispense);
     }
     return modelTask;
 }

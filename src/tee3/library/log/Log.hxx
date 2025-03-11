@@ -67,7 +67,7 @@ public:
      * Therefore, VLOG(#) is mapped to LOG(DEBUG#). Both are removed from non-release
      * builds while LOG(INFO#) is no longer removed from non-release builds.
      */
-    enum class Severity
+    enum class Severity // NOLINT(cert-int09-c,readability-enum-initial-value)
     {
         FATAL,
         ERROR,

@@ -24,8 +24,8 @@ TEST(MetaDataTest, Construct)//NOLINT(readability-function-cognitive-complexity)
     model::MetaData metaData{};
 
     EXPECT_EQ(metaData.version(), ErpServerInfo::ReleaseVersion());
-    EXPECT_EQ(metaData.date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
-    EXPECT_EQ(metaData.releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
+    EXPECT_EQ(metaData.date(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
+    EXPECT_EQ(metaData.releaseDate(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(metaData.jsonDocument()), SchemaType::fhir));

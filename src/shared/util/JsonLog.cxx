@@ -7,9 +7,8 @@
 
 #include "shared/util/Configuration.hxx"
 #include "shared/util/JsonLog.hxx"
-
-#include "shared/util/TLog.hxx"
 #include "shared/util/String.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <iomanip>
 
@@ -98,14 +97,28 @@ JsonLog& JsonLog::message (const std::string_view text)
     return *this;
 }
 
-void JsonLog::locationFromException(const boost::exception& ex)
+JsonLog& JsonLog::locationFromException(const boost::exception& ex) &
 {
     locationFromException<>(ex);
+    return *this;
 }
 
-void JsonLog::locationFromException(const std::exception& ex)
+JsonLog&& JsonLog::locationFromException(const boost::exception& ex) &&
 {
     locationFromException<>(ex);
+    return std::move(*this);
+}
+
+JsonLog& JsonLog::locationFromException(const std::exception& ex) &
+{
+    locationFromException<>(ex);
+    return *this;
+}
+
+JsonLog&& JsonLog::locationFromException(const std::exception& ex) &&
+{
+    locationFromException<>(ex);
+    return std::move(*this);
 }
 
 template<typename ExceptionT>
@@ -190,7 +203,19 @@ void JsonLog::discard (void)
 }
 
 
-std::string JsonLog::escapeJson (const std::string& text)
+std::string JsonLog::escapeJson(const std::string& text)
 {
     return String::replaceAll(text, "\"", "\\\"");
+}
+
+JsonLog& operator<<(JsonLog& jsonLog, const KeyValue& kv)
+{
+    jsonLog.keyValue(kv.key, kv.value);
+    return jsonLog;
+}
+
+JsonLog&& operator<<(JsonLog&& jsonLog, const KeyValue& kv)
+{
+    jsonLog.keyValue(kv.key, kv.value);
+    return std::move(jsonLog);
 }

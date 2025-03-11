@@ -157,7 +157,7 @@ int ErpMain::runApplication (
     }
 
     SignalHandler signalHandler(ioContext);
-    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});
+    signalHandler.registerSignalHandlers({SIGINT, SIGTERM}); // Note that SIGPIPE is ignored when calling this method.
 
     log << "starting admin server";
     serviceContext->getAdminServer().serve(1, "admin");
@@ -294,7 +294,7 @@ Factories ErpMain::createProductionFactories()
         {
             return std::make_unique<HsmMockClient>();
         };
-        factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>&&, std::shared_ptr<BlobCache> blobCache)
+        factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>, std::shared_ptr<BlobCache> blobCache)
         {
             MockBlobCache::setupBlobCache(MockBlobCache::MockTarget::MockedHsm, *blobCache);
             return std::make_unique<HsmMockFactory>(

@@ -45,7 +45,6 @@ BDEMessage::BDEMessage()
     , mIp{}
     , mCid{}
     , mInnerResponseCode{}
-    , mResponseCode{}
     , mEndTime{model::Timestamp::now()}
     , mLastModified{model::Timestamp::now()}
     , mError{}
@@ -90,5 +89,9 @@ void BDEMessage::publish()
     if (mCid)
     {
         log.keyValue("cid", mCid.value());
+    }
+    if (mHashedKvnr.has_value())
+    {
+       log << *mHashedKvnr;
     }
 }

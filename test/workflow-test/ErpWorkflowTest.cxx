@@ -127,6 +127,10 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
 
 TEST_P(ErpWorkflowTestP, TaskClose_EmptyBody_WithMedicationDispense)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (isDiga(GetParam()))
+    {
+        GTEST_SKIP_("no $dispense support for diga");
+    }
     // invoke POST /task/$create
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -153,16 +157,9 @@ TEST_P(ErpWorkflowTestP, TaskClose_EmptyBody_WithMedicationDispense)//NOLINT(rea
     const JWT jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     const JWT jwt{ jwtApotheke() };
 
-    // Test that close request without body succeeds.
-    ClientResponse serverResponse;
-    const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
-    //const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), model::Timestamp::now().toGermanDate());
-    ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) =
-            send(RequestArguments{HttpMethod::POST, closePath, {}, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
-    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
-
+    // Test that close request without body (0 medicationDispenses) succeeds.
+    std::vector<model::Communication> communications;
+    checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications, 0);
 }
 
 // GEMREQ-start A_19169-01#TaskLifecycleNormal
@@ -393,6 +390,7 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
     switch (GetParam())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
             break;
         case model::PrescriptionType::direkteZuweisung:
             expected = 1;
@@ -413,7 +411,9 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
 
     {
         std::optional<model::Bundle> communicationsBundle;
-        ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), "identifier=eq" + model::Timestamp::now().toGermanDate()));
+        ASSERT_NO_FATAL_FAILURE(
+            communicationsBundle = communicationsGet(
+                jwtApotheke(), "identifier=eq" + model::Timestamp::now().toGermanDate()));
         ASSERT_EQ(communicationsBundle->getResourceCount(), expected);
     }
 
@@ -1021,7 +1021,7 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     ASSERT_TRUE(metaData);
     if (!runsInCloudEnv())
     {
-        const auto releaseDate = model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data());
+        const auto releaseDate = model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()});
         EXPECT_EQ(metaData->date(), releaseDate);
         EXPECT_EQ(metaData->releaseDate(), releaseDate);
     }
@@ -1040,7 +1040,7 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     expectedMetaData.setDate(now);
     expectedMetaData.setReleaseDate(now);
 
-    ASSERT_EQ(metaData->serializeToJsonString(), expectedMetaData.serializeToJsonString());
+    ASSERT_EQ(metaData->serializeToJsonString(), expectedMetaData.serializeToJsonString()) << metaData->serializeToJsonString();
 }
 
 TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-complexity)
@@ -1329,7 +1329,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
 
     // Invalid format of prescriptionId for Medication dispense, will be rejected by schema check:
     ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
-        task->prescriptionId(), "INVALID", std::string(secret.value()), kvnr));
+        task->prescriptionId(), "160.INVALID", std::string(secret.value()), kvnr));
     // Valid format of prescriptionId for Medication dispense but invalid content:
     ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
         task->prescriptionId(), "160.000.000.000.000.00", std::string(secret.value()), kvnr));
@@ -1549,7 +1549,6 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     {
         GTEST_SKIP_("skipped in cloud environment");
     }
-    std::string accessCode;
     ClientResponse outerResponse;
 
     const model::PrescriptionId prescriptionId_apothekenpflichigeArzneimittel =
@@ -1615,20 +1614,24 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     ASSERT_TRUE(telematicId.has_value());
 
     std::optional<model::Communication> communicationResponseA;
-    ASSERT_NO_FATAL_FAILURE(
-        communicationResponseA = communicationPost(
-            model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
-            telematicId.value(),
-            R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament A bei Ihnen vorrätig?"})"));
+    std::string dispReqPayload =
+        isDiga(task->type())
+            ? ""
+            : R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament A bei Ihnen vorrätig?"})";
+    ASSERT_NO_FATAL_FAILURE(communicationResponseA = communicationPost(
+                                model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr,
+                                ActorRole::Pharmacists, telematicId.value(), dispReqPayload));
 
     std::this_thread::sleep_for(1s);
 
     std::optional<model::Communication> communicationResponseB;
-    ASSERT_NO_FATAL_FAILURE(
-        communicationResponseB = communicationPost(
-            model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
-            telematicId.value(),
-            R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament B bei Ihnen vorrätig?"})"));
+    std::string dispReqPayloadB =
+        isDiga(task->type())
+            ? ""
+            : R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament B bei Ihnen vorrätig?"})";
+    ASSERT_NO_FATAL_FAILURE(communicationResponseB = communicationPost(
+                                model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr,
+                                ActorRole::Pharmacists, telematicId.value(), dispReqPayloadB));
 
     std::this_thread::sleep_for(2s);
 
@@ -1646,17 +1649,21 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     const auto start = communications[0].timeReceived().value() + (-1s);
 
     std::optional<model::Communication> communicationResponseC;
-    ASSERT_NO_FATAL_FAILURE(
-        communicationResponseC = communicationPost(
-            model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
-            telematicId.value(),
-            R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament C bei Ihnen vorrätig?"})"));
+    std::string dispReqPayloadC =
+        isDiga(task->type())
+            ? ""
+            : R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament C bei Ihnen vorrätig?"})";
+    ASSERT_NO_FATAL_FAILURE(communicationResponseC = communicationPost(
+                                model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr,
+                                ActorRole::Pharmacists, telematicId.value(), dispReqPayloadC));
     std::optional<model::Communication> communicationResponseD;
-    ASSERT_NO_FATAL_FAILURE(
-        communicationResponseD = communicationPost(
-            model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
-            telematicId.value(),
-            R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament D bei Ihnen vorrätig?"})"));
+    std::string dispReqPayloadD =
+        isDiga(task->type())
+            ? ""
+            : R"({"version": 1, "supplyOptionsType": "onPremise", "hint": "Ist das Medikament D bei Ihnen vorrätig?"})";
+    ASSERT_NO_FATAL_FAILURE(communicationResponseD = communicationPost(
+                                model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant, kvnr,
+                                ActorRole::Pharmacists, telematicId.value(), dispReqPayloadD));
 
     std::this_thread::sleep_for(1s);
 
@@ -1945,7 +1952,4 @@ TEST_P(ErpWorkflowTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
 
 
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::direkteZuweisung,
-                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));

@@ -39,6 +39,7 @@ concept FhirValidatableProfileConstexpr = requires {
 template<typename T>
 concept FhirValidatable = FhirValidatableProfileFunction<T> || FhirValidatableProfileConstexpr<T>;
 
+// NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved)
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class FhirResourceBase : public ResourceBase
 {
@@ -133,6 +134,7 @@ protected:
     using FhirResourceBase::FhirResourceBase;
     using FhirResourceBase::getValidationView;
 };
+// NOLINTEND(cppcoreguidelines-rvalue-reference-param-not-moved)
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class UnspecifiedResource : public Resource<UnspecifiedResource>

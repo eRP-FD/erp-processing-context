@@ -17,15 +17,19 @@ class MedicationDispenseOperationParameters : public model::Parameters<Medicatio
 public:
     using Parameters::Parameters;
 
-    model::ProfileType profileType() const;
+    [[nodiscard]] model::ProfileType profileType() const;
 
-    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> getValidationView() const override;
+    [[nodiscard]] gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+    getValidationView() const override;
 
-    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
+    [[nodiscard]] std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 
-    std::list<std::pair<MedicationDispense, GemErpPrMedication>> medicationDispenses() const;
+    [[nodiscard]] std::list<MedicationDispense> medicationDispensesDiga() const;
+    [[nodiscard]] std::list<std::pair<MedicationDispense, GemErpPrMedication>> medicationDispenses() const;
 
 private:
+    [[nodiscard]] std::list<std::pair<MedicationDispense, std::optional<GemErpPrMedication>>>
+    collectMedicationDispenses() const;
     friend class Resource<MedicationDispenseOperationParameters>;
 };
 

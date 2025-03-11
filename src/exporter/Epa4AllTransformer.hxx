@@ -61,7 +61,7 @@ private:
     static void convertPZNIngredients(model::NumberAsStringParserDocument& transformedMedication,
                                       const model::KbvMedicationCompounding& kbvMedicationCompounding);
     static void convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
-                                     rapidjson::Value& epaIngredient, model::Pzn&& pzn, std::string_view text);
+                                     rapidjson::Value& epaIngredient, const model::Pzn& pzn, std::string_view text);
     static model::NumberAsStringParserDocument
     transformResource(const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
                       const std::vector<fhirtools::ValueMapping>& valueMappings,

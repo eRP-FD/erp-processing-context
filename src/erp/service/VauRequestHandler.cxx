@@ -128,7 +128,7 @@ void fillErrorResponse(ServerResponse& innerResponse,
 } // anonymous namespace
 
 
-namespace exception_handlers
+namespace
 {
 void runErpExceptionHandler(const ErpException& exception,
                             const std::unique_ptr<ServerRequest>& innerRequest,
@@ -364,7 +364,7 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
 
 void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
                                            const std::string& upParam,
-                                           std::unique_ptr<InnerTeeRequest>&& innerTeeRequest)
+                                           std::unique_ptr<InnerTeeRequest> innerTeeRequest)
 {
     std::unique_ptr<ServerRequest> innerServerRequest;
     ServerResponse innerServerResponse;
@@ -600,22 +600,23 @@ bool VauRequestHandler::checkProfessionOID(
     const auto professionOIDClaim =
         innerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
     A_19390.finish();
+    auto optionalPathIdParameter = innerRequest->getPathParameter("id");
 
     A_19018.start("Check if professionOID claim is allowed for this endpoint");
     A_19022.start("Check if professionOID claim is allowed for this endpoint");
     A_19026.start("Check if professionOID claim is allowed for this endpoint");
     A_19113_01.start("Check if professionOID claim is allowed for this endpoint");
-    A_19166.start("Check if professionOID claim is allowed for this endpoint");
-    A_19166.start("Check if professionOID claim is allowed for this endpoint");
-    A_19170_01.start("Check if professionOID claim is allowed for this endpoint");
-    A_19230.start("Check if professionOID claim is allowed for this endpoint");
+    A_19166_01.start("Check if professionOID claim is allowed for this endpoint WF-160/169/200/209");
+    A_25993.start("Check if professionOID claim is allowed for this endpoint WF-162");
+    A_19170_02.start("Check if professionOID claim is allowed for this endpoint");
+    A_19230_01.start("Check if professionOID claim is allowed for this endpoint");
     A_19390.start("Check if professionOID claim is allowed for this endpoint");
     A_19395.start("Check if professionOID claim is allowed for this endpoint");
     A_19405.start("Check if professionOID claim is allowed for this endpoint");
-    A_19446_01.start("Check if professionOID claim is allowed for this endpoint");
-    A_22362.start("Check if professionOID claim is allowed for this endpoint");
+    A_19446_02.start("Check if professionOID claim is allowed for this endpoint");
+    A_22362_01.start("Check if professionOID claim is allowed for this endpoint");
     A_24279.start("Check if professionOID claim is allowed for this endpoint");
-    if (! handler->allowedForProfessionOID(professionOIDClaim))
+    if (! handler->allowedForProfessionOID(professionOIDClaim, optionalPathIdParameter))
     {
         TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
         fillErrorResponse(response, HttpStatus::Forbidden, innerRequest,
@@ -624,15 +625,15 @@ bool VauRequestHandler::checkProfessionOID(
         A_19022.finish();
         A_19026.finish();
         A_19113_01.finish();
-        A_19166.finish();
-        A_19166.finish();
-        A_19170_01.finish();
-        A_19230.finish();
+        A_19166_01.finish();
+        A_25993.finish();
+        A_19170_02.finish();
+        A_19230_01.finish();
         A_19390.finish();
         A_19395.finish();
         A_19405.finish();
-        A_19446_01.finish();
-        A_22362.finish();
+        A_19446_02.finish();
+        A_22362_01.finish();
         A_24279.finish();
         log.location(fileAndLine);
         log.error("endpoint is forbidden for professionOID");
@@ -652,20 +653,20 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
     {
         // This is a small trick that helps to avoid having a large number of catches in the calling method.
         if (exceptionPtr)
-            std::rethrow_exception(exceptionPtr);
+            {std::rethrow_exception(exceptionPtr);}
     }
     catch (const ErpException &e)
     {
-        exception_handlers::runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
+        runErpExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
     catch (const ErpServiceException& e)
     {
-        exception_handlers::erpServiceExceptionHandler(e, innerRequest, innerResponse, outerSession);
+        erpServiceExceptionHandler(e, innerRequest, innerResponse, outerSession);
     }
     // GEMREQ-start A_19439#catchJwtError, A_20373#catchExpiredException
     catch (const JwtExpiredException& exception)
     {
-        exception_handlers::runJwtExceptionHandler(
+        runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT expired",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
     }
@@ -673,7 +674,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
     catch (const JwtRequiredClaimException& exception)
     {
         A_20369_01.start("Handle missing required claims.");
-        exception_handlers::runJwtExceptionHandler(
+        runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT misses required claims",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_20369_01.finish();
@@ -681,7 +682,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
     catch (const JwtInvalidSignatureException& exception)
     {
         A_19131.start("Handle invalid signature");
-        exception_handlers::runJwtExceptionHandler(
+        runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT has invalid signature",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_19131.finish();
@@ -689,19 +690,19 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
     }
     catch (const JwtInvalidRfcFormatException& exception)
     {
-        exception_handlers::runJwtInvalidRfcFormatExceptionHandler(
+        runJwtInvalidRfcFormatExceptionHandler(
             exception, innerRequest, innerResponse, outerSession);
     }
     catch (const JwtInvalidFormatException& exception)
     {
-        exception_handlers::runJwtExceptionHandler(
+        runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT has invalid format",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
     }
     catch (const JwtInvalidAudClaimException& exception)
     {
         A_21520.start("Handle invalid aud claim");
-        exception_handlers::runJwtExceptionHandler(
+        runJwtExceptionHandler(
             exception, innerRequest, innerResponse, outerSession, "JWT has invalid aud claim",
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_21520.finish();
@@ -717,15 +718,15 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
     }
     catch (const pqxx::internal_error& e)// directly derived from std::logic_error
     {
-        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
+        runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
     }
     catch (const pqxx::usage_error& e)// directly derived from std::logic_error
     {
-        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
+        runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
     }
     catch (const pqxx::failure& e)// base class for all pqxx runtime errors, derived from std::runtime_error
     {
-        exception_handlers::runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
+        runPqxxExceptionHandler(e, innerRequest, innerResponse, outerSession.accessLog);
     }
     catch (const std::exception &e)
     {

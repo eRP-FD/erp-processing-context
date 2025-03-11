@@ -81,7 +81,7 @@ protected:
     std::shared_ptr<void> mSerializerKeepAlive;
     /// This flag is set to true when mSslStream is being closed and therefore should not be used anymore for
     /// reading and writing. It remains set to true when the stream is closed.
-    bool mIsStreamClosedOrClosing;
+    bool mIsStreamClosedOrClosing{false};
 
     std::unique_ptr<AbstractRequestHandler> mRequestHandler;
 

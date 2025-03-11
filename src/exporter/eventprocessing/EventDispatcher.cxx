@@ -35,6 +35,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
 
     mMedicationClient->addLogData(BDEMessage::prescriptionIdKey, erpEvent.getPrescriptionId().toString());
     mMedicationClient->addLogData(BDEMessage::lastModifiedTimestampKey, erpEvent.getLastModified());
+    mMedicationClient->addLogData(BDEMessage::hashedKvnrKey, std::make_optional<model::HashedKvnr>(erpEvent.getHashedKvnr()));
 
     std::optional<model::AuditEventId> successAuditType;
     std::optional<model::AuditEventId> failedAuditType;

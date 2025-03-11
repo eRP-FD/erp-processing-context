@@ -58,8 +58,8 @@ std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::v
 {
     try
     {
-        const CadesBesSignature cadesBesSignature{containedBinary.data().value().data(), serviceContext.getTslManager(),
-                                                  true};
+        const CadesBesSignature cadesBesSignature{std::string{containedBinary.data().value()},
+                                                  serviceContext.getTslManager(), true};
         // parse it without validation, at this point a fhir document is fine
         auto pkvBundleFactory = model::ResourceFactory<model::AbgabedatenPkvBundle>::fromXml(cadesBesSignature.payload(),
                                                                                       serviceContext.getXmlValidator());

@@ -34,7 +34,7 @@ public:
      */
     // clang-format off
     constexpr static size_t headerSize
-        = 3*1   // version, isPU, direction
+        = (3*1)   // version, isPU, direction
           + 8   // message counter
           + 32; // KeyID
 
@@ -59,7 +59,8 @@ public:
      * For the decrypting streams we need a way to look up a TEE context for the KeyID in the
      * message header.
      */
-    using TeeContextProviderForKeyId = std::function<Tee3SessionContext(const KeyId& keyId)>;
+    using TeeContextProviderForKeyId =
+        std::function<Tee3SessionContext(const KeyId& keyId, const std::uint64_t requestCounter)>;
     /**
      * For encrypting streams we also need a TEE context. The KeyId argument is not required.
      */

@@ -15,8 +15,8 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/String.hxx"
-
 #include "shared/util/TLog.hxx"
+#include "shared/util/Expect.hxx"
 
 namespace
 {
@@ -30,8 +30,8 @@ namespace
     {
         destination.BlobGeneration = gsl::narrow<unsigned int>(source.generation);
         destination.BlobLength = source.data.size();
-        const char* p = source.data;
-        std::copy(p, p+source.data.size(), destination.BlobData);
+        Expect(std::size(destination.BlobData) >= source.data.size(), "BlobData input too large.");
+        std::copy_n(source.data.c_str(), source.data.size(), destination.BlobData);
     }
 
     void setInput (size_t& destination, const ErpVector& source)
@@ -41,7 +41,7 @@ namespace
 
     void setInput (unsigned char destination[MaxBuffer], const ErpVector& source)
     {
-        std::copy(source.begin(), source.end(), destination);
+        std::ranges::copy(source, destination);
     }
 
     void setInput (unsigned int& destination, const std::optional<bool>& source)
@@ -397,7 +397,7 @@ ErpVector HsmProductionClient::signWithVauAutKey(const HsmRawSession& session, S
     auto timer = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "Hsm:ERP_ParseTPMQuote");
 
     ::hsmclient::TPMQuoteInput input;
-    ::std::copy(::std::begin(quote), ::std::end(quote), ::std::begin(input.QuoteData));
+    std::ranges::copy(quote, ::std::begin(input.QuoteData));
 
     const auto parsedQuote = ::hsmclient::ERP_ParseTPMQuote(input);
 

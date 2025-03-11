@@ -94,8 +94,8 @@ public:
      */
     static Certificate createSelfSignedCertificateMock (
         const shared_EVP_PKEY& keyPair,
-        const AuthorizedIdentity& authorizedIdentity = { "kvnr",
-                                                         AuthorizedIdentity::IDENTITY_SUBJECT_ID},
+        const AuthorizedIdentity& authorizedIdentity = { .identity="kvnr",
+                                                         .type=AuthorizedIdentity::IDENTITY_SUBJECT_ID},
         const std::string& hostname = "localhost",
         const std::optional<std::string>& registrationNumber = std::nullopt,
         const std::string& subjectAlternameName = "IP:127.0.0.1");

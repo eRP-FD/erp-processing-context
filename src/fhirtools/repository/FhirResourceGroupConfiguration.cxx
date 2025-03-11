@@ -53,8 +53,6 @@ FhirResourceGroupConfiguration::Group::Group(const FhirResourceGroupConfiguratio
     const rapidjson::Pointer ptId{"/id"};
     const rapidjson::Pointer ptInclude{"/include"};
     const rapidjson::Pointer ptMatch{"/match"};
-    const rapidjson::Pointer ptValidFrom{"/valid-from"};
-    const rapidjson::Pointer ptValidUntil{"/valid-until"};
 
     const auto* id = ptId.Get(groupEntry);
     FPExpect(id && id->IsString(), "/erp/fhir-resource-groups/id is mandatory and must be String");

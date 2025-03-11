@@ -348,7 +348,7 @@ CommandLineArguments processCommandLine(const int argc,
 
 const BlobDescriptor& getDescriptor(const BlobType type)
 {
-    return *std::find_if(blobDescriptors.begin(), blobDescriptors.end(), [type](const auto& descriptor) {
+    return *std::ranges::find_if(blobDescriptors, [type](const auto& descriptor) {
         return descriptor.type == type;
     });
 }
@@ -631,7 +631,7 @@ private:
         {
             // Lookup descriptor by type.
             const auto descriptor =
-                std::find_if(blobDescriptors.begin(), blobDescriptors.end(), [type](const auto& item) {
+                std::ranges::find_if(blobDescriptors, [type](const auto& item) {
                     return item.type == type;
                 });
             Expect(descriptor != blobDescriptors.end(), "blob type not handled");
@@ -660,7 +660,8 @@ private:
 
 int main(const int argc, const char* argv[])
 {
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
     ThreadNames::instance().setThreadName(std::this_thread::get_id(), "main");
 
     if (! ::Environment::get("ERP_SERVER_HOST").has_value())

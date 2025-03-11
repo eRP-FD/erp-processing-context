@@ -21,6 +21,9 @@ set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
 add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 
+# Helper macros to manage transition away from error_code return values.
+add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
+
 #
 # Define how to build the eRP executable.
 #
@@ -32,6 +35,7 @@ list(
         admin/AdminServer.cxx
         admin/PutRuntimeConfigHandler.cxx
         crypto/SignedPrescription.cxx
+        crypto/VsdmProof.cxx
         database/Database.cxx
         database/DatabaseConnectionTimer.cxx
         database/DatabaseFrontend.cxx
@@ -41,6 +45,7 @@ list(
         database/PostgresBackendTask.cxx
         database/RedisClient.cxx
         database/redis/RateLimiter.cxx
+        database/redis/TaskRateLimiter.cxx
         model/AbgabedatenPkvBundle.cxx
         model/Binary.cxx
         model/ChargeItem.cxx
@@ -50,6 +55,8 @@ list(
         model/Consent.cxx
         model/Device.cxx
         model/ErxReceipt.cxx
+        model/EvdgaBundle.cxx
+        model/EvdgaHealthAppRequest.cxx
         model/extensions/ChargeItemMarkingFlags.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
@@ -164,25 +171,26 @@ target_include_directories (
 
 target_link_libraries (
     erp-processing-context-files
-        PUBLIC erp-shared
-        PUBLIC CONAN_PKG::boost
-        PUBLIC CONAN_PKG::date
-        PUBLIC CONAN_PKG::glog
-        PUBLIC CONAN_PKG::gsl-lite
-        PUBLIC CONAN_PKG::openssl
-        PUBLIC CONAN_PKG::rapidjson
-        PUBLIC CONAN_PKG::libpq
-        PUBLIC CONAN_PKG::libpqxx
-        PUBLIC CONAN_PKG::libxml2
-        PUBLIC CONAN_PKG::redis-plus-plus
-        PUBLIC CONAN_PKG::hiredis
-        PUBLIC CONAN_PKG::magic_enum
-        PUBLIC CONAN_PKG::zstd
-        PUBLIC CONAN_PKG::zlib
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
-        PUBLIC $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
+    PUBLIC
+        erp-shared
+        $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:hsmclient::hsmclient>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:tpmclient::tpmclient>
+        $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
+        antlr4_static
+        boost::boost
+        date::date
+        glog::glog
+        gsl::gsl-lite
+        libpqxx::pqxx
+        LibXml2::LibXml2
+        magic_enum::magic_enum
+        rapidjson
+        redis++::redis++_static
+        hiredis::hiredis_all_unofficial
+        openssl::openssl
+        ZLIB::ZLIB
+        zstd::libzstd_static
 )
 
 add_executable(erp-processing-context erp-main.cxx)

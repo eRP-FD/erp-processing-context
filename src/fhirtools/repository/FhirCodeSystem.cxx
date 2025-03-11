@@ -135,7 +135,7 @@ std::vector<std::string> FhirCodeSystem::resolveIsNotA(const std::string& value,
 }
 bool FhirCodeSystem::isA(const FhirCodeSystem::Code& code, const std::string& value) const
 {
-    return std::find(code.isA.begin(), code.isA.end(), value) != code.isA.end();
+    return std::ranges::find(code.isA, value) != code.isA.end();
 }
 const FhirCodeSystem::Code& FhirCodeSystem::getCode(const std::string& code) const
 {
@@ -172,13 +172,13 @@ bool FhirCodeSystem::containsCode(const std::string_view& code) const
 {
     if (isCaseSensitive())
     {
-        return mCodes.end() != std::find_if(mCodes.begin(), mCodes.end(), [&code](const auto& c) {
+        return mCodes.end() != std::ranges::find_if(mCodes, [&code](const auto& c) {
                    return c.code == code;
                });
     }
     else
     {
-        return mCodes.end() != std::find_if(mCodes.begin(), mCodes.end(), [&code](const auto& c) {
+        return mCodes.end() != std::ranges::find_if(mCodes, [&code](const auto& c) {
                    return boost::algorithm::iequals(code, c.code);
                });
     }

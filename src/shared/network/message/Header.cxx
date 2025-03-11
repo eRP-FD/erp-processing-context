@@ -40,6 +40,7 @@ const std::string Header::Tee3::VauCid = "VAU-CID";
 const std::string Header::Tee3::XUserAgent = "x-useragent";
 const std::string Header::Tee3::XInsurantId = "x-insurantid";
 const std::string Header::Tee3::VauNP = "VAU-NP";
+const std::string Header::Tee3::VauNonPuTracing = "VAU-nonPU-Tracing";
 
 const std::string Header::Location = "Location";
 const std::string Header::Server = "Server";
@@ -218,7 +219,7 @@ void Header::setKeepAlive(bool keepAlive)
 std::optional<AcceptMimeType> Header::getAcceptMimeType(std::string_view mimeType) const
 {
     const auto found =
-        std::find_if(mAcceptMimeTypes.cbegin(), mAcceptMimeTypes.cend(),
+        std::ranges::find_if(mAcceptMimeTypes,
                      [mimeType](const auto& m) { return m.getMimeType() == mimeType; });
 
     if (found != mAcceptMimeTypes.cend())

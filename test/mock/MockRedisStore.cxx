@@ -6,6 +6,7 @@
  */
 
 #include "test/mock/MockRedisStore.hxx"
+#include "shared/util/TLog.hxx"
 
 void MockRedisStore::healthCheck()
 {
@@ -73,6 +74,18 @@ void MockRedisStore::publish(const std::string_view& channel [[maybe_unused]], c
     // NOTE: implementation probably not required.
 }
 
+int64_t MockRedisStore::getIntValue(std::string_view key)
+{
+    const std::string_view field = "_mockCount";
+    int64_t count = 1;
+    if (exists(key)) {
+        auto countStr = fieldValueForKey(key, field).value();
+        count = std::strtoll(countStr.c_str(), nullptr, 10);
+        return count;
+    }
+    return 0;
+}
+
 void MockRedisStore::removeExpiredEntries()
 {
     // Perform basic cleanup which simulates Redis expireat feature.
@@ -94,4 +107,9 @@ void MockRedisStore::removeExpiredEntries()
         if (!skip)
         it++;
     }
+}
+
+void MockRedisStore::flushdb()
+{
+    mData.clear();
 }

@@ -432,7 +432,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 // GEMREQ-start A_22157
 TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (! usePostgres() || ! IsPkv(GetParam()))
+    if (! usePostgres() || ! isPkv(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -513,7 +513,7 @@ TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOL
 // GEMREQ-start A_22117-01
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (! usePostgres() || ! IsPkv(GetParam()))
+    if (! usePostgres() || ! isPkv(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -1180,19 +1180,19 @@ TEST_P(PostgresDatabaseCommunicationTest, markCommunicationsAsReceived)//NOLINT(
     database().commitTransaction();
 
     // Verify that c1 has been updated.
-    auto expectedC1 = database().retrieveCommunications(kvnrInsurant.id(), c1id.value(), {});
+    auto expectedC1 = database().retrieveCommunications(kvnrInsurant.id(), c1id, {});
     ASSERT_EQ(expectedC1.size(), 1);
     EXPECT_EQ(expectedC1.front().contentString(), "json blob A");
     EXPECT_EQ(expectedC1.front().timeReceived().value().toXsDateTime(), "2021-01-24T12:34:56.000+00:00");
 
     // Verify that c2 has not been updated and still has the previously set value.
-    auto expectedC2 = database().retrieveCommunications(InsurantB, c2id.value(), {});
+    auto expectedC2 = database().retrieveCommunications(InsurantB, c2id, {});
     ASSERT_EQ(expectedC2.size(), 1);
     EXPECT_EQ(expectedC2.front().contentString(), "json blob B");
     EXPECT_EQ(expectedC2.front().timeReceived().value().toXsDateTime(), "2022-01-23T12:45:00.000+00:00");
 
     // Verify that c3 has not been updated.
-    auto expectedC3 = database().retrieveCommunications(InsurantC, c3id.value(), {});
+    auto expectedC3 = database().retrieveCommunications(InsurantC, c3id, {});
     ASSERT_EQ(expectedC3.size(), 1);
     EXPECT_EQ(expectedC3.front().contentString(), "json blob C");
     EXPECT_FALSE(expectedC3.front().timeReceived().has_value());
@@ -1287,6 +1287,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
                          testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                         model::PrescriptionType::digitaleGesundheitsanwendungen,
                                          model::PrescriptionType::direkteZuweisung,
                                          model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                                          model::PrescriptionType::direkteZuweisungPkv));

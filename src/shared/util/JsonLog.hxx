@@ -74,7 +74,7 @@ public:
 
     static constexpr bool withDetailsDefault();
 
-    JsonLog(JsonLog&& o) = default;
+    JsonLog(JsonLog&& o) noexcept = default;
     JsonLog(LogId id, LogReceiver&& receiver, bool withDetails = withDetailsDefault());
     JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
     ~JsonLog(void);
@@ -94,10 +94,12 @@ public:
     JsonLog& location(const FileNameAndLineNumber& loc);
 
     /// If @p ex is derived form ExceptionWrapperBase, adds location from exception; otherwise adds location "unknown"
-    void locationFromException(const std::exception& ex);
+    JsonLog& locationFromException(const std::exception& ex) &;
+    JsonLog&& locationFromException(const std::exception& ex) &&;
 
     /// If @p ex is derived form ExceptionWrapperBase, adds location from exception; otherwise adds location "unknown"
-    void locationFromException(const boost::exception& ex);
+    JsonLog& locationFromException(const boost::exception& ex) &;
+    JsonLog&& locationFromException(const boost::exception& ex) &&;
 
     /**
      * There are circumstances where an AccessLog object is created but output from it is undesirable.
@@ -127,5 +129,14 @@ constexpr bool JsonLog::withDetailsDefault()
     return false;
 }
 
+struct KeyValue
+{
+    std::string_view key;
+    std::string_view value;
+};
+
+JsonLog& operator<<(JsonLog& jsonLog, const KeyValue& kv);
+
+JsonLog&& operator<<(JsonLog&& jsonLog, const KeyValue& kv);
 
 #endif

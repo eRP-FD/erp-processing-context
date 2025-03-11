@@ -10,8 +10,9 @@
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 
-#include <boost/algorithm/string/case_conv.hpp>
 #include <algorithm>
+#include <boost/algorithm/string/case_conv.hpp>
+#include <date/tz.h>
 #include <source_location>
 #include <utility>
 
@@ -187,6 +188,14 @@ Collection UtilityTrace::eval(const Collection& collection) const
     }
     TVLOG(3) << oss.str();
     return collection;
+}
+
+Collection fhirtools::UtilityToday::eval(const Collection& collection [[maybe_unused]]) const
+{
+    auto germanTimestamp = date::make_zoned("Europe/Berlin", std::chrono::system_clock::now());
+    auto germanDay = date::floor<date::days>(germanTimestamp.get_local_time());
+    Date germanDate{date::year_month_day{germanDay}, Date::Precision::day};
+    return Collection{makeDateElement(germanDate)};
 }
 
 

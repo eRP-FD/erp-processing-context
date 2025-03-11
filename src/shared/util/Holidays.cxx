@@ -96,7 +96,7 @@ void Holidays::loadConfiguredHolidays(const Configuration& configuration)
                     continue;
                 }
             }
-            catch (const std::invalid_argument&)
+            catch (const std::invalid_argument&) // NOLINT(bugprone-empty-catch)
             {
                 // on std::stoi errors, continue trying to parse the entry
             }

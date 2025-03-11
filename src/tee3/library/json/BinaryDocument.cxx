@@ -373,7 +373,7 @@ void BinaryDocument::String::decode(EncType encType, std::uint64_t number, std::
     {
         Assert(encType == EncType::String);
         Assert(buffer.size() >= number);
-        value = std::string(buffer.data(), number);
+        value = std::string(buffer.begin(), number);
         buffer.remove_prefix(number);
     }
 }

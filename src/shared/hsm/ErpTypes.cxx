@@ -33,7 +33,7 @@ ErpBlob::ErpBlob (
     : data(SafeString::no_zero_fill, data_.size()),
       generation(generation_)
 {
-    std::copy(data_.begin(), data_.end(), static_cast<char*>(data));
+    std::ranges::copy(data_, static_cast<char*>(data));
 }
 
 
@@ -41,7 +41,7 @@ ErpBlob::ErpBlob (const ErpBlob& other)
     : data(SafeString::no_zero_fill, other.data.size()),
       generation(other.generation)
 {
-    std::copy(static_cast<const char*>(other.data), static_cast<const char*>(other.data) + other.data.size(), static_cast<char*>(data));
+    std::copy_n(static_cast<const char*>(other.data), other.data.size(), static_cast<char*>(data));
 }
 
 
@@ -108,7 +108,7 @@ ErpVector ErpVector::create (const std::string_view data)
 {
     ErpVector vector;
     vector.resize(data.size());
-    std::copy(data.begin(), data.end(), vector.begin());
+    std::ranges::copy(data, vector.begin());
     return vector;
 }
 

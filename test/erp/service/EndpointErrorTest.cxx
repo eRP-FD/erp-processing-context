@@ -21,7 +21,7 @@ namespace {
             const auto requestedResponseStatus = std::stoi(session.request.getPathParameter("status").value_or("200"));
             throw ErpException("test", fromBoostBeastStatus(gsl::narrow<uint32_t>(requestedResponseStatus)));
         }
-        [[nodiscard]] bool allowedForProfessionOID(std::string_view) const override
+        [[nodiscard]] bool allowedForProfessionOID(std::string_view, const std::optional<std::string>&) const override
         {
             return true;
         }

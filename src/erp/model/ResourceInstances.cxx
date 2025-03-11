@@ -5,6 +5,8 @@
 #include "erp/model/Consent.hxx"
 #include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/EvdgaBundle.hxx"
+#include "erp/model/EvdgaHealthAppRequest.hxx"
 #include "erp/model/GemErpPrMedication.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/KbvComposition.hxx"
@@ -59,8 +61,10 @@ template class Resource<Communication>;
 template class Resource<Consent>;
 template class Resource<Device>;
 template class Resource<Dosage>;
-template class Resource<GemErpPrMedication>;
 template class Resource<ErxReceipt>;
+template class Resource<EvdgaBundle>;
+template class Resource<EvdgaHealthAppRequest>;
+template class Resource<GemErpPrMedication>;
 template class Resource<KbvBundle>;
 template class Resource<KbvComposition>;
 template class Resource<KbvCoverage>;
@@ -92,6 +96,7 @@ template class Resource<Reference>;
 template class Resource<Signature>;
 template class Resource<Subscription>;
 template class Resource<Task>;
+
 
 // NOLINTEND(bugprone-exception-escape, bugprone-forward-declaration-namespace)
 }

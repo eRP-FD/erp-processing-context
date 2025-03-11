@@ -23,45 +23,46 @@ enum class AuditEventId : std::int16_t
     // Note: For any changes here be sure that the functions below are updated accordingly.
     MIN = 0,
     GET_Task = MIN,            // only allowed by insurant;
-    GET_Task_id_insurant,
-    GET_Task_id_representative,
-    GET_Task_id_pharmacy,
-    POST_Task_activate,
-    POST_Task_accept,
-    POST_Task_reject,
-    POST_Task_close,
-    POST_Task_abort_doctor,
-    POST_Task_abort_insurant,
-    POST_Task_abort_representative,
-    POST_Task_abort_pharmacy,
-    GET_MedicationDispense,    // only allowed by insurant;
-    GET_MedicationDispense_id, // only allowed by insurant;
-    Task_delete_expired_id,    // deletion of expired tasks by maintenance script => Id 14 used by database script!
-    DELETE_ChargeItem_id_insurant,
-    DELETE_ChargeItem_id_pharmacy,
-    POST_ChargeItem,           // always caused by pharmacy;
+    GET_Task_id_insurant = 1,
+    GET_Task_id_representative = 2,
+    GET_Task_id_pharmacy = 3,
+    POST_Task_activate = 4,
+    POST_Task_accept = 5,
+    POST_Task_reject = 6,
+    POST_Task_close = 7,
+    POST_Task_abort_doctor = 8,
+    POST_Task_abort_insurant = 9,
+    POST_Task_abort_representative = 10,
+    POST_Task_abort_pharmacy = 11,
+    GET_MedicationDispense = 12,    // only allowed by insurant;
+    GET_MedicationDispense_id = 13, // only allowed by insurant;
+    Task_delete_expired_id = 14,    // deletion of expired tasks by maintenance script => Id 14 used by database script!
+    DELETE_ChargeItem_id_insurant = 15,
+    DELETE_ChargeItem_id_pharmacy = 16,
+    POST_ChargeItem = 17,           // always caused by pharmacy;
     // PUT_ChargeItem_id_insurant (id 18) no longer used;
     PUT_ChargeItem_id = 19,
-    POST_Consent,              // only allowed by insurant;
-    DELETE_Consent,         // only allowed by insurant;
-    ChargeItem_delete_expired_id, // deletion of expired ChargeItems by maintenance script => Id 22 used by database script!
-    GET_ChargeItem_id_insurant,
-    GET_ChargeItem_id_pharmacy,
-    PATCH_ChargeItem_id,
-    GET_Tasks_by_pharmacy_with_pz,
+    POST_Consent = 20,              // only allowed by insurant;
+    DELETE_Consent = 21,         // only allowed by insurant;
+    ChargeItem_delete_expired_id = 22, // deletion of expired ChargeItems by maintenance script => Id 22 used by database script!
+    GET_ChargeItem_id_insurant = 23,
+    GET_ChargeItem_id_pharmacy = 24,
+    PATCH_ChargeItem_id = 25,
+    GET_Tasks_by_pharmacy_with_pz = 26,
+    // 27 left out
     GET_Tasks_by_pharmacy_pnw_check_failed = 28,
     Communication_delete_expired_id = 29, // deletion of expired Communications by maintenance script => Id 29 used by database script!
-    GET_Tasks_by_pharmacy_with_pn3,
-    GET_Tasks_by_pharmacy_with_pn3_failed,
-    POST_Task_dispense,
-    POST_PROVIDE_PRESCRIPTION_ERP,
-    POST_PROVIDE_PRESCRIPTION_ERP_failed,
-    POST_PROVIDE_DISPENSATION_ERP,
-    POST_PROVIDE_DISPENSATION_ERP_failed,
-    POST_CANCEL_PRESCRIPTION_ERP,
-    POST_CANCEL_PRESCRIPTION_ERP_failed,
-    POST_CANCEL_DISPENSATION_REP,
-    POST_CANCEL_DISPENSATION_REP_failed,
+    GET_Tasks_by_pharmacy_with_pn3 = 30,
+    GET_Tasks_by_pharmacy_with_pn3_failed = 31,
+    POST_Task_dispense = 32,
+    POST_PROVIDE_PRESCRIPTION_ERP = 33,
+    POST_PROVIDE_PRESCRIPTION_ERP_failed = 34,
+    POST_PROVIDE_DISPENSATION_ERP = 35,
+    POST_PROVIDE_DISPENSATION_ERP_failed = 36,
+    POST_CANCEL_PRESCRIPTION_ERP = 37,
+    POST_CANCEL_PRESCRIPTION_ERP_failed = 38,
+    POST_CANCEL_DISPENSATION_REP = 39,
+    POST_CANCEL_DISPENSATION_REP_failed = 40,
     MAX = POST_CANCEL_DISPENSATION_REP_failed
 };
 

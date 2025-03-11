@@ -31,8 +31,8 @@ namespace
         ErpVector result;
         const auto& salt = secondCallData.salt;
         result.reserve(data.size() + salt.size());
-        std::copy(data.begin(), data.end(), std::back_inserter(result));
-        std::copy(salt.begin(), salt.end(), std::back_inserter(result));
+        std::ranges::copy(data, std::back_inserter(result));
+        std::ranges::copy(salt, std::back_inserter(result));
         return result;
     }
 
@@ -324,7 +324,7 @@ ErpArray<Aes128Length> HsmSession::vauEcies128 (const ErpVector& clientPublicKey
         {
             return get(eciesKeys.latest.blob);
         }
-        catch (const ::HsmEciesCurveMismatchException&)
+        catch (const ::HsmEciesCurveMismatchException&) //NOLINT(bugprone-empty-catch)
         {
             // ignore error and retry with fallback
         }
@@ -449,7 +449,7 @@ DeriveKeyInput HsmSession::makeDeriveKeyInput(
     input.blobType = blobType;
     auto ak = mBlobCache.getBlob(BlobType::AttestationPublicKey);
     Expect(ak.name.size() == TpmObjectNameLength, "ak name has the wrong size");
-    std::copy(ak.name.begin(), ak.name.end(), input.akName.begin());
+    std::ranges::copy(ak.name, input.akName.begin());
     if (secondCallData.has_value())
     {
         input.initialDerivation = false;

@@ -5,6 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include <algorithm>
+
 #include "shared/crypto/CadesBesSignature.hxx"
 
 #include "shared/crypto/Certificate.hxx"
@@ -228,19 +230,17 @@ namespace
         }
 
         std::vector<std::string> oidsStr(oids.size());
-        std::transform(oids.cbegin(),
-                       oids.cend(),
-                       oidsStr.begin(),
-                       [](const auto& oid)
-                       {
-                           return oid.data();
-                       });
+        std::ranges::transform(oids, oidsStr.begin(), [](const auto& oid) {
+            return oid.data();
+        });
 
-        A_19225.start("Check ProfessionOIDs in QES certificate.");
+        A_19225_02.start("Check ProfessionOIDs in QES certificate for 160/169/200/209.");
+        A_25990.start("Check ProfessionOIDs in QES certificate for 162.");
         Expect3(certificate.checkRoles(oidsStr),
                 "The QES-Certificate does not have expected ProfessionOID.",
                 CadesBesSignature::UnexpectedProfessionOidException);
-        A_19225.finish();
+        A_25990.finish();
+        A_19225_02.finish();
     }
 
 
@@ -683,8 +683,7 @@ void CadesBesSignature::validateCounterSignature(const Certificate& signerCertif
     const unsigned char* data = asn1Type->value.sequence->data;
 
     const CMS_SignerInfoPtr counterSignatureSignerInfo{reinterpret_cast<CMS_SignerInfo*>(
-        //NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
-        ASN1_item_d2i(nullptr, const_cast<const unsigned char**>(&data), asn1Type->value.sequence->length,
+        ASN1_item_d2i(nullptr, &data, asn1Type->value.sequence->length,
                       ASN1_ITEM_rptr(CMS_SignerInfo)))};
     OpenSslExpect(counterSignatureSignerInfo != nullptr, "unable to get CMS_SignerInfo");
 

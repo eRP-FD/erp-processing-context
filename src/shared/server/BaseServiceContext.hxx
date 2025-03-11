@@ -51,7 +51,7 @@ struct BaseFactories {
 class BaseServiceContext
 {
 public:
-    BaseServiceContext(BaseFactories& factories);
+    BaseServiceContext(const BaseFactories& factories);
     virtual ~BaseServiceContext() = default;
 
     std::shared_ptr<Timer> getTimerManager();

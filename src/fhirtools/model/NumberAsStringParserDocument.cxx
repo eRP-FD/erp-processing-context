@@ -205,7 +205,7 @@ void NumberAsStringParserDocument::setKeyValue(rj::Value& object, const rj::Poin
 {
     // The passed string may be marked as safe here as it will be copied anyway in the
     // common "setKeyValue" method when prefixing the string.
-    setKeyValue(object, key, rj::Value(rj::StringRef(value.data())));
+    setKeyValue(object, key, rj::Value(rj::StringRef(value.data(), value.size())));
 }
 
 void NumberAsStringParserDocument::setKeyValue(rj::Value& object, const rj::Pointer& key, int value)
@@ -242,7 +242,7 @@ void NumberAsStringParserDocument::setValue(const rj::Pointer& pointerToEntry, c
 {
     // The passed string may be marked as safe here as it will be copied anyway in the
     // common "setKeyValue" method when prefixing the string.
-    setKeyValue(*this, pointerToEntry, rj::Value(rj::StringRef(value.data())));
+    setKeyValue(*this, pointerToEntry, rj::Value(rj::StringRef(value.data(), value.size())));
 }
 
 void NumberAsStringParserDocument::setValue(const rj::Pointer& pointerToEntry, int value)

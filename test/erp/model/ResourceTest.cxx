@@ -7,6 +7,7 @@
 
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispense.hxx"
+#include "erp/model/GemErpPrMedication.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Parameters.hxx"
 #include "shared/model/Resource.hxx"
@@ -56,7 +57,7 @@ TEST(ResourceBaseTest, InvalidConstruction)//NOLINT(readability-function-cogniti
 TEST(ResourceFactoryTest, invalid_profile)
 {
     static constexpr auto makeBroken = [](const std::string& good) {
-        return String::replaceAll(good, "https://gematik.de/fhir/erp/StructureDefinition",
+        return String::replaceAll(good, "https://fhir.kbv.de/StructureDefinition",
                                   "https://invalid/fhir/erp/StructureDefinition");
     };
     using namespace std::string_literals;
@@ -64,7 +65,7 @@ TEST(ResourceFactoryTest, invalid_profile)
     const auto& backend = fhirInstance.backend();
     auto supported =
         fhirInstance.structureRepository(model::Timestamp::now())
-            .supportedVersions(&backend, {std::string{model::resource::structure_definition::medicationDispense}});
+            .supportedVersions(&backend, {std::string{model::resource::structure_definition::prescriptionItem}});
     ASSERT_FALSE(supported.empty());
     std::string_view sep{};
     std::string profileList;
@@ -76,11 +77,11 @@ TEST(ResourceFactoryTest, invalid_profile)
     }
     const auto goodProfile = to_string(std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version));
     const auto badProfile = makeBroken(goodProfile);
-    auto badMedicationDispense = makeBroken(ResourceTemplates::medicationDispenseXml({}));
-    using Factory = model::ResourceFactory<model::MedicationDispense>;
+    auto badMedicationDispense = makeBroken(ResourceTemplates::kbvBundleXml({}));
+    using Factory = model::ResourceFactory<model::KbvBundle>;
     try {
         Factory::fromXml(badMedicationDispense, *StaticData::getXmlValidator())
-            .getValidated(model::ProfileType::Gem_erxMedicationDispense);
+            .getValidated(model::ProfileType::KBV_PR_ERP_Bundle);
         GTEST_FAIL() << "Expected ErpException";
     }
     catch (const ErpException& ex)

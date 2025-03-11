@@ -23,14 +23,12 @@ namespace model
 
 class MedicationDispenseId;
 
-// Reduced version of Medication Dispense resource, contains only functionality currently needed;
-
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class MedicationDispense : public Resource<MedicationDispense>
 {
 public:
-    static constexpr auto profileType = ProfileType::Gem_erxMedicationDispense;
     using Resource::Resource;
+    [[nodiscard]] ProfileType profileType() const;
 
     [[nodiscard]] PrescriptionId prescriptionId() const;
     [[nodiscard]] Kvnr kvnr() const;

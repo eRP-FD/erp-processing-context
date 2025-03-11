@@ -208,3 +208,39 @@ TEST(SafeStringTest, comparisonSelf)//NOLINT(readability-function-cognitive-comp
     ASSERT_FALSE(a > a);
     ASSERT_TRUE(a >= a);
 }
+
+class SafeStringConversionTest : public testing::Test {
+public:
+    static void convertToStringWhenCalling(const std::string&);
+
+    template <typename T>
+    static constexpr bool test(T&& v [[maybe_unused]])
+    requires requires() { convertToStringWhenCalling(std::forward<T>(v));}
+    {
+        return false;
+    }
+    template <typename T>
+    static constexpr bool test(T&& v [[maybe_unused]])
+    requires (not requires() { convertToStringWhenCalling(std::forward<T>(v));})
+    {
+        return true;
+    }
+private:
+};
+
+TEST_F(SafeStringConversionTest, noImplicitConvertToStdString)
+{
+    // compile-time test
+    SafeString s;
+    static_assert(test(s));
+    static_assert(test(std::move(s)));
+
+    const SafeString cs;
+    static_assert(test(cs));
+
+    // see if our test is correct:
+    static constexpr const char* testchar = "test";
+    static_assert(not test(testchar));
+    std::string stdString;
+    static_assert(not test(stdString));
+}

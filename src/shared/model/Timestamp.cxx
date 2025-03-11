@@ -46,8 +46,8 @@ int64_t timezoneOffset()
     struct tm tmGm {
     };
 #if _POSIX_C_SOURCE >= 1 || _XOPEN_SOURCE || _BSD_SOURCE || _SVID_SOURCE || _POSIX_SOURCE
-    localtime_r(&now, &tmLocal);
-    gmtime_r(&now, &tmGm);
+    ModelExpect(localtime_r(&now, &tmLocal) != nullptr, "localtime_r failed");
+    ModelExpect(gmtime_r(&now, &tmGm) != nullptr, "gmtime_r failed");
 #elif defined _WIN32
     _localtime64_s(&tmLocal, &now);
     _gmtime64_s(&tmGm, &now);

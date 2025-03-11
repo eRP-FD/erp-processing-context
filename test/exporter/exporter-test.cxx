@@ -7,9 +7,10 @@
 
 #include "shared/fhir/Fhir.hxx"
 #include "shared/util/Environment.hxx"
-#include "shared/util/TLog.hxx"
+#include "shared/util/GLogConfiguration.hxx"
 
 #include <gtest/gtest.h>
+#include <span>
 
 int main(int argc, char** argv)
 {
@@ -19,7 +20,8 @@ int main(int argc, char** argv)
     }
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
     ::testing::InitGoogleTest(&argc, argv);
     Fhir::init<ConfigurationBase::MedicationExporter>(Fhir::Init::later);
     return RUN_ALL_TESTS();

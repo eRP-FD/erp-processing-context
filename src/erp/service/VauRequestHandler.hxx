@@ -50,7 +50,7 @@ private:
 
     static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session);
     void handleInnerRequest(PcSessionContext& outerSession, const std::string& upParam,
-                            std::unique_ptr<InnerTeeRequest>&& innerTeeRequest);
+                            std::unique_ptr<InnerTeeRequest> innerTeeRequest);
     static void makeResponse(ServerResponse& innerServerResponse, const Operation& innerOperation,
                       const ServerRequest* innerServerRequest, const InnerTeeRequest& innerTeeRequest,
                       PcSessionContext& outerSession);

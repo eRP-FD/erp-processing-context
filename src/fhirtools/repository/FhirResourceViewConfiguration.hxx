@@ -54,13 +54,16 @@ public:
         const ViewConfig& latest() const;
         std::shared_ptr<FhirStructureRepository> match(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
                                                        const std::string& url, FhirVersion version) const;
+        std::shared_ptr<FhirStructureRepository> match(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
+                                                       const DefinitionKey& definitionKey) const;
         ViewList matchAll(const FhirStructureRepositoryBackend& backend, const std::string& url, FhirVersion version) const;
         std::set<DefinitionKey> supportedVersions(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
                                                    const std::list<std::string>& profileUrls) const;
     };
 
     explicit FhirResourceViewConfiguration(const FhirResourceGroupResolver& resolver,
-                                           const gsl::not_null<const rapidjson::Value*>& fhirResourceViews);
+                                           const gsl::not_null<const rapidjson::Value*>& fhirResourceViews,
+                                           const date::days& globalOffset);
 
     ViewList getViewInfo(const date::local_days& validDate) const;
     ViewList getViewInfo(const Date& validDate) const;

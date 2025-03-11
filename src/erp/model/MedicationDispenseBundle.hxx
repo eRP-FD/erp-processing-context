@@ -25,7 +25,7 @@ public:
     static constexpr auto profileType = ProfileType::MedicationDispenseBundle;
 
     explicit MedicationDispenseBundle(const std::string& linkBase,
-                                      const std::vector<model::MedicationDispense>& medicationDisplenses,
+                                      const std::vector<model::MedicationDispense>& medicationDispenses,
                                       const std::vector<model::GemErpPrMedication>& medications);
 
     using BundleBase<MedicationDispenseBundle>::BundleBase;

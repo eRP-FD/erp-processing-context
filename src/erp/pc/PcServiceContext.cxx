@@ -50,10 +50,10 @@ std::unique_ptr<RateLimiter> createRateLimiter(std::shared_ptr<RedisInterface>& 
 
 
 // GEMREQ-start A_20974-01
-PcServiceContext::PcServiceContext(const Configuration& configuration, Factories&& factories)
+PcServiceContext::PcServiceContext(const Configuration& configuration, const Factories& factories)
     : BaseServiceContext(factories)
     , idp()
-    , mDatabaseFactory(std::move(factories.databaseFactory))
+    , mDatabaseFactory(factories.databaseFactory)
     , mRedisClient(factories.redisClientFactory(
           std::chrono::milliseconds(configuration.getIntValue(ConfigurationKey::REDIS_DOS_SOCKET_TIMEOUT))))
     , mDosHandler(createRateLimiter(mRedisClient))

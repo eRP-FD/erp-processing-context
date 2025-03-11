@@ -81,7 +81,7 @@ template <class Exception, typename Tag>
 class WrappedErrorClass : public Exception
 {
 public:
-    WrappedErrorClass(const std::string& message)
+    explicit WrappedErrorClass(const std::string& message)
     : Exception(message)
     {}
 };

@@ -17,7 +17,10 @@ namespace model
 {
 using namespace std::string_literals;
 
-const std::string binary_template = R"--(
+
+namespace
+{
+const auto* binary_template = R"--(
 {
   "resourceType": "Binary",
   "id": "",
@@ -31,9 +34,6 @@ const std::string binary_template = R"--(
 }
 )--";
 
-namespace
-{
-
 std::once_flag onceFlag;
 struct BinaryTemplateMark;
 RapidjsonNumberAsStringParserDocument<BinaryTemplateMark> BinaryTemplate;
@@ -41,7 +41,7 @@ RapidjsonNumberAsStringParserDocument<BinaryTemplateMark> BinaryTemplate;
 
 void initTemplates()
 {
-    rapidjson::StringStream s(binary_template.data());
+    rapidjson::StringStream s(binary_template);
     BinaryTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s);
 }
 

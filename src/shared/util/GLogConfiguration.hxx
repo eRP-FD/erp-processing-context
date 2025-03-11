@@ -8,8 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_GLOGCONFIGURATION_HXX
 #define ERP_PROCESSING_CONTEXT_UTIL_GLOGCONFIGURATION_HXX
 
-#include "shared/util/GLog.hxx"
+#include <string_view>
 
+namespace google
+{
+class LogMessage;
+}
 class GLogConfiguration {
 public:
     /**
@@ -28,7 +32,7 @@ public:
      *                   <log level> overrides any value given by ERP_VLOG_MAX_VALUE
      * @param appName - the name of the application
      */
-    static void init_logging(const std::string_view& appName);
+    static void initLogging(const char* argv0);
 
     /**
      * Initializes the glog with specified configuration
@@ -39,8 +43,8 @@ public:
      * @param logDir - log directory
      * @param vLogMaxValue - show the logs for the v-value and below
      */
-    static void init_logging(
-        const std::string_view& appName,
+    static void initLogging(
+        const char* argv0,
         bool logToStderr,
         bool stderrThreshold,
         int minLogLevel,
@@ -49,7 +53,7 @@ public:
 
 private:
     static int getLogLevelInt(const std::string& logLevelString);
-    static void erpLogPrefix(std::ostream& s, const google::LogMessageInfo& lmi, void*);
+    static void erpLogPrefix(std::ostream& ostream, const google::LogMessage& lmi, void*);
 };
 
 #endif

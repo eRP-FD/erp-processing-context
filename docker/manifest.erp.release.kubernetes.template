@@ -65,7 +65,9 @@ sgx.allowed_files = [
 "file:/erp/bin/h03000001.bin",
 # ERP auxiliary configuration
 "file:/erp/tsl/tsl-ca.der",
-"file:/erp/tsl/tsl-ssl-root-ca.pem"
+"file:/erp/tsl/tsl-ssl-root-ca.pem",
+"file:/erp/bin/01_production.config.json",
+"file:/erp/bin/01_production-medication-exporter.config.json"
 ]
 
 # Trusted files are signed and can only be read from within the gramine environment.

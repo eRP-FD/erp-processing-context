@@ -8,12 +8,7 @@
 #include "test/util/ServerTestBase.hxx"
 #include "TestUtils.hxx"
 #include "erp/ErpProcessingContext.hxx"
-#include "shared/common/Constants.hxx"
-#include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "shared/fhir/Fhir.hxx"
-#include "shared/model/Resource.hxx"
-#include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Composition.hxx"
 #include "erp/model/Device.hxx"
@@ -23,15 +18,21 @@
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/Patient.hxx"
-#include "shared/model/ResourceFactory.hxx"
-#include "shared/util/Base64.hxx"
-#include "shared/util/Environment.hxx"
-#include "shared/util/FileHelper.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/crypto/CadesBesSignature.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceFactory.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
+#include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
@@ -144,10 +145,10 @@ void ServerTestBase::SetUp (void)
     {
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp.communication");
-        deleteTxn.exec("DELETE FROM erp.task");
-        deleteTxn.exec("DELETE FROM erp.task_169");
-        deleteTxn.exec("DELETE FROM erp.task_200");
-        deleteTxn.exec("DELETE FROM erp.task_209");
+        for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>())
+        {
+            deleteTxn.exec("DELETE FROM " + PostgresDatabaseTest::taskTableName(prescriptionType));
+        }
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.commit();
@@ -435,7 +436,7 @@ Task ServerTestBase::addTaskToDatabase(const TaskDescriptor& descriptor)
 
     if (descriptor.status == Task::Status::ready)
     {
-        activateTask(task, descriptor.kvnrPatient);
+        activateTask(task, descriptor.kvnrPatient, descriptor.expiryDate);
     }
     else if (descriptor.status == Task::Status::inprogress)
     {
@@ -463,14 +464,17 @@ Task ServerTestBase::createTask(
     return task;
 }
 
-void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
+void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient,
+                                  std::optional<model::Timestamp> expiryDate,
+                                  std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions)
 {
     PrescriptionId prescriptionId = task.prescriptionId();
     Kvnr kvnr{kvnrPatient, prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv};
     task.setKvnr(kvnr);
 
-    const auto prescriptionBundleXmlString = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
+    const auto prescriptionBundleXmlString = mvoOptions.has_value()
+        ? ResourceTemplates::kbvBundleMvoXml(*mvoOptions)
+        : ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .kvnr = kvnrPatient});
     static const fhirtools::ValidatorOptions validatorOptions{.allowNonLiteralAuthorReference = true};
     const auto prescriptionBundle =
         ResourceFactory<KbvBundle>::fromXml(prescriptionBundleXmlString, *StaticData::getXmlValidator(),
@@ -487,7 +491,7 @@ void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient)
 
     task.setHealthCarePrescriptionUuid();
     task.setPatientConfirmationUuid();
-    task.setExpiryDate(Timestamp::now() + std::chrono::hours(24) * 92);
+    task.setExpiryDate(expiryDate.value_or(Timestamp::now() + std::chrono::hours(24) * 92));
     task.setAcceptDate(Timestamp::now());
     task.setStatus(Task::Status::ready);
     task.updateLastUpdate();

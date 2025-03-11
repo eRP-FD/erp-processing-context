@@ -63,7 +63,7 @@ MimeType::MimeType(std::string_view stringRepresentation)
 }
 
 AcceptMimeType::AcceptMimeType(std::string_view stringRepresentation)
-    : MimeType(stringRepresentation), mQFactorWeight(1.f)
+    : MimeType(stringRepresentation)
 {
     auto qOption = getOption("q");
     if (qOption)

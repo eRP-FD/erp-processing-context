@@ -8,6 +8,7 @@
 #include "shared/model/Bundle.hxx"
 #include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/EvdgaBundle.hxx"
 #include "erp/model/KbvBundle.hxx"
 #include "erp/model/MedicationDispenseBundle.hxx"
 #include "shared/model/ResourceNames.hxx"
@@ -76,7 +77,7 @@ namespace model
 
 template<class DerivedBundle>
 BundleBase<DerivedBundle>::BundleBase(const BundleType type, FhirResourceBase::Profile profile, const Uuid& bundleId)
-    : Resource<DerivedBundle>(profile)
+    : Resource<DerivedBundle>(std::move(profile))
 {
     // The bundle ID:
     setId(bundleId);
@@ -95,7 +96,7 @@ BundleBase<DerivedBundle>::BundleBase(const BundleType type, FhirResourceBase::P
 
 template<class DerivedBundle>
 BundleBase<DerivedBundle>::BundleBase(const BundleType type, FhirResourceBase::Profile profile)
-    : BundleBase<DerivedBundle>(type, profile, Uuid())
+    : BundleBase<DerivedBundle>(type, std::move(profile), Uuid())
 {
 }
 
@@ -338,6 +339,7 @@ std::optional<model::Timestamp> Bundle::getValidationReferenceTimestamp() const
 }
 
 template class BundleBase<ErxReceipt>;
+template class BundleBase<EvdgaBundle>;
 template class BundleBase<KbvBundle>;
 template class BundleBase<Bundle>;
 template class BundleBase<MedicationDispenseBundle>;

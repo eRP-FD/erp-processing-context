@@ -32,6 +32,8 @@ public:
 
     int64_t incr(const std::string_view& key) override;
     void publish(const std::string_view& channel, const std::string_view& message) override;
+    int64_t getIntValue(std::string_view key) override;
+    void flushdb() override;
 private:
     void removeExpiredEntries();
 

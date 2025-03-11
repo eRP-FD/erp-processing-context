@@ -237,12 +237,15 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::KBV_PR_ERP_Medication_PZN:
     case ProfileType::KBV_PR_ERP_PracticeSupply:
     case ProfileType::KBV_PR_ERP_Prescription:
+    case ProfileType::KBV_PR_EVDGA_Bundle:
+    case ProfileType::KBV_PR_EVDGA_HealthAppRequest:
     case ProfileType::KBV_PR_FOR_Coverage:
     case ProfileType::KBV_PR_FOR_Organization:
     case ProfileType::KBV_PR_FOR_Patient:
     case ProfileType::KBV_PR_FOR_Practitioner:
     case ProfileType::KBV_PR_FOR_PractitionerRole:
-    case ProfileType::Gem_erxMedicationDispense:
+    case ProfileType::GEM_ERP_PR_MedicationDispense:
+    case ProfileType::GEM_ERP_PR_MedicationDispense_DiGA:
     case ProfileType::MedicationDispenseBundle:
     case ProfileType::Gem_erxReceiptBundle:
     case ProfileType::Gem_erxTask:
@@ -446,12 +449,14 @@ std::optional<std::string_view> Communication::contentString() const
 void Communication::verifyPayload(const JsonValidator& validator) const
 {
     CommunicationPayload payload{getValue(payloadPointer)};
-
-    payload.verifyLength();
-    const auto schema = payloadSchema();
-    if (schema.has_value())
+    if (!payload.empty())
     {
-        payload.validateJsonSchema(validator, *schema);
+        payload.verifyLength();
+        const auto schema = payloadSchema();
+        if (schema.has_value())
+        {
+            payload.validateJsonSchema(validator, *schema);
+        }
     }
 }
 // GEMREQ-end A_19450-01

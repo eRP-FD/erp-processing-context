@@ -102,8 +102,8 @@ std::string Base64::encode (std::string_view data)
 std::string Base64::toBase64Url(const std::string& encodedData)
 {
     std::string result = encodedData;
-    std::replace(result.begin(), result.end(), '+', '-');
-    std::replace(result.begin(), result.end(), '/', '_');
+    std::ranges::replace(result, '+', '-');
+    std::ranges::replace(result, '/', '_');
     // remove padding
     while (result.back() == '=' && result.size() > 2)
         result.pop_back();
@@ -115,7 +115,7 @@ util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
 {
     static const auto binaryAlphabet = getBinaryAlphabet();
 
-    const size_t decodedMaxSize = base64.length() * 3 / 4 + 3;
+    const size_t decodedMaxSize = (base64.length() * 3 / 4) + 3;
     auto decodedData = std::make_unique<char[]>(decodedMaxSize);
 
     std::int32_t value{};
@@ -181,7 +181,7 @@ size_t Base64::adjustSizeForEncoding (size_t sizeBeforeEncoding)
 
 size_t Base64::adjustSizeForDecoding (const size_t dataSize, const size_t paddingSize)
 {
-    return (dataSize + paddingSize) * 3/4 - paddingSize;
+    return ((dataSize + paddingSize) * 3/4) - paddingSize;
 }
 
 

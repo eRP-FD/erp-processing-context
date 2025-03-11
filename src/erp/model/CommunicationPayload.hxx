@@ -25,6 +25,7 @@ public:
 
     void verifyLength() const;
     void validateJsonSchema(const JsonValidator& validator, SchemaType schemaType) const;
+    [[nodiscard]] bool empty() const;
 
 private:
     std::size_t mLength = 0;

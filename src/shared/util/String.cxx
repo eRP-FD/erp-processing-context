@@ -126,7 +126,7 @@ std::pair<std::vector<char*>,std::unique_ptr<char[]>> String::splitIntoNullTermi
     {
         const auto trimmedItem = String::trim(item);
         array.push_back(p);
-        std::copy(trimmedItem.begin(), trimmedItem.end(), p);
+        std::ranges::copy(trimmedItem, p);
         p += trimmedItem.size();
         *p++ = '\0';
     }

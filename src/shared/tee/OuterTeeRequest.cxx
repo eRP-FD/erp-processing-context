@@ -30,15 +30,15 @@ std::string OuterTeeRequest::assemble (void) const
 
     result[0] = static_cast<char>(version);
     size_t offset = VersionLength;
-    std::copy(xComponent, xComponent + EllipticCurve::KeyCoordinateLength, result.data() + offset);
+    std::copy_n(xComponent, EllipticCurve::KeyCoordinateLength, result.data() + offset);
     offset += EllipticCurve::KeyCoordinateLength;
-    std::copy(yComponent, yComponent + EllipticCurve::KeyCoordinateLength, result.data() + offset);
+    std::copy_n(yComponent, EllipticCurve::KeyCoordinateLength, result.data() + offset);
     offset += EllipticCurve::KeyCoordinateLength;
-    std::copy(iv, iv+AesGcm128::IvLength, result.data() + offset);
+    std::copy_n(iv, AesGcm128::IvLength, result.data() + offset);
     offset += AesGcm128::IvLength;
-    std::copy(ciphertext.begin(), ciphertext.end(), result.data() + offset);
+    std::ranges::copy(ciphertext, result.data() + offset);
     offset += ciphertext.size();
-    std::copy(authenticationTag, authenticationTag+AesGcm128::AuthenticationTagLength, result.data() + offset);
+    std::copy_n(authenticationTag, AesGcm128::AuthenticationTagLength, result.data() + offset);
 
     return result;
 }

@@ -17,6 +17,9 @@ export the recipe, locally with:
 
 `conan export . erp/stable`
 
+openssl:
+`conan export --version 3.1.8 --user erp --channel public .`
+
 Then, upload to the appropriate remote (here, erp):
 
 `conan upload -r erp hiredis/1.2.0@erp/stable`

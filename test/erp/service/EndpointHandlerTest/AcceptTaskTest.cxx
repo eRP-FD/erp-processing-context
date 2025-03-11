@@ -378,8 +378,6 @@ TEST_F(AcceptTaskTest, AcceptTaskAlreadyInProgressSelf)
 
 TEST_F(AcceptTaskTest, AcceptTaskFailExpiryDate)
 {
-    auto kbvBundle = ResourceTemplates::kbvBundleXml();
-
     using namespace std::chrono_literals;
     const auto yesterday = model::Timestamp::now() - 24h;
     const auto taskId = model::PrescriptionId::fromDatabaseId(

@@ -87,8 +87,8 @@ public:
 protected: // protected so that we can override some functionality in tests.
     mutable std::mutex mMutex;
     std::list<std::unique_ptr<HsmSession>> mAvailableHsmSessions;
-    size_t mActiveSessionCount;
-    bool mIsPoolReleased;
+    size_t mActiveSessionCount{0};
+    bool mIsPoolReleased{false};
     std::condition_variable mWaitForAvailableSessionVariable;
     std::unique_ptr<HsmFactory> mHsmFactory;
     std::shared_ptr<HsmPoolSessionRemover> mSessionRemover;
@@ -107,7 +107,7 @@ private:
      * For testing: the maximum number of concurrently used sessions. Can be used to verify that mMaxSessionCount
      * is obeyed.
      */
-    size_t mMaxUsedSessionCount;
+    size_t mMaxUsedSessionCount{0};
 
     std::shared_ptr<Timer> mTimerManager;
 

@@ -70,6 +70,10 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::kbv_practice_supply;
         case KBV_PR_ERP_Prescription:
             return sd::kbv_medication_request;
+        case KBV_PR_EVDGA_Bundle:
+            return sd::kbv_pr_evdga_bundle;
+        case KBV_PR_EVDGA_HealthAppRequest:
+            return sd::kbv_pr_evdga_health_app_request;
         case KBV_PR_FOR_Coverage:
             return sd::kbv_for_coverage;
         case KBV_PR_FOR_Organization:
@@ -80,8 +84,10 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::kbv_for_practitioner;
         case KBV_PR_FOR_PractitionerRole:
             return sd::kbv_for_practitioner_role;
-        case Gem_erxMedicationDispense:
+        case GEM_ERP_PR_MedicationDispense:
             return sd::medicationDispense;
+        case GEM_ERP_PR_MedicationDispense_DiGA:
+            return sd::medicationDispenseDiga;
         case MedicationDispenseBundle:
             return sd::medicationDispenseBundle;
         case Gem_erxReceiptBundle:
@@ -135,7 +141,8 @@ std::optional<model::ProfileType> model::findProfileType(std::string_view profil
         {sd::kbv_for_patient, KBV_PR_FOR_Patient},
         {sd::kbv_for_practitioner, KBV_PR_FOR_Practitioner},
         {sd::kbv_for_practitioner_role, KBV_PR_FOR_PractitionerRole},
-        {sd::medicationDispense, Gem_erxMedicationDispense},
+        {sd::medicationDispense, GEM_ERP_PR_MedicationDispense},
+        {sd::medicationDispenseDiga, GEM_ERP_PR_MedicationDispense_DiGA},
         {sd::medicationDispenseBundle, MedicationDispenseBundle},
         {sd::receipt, Gem_erxReceiptBundle},
         {sd::task, Gem_erxTask},
@@ -144,8 +151,11 @@ std::optional<model::ProfileType> model::findProfileType(std::string_view profil
         {sd::dispenseItem, DAV_DispenseItem},
         {sd::subscription, Subscription},
         {sd::operationoutcome, OperationOutcome},
+        {sd::organization_directory, OrganizationDirectory},
+        {sd::epa_medication_pzn_ingredient, EPAMedicationPZNIngredient},
+        {sd::kbv_pr_evdga_bundle, KBV_PR_EVDGA_Bundle},
     };
-    fhirtools::DefinitionKey key{profileUrl};
+    const fhirtools::DefinitionKey key{profileUrl};
     if (auto profiType = profileUrlToTypeMap.find(key.url); profiType != profileUrlToTypeMap.end())
     {
         return profiType->second;

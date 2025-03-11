@@ -157,6 +157,8 @@ std::string PostgresBackendTask::taskTableName() const
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
             return TASK_160_TABLE_NAME;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            return TASK_162_TABLE_NAME;
         case model::PrescriptionType::direkteZuweisung:
             return TASK_169_TABLE_NAME;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -587,10 +589,10 @@ PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::work& transaction, c
 }
 
 
-namespace taskFromQueryResultRowHelper
+namespace
 {
 db_model::Blob getSalt(const pqxx::row& resultRow, model::Task::Status status,
-                       const PostgresBackendTask::TaskQueryIndexes& indexes)
+                              const PostgresBackendTask::TaskQueryIndexes& indexes)
 {
     if (resultRow.at(indexes.saltIndex).is_null())
     {
@@ -622,7 +624,7 @@ db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resu
     const auto status =
         model::Task::fromNumericalStatus(gsl::narrow<int8_t>(resultRow.at(indexes.statusIndex).as<int>()));
 
-    db_model::Blob salt = taskFromQueryResultRowHelper::getSalt(resultRow, status, indexes);
+    db_model::Blob salt = getSalt(resultRow, status, indexes);
 
     const model::Timestamp authoredOn{resultRow.at(indexes.authoredOnIndex).as<double>()};
     const model::Timestamp lastModified{resultRow.at(indexes.lastModifiedIndex).as<double>()};
@@ -633,7 +635,7 @@ db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resu
     }
     db_model::Task dbTask{prescriptionId, keyBlobId, salt, status, lastStatusChange, authoredOn, lastModified};
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.accessCodeIndex, resultRow))
+    if (checkIndexAndRow(indexes.accessCodeIndex, resultRow))
     {
         dbTask.accessCode.emplace(resultRow.at(*indexes.accessCodeIndex).as<db_model::postgres_bytea>());
     }
@@ -653,28 +655,28 @@ db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resu
         dbTask.acceptDate.emplace(resultRow.at(indexes.acceptDateIndex).as<double>());
     }
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.secretIndex, resultRow))
+    if (checkIndexAndRow(indexes.secretIndex, resultRow))
     {
         dbTask.secret.emplace(resultRow.at(*indexes.secretIndex).as<db_model::postgres_bytea>());
     }
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.ownerIndex, resultRow))
+    if (checkIndexAndRow(indexes.ownerIndex, resultRow))
     {
         dbTask.owner.emplace(resultRow.at(*indexes.ownerIndex).as<db_model::postgres_bytea>());
     }
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.receiptIndex, resultRow))
+    if (checkIndexAndRow(indexes.receiptIndex, resultRow))
     {
         dbTask.receipt.emplace(resultRow.at(*indexes.receiptIndex).as<db_model::postgres_bytea>());
     }
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.healthcareProviderPrescriptionIndex, resultRow))
+    if (checkIndexAndRow(indexes.healthcareProviderPrescriptionIndex, resultRow))
     {
         dbTask.healthcareProviderPrescription.emplace(
             resultRow.at(*indexes.healthcareProviderPrescriptionIndex).as<db_model::postgres_bytea>());
     }
 
-    if (taskFromQueryResultRowHelper::checkIndexAndRow(indexes.lastMedicationDispenseIndex, resultRow))
+    if (checkIndexAndRow(indexes.lastMedicationDispenseIndex, resultRow))
     {
         dbTask.lastMedicationDispense.emplace(resultRow.at(*indexes.lastMedicationDispenseIndex).as<double>());
     }

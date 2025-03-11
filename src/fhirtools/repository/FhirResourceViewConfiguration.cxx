@@ -5,6 +5,7 @@
  */
 
 #include "shared/util/Environment.hxx"
+#include "shared/util/TLog.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/repository/FhirResourceGroup.hxx"
@@ -60,19 +61,27 @@ std::shared_ptr<FhirStructureRepository>
 FhirResourceViewConfiguration::ViewList::match(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
                                                const std::string& url, FhirVersion version) const
 {
-    const DefinitionKey key{url, version};
+    return match(std::move(backend), DefinitionKey{url, version});
+}
+
+std::shared_ptr<FhirStructureRepository>
+//NOLINTNEXTLINE(performance-unnecessary-value-param)
+FhirResourceViewConfiguration::ViewList::match(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
+                                               const DefinitionKey& definitionKey) const
+{
     std::shared_ptr<FhirStructureRepository> result;
     std::optional<date::local_days> resultStart;
     for (const auto& viewCfg : *this)
     {
         auto v = viewCfg->view(backend);
-        if (v->findStructure(key) == nullptr)
+        if (v->findStructure(definitionKey) == nullptr)
         {
             continue;
         }
         if (! result || resultStart < viewCfg->mStart)
         {
             result = v;
+            resultStart = viewCfg->mStart;
         }
     }
     return result;
@@ -98,7 +107,7 @@ FhirResourceViewConfiguration::ViewList::matchAll(const FhirStructureRepositoryB
 }
 
 std::set<DefinitionKey> fhirtools::FhirResourceViewConfiguration::ViewList::supportedVersions(
-    gsl::not_null<const FhirStructureRepositoryBackend*> backend, //NOLINT(performance-unnecessary-value-param)
+    gsl::not_null<const FhirStructureRepositoryBackend*> backend,//NOLINT(performance-unnecessary-value-param)
     const std::list<std::string>& profileUrls) const
 {
     std::set<DefinitionKey> result;
@@ -118,7 +127,8 @@ std::set<DefinitionKey> fhirtools::FhirResourceViewConfiguration::ViewList::supp
 }
 
 FhirResourceViewConfiguration::FhirResourceViewConfiguration(
-    const FhirResourceGroupResolver& resolver, const gsl::not_null<const rapidjson::Value*>& fhirResourceViews)
+    const FhirResourceGroupResolver& resolver, const gsl::not_null<const rapidjson::Value*>& fhirResourceViews,
+    const date::days& globalOffset)
 {
     using namespace std::string_literals;
     FPExpect(fhirResourceViews->IsArray(), "fhir-resource-views is not an array");
@@ -128,6 +138,10 @@ FhirResourceViewConfiguration::FhirResourceViewConfiguration(
     const rapidjson::Pointer ptValidUntil{"/valid-until"};
     const rapidjson::Pointer ptGroups{"/groups"};
 
+    if (globalOffset != date::days{0})
+    {
+        TLOG(WARNING) << "adding " << globalOffset << " days GLOBAL OFFSET to all FHIR resource views";
+    }
 
     for (const auto& item : fhirResourceViews->GetArray())
     {
@@ -139,6 +153,15 @@ FhirResourceViewConfiguration::FhirResourceViewConfiguration(
         std::string envName{envNameValue->GetString()};
         auto start = retrieveDateAndEnvVars(envName + "_VALID_FROM", ptValidFrom, item);
         auto end = retrieveDateAndEnvVars(envName + "_VALID_UNTIL", ptValidUntil, item);
+
+        if (start && globalOffset != date::days{0})
+        {
+            *start += globalOffset;
+        }
+        if (end && globalOffset != date::days{0})
+        {
+            *end += globalOffset;
+        }
 
         std::set<std::string> groups;
         const auto* groupIds = ptGroups.Get(item);
@@ -153,6 +176,8 @@ FhirResourceViewConfiguration::FhirResourceViewConfiguration(
             FPExpect(inserted, "duplicate group in view "s.append(envName).append(": ").append(groupS));
         }
         using namespace date::literals;
+        TVLOG(1) << "view " << envName << " valid-from: " << start.value_or(date::local_days{})
+                 << " valid-until: " << end.value_or(date::local_days{std::numeric_limits<std::chrono::days>::max()});
         mResourceViews.emplace(std::piecewise_construct, std::forward_as_tuple(end.value_or(date::local_days::max())),
                                std::forward_as_tuple(std::make_shared<ViewConfigInternal>(
                                    id->GetString(), envName, start, end, std::move(groups))));

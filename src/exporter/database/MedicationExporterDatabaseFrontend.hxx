@@ -21,10 +21,10 @@
 class MedicationExporterDatabaseFrontend : public MedicationExporterDatabaseFrontendInterface
 {
 public:
-    MedicationExporterDatabaseFrontend(std::unique_ptr<MedicationExporterDatabaseBackend>&& backend, HsmPool& hsmPool,
+    MedicationExporterDatabaseFrontend(std::unique_ptr<MedicationExporterDatabaseBackend>&& backend,
                                        KeyDerivation& keyDerivation, const TelematikLookup& lookup);
 
-    ~MedicationExporterDatabaseFrontend(void) override = default;
+    ~MedicationExporterDatabaseFrontend() override = default;
 
     void commitTransaction() const override;
 
@@ -62,7 +62,6 @@ private:
     [[nodiscard]] SafeString medicationDispenseKey(const db_model::TaskEvent& dbTaskEvent) const;
 
     std::unique_ptr<MedicationExporterDatabaseBackend> mBackend;
-    HsmPool& mHsmPool;
     KeyDerivation& mDerivation;
     DataBaseCodec mCodec;
     const TelematikLookup& mTelematikLookup;

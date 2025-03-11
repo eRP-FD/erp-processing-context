@@ -120,7 +120,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     model::MedicationsAndDispenses medicationsAndDispenses;
     if (!session.request.getBody().empty())
     {
-        medicationsAndDispenses = parseBody(session, Operation::POST_Task_id_close);
+        medicationsAndDispenses = parseBody(session, Operation::POST_Task_id_close, prescriptionId.type());
     }
     if(medicationsAndDispenses.medicationDispenses.empty())
     {
@@ -134,7 +134,9 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     {
         checkMedicationDispenses(medicationsAndDispenses.medicationDispenses, prescriptionId, kvnr.value(),
                                  telematikIdFromAccessToken.value());
+        A_26337.start("update lastMedicationDispense timestamp");
         task.updateLastMedicationDispense();
+        A_26337.finish();
     }
 
     A_19233_05.start(

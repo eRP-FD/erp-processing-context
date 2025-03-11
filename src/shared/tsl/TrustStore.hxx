@@ -162,7 +162,7 @@ private:
 
     const TslMode mMode;
 
-    bool mTslStored;
+    bool mTslStored{false};
     std::optional<std::string> mTslHashValue;
     std::optional<std::string> mId;
     std::string mSequenceNumber;

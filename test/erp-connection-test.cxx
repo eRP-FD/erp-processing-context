@@ -12,13 +12,15 @@
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/GLog.hxx"
 #include "shared/util/GLogConfiguration.hxx"
+#include <span>
 
 
 int main (int argc, char** argv)
 {
     Environment::set("ERP_VLOG_MAX_VALUE", "4");
 
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
 
     if (argc >= 2 && argc <= 3)
     {
@@ -27,7 +29,7 @@ int main (int argc, char** argv)
             std::string certificates;
             if (argc == 3)
             {
-                const std::string path = argv[2];
+                const std::string path = args[2];
                 if(!path.empty())
                 {
                     Expect(FileHelper::exists(path), "CA file must exist");
@@ -45,7 +47,7 @@ int main (int argc, char** argv)
                 Constants::resolveTimeout);
 
             ClientResponse response = requestSender.send(
-                argv[1],
+                args[1],
                 HttpMethod::GET,
                 "",
                 {},

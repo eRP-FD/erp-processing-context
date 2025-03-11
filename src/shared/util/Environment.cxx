@@ -82,7 +82,7 @@ int Environment::getInt(const char* envConfigName, const int defaultValue)
                 return val;
             }
         }
-        catch (const std::logic_error& )
+        catch (const std::logic_error& ) //NOLINT(bugprone-empty-catch)
         {
             // Nothing to do here, the default value will be returned
         }

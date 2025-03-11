@@ -52,6 +52,10 @@
           "deviceRefType": "url",
           "prescriptionDigestRefType": "relative",
           "prescriptionDigestMetaVersionId": "1"
+        },
+        "get": {
+          "enforceHcvCheck": "false",
+          "rateLimit": "100"
         }
       },
       "communication": {
@@ -99,6 +103,7 @@
           "mandatory-resolvable-reference-failure": "error"
         }
       },
+      "reference-time-offset-days": "0",
       "structure-files": [
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-types.xml",
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/profiles-resources.xml",
@@ -121,6 +126,7 @@
         "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.itv.evdga-1.1.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de",
         "@ERP_FHIR_RESOURCE_DIR@profiles/terminology.hl7.org-6.0.2/package"
       ],
@@ -191,7 +197,6 @@
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT", "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION", "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"               , "version": "1.00" },
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"      , "version": "1.01" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"       , "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"    , "version": "1.02" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"        , "version": "1.01" },
@@ -201,19 +206,11 @@
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT"  , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_SEITENLOKALISATION"  , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP"                 , "version": "1.00" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART"        , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE"         , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PERSONENGRUPPE"      , "version": "1.02" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PKV_TARIFF"          , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN"   , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS"  , "version": "1.02" }
-          ]
-        },
-        {
-          "id": "DARREICHUNGSFORM_1_13",
-          "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM", "version": "1.13" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"  , "version": "1.13" }
           ]
         },
         {
@@ -224,10 +221,10 @@
           ]
         },
         {
-          "id": "DMP_1_05",
+          "id": "DARREICHUNGSFORM_1_15",
           "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP", "version": "1.05" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP"  , "version": "1.05" }
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM", "version": "1.15" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"  , "version": "1.15" }
           ]
         },
         {
@@ -238,13 +235,20 @@
           ]
         },
         {
-          "id": "KBV-Schluesseltabellen-Q3/24",
-          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_13", "DMP_1_05"],
+          "id": "FORMULAR_ART_1_02",
+          "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART", "version": "1.02" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART"  , "version": "1.02" }
+          ]
+        },
+        {
+          "id": "KBV-Schluesseltabellen-Q1/25",
+          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_14", "DMP_1_06", "FORMULAR_ART_1_02"],
           "match": []
         },
         {
-          "id": "KBV-Schluesseltabellen-Q4/24-Q1/25",
-          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_14", "DMP_1_06"],
+          "id": "KBV-Schluesseltabellen-Q2/25",
+          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_15", "DMP_1_06", "FORMULAR_ART_1_02"],
           "match": []
         },
         {
@@ -269,17 +273,23 @@
           ]
         },
         {
-          "id": "kbv.ita.erp-1.1.0",
+          "id": "kbv.ita.for-1.1.0",
           "include": [
             "KBV_schluesseltabellen_sliced",
             "de.basisprofil.r4-1.3.2",
             "error-codesystems"
           ],
           "match": [
-            { "file": ".*/KBV.Basis-1.3.0/package/.*" },
-            { "file": ".*/profiles/kbv.ita.erp-1.1.2/.*" },
             { "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_.*", "version": "1.1.0"},
-            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*", "version": "1.1.0"}
+            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*", "version": "1.1.0"},
+            { "file": ".*/KBV.Basis-1.3.0/package/.*" }
+          ]
+        },
+        {
+          "id": "kbv.ita.erp-1.1.0",
+          "include": [ "kbv.ita.for-1.1.0" ],
+          "match": [
+            { "file": ".*/profiles/kbv.ita.erp-1.1.2/.*" }
           ]
         },
         {
@@ -377,7 +387,7 @@
         },
         {
           "id": "de.gematik.erezept-patientenrechnung.r4-1.0",
-          "include": ["kbv.ita.erp-1.1.0"],
+          "include": ["kbv.ita.for-1.1.0"],
           "match": [
             { "url": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType", "version": "1.0" },
             { "url": "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_.*", "version": "1.0" },
@@ -502,30 +512,24 @@
             { "url": "http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-ZusatzdatenHerstellung", "version": "1.3"},
             { "url": "http://fhir.abda.de/eRezeptAbgabedaten/ValueSet/DAV-PKV-VS-ERP-ArtRezeptaenderung", "version": "1.3"}
           ]
+        },
+        {
+          "id": "kbv.itv.evdga-1.1.0",
+          "include": [ "kbv.ita.for-1.1.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.itv\\.evdga-1\\.1\\.0/package/.*\\.xml" }
+          ]
         }
       ],
       "resource-views": [
         {
-          "id": "2024-07-01",
-          "env-name": "ERP_DARREICHUNGSFORM_1_13",
-          "valid-until": "2024-09-30",
-          "groups": [
-            "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q3/24",
-            "de.gematik.erezept-workflow.r4-1.2",
-            "de.abda.erezeptabgabedatenpkv-1.2",
-            "de.gematik.erezept-patientenrechnung.r4-1.0"
-          ]
-        },
-        {
           "id": "2024-10-01",
           "env-name": "ERP_2024_10_01",
-          "valid-from": "2024-10-01",
+          "valid-until": "2025-04-15",
           "groups": [
             "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q4/24-Q1/25",
+            "KBV-Schluesseltabellen-Q2/25",
             "de.gematik.erezept-workflow.r4-1.2",
-            "de.abda.erezeptabgabedatenpkv-1.2",
             "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
@@ -533,12 +537,31 @@
           "id": "2024-11-01",
           "env-name": "ERP_2024_11_01",
           "valid-from": "2024-11-01",
+          "valid-until": "2025-04-15",
           "groups": [
             "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q4/24-Q1/25",
+            "KBV-Schluesseltabellen-Q2/25",
             "de.gematik.erezept-workflow.r4-1.3",
-            "de.abda.erezeptabgabedatenpkv-1.2",
             "de.gematik.erezept-patientenrechnung.r4-1.0"
+          ]
+        },
+        {
+          "id": "KBV_2023-07-01_2025-Q1",
+          "env-name": "ERP_KBV_2023_07_01_2025_Q1",
+          "valid-from": "2025-01-01",
+          "valid-until": "2025-03-31",
+          "groups": [
+            "kbv.ita.erp-1.1.0",
+            "KBV-Schluesseltabellen-Q1/25"
+          ]
+        },
+        {
+          "id": "KBV_2023-07-01_2025-Q2",
+          "env-name": "ERP_KBV_2023_07_01_2025_Q2",
+          "valid-from": "2025-04-01",
+          "groups": [
+            "kbv.ita.erp-1.1.0",
+            "KBV-Schluesseltabellen-Q2/25"
           ]
         },
         {
@@ -547,7 +570,16 @@
           "valid-from": "2025-01-15",
           "groups": [
             "de.gematik.erezept-workflow.r4-1.4",
-            "KBV-Schluesseltabellen-Q4/24-Q1/25"
+            "KBV-Schluesseltabellen-Q2/25"
+          ]
+        },
+        {
+          "id": "DAV_2023_07_01",
+          "env-name": "ERP_DAV_2023_07_01",
+          "valid-until": "2025-04-15",
+          "groups": [
+            "de.abda.erezeptabgabedatenpkv-1.2",
+            "KBV-Schluesseltabellen-Q2/25"
           ]
         },
         {
@@ -556,7 +588,17 @@
           "valid-from": "2025-01-15",
           "groups": [
             "de.abda.erezeptabgabedatenpkv-1.3",
-            "KBV-Schluesseltabellen-Q4/24-Q1/25"
+            "KBV-Schluesseltabellen-Q2/25",
+            "de.gematik.erezept-patientenrechnung.r4-1.0"
+          ]
+        },
+        {
+          "id": "EVDGA_2025_01_15",
+          "env-name": "ERP_EVDGA_2025_01_15",
+          "valid-from": "2025-01-15",
+          "groups": [
+            "kbv.itv.evdga-1.1.0",
+            "KBV-Schluesseltabellen-Q2/25"
           ]
         }
       ]

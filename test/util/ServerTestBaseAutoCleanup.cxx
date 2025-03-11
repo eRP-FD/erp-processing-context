@@ -6,9 +6,9 @@
  */
 
 #include "test/util/ServerTestBaseAutoCleanup.hxx"
-
 #include "erp/model/Communication.hxx"
 #include "shared/util/TLog.hxx"
+#include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/mock/MockDatabase.hxx"
 
 using namespace model;
@@ -69,10 +69,8 @@ void ServerTestBaseAutoCleanup::cleanupDatabase (void)
         {
             // There is no predefined method for this. Run an adhoc SQL query.
             auto transaction = createTransaction();
-            transaction.exec("DELETE FROM erp.task where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
-            transaction.exec("DELETE FROM erp.task_169 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
-            transaction.exec("DELETE FROM erp.task_200 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
-            transaction.exec("DELETE FROM erp.task_209 where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
+            transaction.exec("DELETE FROM " + PostgresDatabaseTest::taskTableName(prescriptionId.type()) +
+                             " where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.exec("DELETE FROM erp.auditevent where prescription_id = " + std::to_string(prescriptionId.toDatabaseId()));
             transaction.commit();
         }

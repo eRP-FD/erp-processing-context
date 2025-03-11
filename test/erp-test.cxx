@@ -30,13 +30,13 @@ int main(int argc, char** argv)
     {
         Environment::set("ERP_VLOG_MAX_VALUE", "1");
     }
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
     Environment::set("ERP_SERVER_HOST", "127.0.0.1");
 
     std::optional<size_t> instance;
-    for (int i = 0; i < argc; ++i)
+    for (std::string_view arg : args)
     {
-        std::string_view arg{argv[i]};
         if (arg.starts_with(erp_instance))
         {
             instance = std::stoull(std::string{arg.substr(erp_instance.size())});

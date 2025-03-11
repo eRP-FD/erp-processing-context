@@ -21,6 +21,8 @@ enum class ProfileType
     Gem_erxDevice,
     Gem_erxDigest,
     GEM_ERP_PR_Medication,
+    GEM_ERP_PR_MedicationDispense,
+    GEM_ERP_PR_MedicationDispense_DiGA,
     GEM_ERP_PR_PAR_CloseOperation_Input,
     GEM_ERP_PR_PAR_DispenseOperation_Input,
     KBV_PR_ERP_Bundle,
@@ -31,12 +33,13 @@ enum class ProfileType
     KBV_PR_ERP_Medication_PZN,
     KBV_PR_ERP_PracticeSupply,
     KBV_PR_ERP_Prescription,
+    KBV_PR_EVDGA_Bundle,
+    KBV_PR_EVDGA_HealthAppRequest,
     KBV_PR_FOR_Coverage,
     KBV_PR_FOR_Organization,
     KBV_PR_FOR_Patient,
     KBV_PR_FOR_Practitioner,
     KBV_PR_FOR_PractitionerRole,
-    Gem_erxMedicationDispense,
     MedicationDispenseBundle,
     Gem_erxReceiptBundle,
     Gem_erxTask,
@@ -52,7 +55,7 @@ enum class ProfileType
     CancelPrescriptionErpOp,
     ProvideDispensationErpOp,
     OrganizationDirectory,
-    EPAMedicationPZNIngredient
+    EPAMedicationPZNIngredient,
 };
 
 // these profiles define "meta.profile" as mandatory elements

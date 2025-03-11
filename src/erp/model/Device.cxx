@@ -23,7 +23,7 @@ using namespace resource;
 
 namespace
 {
-constexpr std::string_view contact_template = R"(
+constexpr const auto* contact_template = R"(
 {
   {
       "system":"COMMUNICATION_SYSTEM",
@@ -31,7 +31,7 @@ constexpr std::string_view contact_template = R"(
   }
 })";
 
-const std::string device_template = R"(
+const auto* device_template = R"(
 {
   "resourceType":"Device",
   "id":"DEVICE_ID",
@@ -69,10 +69,10 @@ RapidjsonNumberAsStringParserDocument<DeviceTemplateMark> deviceTemplate;
 
 void initTemplates ()
 {
-    rj::StringStream s1(device_template.data());
+    rj::StringStream s1(device_template);
     deviceTemplate->ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s1);
 
-    rapidjson::StringStream s2(contact_template.data());
+    rapidjson::StringStream s2(contact_template);
     contactTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s2);
 }
 

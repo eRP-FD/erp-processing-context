@@ -16,6 +16,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <iostream>
+#include <span>
 #include <string_view>
 
 std::ostream& usage(std::ostream& out)
@@ -45,12 +46,13 @@ std::filesystem::path makeOutname(std::filesystem::path path, std::string_view e
 int main(int argc, char* argv[])
 {
     using namespace std::string_view_literals;
-    GLogConfiguration::init_logging(argv[0]);
+    auto args = std::span(argv, size_t(argc));
+    GLogConfiguration::initLogging(args[0]);
     Environment::set("ERP_SERVER_HOST", "none");
     try
     {
         auto owd = std::filesystem::current_path();
-        auto here = std::filesystem::path(argv[0]).remove_filename().native();
+        auto here = std::filesystem::path(args[0]).remove_filename().native();
         if(int res = chdir(here.c_str()) != EXIT_SUCCESS)
         {
             return res;
@@ -58,9 +60,8 @@ int main(int argc, char* argv[])
         Fhir::init<ConfigurationBase::ERP>();
         const auto& fhir = Fhir::instance();
         Expect(argc > 1, "Missing input filename.");
-        for (int i = 1; i < argc; ++i)
+        for (std::filesystem::path origPath : args.subspan(1))
         {
-            std::filesystem::path origPath{argv[i]};
             auto inFilePath = origPath;
             if (inFilePath.is_relative())
             {

@@ -16,11 +16,14 @@ class TslManager;
 class SignedPrescription : public CadesBesSignature
 {
 public:
-    static SignedPrescription fromBin(const std::string& content, TslManager& tslManager);
+    static SignedPrescription fromBin(const std::string& content, TslManager& tslManager,
+                                      const std::vector<std::string_view>& professionOids);
     static SignedPrescription fromBinNoVerify(const std::string& content);
 private:
     using CadesBesSignature::CadesBesSignature;
-    static SignedPrescription doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile, TslManager* tslManager);
+    static SignedPrescription doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
+                                                        TslManager* tslManager,
+                                                        const std::vector<std::string_view>& professionOids);
 };
 
 

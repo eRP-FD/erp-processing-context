@@ -202,7 +202,6 @@ std::shared_ptr<ProfileSetValidator> ProfileSetValidator::subField(const FhirStr
     Expect3(subField.has_value(), "no such field: " + name, std::logic_error);
     result->mParent = this;
     result->mElementInParent = subField->element();
-    auto originalName = subField->element()->originalName();
     for (auto& profVal : mProfileValidators)
     {
         auto subVal = profVal.second.subFieldValidators(repo, name);

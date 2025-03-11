@@ -12,7 +12,7 @@
 
 
 // GEMREQ-start A_20974-01
-BaseServiceContext::BaseServiceContext(BaseFactories& factories)
+BaseServiceContext::BaseServiceContext(const BaseFactories& factories)
     : mTimerManager(std::make_shared<Timer>())
     , mBlobCache(factories.blobCacheFactory())
     , mHsmPool(std::make_unique<HsmPool>(factories.hsmFactoryFactory(factories.hsmClientFactory(), mBlobCache),
@@ -21,7 +21,7 @@ BaseServiceContext::BaseServiceContext(BaseFactories& factories)
     , mKeyDerivation(*mHsmPool)
     , mXmlValidator(factories.xmlValidatorFactory())
     , mTslManager(factories.tslManagerFactory(mXmlValidator))
-    , mTpmFactory(std::move(factories.tpmFactory))
+    , mTpmFactory(factories.tpmFactory)
     // GEMREQ-end A_20974-01
 {
     Expect3(mTslManager != nullptr, "mTslManager could not be initialized", std::logic_error);

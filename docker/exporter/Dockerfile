@@ -5,20 +5,19 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.1.4 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.2.2 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
     apt-get install -y binutils
 
-WORKDIR /build
-COPY . erp-medication-exporter
+WORKDIR /erp
+COPY . source
 ARG GITHUB_USERNAME
 ARG GITHUB_OAUTH_TOKEN
 ENV GITHUB_USERNAME=${GITHUB_USERNAME:-''} \
     GITHUB_OAUTH_TOKEN=${GITHUB_OAUTH_TOKEN:-''}
 RUN git config --global url.https://${GITHUB_USERNAME:-}:${GITHUB_OAUTH_TOKEN:-}@github.ibmgcloud.net/.insteadOf git@github.ibmgcloud.net:
-RUN pip3 install "conan<2.0" --upgrade
 # set username and password in environment variables for IBM internal nexus "erp"
 # (as added below) so that the login to this remote happens automatically.
 ARG CONAN_LOGIN_USERNAME
@@ -28,35 +27,33 @@ ARG ERP_RELEASE_VERSION
 ENV CONAN_LOGIN_USERNAME=${CONAN_LOGIN_USERNAME:-''} \
     CONAN_PASSWORD=${CONAN_PASSWORD:-''} \
     ERP_BUILD_VERSION=${ERP_BUILD_VERSION:-'0.0.0'} \
-    ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'} \
-    GCC_VERSION=12
+    ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'}
 
-RUN conan remote clean &&\
-    conan remote add conan-center-binaries  https://nexus.epa-dev.net/repository/conan-center-binaries --force &&\
-    conan user -r conan-center-binaries -p "${CONAN_PASSWORD}" "${CONAN_LOGIN_USERNAME}" &&\
-    conan remote add erp https://nexus.epa-dev.net/repository/erp-conan-internal true --force &&\
-    conan user -r erp -p "${CONAN_PASSWORD}" "${CONAN_LOGIN_USERNAME}" &&\
-    conan remote add nexus https://nexus.epa-dev.net/repository/conan-center-proxy true --force &&\
-    conan profile new --detect default && \
-    conan profile update settings.compiler.version=${GCC_VERSION} default && \
-    conan profile update env.CC=gcc-${GCC_VERSION} default && \
-    conan profile update env.CXX=g++-${GCC_VERSION} default
+COPY scripts/ci-build.sh scripts/ci-build.sh
 
+
+RUN scripts/ci-build.sh \
+        --source_folder="source" \
+        --output_folder="/" \
+        --build_type="Release" \
+        --build_version="${ERP_BUILD_VERSION}" \
+        --release_version="${ERP_RELEASE_VERSION}" \
+        --skip-build
+
+RUN scripts/ci-build.sh \
+        --source_folder="source" \
+        --output_folder="/" \
+        --build_type="RelWithDebInfo" \
+        --build_version="${ERP_BUILD_VERSION}" \
+        --release_version="${ERP_RELEASE_VERSION}" \
+        --skip-build
 
 # Build Release variant:
 FROM build AS release_build
 
-WORKDIR /build/erp-medication-exporter/release
-RUN CC=gcc-${GCC_VERSION} CXX=g++-${GCC_VERSION} cmake \
-    -GNinja \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DERP_WITH_HSM_MOCK=OFF \
-    -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
-    -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
-    -DERP_WARNING_AS_ERROR=ON \
-    -DCMAKE_INSTALL_PREFIX=/erp-exporter .. && \
-    ninja -l$(nproc) production && \
-    cmake --install . --strip --component production && \
+WORKDIR /build/Release
+RUN cmake --build . --target production -- -l$(nproc) && \
+    cmake --install . --strip --component production --prefix /erp-exporter &&\
     cp install_manifest_production.txt install_manifest.txt
 
 RUN tar -czf ./erp-medication-exporter.tar.gz /erp-exporter
@@ -64,30 +61,23 @@ RUN tar -czf ./erp-medication-exporter.tar.gz /erp-exporter
 # Build RelWithDebInfo variant:
 FROM build AS reldeb_build
 
-WORKDIR /build/erp-medication-exporter/reldeb
-RUN CC=gcc-12 CXX=g++-12 cmake \
-    -GNinja \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DERP_WITH_HSM_MOCK=OFF \
-    -DERP_BUILD_VERSION=${ERP_BUILD_VERSION} \
-    -DERP_RELEASE_VERSION=${ERP_RELEASE_VERSION} \
-    -DERP_WARNING_AS_ERROR=ON \
-    -DCMAKE_INSTALL_PREFIX=/debug/erp-exporter .. && \
-    ninja -l$(nproc) production && \
-    cmake --install . --component production && \
+WORKDIR /build/RelWithDebInfo
+
+RUN cmake --build . --target production -- -l$(nproc) && \
+    cmake --install . --component production --prefix /debug/erp-exporter &&\
     cp install_manifest_production.txt install_manifest.txt
 
 RUN tar -czf ./erp-medication-exporter-debug.tar.gz /debug/erp-exporter
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.7 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.8 AS runtime
 
 WORKDIR /debug/erp-exporter
-COPY --from=reldeb_build /build/erp-medication-exporter/reldeb/erp-medication-exporter-debug.tar.gz .
+COPY --from=reldeb_build /build/RelWithDebInfo/erp-medication-exporter-debug.tar.gz .
 COPY --from=reldeb_build /debug/erp-exporter .
 
 WORKDIR /erp-exporter
-COPY --from=release_build /build/erp-medication-exporter/release/erp-medication-exporter.tar.gz .
+COPY --from=release_build /build/Release/erp-medication-exporter.tar.gz .
 COPY --from=release_build /erp-exporter .
 
 WORKDIR /

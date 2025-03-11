@@ -7,6 +7,25 @@
 
 cmake_minimum_required(VERSION 3.16)
 
+find_package(Boost REQUIRED)
+find_package(GTest REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(PostgreSQL REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(ZLIB REQUIRED)
+find_package(antlr4-runtime REQUIRED)
+find_package(botan REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(hiredis REQUIRED)
+find_package(libpqxx REQUIRED)
+find_package(libunwind REQUIRED)
+find_package(libxml2 REQUIRED)
+find_package(magic_enum REQUIRED)
+find_package(redis++ REQUIRED)
+find_package(zstd REQUIRED)
+
 project(erp-medication-exporter)
 
 set(ERP_APP_NAME ${PROJECT_NAME})
@@ -20,6 +39,9 @@ set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 # and leads to failing lookups.
 
 add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
+
+# Helper macros to manage transition away from error_code return values.
+add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
 
 #
 # Define how to build the eRP executable.
@@ -57,6 +79,7 @@ list(
         model/EpaOpProvidePrescriptionErpInputParameters.cxx
         model/EpaOpRxDispensationErpOutputParameters.cxx
         model/EpaOpRxPrescriptionErpOutputParameters.cxx
+        model/HashedKvnr.cxx
         model/OrganizationDirectory.cxx
         model/ResourceInstances.cxx
         model/TaskEvent.cxx
@@ -96,6 +119,8 @@ list(
         ../erp/model/Consent.cxx
         ../erp/model/Device.cxx
         ../erp/model/ErxReceipt.cxx
+        ../erp/model/EvdgaBundle.cxx
+        ../erp/model/EvdgaHealthAppRequest.cxx
         ../erp/model/Iknr.cxx
         ../erp/model/KbvBundle.cxx
         ../erp/model/KbvComposition.cxx
@@ -150,26 +175,17 @@ target_include_directories (
 
 target_link_libraries (
     erp-medication-exporter-files
-        PUBLIC erp-shared
-        PUBLIC tee3
-        PUBLIC CONAN_PKG::boost
-        PUBLIC CONAN_PKG::date
-        PUBLIC CONAN_PKG::glog
-        PUBLIC CONAN_PKG::gsl-lite
-        PUBLIC CONAN_PKG::openssl
-        PUBLIC CONAN_PKG::rapidjson
-        PUBLIC CONAN_PKG::libpq
-        PUBLIC CONAN_PKG::libpqxx
-        PUBLIC CONAN_PKG::libxml2
-        PUBLIC CONAN_PKG::redis-plus-plus
-        PUBLIC CONAN_PKG::hiredis
-        PUBLIC CONAN_PKG::magic_enum
-        PUBLIC CONAN_PKG::zstd
-        PUBLIC CONAN_PKG::zlib
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
-        PUBLIC $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
-        PUBLIC $<$<BOOL:${WITH_PROFILING}>:gperftools::profiler>
+        PUBLIC
+            erp-shared
+            tee3
+            rapidjson
+            boost::boost
+            date::date
+            glog::glog
+            gsl::gsl-lite
+            libpqxx::pqxx
+            LibXml2::LibXml2
+            magic_enum::magic_enum
 )
 
 add_executable(erp-medication-exporter erp-medication-exporter-main.cxx)

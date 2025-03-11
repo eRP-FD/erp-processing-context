@@ -71,8 +71,9 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
                 case MEDICATIONSVC_PRESCRIPTION_STATUS:
                 case MEDICATIONSVC_PRESCRIPTION_NO_EXIST:
                     logWarning(taskEvent)
-                        .keyValue("event", "Processing task event: Unexpected operation outcome")
-                        .keyValue("reason",  "EPAOperationOutcome code: "  + std::string(magic_enum::enum_name(issue.detailsCode)));
+                        << KeyValue("event", "Processing task event: Unexpected operation outcome")
+                        << KeyValue("reason", "EPAOperationOutcome code: " +
+                                                  std::string(magic_enum::enum_name(issue.detailsCode)));
                     break;
                 case SVC_IDENTITY_MISMATCH:
                 case MEDICATIONSVC_PRESCRIPTION_DUPLICATE:
@@ -84,9 +85,9 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
                 case MEDICATIONSVC_DISPENSATION_STATUS:
                 case GENERIC_OPERATION_OUTCOME_CODE:
                     logError(taskEvent)
-                        .keyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")
-                        .keyValue("reason", "unexpected operation outcome from Medication Client: " +
-                                                std::string(magic_enum::enum_name(issue.detailsCode)));
+                        << KeyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")
+                        << KeyValue("reason", "unexpected operation outcome from Medication Client: " +
+                                                  std::string(magic_enum::enum_name(issue.detailsCode)));
                     outcome = Outcome::DeadLetter;
                     break;
             }

@@ -36,7 +36,7 @@ char mod10(std::string_view str)
         else
             sum += val;
     }
-    return static_cast<char>(sum % 10 + '0');
+    return static_cast<char>((sum % 10) + '0');
 }
 
 } // namespace checksum

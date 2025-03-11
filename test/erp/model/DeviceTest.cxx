@@ -63,7 +63,6 @@ TEST(DeviceTest, ConstructFromJson)//NOLINT(readability-function-cognitive-compl
     })";
 
     // For testing use different values than the default constructor will assign.
-    const std::string deviceId = "9876";
     const Device::Status status = Device::Status::entered_in_error;
     const std::string serialNumber = "R1.12345";
     const std::string version = "4.3.2";
@@ -104,11 +103,6 @@ TEST(DeviceTest, ConstructFromJson)//NOLINT(readability-function-cognitive-compl
     EXPECT_EQ(device.contact(Device::CommunicationSystem::url).value(), urlContact);
     EXPECT_TRUE(device.contact(Device::CommunicationSystem::sms).has_value());
     EXPECT_EQ(device.contact(Device::CommunicationSystem::sms).value(), smsContact);
-
-    const ::testing::TestInfo* testInfo = ::testing::UnitTest::GetInstance()->current_test_info();
-    std::string testName = testInfo->name();
-    std::string testCaseName = testInfo->test_case_name();
-    std::string fileName = testCaseName + "-" + testName;
 
     EXPECT_NO_THROW((void)device.serializeToXmlString());
     EXPECT_NO_THROW((void)device.serializeToJsonString());

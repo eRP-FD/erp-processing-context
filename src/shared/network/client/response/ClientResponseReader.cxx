@@ -14,8 +14,7 @@
 
 ClientResponseReader::ClientResponseReader (void)
     : mBuffer(),
-      mParser(),
-      mIsStreamClosed(false)
+      mParser()
 {
     mParser.body_limit(ErpConstants::MaxResponseBodySize);
 }

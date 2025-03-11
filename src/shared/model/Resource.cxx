@@ -226,17 +226,17 @@ model::FhirResourceBase::getValidationView(ProfileType profileType) const
     const auto viewList = Fhir::instance().structureRepository(*referenceTimestamp);
     ModelExpect(! viewList.empty(), "Invalid reference timestamp: " + referenceTimestamp->toXsDateTime());
     std::shared_ptr<const fhirtools::FhirStructureRepository> repoView;
-    if (viewList.size() == 1 || !mandatoryMetaProfile(profileType))
+    const auto profileName = getProfileName();
+    ModelExpect(profileName.has_value() || ! mandatoryMetaProfile(profileType), "missing mandatory meta.profile");
+    if (viewList.size() == 1 || ! profileName)
     {
+        // effectivly validates against base profiles, which are contained in any view.
         repoView = viewList.latest().view(backend);
     }
     else
     {
-        auto profileName = getProfileName();
-        ModelExpect(profileName.has_value(), "missing meta.profile");
         fhirtools::DefinitionKey key{*profileName};
-        ModelExpect(key.version.has_value(), "missing version on meta.profile: " + to_string(key));
-        repoView = viewList.match(std::addressof(fhirInstance.backend()), key.url, *key.version);
+        repoView = viewList.match(std::addressof(fhirInstance.backend()), key);
         if (! repoView)
         {
             std::ostringstream supportedVersions;

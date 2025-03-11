@@ -26,7 +26,7 @@ MedicationDispenseHandlerBase::MedicationDispenseHandlerBase(
 {
 }
 
-model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessionContext& session, Operation forOperation)
+model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessionContext& session, Operation forOperation, model::PrescriptionType workflow)
 {
     try
     {
@@ -36,17 +36,23 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessio
 
         if (resourceType == model::Bundle::resourceTypeName)
         {
+            ErpExpect(! isDiga(workflow), HttpStatus::BadRequest,
+                      "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
+                      "Gesundheitsanwendungen zulässig.");
             return {.medicationDispenses = medicationDispensesFromBundle(std::move(unspec))};
         }
         else if (resourceType == model::MedicationDispense::resourceTypeName)
         {
+            ErpExpect(! isDiga(workflow), HttpStatus::BadRequest,
+                      "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
+                      "Gesundheitsanwendungen zulässig.");
             model::MedicationsAndDispenses result;
             result.medicationDispenses.emplace_back(medicationDispensesSingle(std::move(unspec)));
             return result;
         }
         else if (resourceType == model::MedicationDispenseOperationParameters::resourceTypeName)
         {
-            return medicationDispensesFromParameters(std::move(unspec), forOperation);
+            return medicationDispensesFromParameters(std::move(unspec), forOperation, workflow);
         }
         ErpFail(HttpStatus::BadRequest, "Unsupported resource type in request body: " + std::string(resourceType));
         A_22069.finish();
@@ -71,7 +77,7 @@ void MedicationDispenseHandlerBase::checkSingleOrBundleAllowed(const model::Medi
 model::MedicationDispense MedicationDispenseHandlerBase::medicationDispensesSingle(UnspecifiedResourceFactory&& unspec)
 {
     auto dispenseFactory = for_resource<model::MedicationDispense>(std::move(unspec));
-    auto medicationDispense = std::move(dispenseFactory).getValidated(model::ProfileType::Gem_erxMedicationDispense);
+    auto medicationDispense = std::move(dispenseFactory).getValidated(model::ProfileType::GEM_ERP_PR_MedicationDispense);
     checkSingleOrBundleAllowed(medicationDispense);
     return medicationDispense;
 }
@@ -138,23 +144,34 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
           std::logic_error);
 }
 
-model::MedicationsAndDispenses
-MedicationDispenseHandlerBase::medicationDispensesFromParameters(UnspecifiedResourceFactory&& unspec, Operation forOperation)
+model::MedicationsAndDispenses MedicationDispenseHandlerBase::medicationDispensesFromParameters(
+    UnspecifiedResourceFactory&& unspec, Operation forOperation, model::PrescriptionType workflow)
 {
-    model::ProfileType profileType = parameterTypeFor(forOperation);
+    const model::ProfileType profileType = parameterTypeFor(forOperation);
     auto parametersFactory = for_resource<model::MedicationDispenseOperationParameters>(std::move(unspec));
     auto validatedParameters = std::move(parametersFactory).getValidated(profileType);
     model::MedicationsAndDispenses result;
-    auto medicationDispensePairs = validatedParameters.medicationDispenses();
-    for (auto&& [medicationDispense, medication]: medicationDispensePairs)
+    if (isDiga(workflow))
     {
-        A_26527.start("Assign new IDs to ensure uniqueness in GET /MedicationDispense");
-        Uuid newId{};
-        medicationDispense.setMedicationReference(newId.toUrn());
-        medication.setId(newId.toString());
-        A_26527.finish();
-        result.medicationDispenses.emplace_back(std::move(medicationDispense));
-        result.medications.emplace_back(std::move(medication));
+        auto medicationDispenses = validatedParameters.medicationDispensesDiga();
+        for (auto&& medicationDispense : medicationDispenses)
+        {
+            result.medicationDispenses.emplace_back(std::move(medicationDispense));
+        }
+    }
+    else
+    {
+        auto medicationDispensePairs = validatedParameters.medicationDispenses();
+        for (auto&& [medicationDispense, medication]: medicationDispensePairs)
+        {
+            A_26527.start("Assign new IDs to ensure uniqueness in GET /MedicationDispense");
+            const Uuid newId{};
+            medicationDispense.setMedicationReference(newId.toUrn());
+            medication.setId(newId.toString());
+            A_26527.finish();
+            result.medicationDispenses.emplace_back(std::move(medicationDispense));
+            result.medications.emplace_back(std::move(medication));
+        }
     }
     return result;
 }

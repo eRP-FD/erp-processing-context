@@ -16,6 +16,7 @@
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
 
+#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/fusion/view/transform_view.hpp>
 #include <ranges>
@@ -371,8 +372,8 @@ FhirStructureRepositoryBackend::resolveContentReference(const FhirResourceGroup&
 
     const auto& baseElements = baseType->elements();
     const auto& refElementIt =
-        find_if(baseElements.begin(), baseElements.end(), [&](const std::shared_ptr<const FhirElement>& element) {
-            return element->name() == elementName;
+        std::ranges::find_if(baseElements, [&](const std::shared_ptr<const FhirElement>& xelement) {
+            return xelement->name() == elementName;
         });
     size_t elementIndex = 0;
     std::shared_ptr<const FhirElement> refElement;

@@ -3,6 +3,14 @@
 # (C) Copyright IBM Corp. 2021, 2024
 # non-exclusively licensed to gematik GmbH
 #
+
+find_package(Boost REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(botan REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+
 add_library(tee3 STATIC
     library/client/Error.cxx
     library/common/BoostBeastHeaderConverter.cxx
@@ -91,11 +99,10 @@ target_link_libraries(tee3
     PUBLIC
         erp-shared
     PRIVATE
-        CONAN_PKG::botan
-        CONAN_PKG::boost
-        CONAN_PKG::date
-        CONAN_PKG::glog
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::rapidjson
+        botan::botan
+        boost::boost
+        date::date
+        glog::glog
+        gsl::gsl-lite
+        rapidjson
 )
-

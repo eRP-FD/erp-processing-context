@@ -397,8 +397,6 @@ TEST_F(TslManagerTest, validTsl_Success)
 
 TEST_F(TslManagerTest, outdatedTslUpdate_Success)
 {
-    std::string newTslContent = ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-
     bool hookIsCalled = false;
     const std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         nullptr,

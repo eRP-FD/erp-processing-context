@@ -39,7 +39,7 @@ public:
                    model::Timestamp initSessionTime = model::Timestamp::now());
 
     PcServiceContext& serviceContext; // Specialized type (identical to BaseSessionContext::baseServiceContext)
-    bool callerWantsJson;
+    bool callerWantsJson{false};
     std::chrono::microseconds backendDuration{0};
 
     AuditDataCollector& auditDataCollector();

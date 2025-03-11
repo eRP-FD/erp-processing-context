@@ -22,8 +22,7 @@ TslProvider& TslProvider::getInstance()
 
 
 TslProvider::TslProvider()
-  : mMutex(),
-    mTslManager(nullptr)
+  : mMutex()
 {
 }
 

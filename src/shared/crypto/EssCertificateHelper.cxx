@@ -310,8 +310,8 @@ namespace
     void verifySigningCertificateAttributeContainsHash(
         SigningCertificate& essSigningCertificate,
         X509& signingCertificate,
-        std::function<int(CertificateIdStack*)> getNum,
-        std::function<CertificateId*(CertificateIdStack*, int)> getValue)
+        const std::function<int(CertificateIdStack*)>& getNum,
+        const std::function<CertificateId*(CertificateIdStack*, int)>& getValue)
     {
         const int idCount = getNum(essSigningCertificate.essCertificateIds);
         OpenSslExpect(idCount > 0, "At least one certificate is expected in the signed data.");

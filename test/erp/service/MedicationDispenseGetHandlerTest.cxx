@@ -227,7 +227,6 @@ protected:
                 if (!responseBody.empty())
                 {
                     ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(MedicationDispense::fromJsonNoValidation(responseBody)));
-                    std::string xmlString = medicationDispensesResponse.back().serializeToXmlString();
                 }
             }
             else
@@ -238,7 +237,6 @@ protected:
                 {
                     ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(
                         MedicationDispense::fromJson(responseBundle.getResource(idxResource))));
-                    std::string xmlString = medicationDispensesResponse.back().serializeToXmlString();
                 }
             }
         }

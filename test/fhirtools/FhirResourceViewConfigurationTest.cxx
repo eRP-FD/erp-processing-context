@@ -107,7 +107,7 @@ TEST_F(FhirResourceViewConfigurationTest, ViewsSelection)
                     {"END_OVERLAPP", "2024-11-15", "", {"darreichungsform_1_14"}}});
 
     std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
-    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue));
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, date::days{}));
     EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"1969-01-01"})),
               (strings{"BEGIN_OVERLAPP", "ERP_DARREICHUNGSFORM_1_12"}));
     EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-06-30"})),
@@ -187,7 +187,7 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
         {"viewB", "2024-07-01", "2024-10-01", {"groupB", "groupBase"}},
     });
     std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
-    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue));
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, date::days{}));
     std::optional<ViewList> viewListViewA;
     ASSERT_NO_THROW(viewListViewA.emplace(viewsConfiguration->getViewInfo(Date{"2024-06-01"})));
     EXPECT_EQ(viewListViewA->size(), 1);
@@ -326,7 +326,7 @@ TEST_P(FhirResourceViewConfigurationTestInconsistent, ViewInconsistent)
     std::optional<fhirtools::FhirResourceViewConfiguration> viewCfg;
     try
     {
-        viewCfg.emplace(res, viewCfgValue);
+        viewCfg.emplace(res, viewCfgValue, date::days{});
         FAIL() << "Expected exception on view inconsistency.";
     }
     catch (const std::runtime_error& re)

@@ -17,8 +17,7 @@
 ServerRequestReader::ServerRequestReader (SslStream& stream)
     : mStream(stream),
       mBuffer(),
-      mParser(),
-      mIsStreamClosed(false)
+      mParser()
 {
 }
 

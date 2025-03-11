@@ -23,9 +23,8 @@ class FhirStructureDefinition;
 
 class FhirCanonicalizer
 {
-    static constexpr auto implements = A_19029_05.start(
-    "das Bundle entsprechend der Kanonisierungsregeln http://hl7.org/fhir/canonicalization/json#static normalisieren")
-    && A_19029_05.finish();
+    static constexpr auto implements = A_19029_06.implements(
+    "das Bundle entsprechend der Kanonisierungsregeln http://hl7.org/fhir/canonicalization/json#static normalisieren");
 public:
     /**
      * Serializes the FHIR resources into a canonical json string according to "http://hl7.org/fhir/json.html#canonical".

@@ -34,6 +34,8 @@ public:
                    std::chrono::milliseconds>& timestamp) = 0;
     virtual int64_t incr(const std::string_view& key) = 0;
     virtual void publish(const std::string_view& channel, const std::string_view& message) = 0;
+    virtual int64_t getIntValue(std::string_view key) = 0;
+    virtual void flushdb() = 0;
 };
 
 #endif

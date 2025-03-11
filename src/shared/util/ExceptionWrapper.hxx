@@ -38,7 +38,7 @@ class ExceptionWrapperBase
 {
 public:
     explicit ExceptionWrapperBase(const FileNameAndLineNumber& initRootLocation, const FileNameAndLineNumber initLocation)
-        : location{initLocation, initRootLocation}
+        : location{.location = initLocation, .rootLocation = initRootLocation}
     {}
     virtual ~ExceptionWrapperBase() = default;
 

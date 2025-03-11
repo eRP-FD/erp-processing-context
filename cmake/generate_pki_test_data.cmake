@@ -7,14 +7,23 @@
 
 # Enforce use of conan-provided OpenSSL
 unset(OPENSSL CACHE)
+
 find_program(OPENSSL
     NAMES openssl
-    PATHS "${CONAN_BIN_DIRS_OPENSSL}"
+    PATHS
+        ${openssl_BIN_DIRS_RELEASE}
+        ${openssl_BIN_DIRS_RELWITHDEBINFO}
+        ${openssl_BIN_DIRS_MINSIZEREL}
+        ${openssl_BIN_DIRS_DEBUG}
     NO_DEFAULT_PATH
     REQUIRED)
 mark_as_advanced(OPENSSL)
-set(ENV{OPENSSL} "${OPENSSL}")
-set(ENV{LD_LIBRARY_PATH} "${CONAN_LIB_DIRS_OPENSSL}:$ENV{LD_LIBRARY_PATH}")
+set(OPENSSL_LD_LIBARAY_PATH
+    ${openssl_OpenSSL_Crypto_LIB_DIRS_DEBUG}
+    ${openssl_OpenSSL_Crypto_LIB_DIRS_RELWITHDEBINFO}
+    ${openssl_OpenSSL_Crypto_LIB_DIRS_MINSIZEREL}
+    ${openssl_OpenSSL_Crypto_LIB_DIRS_RELEASE}
+)
 
 # Check availability of executables used in script
 find_program(DD
@@ -31,11 +40,13 @@ find_program(XMLSEC1
 mark_as_advanced(XMLSEC1)
 
 execute_process(
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_pki_test_data.sh --clean --output-dir=${CMAKE_BINARY_DIR}
-        COMMAND_ECHO STDOUT
-        OUTPUT_VARIABLE OUTPUT_GENERATE_PKI_TEST_DATA
-        ERROR_VARIABLE ERROR_GENERATE_PKI_TEST_DATA
-        RESULT_VARIABLE RESULT_GENERATE_PKI_TEST_DATA
+    COMMAND
+        ${CMAKE_COMMAND} -E env "OPENSSL=${OPENSSL}" "LD_LIBRARY_PATH=${OPENSSL_LD_LIBARAY_PATH}:$ENV{LD_LIBRARY_PATH}"
+            ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_pki_test_data.sh --clean --output-dir=${CMAKE_BINARY_DIR}
+    COMMAND_ECHO STDOUT
+    OUTPUT_VARIABLE OUTPUT_GENERATE_PKI_TEST_DATA
+    ERROR_VARIABLE ERROR_GENERATE_PKI_TEST_DATA
+    RESULT_VARIABLE RESULT_GENERATE_PKI_TEST_DATA
 )
 
 if(RESULT_GENERATE_PKI_TEST_DATA AND NOT RESULT_GENERATE_PKI_TEST_DATA EQUAL 0)

@@ -45,9 +45,7 @@ size_t toSizeT(const std::string& numberString, const std::string& fieldName, bo
 
 
 PagingArgument::PagingArgument ()
-    : mCount(getDefaultCount()),
-      mOffset(0),
-      mTotalSearchMatches(0)
+    : mCount(getDefaultCount())
 {
 }
 

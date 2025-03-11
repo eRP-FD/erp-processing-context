@@ -69,7 +69,8 @@ bool EpaMedicationClientImpl::testConnection()
 {
     auto fut = co_spawn(
         mIoContext,
-        [&]() -> boost::asio::awaitable<bool> {
+        // The lifetime of lambda capture is no issue here, because of fut.get() below, which waits for the coroutine.
+        [this]() -> boost::asio::awaitable<bool> {// NOLINT(cppcoreguidelines-avoid-capturing-lambda-coroutines)
             try
             {
                 auto tee3Client = co_await mTeeClientPool->acquire(mHostname);

@@ -96,6 +96,7 @@ public:
         std::optional<std::string> telematicIdPharmacy = std::nullopt;
         std::string accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
         model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel;
+        std::optional<model::Timestamp> expiryDate = std::nullopt;
     };
 
     virtual std::vector<model::Task> addTasksToDatabase(const std::vector<TaskDescriptor>& descriptors);
@@ -104,7 +105,9 @@ public:
     virtual model::Task createTask(
         const std::string& accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32)),
         model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel);
-    virtual void activateTask(model::Task& task, const std::string& kvnrPatient = InsurantE);
+    virtual void activateTask(model::Task& task, const std::string& kvnrPatient = InsurantE,
+                              std::optional<model::Timestamp> expiryDate = std::nullopt,
+                              std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions = std::nullopt);
     virtual void acceptTask(model::Task& task, const SafeString secret = SecureRandomGenerator::generate(32));
     virtual std::vector<model::MedicationDispense> closeTask(
         model::Task& task,

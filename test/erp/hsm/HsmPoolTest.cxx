@@ -71,6 +71,7 @@ TEST_F(HsmPoolTest, poolAcquire_thread)//NOLINT(readability-function-cognitive-c
 
     hsmPool.resetMaxUsedSessionCount();
 
+    threads.reserve(threadCount);
     for (size_t index=0; index<threadCount; ++index)
     {
         threads.emplace_back(

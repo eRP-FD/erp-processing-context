@@ -24,7 +24,6 @@ TimerJobBase::TimerJobBase (
     , mInterval(interval)
     , mJobThread()
     , mAbortCondition()
-    , mIsAborted(false)
 {
 }
 

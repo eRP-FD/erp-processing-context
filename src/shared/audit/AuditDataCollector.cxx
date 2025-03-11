@@ -124,10 +124,7 @@ bool AuditDataCollector::shouldCreateAuditEventOnSuccess() const noexcept
 
 bool AuditDataCollector::shouldCreateAuditEventOnError(HttpStatus errorCode) const noexcept
 {
-    return (errorCode == HttpStatus::Forbidden &&
-           mEventId.has_value() &&
-           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed)
-        || (errorCode == HttpStatus::NotAcceptPN3 &&
-           mEventId.has_value() &&
-           *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed);
+    return (mEventId.has_value() && *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed) ||
+           (errorCode == HttpStatus::NotAcceptPN3 && mEventId.has_value() &&
+            *mEventId == model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed);
 }

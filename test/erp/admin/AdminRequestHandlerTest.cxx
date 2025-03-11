@@ -28,6 +28,7 @@ public:
     AdminRequestHandlerTest()
     {
         MockTerminationHandler::setupForTesting();
+        header.setMethod(HttpMethod::POST);
         header.addHeaderField(Header::ContentType, ContentMimeType::xWwwFormUrlEncoded);
         header.addHeaderField(Header::Authorization, "Basic cred");
     }

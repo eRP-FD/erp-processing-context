@@ -44,7 +44,7 @@ namespace
                                  const std::string& authorIdentifier,
                                  const PcServiceContext& serviceContext)
     {
-        CadesBesSignature dispenseItemCadesBesSignature{dispenseItem.data().value().data()};
+        CadesBesSignature dispenseItemCadesBesSignature{std::string{dispenseItem.data().value()}};
         dispenseItemCadesBesSignature.addCounterSignature(serviceContext.getCFdSigErp(),
                                                           serviceContext.getCFdSigErpPrv());
 
@@ -262,7 +262,8 @@ void ChargeItemGetByIdHandler::handleRequest(PcSessionContext& session)
 
         // embed signed dispense into signature of KBV-Bundle which is intentionally data duplication.
         Expect3(chargeInformation.dispenseItem.has_value(), "Dispense Item not present", ::std::logic_error);
-        const CadesBesSignature dispenseItemCadesBesSignature{chargeInformation.dispenseItem->data().value().data()};
+        const CadesBesSignature dispenseItemCadesBesSignature{
+            std::string{chargeInformation.dispenseItem->data().value()}};
         const model::Signature dispenseItemSignature{
             dispenseItemCadesBesSignature.getBase64(),
             dispenseItemCadesBesSignature.getSigningTime().value_or(model::Timestamp::now()), std::nullopt, "Apotheke"};

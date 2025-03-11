@@ -10,8 +10,7 @@
 
 
 HsmRawSession::HsmRawSession (void)
-    : rawSession{0, 0, 0, hsmclient::HSMSessionStatus::HSMUninitialised, 0, 0, 0},
-      identity(HsmIdentity::Identity::Work)
+    : rawSession{0, 0, 0, hsmclient::HSMSessionStatus::HSMUninitialised, 0, 0, 0}
 {
 }
 

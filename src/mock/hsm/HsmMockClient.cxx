@@ -16,6 +16,7 @@
 
 #include "shared/util/TLog.hxx"
 
+#include <algorithm>
 #include <sstream>
 
 
@@ -67,7 +68,7 @@ ErpBlob HsmMockClient::getTeeToken(
 
     std::vector<uint8_t> tokenData;
     tokenData.resize(defaultTeeBlob.size());
-    std::copy(defaultTeeBlob.begin(), defaultTeeBlob.end(), tokenData.data());
+    std::ranges::copy(defaultTeeBlob, tokenData.data());
     // Remember the tee token.
     // Subsequent calls to other methods of this class are expected to authenticate via this token.
     mTeeToken = ErpBlob(std::move(tokenData), 0);
@@ -132,7 +133,7 @@ ErpArray<Aes128Length> HsmMockClient::doVauEcies128(
 
     ErpArray<Aes128Length> output;
     const std::string_view sv = symmetricKey;
-    std::copy(sv.begin(), sv.end(), output.data());
+    std::ranges::copy(sv, output.data());
     return output;
 }
 
@@ -198,7 +199,7 @@ DeriveKeyOutput HsmMockClient::derivePersistenceKey(DeriveKeyInput&& input, ::Bl
         // The production client will add a different number of bytes. This is so that the caller
         // does not hard code any expectation that might be not true in the next release of the hsm(client).
         input.derivationData.reserve(input.derivationData.size() + defaultRandomData.size());
-        std::copy(defaultRandomData.begin(), defaultRandomData.end(), std::back_inserter(input.derivationData));
+        std::ranges::copy(defaultRandomData, std::back_inserter(input.derivationData));
     }
 
     input.derivationData.push_back(static_cast<decltype(input.derivationData)::value_type>(expectedBlobType));
@@ -223,7 +224,7 @@ DeriveKeyOutput HsmMockClient::derivePersistenceKey(DeriveKeyInput&& input, ::Bl
         output.optionalData = {};
     }
 
-    std::copy(symmetricKey.begin(), symmetricKey.end(), output.derivedKey.data());
+    std::ranges::copy(symmetricKey, output.derivedKey.data());
     return output;
 }
 

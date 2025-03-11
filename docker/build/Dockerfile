@@ -11,8 +11,8 @@ FROM ubuntu:jammy AS build
 RUN apt-get update --fix-missing && \
     apt-get install -y software-properties-common wget && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -  && \
-    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main && \
-    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main
+    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main && \
+    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     openjdk-11-jre-headless \
     gcc-12 g++-12 \
@@ -34,8 +34,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
     xxd \
     xmlsec1 \
     xsltproc \
-    clang-tidy-15 \
     clang-tidy-16 \
+    clang-tidy-19 \
     tzdata \
     ccache \
     openjdk-17-jdk \
@@ -43,7 +43,11 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
 
 # Update certificates and install latest version of cmake
 RUN update-ca-certificates && \
-    pip install --upgrade cmake
+    pip install --upgrade cmake 'conan'
+
+# Tool for converting json sbom to xml
+RUN wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.2/cyclonedx-linux-x64 -O /usr/bin/cyclonedx && \
+    chmod 755 /usr/bin/cyclonedx
 
 COPY known_hosts /root/.ssh/known_hosts
 # work around fix for CVE-2022-24765:

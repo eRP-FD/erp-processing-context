@@ -50,7 +50,8 @@ public:
      * to the given endpoint.
      * In case the server mandates a TEE reconnect, it is executed automatically.
      */
-    boost::asio::awaitable<boost::system::result<Tee3Client::Response>> sendTeeRequest(std::string hostname, Tee3Client::Request req, std::unordered_map<std::string, std::any>& logDataBag);
+    boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
+    sendTeeRequest(std::string hostname, Tee3Client::Request req, std::unordered_map<std::string, std::any> logDataBag);
 
     /**
      * Add a connection pool for the given hostname, it must be called before trying

@@ -30,21 +30,30 @@ target_sources(erp-hsm-tpm-mock
         $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:$<TARGET_OBJECTS:enrolment-api-client>>
 )
 
+find_package(Boost REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(PostgreSQL REQUIRED)
+find_package(libpqxx REQUIRED)
+find_package(magic_enum REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(libxml2 REQUIRED)
 
 target_link_libraries(erp-hsm-tpm-mock
     PUBLIC
-        CONAN_PKG::boost
-        CONAN_PKG::date
-        CONAN_PKG::glog
-        CONAN_PKG::gsl-lite
-        CONAN_PKG::libpq
-        CONAN_PKG::libpqxx
-        CONAN_PKG::magic_enum
-        CONAN_PKG::openssl
-        CONAN_PKG::rapidjson
-        CONAN_PKG::libxml2
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::hsmclient>
-        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:CONAN_PKG::tpmclient>
+        boost::boost
+        date::date
+        glog::glog
+        gsl::gsl-lite
+        PostgreSQL::PostgreSQL
+        libpqxx::pqxx
+        magic_enum::magic_enum
+        openssl::openssl
+        rapidjson
+        LibXml2::LibXml2
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:hsmclient::hsmclient>
+        $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:tpmclient::tpmclient>
 )
 
 

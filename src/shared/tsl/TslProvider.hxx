@@ -61,7 +61,7 @@ private:
     //
 
     mutable std::mutex mMutex;
-    TslManager* mTslManager;
+    TslManager* mTslManager{nullptr};
 };
 // GEMREQ-end A_16901
 

@@ -6,29 +6,53 @@
  */
 
 #include "erp/service/ErpRequestHandler.hxx"
-
+#include "erp/util/search/PagingArgument.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/TLog.hxx"
-#include "erp/util/search/PagingArgument.hxx"
 
 #include <utility>
 
 
 // GEMREQ-start allowedProfessionOIDs
-ErpRequestHandler::ErpRequestHandler (const Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOIDs)
-    : mOperation(operation),
-      mAllowedProfessionOIDs(allowedProfessionOIDs)
+ErpRequestHandler::ErpRequestHandler(const Operation operation,
+                                     const std::initializer_list<std::string_view>& allowedProfessionOIDs)
+    : mOperation(operation)
+    , mAllowedProfessionOIDsAllWorkflows(allowedProfessionOIDs)
+{
+}
+ErpRequestHandler::ErpRequestHandler(Operation operation, OIDsByWorkflow allowedProfessionOiDsByWorkflow)
+    : mOperation(operation)
+    , mAllowedProfessionOIDsByWorkflow(std::move(allowedProfessionOiDsByWorkflow))
 {
 }
 // GEMREQ-end allowedProfessionOIDs
 
 
 // GEMREQ-start allowedForProfessionOID
-bool ErpRequestHandler::allowedForProfessionOID (std::string_view professionOid) const
+bool ErpRequestHandler::allowedForProfessionOID (std::string_view professionOid,
+                                                 const std::optional<std::string>& optionalPathIdParameter) const
 {
-    return mAllowedProfessionOIDs.count(professionOid) > 0;
+    if (mAllowedProfessionOIDsAllWorkflows.contains(professionOid))
+    {
+        return true;
+    }
+    if (optionalPathIdParameter.has_value())
+    {
+        try
+        {
+            auto prescriptionId = model::PrescriptionId::fromString(optionalPathIdParameter.value());
+            auto workflow = prescriptionId.type();
+            return mAllowedProfessionOIDsByWorkflow.contains(workflow) &&
+                   mAllowedProfessionOIDsByWorkflow.at(workflow).contains(professionOid);
+        }
+        catch (const model::ModelException&)
+        {
+            return false;
+        }
+    }
+    return false;
 }
 // GEMREQ-end allowedForProfessionOID
 
@@ -146,9 +170,11 @@ bool ErpRequestHandler::isVerificationIdentityKvnr(const std::string_view& kvnr)
         }
         catch (const std::invalid_argument&)
         {
+            return false;
         }
         catch (const std::out_of_range&)
         {
+            return false;
         }
     }
     A_20751.finish();
@@ -194,7 +220,7 @@ ErpUnconstrainedRequestHandler::ErpUnconstrainedRequestHandler (const Operation 
 {
 }
 
-bool ErpUnconstrainedRequestHandler::allowedForProfessionOID (std::string_view /*professionOid*/) const
+bool ErpUnconstrainedRequestHandler::allowedForProfessionOID(std::string_view, const std::optional<std::string>&) const
 {
     return true;
 }

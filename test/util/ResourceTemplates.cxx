@@ -32,6 +32,10 @@ std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
     Versions::KBV_ERP_1_1_0,
 };
 
+std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
+    Versions::KBV_EVDGA_1_1_0,
+};
+
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
     Versions::GEM_ERPCHRG_1_0,
 };
@@ -68,6 +72,11 @@ Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[
     return KBV_ERP_1_1_0;
 }
 
+Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference [[maybe_unused]])
+{
+    return KBV_EVDGA_1_1_0;
+}
+
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
 {
     auto taskKey = latest(model::resource::structure_definition::task, reference);
@@ -101,6 +110,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
             insuranceType = "GKV";
             boost::replace_all(bundle, "###PKV_ASSIGNER###", "");
             break;
@@ -169,7 +179,6 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     auto& resourceManager = ResourceManager::instance();
     const std::string kbvVersionStr{to_string(
         bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)))};
-    std::string kvid10Ns{model::resource::naming_system::gkvKvid10};
     std::string templateFileName =
         "test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung_template_" + kbvVersionStr + ".xml";
 
@@ -387,11 +396,11 @@ std::string medicationXml(const MedicationOptions& medicationOptions)
     struct GetTemplate {
         std::string operator()(const Versions::KBV_ERP& version)
         {
-            return (std::ostringstream{} << medicationOptions.templatePrefix << version <<".xml").str();
+            return (std::ostringstream{} << medicationOptions.templatePrefix << version << ".xml").str();
         }
         std::string operator()(const Versions::GEM_ERP& version)
         {
-            return (std::ostringstream{} << medicationOptions.templatePrefix << "gem_" << version <<".xml").str();
+            return (std::ostringstream{} << medicationOptions.templatePrefix << "gem_" << version << ".xml").str();
         }
         std::string operator()(const std::monostate&)
         {
@@ -407,12 +416,27 @@ std::string medicationXml(const MedicationOptions& medicationOptions)
 
     using namespace std::string_literals;
     auto& resourceManager = ResourceManager::instance();
-    auto medication = resourceManager.getStringResource(visit(GetTemplate{medicationOptions}, medicationOptions.version));
-    boost::replace_all(medication, "###MEDICATION_ID###", medicationOptions.id.value_or("001413e4-a5e9-48da-9b07-c17bab476407"));
+    auto medication =
+        resourceManager.getStringResource(visit(GetTemplate{medicationOptions}, medicationOptions.version));
+    boost::replace_all(medication, "###MEDICATION_ID###",
+                       medicationOptions.id.value_or("001413e4-a5e9-48da-9b07-c17bab476407"));
     boost::replace_all(medication, "###DARREICHUNGSFORM###", medicationOptions.darreichungsform);
     boost::replace_all(medication, "###MEDICATION_CATEGORY###", medicationOptions.medicationCategory);
     boost::replace_all(medication, "###PZN###", medicationOptions.pzn.id());
     return medication;
+}
+
+std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    std::string const templateFileName =
+        "test/EndpointHandlerTest/GEM_ERP_PR_MedicationDispense_DiGA_" + to_string(options.version) + ".xml";
+    auto medicationDispense = resourceManager.getStringResource(templateFileName);
+    boost::replace_all(medicationDispense, "##PRESCRIPTION_ID##", options.prescriptionId);
+    boost::replace_all(medicationDispense, "##KVNR##", options.kvnr);
+    boost::replace_all(medicationDispense, "##TELEMATIK_ID##", options.telematikId);
+    boost::replace_all(medicationDispense, "##WHENHANDEDOVER##", options.whenHandedOver);
+    return medicationDispense;
 }
 
 std::string taskJson(const TaskOptions& taskOptions)
@@ -530,6 +554,13 @@ std::string medicationDispenseOperationParametersXml(const MedicationDispenseOpe
         result += part("medication", medicationXml(medicationOptions));
         result += "</parameter>\n";
     }
+    for (const auto& medicationDispenseDiGa : options.medicationDispensesDiGA)
+    {
+        result += "<parameter>\n";
+        result += "  <name value=\"rxDispensation\" />\n";
+        result += part("medicationDispense", medicationDispenseDigaXml(medicationDispenseDiGa));
+        result += "</parameter>\n";
+    }
     result += "</Parameters>";
     return result;
 }
@@ -550,6 +581,21 @@ std::string dispenseOrCloseTaskBodyXml(const MedicationDispenseOperationParamete
     });
 }
 
+std::string evdgaBundleXml(const EvdgaBundleOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    std::string templateFileName =
+        "test/EndpointHandlerTest/EVDGA_Bundle_template_" + to_string(options.version) + ".xml";
+    auto evdgaBundle = resourceManager.getStringResource(templateFileName);
 
+    boost::replace_all(evdgaBundle, "##PRESCRIPTION_ID##", options.prescriptionId);
+    boost::replace_all(evdgaBundle, "##TIMESTAMP##", options.timestamp);
+    boost::replace_all(evdgaBundle, "##KVNR##", options.kvnr);
+    boost::replace_all(evdgaBundle, "##COVERAGE_SYSTEM##", options.coverageSystem);
+    boost::replace_all(evdgaBundle, "##COVERAGE_CODE##", options.coverageCode);
+    boost::replace_all(evdgaBundle, "##AUTHORED_ON##", options.authoredOn);
+
+    return evdgaBundle;
+}
 }// namespace ResourceTemplates
 

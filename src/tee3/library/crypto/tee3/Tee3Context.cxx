@@ -21,7 +21,8 @@ Tee3Context::Tee3Context(
     channelId(channelId),
     version(0x02),
     isPU(isPU),
-    messageCounter(initialMessageCounter)
+    messageCounter(initialMessageCounter),
+    requestCounter(initialRequestCounter)
 {
 }
 // GEMREQ-end A_24629
@@ -30,7 +31,9 @@ Tee3Context::Tee3Context(
 Tee3Context::Tee3Context(const Tee3Context& other)
   : Tee3Context(other.k2ApplicationData, other.keyId, other.vauCid, other.channelId, other.isPU)
 {
-    Assert(other.messageCounter == initialMessageCounter)
+    Assert(
+        other.messageCounter == initialMessageCounter
+        && other.requestCounter == initialRequestCounter)
         << "can not copy TEE context that is already in use";
 }
 
@@ -42,10 +45,13 @@ Tee3Context::Tee3Context(Tee3Context&& other) noexcept
     channelId(std::move(other.channelId)),
     version(other.version),
     isPU(other.isPU),
-    messageCounter(0)
+    messageCounter(initialMessageCounter),
+    requestCounter(initialRequestCounter)
 {
-    Assert(other.messageCounter == initialMessageCounter)
-        << "can not move TEE context that is already in use";
+    Assert(
+        other.messageCounter == initialMessageCounter
+        && other.requestCounter == initialRequestCounter)
+        << "can not copy TEE context that is already in use";
 }
 
 
@@ -55,14 +61,22 @@ bool Tee3Context::isSet() const
 }
 
 // GEMREQ-start A_24629#incrementCounter
-Tee3Context::SessionContexts Tee3Context::createSessionContexts()
+Tee3Context::SessionContexts Tee3Context::createSessionContexts(
+    const std::optional<uint64_t>& newRequestCounter)
 {
     // The message counter is fixed to the next/increased message counter value.
     // Only one of the two session contexts should use this value to encrypt a response or a request.
-    // The other session context should be used to decrypt a request or response, where the message
-    // counter is not used. This is because at the moment message counts can not be verified by
-    // the receivers.
-    auto counter = ++messageCounter;
+    // The other session context should be used to decrypt a request or response.
+    auto messageCounterTemp = ++messageCounter;
+    uint64_t requestCounterTemp = 0;
+    if (newRequestCounter.has_value())
+    {
+        requestCounter.store(*newRequestCounter);
+        requestCounterTemp = *newRequestCounter;
+    }
+    else
+        requestCounterTemp = ++requestCounter;
+
     return {
         Tee3SessionContext{
             .k2Key = k2ApplicationData.clientToServer,
@@ -70,7 +84,8 @@ Tee3Context::SessionContexts Tee3Context::createSessionContexts()
             .vauCid = vauCid,
             .version = version,
             .isPU = isPU,
-            .messageCounter = counter,
+            .messageCounter = messageCounterTemp,
+            .requestCounter = requestCounterTemp,
             .direction = Tee3SessionContext::Direction::ClientToServer},
         Tee3SessionContext{
             .k2Key = k2ApplicationData.serverToClient,
@@ -78,7 +93,8 @@ Tee3Context::SessionContexts Tee3Context::createSessionContexts()
             .vauCid = vauCid,
             .version = version,
             .isPU = isPU,
-            .messageCounter = counter,
+            .messageCounter = messageCounterTemp,
+            .requestCounter = requestCounterTemp,
             .direction = Tee3SessionContext::Direction::ServerToClient},
     };
 }
@@ -86,7 +102,8 @@ Tee3Context::SessionContexts Tee3Context::createSessionContexts()
 
 Tee3Context::SessionContexts Tee3Context::getCurrentSessionContexts() const
 {
-    const uint64_t counter = messageCounter;
+    const uint64_t messageCounterTemp = messageCounter;
+    const uint64_t requestCounterTemp = requestCounter;
     return {
         Tee3SessionContext{
             .k2Key = k2ApplicationData.clientToServer,
@@ -94,7 +111,8 @@ Tee3Context::SessionContexts Tee3Context::getCurrentSessionContexts() const
             .vauCid = vauCid,
             .version = version,
             .isPU = isPU,
-            .messageCounter = counter,
+            .messageCounter = messageCounterTemp,
+            .requestCounter = requestCounterTemp,
             .direction = Tee3SessionContext::Direction::ClientToServer},
         Tee3SessionContext{
             .k2Key = k2ApplicationData.serverToClient,
@@ -102,7 +120,8 @@ Tee3Context::SessionContexts Tee3Context::getCurrentSessionContexts() const
             .vauCid = vauCid,
             .version = version,
             .isPU = isPU,
-            .messageCounter = counter,
+            .messageCounter = messageCounterTemp,
+            .requestCounter = requestCounterTemp,
             .direction = Tee3SessionContext::Direction::ServerToClient},
     };
 }
@@ -120,7 +139,8 @@ Tee3Context& Tee3Context::operator=(Tee3Context&& other) noexcept
         Assert(version == other.version);
         Assert(isPU == other.isPU);
 
-        messageCounter.exchange(other.messageCounter);
+        messageCounter.store(other.messageCounter);
+        requestCounter.store(other.requestCounter);
     }
     return *this;
 }

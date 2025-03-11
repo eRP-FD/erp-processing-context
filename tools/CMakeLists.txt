@@ -5,6 +5,15 @@
 # non-exclusively licensed to gematik GmbH
 #
 
+find_package(Boost REQUIRED)
+find_package(OpenSSL REQUIRED)
+find_package(RapidJSON REQUIRED)
+find_package(date REQUIRED)
+find_package(glog REQUIRED)
+find_package(gsl-lite REQUIRED)
+find_package(libxml2 REQUIRED)
+find_package(magic_enum REQUIRED)
+
 set(VAU_ENC_SOURCES vau_encrypt/vau_encrypt_main.cxx)
 
 add_library(erp-tool-lib EXCLUDE_FROM_ALL OBJECT ${ERP_TOOL_LIB_SOURCES})
@@ -31,15 +40,15 @@ add_library(enrolment-api-client OBJECT
     EnrolmentApiClient.cxx)
 
 target_link_libraries(enrolment-api-client
-    PUBLIC
-       CONAN_PKG::boost
-       CONAN_PKG::date
-       CONAN_PKG::glog
-       CONAN_PKG::gsl-lite
-       CONAN_PKG::libxml2
-       CONAN_PKG::magic_enum
-       CONAN_PKG::openssl
-       CONAN_PKG::rapidjson
+    PRIVATE
+       LibXml2::LibXml2
+       boost::boost
+       date::date
+       glog::glog
+       gsl::gsl-lite
+       magic_enum::magic_enum
+       openssl::openssl
+       rapidjson
 )
 
 target_include_directories(enrolment-api-client
@@ -57,7 +66,7 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
         PRIVATE
             erp-hsm-tpm-mock
             erp-processing-context-files
-            CONAN_PKG::magic_enum
+            magic_enum::magic_enum
     )
     target_include_directories(
         blob-db-initialization
@@ -87,7 +96,7 @@ add_executable(tee3send EXCLUDE_FROM_ALL tee3send/tee3send_main.cxx)
 target_link_libraries(tee3send
     PRIVATE
         erp-medication-exporter-files
-        CONAN_PKG::boost
+        boost::boost
 )
 
 add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate resources)

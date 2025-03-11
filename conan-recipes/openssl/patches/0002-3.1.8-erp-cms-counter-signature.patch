@@ -1,4 +1,4 @@
-From dcafe2c658a52d7fd13333f9d4b76e612517dd49 Mon Sep 17 00:00:00 2001
+From ba04529468a612fe8f40fbaafb0dd91bb5ca8515 Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
 Date: Mon, 20 Nov 2023 12:41:51 +0100
 Subject: [PATCH 2/2] 3.1.4-erp-cms-counter-signature.patch
@@ -10,7 +10,7 @@ Subject: [PATCH 2/2] 3.1.4-erp-cms-counter-signature.patch
  3 files changed, 217 insertions(+), 28 deletions(-)
 
 diff --git a/crypto/cms/cms_att.c b/crypto/cms/cms_att.c
-index 5b99516b29..66af393a48 100644
+index 64acda7263..18ae55c171 100644
 --- a/crypto/cms/cms_att.c
 +++ b/crypto/cms/cms_att.c
 @@ -43,8 +43,7 @@ static const struct {
@@ -24,13 +24,13 @@ index 5b99516b29..66af393a48 100644
                                 | CMS_ATTR_F_ONLY_ONE
                                 | CMS_ATTR_F_ONE_ATTR_VALUE
 diff --git a/crypto/cms/cms_sd.c b/crypto/cms/cms_sd.c
-index cfac556957..5a12a3778c 100644
+index 4b7b153d3b..cfcd03facf 100644
 --- a/crypto/cms/cms_sd.c
 +++ b/crypto/cms/cms_sd.c
 @@ -333,23 +333,15 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
      return ret;
  }
-
+ 
 -CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
 -                                X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 -                                unsigned int flags)
@@ -46,7 +46,7 @@ index cfac556957..5a12a3778c 100644
 -    int i, type;
 -    const CMS_CTX *ctx = ossl_cms_get0_cmsctx(cms);
 +    int type = 0;
-
+ 
 -    if (!X509_check_private_key(signer, pk)) {
 -        ERR_raise(ERR_LIB_CMS, CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
 -        return NULL;
@@ -60,11 +60,11 @@ index cfac556957..5a12a3778c 100644
 @@ -383,7 +375,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
      if (!ossl_cms_set1_SignerIdentifier(si->sid, signer, type, ctx))
          goto err;
-
+ 
 -    if (md == NULL) {
 +    if (*md == NULL) {
          int def_nid;
-
+ 
          if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0) {
 @@ -391,26 +383,43 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
                             "pkey nid=%d", EVP_PKEY_get_id(pk));
@@ -79,14 +79,14 @@ index cfac556957..5a12a3778c 100644
              goto err;
          }
      }
-
+ 
 -    if (!md) {
 -        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
 -        goto err;
 -    }
 +    X509_ALGOR_set_md(si->digestAlgorithm, *md);
 +    return si;
-
+ 
 -    if (md == NULL) {
 -        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
 -        goto err;
@@ -97,7 +97,7 @@ index cfac556957..5a12a3778c 100644
 +    M_ASN1_free_of(si, CMS_SignerInfo);
 +    return NULL;
 +}
-
+ 
 -    X509_ALGOR_set_md(si->digestAlgorithm, md);
 +CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
 +                                X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
@@ -108,7 +108,7 @@ index cfac556957..5a12a3778c 100644
 +    X509_ALGOR *alg = NULL;
 +    int i = 0, type = 0;
 +    const CMS_CTX *ctx = ossl_cms_get0_cmsctx(cms);
-
+ 
 +    if (!X509_check_private_key(signer, pk)) {
 +        ERR_raise(ERR_LIB_CMS, CMS_R_PRIVATE_KEY_DOES_NOT_MATCH_CERTIFICATE);
 +        return NULL;
@@ -117,11 +117,11 @@ index cfac556957..5a12a3778c 100644
 +    if (!sd)
 +        goto err;
 +    si = cms_SignerInfo_init(sd, signer, pk, &md, ctx, flags);
-+
++ 
      /* See if digest is present in digestAlgorithms */
      for (i = 0; i < sk_X509_ALGOR_num(sd->digestAlgorithms); i++) {
          const ASN1_OBJECT *aoid;
-@@ -1129,3 +1137,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
+@@ -1145,3 +1154,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
          return 0;
      return 1;
  }
@@ -307,16 +307,16 @@ index cb24d8238e..18c3e1430c 100644
 +++ b/include/openssl/cms.h.in
 @@ -50,6 +50,7 @@ typedef struct CMS_OtherKeyAttribute_st CMS_OtherKeyAttribute;
  -}
-
+ 
  DECLARE_ASN1_FUNCTIONS(CMS_ContentInfo)
 +DECLARE_ASN1_FUNCTIONS(CMS_SignerInfo)
  DECLARE_ASN1_FUNCTIONS(CMS_ReceiptRequest)
  DECLARE_ASN1_PRINT_FUNCTION(CMS_ContentInfo)
-
+ 
 @@ -391,6 +392,10 @@ int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms,
  int CMS_SharedInfo_encode(unsigned char **pder, X509_ALGOR *kekalg,
                            ASN1_OCTET_STRING *ukm, int keylen);
-
+ 
 +int CMS_add1_counter_signature(CMS_SignerInfo *si, CMS_ContentInfo* cms,
 +                               X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 +                               unsigned int flags);
@@ -324,5 +324,6 @@ index cb24d8238e..18c3e1430c 100644
  /* Backward compatibility for spelling errors. */
  # define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
  # define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
---
-2.39.3
+-- 
+2.45.2
+

@@ -293,18 +293,18 @@ std::string baseType(const fhirtools::FhirStructureRepositoryBackend& backend,
     return typeDef->urlAndVersion();
 }
 
-}// anonymous namespace
 
 std::map<std::string, std::list<ProfileType>> supportedProfileTypes{
     {"Task", {ProfileType::Gem_erxTask}},
     {"Communication", model::Communication::acceptedCommunications},
-    {"MedicationDispense", {ProfileType::Gem_erxMedicationDispense}},
+    {"MedicationDispense", {ProfileType::GEM_ERP_PR_MedicationDispense, ProfileType::GEM_ERP_PR_MedicationDispense_DiGA}},
     {"AuditEvent", {ProfileType::Gem_erxAuditEvent}},
     {"Device", {ProfileType::Gem_erxDevice}},
     {"ChargeItem", {ProfileType::Gem_erxChargeItem}},
     {"Consent", {ProfileType::Gem_erxConsent}},
 };
 
+}// anonymous namespace
 
 MetaData::MetaData(const model::Timestamp& referenceTimestamp)
     : Resource(FhirResourceBase::NoProfile,
@@ -349,7 +349,10 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
             rapidjson::Value supportedProfileArray(rapidjson::kArrayType);
             for (const auto& profileType : typeProfiles)
             {
-                addStringToArray(supportedProfileArray, latestProfile(backend, viewList, profileType));
+                if (! viewList.supportedVersions(&backend, {std::string{value(profile(profileType))}}).empty())
+                {
+                    addStringToArray(supportedProfileArray, latestProfile(backend, viewList, profileType));
+                }
             }
             setKeyValue(resource, rapidjson::Pointer{"/supportedProfile"}, supportedProfileArray);
         }

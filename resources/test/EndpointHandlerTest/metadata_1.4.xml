@@ -116,7 +116,11 @@
     </resource>
     <resource>
       <type value="MedicationDispense"/>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.4"/>
+        <profile value="http://hl7.org/fhir/StructureDefinition/MedicationDispense|4.0.1"/>
+        <supportedProfile
+                value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.4"/>
+        <supportedProfile
+                value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense_DiGA|1.4"/>
       <interaction>
         <code value="read"/>
       </interaction>

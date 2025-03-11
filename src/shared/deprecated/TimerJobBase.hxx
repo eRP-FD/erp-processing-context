@@ -91,7 +91,7 @@ private:
 
     std::thread mJobThread;
     std::condition_variable mAbortCondition;
-    bool mIsAborted;
+    bool mIsAborted{false};
 
 
     /**

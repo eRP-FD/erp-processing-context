@@ -926,8 +926,8 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
     std::optional<model::MetaData> metaData;
     ASSERT_NO_THROW(metaData = model::MetaData::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion());
-    EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
-    EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
+    EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
+    EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
 
     const auto now = model::Timestamp::now();
     const auto* version = "0.3.1";
@@ -942,7 +942,7 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
     expectedMetaData.setDate(now);
     expectedMetaData.setReleaseDate(now);
 
-    ASSERT_EQ(metaData->serializeToXmlString(), expectedMetaData.serializeToXmlString());
+    ASSERT_EQ(metaData->serializeToXmlString(), expectedMetaData.serializeToXmlString()) << metaData->serializeToXmlString();
 }
 
 TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive-complexity)
@@ -963,8 +963,8 @@ TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive
     ASSERT_NO_THROW(metaData = model::MetaData::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator()));
 
     EXPECT_EQ(metaData->version(), ErpServerInfo::ReleaseVersion());
-    EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
-    EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(ErpServerInfo::ReleaseDate().data()));
+    EXPECT_EQ(metaData->date(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
+    EXPECT_EQ(metaData->releaseDate(), model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()}));
 
     const auto now = model::Timestamp::now();
     const auto* version = "0.3.1";
@@ -1233,12 +1233,8 @@ void checkGetConsentHandler(
 
 TEST_F(EndpointHandlerTest, GetConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
     const char* const origKvnr = "X500000056";
     const char* const origDateTimeStr = "2021-06-01T07:13:00+05:00";
-    // Consent object contained by mock database:
-    auto consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr), "##DATETIME##", origDateTimeStr);
-
     const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr));
 
     // succcessful retrieval:
@@ -1554,7 +1550,7 @@ void checkPatchChargeItemHandler(
 
     ServerRequest serverRequest{ std::move(requestHeader) };
     serverRequest.setAccessToken(std::move(jwt));
-    serverRequest.setBody(body.data());
+    serverRequest.setBody(std::string{body});
     serverRequest.setPathParameters({"id"}, {id.toString()});
 
     ServerResponse serverResponse;

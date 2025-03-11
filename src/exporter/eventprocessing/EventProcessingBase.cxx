@@ -7,6 +7,7 @@
 #include "exporter/eventprocessing/EventProcessingBase.hxx"
 #include "exporter/model/EpaErrorType.hxx"
 #include "exporter/model/EpaOperationOutcome.hxx"
+#include "exporter/model/HashedKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
 
 #include <gsl/gsl-lite.hpp>
@@ -58,10 +59,9 @@ JsonLog EventProcessingBase::logError(const model::TaskEvent& event)
 
 JsonLog EventProcessingBase::log(JsonLog::LogReceiver&& logReceiver, const model::TaskEvent& event)
 {
-    LogId logId = LogId::INFO;
-    JsonLog log(logId, std::move(logReceiver), false);
-    log.keyValue("prescription_id", event.getPrescriptionId().toString())
-        .keyValue("usecase", magic_enum::enum_name(event.getUseCase()));
+    JsonLog log(LogId::INFO, std::move(logReceiver), false);
+    log << model::HashedKvnr(event.getHashedKvnr()) << KeyValue("prescription_id", event.getPrescriptionId().toString())
+         << KeyValue("usecase", magic_enum::enum_name(event.getUseCase()));
     return log;
 }
 

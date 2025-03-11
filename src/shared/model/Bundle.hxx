@@ -72,7 +72,7 @@ public:
     using Resource<DerivedBundle>::findStringInArray;
 
     BundleBase(BundleType type, FhirResourceBase::Profile profile);
-    BundleBase(BundleType type, FhirResourceBase::Profile profile, const Uuid& bundleId);
+    BundleBase(BundleType type, FhirResourceBase::Profile profile, const Uuid& bundleId); //NOLINT(performance-unnecessary-value-param)
 
     void setId(const Uuid& bundleId);
 

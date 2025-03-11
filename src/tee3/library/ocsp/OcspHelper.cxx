@@ -121,7 +121,7 @@ OcspRequestPtr OcspHelper::createOcspRequest(OCSP_CERTID& certId)
     Assert(OCSP_request_add0_id(request.get(), id.get()))
         << "Could not set certificate id to OCSP request!";
     // after this, id will be part of request, so it does no longer have to be freed
-    (void) id.release();
+    (void) id.release(); //NOLINT(bugprone-unused-return-value)
 
     return request;
 }

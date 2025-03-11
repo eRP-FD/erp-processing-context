@@ -97,8 +97,7 @@ SafeString::~SafeString (void)
 
 SafeString::operator const char* (void) const
 {
-    checkForTerminatingZero();
-    return mValue.get();
+    return c_str();
 }
 
 SafeString::operator const unsigned char* (void) const
@@ -127,14 +126,25 @@ SafeString::operator gsl::span<const char> (void) const
 
 SafeString::operator char* (void)
 {
-    checkForTerminatingZero();
-    return mValue.get();
+    return c_str();
 }
 
 SafeString::operator std::byte*(void)
 {
     checkForTerminatingZero();
     return reinterpret_cast<std::byte*>(mValue.get());
+}
+
+char* SafeString::c_str()
+{
+    checkForTerminatingZero();
+    return mValue.get();
+}
+
+const char* SafeString::c_str() const
+{
+    checkForTerminatingZero();
+    return mValue.get();
 }
 
 size_t SafeString::size (void) const

@@ -206,6 +206,7 @@ void model::ResourceFactoryBase::conditionalValidateGeneric(
         validationResult.add(fhirtools::Severity::error, *validationErpException->diagnostics(), {}, nullptr);
     }
     const gsl::not_null useRepoView = repoView ? repoView : getValidationView().get();
+    TVLOG(1) << "using view " << useRepoView->id() << " for " <<  getProfileName().value_or("UNKNOWN");
     validationResult.merge(ResourceFactoryBase::validateGeneric(*useRepoView, validatorOptions, profiles));
     auto highestSeverity = validationResult.highestSeverity();
 #ifdef ENABLE_DEBUG_LOG

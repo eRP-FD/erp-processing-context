@@ -37,7 +37,10 @@ class ErpRequestHandler
     : public RequestHandlerInterface
 {
 public:
-    explicit ErpRequestHandler (Operation operation, const std::initializer_list<std::string_view>& allowedProfessionOiDs);
+    explicit ErpRequestHandler(Operation operation,
+                               const std::initializer_list<std::string_view>& allowedProfessionOiDs);
+    using OIDsByWorkflow = std::unordered_map<model::PrescriptionType, std::unordered_set<std::string_view>>;
+    explicit ErpRequestHandler(Operation operation, OIDsByWorkflow allowedProfessionOiDsByWorkflow);
     ~ErpRequestHandler (void) override = default;
 
     // Within erp, switch from BaseSessionContext to PcSessionContext via dynamic_cast.
@@ -48,7 +51,8 @@ public:
     virtual void preHandleRequestHook(SessionContext& session);
     void preHandleRequestHook(BaseSessionContext& baseSessionContext) override { preHandleRequestHook(dynamic_cast<SessionContext&>(baseSessionContext)); }
 
-    bool allowedForProfessionOID (std::string_view professionOid) const override;
+    bool allowedForProfessionOID(std::string_view professionOid,
+                                 const std::optional<std::string>& optionalPathIdParameter) const override;
     Operation getOperation (void) const override;
     std::string_view name() const;
 
@@ -60,7 +64,7 @@ protected:
     /// @brief extract and validate ID from URL
     static model::PrescriptionId parseId(const ServerRequest& request, AccessLog& accessLog);
 
-    void makeResponse(SessionContext& session, HttpStatus status, const model::ResourceBase* body);
+    static void makeResponse(SessionContext& session, HttpStatus status, const model::ResourceBase* body);
     static std::string makeFullUrl(std::string_view tail);
     static std::string getLinkBase ();
 
@@ -78,14 +82,16 @@ private:
     static void checkValidEncoding(const ContentMimeType& contentMimeType);
 
     const Operation mOperation;
-    std::unordered_set<std::string_view> mAllowedProfessionOIDs;
+    std::unordered_set<std::string_view> mAllowedProfessionOIDsAllWorkflows;
+    OIDsByWorkflow mAllowedProfessionOIDsByWorkflow;
 };
 
 class ErpUnconstrainedRequestHandler : public ErpRequestHandler
 {
 public:
     explicit ErpUnconstrainedRequestHandler(Operation operation);
-    bool allowedForProfessionOID (std::string_view professionOid) const override;
+    bool allowedForProfessionOID(std::string_view professionOid,
+                                 const std::optional<std::string>& optionalPathIdParameter) const override;
 };
 
 template<class TModel>

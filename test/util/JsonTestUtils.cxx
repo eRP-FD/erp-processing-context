@@ -61,6 +61,7 @@ std::string canonicalJson(const std::string& json)
 
 const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
     { ActorRole::Insurant,       naming_system::gkvKvid10   },
+    { ActorRole::PkvInsurant,    naming_system::pkvKvid10   },
     { ActorRole::Representative, naming_system::gkvKvid10   },
     { ActorRole::Doctor,         naming_system::telematicID },
     { ActorRole::Pharmacists,    naming_system::telematicID }
@@ -167,9 +168,9 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     static constexpr const char* fmtSpecAbout = R"(
             "about": [{"reference": "%1%"}])";
     static constexpr const char* fmtSpecSender = R"(
-            "sender": {"identifier": {"system": "%1%","value" : "%2%"}})";
+            "sender": {"identifier": {%3%"system": "%1%","value" : "%2%"}})";
     static constexpr const char* fmtSpecRecipient = R"(
-            "recipient": [{"identifier": {"system": "%1%","value" : "%2%"}}])";
+            "recipient": [{"identifier": {%3%"system": "%1%","value" : "%2%"}}])";
     static constexpr const char* fmtSpecSent = R"(
             "sent": "%1%")";
     static constexpr const char* fmtSpecReceived = R"(
@@ -262,12 +263,16 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     if (mAbout.has_value())
         body += "," + boost::str(boost::format(fmtSpecAbout) % mAbout.value());
     if (mSender.has_value())
+    {
         body += "," + boost::str(boost::format(fmtSpecSender) % actorRoleToResourceId(std::get<0>(mSender.value())) %
-                                 std::get<1>(mSender.value()));
+                                std::get<1>(mSender.value()) % senderIdentifierType());
+    }
     if (mRecipient.has_value())
+    {
         body +=
-            "," + boost::str(boost::format(fmtSpecRecipient) % actorRoleToResourceId(std::get<0>(mRecipient.value())) %
-                             std::get<1>(mRecipient.value()));
+           "," + boost::str(boost::format(fmtSpecRecipient) % actorRoleToResourceId(std::get<0>(mRecipient.value())) %
+                            std::get<1>(mRecipient.value()) % receipientIdentifierType());
+    }
     if (mTimeSent.has_value())
         body += "," + boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
     if (mTimeReceived.has_value())
@@ -317,145 +322,54 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 
 std::string CommunicationJsonStringBuilder::createXmlString() const
 {
-    const ProfileType profileType = model::Communication::messageTypeToProfileType(mMessageType);
+    return Fhir::instance().converter().jsonToXmlString(
+        model::NumberAsStringParserDocument::fromJson(createJsonString()));
+}
 
-    static constexpr const char* fmtSpecProfile = R"(
-            <meta> <profile value="%1%|%2%" /></meta>)";
-    static constexpr const char fmtFlowTypeExtension[] = "\n" R"(
-            <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
-                <valueCoding>
-                    <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
-                    <code value="%1%" />
-                </valueCoding>
-            </extension>)""\n";
-    static constexpr const char* fmtSpecBasedOnTaskId = R"(
-            <basedOn> <reference value="Task/%1%"/> </basedOn>)";
-    static constexpr const char* fmtSpecBasedOnTaskIdAccessCode = R"(
-            <basedOn> <reference value="Task/%1%/$accept?ac=%2%"/> </basedOn>)";
-    static constexpr const char* fmtSpecBasedOnChargeItemId = R"(
-            <basedOn> <reference value="ChargeItem/%1%"/> </basedOn>)";
-    static constexpr const char* fmtSpecAbout = R"(
-            <about> <reference value="%1%"/> </about>)";
-    static constexpr const char* fmtSpecSender = R"(
-            <sender> <identifier> <system value="%1%"/> <value value="%2%"/> </identifier> </sender>)";
-    static constexpr const char* fmtSpecRecipient = R"(
-            <recipient> <identifier> <system value="%1%"/> <value value="%2%"/> </identifier> </recipient>)";
-    static constexpr const char* fmtSpecSent = R"(
-            <sent value="%1%"/>)";
-    static constexpr const char* fmtSpecReceived = R"(
-            <received value="%1%"/>)";
-    static constexpr const char* fmtSpecPayloadContentString = R"--(
-            <payload>
-              <contentString value="%1%" />
-            </payload>)--";
-    static constexpr const char* fmtSpecPayloadInfoReqContentString =  R"--(
-            <payload>
-                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider">
-                    <valueIdentifier>
-                        <system value="http://fhir.de/sid/arge-ik/iknr" />
-                        <value value="109500969" />
-                    </valueIdentifier>
-                </extension>
-                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType">
-                    <valueBoolean value="false" />
-                </extension>
-                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType">
-                    <valueCoding>
-                        <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType" />
-                        <code value="160" />
-                    </valueCoding>
-                </extension>
-                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity">
-                    <valueQuantity>
-                        <value value="1" />
-                        <system value="http://unitsofmeasure.org" />
-                    </valueQuantity>
-                </extension>
-                <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType">
-                    <extension url="onPremise">
-                        <valueBoolean value="true" />
-                    </extension>
-                    <extension url="shipment">
-                        <valueBoolean value="false" />
-                    </extension>
-                    <extension url="delivery">
-                        <valueBoolean value="true" />
-                    </extension>
-                </extension>
-                <contentString value="%1%" />
-            </payload>
-    )--";
-    std::string body = R"(<Communication xmlns="http://hl7.org/fhir">)";
-
-    const bool isChargeItemRelated =
-        mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
-    const auto defaulVersion =
-        isChargeItemRelated
-            ? static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERPCHRG_current())
-            : static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERP_current());
-    body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
-                       to_string(mProfileVersion.value_or(defaulVersion)));
-
-    const ResourceTemplates::Versions::GEM_ERP gemVersion{
-        mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current())};
-    if (mMessageType == model::Communication::MessageType::DispReq &&
-        gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+std::string CommunicationJsonStringBuilder::senderIdentifierType() const
+{
+    switch (mMessageType)
     {
-        Expect3(mPrescriptionId && mPrescriptionId->size() >= 3,
-                "Cannot create Communication message: missing prescription id", std::logic_error);
-        body += boost::str(boost::format(fmtFlowTypeExtension) % mPrescriptionId->substr(0, 3));
-    }
-    if (mAbout)
-    {
-        ResourceTemplates::MedicationOptions medicationOptions;
-        if (mMedicationOptions)
-        {
-            medicationOptions = *mMedicationOptions;
-        }
-        else
-        {
-            std::string id{*mAbout};
-            if (! id.empty() && id[0] == '#')
+        case Communication::MessageType::InfoReq:
+        case Communication::MessageType::DispReq:
+        case Communication::MessageType::Representative:
+            if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
             {
-                id = id.substr(1);
-            }
-            if (gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
-            {
-                medicationOptions.version = gemVersion;
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
             }
             else
             {
-                medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "GKV"}]},)";
             }
-            medicationOptions.id = id;
-        }
-        body += "<contained>" + ResourceTemplates::medicationXml(medicationOptions) + "</contained>";
+        case Communication::MessageType::Reply:
+        case Communication::MessageType::ChargChangeReply:
+            return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
+        case Communication::MessageType::ChargChangeReq:
+            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
     }
-    if (mPrescriptionId.has_value() && mAccessCode.has_value())
-        body += boost::str(boost::format(fmtSpecBasedOnTaskIdAccessCode) % mPrescriptionId.value() % mAccessCode.value());
-    else if (mPrescriptionId.has_value())
-        body += boost::str(boost::format(isChargeItemRelated ? fmtSpecBasedOnChargeItemId : fmtSpecBasedOnTaskId) % mPrescriptionId.value());
-    body += R"(<status value="unknown"/>)";
-    if (mAbout.has_value())
-        body += boost::str(boost::format(fmtSpecAbout) % mAbout.value());
-    if (mRecipient.has_value())
-        body += boost::str(boost::format(fmtSpecRecipient) % actorRoleToResourceId(std::get<0>(mRecipient.value())) %
-                           std::get<1>(mRecipient.value()));
-    if (mSender.has_value())
-        body += boost::str(boost::format(fmtSpecSender) % actorRoleToResourceId(std::get<0>(mSender.value())) %
-                           std::get<1>(mSender.value()));
-    if (mTimeSent.has_value())
-        body += boost::str(boost::format(fmtSpecSent) % mTimeSent.value());
-    if (mTimeReceived.has_value())
-        body += boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
-    if (mPayload.has_value())
+    return "";
+}
+
+std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
+{
+    switch (mMessageType)
     {
-        auto payload = String::replaceAll(mPayload.value(), "\"", "&quot;");
-        if (mMessageType == Communication::MessageType::InfoReq)
-            body += boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
-        else
-            body += boost::str(boost::format(fmtSpecPayloadContentString) % payload);
+        case Communication::MessageType::InfoReq:
+        case Communication::MessageType::DispReq:
+        case Communication::MessageType::ChargChangeReq:
+            return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
+        case Communication::MessageType::Reply:
+        case Communication::MessageType::Representative:
+            if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
+            }
+            else
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "GKV"}]},)";
+            }
+        case Communication::MessageType::ChargChangeReply:
+            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
     }
-    body += "</Communication>";
-    return body;
+    return "";
 }

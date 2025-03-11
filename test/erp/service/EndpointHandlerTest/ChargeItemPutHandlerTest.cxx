@@ -60,7 +60,7 @@ void checkPutChargeItemHandler(std::optional<model::ChargeItem>& resultChargeIte
     const auto accessCode = chargeItem.accessCode();
     if (accessCode.has_value())
     {
-        requestHeader.addHeaderField(Header::XAccessCode, accessCode->data());
+        requestHeader.addHeaderField(Header::XAccessCode, std::string{*accessCode});
     }
 
     std::string body = (contentType.getMimeType() == MimeType::fhirJson) ? chargeItem.serializeToJsonString()

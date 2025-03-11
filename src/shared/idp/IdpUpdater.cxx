@@ -66,6 +66,8 @@ private:
     IdpUpdater& mIdpUpdater;
 };
 
+namespace
+{
 /**
  * Make a GET request to the given `host` with the given URL `path` and return the returned body.
  */
@@ -74,14 +76,14 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
     ClientResponse response;
     boost::asio::io_context io;
     const auto port = std::to_string(url.mPort);
-    auto resolverResults = boost::asio::ip::tcp::resolver{io}.resolve(url.mHost.c_str(), port.c_str());
+    auto resolverResults = boost::asio::ip::tcp::resolver{io}.resolve(url.mHost, port);
     for (const auto& resolverEntry : resolverResults)
     {
         try
         {
             response = requestSender.send(resolverEntry.endpoint(), url, HttpMethod::GET, "");
         }
-        catch (const std::exception&)
+        catch (const std::exception&) //NOLINT(bugprone-empty-catch)
         {
             // retry with next endpoint
         }
@@ -99,6 +101,7 @@ std::string getBody (const UrlRequestSender& requestSender, const UrlHelper::Url
 
     return response.getBody();
 }
+}
 
 
 IdpUpdater::IdpUpdater (
@@ -106,8 +109,7 @@ IdpUpdater::IdpUpdater (
     TslManager& tslManager,
     const std::shared_ptr<UrlRequestSender>& urlRequestSender, // NOLINT(modernize-pass-by-value)
     boost::asio::io_context& ioContext)
-    : mUpdateFailureCount()
-    , mCertificateHolder(certificateHolder)
+    : mCertificateHolder(certificateHolder)
     , mTslManager(tslManager)
     , mRequestSender(urlRequestSender)
     , mIsUpdateActive(false)
@@ -186,7 +188,7 @@ void IdpUpdater::update (void)
             throw;
         }
     }
-    catch(const ReportedException&)
+    catch(const ReportedException&) //NOLINT(bugprone-empty-catch)
     {
         // Error has already been reported. There is nothing more to do.
     }

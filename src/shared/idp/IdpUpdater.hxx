@@ -82,7 +82,7 @@ private:
     void startUpdateTimer();
     std::chrono::system_clock::duration updateInterval() const;
 
-    size_t mUpdateFailureCount;
+    size_t mUpdateFailureCount{0};
     Idp& mCertificateHolder;
     TslManager& mTslManager;
     std::shared_ptr<UrlRequestSender> mRequestSender;

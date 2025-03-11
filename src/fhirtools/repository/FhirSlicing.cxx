@@ -20,6 +20,7 @@
 #include "fhirtools/validator/Severity.hxx"
 
 #include <algorithm>
+#include <utility>
 #include <variant>
 
 using fhirtools::Element;
@@ -80,7 +81,7 @@ class SliceCondition : public FhirSlicing::Condition
 public:
     bool test(const ::Element& element, const fhirtools::ValidatorOptions& opt) const override
     {
-        return std::ranges::all_of(mConditions, [&](auto cond) {
+        return std::ranges::all_of(mConditions, [&](const auto& cond) {
             return cond->test(element, opt);
         });
     }
@@ -164,7 +165,7 @@ public:
         mFixed = defPtrs.front().element()->fixed();
         defPtrs.pop_front();
         ValueElement fixedValue{repo.shared_from_this(), mFixed};
-        bool ambiguous = std::ranges::any_of(defPtrs, [&](auto dp) {
+        bool ambiguous = std::ranges::any_of(defPtrs, [&](const auto& dp) {
             return ValueElement{repo.shared_from_this(), dp.element()->fixed()}.equals(fixedValue) != true;
         });
         if (ambiguous)
@@ -232,7 +233,7 @@ public:
     {
         const auto& repo = element.getFhirStructureRepository();
         return std::ranges::all_of(mPattern, [&](auto pattern) {
-            return element.matches(ValueElement{repo, pattern});
+            return element.matches(ValueElement{repo,  std::move(pattern)});
         });
     }
     std::vector<std::shared_ptr<const fhirtools::FhirValue>> mPattern;

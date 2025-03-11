@@ -21,7 +21,7 @@
 struct SampleFiles {
     std::string_view xmlSample;
     std::string_view jsonSample;
-    std::optional<std::string_view> skipReason = {};
+    std::optional<std::string> skipReason = {};
 };
 
 static std::ostream& operator << (std::ostream& out, const SampleFiles& sample)
@@ -82,7 +82,7 @@ TEST_P(FhirConverterTest, samplesFromXMLTest)
 {
     if (GetParam().skipReason)
     {
-        GTEST_SKIP_(GetParam().skipReason->data());
+        GTEST_SKIP_(GetParam().skipReason->c_str());
     }
     using namespace std::string_literals;
     const auto& converter = Fhir::instance().converter();

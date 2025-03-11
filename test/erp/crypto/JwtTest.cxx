@@ -645,3 +645,28 @@ TEST_F(JwtTest, displayNameOrganization)
     const auto jwt = builder.getJWT(claim);
     EXPECT_EQ(jwt.displayName(), "Arzt");
 }
+
+TEST_F(JwtTest, base64DecodingErrorWhitespace)
+{
+    auto payload = mPayload.substr(0, mPayload.size() - 100) + " " + mPayload.substr(mPayload.size() - 100);
+    ASSERT_THROW(JWT{mHeader + "." + payload + "." + mSignature}, JwtInvalidFormatException);
+}
+
+TEST_F(JwtTest, base64DecodingErrorInvalidPadding)
+{
+    auto payload = mPayload.substr(0, mPayload.size() - 100) + "=" + mPayload.substr(mPayload.size() - 100);
+    ASSERT_THROW(JWT{mHeader + "." + payload + "." + mSignature}, JwtInvalidFormatException);
+}
+
+TEST_F(JwtTest, base64DecodingErrorExcessivePadding)
+{
+    auto payload = mPayload + "====";
+    ASSERT_THROW(JWT{mHeader + "." + payload + "." + mSignature}, JwtInvalidFormatException);
+}
+
+TEST_F(JwtTest, base64DecodingErrorInvalidCharacter)
+{
+    auto payload = mPayload.substr(0, mPayload.size() - 100) + char(-1) + mPayload.substr(mPayload.size() - 100);
+    ASSERT_THROW(JWT{mHeader + "." + payload + "." + mSignature}, JwtInvalidFormatException);
+}
+
