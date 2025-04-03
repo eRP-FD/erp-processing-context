@@ -47,6 +47,7 @@ public:
 
     int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                        model::PrescriptionType prescriptionType) const override;
+    std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const override;
 
     void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const override;
 
@@ -59,6 +60,7 @@ public:
 private:
     static std::shared_ptr<Compression> compressionInstance();
     [[nodiscard]] SafeString taskKey(const db_model::TaskEvent& dbTaskEvent) const;
+    [[nodiscard]] SafeString taskKey(model::PrescriptionId prescriptionId, model::Timestamp authoredOn, BlobId blobId, const db_model::Blob& salt) const;
     [[nodiscard]] SafeString medicationDispenseKey(const db_model::TaskEvent& dbTaskEvent) const;
 
     std::unique_ptr<MedicationExporterDatabaseBackend> mBackend;

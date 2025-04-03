@@ -8,6 +8,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MODEL_TASKEVENT_HXX
 
 #include "erp/crypto/SignedPrescription.hxx"
+#include "exporter/model/HashedKvnr.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
@@ -66,6 +67,15 @@ private:
     Bundle mKbvBundle;
     model::Timestamp mLastModified;
     std::int32_t mRetryCount{0};
+};
+
+struct BareTaskEvent
+{
+    Kvnr kvnr;
+    HashedKvnr hashedKvnr;
+    TaskEvent::UseCase useCase;
+    PrescriptionId prescriptionId;
+    PrescriptionType prescriptionType;
 };
 
 

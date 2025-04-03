@@ -245,14 +245,14 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
     SafeString decryptedDoctorIdentity;
     ASSERT_NO_THROW(decryptedDoctorIdentity = getDBCodec().decode(encryptedDoctorIdentity, taskKey));
     SafeString expectedDoctorIdentity{
-        R"({"id": "0123456789", "name": "Institutions- oder Organisations-Bezeichnung", "oid": "1.2.276.0.76.4.30"})"};
+        R"({"id":"0123456789","name":"Institutions- oder Organisations-Bezeichnung","oid":"1.2.276.0.76.4.30"})"};
     EXPECT_EQ(decryptedDoctorIdentity, expectedDoctorIdentity);
     // 23: pharmacy_identity
     db_model::EncryptedBlob encryptedPharmacyIdentity{row[col::pharmacy_identity].as<db_model::postgres_bytea>()};
     SafeString decryptedPharmacyIdentity;
     ASSERT_NO_THROW(decryptedPharmacyIdentity = getDBCodec().decode(encryptedPharmacyIdentity, taskKey));
     SafeString expectedPharmacyIdentity{
-        R"({"id": "3-SMC-B-Testkarte-883110000120312", "name": "Institutions- oder Organisations-Bezeichnung", "oid": "1.2.276.0.76.4.54"})"};
+        R"({"id":"3-SMC-B-Testkarte-883110000120312","name":"Institutions- oder Organisations-Bezeichnung","oid":"1.2.276.0.76.4.54"})"};
     EXPECT_EQ(decryptedPharmacyIdentity, expectedPharmacyIdentity);
     // 24:  last_status_update date
     //     not encrypted

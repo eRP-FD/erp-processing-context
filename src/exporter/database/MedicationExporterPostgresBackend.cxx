@@ -75,6 +75,17 @@ SET
 WHERE
   kvnr_hashed = $1 AND prescription_id = $2 AND prescription_type = $3 AND state != 'deadLetterQueue'
     )");
+QUERY(sqlMarkFirstEventDeadletter, R"(
+UPDATE
+  erp_event.task_event
+  SET state='deadLetterQueue'
+WHERE id = (
+        SELECT id FROM erp_event.task_event
+        WHERE kvnr_hashed = $1 AND state = 'pending'
+        ORDER BY prescription_id ASC, last_modified ASC LIMIT 1
+    )
+RETURNING kvnr, kvnr_hashed, prescription_id, prescription_type, usecase, EXTRACT(EPOCH FROM authored_on), task_key_blob_id, salt
+)");
 QUERY(sqlDeleteOneEventForFKvnr, R"(
 DELETE FROM
   erp_event.task_event
@@ -238,7 +249,7 @@ MedicationExporterPostgresBackend::getAllEventsForKvnr(const model::EventKvnr& e
                 map<BlobId, int32_t>(res, idx.keyBlobId, "blob id is null"),
                 map<db_model::Blob, db_model::postgres_bytea>(res, idx.salt, "salt is null"),
                 map<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.kvnr, "kvnr is null"),
-                map<db_model::HashedKvnr, db_model::postgres_bytea>(res, idx.kvnr_hashed, "kvnr_hashed is null"),
+                map<db_model::HashedKvnr, db_model::postgres_bytea>(res, idx.kvnrHashed, "kvnr_hashed is null"),
                 map<std::string, std::string>(res, idx.state, "state is null"),
                 map<std::string, std::string>(res, idx.usecase, "use case is null"),
                 map<model::Timestamp, double>(res, idx.lastModified, "last_modified is null"),
@@ -291,6 +302,45 @@ int MedicationExporterPostgresBackend::markDeadLetter(const model::EventKvnr& kv
         mTransaction->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
                                   static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
     return result.affected_rows();
+}
+
+std::optional<db_model::BareTaskEvent>
+MedicationExporterPostgresBackend::markFirstEventDeadLetter(const model::EventKvnr& kvnr)
+{
+    const QueryDefinition& sql = sqlMarkFirstEventDeadletter;
+    checkCommonPreconditions();
+    TVLOG(2) << sql.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+                                                                        "PostgreSQL:markFirstEventDeadLetter");
+
+    const auto result = mTransaction->exec_params(sql.query, kvnr.kvnrHashed());
+
+    if (! result.empty())
+    {
+        Expect(result.size() == 1, "Bad result marking first event as deadletter");
+        const auto& res = result[0];
+
+        MarkFirsEventDeadletterQueryIndexes idx;
+        Expect(res.size() == idx.total, "Bad result marking first event as deadletter");
+
+        auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(
+            map<uint8_t, int16_t>(res, idx.prescriptionType, "prescription_type is null"));
+        Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
+        const auto& prescriptionId = model::PrescriptionId::fromDatabaseId(
+            *prescription_type_opt, map<int64_t>(res, idx.prescriptionId, "prescription_id is null"));
+
+        return std::make_optional(db_model::BareTaskEvent{
+            map<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.kvnr, "kvnr is null"),
+            map<db_model::HashedKvnr, db_model::postgres_bytea>(result[0], idx.kvnrHashed, "kvnr_hashed is null"),
+            map<std::string, std::string>(res, idx.usecase, "use case is null"),
+            prescriptionId,
+            map<std::int16_t, std::int16_t>(res, idx.prescriptionType, "prescription type is null"),
+            map<model::Timestamp, double>(res, idx.authoredOn, "authored_on is null"),
+            map<BlobId, int32_t>(res, idx.keyBlobId, "blob id is null"),
+            map<db_model::Blob, db_model::postgres_bytea>(res, idx.salt, "salt is null"),
+        });
+    }
+    return std::nullopt;
 }
 
 void MedicationExporterPostgresBackend::deleteAllEventsForKvnr(const model::EventKvnr& kvnr)

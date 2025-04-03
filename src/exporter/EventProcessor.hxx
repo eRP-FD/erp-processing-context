@@ -37,7 +37,7 @@ public:
 
     bool process() override;
     virtual void processOne(const model::EventKvnr& kvnr);
-    virtual void checkRetryCount(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent);
+    virtual bool checkRetryCount(const model::EventKvnr& kvnr);
 
     virtual void processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount& epaAccount,
                                    const MedicationExporterDatabaseFrontendInterface::taskevents_t& events);

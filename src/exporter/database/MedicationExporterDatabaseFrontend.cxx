@@ -99,6 +99,21 @@ int MedicationExporterDatabaseFrontend::markDeadLetter(const model::EventKvnr& k
     return mBackend->markDeadLetter(kvnr, prescriptionId, prescriptionType);
 }
 
+std::optional<model::BareTaskEvent>
+MedicationExporterDatabaseFrontend::markFirstEventDeadLetter(const model::EventKvnr& kvnr) const
+{
+    if (auto minimalTaskEventAuditData = mBackend->markFirstEventDeadLetter(kvnr))
+    {
+        auto keyForTask = taskKey(minimalTaskEventAuditData->prescriptionId, minimalTaskEventAuditData->authoredOn,
+                                  minimalTaskEventAuditData->blobId, minimalTaskEventAuditData->salt);
+        return TaskEventConverter(mCodec, mTelematikLookup)
+            .convertBareEvent(minimalTaskEventAuditData->kvnr, minimalTaskEventAuditData->hashedKvnr,
+                              minimalTaskEventAuditData->usecase, minimalTaskEventAuditData->prescriptionId,
+                              minimalTaskEventAuditData->prescriptionType, keyForTask);
+    }
+    return std::nullopt;
+}
+
 void MedicationExporterDatabaseFrontend::deleteOneEventForKvnr(const model::EventKvnr& kvnr,
                                                                model::TaskEvent::id_t id) const
 {
@@ -125,6 +140,12 @@ SafeString MedicationExporterDatabaseFrontend::taskKey(const db_model::TaskEvent
     Expect(not dbTaskEvent.salt.empty(), "missing salt in task event.");
     return mDerivation.taskKey(dbTaskEvent.prescriptionId, dbTaskEvent.authoredOn, dbTaskEvent.blobId,
                                dbTaskEvent.salt);
+}
+
+SafeString MedicationExporterDatabaseFrontend::taskKey(model::PrescriptionId prescriptionId, model::Timestamp authoredOn, BlobId blobId, const db_model::Blob& salt) const
+{
+    Expect(not salt.empty(), "missing salt in task event.");
+    return mDerivation.taskKey(prescriptionId, authoredOn, blobId, salt);
 }
 
 SafeString MedicationExporterDatabaseFrontend::medicationDispenseKey(const db_model::TaskEvent& dbTaskEvent) const

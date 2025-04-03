@@ -57,6 +57,7 @@ public:
                               model::PrescriptionType prescriptionType) const = 0;
     virtual int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                                model::PrescriptionType prescriptionType) const = 0;
+    virtual std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const = 0;
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const = 0;
 

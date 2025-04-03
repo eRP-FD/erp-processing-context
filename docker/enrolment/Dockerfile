@@ -20,7 +20,7 @@ ARG GITHUB_OAUTH_TOKEN
 ENV GITHUB_USERNAME=${GITHUB_USERNAME:-''} \
     GITHUB_OAUTH_TOKEN=${GITHUB_OAUTH_TOKEN:-''}
 RUN git config --global url.https://${GITHUB_USERNAME:-}:${GITHUB_OAUTH_TOKEN:-}@github.ibmgcloud.net/.insteadOf git@github.ibmgcloud.net:
-RUN pip3 install "conan<3" --upgrade
+RUN pip3 install "conan<2.14" --upgrade
 # set username and password in environment variables for IBM internal nexus "erp"
 # (as added below) so that the login to this remote happens automatically.
 ARG CONAN_LOGIN_USERNAME

@@ -19,6 +19,24 @@ TaskEventConverter::TaskEventConverter(const DataBaseCodec& codec, const Telemat
 {
 }
 
+model::BareTaskEvent TaskEventConverter::convertBareEvent(const db_model::EncryptedBlob& kvnr,
+                                                          const db_model::HashedKvnr& hashedKvnr,
+                                                          const std::string& usecase,
+                                                          model::PrescriptionId prescriptionId,
+                                                          std::int16_t prescriptionType, const SafeString& key) const
+{
+    const auto decodedKvnr = model::Kvnr(std::string_view{mCodec.decode(kvnr, key)});
+    const auto typedUsecase = magic_enum::enum_cast<model::TaskEvent::UseCase>(usecase);
+    Expect(typedUsecase.has_value(), "unknown usecase value");
+
+    const auto typedPrescriptionType =
+        magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<std::uint8_t>(prescriptionType));
+    Expect(typedPrescriptionType.has_value(), "unknown prescription type value");
+
+    return model::BareTaskEvent{decodedKvnr, model::HashedKvnr(hashedKvnr), *typedUsecase, prescriptionId,
+                                *typedPrescriptionType};
+}
+
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::TaskEvent& dbTaskEvent,
                                                               const SafeString& key,
                                                               const SafeString& medicationDispenseKey) const

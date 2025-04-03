@@ -57,56 +57,60 @@ bool EventProcessor::process()
 
 void EventProcessor::processOne(const model::EventKvnr& kvnr)
 {
-    // Workflow step 2
-    const auto events = createMedicationExporterCommitGuard().db().getAllEventsForKvnr(kvnr);
-
-    jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
-              << KeyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events");
-    if (! events.empty())
+    // Workflow step 18
+    if (checkRetryCount(kvnr))
     {
-        const auto& firstEvent = *events.front();
+        // Workflow step 2
+        const auto events = createMedicationExporterCommitGuard().db().getAllEventsForKvnr(kvnr);
 
-        checkRetryCount(kvnr, firstEvent);
-
-        // Workflow step 3 - decodedKvnr = decrypt(events.front()).kvnr
-        auto epaAccount = ePaAccountLookup(firstEvent);
-
-        // Workflow step 4 - ePA account lookup
-        switch (epaAccount.lookupResult)
+        jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+                  << KeyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events");
+        if (! events.empty())
         {
-            case EpaAccount::Code::allowed:
-                // Workflow step 4a
-                TVLOG(1) << "account lookup allowed with given kvnr";
+            const auto& firstEvent = *events.front();
+
+
+            // Workflow step 3 - decodedKvnr = decrypt(events.front()).kvnr
+            auto epaAccount = ePaAccountLookup(firstEvent);
+
+            // Workflow step 4 - ePA account lookup
+            switch (epaAccount.lookupResult)
+            {
+                case EpaAccount::Code::allowed:
+                    // Workflow step 4a
+                        TVLOG(1) << "account lookup allowed with given kvnr";
                 processEpaAllowed(kvnr, epaAccount, events);
                 break;
-            case EpaAccount::Code::deny:
-                [[fallthrough]];
-            case EpaAccount::Code::notFound:
-                // Workflow step 4b - deny / not found -> Workflow step 14
-                processEpaDeniedOrNotFound(kvnr);
+                case EpaAccount::Code::deny:
+                    [[fallthrough]];
+                case EpaAccount::Code::notFound:
+                    // Workflow step 4b - deny / not found -> Workflow step 14
+                        processEpaDeniedOrNotFound(kvnr);
                 break;
-            case EpaAccount::Code::conflict:
-                // Workflow step 4c
-                processEpaConflict(kvnr);
+                case EpaAccount::Code::conflict:
+                    // Workflow step 4c
+                        processEpaConflict(kvnr);
                 break;
-            case EpaAccount::Code::unknown:
-                // Workflow step 4d
-                TVLOG(1) << "account lookup unknown with given kvnr";
+                case EpaAccount::Code::unknown:
+                    // Workflow step 4d
+                        TVLOG(1) << "account lookup unknown with given kvnr";
                 processEpaUnknown(kvnr);
                 break;
+            }
         }
-    }
-    else
-    {
-        // Workflow step 13 - set kvnr to processed
-        createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
-        TLOG(WARNING) << "KVNR to process had no events";
+        else
+        {
+            // Workflow step 13 - set kvnr to processed
+            createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
+            TLOG(WARNING) << "KVNR to process had no events";
+        }
     }
 }
 
-void EventProcessor::checkRetryCount(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent)
+bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr)
 {
     const auto retry = kvnr.getRetryCount();
+    // Workflow step 18 check retry_count
     if (retry > mMaxRetryAttempts)
     {
         AuditDataCollector auditDataCollector;
@@ -114,44 +118,59 @@ void EventProcessor::checkRetryCount(const model::EventKvnr& kvnr, const model::
         auditDataCollector.setAgentType(model::AuditEvent::AgentType::machine);
         auditDataCollector.setAgentWho("9-E-Rezept-Fachdienst");
         auditDataCollector.setDeviceId(ExporterDeviceId);
-        auditDataCollector.setPrescriptionId(taskEvent.getPrescriptionId());
-        auditDataCollector.setInsurantKvnr(taskEvent.getKvnr());
-        switch (taskEvent.getUseCase())
+
+        // Workflow step 19 mark first event as deadletter-queue
+        if (const auto unexpandedTaskEvent = createMedicationExporterCommitGuard().db().markFirstEventDeadLetter(kvnr))
         {
-            case model::TaskEvent::UseCase::providePrescription:
-                A_25962.start("Die Verordnung konnte nicht in die Patientenakte übertragen werden.");
+            auditDataCollector.setPrescriptionId(unexpandedTaskEvent->prescriptionId);
+            auditDataCollector.setInsurantKvnr(unexpandedTaskEvent->kvnr);
+
+            switch (unexpandedTaskEvent->useCase)
+            {
+                case model::TaskEvent::UseCase::providePrescription:
+                    A_25962.start("Die Verordnung konnte nicht in die Patientenakte übertragen werden.");
                 auditDataCollector.setAction(model::AuditEvent::Action::create);
                 auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed);
                 A_25962.finish();
                 break;
-            case model::TaskEvent::UseCase::cancelPrescription:
-                A_25962.start(
-                    "Die Löschinformation zum E-Rezept konnte nicht in die Patientenakte übermittelt werden.");
+                case model::TaskEvent::UseCase::cancelPrescription:
+                    A_25962.start(
+                        "Die Löschinformation zum E-Rezept konnte nicht in die Patientenakte übermittelt werden.");
                 auditDataCollector.setAction(model::AuditEvent::Action::del);
                 auditDataCollector.setEventId(model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed);
                 A_25962.finish();
                 break;
-            case model::TaskEvent::UseCase::provideDispensation:
-                A_25962.start("Die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");
+                case model::TaskEvent::UseCase::provideDispensation:
+                    A_25962.start("Die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");
                 auditDataCollector.setAction(model::AuditEvent::Action::create);
                 auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
                 A_25962.finish();
                 break;
-            case model::TaskEvent::UseCase::cancelDispensation:// unreachable
-                break;
+                case model::TaskEvent::UseCase::cancelDispensation:// unreachable
+                    break;
+            }
+            jsonLog() << kvnr
+                      << KeyValue("event", "Put first event for task in dead letter queue")
+                      << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+                      << KeyValue("prescription_id", unexpandedTaskEvent->prescriptionId.toString())
+                      << KeyValue("reason", "Max retry count reached");
+            // Workflow step 20 write audit event
+            writeAuditEvent(auditDataCollector);
         }
-        const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
-            kvnr, taskEvent.getPrescriptionId(), taskEvent.getPrescriptionType());
-        jsonLog() << kvnr
-                  << KeyValue("event", "Put all events for task in dead letter queue: " + std::to_string(skipped))
-                  << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
-                  << KeyValue("prescription_id", taskEvent.getPrescriptionId().toString())
-                  << KeyValue("reason", "Max retry count reached");
-        writeAuditEvent(auditDataCollector);
-        createMedicationExporterCommitGuard().db().updateProcessingDelay(0, mRetryDelaySeconds, kvnr);
-    }
-}
+        else
+        {
+             jsonLog() << kvnr
+                      << KeyValue("event", "KVNR has exceeded retry_count but events to put on deadlettter queue")
+                      << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
+                      << KeyValue("reason", "Max retry count reached");
+        }
 
+        // Workflow step 21 set KVNR to pending, retry_count to 0 and reschedule in delay-seconds
+        createMedicationExporterCommitGuard().db().updateProcessingDelay(0, mRetryDelaySeconds, kvnr);
+        return false;
+    }
+    return true;
+}
 
 void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount& epaAccount,
                                        const MedicationExporterDatabaseFrontendInterface::taskevents_t& events)

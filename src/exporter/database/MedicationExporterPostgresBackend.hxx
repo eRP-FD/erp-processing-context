@@ -34,6 +34,7 @@ public:
                       model::PrescriptionType prescriptionType) override;
     int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                        model::PrescriptionType prescriptionType) override;
+    std::optional<db_model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) override;
 
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) override;
 
@@ -50,7 +51,7 @@ public:
         pqxx::row::size_type keyBlobId = 3;
         pqxx::row::size_type salt = 4;
         pqxx::row::size_type kvnr = 5;
-        pqxx::row::size_type kvnr_hashed = 6;
+        pqxx::row::size_type kvnrHashed = 6;
         pqxx::row::size_type state = 7;
         pqxx::row::size_type usecase = 8;
         pqxx::row::size_type doctorIdentity = 9;
@@ -63,6 +64,18 @@ public:
         pqxx::row::size_type medicationDispenseBundle = 16;
         pqxx::row::size_type retryCount = 17;
                          int total = 18;
+    };
+
+    struct MarkFirsEventDeadletterQueryIndexes {
+        pqxx::row::size_type kvnr = 0;
+        pqxx::row::size_type kvnrHashed = 1;
+        pqxx::row::size_type prescriptionId = 2;
+        pqxx::row::size_type prescriptionType = 3;
+        pqxx::row::size_type usecase = 4;
+        pqxx::row::size_type authoredOn = 5;
+        pqxx::row::size_type keyBlobId = 6;
+        pqxx::row::size_type salt = 7;
+                         int total = 8;
     };
 
     [[nodiscard]]

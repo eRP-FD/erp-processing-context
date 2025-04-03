@@ -1502,7 +1502,14 @@ void ErpWorkflowTestBase::taskDispenseInternal(
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(bundle = model::Bundle::fromXml(serverResponse.getBody(), *getXmlValidator()));
+        auto view = Fhir::instance()
+                .structureRepository(model::Timestamp::now())
+                .match(&Fhir::instance().backend(),
+                       ResourceTemplates::Versions::latest(
+                           "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense"));
+        ASSERT_NO_THROW(bundle = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(),
+                                                                                *StaticData::getXmlValidator())
+                                     .getValidated(model::ProfileType::fhir, view));
     }
     else
     {

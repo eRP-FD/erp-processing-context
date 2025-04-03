@@ -5,34 +5,6 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-# Overview
-# --------
-# The following images are pulled from ibmcloud:
-#
-# HSM simulator (de.icr.io/erp_dev/vau-hsm:latest)
-#
-# TPM server    (de.icr.io/erp_dev/tpm-client:latest)
-#
-# Redis server  (de.icr.io/erp_dev/redis:6.0.11)
-#               The local redis/ folder is mapped in /data. The folder
-#               contains the log, config and the database itself.
-#
-# Postgres      (de.icr.io/erp_dev/erp-postgres-db:v-0.0.4)
-#
-# Other services:
-#
-# db-schema     (postgres:13 - official docker image)
-#               It uses the files in tls/ which are generated with
-#               ibm:eRp/postgres-docker/scripts/generate_certs.sh and the
-#               SQL scripts (ibm:eRp/erp-processing-context.git/scripts/sql).
-#
-# Test redis connection from your host with:
-# redis-cli --tls --cert ./tls/server.crt --key ./tls/server.key -p 9004 --cacert ./tls/rootCA.crt -a welcome
-#
-# Test psql connection from your host with:
-# psql --username=erp_admin --dbname=erp-dev --host=<your host ip> --port=9005
-#
-
 services:
   # --------------------------------------------------------------------------------
   # HSM Simulator
@@ -147,9 +119,33 @@ services:
       PGSSLROOTCERT: '/tls/rootCA.crt'
     entrypoint: >
       /bin/bash -c "
-      echo Wait 10 s for postgres ... ;
-      sleep 10 ;
+      while true ;
+          do echo 'Waiting for postgresql' ;
+          psql -p 5432 -U erp_admin -d erp_processing_context -h postgres-erp -c '\\q' ;
+          if [ $? -eq 0 ] ; then
+              break ;
+          fi ;
+          sleep 0.5 ;
+      done ;
+      while true ;
+          do echo 'Waiting for postgresql' ;
+          psql -p 5433 -U erp_admin -d erp_event_db -h postgres-exporter -c '\\q' ;
+          if [ $? -eq 0 ] ; then
+              break ;
+          fi ;
+          sleep 0.5 ;
+      done ;
       /data/reset_database.sh postgres-erp 5432 erp_processing_context erp_admin erp0815 ;
-      echo Wait 3 s for postgres ... ;
-      sleep 3 ;
       /data/reset_event_database.sh postgres-exporter 5433 erp_event_db erp_admin erp0815 erp_processing_context postgres-erp 5432 erp_admin erp0815"
+
+  # --------------------------------------------------------------------------------
+  # epa-test-mock
+  # --------------------------------------------------------------------------------
+  epa-test-mock:
+    image: de.icr.io/erp_dev/epa-test-mock:v-0.76.0
+    container_name: epa-test-mock
+    ports:
+      - "18888:8888"
+    volumes:
+      - './tls:/tls'
+      - './epa-test-mock:/lzconfig'

@@ -19,6 +19,18 @@
 namespace db_model
 {
 
+struct BareTaskEvent
+{
+    db_model::EncryptedBlob kvnr;
+    db_model::HashedKvnr hashedKvnr;
+    std::string usecase;
+    model::PrescriptionId prescriptionId;
+    std::int16_t prescriptionType;
+    model::Timestamp authoredOn;
+    BlobId blobId;
+    const db_model::Blob salt;
+};
+
 class TaskEvent
 {
 public:

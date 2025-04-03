@@ -113,6 +113,8 @@ pipeline {
                                     if (result != 0){
                                         error('build failed')
                                     }
+                                    // Fix build folder file permissions
+                                    sh "chmod o+w build/"
                                 }
                             }
                         }
@@ -277,8 +279,6 @@ pipeline {
                                     timeout(time: 5, unit: 'MINUTES') {
                                         waitForQualityGate abortPipeline: true
                                     }
-                                    // Fix build folder file permissions
-                                    sh "chmod o+w build/"
                                  }
                             }
                         }

@@ -72,8 +72,17 @@ protected:
             AccessLog accessLog;
             SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
             ASSERT_NO_THROW(handler.handleRequest(sessionContext));
-            auto bundle = model::Bundle::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator());
-            auto acceptedTasks = bundle.getResourcesByType<model::Task>();
+            auto view = Fhir::instance()
+                            .structureRepository(model::Timestamp::now())
+                            .match(&Fhir::instance().backend(),
+                                   ResourceTemplates::Versions::latest(
+                                       "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"));
+            std::optional<model::Bundle> bundle;
+            ASSERT_NO_THROW(bundle = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(),
+                                                                                    *StaticData::getXmlValidator())
+                                         .getValidated(model::ProfileType::fhir, view));
+            ASSERT_TRUE(bundle.has_value());
+            auto acceptedTasks = bundle->getResourcesByType<model::Task>();
             ASSERT_EQ(acceptedTasks.size(), 1);
             EXPECT_TRUE(acceptedTasks[0].owner().has_value());
             ASSERT_TRUE(acceptedTasks[0].secret().has_value());

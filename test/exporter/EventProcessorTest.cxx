@@ -53,24 +53,6 @@ public:
     void SetUp() override
     {
         PostgresDatabaseTest::SetUp();
-
-        /*
-         * Requirements to execute the different EventProcessorTest's tests successfully:
-         * - X011999971 must be configured as 409/Conflict on provideDispensation
-         * - X011999972 must be configured as 500/InternalServerError on provideDispensation
-         * - X011999973 must be configured as 403/Forbidden
-         * - X011300022 must be configured as 423/Locked
-         * - X011300011 must be configured to have a 5s delay on providePrescription (processOne_epa_timeout_retry_first_event)
-         * - X011300012 must be configured to have a 5s delay on providePrescription and provideDispensation (processOne_epa_timeout_retry and processOne_epa_timeout_retry_two_events)
-         * - X011300013 must be configured to have a 5s delay provideDispensation (processOne_epa_timeout_retry_second_event)
-         * - X011300021 must be configured to be responded with template: prescription- and dispensationoutput_MEDICATIONSVC_NO_VALID_STRUCTURE.json for providePrescription and -Dispensation
-         * The required config for the epa-test-mock is given in test/ePATestMock/lzcfg.yaml.
-         */
-        bool preparedEpaForTests = false;
-        if (! preparedEpaForTests)
-        {
-            GTEST_SKIP() << "EventProcessorTest skipped. Unskip if KVNRs are prepared to run the tests successfully.";
-        }
     }
 
     static inline ThreadPool ioThreadPool;
@@ -194,7 +176,6 @@ TEST_F(EventProcessorTest, processOne)
     }
 }
 
-
 TEST_F(EventProcessorTest, checkRetryCount)
 {
     model::Kvnr kvnr1{"X000000012"};
@@ -224,7 +205,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
     ASSERT_EQ(events1.size(), 2);
 
     EventProcessor eventProcessor(serviceContext);
-    eventProcessor.checkRetryCount(eventKvnr1, *events1.front());
+    eventProcessor.checkRetryCount(eventKvnr1);
 
     auto transaction = createTransaction();
     {
@@ -248,7 +229,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
     EXPECT_EQ(numberOfAuditEvents.at(0, 0).as<std::int32_t>(), 0);
 
     const auto next_export_before = model::Timestamp::now();
-    eventProcessor.checkRetryCount(eventKvnr2, *events2.front());
+    eventProcessor.checkRetryCount(eventKvnr2);
     {
         const auto numberOfAuditEvents2 = erpDbTransaction.exec_params("SELECT COUNT(*) FROM erp.auditevent");
         EXPECT_EQ(numberOfAuditEvents2.at(0, 0).as<std::int32_t>(), 1);
@@ -277,7 +258,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
         EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 0).as<std::string>()),
                   model::TaskEvent::UseCase::provideDispensation);
         EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 1).as<std::string>()),
-                  model::TaskEvent::State::deadLetterQueue);
+                  model::TaskEvent::State::pending);
     }
 }
 
@@ -293,17 +274,19 @@ TEST_F(EventProcessorTest, process_checkRetryCount)
     insertTaskEvent(kvnr1, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
+    insertTaskEvent(kvnr1, prescriptionId2.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
 
     const auto events1 = createDbFrontendCommitGuard().db().getAllEventsForKvnr(eventKvnr1);
-    ASSERT_EQ(events1.size(), 2);
+    ASSERT_EQ(events1.size(), 3);
 
     EventProcessor eventProcessor(serviceContext);
+    const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr1);
 
     auto transaction = createTransaction();
 
-    const auto next_export_before = model::Timestamp::now();
-    eventProcessor.checkRetryCount(eventKvnr1, *events1.front());
     {
         const auto kvnrResult = transaction.exec_params(
             "SELECT state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr WHERE kvnr_hashed = $1 ",
@@ -317,18 +300,25 @@ TEST_F(EventProcessorTest, process_checkRetryCount)
         EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
 
         const auto results =
-            transaction.exec_params("SELECT usecase, state FROM erp_event.task_event WHERE kvnr_hashed = $1 "
+            transaction.exec_params("SELECT prescription_id, usecase, state FROM erp_event.task_event WHERE kvnr_hashed = $1 "
                                     "ORDER BY prescription_id ASC, last_modified ASC",
                                     eventKvnr1.kvnrHashed());
-        ASSERT_EQ(results.size(), 2);
-        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 0).as<std::string>()),
+        ASSERT_EQ(results.size(), 3);
+        EXPECT_EQ(results.at(0, 0).as<std::int64_t>(), prescriptionId1.toDatabaseId());
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(0, 1).as<std::string>()),
                   model::TaskEvent::UseCase::providePrescription);
-        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 1).as<std::string>()),
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(0, 2).as<std::string>()),
                   model::TaskEvent::State::deadLetterQueue);
-        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 0).as<std::string>()),
+        EXPECT_EQ(results.at(1, 0).as<std::int64_t>(), prescriptionId1.toDatabaseId());
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(1, 1).as<std::string>()),
                   model::TaskEvent::UseCase::provideDispensation);
-        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 1).as<std::string>()),
-                  model::TaskEvent::State::deadLetterQueue);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(1, 2).as<std::string>()),
+                  model::TaskEvent::State::pending);
+        EXPECT_EQ(results.at(2, 0).as<std::int64_t>(), prescriptionId2.toDatabaseId());
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::UseCase>(results.at(2, 1).as<std::string>()),
+                  model::TaskEvent::UseCase::providePrescription);
+        EXPECT_EQ(magic_enum::enum_cast<model::TaskEvent::State>(results.at(2, 2).as<std::string>()),
+                  model::TaskEvent::State::pending);
     }
 }
 

@@ -16,6 +16,8 @@
 #include <chrono>
 #include <iostream>
 
+#include <sw/redis++/errors.h>
+
 
 std::unique_ptr<ApplicationHealthAndRegistrationUpdater>
 ApplicationHealthAndRegistrationUpdater::create(const Configuration& configuration,
@@ -49,12 +51,18 @@ ApplicationHealthAndRegistrationUpdater::ApplicationHealthAndRegistrationUpdater
 void ApplicationHealthAndRegistrationUpdater::onStart(void)
 {
     HealthCheck::update(mServiceContext);
-    mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
-
-    if (mRegistration->registered())
+    try
     {
-        // first execution is done immediately
-        executeJob();
+        mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
+        if (mRegistration->registered())
+        {
+            // first execution is done immediately
+            executeJob();
+        }
+    }
+    catch (const sw::redis::Error& e)
+    {
+        TLOG(ERROR) << "Redis error while updating registration info during start, with " << e.what();
     }
 }
 
@@ -62,8 +70,18 @@ void ApplicationHealthAndRegistrationUpdater::onStart(void)
 void ApplicationHealthAndRegistrationUpdater::executeJob(void)
 {
     HealthCheck::update(mServiceContext);
-    mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
-    if (!mRegistration->registered())
+    bool registered = false;
+    try
+    {
+        mRegistration->updateRegistrationBasedOnApplicationHealth(mServiceContext.applicationHealth());
+        registered = mRegistration->registered();
+    }
+    catch (const sw::redis::Error& e)
+    {
+        TLOG(ERROR) << "Redis error while updating registration info with " << e.what();
+    }
+
+    if (!registered)
     {
         return;
     }

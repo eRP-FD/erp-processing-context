@@ -1,9 +1,9 @@
 # docker-compose.yml
-Orchestration script for working with all components required for the erp-processing-context.
+Orchestration script for working with all components required for the erp-processing-context and the medication-exporter.
 
 ## Initial setup
 First step: see `tls/README.md`. You may use the file `03_docker-compose.config.json` which uses adjusted connection settings for
-postgres and redis. Place the file in your folder where erp-processing-context resides and adjust the `certificatePath` for redis
+postgres and redis. Place the file in your folder where the erp-processing-context binary resides and adjust the `certificatePath` for postgres and redis
 to point to the generated rootCA.crt file.
 
 ## Further Info
@@ -67,6 +67,26 @@ Then, in another shell instance, start `blob-db-initialization` *with the same v
 Wait until `erp-processing-context` stops reporting `TeeTokenUpdater` and `C.FD.SIG-eRP` as DOWN.
 ```
 WARNING ErpMain.cxx:395] main/: health status is DOWN (TeeTokenUpdater, C.FD.SIG-eRP), waiting for it to go up
-``
+```
 
+### Connect to redis container:
+```shell
+$COMPOSE_YAML="<source_folder>/docker-compose"
+redis-cli --tls \
+    --cert "$COMPOSE_YAML/tls/server.crt" --key "$COMPOSE_YAML/tls/server.key" \
+    -p 9004 --cacert "$COMPOSE_YAML/tls/rootCA.crt" -a welcome
+```
 
+### Connect to postgres container:
+
+```shell
+# erp-processing-context database
+psql --username=erp_admin --dbname=erp_processing_context --host=<your host ip> --port=9005
+
+# medication-exporter database
+psql --username=erp_admin --dbname=erp_event_db --host=<your host ip> --port=9006
+
+# when psql is not available:
+docker run -ti --rm postgres:16 psql --username=erp_admin --dbname=erp_processing_context --host=<your host ip> --port=9005
+docker run -ti --rm postgres:16 psql --username=erp_admin --dbname=erp_event_db --host=<your host ip> --port=9006
+```
