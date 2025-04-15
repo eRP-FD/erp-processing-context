@@ -1,15 +1,15 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EPAACCOUNTLOOKUPCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EPAACCOUNTLOOKUPCLIENT_HXX
 
+#include "shared/model/Kvnr.hxx"
 #include "shared/network/client/TlsCertificateVerifier.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
-#include "shared/model/Kvnr.hxx"
 
 #include <any>
 
@@ -21,8 +21,8 @@ class IEpaAccountLookupClient
 {
 public:
     virtual ~IEpaAccountLookupClient() = default;
-    virtual ClientResponse sendConsentDecisionsRequest(const model::Kvnr& kvnr, const std::string& host,
-                                                       uint16_t port) = 0;
+    virtual ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                                       const std::string& host, uint16_t port) = 0;
     virtual IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) = 0;
 };
 
@@ -32,8 +32,8 @@ public:
     EpaAccountLookupClient(MedicationExporterServiceContext& serviceContext, std::string_view consentDecisionsEndpoint,
                            std::string_view userAgent);
 
-    ClientResponse sendConsentDecisionsRequest(const model::Kvnr& kvnr, const std::string& host,
-                                               uint16_t port) override;
+    ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                               const std::string& host, uint16_t port) override;
 
     IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override;
 

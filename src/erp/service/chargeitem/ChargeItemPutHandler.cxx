@@ -1,15 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
-#include "shared/ErpRequirements.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/KbvBundle.hxx"
+#include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/util/TLog.hxx"
 
 namespace

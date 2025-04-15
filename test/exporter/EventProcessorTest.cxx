@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -17,6 +17,7 @@
 #include "shared/util/Configuration.hxx"
 #include "test/exporter/database/PostgresDatabaseTest.hxx"
 
+#include <boost/beast/core/error.hpp>
 #include <memory>
 
 /**
@@ -110,7 +111,10 @@ TEST_F(EventProcessorTest, process)
                     mDoctorIdentity, mPharmacyIdentity);
 
     EventProcessor eventProcessor(serviceContext);
+    testing::internal::CaptureStderr();
     bool processed = eventProcessor.process();
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
     EXPECT_EQ(processed, true);
 
     {// verify: events from prescription that with deadletterQueue events marked deadletterQueue and still in DB
@@ -333,8 +337,10 @@ TEST_F(EventProcessorTest, processOne_jsonlog_failure_providePrescription)
                     mDoctorIdentity, std::nullopt);
 
     EventProcessor eventProcessor(serviceContext);
+    testing::internal::CaptureStderr();
     eventProcessor.processOne(eventKvnr);
-    // unfortunately there currently is no automated way to check for the required log message
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
 }
 
 TEST_F(EventProcessorTest, processOne_jsonlog_failure_provideDispensation)
@@ -347,8 +353,10 @@ TEST_F(EventProcessorTest, processOne_jsonlog_failure_provideDispensation)
                     mDoctorIdentity, mPharmacyIdentity);
 
     EventProcessor eventProcessor(serviceContext);
+    testing::internal::CaptureStderr();
     eventProcessor.processOne(eventKvnr);
-    // unfortunately there currently is no automated way to check for the required log message
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
 }
 
 TEST_F(EventProcessorTest, calculateExponentialBackoffDelay)
@@ -504,6 +512,36 @@ TEST_F(EventProcessorTest, processOne_retry_403)
         transaction.commit();
     }
 }
+
+TEST_F(EventProcessorTest, epalookup_timeout)
+{
+    model::Kvnr kvnr{"X011300051"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    model::ProvidePrescriptionTaskEvent taskEvent(
+        1, prescriptionId1, prescriptionId1.type(), kvnr, "hashed-kvnr-for-test",
+        model::TaskEvent::UseCase::providePrescription, model::TaskEvent::State::pending,
+        model::TelematikId{"qesDoctorId"}, model::TelematikId{"jwtDoctorId"}, "jwtDoctorOrganizationName",
+        "jwtDoctorProfessionOid", model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
+        model::Timestamp::fromGermanDate("2024-12-24"));
+
+
+    EventProcessor eventProcessor(serviceContext);
+
+    try
+    {
+        eventProcessor.ePaAccountLookup(taskEvent);
+    }
+    catch (const ExceptionWrapper<boost::beast::system_error>& e)
+    {
+        EXPECT_EQ(e.code(), boost::beast::error::timeout);
+    }
+}
+
 
 TEST_F(EventProcessorTest, processOne_retry_500)
 {
@@ -954,6 +992,27 @@ TEST_F(EventProcessorTest, ePaAccountLookup_kvnrIsLogged)
 }
 
 
+TEST_F(EventProcessorTest, ePaAccountLookup_timeout)
+{
+    EventProcessor eventProcessor(serviceContext);
+
+    model::Kvnr kvnr{"X011300051"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+
+    model::ProvidePrescriptionTaskEvent taskEvent(1, prescriptionId1, prescriptionId1.type(),
+                                 kvnr, "hashed-kvnr-for-test", model::TaskEvent::UseCase::providePrescription, model::TaskEvent::State::pending,
+                                 model::TelematikId{"qesDoctorId"}, model::TelematikId{"jwtDoctorId"},
+                                 "jwtDoctorOrganizationName",
+                                 "jwtDoctorProfessionOid", model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
+                                 model::Timestamp::fromGermanDate("2024-12-24"));
+
+    testing::internal::CaptureStderr();
+    EXPECT_ANY_THROW(eventProcessor.ePaAccountLookup(taskEvent));
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("error":"The socket was closed due to a timeout)") != std::string::npos) << output;
+}
+
+
 TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
 {
     model::Kvnr kvnr{"X000000012"};
@@ -980,7 +1039,10 @@ TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
         originalEvent.getLastModified()));
 
     EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed};
+    testing::internal::CaptureStderr();
     eventProcessor.processEpaAllowed(eventKvnr, epaAccount, events);
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
 
     {
         auto transaction = createTransaction();

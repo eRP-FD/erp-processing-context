@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,15 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_WORKFLOW_PARAMETER_HXX
 #define ERP_PROCESSING_CONTEXT_WORKFLOW_PARAMETER_HXX
 
+#include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
 #include "shared/model/Parameters.hxx"
 #include "shared/model/PrescriptionType.hxx"
 #include "shared/model/Resource.hxx"
-#include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
 
-#include <libxml2/libxml/tree.h>
-#include <memory>
 #include <string_view>
-
 
 namespace model
 {

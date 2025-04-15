@@ -1,6 +1,6 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2024
-* (C) Copyright IBM Corp. 2021, 2024
+* (C) Copyright IBM Deutschland GmbH 2021, 2025
+* (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
 */
@@ -14,6 +14,8 @@
 #include <boost/beast/core/flat_buffer.hpp>
 #include <boost/beast/ssl.hpp>
 #include <memory>
+
+namespace exporter {
 
 class ServerSocketHandler : public std::enable_shared_from_this<ServerSocketHandler>
 {
@@ -141,3 +143,5 @@ MedicationExporterServiceContext& HttpsServer::serviceContext()
 {
     return mServiceContext;
 }
+
+} // namespace exporter

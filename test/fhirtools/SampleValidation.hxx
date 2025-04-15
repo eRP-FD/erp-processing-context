@@ -2,6 +2,7 @@
 #define ERP_TEST_FHIR_TOOLS_SAMPLEVALIDATION_HXX
 
 
+#include "fhirtools/converter/internal/FhirSAXHandler.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/repository/FhirResourceGroupConst.hxx"
@@ -80,7 +81,7 @@ protected:
         std::optional<model::NumberAsStringParserDocument> doc;
         if (fileContent[startPos] == '<')
         {
-            doc.emplace(Fhir::instance().converter().xmlStringToJson(fileContent));
+            doc.emplace(FhirSaxHandler::parseXMLintoJSON(repo(), fileContent, nullptr));
         }
         else
         {

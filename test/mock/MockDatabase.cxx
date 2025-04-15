@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,14 +9,14 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/crypto/CMAC.hxx"
 #include "shared/database/DatabaseModel.hxx"
 #include "shared/hsm/HsmClient.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"

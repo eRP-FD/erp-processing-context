@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -42,6 +42,8 @@ add_library(erp-shared STATIC
     crypto/SecureRandomGenerator.cxx
     crypto/Seeder.cxx
     crypto/Sha256.cxx
+    crypto/SignedPrescription.cxx
+    database/AccessTokenIdentity.cxx
     database/CommonDatabaseFrontend.cxx
     database/CommonPostgresBackend.cxx
     database/DatabaseCodec.cxx
@@ -79,11 +81,31 @@ add_library(erp-shared STATIC
     idp/IdpUpdater.cxx
     model/AuditData.cxx
     model/AuditEvent.cxx
+    model/Binary.cxx
     model/Bundle.cxx
     model/Coding.cxx
+    model/Composition.cxx
+    model/Device.cxx
+    model/extensions/KBVMedicationCategory.cxx
+    model/extensions/KBVMultiplePrescription.cxx
     model/Extension.cxx
+    model/GemErpPrMedication.cxx
     model/Health.cxx
+    model/Iknr.cxx
     model/Kvnr.cxx
+    model/KbvBundle.cxx
+    model/KbvComposition.cxx
+    model/KbvCoverage.cxx
+    model/KbvMedicationCompounding.cxx
+    model/KbvMedicationPzn.cxx
+    model/KbvMedicationRequest.cxx
+    model/KbvOrganization.cxx
+    model/Link.cxx
+    model/MedicationDispense.cxx
+    model/MedicationDispenseBundle.cxx
+    model/MedicationDispenseId.cxx
+    model/MedicationDispenseOperationParameters.cxx
+    model/Patient.cxx
     model/ModelException.cxx
     model/OperationOutcome.cxx
     model/Parameters.cxx
@@ -91,13 +113,17 @@ add_library(erp-shared STATIC
     model/PrescriptionType.cxx
     model/ProfileType.cxx
     model/RapidjsonDocument.cxx
+    model/Reference.cxx
     model/ResourceBase.cxx
     model/Resource.cxx
     model/ResourceFactory.cxx
+    model/SharedResourceInstances.cxx
     model/ResourceNames.cxx
+    model/Signature.cxx
     model/TelematikId.cxx
     model/TimePeriod.cxx
     model/Timestamp.cxx
+    model/Pzn.cxx
     network/client/ClientBase.cxx
     network/client/CoHttpsClient.cxx
     network/client/HttpClient.cxx
@@ -187,7 +213,6 @@ add_library(erp-shared STATIC
     util/Random.cxx
     util/SafeString.cxx
     util/String.cxx
-    util/TimeoutHelper.cxx
     util/ThreadNames.cxx
     util/TLog.cxx
     util/UrlHelper.cxx
@@ -222,7 +247,6 @@ target_compile_definitions(erp-shared
         $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
 )
 
-target_include_directories(erp-shared PUBLIC "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(erp-shared
     PUBLIC
         LibXml2::LibXml2

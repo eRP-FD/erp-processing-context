@@ -1,20 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
+
+#include "erp/database/Database.hxx"
+#include "erp/model/ErxReceipt.hxx"
+#include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
-#include "erp/database/Database.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/ErxReceipt.hxx"
-#include "shared/util/FileHelper.hxx"
-#include "erp/util/search/UrlArguments.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "test/util/JwtBuilder.hxx"
-#include "test_config.h"
 
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/ServerTestBaseAutoCleanup.hxx"

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -57,6 +57,7 @@ public:
     TslManager& tslManager();
 
 private:
+    boost::asio::awaitable<Tee3ClientsForHost::Tee3ClientPtr> acquireInternal(std::shared_ptr<Tee3ClientPool> pool);
     boost::asio::awaitable<void> release(std::shared_ptr<Tee3ClientPool> pool, std::unique_ptr<Tee3Client> instance);
 
     std::weak_ptr<Tee3ClientPool> mOwningPool;

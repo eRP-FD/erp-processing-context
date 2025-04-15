@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,16 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 #define ERP_PROCESSING_CONTEXT_STATICDATA_HXX
 
-#include "EnvironmentVariableGuard.hxx"
 #include "shared/crypto/Certificate.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "shared/validation/JsonValidator.hxx"
 #include "shared/validation/XmlValidator.hxx"
-#include "test_config.h"
 #include "test/util/TestConfiguration.hxx"
 
 #include <memory>
-#include <mutex>
 
 // The sole intention of this classes is to provide one static instance of the JsonValidator class
 // in all tests, which takes very long to load, due to the loading of JSON schema files.

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -26,39 +26,43 @@ EpaMedicationClientImpl::EpaMedicationClientImpl(boost::asio::io_context& ioCont
 {
 }
 
-EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvidePrescription(const model::Kvnr& kvnr,
+EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvidePrescription(const std::string& xRequestId,
+                                                                                   const model::Kvnr& kvnr,
                                                                                    const std::string& payload)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$provide-prescription-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req));
 }
 
 
-EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvideDispensation(const model::Kvnr& kvnr,
+EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvideDispensation(const std::string& xRequestId,
+                                                                                   const model::Kvnr& kvnr,
                                                                                    const std::string& payload)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$provide-dispensation-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req));
 }
 
-EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendCancelPrescription(const model::Kvnr& kvnr,
+EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendCancelPrescription(const std::string& xRequestId,
+                                                                                  const model::Kvnr& kvnr,
                                                                                   const std::string& payload)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$cancel-prescription-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req));
 }
 
-EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendRequestBlocking(Tee3Client::Request req)
+EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendRequestBlocking(const std::string& xRequestId,
+                                                                               Tee3Client::Request req)
 {
     std::future<Tee3Client::Response> fut = co_spawn(
         mIoContext,
-        sendRequest(std::move(req)),
+        sendRequest(xRequestId, std::move(req)),
         boost::asio::use_future);
     auto response = fut.get();
     return Response{.httpStatus = fromBoostBeastStatus(static_cast<uint32_t>(response.result_int())),
@@ -86,9 +90,10 @@ bool EpaMedicationClientImpl::testConnection()
 }
 
 
-boost::asio::awaitable<Tee3Client::Response> EpaMedicationClientImpl::sendRequest(Tee3Client::Request req)
+boost::asio::awaitable<Tee3Client::Response> EpaMedicationClientImpl::sendRequest(std::string xRequestId,
+                                                                                  Tee3Client::Request req)
 {
-    auto resp = co_await mTeeClientPool->sendTeeRequest(mHostname, std::move(req), mLogDataBag);
+    auto resp = co_await mTeeClientPool->sendTeeRequest(mHostname, std::move(xRequestId), std::move(req), mLogDataBag);
     Expect(resp.has_value(), "Response had an error");
     co_return resp.value();
 }
@@ -98,7 +103,6 @@ Tee3Client::Request EpaMedicationClientImpl::request(boost::beast::http::verb ve
 {
     auto req = Tee3Client::Request{verb, target, 11};
     req.set(Header::Tee3::XInsurantId, kvnr.id());
-    req.set(Header::XRequestId, Uuid().toString());
     req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
     return req;
 }

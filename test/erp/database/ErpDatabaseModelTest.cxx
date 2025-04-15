@@ -1,10 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/ErpDatabaseModel.hxx"
+#include "shared/database/AccessTokenIdentity.hxx"
 #include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>

@@ -1,12 +1,12 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/model/EpaMedicationPznIngredient.hxx"
 #include "exporter/model/EpaMedicationTypeExtension.hxx"
 #include "shared/util/Uuid.hxx"
 
-#include <erp/model/Pzn.hxx>
+#include "shared/model/Pzn.hxx"
 
 namespace model
 {

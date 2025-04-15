@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -81,7 +81,7 @@ set(FHIR_PROFILES_DIRS
         "fhir/profiles/KBV.Basis-1.3.0"
         "fhir/profiles/kbv.ita.erp-1.1.2"
         "fhir/profiles/kbv.ita.for-1.1.0/package/"
-        "fhir/profiles/kbv.itv.evdga-1.1.0/package"
+        "fhir/profiles/kbv.itv.evdga-1.1.1/package"
         "fhir/profiles/fhir.kbv.de"
         "fhir/profiles/terminology.hl7.org-6.0.2/package"
         )

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -103,7 +103,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim().toLowerCase()
-                                    def erp_release_version = "1.17.0"
+                                    def erp_release_version = "1.17.1"
                                     def result = sh(returnStatus: true, script: "cd /media/erp && scripts/ci-build.sh "+
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}' " +
@@ -141,6 +141,7 @@ pipeline {
                                                 antlr4-cppruntime
                                                 boost
                                                 botan
+                                                cmake
                                                 date
                                                 glog
                                                 gsl-lite
@@ -149,15 +150,15 @@ pipeline {
                                                 libcurl
                                                 libpq
                                                 libpqxx
+                                                libunwind
                                                 libxml2
                                                 magic_enum
                                                 openssl
                                                 rapidjson
                                                 redis-plus-plus
+                                                xmlsec
                                                 zlib
                                                 zstd
-                                                libunwind
-                                                cmake
                                         )
 
                                         declare -a private_packages=(
@@ -302,7 +303,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.17.0"
+                                def release_version = "1.17.1"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -382,7 +383,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.17.0"
+                                def release_version = "1.17.1"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +

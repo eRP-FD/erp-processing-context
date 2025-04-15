@@ -1,9 +1,6 @@
-/*
- * (C) Copyright IBM Deutschland GmbH 2024
- * (C) Copyright IBM Corp. 2024
- *
- * non-exclusively licensed to gematik GmbH
- */
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
+// non-exclusively licensed to gematik GmbH
 #include "FhirResourceViewGroupSet.hxx"
 #include "FhirResourceGroup.hxx"
 #include "fhirtools/FPExpect.hxx"

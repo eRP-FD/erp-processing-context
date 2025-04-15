@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -187,6 +187,12 @@ FhirElement::Representation fhirtools::stringToRepresentation(const std::string_
     {
         FPFail2("Cannot convert string to FhirElement::Representation: "s.append(str), std::logic_error);
     }
+}
+
+FhirElement::Builder& FhirElement::Builder::isRoot(bool newIsRoot)
+{
+    mFhirElement->mIsRoot = newIsRoot;
+    return *this;
 }
 
 FhirElement::Builder& FhirElement::Builder::name(std::string name_)

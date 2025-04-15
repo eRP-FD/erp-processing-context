@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,18 +9,15 @@
 #define ERP_PROCESSING_CONTEXT_URLARGUMENTS_HXX
 
 
-#include "erp/model/Link.hxx"
-#include "shared/model/TimePeriod.hxx"
+#include "shared/model/Link.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "erp/util/search/PagingArgument.hxx"
-#include "erp/util/search/ReverseIncludeArgument.hxx"
 #include "erp/util/search/SearchArgument.hxx"
 #include "erp/util/search/SearchParameter.hxx"
 #include "erp/util/search/SortArgument.hxx"
 
 #include <pqxx/connection>
-#include <variant>
 
 class KeyDerivation;
 

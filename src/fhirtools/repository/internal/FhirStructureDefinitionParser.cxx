@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -397,6 +397,7 @@ void FhirStructureDefinitionParser::leaveStructureDefinition()
 void fhirtools::FhirStructureDefinitionParser::enterSnapshotSubTree()
 {
     mHaveSnapshot = true;
+    mElementBuilder.isRoot(true);
     mStructureBuilder.initGroup(*groupResolver, currentFile);
     mStack.emplace_back(ElementType::snapshot, "snapshot"_xs.xs_str());
 }

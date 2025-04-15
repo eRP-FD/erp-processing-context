@@ -1,4 +1,8 @@
 getConsentDecisions:
+  - kvnr: "X011300051"
+    code: 200
+    template: getConsentDecisions.permit.json
+    delay: 5000
   - kvnr: ".*"
     code: 200
     template: getConsentDecisions.permit.json

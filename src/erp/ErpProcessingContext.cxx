@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -137,13 +137,11 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
 
     // For GET /MedicationDispense see gemSpec_FD_eRp_V1.1.1, 6.2.1
     // GEMREQ-start A_19405
-    A_19405.start("Register the allowed professionOIDs");
+    A_19405_02.start("Register the allowed professionOIDs");
     const oids medicationDispenseEndpointOIDs{oid_versicherter};
     handlerManager.onGetDo("/MedicationDispense",
             std::make_unique<GetAllMedicationDispenseHandler>(medicationDispenseEndpointOIDs));
-    handlerManager.onGetDo("/MedicationDispense/{id}",
-            std::make_unique<GetMedicationDispenseHandler>(medicationDispenseEndpointOIDs));
-    A_19405.finish();
+    A_19405_02.finish();
     // GEMREQ-end A_19405
 
 

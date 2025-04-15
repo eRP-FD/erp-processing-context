@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -85,10 +85,7 @@ public:
     const std::vector<FhirConstraint>& getConstraints() const { return mConstraints; }
     bool isArray() const { return mIsArray; }
     [[nodiscard]] bool isBackbone() const { return mIsBackbone; }
-    /// element is a root element
-    /// root elements have no \<type\>; element and carry the name of their Structure's typeId (StructureDefinition/type\@value)
-    bool isRoot() const
-    { return mTypeId.empty() && (mName.find('.') == std::string::npos); }
+    bool isRoot() const { return mIsRoot; }
 
     const std::optional<FhirSlicing>& slicing() const;
     bool hasSlices() const { return mSlicing.has_value() && !mSlicing->slices().empty();}
@@ -117,6 +114,7 @@ public:
     FhirElement& operator=(const FhirElement&) = delete;
 
 private:
+    bool mIsRoot = false;
     std::string mName;
     std::string mOriginalName;
     std::string mTypeId;
@@ -147,6 +145,8 @@ public:
     Builder();
 
     explicit Builder(FhirElement elementTemplate);
+
+    Builder& isRoot(bool newIsRoot);
 
     Builder& name(std::string name_);
 

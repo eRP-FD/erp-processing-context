@@ -8,7 +8,6 @@
 
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/crypto/VsdmProof.hxx"
-#include "erp/model/KbvBundle.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
 #include "erp/util/search/UrlArguments.hxx"
@@ -16,6 +15,7 @@
 #include "shared/audit/AuditEventCreator.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/hsm/VsdmKeyCache.hxx"
+#include "shared/model/KbvBundle.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Hash.hxx"
@@ -262,38 +262,40 @@ void validateProofV2(SessionContext& context, const VsdmProof2& proofContent,
     Expect(decryptedProof.has_value(), "Decrypted proof missing");
     // GEMREQ-end A_27279#decrypt
     // GEMREQ-start A_27279#validate
+
+    // A_27279: step 8: hcv must be equal if passed
+    std::string hcv;
+    if (urlHcv.has_value())
+    {
+        try
+        {
+            hcv = util::bufferToString(Base64::decode(urlHcv.value()));
+        }
+        catch (const std::invalid_argument& ia)
+        {
+            TVLOG(1) << ia.what();
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, "HCV Base64-Dekodierung fehlgeschlagen.", ia.what());
+        }
+        catch (const std::runtime_error& re)
+        {
+            TVLOG(1) << re.what();
+            ErpFailWithDiagnostics(HttpStatus::BadRequest, "HCV Validierung fehlgeschlagen.", re.what());
+        }
+    }
+
     try {
         // A_27279: step 6: not revoked
         ErpExpect(! decryptedProof->revoked, HttpStatus::Forbidden, "eGK gesperrt");
 
         // A_27279: step 7: valid time
         validateProofTimestamp(context, decryptedProof->iat);
-        // A_27279: step 8: hcv must be equal if passed
-        if (urlHcv.has_value())
+        A_27445.start("Check for RejectHcvMismatch and update counter");
+        if (hcv != decryptedProof->hcv && urlHcv.has_value())
         {
-            std::string hcv;
-            try
-            {
-                hcv = util::bufferToString(Base64::decode(urlHcv.value()));
-            }
-            catch (const std::invalid_argument& ia)
-            {
-                TVLOG(1) << ia.what();
-                ErpFailWithDiagnostics(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.", ia.what());
-            }
-            catch (const std::runtime_error& re)
-            {
-                TVLOG(1) << re.what();
-                ErpFailWithDiagnostics(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.", re.what());
-            }
-            A_27445.start("Check for RejectHcvMismatch and update counter");
-            if (hcv != decryptedProof->hcv)
-            {
-                TaskRateLimiter::updateStatistic(*(context.serviceContext.getRedisClient()), hashedTelematikId);
-                ErpFail(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.");
-            }
-            A_27445.finish();
+            TaskRateLimiter::updateStatistic(*(context.serviceContext.getRedisClient()), hashedTelematikId);
+            ErpFail(HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.");
         }
+        A_27445.finish();
     }
     catch (const std::exception&)
     {
@@ -544,6 +546,7 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
         {"pnw", "pnw", SearchParameter::Type::String},
         {"PNW", "PNW", SearchParameter::Type::String},
         {"kvnr", "kvnr", SearchParameter::Type::String},
+        {"hcv", "hcv", SearchParameter::Type::String},
     });
     argumentsResp->parse(session.request.getQueryParameters(), session.serviceContext.getKeyDerivation());
     const auto links = argumentsResp->createBundleLinks(getLinkBase(), "/Task", totalSearchMatches);

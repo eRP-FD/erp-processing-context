@@ -1,8 +1,8 @@
 #include "MedicationsAndDispenses.hxx"
 
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
 #include "shared/util/Expect.hxx"
 
 void model::MedicationsAndDispenses::addFromBundle(const MedicationDispenseBundle& bundle)

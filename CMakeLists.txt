@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -14,6 +14,8 @@ cmake_minimum_required(VERSION 3.18)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 project(erp-processing-context LANGUAGES CXX)
+
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}/src") # "src/Header.hxx"
 
 include(GNUInstallDirs)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/bin")
@@ -38,9 +40,11 @@ if (NOT ERP_WITH_HSM_TPM_PRODUCTION AND NOT ERP_WITH_HSM_MOCK)
     message(FATAL_ERROR "either ERP_WITH_HSM_TPM_PRODUCTION or ERP_WITH_HSM_MOCK must be enabled.")
 endif()
 
+# GEMREQ-start A_19716#ENABLE_DEBUG_LOG
 if((CMAKE_BUILD_TYPE MATCHES Debug) OR (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo))
     add_compile_options(-DENABLE_DEBUG_LOG)
 endif()
+# GEMREQ-end A_19716#ENABLE_DEBUG_LOG
 
 SET(ERP_BUILD_VERSION "" CACHE STRING "Erp Build version")
 SET(ERP_RELEASE_VERSION "" CACHE STRING "Erp Release version")
@@ -53,10 +57,17 @@ else()
 endif()
 
 if(NOT ERP_RELEASE_VERSION)
-    message(WARNING "ERP_RELEASE_VERSION not set.")
-    set(ERP_RELEASE_VERSION "UNRELEASED VERSION" CACHE STRING "Erp Release version" FORCE)
-else()
-    message(NOTICE "ERP_RELEASE_VERSION: ${ERP_RELEASE_VERSION}")
+    message(FATAL_ERROR "ERP_RELEASE_VERSION not set")
+endif()
+
+### Pattern/length according to A_22470-05
+set(ERP_RELEASE_VERSION_PATTERN "^[a-zA-Z0-9.-]+$")
+if (NOT ERP_RELEASE_VERSION MATCHES "${ERP_RELEASE_VERSION_PATTERN}")
+    message(FATAL_ERROR "ERP_RELEASE_VERSION (\"${ERP_RELEASE_VERSION}\") doesn't match pattern ${ERP_RELEASE_VERSION_PATTERN}")
+endif()
+string(LENGTH "${ERP_RELEASE_VERSION}" ERP_RELEASE_VERSION_LENGTH)
+if (ERP_RELEASE_VERSION_LENGTH GREATER 15)
+    message(FATAL_ERROR "ERP_RELEASE_VERSION (\"${ERP_RELEASE_VERSION}\") too long.")
 endif()
 
 string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)

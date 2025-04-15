@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 #ifndef MEDICATION_EXPORTER_TEE3CLIENTPOOL_HXX
@@ -33,7 +33,8 @@ class Tee3ClientPool : public std::enable_shared_from_this<Tee3ClientPool>, publ
 {
 public:
     using Tee3ClientPtr = Tee3ClientsForHost::Tee3ClientPtr;
-    Tee3ClientPool(boost::asio::io_context& ctx, HsmPool& hsmPool, TslManager& tslManager);
+    static std::shared_ptr<Tee3ClientPool> create(boost::asio::io_context& ctx, HsmPool& hsmPool, TslManager& tslManager,
+                                                  std::chrono::steady_clock::duration endpointRefreshInterval);
 
     /**
      * Acquire a tee client from the pool. To return it to the pool,
@@ -51,7 +52,8 @@ public:
      * In case the server mandates a TEE reconnect, it is executed automatically.
      */
     boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
-    sendTeeRequest(std::string hostname, Tee3Client::Request req, std::unordered_map<std::string, std::any> logDataBag);
+    sendTeeRequest(std::string hostname, std::string xRequestId, Tee3Client::Request req,
+                   std::unordered_map<std::string, std::any> logDataBag);
 
     /**
      * Add a connection pool for the given hostname, it must be called before trying
@@ -62,9 +64,12 @@ public:
     boost::asio::awaitable<void> addEpaHost(std::string hostname, std::uint16_t port, size_t connectionCount);
 
 private:
-    void release(std::unique_ptr<Tee3Client> tee3Client);
-    static boost::asio::awaitable<void> internalRelease(std::weak_ptr<Tee3ClientPool> self, std::unique_ptr<Tee3Client> teeClient);
-    boost::asio::awaitable<void> refreshEndpoints(std::string hostname, std::uint16_t port);
+    Tee3ClientPool(boost::asio::io_context& ctx, HsmPool& hsmPool, TslManager& tslManager,
+                   std::chrono::steady_clock::duration endpointRefreshInterval);
+
+    void setupRefreshEndpointsTimer();
+    static void refreshEndpoints(std::weak_ptr<Tee3ClientPool> weakSelf, boost::system::error_code ec);
+
     boost::asio::awaitable<boost::system::result<std::unique_ptr<Tee3ClientsForHost>>>
     setupPool(std::string hostname, std::uint16_t port, size_t connectionCount);
 
@@ -74,6 +79,8 @@ private:
     boost::asio::strand<boost::asio::any_io_executor> mStrand;
     HsmPool& mHsmPool;
     TslManager& mTslManager;
+    std::chrono::steady_clock::duration mEndpointsRefreshInterval;
+    boost::asio::steady_timer mRefreshEndpointsTimer;
     // map of hostname -> tee clients, note that it does not make sense
     // to distinguish by port, as they would end up at the same ePA gateway
     std::unordered_map<std::string, std::unique_ptr<Tee3ClientsForHost>> mTee3Clients;

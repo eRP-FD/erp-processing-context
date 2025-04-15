@@ -37,8 +37,9 @@
     "epa-account-lookup": {
       "connectTimeoutSeconds": "2",
       "resolveTimeoutMilliseconds": "2000",
+      "dnsRefreshInterval": "18:00:00",
       "endpoint": "/information/api/v1/ehr/consentdecisions",
-      "userAgent": "ERP-FD/1.17.0",
+      "userAgent": "ERP-FD/@ERP_RELEASE_VERSION@",
       "erpSubmissionFunctionId": "erp-submission",
       "epaAsFqdn": ["epa-as-1-mock:443"],
       "poolSizePerFqdn": "5"

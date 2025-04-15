@@ -168,7 +168,8 @@ public:
         handler.handleRequest(sessionContext);
     }
 
-    void verifyTasksReady(ServerResponse serverResponse, size_t expectTasksSize = 2)
+    void verifyTasksReady(ServerResponse serverResponse, size_t expectTasksSize = 2,
+                          const std::string& expectedHcvUrlParam = "")
     {
         model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
         const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
@@ -185,6 +186,12 @@ public:
             ASSERT_GE(task.expiryDate(), acceptedExpiryDate);
             EXPECT_EQ(task.type(), model::PrescriptionType::apothekenpflichigeArzneimittel);
             EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = task.accessCode());
+        }
+        if (!expectedHcvUrlParam.empty())
+        {
+            const auto link = taskBundle.getLink(model::Link::Self);
+            ASSERT_TRUE(link.has_value());
+            EXPECT_NE(link->find(expectedHcvUrlParam), std::string_view::npos) << *link;
         }
     }
 
@@ -261,7 +268,7 @@ TEST_F(GetTasksByPharmacyTest, PN2_success)
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, hcv));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    verifyTasksReady(serverResponse);
+    verifyTasksReady(serverResponse, 2, "hcv=" + Base64::toBase64Url(Base64::encode(hcv)));
 }
 
 TEST_F(GetTasksByPharmacyTest, PN2_rejectMissingHcv)
@@ -355,7 +362,7 @@ TEST_F(GetTasksByPharmacyTest, PN2_hcvBase64Error)
     EnvironmentVariableGuard guardHcvCheck(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK, "false");
     ServerResponse serverResponse;
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE(callHandler(pnw, serverResponse, kvnr, std::nullopt, std::nullopt, encodedHcv),
-                                      HttpStatus::RejectHcvMismatch, "HCV Validierung fehlgeschlagen.");
+                                      HttpStatus::BadRequest, "HCV Base64-Dekodierung fehlgeschlagen.");
 }
 
 TEST_F(GetTasksByPharmacyTest, PN2_missingKey)
@@ -1002,7 +1009,7 @@ TEST_F(GetTasksByPharmacyTest, Paging)
     auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
-    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, std::nullopt, 10));
+    ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, hcv, 10));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
@@ -1010,7 +1017,8 @@ TEST_F(GetTasksByPharmacyTest, Paging)
     const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
     EXPECT_EQ(tasks.size(), 10);
 
-    const auto self = "/Task?pnw=" + UrlHelper::escapeUrl(pnw) + "&kvnr=" + kvnr.id() + "&_sort=authored-on";
+    const auto self = "/Task?pnw=" + UrlHelper::escapeUrl(pnw) + "&kvnr=" + kvnr.id() +
+                      "&hcv=" + Base64::toBase64Url(Base64::encode(hcv)) + "&_sort=authored-on";
 
     validateLink(taskBundle, model::Link::Type::Self, self + "&_count=10&__offset=0");
     validateLink(taskBundle, model::Link::Type::Next, self + "&_count=10&__offset=10");

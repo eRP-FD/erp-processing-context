@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,8 +10,10 @@
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/network/message/Header.hxx"
+#include "shared/util/Base64.hxx"
 #include "shared/util/Hash.hxx"
 #include "src/shared/enrolment/VsdmHmacKey.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
@@ -253,6 +255,32 @@ TEST_F(GetTaskByPharmacyWfTest, Success)
         {prescriptionId, prescriptionId, std::nullopt}, kvnr.id(), "en", startTime,
         {telematikIdDoctor, kvnr.id(), telematikIdPharmacy}, {0, 2},
         {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::read}));
+}
+
+TEST_F(GetTaskByPharmacyWfTest, PN2_rejectMissingHcv)
+{
+    if (runsInCloudEnv())
+    {
+        GTEST_SKIP();
+    }
+    const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
+    ASSERT_FALSE(keys.empty());
+    VsdmHmacKey vsdmKey{keys[0]};
+
+    auto encryptedProof = VsdmProof2::encrypt(vsdmKey, VsdmProof2::DecryptedProof{
+                                                              .revoked = false,
+                                                              .hcv = hcv,
+                                                              .iat = model::Timestamp::now(),
+                                                              .kvnr = kvnr,
+                                                          });
+
+    auto pz = encryptedProof.serialize();
+    auto pnw = createEncodedPnw(pz);
+
+    EnvironmentVariableGuard guardHcvCheck(ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK, "false");
+    ServerResponse serverResponse;
+    std::optional<model::Bundle> tasks{};
+    ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::OK, std::nullopt, std::nullopt, pnw));
 }
 
 TEST_F(GetTaskByPharmacyWfTest, PN2Success)

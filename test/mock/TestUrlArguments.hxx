@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,9 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_TESTURLARGUMENTS_HXX
 
 #include "erp/database/ErpDatabaseModel.hxx"
-#include "erp/model/Communication.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "shared/model/AuditData.hxx"
 
 /**
  * Apply search, sort and paging arguments to the mock database.

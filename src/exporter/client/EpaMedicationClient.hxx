@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -29,9 +29,12 @@ public:
     };
 
     virtual ~IEpaMedicationClient() = default;
-    virtual Response sendProvidePrescription(const model::Kvnr& kvnr, const std::string& payload) = 0;
-    virtual Response sendProvideDispensation(const model::Kvnr& kvnr, const std::string& payload) = 0;
-    virtual Response sendCancelPrescription(const model::Kvnr& kvnr, const std::string& payload) = 0;
+    virtual Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                             const std::string& payload) = 0;
+    virtual Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                             const std::string& payload) = 0;
+    virtual Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                            const std::string& payload) = 0;
     virtual void addLogData(const std::string& key, const std::any& data) = 0;
 };
 

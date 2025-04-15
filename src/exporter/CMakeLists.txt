@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -44,7 +44,7 @@ add_compile_definitions(BOOST_ASIO_DISABLE_GETADDRINFO)
 add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
 
 #
-# Define how to build the eRP executable.
+# Define how to build the exporter executable.
 #
 list(
     APPEND erp-medication-exporter-source-files
@@ -60,7 +60,7 @@ list(
         TelematikLookup.hxx
         VauAutTokenSigner.cxx
         admin/PutRuntimeConfigHandler.cxx
-        database/ExporterDatabaseModel.cxx
+        database/TaskEvent.cxx
         database/MainDatabaseFrontend.cxx
         database/MainDatabaseFrontend.hxx
         database/MainPostgresBackend.cxx
@@ -108,53 +108,7 @@ list(
         util/ConfigurationFormatter.cxx
         util/RuntimeConfiguration.cxx
         util/health/HealthCheck.cxx
-        ../erp/crypto/SignedPrescription.cxx
-        ../erp/database/ErpDatabaseModel.cxx
-        ../erp/model/AbgabedatenPkvBundle.cxx
-        ../erp/model/Binary.cxx
-        ../erp/model/ChargeItem.cxx
-        ../erp/model/Communication.cxx
-        ../erp/model/CommunicationPayload.cxx
-        ../erp/model/Composition.cxx
-        ../erp/model/Consent.cxx
-        ../erp/model/Device.cxx
-        ../erp/model/ErxReceipt.cxx
-        ../erp/model/EvdgaBundle.cxx
-        ../erp/model/EvdgaHealthAppRequest.cxx
-        ../erp/model/Iknr.cxx
-        ../erp/model/KbvBundle.cxx
-        ../erp/model/KbvComposition.cxx
-        ../erp/model/KbvCoverage.cxx
-        ../erp/model/KbvMedicationCompounding.cxx
-        ../erp/model/KbvMedicationFreeText.cxx
-        ../erp/model/KbvMedicationIngredient.cxx
-        ../erp/model/KbvMedicationPzn.cxx
-        ../erp/model/KbvMedicationRequest.cxx
-        ../erp/model/KbvOrganization.cxx
-        ../erp/model/KbvPracticeSupply.cxx
-        ../erp/model/KbvPractitioner.cxx
-        ../erp/model/Lanr.cxx
-        ../erp/model/Link.cxx
-        ../erp/model/MedicationDispense.cxx
-        ../erp/model/MedicationDispenseBundle.cxx
-        ../erp/model/MedicationDispenseId.cxx
-        ../erp/model/MetaData.cxx
-        ../erp/model/OuterResponseErrorData.cxx
-        ../erp/model/Patient.cxx
-        ../erp/model/Pzn.cxx
-        ../erp/model/Reference.cxx
-        ../erp/model/ResourceInstances.cxx
-        ../erp/model/Signature.cxx
-        ../erp/model/Subscription.cxx
-        ../erp/model/Task.cxx
-        ../erp/model/WorkflowParameters.cxx
-        ../erp/model/extensions/ChargeItemMarkingFlags.cxx
-        ../erp/model/extensions/KBVEXERPAccident.cxx
-        ../erp/model/extensions/KBVEXFORLegalBasis.cxx
-        ../erp/model/extensions/KBVMedicationCategory.cxx
-        ../erp/model/extensions/KBVMultiplePrescription.cxx
         )
-
 
 add_library(
     erp-medication-exporter-files OBJECT
@@ -165,12 +119,6 @@ target_compile_definitions(erp-medication-exporter-files
     PUBLIC
         $<$<BOOL:${ERP_WITH_HSM_MOCK}>:WITH_HSM_MOCK=1>
         $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
-)
-
-target_include_directories (
-    erp-medication-exporter-files
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
-        PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
 )
 
 target_link_libraries (
@@ -192,11 +140,6 @@ add_executable(erp-medication-exporter erp-medication-exporter-main.cxx)
 # Add -rdynamic to enrich the symbol table so that stack traces become more readable.
 set_property(TARGET erp-medication-exporter PROPERTY ENABLE_EXPORTS ON)
 
-target_include_directories (
-    erp-medication-exporter
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
-)
-
 target_link_libraries (
     erp-medication-exporter
         PUBLIC
@@ -206,7 +149,7 @@ target_link_libraries (
 add_dependencies(erp-medication-exporter resources)
 
 
-# warning is triggred somewhere in boost library - we cannot do anything about it. (boost 1.86.0 has the same issue still)
+# warning is triggered somewhere in boost library - we cannot do anything about it. (boost 1.86.0 has the same issue still)
 set_property(SOURCE network/client/Tee3Client.cxx PROPERTY COMPILE_OPTIONS -Wno-mismatched-new-delete)
 
 install(TARGETS erp-medication-exporter COMPONENT production)

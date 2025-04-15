@@ -3,6 +3,7 @@
 #include "shared/model/Health.hxx"
 #include "shared/server/response/ResponseBuilder.hxx"
 
+namespace exporter {
 
 void HealthHandler::handleRequest(SessionContext& session)
 {
@@ -40,3 +41,5 @@ void HealthHandler::handleRequest(SessionContext& session)
         .jsonBody(healthResource->serializeToJsonString())
         .keepAlive(true);
 }
+
+} // namespace exporter

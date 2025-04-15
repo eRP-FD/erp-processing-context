@@ -1,11 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/model/TaskEvent.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
 
 namespace model
 {
@@ -79,6 +79,11 @@ Timestamp TaskEvent::getLastModified() const
 std::int32_t TaskEvent::getRetryCount() const
 {
     return mRetryCount;
+}
+
+const std::string& TaskEvent::getXRequestId() const
+{
+    return mXRequestId;
 }
 
 ProvidePrescriptionTaskEvent::ProvidePrescriptionTaskEvent(

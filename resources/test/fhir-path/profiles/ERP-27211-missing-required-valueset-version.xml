@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="ERP-27211-missing-required-valueset"/>
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/CodeSystem/Any"/>
+    <resource>
+      <CodeSystem>
+        <id value="CodeSystemAny"/>
+        <url value="http://fhir-tools.test/minifhirtypes/CodeSystem/Any"/>
+        <version value="0.0.1"/>
+        <concept>
+          <code value="AnyCode"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+    <resource>
+      <ValueSet>
+        <id value="ValueSetAny"/>
+        <url value="http://fhir-tools.test/minifhirtypes/ValueSet/Any"/>
+        <version value="0.0.1"/>
+        <compose>
+          <include>
+            <system value="http://fhir-tools.test/minifhirtypes/CodeSystem/Any"/>
+          </include>
+        </compose>
+      </ValueSet>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/BackboneElement"/>
+    <resource>
+      <StructureDefinition>
+        <id value="MissingRequiredValueSet"/>
+        <url value="http://fhir-tools.test/minifhirtypes/MissingRequiredValueSet"/>
+        <version value="4.0.1"/>
+        <name value="MissingRequiredValueSet"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="MissingRequiredValueSet"/>
+        <snapshot>
+          <element id="MissingRequiredValueSet">
+            <path value="MissingRequiredValueSet"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="MissingRequiredValueSet"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="MissingRequiredValueSet.valueSet">
+            <path value="MissingRequiredValueSet.valueSet"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="MissingRequiredValueSet.valueSet"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+            <binding>
+              <strength value="required"/>
+              <valueSet value="http://fhir-tools.test/minifhirtypes/ValueSet/Any|1.0.0"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

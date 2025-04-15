@@ -1,15 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/service/chargeitem/ChargeItemBodyHandlerBase.hxx"
-#include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "erp/service/chargeitem/ChargeItemBodyHandlerBase.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
-#include "shared/model/Bundle.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Expect.hxx"
 

@@ -152,3 +152,29 @@ TEST_F(CreateTaskTest, multiViewERP26615_3)
                                           "invalid profile https://gematik.de/fhir/erp/StructureDefinition/Mumpiz must "
                                           "be one of: http://hl7.org/fhir/StructureDefinition/Parameters|4.0.1");
 }
+
+TEST_F(CreateTaskTest, invalidERP27183)
+{
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="abc"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    CreateTaskHandler handler({});
+    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
+                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
+    request.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    handler.preHandleRequestHook(sessionContext);
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                          "error getting workFlowType from parameters", "stoi");
+}

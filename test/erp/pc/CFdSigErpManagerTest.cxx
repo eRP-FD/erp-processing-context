@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -361,4 +361,68 @@ TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
     TVLOG(0) << "Got OCSP-Response";
     ASSERT_TRUE(requesting);
     completedMtx.unlock();
+}
+
+TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate)
+{
+    std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
+    CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
+
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+    std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
+        requestSender,
+        {},
+        {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
+
+    boost::asio::io_context ioContext;
+    std::thread ioThread{[&ioContext]() {
+        auto workGuard = boost::asio::make_work_guard(ioContext);
+        ioContext.run();
+    }};
+    auto blobCache = mContext.getBlobCache();
+    blobCache->registerCacheUpdateCallback([&]{cFdSigErpManager.updateOcspResponseCacheOnBlobCacheUpdate();});
+    blobCache->startRefresher(ioContext, std::chrono::milliseconds{1000});
+
+    testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+    ioContext.stop();
+    ioThread.join();
+}
+
+TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate2)
+{
+    // Same test but this time using a custom PcServiceContext instance with the CountingUrlRequestSenderMock used.
+
+    std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
+        CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
+    auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
+    auto certCA = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErpSigner());
+    const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
+    auto factories = StaticData::makeMockFactories();
+    factories.tslManagerFactory = [&](std::shared_ptr<XmlValidator>) {
+        return TslTestHelper::createTslManager<TslManager>(
+            requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+    };
+
+    auto  serviceContext = std::make_shared<PcServiceContext>(Configuration::instance(), std::move(factories));
+
+    ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
+
+    boost::asio::io_context ioContext;
+    std::thread ioThread{[&ioContext]() {
+        auto workGuard = boost::asio::make_work_guard(ioContext);
+        ioContext.run();
+    }};
+    auto blobCache = serviceContext->getBlobCache();
+    blobCache->startRefresher(ioContext, std::chrono::milliseconds{1000});
+
+    testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+    serviceContext.reset();
+    ioContext.stop();
+    ioThread.join();
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -27,10 +27,12 @@ private:
 };
 
 #define TLOG(level) LOG(level) << ThreadNames::instance().getCurrentThreadName() << "/" << tlogContext.value_or("") << ": "
+// GEMREQ-start A_19716#macroDefinition
 #ifdef ENABLE_DEBUG_LOG
 #define TVLOG(level) VLOG(level) << "v=" << (level) << " " << ThreadNames::instance().getCurrentThreadName() << "/" << tlogContext.value_or("") << ": "
 #else
 #define TVLOG(level) static_cast<void>(level), LOG_IF(INFO, false)
 #endif
+// GEMREQ-end A_19716#macroDefinition
 
 #endif

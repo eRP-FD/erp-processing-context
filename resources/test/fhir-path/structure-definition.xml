@@ -24,6 +24,14 @@
                 <code value="http://hl7.org/fhirpath/System.String" />
             </type>
         </element>
+        <element id="Test.stringPrimitive">
+            <path value="Test.stringPrimitive" />
+            <min value="0" />
+            <max value="1" />
+            <type>
+                <code value="string" />
+            </type>
+        </element>
         <element id="Test.multiString">
             <path value="Test.multiString" />
             <min value="0" />

@@ -1,33 +1,28 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "CommunicationPostHandler.hxx"
-#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/CommunicationPayload.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/service/SubscriptionPostHandler.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
 #include "shared/model/ResourceNames.hxx"
-#include "shared/network/message/MimeType.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"
-#include "shared/util/FileHelper.hxx"
 #include "shared/util/TLog.hxx"
-
 
 
 using namespace model;

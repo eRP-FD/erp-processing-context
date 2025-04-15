@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,9 +8,9 @@
 #ifndef ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 #define ERP_PROCESSING_CONTEXT_DATABASE_DATABASE_HXX
 
+#include "erp/database/ErpDatabaseModel.hxx"
 #include "shared/crypto/RandomSource.hxx"
 #include "shared/database/DatabaseConnectionInfo.hxx"
-#include "erp/database/ErpDatabaseModel.hxx"
 #include "shared/hsm/ErpTypes.hxx"
 
 #include <date/date.h>
@@ -58,7 +58,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "30";
+    static constexpr const char* expectedSchemaVersion = "32";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey

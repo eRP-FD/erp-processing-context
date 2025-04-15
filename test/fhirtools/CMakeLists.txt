@@ -14,6 +14,7 @@ add_executable(fhirtools-test
         FhirResourceGroupConstTest.cxx
         FhirResourceGroupTest.cxx
         FhirResourceViewGroupSetTest.cxx
+        FhirResourceViewVerifierTest.cxx
         FhirStructureRepositoryFixerTest.cxx
         FhirStructureRepositoryTest.cxx
         FhirValueSetTest.cxx

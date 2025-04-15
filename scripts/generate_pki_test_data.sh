@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# (C) Copyright IBM Deutschland GmbH 2021, 2023
-# (C) Copyright IBM Corp. 2021, 2023
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -414,7 +414,7 @@ function generate_tsl()
   fi
 
   # sign TSL
-  xmlsec1 --sign --privkey-pem:tslkey "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
+  $XMLSEC1 --sign --privkey-pem:tslkey "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
 }
 
 
@@ -542,6 +542,12 @@ generate_certificate sub_ca1_ec tsl_signer_wrong_key_usage_ec "TSL signer 2" tsl
 generate_certificate sub_ca1_ec smc_b_osig_ec "SMC-B Osig Signer" smc_b_osig ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
 
+generate_root_ca root_ca_rsa rsa:2048
+generate_sub_ca root_ca_rsa sub_ca1_rsa "Example Inc. Sub CA RSA 1" rsa:2048 $normal
+generate_certificate sub_ca1_rsa tsl_signer_rsa1 "TSL Signer RSA 1" usr_cert rsa:2048 $normal \
+  subjectAltName=email:admin@example.com,DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
+
+
 # The Gematik TSLs to generate from templates
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_valid.xml" $normal
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_no_ocsp_mapping.xml" "TSL_no_ocsp_mapping.xml" $normal
@@ -551,5 +557,8 @@ generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_broken_new_c
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_parserTest.xml" "TSL_parserTest.xml" $normal
 generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
 generate_tsl tsl_signer_wrong_key_usage_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_wrongSigner.xml" $normal
+
+generate_tsl tsl_signer_rsa1 sub_ca1_rsa "template_BNA_RSA_valid_sha512.xml" "BNA_RSA_valid_sha512.xml" $normal
+generate_tsl tsl_signer_rsa1 sub_ca1_rsa "template_BNA_RSA_valid_sha256.xml" "BNA_RSA_valid_sha256.xml" $normal
 
 success=true

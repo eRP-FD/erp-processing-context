@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -73,7 +73,7 @@ public:
 TEST_F(AdminRequestHandlerTest, ConfigurationHandler)
 {
     ServerRequest request{Header(header)};
-    SessionContext session{*serviceContext, request, response, accessLog};
+    exporter::SessionContext session{*serviceContext, request, response, accessLog};
     GetConfigurationHandler handler{
         ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
         std::make_unique<exporter::ConfigurationFormatter>(std::make_shared<const exporter::RuntimeConfiguration>())};

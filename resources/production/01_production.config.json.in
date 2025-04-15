@@ -126,7 +126,7 @@
         "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
-        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.itv.evdga-1.1.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.itv.evdga-1.1.1/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de",
         "@ERP_FHIR_RESOURCE_DIR@profiles/terminology.hl7.org-6.0.2/package"
       ],
@@ -514,10 +514,10 @@
           ]
         },
         {
-          "id": "kbv.itv.evdga-1.1.0",
+          "id": "kbv.itv.evdga-1.1.1",
           "include": [ "kbv.ita.for-1.1.0" ],
           "match": [
-            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.itv\\.evdga-1\\.1\\.0/package/.*\\.xml" }
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.itv\\.evdga-1\\.1\\.1/package/.*\\.xml" }
           ]
         }
       ],
@@ -597,7 +597,7 @@
           "env-name": "ERP_EVDGA_2025_01_15",
           "valid-from": "2025-01-15",
           "groups": [
-            "kbv.itv.evdga-1.1.0",
+            "kbv.itv.evdga-1.1.1",
             "KBV-Schluesseltabellen-Q2/25"
           ]
         }

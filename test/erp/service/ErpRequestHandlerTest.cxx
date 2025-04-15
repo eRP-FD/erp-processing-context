@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,10 +10,8 @@
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/WorkflowParameters.hxx"
-#include "mock/hsm/HsmMockFactory.hxx"
-#include "shared/model/Bundle.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "test_config.h"

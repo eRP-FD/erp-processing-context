@@ -74,7 +74,7 @@ public:
 
     [[nodiscard]] std::string getCertificateNotAfterTimestamp() const;
 
-    bool hasOcspResponse() const;
+    void updateOcspResponseCacheOnBlobCacheUpdate();
 
 protected:
     void onStart(void) override;

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -27,7 +27,7 @@ void deactivateLibxmlLoggingToStderr()
 {
     // Silence libxml2 by installing a no-op error handler. Without this, errors are logged
     // to stderr, and that would bypass our GLog settings in production.
-    xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {
+    xmlSetStructuredErrorFunc(nullptr, [](void*, const xmlError*) {
     });
 }
 }

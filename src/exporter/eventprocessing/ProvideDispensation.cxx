@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -53,14 +53,15 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
                   medicationDispenseBundle, taskEvent.getPrescriptionId(), taskEvent.getMedicationRequestAuthoredOn(),
                   telematikIdFromJwt, organizationNameFromJwt, organizationProfessionOidFromJwt);
 
-    auto response = mMedicationClient->sendProvideDispensation(taskEvent.getKvnr(),
+    auto response = mMedicationClient->sendProvideDispensation(taskEvent.getXRequestId(), taskEvent.getKvnr(),
                                                                providePrescriptionErpOp.serializeToJsonString());
 
     Outcome outcome = fromHttpStatus(response.httpStatus);
 
     switch (outcome)
     {
-        case Outcome::Success: {
+        case Outcome::Success:
+        case Outcome::SuccessAuditFail: {
             model::EPAOpRxDispensationERPOutputParameters responseParameters(std::move(response.body));
             const auto issue = responseParameters.getOperationOutcomeIssue();
             switch (issue.detailsCode)
@@ -74,6 +75,7 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
                         << KeyValue("event", "Processing task event: Unexpected operation outcome")
                         << KeyValue("reason", "EPAOperationOutcome code: " +
                                                   std::string(magic_enum::enum_name(issue.detailsCode)));
+                    outcome = Outcome::SuccessAuditFail;
                     break;
                 case SVC_IDENTITY_MISMATCH:
                 case MEDICATIONSVC_PRESCRIPTION_DUPLICATE:

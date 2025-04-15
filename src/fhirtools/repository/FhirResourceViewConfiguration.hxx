@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -48,7 +48,7 @@ public:
         view(gsl::not_null<const FhirStructureRepositoryBackend*> backend) const;
     };
 
-    class ViewList : public std::list<gsl::not_null<const std::shared_ptr<const ViewConfig>>>
+    class ViewList : public std::list<gsl::not_null<std::shared_ptr<const ViewConfig>>>
     {
     public:
         const ViewConfig& latest() const;

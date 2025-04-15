@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -568,9 +568,58 @@ namespace
                 return "SHA256";
             }
 
-            Fail2("Signature algorithm is not ECDSA-SHA256", std::runtime_error);
+            if ("http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384" == algorithm)
+            {
+                return "SHA384";
+            }
+
+            if ("http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512" == algorithm)
+            {
+                return "SHA512";
+            }
+
+            Fail2("ECSDSA Signature algorithm is not supported: " + algorithm, std::runtime_error);
         }
         // GEMREQ-end A_17205
+
+        std::string getRsaDigestName(const std::string& algorithm)
+        {
+            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" == algorithm ||
+                "http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1" == algorithm)
+            {
+                return "SHA512";
+            }
+            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" == algorithm ||
+                "http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1" == algorithm)
+            {
+                return "SHA384";
+            }
+            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" == algorithm ||
+                "http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1" == algorithm)
+            {
+                return "SHA256";
+            }
+
+            Fail2("Signature algorithm is not using a supported RSA digest", std::runtime_error);
+        }
+
+        int getRsaPadding(const std::string& algorithm)
+        {
+            if ("http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1" == algorithm ||
+                "http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1" == algorithm ||
+                "http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1" == algorithm)
+            {
+                return RSA_PKCS1_PSS_PADDING;
+            }
+            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" == algorithm ||
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" == algorithm ||
+                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" == algorithm)
+            {
+                return RSA_PKCS1_PADDING;
+            }
+
+            Fail2("Signature algorithm is not using a supported RSA digest", std::runtime_error);
+        }
 
 
         // @see https://www.w3.org/TR/xmldsig-core/#sec-SignatureValidation
@@ -668,19 +717,33 @@ namespace
 
             const std::string digestAlgorithm =
                 xmlDocument.getAttributeValue(xpathLiteral_digestAlgorithm);
-            Expect(digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha256",
-                   "unsupported digest algorithm");
+            const std::string expectedDigest = Base64::decodeToString(expectedDigestValue, true);
+            std::string calculatedDigest;
+            if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha256")
+            {
+                calculatedDigest = Hash::sha256(*canonicalizedData);
+            }
+            else if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha384")
+            {
+                calculatedDigest = Hash::sha384(*canonicalizedData);
+            }
+            else if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha512")
+            {
+                calculatedDigest = Hash::sha512(*canonicalizedData);
+            }
+            else
+            {
+                Fail("unsupported digest algorithm: " + digestAlgorithm);
+            }
 
-            const std::string expectedDigest = Base64::decodeToString(expectedDigestValue);
-            const std::string calculatedDigest = Hash::sha256(*canonicalizedData);
-            Expect( expectedDigest == calculatedDigest,
-                   "unexpected digest value");
+            Expect(expectedDigest == calculatedDigest, "Digest value mismatch");
         }
 
 
         void validateRsaSignature(
             const std::string& canonicalizedSignedInfo,
             const util::Buffer& signature,
+            const std::string& algorithm,
             const X509Certificate& signerCertificate)
         {
             EVP_PKEY* pKey = signerCertificate.getPublicKey();
@@ -688,12 +751,13 @@ namespace
 
             std::shared_ptr<EVP_MD_CTX> rsaVerifyCtx(EVP_MD_CTX_create(), EVP_MD_CTX_free);
             Expect(rsaVerifyCtx != nullptr, "Can not create verification context.");
-
+            const std::string digestName = getRsaDigestName(algorithm);
             EVP_PKEY_CTX* keyContext = nullptr;
-            Expect(EVP_DigestVerifyInit(rsaVerifyCtx.get(), &keyContext, EVP_sha256(), nullptr, pKey) == 1,
+            Expect(EVP_DigestVerifyInit(rsaVerifyCtx.get(), &keyContext, EVP_get_digestbyname(digestName.c_str()),
+                                        nullptr, pKey) == 1,
                    "Can not initialize Digest Verification.");
 
-            Expect(EVP_PKEY_CTX_set_rsa_padding(keyContext, RSA_PKCS1_PSS_PADDING) == 1,
+            Expect(EVP_PKEY_CTX_set_rsa_padding(keyContext, getRsaPadding(algorithm)) == 1,
                    "Can not set RSA padding.");
 
             Expect(EVP_DigestVerifyUpdate(rsaVerifyCtx.get(),
@@ -722,18 +786,18 @@ namespace
             // GEMREQ-start A_17206
             // GEMREQ-start A_17205
             const std::string signatureString = xmlDocument.getElementText(xpathLiteral_signatureValue);
+            const std::string signatureAlgorithm = xmlDocument.getAttributeValue(xpathLiteral_signatureAlgorithm);
             TVLOG(2) << "Signature stored int TSL-File is [" << signatureString << "]";
+
+            const util::Buffer signature = Base64::decode(Base64::cleanupForDecoding(signatureString));
 
             if (signerCertificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
             {
-                if (! validateSignature(
-                        *canonicalizedSignedInfo,
-                        EllipticCurveUtils::convertSignatureFormat(
-                            Base64::decode(Base64::cleanupForDecoding(signatureString)),
-                            EllipticCurveUtils::SignatureFormat::XMLDSIG,
-                            EllipticCurveUtils::SignatureFormat::ASN1_DER),
-                        xmlDocument.getAttributeValue(xpathLiteral_signatureAlgorithm),
-                        signerCertificate))
+                if (! validateSignature(*canonicalizedSignedInfo,
+                                        EllipticCurveUtils::convertSignatureFormat(
+                                            signature, EllipticCurveUtils::SignatureFormat::XMLDSIG,
+                                            EllipticCurveUtils::SignatureFormat::ASN1_DER),
+                                        signatureAlgorithm, signerCertificate))
                 {
                     Fail2("Invalid signature", std::runtime_error);
                 }
@@ -742,9 +806,7 @@ namespace
             // GEMREQ-end A_17206
             else if (signerCertificate.getSigningAlgorithm() == SigningAlgorithm::rsaPss)
             {
-                const util::Buffer signature = Base64::decode(Base64::cleanupForDecoding(
-                    signatureString));
-                validateRsaSignature(*canonicalizedSignedInfo, signature, signerCertificate);
+                validateRsaSignature(*canonicalizedSignedInfo, signature, signatureAlgorithm, signerCertificate);
             }
             else
             {

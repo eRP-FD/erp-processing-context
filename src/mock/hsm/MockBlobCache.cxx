@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -21,7 +21,7 @@
 #endif
 #include "mock/tpm/TpmTestData.hxx"
 
-#include "mock_config.h"
+#include "mock/mock_config.h"
 
 
 namespace

@@ -1,8 +1,8 @@
 #include "erp/model/EvdgaBundle.hxx"
-#include "test/util/ResourceTemplates.hxx"
-#include "test/util/StaticData.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/util/Configuration.hxx"
+#include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
 

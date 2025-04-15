@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -15,15 +15,14 @@
 #include <pqxx/pqxx>
 #endif
 
-#include "erp/model/Binary.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/AuditData.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/Uuid.hxx"
 #include "test_config.h"

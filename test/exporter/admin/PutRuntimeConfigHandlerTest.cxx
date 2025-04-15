@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/MedicationExporterMain.hxx"
@@ -75,8 +75,8 @@ public:
             body.append("=" + value);
         }
         request.setBody(std::move(body));
-        SessionContext session{*serviceContext, request, response, accessLog};
-        PutRuntimeConfigHandler handler{ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS};
+        exporter::SessionContext session{*serviceContext, request, response, accessLog};
+        exporter::PutRuntimeConfigHandler handler{ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS};
         EXPECT_NO_THROW(handler.handleRequest(session));
         EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
     }
@@ -85,7 +85,7 @@ public:
     {
         ServerRequest request{Header(header)};
         request.header().setMethod(HttpMethod::GET);
-        SessionContext session{*serviceContext, request, response, accessLog};
+        exporter::SessionContext session{*serviceContext, request, response, accessLog};
         GetConfigurationHandler handler{
             ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
             std::make_unique<exporter::ConfigurationFormatter>(serviceContext->getRuntimeConfiguration())};

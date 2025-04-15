@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -32,7 +32,8 @@ TEST_F(EpaAccountLookupTest, allowed)
 }
 )_");
     EpaAccountLookup lookup(std::move(client));
-    auto epaAccount = lookup.lookup(model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
+    auto epaAccount =
+        lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::allowed);
     EXPECT_EQ(epaAccount.host, "huhu");
     EXPECT_EQ(epaAccount.port, 3);
@@ -58,7 +59,8 @@ TEST_F(EpaAccountLookupTest, denied)
 }
 )_");
     EpaAccountLookup lookup(std::move(client));
-    auto epaAccount = lookup.lookup(model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
+    auto epaAccount =
+        lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::deny);
     EXPECT_EQ(epaAccount.host, "huhu");
     EXPECT_EQ(epaAccount.port, 3);
@@ -71,7 +73,8 @@ TEST_F(EpaAccountLookupTest, notFound)
     client->setResponseStatus(HttpStatus::NotFound);
     client->setResponseBody(R"_()_");
     EpaAccountLookup lookup(std::move(client));
-    auto epaAccount = lookup.lookup(model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
+    auto epaAccount =
+        lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::notFound);
     EXPECT_EQ(epaAccount.host, "");
     EXPECT_EQ(epaAccount.port, 0);
@@ -84,7 +87,8 @@ TEST_F(EpaAccountLookupTest, unknown)
     client->setResponseStatus(HttpStatus::InternalServerError);
     client->setResponseBody(R"_(uh oh)_");
     EpaAccountLookup lookup(std::move(client));
-    auto epaAccount = lookup.lookup(model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
+    auto epaAccount =
+        lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::unknown);
     EXPECT_EQ(epaAccount.host, "");
     EXPECT_EQ(epaAccount.port, 0);
@@ -99,12 +103,10 @@ TEST_F(EpaAccountLookupTest, conflict)
 "errorCode": "statusMismatch"
 })_");
     EpaAccountLookup lookup(std::move(client));
-    auto epaAccount = lookup.lookup(model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
+    auto epaAccount =
+        lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), {std::make_tuple("huhu", 3)});
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::conflict);
     EXPECT_EQ(epaAccount.host, "huhu");
     EXPECT_EQ(epaAccount.port, 3);
     EXPECT_EQ(epaAccount.kvnr, model::Kvnr("X123456788", model::Kvnr::Type::gkv));
 }
-
-
-

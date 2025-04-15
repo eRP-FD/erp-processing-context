@@ -1,14 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Extension.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>

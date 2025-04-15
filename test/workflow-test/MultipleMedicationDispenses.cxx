@@ -1,11 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
@@ -79,21 +79,6 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
         task1, task1, task1, task1, task1, task1, task1
     };
 
-    // GET MedicationDispense/ID
-    for (size_t i = 0; i < GetParam().numMedicationDispenses; ++i)
-    {
-        const auto med = medicationDispenseGet(kvnr, model::MedicationDispenseId(task1, i).toString());
-        ASSERT_TRUE(med.has_value());
-        ASSERT_EQ(med->prescriptionId(), task1);
-        ASSERT_EQ(med->kvnr(), kvnr);
-        actorIdentifiers.push_back(kvnr);
-        expectedActions.push_back(model::AuditEvent::SubType::read);
-        prescriptionIds.emplace_back(task1);
-    }
-    auto noMed =
-        medicationDispenseGet(kvnr, model::MedicationDispenseId(task1, GetParam().numMedicationDispenses).toString());
-    ASSERT_FALSE(noMed.has_value());
-
     // GET MedicationDispense/
     {
         auto meds = medicationDispenseGetAll({}, JwtBuilder::testBuilder().makeJwtVersicherter(kvnr));
@@ -111,7 +96,7 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
         prescriptionIds.emplace_back(std::nullopt);
     }
 
-    // GET MedicationDispense/?identifier=https://gematik.de/fhir/NamingSystem/PrescriptionID|<PrescriptionID>
+    // GET MedicationDispense/?identifier=https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId|<PrescriptionID>
     {
         auto meds = medicationDispenseGetAll(
             "identifier=" + std::string{model::resource::naming_system::prescriptionID} + "|" + task1.toString(),

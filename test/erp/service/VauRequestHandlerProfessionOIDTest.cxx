@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -419,14 +419,14 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAbortForbidden)
 // GEMREQ-start A_19405
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesSuccess)
 {
-    A_19405.test("Valid professionOID claim in JWT");
+    A_19405_02.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/MedicationDispense";
     testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesForbidden)
 {
-    A_19405.test("Invalid professionOID claim in JWT");
+    A_19405_02.test("Invalid professionOID claim in JWT");
     const std::string_view endpoint = "/MedicationDispense";
     testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
@@ -439,27 +439,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
 }
 // GEMREQ-end A_19405
-
-TEST_F(VauRequestHandlerProfessionOIDTest, GetMedicationDispenseSuccess)
-{
-    A_19405.test("Valid professionOID claim in JWT");
-    const std::string_view endpoint = "/MedicationDispense/160.000.000.004.711.86";
-    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::NotFound);
-}
-TEST_F(VauRequestHandlerProfessionOIDTest, GetMedicationDispenseForbidden)
-{
-    A_19405.test("Invalid professionOID claim in JWT");
-    const std::string_view endpoint = "/MedicationDispense/160.000.000.004.711.86";
-    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtArzt, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
-    testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
-}
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllCommunicationSuccess)
 {

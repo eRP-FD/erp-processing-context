@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -85,7 +85,14 @@ Header ClientResponseReader::readHeader (stream_type& stream)
         markStreamAsClosed();
         throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, ec);
     }
-    else if (ec)
+    if (ec == boost::beast::error::timeout )
+    {
+        HeaderLog::vlog(1, "TcpRequestReader : socket read timeout");
+        // the connection is automatically closed by boost, when a timeout happens
+        markStreamAsClosed();
+        throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, ec);
+    }
+    if (ec)
     {
         HeaderLog::vlog(1, [&] {
             return std::ostringstream{} << "content of buffer is '"

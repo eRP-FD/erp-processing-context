@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -29,7 +29,7 @@ TEST(SeedTimerTest, distribute)//NOLINT(readability-function-cognitive-complexit
     ThreadPool pool;
     // There is no HTTPS server whose socket connection would keep the io_context busy and the threads alive.
     // Therefore we have to assign a work object to achieve the same effect.
-    boost::asio::io_context::work keepThreadsAlive(pool.ioContext());
+    auto workGuard{boost::asio::make_work_guard(pool.ioContext())};
     pool.setUp(threads, "test");
     ASSERT_NO_FATAL_FAILURE(testutils::waitFor([&]{return pool.getWorkerCount() >= threads; }));
     std::atomic_size_t callCount = 0;

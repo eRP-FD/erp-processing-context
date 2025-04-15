@@ -75,7 +75,8 @@ int main(int argc, char* argv[])
     {
         auto owd = std::filesystem::current_path();
         auto here = std::filesystem::path(args[0]).remove_filename().native();
-        chdir(here.c_str());
+        int changed = chdir(here.c_str());
+        Expect(changed == 0, "Failed to change directory");
         Expect(argc > 2, "Missing argument");
         auto view = getView(args[1]);
         Expect(view != nullptr, "no such view: " + std::string{args[1]});

@@ -181,6 +181,12 @@ std::string CFdSigErpManager::getCertificateNotAfterTimestamp() const
     return model::Timestamp::fromTmInUtc(x509Certificate.getNotAfter()).toXsDateTime();
 }
 
+void CFdSigErpManager::updateOcspResponseCacheOnBlobCacheUpdate()
+{
+    TLOG(INFO) << "Running FD.OSIG certificate validation because of BlobCache update";
+    executeJob();
+}
+
 
 void CFdSigErpManager::onStart()
 {

@@ -28,8 +28,6 @@ target_link_libraries(fhirtools
 
 antlr_target(fhirtools fhirpath.g4 PARSER LEXER VISITOR PACKAGE fhirtools)
 target_include_directories(fhirtools
-    PUBLIC
-        "${CMAKE_SOURCE_DIR}/src"
     PRIVATE
         "${ANTLR_fhirtools_OUTPUT_DIR}"
 )

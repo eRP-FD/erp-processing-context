@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -56,30 +56,25 @@ RUN cmake --build . --target production -- -l$(nproc) && \
     cmake --install . --strip --component production --prefix /erp &&\
     cp install_manifest_production.txt install_manifest.txt
 
-COPY docker/manifest.erp.release.template /erp/bin/erp-processing-context.manifest
-COPY docker/manifest.erp.release.kubernetes.template /erp/bin/erp-processing-context-kubernetes.manifest
-
-COPY docker/manifest.exporter.release.template /erp/bin/exporter.manifest
-COPY docker/manifest.exporter.release.kubernetes.template /erp/bin/exporter-kubernetes.manifest
-
+COPY docker/manifest.template /erp/bin/manifest.template
+COPY docker/manifest-kubernetes.template /erp/bin/manifest-kubernetes.template
+COPY docker/template.bash /build/Release/
 COPY docker/create_gramine_manifest.bash /build/Release/
+RUN chmod 755 template.bash create_gramine_manifest.bash
 
-# Create signed manifest files for erp-processing-context.
-RUN chmod 755 create_gramine_manifest.bash && \
-    ./create_gramine_manifest.bash \
-        install_manifest.txt  \
-        /erp/bin/erp-processing-context.manifest
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /erp/bin/erp-processing-context-kubernetes.manifest
+# Create manifest files:
 
-# Create signed manifest files for medication-exporter.
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /erp/bin/exporter.manifest
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /erp/bin/exporter-kubernetes.manifest
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -r /erp                                                                                        /erp/bin/manifest.template > /erp/bin/erp-processing-context.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -r /erp -a \"file:/var/config/erp/config/SerNo2TID.csv\"                                       /erp/bin/manifest.template > /erp/bin/exporter.manifest
+
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -r /erp -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\"                                               /erp/bin/manifest-kubernetes.template > /erp/bin/erp-processing-context-kubernetes.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -r /erp -a \"file:/var/config/erp/config/SerNo2TID.csv\",\"file:/erp/tsl/tsl-ssl-root-ca.pem\" /erp/bin/manifest-kubernetes.template > /erp/bin/exporter-kubernetes.manifest
+
+RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/erp-processing-context.manifest
+RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/exporter.manifest
+
+RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/erp-processing-context-kubernetes.manifest
+RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/exporter-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context.tar.gz /erp
 
@@ -92,30 +87,25 @@ RUN cmake --build . --target production -- -l$(nproc) && \
     cmake --install . --component production --prefix /debug/erp &&\
     cp install_manifest_production.txt install_manifest.txt
 
-COPY docker/manifest.erp.reldeb.template /debug/erp/bin/erp-processing-context.manifest
-COPY docker/manifest.erp.reldeb.kubernetes.template /debug/erp/bin/erp-processing-context-kubernetes.manifest
-
-COPY docker/manifest.exporter.reldeb.template /debug/erp/bin/exporter.manifest
-COPY docker/manifest.exporter.reldeb.kubernetes.template /debug/erp/bin/exporter-kubernetes.manifest
-
+COPY docker/manifest.template /debug/erp/bin/manifest.template
+COPY docker/manifest-kubernetes.template /debug/erp/bin/manifest-kubernetes.template
+COPY docker/template.bash /build/RelWithDebInfo/
 COPY docker/create_gramine_manifest.bash /build/RelWithDebInfo/
+RUN chmod 755 template.bash create_gramine_manifest.bash
 
-# Create signed manifest files for erp-processing-context.
-RUN chmod 755 create_gramine_manifest.bash && \
-    ./create_gramine_manifest.bash \
-        install_manifest.txt  \
-        /debug/erp/bin/erp-processing-context.manifest
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /debug/erp/bin/erp-processing-context-kubernetes.manifest
+# Create manifest files:
 
-# Create signed manifest files for medication-exporter.
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /debug/erp/bin/exporter.manifest
-RUN ./create_gramine_manifest.bash \
-        install_manifest.txt \
-        /debug/erp/bin/exporter-kubernetes.manifest
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -d /debug -r /debug                                                                                        /debug/erp/bin/manifest.template > /debug/erp/bin/erp-processing-context.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -d /debug -r /debug -a \"file:/var/config/erp/config/SerNo2TID.csv\"                                       /debug/erp/bin/manifest.template > /debug/erp/bin/exporter.manifest
+
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -d /debug -r /debug -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\"                                               /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/erp-processing-context-kubernetes.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -d /debug -r /debug -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\",\"file:/var/config/erp/config/SerNo2TID.csv\" /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/exporter-kubernetes.manifest
+
+RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/erp-processing-context.manifest
+RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/erp-processing-context-kubernetes.manifest
+
+RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/exporter.manifest
+RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/exporter-kubernetes.manifest
 
 RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 

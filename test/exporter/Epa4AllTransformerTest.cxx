@@ -1,16 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/exporter/Epa4AllTransformerTest.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/KbvOrganization.hxx"
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
 #include "exporter/ExporterRequirements.hxx"
@@ -19,6 +14,10 @@
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/KbvOrganization.hxx"
+#include "shared/model/Patient.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "test/util/ResourceTemplates.hxx"
 

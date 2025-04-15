@@ -1,36 +1,27 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/task/CloseTaskHandler.hxx"
-#include "shared/ErpRequirements.hxx"
-#include "shared/network/message/MimeType.hxx"
-#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/Composition.hxx"
-#include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/KbvMedicationCompounding.hxx"
-#include "erp/model/KbvMedicationFreeText.hxx"
-#include "erp/model/KbvMedicationIngredient.hxx"
-#include "erp/model/KbvMedicationPzn.hxx"
-#include "shared/model/Kvnr.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "erp/model/Signature.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
-#include "shared/model/ResourceNames.hxx"
 #include "erp/model/Task.hxx"
-#include "shared/server/request/ServerRequest.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/Composition.hxx"
+#include "shared/model/Device.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/Signature.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"

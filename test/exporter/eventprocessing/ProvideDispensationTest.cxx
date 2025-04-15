@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -253,3 +253,160 @@ TEST_F(ProvideDispensationTest, AuditEvent)
     EXPECT_EQ(auditData->prescriptionId(),
               model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1));
 }
+
+TEST_F(ProvideDispensationTest, AuditEventPRESCRIPTION_NO_EXIST)
+{
+    auto client = std::make_unique<EpaMedicationClientMock>();
+    client->setHttpStatusResponse(HttpStatus::OK);
+    client->setOperationOutcomeResponse(R"({
+"resourceType": "Parameters",
+"id": "example-epa-op-rx-dispensation-erp-output-parameters-1",
+"meta": {
+    "profile":  [
+        "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-dispensation-erp-output-parameters"
+    ]
+},
+"parameter":  [
+    {
+        "name": "rxDispensation",
+        "part":  [
+            {
+                "name": "prescriptionId",
+                "valueIdentifier": {
+                    "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+                    "value": "160.153.303.257.459"
+                }
+            },
+            {
+                "name": "authoredOn",
+                "valueDate": "2025-01-22"
+            },
+            {
+                "name": "operationOutcome",
+                "resource": {
+                    "resourceType": "OperationOutcome",
+                    "id": "255002c7-aa1b-4163-bdd4-ede482453cca",
+                    "meta": {
+                        "profile":  [
+                            "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-ms-operation-outcome"
+                        ]
+                    },
+                    "issue":  [
+                        {
+                            "severity": "information",
+                            "code": "informational",
+                            "details": {
+                                "coding":  [
+                                    {
+                                        "code": "MEDICATIONSVC_PRESCRIPTION_NO_EXIST",
+                                        "system": "https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-codes-cs",
+                                        "display": "Operation Successfully Completed in Medication Service"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+]
+})");
+
+    eventprocessing::EventDispatcher eventDispatcher{std::move(client)};
+    AuditDataCollector auditDataCollector;
+    eventprocessing::Outcome outcome{};
+    ASSERT_NO_FATAL_FAILURE(outcome = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    std::optional<model::AuditData> auditData;
+    ASSERT_TRUE(auditDataCollector.shouldCreateAuditEventOnSuccess());
+    EXPECT_EQ(outcome, eventprocessing::Outcome::SuccessAuditFail);
+    ASSERT_NO_FATAL_FAILURE(auditData.emplace(auditDataCollector.createData()));
+    ASSERT_TRUE(auditData);
+    EXPECT_EQ(auditData->agentType(), model::AuditEvent::AgentType::machine);
+    EXPECT_EQ(auditData->eventId(), model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
+    EXPECT_EQ(auditData->action(), model::AuditEvent::Action::create);
+    EXPECT_EQ(auditData->insurantKvnr(), model::Kvnr{"X12345678"});
+    EXPECT_EQ(auditData->deviceId(), 1);
+    EXPECT_EQ(auditData->prescriptionId(),
+              model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1));
+
+}
+
+TEST_F(ProvideDispensationTest,AuditEventPRESCRIPTION_STATUS)
+{
+    auto client = std::make_unique<EpaMedicationClientMock>();
+    client->setHttpStatusResponse(HttpStatus::OK);
+    client->setOperationOutcomeResponse(R"({
+"resourceType": "Parameters",
+"id": "example-epa-op-rx-dispensation-erp-output-parameters-1",
+"meta": {
+    "profile":  [
+        "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-dispensation-erp-output-parameters"
+    ]
+},
+"parameter":  [
+    {
+        "name": "rxDispensation",
+        "part":  [
+            {
+                "name": "prescriptionId",
+                "valueIdentifier": {
+                    "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+                    "value": "160.153.303.257.459"
+                }
+            },
+            {
+                "name": "authoredOn",
+                "valueDate": "2025-01-22"
+            },
+            {
+                "name": "operationOutcome",
+                "resource": {
+                    "resourceType": "OperationOutcome",
+                    "id": "255002c7-aa1b-4163-bdd4-ede482453cca",
+                    "meta": {
+                        "profile":  [
+                            "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-ms-operation-outcome"
+                        ]
+                    },
+                    "issue":  [
+                        {
+                            "severity": "information",
+                            "code": "informational",
+                            "details": {
+                                "coding":  [
+                                    {
+                                        "code": "MEDICATIONSVC_PRESCRIPTION_STATUS",
+                                        "system": "https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-codes-cs",
+                                        "display": "Operation Successfully Completed in Medication Service"
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+]
+})");
+
+    eventprocessing::EventDispatcher eventDispatcher{std::move(client)};
+    AuditDataCollector auditDataCollector;
+    eventprocessing::Outcome outcome{};
+    ASSERT_NO_FATAL_FAILURE(outcome = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    std::optional<model::AuditData> auditData;
+    ASSERT_TRUE(auditDataCollector.shouldCreateAuditEventOnSuccess());
+    EXPECT_EQ(outcome, eventprocessing::Outcome::SuccessAuditFail);
+    ASSERT_NO_FATAL_FAILURE(auditData.emplace(auditDataCollector.createData()));
+    ASSERT_TRUE(auditData);
+    EXPECT_EQ(auditData->agentType(), model::AuditEvent::AgentType::machine);
+    EXPECT_EQ(auditData->eventId(), model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
+    EXPECT_EQ(auditData->action(), model::AuditEvent::Action::create);
+    EXPECT_EQ(auditData->insurantKvnr(), model::Kvnr{"X12345678"});
+    EXPECT_EQ(auditData->deviceId(), 1);
+    EXPECT_EQ(auditData->prescriptionId(),
+              model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1));
+
+}
+

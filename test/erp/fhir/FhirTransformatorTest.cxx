@@ -1,14 +1,12 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/KbvMedicationIngredient.hxx"
-#include "erp/model/KbvMedicationPzn.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"

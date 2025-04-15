@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -1049,7 +1049,7 @@ TEST_F(ActivateTaskTest, DigaE16D)
     ASSERT_TRUE(exception);
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
-        R"(; Bundle.entry[0].resource{Composition}.type.coding[0].code: error: value must match fixed value: "e16D" (but is "e16A") (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Composition|1.1.0))");
+        R"(; Bundle.entry[0].resource{Composition}.type.coding[0].code: error: value must match fixed value: "e16D" (but is "e16A") (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Composition|1.1))");
 }
 
 TEST_F(ActivateTaskTest, DigaDeviceRequest)

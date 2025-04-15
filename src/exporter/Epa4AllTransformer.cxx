@@ -1,21 +1,18 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/Epa4AllTransformer.hxx"
-#include "erp/model/KbvComposition.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationCompounding.hxx"
-#include "erp/model/KbvMedicationFreeText.hxx"
-#include "erp/model/KbvMedicationPzn.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/KbvOrganization.hxx"
-#include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/Patient.hxx"
-#include "erp/model/Task.hxx"
+#include "shared/model/KbvComposition.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
+#include "shared/model/KbvMedicationCompounding.hxx"
+#include "shared/model/KbvMedicationPzn.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/KbvOrganization.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/Patient.hxx"
 #include "exporter/ExporterRequirements.hxx"
 #include "exporter/model/DataAbsentReason.hxx"
 #include "exporter/model/OrganizationDirectory.hxx"
@@ -23,7 +20,6 @@
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
 #include "model/EpaMedicationPznIngredient.hxx"
-#include "model/EpaMedicationTypeExtension.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Coding.hxx"

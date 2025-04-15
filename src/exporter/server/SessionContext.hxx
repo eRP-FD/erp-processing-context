@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -17,6 +17,7 @@
 
 class MedicationExporterServiceContext;
 
+namespace exporter {
 
 /**
  * A session context is a bag of values that are only accessible, with one exception, only from a single thread
@@ -43,5 +44,6 @@ private:
     Header::keyValueMap_t mOuterResponseHeaderFields;
 };
 
+} // namespace exporter
 
 #endif

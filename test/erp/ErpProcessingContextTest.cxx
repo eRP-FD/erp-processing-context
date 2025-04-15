@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -207,16 +207,8 @@ TEST_F(ErpProcessingContextTest, PostTaskAbort_ProfessionOIDs)
 // GEMREQ-start A_19405
 TEST_F(ErpProcessingContextTest, GetAllMedicationDispenses_ProfessionOIDs)
 {
-    A_19405.test("Unit test of allowedForProfessionOID() function");
+    A_19405_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/MedicationDispense", {
-            "1.2.276.0.76.4.49", // oid_versicherter
-    });
-}
-
-TEST_F(ErpProcessingContextTest, GetMedicationDispense_ProfessionOIDs)
-{
-    A_19405.test("Unit test of allowedForProfessionOID() function");
-    checkAllOids(HttpMethod::GET, "/MedicationDispense/{id}", {
             "1.2.276.0.76.4.49", // oid_versicherter
     });
 }

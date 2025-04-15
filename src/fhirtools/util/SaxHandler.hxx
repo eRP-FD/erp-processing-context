@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -111,7 +111,7 @@ private:
                               int nbNamespaces, const xmlChar** namespaces, int nbAttributes,
                               int nbDefaulted, const xmlChar** attributes);
     static void cErrorCallback(void* self, const char* msg, ...);
-    static void structuredErrorCallback(void* self, xmlErrorPtr err);
+    static void structuredErrorCallback(void* self, const xmlError* err);
     xmlSAXHandler mHandler{};
 };
 }

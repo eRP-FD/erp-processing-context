@@ -1,22 +1,22 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/MedicationDispenseOperationParameters.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Uuid.hxx"
 
@@ -30,7 +30,8 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessio
 {
     try
     {
-        A_22069.start("Detect input resource type: Bundle or MedicationDispense");
+        A_22069_01.start("Detect input resource type: Bundle or MedicationDispense");
+        A_24283_02.start("Detect input resource type: Bundle or MedicationDispense");
         auto unspec = createResourceFactory<model::UnspecifiedResource>(session);
         const auto resourceType = unspec.getResourceType();
 
@@ -55,7 +56,8 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessio
             return medicationDispensesFromParameters(std::move(unspec), forOperation, workflow);
         }
         ErpFail(HttpStatus::BadRequest, "Unsupported resource type in request body: " + std::string(resourceType));
-        A_22069.finish();
+        A_24283_02.finish();
+        A_22069_01.finish();
     }
     catch (const model::ModelException& e)
     {

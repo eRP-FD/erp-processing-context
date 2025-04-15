@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -122,7 +122,7 @@ services:
       while true ;
           do echo 'Waiting for postgresql' ;
           psql -p 5432 -U erp_admin -d erp_processing_context -h postgres-erp -c '\\q' ;
-          if [ $? -eq 0 ] ; then
+          if [ $$? -eq 0 ] ; then
               break ;
           fi ;
           sleep 0.5 ;
@@ -130,7 +130,7 @@ services:
       while true ;
           do echo 'Waiting for postgresql' ;
           psql -p 5433 -U erp_admin -d erp_event_db -h postgres-exporter -c '\\q' ;
-          if [ $? -eq 0 ] ; then
+          if [ $$? -eq 0 ] ; then
               break ;
           fi ;
           sleep 0.5 ;
@@ -142,7 +142,7 @@ services:
   # epa-test-mock
   # --------------------------------------------------------------------------------
   epa-test-mock:
-    image: de.icr.io/erp_dev/epa-test-mock:v-0.76.0
+    image: de.icr.io/erp_dev/epa-test-mock:v-0.82.0
     container_name: epa-test-mock
     ports:
       - "18888:8888"

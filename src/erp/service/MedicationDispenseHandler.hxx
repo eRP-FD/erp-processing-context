@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -18,13 +18,6 @@ class GetAllMedicationDispenseHandler: public MedicationDispenseHandlerBase
 {
 public:
     GetAllMedicationDispenseHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
-    void handleRequest(PcSessionContext& session) override;
-};
-
-class GetMedicationDispenseHandler: public ErpRequestHandler
-{
-public:
-    GetMedicationDispenseHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     void handleRequest(PcSessionContext& session) override;
 };
 

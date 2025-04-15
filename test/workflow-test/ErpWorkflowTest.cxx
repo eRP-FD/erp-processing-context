@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,7 +10,7 @@
 #include "shared/ErpRequirements.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
-#include "erp/model/KbvBundle.hxx"
+#include "shared/model/KbvBundle.hxx"
 #include "shared/model/Resource.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -259,8 +259,9 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurantProxy) // NOLINT
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         { prescriptionId }, kvnr.id(), "en", startTime,
-        { telematicIdDoctor, kvnr.id(), kvnrRepresentative->id() }, { 0 },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del});
+        { telematicIdDoctor, kvnr.id(), kvnrRepresentative->id(), kvnr.id() }, { 0 },
+                     {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+                      model::AuditEvent::SubType::del, model::AuditEvent::SubType::read});
 }
 
 TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurant) // NOLINT
@@ -295,8 +296,9 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurant) // NOLINT
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         { prescriptionId }, kvnr, "de", startTime,
-        { telematicIdDoctor, kvnr, kvnr }, { 0 },
-        { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del });
+        { telematicIdDoctor, kvnr, kvnr, kvnr }, { 0 },
+                     {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
+                      model::AuditEvent::SubType::del, model::AuditEvent::SubType::read});
 }
 
 TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
@@ -325,9 +327,9 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         { prescriptionId }, kvnr, "de", startTime,
-        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy }, { 0, 2, 3, 4 },
+        { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr }, { 0, 2, 3, 4 },
         { model::AuditEvent::SubType::update, model::AuditEvent::SubType::read,
-          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del });
+          model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::del, model::AuditEvent::SubType::read });
 }
 
 TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
@@ -1580,7 +1582,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
               std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::direkteZuweisung)));
 
     // Send request with HttpMethod::GET
-    args.vauPath = "/MedicationDispense/" + prescriptionId_direkteZuweisung.toString();
+    args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString();
     args.method = HttpMethod::GET;
     args.jwt = defaultJwt();
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));

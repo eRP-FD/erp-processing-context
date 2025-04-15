@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,13 +8,12 @@
 #include "erp/service/task/DispenseTaskHandler.hxx"
 
 #include "shared/ErpRequirements.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
 
 /**
  * @brief Construct a new Dispense Task Handler:: Dispense Task Handler object

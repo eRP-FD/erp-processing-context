@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,14 +8,12 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_ERXRECEIPT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_ERXRECEIPT_HXX
 
-#include "erp/model/Binary.hxx"
-#include "erp/model/Composition.hxx"
-#include "erp/model/Device.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/Composition.hxx"
+#include "shared/model/Device.hxx"
 #include "shared/model/PrescriptionId.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/util/Uuid.hxx"
-
-#include <rapidjson/document.h>
 
 namespace model
 {

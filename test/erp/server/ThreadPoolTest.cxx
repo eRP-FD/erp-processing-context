@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -21,7 +21,7 @@ TEST(ThreadPoolTest, runOnAllThreads)//NOLINT(readability-function-cognitive-com
     ThreadPool threadPool;
     // There is no HTTPS server whose socket connection would keep the io_context busy and the threads alive.
     // Therefore we have to assign a work object to achieve the same effect.
-    boost::asio::io_context::work keepThreadsAlive(threadPool.ioContext());
+    auto workGuard{boost::asio::make_work_guard(threadPool.ioContext())};
 
     threadPool.setUp(workers, "test");
     //wait until all threads have started:

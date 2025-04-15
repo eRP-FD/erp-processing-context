@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,10 +8,10 @@
 #ifndef ERP_EXPORTER_TASKEVENTEXPORTERTEST_HXX
 #define ERP_EXPORTER_TASKEVENTEXPORTERTEST_HXX
 
-#include "erp/model/Binary.hxx"
 #include "exporter/TelematikLookup.hxx"
-#include "exporter/database/ExporterDatabaseModel.hxx"
+#include "exporter/database/TaskEvent.hxx"
 #include "exporter/model/TaskEvent.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "test/util/JwtBuilder.hxx"

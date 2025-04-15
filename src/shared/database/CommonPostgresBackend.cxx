@@ -1,6 +1,5 @@
 #include "shared/database/CommonPostgresBackend.hxx"
 #include "DatabaseModel.hxx"
-#include "erp/database/ErpDatabaseModel.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/TLog.hxx"

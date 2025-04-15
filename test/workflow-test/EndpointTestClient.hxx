@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,13 +8,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_TEXT_ENDPOINTTESTCLIENT_HXX
 
-#include "shared/network/client/HttpsClient.hxx"
-#include "shared/hsm/HsmPool.hxx"
-#include "erp/server/HttpsServer.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "erp/server/HttpsServer.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/network/client/HttpsClient.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/workflow-test/TestClient.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/workflow-test/TestClient.hxx"
 
 class EndpointTestClient final : public TestClient
 {

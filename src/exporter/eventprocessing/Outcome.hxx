@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -15,6 +15,7 @@ namespace eventprocessing
 enum class Outcome : uint8_t
 {
     Success,
+    SuccessAuditFail,
     Retry,
     DeadLetter,
     Conflict,

@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 # non-exclusively licensed to gematik GmbH
 #
 
@@ -94,7 +94,7 @@ add_library(tee3 STATIC
     rca-chains.cxx
 )
 target_compile_definitions(tee3 PRIVATE ENABLE_LOG=1)
-target_include_directories(tee3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(tee3 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # "library/XXX/Header.hxx"
 target_link_libraries(tee3
     PUBLIC
         erp-shared

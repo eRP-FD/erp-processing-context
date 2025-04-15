@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -1022,4 +1022,5 @@ INSTANTIATE_TEST_SUITE_P(
                  "Resource.contained[0]{Resource}.extension[0].url"},
             },
         },
+        { "Resource", "test/fhir-path/issues/ERP-26128-ValueUrlExtension.xml"},
     }));

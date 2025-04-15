@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"

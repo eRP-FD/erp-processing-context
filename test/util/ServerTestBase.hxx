@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -14,19 +14,17 @@
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/JsonTestUtils.hxx"
 
-#include "shared/network/client/HttpsClient.hxx"
-#include "shared/crypto/Jwt.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
-#include "shared/hsm/HsmPool.hxx"
-#include "shared/hsm/KeyDerivation.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/Task.hxx"
-#include "shared/model/TelematikId.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/HttpsServer.hxx"
+#include "shared/crypto/Jwt.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/hsm/HsmPool.hxx"
+#include "shared/model/TelematikId.hxx"
 #include "shared/util/ByteHelper.hxx"
-#include "shared/util/Configuration.hxx"
 #include "shared/util/Uuid.hxx"
 #include "test/util/JwtBuilder.hxx"
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -17,13 +17,16 @@ public:
     void setExpectedInput(const std::string& input);
 
     Response send(const model::Kvnr& kvnr, const std::string& payload);
-    Response sendProvidePrescription(const model::Kvnr& kvnr, const std::string& payload) override;
-    Response sendProvideDispensation(const model::Kvnr& kvnr, const std::string& payload) override;
-    Response sendCancelPrescription(const model::Kvnr& kvnr, const std::string& payload) override;
+    Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                     const std::string& payload) override;
+    Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                     const std::string& payload) override;
+    Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                    const std::string& payload) override;
     void addLogData(const std::string& key, const std::any& data) override
     {
-        (void)key;
-        (void)data;
+        (void) key;
+        (void) data;
         // Not required in mock.
     }
 

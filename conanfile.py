@@ -1,5 +1,5 @@
-# (C) Copyright IBM Deutschland GmbH 2021, 2023
-# (C) Copyright IBM Corp. 2021, 2023
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -46,7 +46,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "UNRELEASED VERSION",
+        'release_version': "1.17.1-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -55,26 +55,23 @@ class ErpProcessingContext(ConanFile):
     }
     # generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "."
-    build_requires = []
     requires = [
         'antlr4-cppruntime/4.13.1',
-        'boost/1.86.0',
+        'boost/1.87.0',
         'botan/3.6.1',
         'date/3.0.3',  # date can be removed as soon as we use C++20
         'glog/0.7.1',
         'gsl-lite/0.41.0',
-        'gtest/1.13.0',
+        'gtest/1.16.0',
         'hiredis/1.2.0',
-        'libpq/15.4',
-        'libpqxx/7.9.2',
-        'libunwind/1.8.0',
-        'libxml2/2.11.9',
+        'libpqxx/7.10.0',
+        'libxml2/2.13.6',
         'magic_enum/0.9.7',
-        'openssl/3.1.8@erp/public',
+        'openssl/3.1.8+erp',
         'rapidjson/cci.20230929',
         'redis-plus-plus/1.3.13',
         'zlib/1.3.1',
-        'zstd/1.5.6'  # database compression
+        'zstd/1.5.7'  # database compression
     ]
 
     def set_version(self):
@@ -86,6 +83,12 @@ class ErpProcessingContext(ConanFile):
         if self.options.with_hsm_tpm_production:
             self.requires('tpmclient/0.15.0-b40')
             self.requires('hsmclient/2.13.0-b89')
+        self.requires('libunwind/1.8.1', override=True) # Conflict originates from glog/0.7.1
+        self.requires('libpq/15.12', override=True) # Conflict originates from libpqxx/7.10.0
+
+    def build_requirements(self):
+        self.tool_requires('xmlsec/1.3.6', options={"shared": False})
+
 
     def layout(self):
         cmake_layout(self)
@@ -110,13 +113,13 @@ class ErpProcessingContext(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        tc.variables["ERP_BUILD_VERSION"] = self.version or "LOCAL"
-        tc.variables["ERP_RELEASE_VERSION"] = self.options.release_version
-        tc.variables["ERP_WITH_HSM_MOCK"] = self.options.with_hsm_mock
-        tc.variables["ERP_WITH_HSM_TPM_PRODUCTION"] = self.options.with_hsm_tpm_production
-        tc.variables["ERP_WARNING_AS_ERROR"] = self.options.with_warning_as_error
+        tc.cache_variables["ERP_BUILD_VERSION"] = self.version or "LOCAL"
+        tc.cache_variables["ERP_RELEASE_VERSION"] = self.options.release_version
+        tc.cache_variables["ERP_WITH_HSM_MOCK"] = self.options.with_hsm_mock
+        tc.cache_variables["ERP_WITH_HSM_TPM_PRODUCTION"] = self.options.with_hsm_tpm_production
+        tc.cache_variables["ERP_WARNING_AS_ERROR"] = self.options.with_warning_as_error
         if self.options.with_ccache:
-            tc.variables["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
+            tc.cache_variables["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
 
         tc.generate()
 

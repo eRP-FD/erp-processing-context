@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -466,6 +466,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_CONNECTION_MAX_AGE_MINUTES            , {"ERP_MEDICATION_EXPORTER_POSTGRES_CONNECTION_MAX_AGE_MINUTES"            , "/erp-medication-exporter/postgres/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections will be closed and re-opened."}},
 
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_CONNECT_TIMEOUT_SECONDS      , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_CONNECT_TIMEOUT_SECONDS"      , "/erp-medication-exporter/epa-account-lookup/connectTimeoutSeconds", Flags::categoryEnvironment, "HTTPs Client configuration"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL         , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL"         , "/erp-medication-exporter/epa-account-lookup/dnsRefreshInterval", Flags::categoryEnvironment, "DNS refresh interval for ePAs [HH:MM:SS]"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS" , "/erp-medication-exporter/epa-account-lookup/resolveTimeoutMilliseconds", Flags::categoryEnvironment, "HTTPs Client configuration"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT                     , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT"                     , "/erp-medication-exporter/epa-account-lookup/endpoint", Flags::categoryEnvironment, "Lookup endpoint on the EPA side"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT                   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT"                   , "/erp-medication-exporter/epa-account-lookup/userAgent", Flags::categoryEnvironment, "Our user agent used in lookup request"}},

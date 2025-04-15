@@ -12,6 +12,7 @@
 #include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/network/message/Header.hxx"
+#include "shared/erp-serverinfo.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"
@@ -25,7 +26,6 @@
 #include "mock/tsl/MockTslManager.hxx"
 #endif
 #if WITH_HSM_TPM_PRODUCTION > 0
-#include "shared/enrolment/EnrolmentHelper.hxx"
 #include "shared/hsm/production/HsmProductionClient.hxx"
 #include "shared/hsm/production/HsmProductionFactory.hxx"
 #include "shared/tpm/TpmProduction.hxx"
@@ -34,6 +34,7 @@
 #include <boost/asio/detached.hpp>
 #include <boost/asio/io_context.hpp>
 #include <boost/beast/http/write.hpp>
+#include <shared/enrolment/EnrolmentHelper.hxx>
 #include <charconv>
 #include <filesystem>
 #include <iostream>
@@ -103,7 +104,7 @@ MedicationExporterFactories createProductionFactories()
     factories.adminServerFactory = [](const std::string_view address, uint16_t port,
                                       RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                       bool enforceClientAuthentication, const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers),
+        return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
                                              dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
@@ -123,7 +124,7 @@ MedicationExporterFactories createProductionFactories()
     factories.enrolmentServerFactory = [](const std::string_view address, uint16_t port,
                                           RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                           bool enforceClientAuthentication, const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers),
+        return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
                                              dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
@@ -166,7 +167,7 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
         req.set(Header::XRequestId, Uuid().toString());
         req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
         req.body() = "{}";
-        auto response = co_await clientPool->sendTeeRequest(host, req, empty);
+        auto response = co_await clientPool->sendTeeRequest(host, Uuid{}.toString(), req, empty);
         LOG(INFO) << "got response after waiting " << waitTime;
     }
     catch (const std::exception& e)
@@ -177,16 +178,18 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
 
 void testHttpsClient(MedicationExporterServiceContext& serviceContext)
 {
-    auto fqdns = Configuration::instance().epaFQDNs();
+    const auto& config = Configuration::instance();
+    const auto& userAgent = config.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT);
+    auto fqdns = config.epaFQDNs();
     auto fqdn = fqdns.front();
     model::Kvnr kvnr{"X1234567890"};
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.17.0");
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", userAgent);
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
-            client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
+            client.sendConsentDecisionsRequest(Uuid{}.toString(), kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
             LOG(INFO) << "finished consent... ";
         }).detach();
     }
@@ -195,10 +198,10 @@ void testHttpsClient(MedicationExporterServiceContext& serviceContext)
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", "ERP-FD/1.17.0");
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", userAgent);
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
-            client.sendConsentDecisionsRequest(kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
+            client.sendConsentDecisionsRequest(Uuid{}.toString(), kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
             LOG(INFO) << "finished consent... ";
         }).detach();
     }

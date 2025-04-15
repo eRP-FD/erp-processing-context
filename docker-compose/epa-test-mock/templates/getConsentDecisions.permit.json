@@ -1,0 +1,12 @@
+{
+  "data": [
+    {
+      "functionId": "medication",
+      "decision": "deny"
+    },
+    {
+      "functionId": "erp-submission",
+      "decision": "permit"
+    }
+  ]
+}

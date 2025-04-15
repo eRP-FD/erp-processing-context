@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -33,18 +33,20 @@ IEpaMedicationClient::Response EpaMedicationClientMock::send(const model::Kvnr&,
     }
     return {.httpStatus = mHttpStatus, .body = model::NumberAsStringParserDocument::fromJson(mOperationOutcome)};
 }
-IEpaMedicationClient::Response EpaMedicationClientMock::sendProvidePrescription(const model::Kvnr& kvnr,
+IEpaMedicationClient::Response EpaMedicationClientMock::sendProvidePrescription(const std::string&,
+                                                                                const model::Kvnr& kvnr,
                                                                                 const std::string& payload)
 {
     return send(kvnr, payload);
 }
-IEpaMedicationClient::Response EpaMedicationClientMock::sendProvideDispensation(const model::Kvnr& kvnr,
+IEpaMedicationClient::Response EpaMedicationClientMock::sendProvideDispensation(const std::string&,
+                                                                                const model::Kvnr& kvnr,
                                                                                 const std::string& payload)
 {
     return send(kvnr, payload);
 }
-IEpaMedicationClient::Response EpaMedicationClientMock::sendCancelPrescription(const model::Kvnr& kvnr,
-                                                                               const std::string& payload)
+IEpaMedicationClient::Response
+EpaMedicationClientMock::sendCancelPrescription(const std::string&, const model::Kvnr& kvnr, const std::string& payload)
 {
     return send(kvnr, payload);
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -19,6 +19,7 @@
 class RequestHandlerManager;
 class AccessLog;
 
+namespace exporter {
 
 class ExporterRequestHandler : public PartialRequestHandler
 {
@@ -51,5 +52,6 @@ public:
     ~ServerSession() = default;
 };
 
+} // namespace exporter
 
 #endif

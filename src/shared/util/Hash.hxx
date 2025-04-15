@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -19,8 +19,10 @@
 class Hash
 {
 public:
-    static std::vector<char> sha1 (gsl::span<const char> source);
-    static std::vector<char> sha256 (gsl::span<const char> source);
+    static std::vector<char> sha1(gsl::span<const char> source);
+    static std::vector<char> sha256(gsl::span<const char> source);
+    static std::vector<char> sha384(gsl::span<const char> source);
+    static std::vector<char> sha512(gsl::span<const char> source);
 
     /**
      * Return the binary SHA1 hash of the given data.
@@ -37,6 +39,28 @@ public:
      * Return the binary SHA 256 hash of the given data.
      */
     static util::Buffer sha256 (const util::Buffer& data);
+
+    /**
+     * Return the binary SHA 384 hash of the given data.
+     * Note that the returned string still contains binary data, not a hex or base64 representation.
+     */
+    static std::string sha384(const std::string& data);
+
+    /**
+     * Return the binary SHA 384 hash of the given data.
+     */
+    static util::Buffer sha384(const util::Buffer& data);
+
+    /**
+     * Return the binary SHA 512 hash of the given data.
+     * Note that the returned string still contains binary data, not a hex or base64 representation.
+     */
+    static std::string sha512(const std::string& data);
+
+    /**
+     * Return the binary SHA 512 hash of the given data.
+     */
+    static util::Buffer sha512(const util::Buffer& data);
 
     /**
      * Return the binary Hmac Cash based on SHA 256 algorithm.

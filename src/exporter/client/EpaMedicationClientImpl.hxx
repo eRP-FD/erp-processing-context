@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -38,16 +38,19 @@ public:
     EpaMedicationClientImpl(boost::asio::io_context& ioContext, std::string hostname,
                             std::shared_ptr<Tee3ClientPool> teeClientPool);
 
-    Response sendProvidePrescription(const model::Kvnr& kvnr, const std::string& payload) override;
-    Response sendProvideDispensation(const model::Kvnr& kvnr, const std::string& payload) override;
-    Response sendCancelPrescription(const model::Kvnr& kvnr, const std::string& payload) override;
+    Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                     const std::string& payload) override;
+    Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                     const std::string& payload) override;
+    Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                    const std::string& payload) override;
     void addLogData(const std::string& key, const std::any& data) override;
 
     bool testConnection();
 
 private:
-    Response sendRequestBlocking(Tee3Client::Request req);
-    boost::asio::awaitable<Tee3Client::Response> sendRequest(Tee3Client::Request req);
+    Response sendRequestBlocking(const std::string& xRequestId, Tee3Client::Request req);
+    boost::asio::awaitable<Tee3Client::Response> sendRequest(std::string xRequestId, Tee3Client::Request req);
     Tee3Client::Request request(boost::beast::http::verb verb, std::string_view target, const model::Kvnr& kvnr);
 
     boost::asio::io_context& mIoContext;

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -88,8 +88,15 @@ std::string PatchChargeItemParameters::MarkingFlag::toExtensionJson() const
 std::optional<model::PrescriptionType> CreateTaskParameters::getPrescriptionType() const
 {
     const auto stringValue = getStringValue(workFlowTypePointer);
-    const uint8_t numeric = static_cast<uint8_t>(std::stoi(std::string{stringValue}));
-    return magic_enum::enum_cast<model::PrescriptionType>(numeric);
+    try
+    {
+        const uint8_t numeric = static_cast<uint8_t>(std::stoi(std::string{stringValue}));
+        return magic_enum::enum_cast<model::PrescriptionType>(numeric);
+    }
+    catch (const std::exception& ia)
+    {
+        ModelFail(ia.what());
+    }
 }
 
 // GEMREQ-start A_22878#getChargeItemMarkingFlag

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,16 +9,7 @@
 #include "TestUtils.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/database/PostgresBackend.hxx"
-#include "erp/model/ChargeItem.hxx"
-#include "erp/model/Composition.hxx"
-#include "erp/model/Device.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/Patient.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -27,6 +18,12 @@
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/model/Composition.hxx"
+#include "shared/model/Device.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/Patient.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/util/Base64.hxx"
@@ -37,7 +34,6 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
-#include "test/mock/RegistrationMock.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"

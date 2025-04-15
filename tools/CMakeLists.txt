@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -16,14 +16,10 @@ find_package(magic_enum REQUIRED)
 
 set(VAU_ENC_SOURCES vau_encrypt/vau_encrypt_main.cxx)
 
+include_directories(${CMAKE_SOURCE_DIR}) # "tools/Header.hxx"
+
 add_library(erp-tool-lib EXCLUDE_FROM_ALL OBJECT ${ERP_TOOL_LIB_SOURCES})
 target_compile_definitions(erp-tool-lib PUBLIC WITH_HSM_MOCK=1)
-target_include_directories(erp-tool-lib
-    PRIVATE
-        "${CMAKE_CURRENT_BINARY_DIR}"
-    PUBLIC
-        "${CMAKE_CURRENT_SOURCE_DIR}"
-)
 target_link_libraries(erp-tool-lib
     PUBLIC
         erp-hsm-tpm-mock
@@ -51,9 +47,6 @@ target_link_libraries(enrolment-api-client
        rapidjson
 )
 
-target_include_directories(enrolment-api-client
-    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/.. ${CMAKE_SOURCE_DIR}/src)
-
 # The blob-db-initialization relies on HSM and TPM support. On platforms where they are not supported, the tool can
 # not be built.
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -67,10 +60,6 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
             erp-hsm-tpm-mock
             erp-processing-context-files
             magic_enum::magic_enum
-    )
-    target_include_directories(
-        blob-db-initialization
-            PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/..  # Allow a leading `tools/` in include paths.
     )
     install_libs_for(blob-db-initialization blob-db-initialization)
     install(TARGETS blob-db-initialization COMPONENT blob-db-initialization)
@@ -100,3 +89,5 @@ target_link_libraries(tee3send
 )
 
 add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate resources)
+
+add_subdirectory(fhirinstall)

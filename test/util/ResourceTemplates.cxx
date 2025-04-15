@@ -1,16 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/util/ResourceTemplates.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
@@ -33,7 +33,7 @@ std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
-    Versions::KBV_EVDGA_1_1_0,
+    Versions::KBV_EVDGA_1_1_1,
 };
 
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
@@ -74,7 +74,7 @@ Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[
 
 Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference [[maybe_unused]])
 {
-    return KBV_EVDGA_1_1_0;
+    return KBV_EVDGA_1_1_1;
 }
 
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)

@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
 #include "erp/admin/PutRuntimeConfigHandler.hxx"
@@ -34,6 +34,7 @@ public:
 
     void changePN3(bool enable, const std::optional<model::Timestamp>& expiry)
     {
+        header.setMethod(HttpMethod::PUT);
         ServerRequest request{Header(header)};
         std::string body = std::string{"AcceptPN3="} + (enable ? "True" : "fAlse");
         if (expiry)
@@ -49,6 +50,7 @@ public:
 
     void checkGetConfigPn3(bool shouldBeEnabled, const std::optional<model::Timestamp>& expectedExpiry)
     {
+        header.setMethod(HttpMethod::GET);
         ServerRequest request{Header(header)};
         SessionContext session{serviceContext, request, response, accessLog};
         GetConfigurationHandler handler{ConfigurationKey::ADMIN_CREDENTIALS,

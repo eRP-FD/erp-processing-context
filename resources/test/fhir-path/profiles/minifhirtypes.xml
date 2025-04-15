@@ -83,6 +83,46 @@
     </resource>
   </entry>
   <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/url"/>
+    <resource>
+      <StructureDefinition>
+        <id value="url"/>
+        <url value="http://fhir-tools.test/minifhirtypes/url"/>
+        <version value="4.0.1"/>
+        <name value="url"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="false"/>
+        <type value="url"/>
+        <snapshot>
+          <element id="url">
+            <path value="url"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="url"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="url.value">
+            <path value="url.value"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="url.value"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
     <fullUrl value="http://fhir-tools.test/minifhirtypes/BackboneElement"/>
     <resource>
       <StructureDefinition>
@@ -266,6 +306,9 @@
             </type>
             <type>
               <code value="decimal"/>
+            </type>
+            <type>
+              <code value="url"/>
             </type>
           </element>
         </snapshot>

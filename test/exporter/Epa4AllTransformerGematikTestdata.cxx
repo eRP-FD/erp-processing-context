@@ -1,27 +1,27 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
-#include "erp/model/KbvOrganization.hxx"
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/Patient.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
 #include "exporter/ExporterRequirements.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/KbvOrganization.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/Patient.hxx"
 #include "test/exporter/Epa4AllTransformerTest.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <fstream>
 
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 

@@ -1,27 +1,25 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
-
-#include "erp/model/MedicationDispenseBundle.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
-#include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "shared/util/FileHelper.hxx"
-#include "shared/util/Environment.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "test/util/StaticData.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/Patient.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
+#include <shared/crypto/EllipticCurveUtils.hxx>
 #include <chrono>
 
 using namespace std::chrono_literals;

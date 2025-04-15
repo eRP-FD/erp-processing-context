@@ -1,11 +1,11 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_EVDGAHEALTHAPPREQUEST_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_EVDGAHEALTHAPPREQUEST_HXX
 
-#include "Pzn.hxx"
+#include "shared/model/Pzn.hxx"
 #include "shared/model/Resource.hxx"
 
 namespace model

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -13,12 +13,7 @@
 #include "shared/database/DatabaseCodec.hxx"
 #include "shared/database/DatabaseModel.hxx"
 #include "shared/hsm/ErpTypes.hxx"
-#include "shared/hsm/HsmClient.hxx"
-#include "shared/model/AuditData.hxx"
-#include "shared/model/Bundle.hxx"
-#include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
-#include "shared/model/TelematikId.hxx"
 #include "shared/model/Timestamp.hxx"
 
 #include <string>
@@ -103,25 +98,6 @@ struct ChargeItem {
     ::std::optional<EncryptedBlob> receiptJson = {};
     EncryptedBlob billingData = {};
     EncryptedBlob billingDataJson = {};
-};
-
-class AccessTokenIdentity
-{
-public:
-    explicit AccessTokenIdentity(const JWT& jwt);
-    AccessTokenIdentity(const model::TelematikId& id, std::string_view name, std::string_view oid);
-
-    std::string getJson() const;
-    const model::TelematikId& getId() const;
-    const std::string& getName() const;
-    const std::string& getOid() const;
-
-    static AccessTokenIdentity fromJson(const std::string& json);
-
-private:
-    model::TelematikId mId;
-    std::string mName;
-    std::string mOid;
 };
 
 }// namespace db_model

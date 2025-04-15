@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 #include "exporter/tee3/EpaCertificateService.hxx"
@@ -11,6 +11,7 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/HeaderLog.hxx"
+#include "shared/util/Uuid.hxx"
 #include "tee3/library/crypto/tee3/Tee3Protocol.hxx"
 #include "tee3/library/util/cbor/CborDeserializer.hxx"
 
@@ -97,7 +98,7 @@ boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInt
                                "/CertData." + certId.hash + '-' + std::to_string(certId.version), 11};
     req.set(Header::Tee3::XUserAgent,
             config.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT));
-    auto resp = co_await client.send(req);
+    auto resp = co_await client.send(Uuid{}.toString(), req);
     Expect(! resp.has_error(), "certificate download failed: cert: " + certId.hash +
                                    " version: " + std::to_string(certId.version) + ": " + resp.error().message());
     HeaderLog::vlog(3, [&] {

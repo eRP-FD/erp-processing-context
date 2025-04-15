@@ -1,16 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/Task.hxx"
-#include "erp/model/Composition.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/ErpConstants.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/model/Composition.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/ResourceNames.hxx"

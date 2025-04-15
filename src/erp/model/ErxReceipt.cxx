@@ -1,15 +1,13 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/ErxReceipt.hxx"
-#include "shared/model/Resource.hxx"
-#include "erp/model/Binary.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "shared/model/ResourceNames.hxx"
+#include "shared/model/Resource.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/model/RapidjsonDocument.hxx"
 

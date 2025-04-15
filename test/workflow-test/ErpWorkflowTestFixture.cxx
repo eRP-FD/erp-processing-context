@@ -1,16 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "erp/model/EvdgaBundle.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/beast/BoostBeastStringWriter.hxx"
@@ -479,10 +477,19 @@ void ErpWorkflowTestBase::checkTaskClose(
 
     // Check medication dispense saved during /Task/Close
     ASSERT_TRUE(task->kvnr().has_value());
-    std::optional<model::MedicationDispense> medicationDispenseForTask;
-    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetInternal(medicationDispenseForTask, kvnr, prescriptionId.toString()));
-    ASSERT_TRUE(medicationDispenseForTask.has_value());
-    EXPECT_EQ(medicationDispenseForTask->telematikId(), telematicId);
+    std::optional<model::Bundle> medicationDispenseBundleForTask;
+    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetAllInternal(
+        medicationDispenseBundleForTask,
+        "identifier=" + std::string{model::resource::naming_system::prescriptionID} + "|" + prescriptionId.toString(),
+        jwtInsurant));
+    ASSERT_TRUE(medicationDispenseBundleForTask.has_value());
+    ASSERT_GT(medicationDispenseBundleForTask->getResourceCount(), 0);
+    auto medicationDispensesForTask = medicationDispenseBundleForTask->getResourcesByType<model::MedicationDispense>();
+    ASSERT_GT(medicationDispensesForTask.size(), 0) << medicationDispenseBundleForTask->serializeToJsonString();
+    for (const auto& dispensesForTask : medicationDispensesForTask)
+    {
+        EXPECT_EQ(dispensesForTask.telematikId(), telematicId);
+    }
     ASSERT_TRUE(task->lastMedicationDispense().has_value());
     if (numMedicationDispenses > 0)
     {
@@ -523,9 +530,13 @@ void ErpWorkflowTestBase::checkTaskAbort(
     ASSERT_FALSE(taskBundle);   // cancelled Task can not be retrieved
 
     // check that no MedicationDispense has been created for the kvnr.
-    std::optional<model::MedicationDispense> medicationDispenseForTask;
-    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetInternal(medicationDispenseForTask, kvnr, prescriptionId.toString()));
-    ASSERT_FALSE(medicationDispenseForTask.has_value());
+    std::optional<model::Bundle> medicationDispenseForTask;
+    ASSERT_NO_FATAL_FAILURE(medicationDispenseGetAllInternal(
+        medicationDispenseForTask,
+        "identifier=" + std::string{model::resource::naming_system::prescriptionID} + "|" + prescriptionId.toString(),
+        jwtInsurant));
+    ASSERT_TRUE(medicationDispenseForTask.has_value());
+    ASSERT_EQ(medicationDispenseForTask->getResourceCount(), 0);
 
     // Check deletion of task related communication objects:
     A_19027_06.test("Deletion of task related communications");
@@ -656,7 +667,7 @@ void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string
         auditEventBundle = auditEventGet(
             insurantKvnr, language, "date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=date"));
     ASSERT_TRUE(auditEventBundle);
-    ASSERT_EQ(auditEventBundle->getResourceCount(), expectedActions.size());
+    ASSERT_EQ(auditEventBundle->getResourceCount(), expectedActions.size()) << auditEventBundle->serializeToJsonString();
 
     const auto auditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
     for(std::size_t i = 0; i < auditEvents.size(); ++i)
@@ -1048,33 +1059,6 @@ void ErpWorkflowTestBase::communicationPostInternal(
     ASSERT_NO_FATAL_FAILURE(modelElemfromString<model::Communication>(
         communicationResponse, serverResponse.getBody(), *serverResponse.getHeader().contentType(),
         model::Communication::messageTypeToProfileType(messageType), fhirtools::ValidatorOptions{}));
-}
-
-//NOLINTNEXTLINE(readability-function-cognitive-complexity)
-void ErpWorkflowTestBase::medicationDispenseGetInternal(
-    std::optional<model::MedicationDispense>& medicationDispense,
-    const std::string& kvnr,
-    const std::string& medicationDispenseId)
-{
-    std::string getPath = "/MedicationDispense/" + medicationDispenseId;
-    ClientResponse serverResponse;
-    JWT jwt{ JwtBuilder::testBuilder().makeJwtVersicherter(kvnr) };
-    auto args = RequestArguments{HttpMethod::GET, getPath, ""}.withJwt(jwt).withHeader(
-        Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
-    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(args));
-    HttpStatus status = serverResponse.getHeader().status();
-    ASSERT_TRUE((status == HttpStatus::OK) || (status == HttpStatus::NotFound));
-    if (status == HttpStatus::OK)
-    {
-        ASSERT_NO_THROW(medicationDispense =
-                            model::MedicationDispense::fromJson(serverResponse.getBody(), *getJsonValidator()));
-        ASSERT_TRUE(medicationDispense);
-    }
-    else
-    {
-        ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(operationOutcomeFromResponse(serverResponse.getBody(), true /*isJson*/),
-                                                      model::OperationOutcome::Issue::Type::not_found));
-    }
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -2779,13 +2763,6 @@ std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(const st
             break;
     }
     return std::make_tuple(toCadesBesSignature(qesBundle, timestamp), qesBundle);
-}
-std::optional<model::MedicationDispense> ErpWorkflowTestBase::medicationDispenseGet(
-    const std::string& kvnr, const std::string& medicationDispenseId)
-{
-    std::optional<model::MedicationDispense> medicationDispense;
-    medicationDispenseGetInternal(medicationDispense, kvnr, medicationDispenseId);
-    return medicationDispense;
 }
 
 std::optional<model::Bundle> ErpWorkflowTestBase::medicationDispenseGetAll(

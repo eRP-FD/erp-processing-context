@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 //
 // non-exclusively licensed to gematik GmbH
 
@@ -119,8 +119,13 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         result.emplace(std::move(key), std::move(validator));
         return result;
     }
-    for (const auto& defPtr : mDefPtr.subDefinitions(repo, name))
+    const auto& subDefinitions = mDefPtr.subDefinitions(repo, name);
+    for (const auto& defPtr : subDefinitions)
     {
+        if (mDefPtr.profile()->kind() != FhirStructureDefinition::Kind::slice && mDefPtr.profile()->isSystemType())
+        {
+            continue;
+        }
         std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
         for (const auto& url : defPtr.element()->profiles())
         {
@@ -141,7 +146,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         }
         result.emplace(std::move(key), std::move(validator));
     }
-
+    Expect3(!result.empty() || subDefinitions.empty(), "no valid subfield for: " + to_string(mDefPtr), std::logic_error);
     return result;
 }
 

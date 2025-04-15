@@ -1,24 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/server/ServerSession.hxx"
 #include "exporter/server/SessionContext.hxx"
-#include "shared/ErpRequirements.hxx"
-#include "shared/server/AccessLog.hxx"
-#include "shared/server/ErrorHandler.hxx"
-#include "shared/server/Worker.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/handler/RequestHandlerManager.hxx"
 #include "shared/server/request/ServerRequestReader.hxx"
-#include "shared/server/response/ServerResponseWriter.hxx"
-#include "shared/util/JwtException.hxx"
 
 #include <boost/beast/http/write.hpp>
-#include <boost/exception/diagnostic_information.hpp>
+
+namespace exporter {
 
 std::tuple<bool, std::optional<RequestHandlerManager::MatchingHandler>, ServerResponse> ExporterRequestHandler::handleRequest(ServerRequest& request, AccessLog& accessLog)
 {
@@ -64,3 +59,5 @@ ServerSession::ServerSession (
 	: BaseServerSession(std::move(socket), context, std::move(requestHandler))
 {
 }
+
+} // namespace exporter

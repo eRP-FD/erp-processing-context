@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,8 +9,9 @@
 #define ERP_EXPORTER_TASKEVENTCONVERTER_HXX
 
 #include "exporter/TelematikLookup.hxx"
-#include "exporter/database/ExporterDatabaseModel.hxx"
+#include "exporter/database/TaskEvent.hxx"
 #include "exporter/model/TaskEvent.hxx"
+#include "shared/database/DatabaseCodec.hxx"
 
 #include <memory>
 

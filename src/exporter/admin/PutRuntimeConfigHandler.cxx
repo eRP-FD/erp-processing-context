@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/admin/PutRuntimeConfigHandler.hxx"
@@ -11,6 +11,7 @@
 #include "shared/util/TLog.hxx"
 #include "shared/util/UrlHelper.hxx"
 
+namespace exporter {
 
 PutRuntimeConfigHandler::PutRuntimeConfigHandler(ConfigurationKey adminRcCredentialsKey)
     : AdminRequestHandlerBase(adminRcCredentialsKey)
@@ -24,7 +25,7 @@ Operation PutRuntimeConfigHandler::getOperation() const
 
 void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
 {
-    auto& session = dynamic_cast<SessionContext&>(baseSession);
+    auto& session = dynamic_cast<::exporter::SessionContext&>(baseSession);
     TVLOG(1) << "PUT /admin/configuration: " << session.request.header().serializeFields();
     TVLOG(1) << "PUT /admin/configuration: " << session.request.getBody();
 
@@ -73,3 +74,5 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
         }
     }
 }
+
+} // namespace exporter

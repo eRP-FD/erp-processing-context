@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,10 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_CHARGEITEM_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_CHARGEITEM_HXX
 
-#include "erp/model/AbgabedatenPkvBundle.hxx"
-#include "erp/model/Binary.hxx"
 #include "erp/model/extensions/ChargeItemMarkingFlags.hxx"
+#include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Resource.hxx"

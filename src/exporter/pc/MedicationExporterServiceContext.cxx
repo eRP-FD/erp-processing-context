@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -17,6 +17,20 @@
 #include "shared/enrolment/EnrolmentServer.hxx"
 #include "shared/util/Configuration.hxx"
 
+#include <date/date.h>
+
+namespace {
+std::chrono::steady_clock::duration refreshInterval() {
+    std::chrono::steady_clock::duration result;
+    std::istringstream intervalStr{Configuration::instance().getStringValue(
+        ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL)};
+    intervalStr.imbue(std::locale::classic());
+    intervalStr >> date::parse("%H:%M:%S", result);
+    Expect3(! intervalStr.fail() && intervalStr.peek() == std::char_traits<char>::eof(),
+            "Invalid format for MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL expected HH:MM:SS", std::logic_error);
+    return result;
+}
+}
 
 MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::io_context& ioContext,
                                                                    const Configuration& configuration,
@@ -25,7 +39,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
     , mIoContext{ioContext}
     , mExporterDatabaseFactory(factories.exporterDatabaseFactory)
     , mErpDatabaseFactory(factories.erpDatabaseFactory)
-    , mTeeClientPool{std::make_shared<Tee3ClientPool>(ioContext, *mHsmPool, *mTslManager)}
+    , mTeeClientPool{Tee3ClientPool::create(ioContext, *mHsmPool, *mTslManager, refreshInterval())}
     , mRuntimeConfiguration(std::make_unique<exporter::RuntimeConfiguration>())
 {
     Expect3(mExporterDatabaseFactory != nullptr,
@@ -37,7 +51,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
     applicationHealth().enableChecks({Bna, Hsm, Postgres, PrngSeed, TeeToken, Tsl, EventDb});
 
     RequestHandlerManager adminHandlers;
-    adminHandlers.onGetDo("/health", std::make_unique<HealthHandler>());
+    adminHandlers.onGetDo("/health", std::make_unique<exporter::HealthHandler>());
     adminHandlers.onPostDo("/admin/shutdown",
                            std::make_unique<PostRestartHandler>(
                                ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
@@ -46,7 +60,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
                           std::make_unique<GetConfigurationHandler>(
                               ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
                               std::make_unique<exporter::ConfigurationFormatter>(getRuntimeConfiguration())));
-    adminHandlers.onPutDo("/admin/configuration", std::make_unique<PutRuntimeConfigHandler>(
+    adminHandlers.onPutDo("/admin/configuration", std::make_unique<exporter::PutRuntimeConfigHandler>(
                                                       ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS));
     mAdminServer = factories.adminServerFactory(
         configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE),

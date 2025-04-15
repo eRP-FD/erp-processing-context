@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,16 +8,15 @@
 #ifndef TEST_UTIL_RESOURCETEMPLATES_HXX
 #define TEST_UTIL_RESOURCETEMPLATES_HXX
 
-#include "erp/model/Iknr.hxx"
 #include "erp/model/Lanr.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
-#include "erp/model/Pzn.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/Iknr.hxx"
 #include "shared/model/Kvnr.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/Pzn.hxx"
 #include "shared/model/Timestamp.hxx"
 
-#include <erp/model/MedicationDispenseBundle.hxx>
-#include <chrono>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -51,7 +50,7 @@ struct Versions {
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
     static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
-    static inline KBV_EVDGA KBV_EVDGA_1_1_0{"1.1.0"};
+    static inline KBV_EVDGA KBV_EVDGA_1_1_1{"1.1.1"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};

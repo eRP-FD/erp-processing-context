@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -36,9 +36,11 @@ public:
     explicit EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient);
     explicit EpaAccountLookup(MedicationExporterServiceContext& serviceContext);
 
-    EpaAccount lookup(const model::Kvnr& kvnr);
-    EpaAccount lookup(const model::Kvnr& kvnr, const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList);
-    EpaAccount::Code checkConsent(const model::Kvnr& kvnr, const std::string& host, uint16_t port);
+    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr);
+    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
+                      const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList);
+    EpaAccount::Code checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr, const std::string& host,
+                                  uint16_t port);
     IEpaAccountLookupClient& lookupClient()
     {
         return *mLookupClient;

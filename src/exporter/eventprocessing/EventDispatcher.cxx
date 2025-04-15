@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -96,6 +96,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
             // no audit event
             break;
         case Outcome::DeadLetter:
+        case Outcome::SuccessAuditFail:
             auditDataCollector.setEventId(*failedAuditType);
             break;
         case Outcome::Conflict:

@@ -1,12 +1,12 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/AbgabedatenPkvBundle.hxx"
-#include "erp/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispense.hxx"
 
 
 namespace model

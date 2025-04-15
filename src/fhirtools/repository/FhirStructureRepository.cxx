@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -517,8 +517,7 @@ const FhirStructureDefinition* FhirStructureRepositoryBackend::addSystemType(Fhi
     builder.kind(kind)
         .typeId(urlString)
         .url(urlString)
-        .addElement(FhirElement::Builder{}.name(urlString).isArray(true).getAndReset(), {})
-        .addElement(FhirElement::Builder{}.name(urlString + ".value"s).typeId(urlString).getAndReset(), {})
+        .addElement(FhirElement::Builder{}.name(urlString).isArray(true).isRoot(true).getAndReset(), {})
         .initGroup(*mSystemGroupResolver, {});
     return addDefinition(std::make_unique<FhirStructureDefinition>(builder.getAndReset()));
 }

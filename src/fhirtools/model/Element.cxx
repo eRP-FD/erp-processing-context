@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -918,6 +918,12 @@ std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
             case Element::Type::DateTime:
             case Element::Type::Time:
             case Element::Type::Quantity: {
+                // Note: We are not comparing subobjects of primitives, because the specification requires to do a
+                // conversion to the equivalent FHIRpath primitive when using such type in fhirpath expression:
+                // https://hl7.org/fhir/R4/fhirpath.html
+                // The evaluation engine will automatically convert the value of FHIR types representing primitives to
+                // FHIRPath types when they are used in expressions according to the following mapping: [...]
+                // This conversion looses subobject extensions.
                 const auto compareToResult = compareTo(rhs);
                 return compareToResult.has_value() ? std::make_optional(compareToResult == std::strong_ordering::equal)
                                                    : std::nullopt;

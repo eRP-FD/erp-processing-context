@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -88,6 +88,21 @@ std::vector<std::string_view> ErpElement::profiles() const
 std::string ErpElement::asRaw() const
 {
     FPExpect3(mValue, "Element has no value", std::logic_error);
+    switch (type())
+    {
+        case Type::Boolean:
+            return std::string{mValue->GetBool() ? "true" : "false"};
+        case Type::Structured:
+        case Type::Quantity:
+            return model::NumberAsStringParserDocument::serializeToJsonString(*mValue);
+        case Type::Integer:
+        case Type::Decimal:
+        case Type::String:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Time:
+            break;
+    }
     return std::string{model::NumberAsStringParserDocument::valueAsRaw(*mValue)};
 }
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -67,7 +67,7 @@ public:
     virtual bool connected() const;
 
     /// @brief send HTTP request
-    boost::asio::awaitable<boost::system::result<Response>> send(Request request);
+    boost::asio::awaitable<boost::system::result<Response>> send(std::string xRequestId, Request request);
 
     const std::string& hostname() const;
     uint16_t port() const;
@@ -76,7 +76,7 @@ public:
     Strand& strand() const;
 
     /// @brief set mandatory HTTPS header fields
-    void setMandatoryFields(Request&);
+    void setMandatoryFields(const std::string& xRequestId, Request&) const;
 
 protected:
     boost::asio::awaitable<void> initRetry();

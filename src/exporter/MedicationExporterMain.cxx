@@ -1,6 +1,6 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2024
-* (C) Copyright IBM Corp. 2021, 2024
+* (C) Copyright IBM Deutschland GmbH 2021, 2025
+* (C) Copyright IBM Corp. 2021, 2025
 *
 * non-exclusively licensed to gematik GmbH
 */
@@ -41,6 +41,7 @@
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
 #include <boost/asio/deferred.hpp>
+#include <boost/asio/immediate.hpp>
 
 boost::asio::awaitable<void> setupEpaClientPool(std::shared_ptr<MedicationExporterServiceContext> serviceContext)
 {
@@ -119,7 +120,7 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
     factories.adminServerFactory = [](const std::string_view address, uint16_t port,
                                       RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                       bool enforceClientAuthentication, const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers),
+        return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
                                              dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
@@ -137,7 +138,7 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
     factories.enrolmentServerFactory = [](const std::string_view address, uint16_t port,
                                           RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                           bool enforceClientAuthentication, const SafeString& caCertificates) {
-        return std::make_unique<HttpsServer>(address, port, std::move(requestHandlers),
+        return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
                                              dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
                                              enforceClientAuthentication, caCertificates);
     };
@@ -284,6 +285,8 @@ boost::asio::awaitable<void> MedicationExporterMain::RunLoop::eventProcessingWor
         switch (rescheduleRule)
         {
             case Reschedule::Immediate:
+                // return into executor to allow handling of other events (like SignalHandler)
+                co_await async_immediate(co_await boost::asio::this_coro::executor);
                 break;
             case Reschedule::Delayed:
                 timer.expires_after(std::chrono::seconds(5));

@@ -1,17 +1,17 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/service/task/CloseTaskHandler.hxx"
+#include "erp/service/task/DispenseTaskHandler.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/crypto/Sha256.hxx"
 #include "shared/erp-serverinfo.hxx"
-#include "erp/service/task/CloseTaskHandler.hxx"
-#include "erp/service/task/DispenseTaskHandler.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
@@ -220,7 +220,7 @@ protected:
 TEST_P(CloseTaskInputTest, CloseTask)
 {
     using namespace std::string_literals;
-    A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
+    A_22069_01.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto& testConfig = TestConfiguration::instance();
 
     CloseTaskHandler handler({});
@@ -321,7 +321,7 @@ INSTANTIATE_TEST_SUITE_P(valid, CloseTaskInputTest, testing::Values(
 // Regression Test for Bugticket ERP-5656
 TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_22069.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
+    A_22069_01.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto correctId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     CloseTaskHandler handler({});

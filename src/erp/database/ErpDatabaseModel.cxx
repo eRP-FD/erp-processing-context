@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -42,22 +42,6 @@ MedicationDispense::MedicationDispense(model::PrescriptionId initPrescriptionId,
 {
 }
 
-AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId eventId,
-                     std::optional<EncryptedBlob> metaData, model::AuditEvent::Action action, HashedKvnr insurantKvnr,
-                     int16_t deviceId, std::optional<model::PrescriptionId> prescriptionId,
-                     std::optional<BlobId> blobId)
-    : agentType(agentType)
-    , eventId(eventId)
-    , metaData(std::move(metaData))
-    , action(action)
-    , insurantKvnr(std::move(insurantKvnr))
-    , deviceId(deviceId)
-    , prescriptionId(std::move(prescriptionId))
-    , blobId(blobId)
-    , id()
-    , recorded(model::Timestamp::now())
-{
-}
 
 ::db_model::ChargeItem::ChargeItem(const ::model::PrescriptionId& id)
     : prescriptionId{id}
@@ -187,61 +171,4 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     {
         ModelFail("Unable to reconstruct charge item from database:"s + exception.what());
     }
-}
-
-AccessTokenIdentity::AccessTokenIdentity(const JWT& jwt)
-    : mId(jwt.stringForClaim(JWT::idNumberClaim).value_or(""))
-    , mName(jwt.stringForClaim(JWT::organizationNameClaim).value_or("unbekannt"))
-    , mOid(jwt.stringForClaim(JWT::professionOIDClaim).value_or(""))
-{
-    ModelExpect(! mId.id().empty() && ! mOid.empty(), "incomplete JWT, idNumber or professionOID missing");
-}
-
-AccessTokenIdentity::AccessTokenIdentity(const model::TelematikId& id, std::string_view name, std::string_view oid)
-    : mId(id)
-    , mName(name)
-    , mOid(oid)
-{
-}
-
-std::string AccessTokenIdentity::getJson() const
-{
-    rapidjson::Document d;
-    d.SetObject();
-    d.AddMember("id", mId.id(), d.GetAllocator());
-    d.AddMember("name", mName, d.GetAllocator());
-    d.AddMember("oid", mOid, d.GetAllocator());
-
-    rapidjson::StringBuffer buffer;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
-    d.Accept(writer);
-
-    return buffer.GetString();
-}
-
-const model::TelematikId& AccessTokenIdentity::getId() const
-{
-    return mId;
-}
-
-const std::string& AccessTokenIdentity::getName() const
-{
-    return mName;
-}
-
-const std::string& AccessTokenIdentity::getOid() const
-{
-    return mOid;
-}
-
-AccessTokenIdentity AccessTokenIdentity::fromJson(const std::string& json)
-{
-    rapidjson::Document doc;
-    doc.Parse(json);
-    if (doc.HasParseError())
-    {
-        Fail("invalid custom json representation of JWT");
-    }
-    return AccessTokenIdentity(model::TelematikId(std::string(doc["id"].GetString())),
-                               std::string(doc["name"].GetString()), std::string(doc["oid"].GetString()));
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -28,11 +28,13 @@ CancelPrescription::CancelPrescription(gsl::not_null<IEpaMedicationClient*> medi
 Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& erpEvent)
 {
     model::EPAOpCancelPrescriptionERPInputParameters params{erpEvent.getPrescriptionId(), erpEvent.getMedicationRequestAuthoredOn()};
-    auto response = mMedicationClient->sendCancelPrescription(erpEvent.getKvnr(), params.serializeToJsonString());
+    auto response = mMedicationClient->sendCancelPrescription(erpEvent.getXRequestId(), erpEvent.getKvnr(),
+                                                              params.serializeToJsonString());
     Outcome outcome = fromHttpStatus(response.httpStatus);
     switch (outcome)
     {
-        case Outcome::Success: {
+        case Outcome::Success:
+        case Outcome::SuccessAuditFail: {
             model::EPAOpRxPrescriptionERPOutputParameters responseParameters(std::move(response.body));
             const auto issue = responseParameters.getOperationOutcomeIssue();
             switch (issue.detailsCode)

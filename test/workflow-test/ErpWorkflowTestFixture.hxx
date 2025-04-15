@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,32 +10,25 @@
 
 #include "HttpsTestClient.hxx"
 #include "TestClient.hxx"
-#include "erp/model/Binary.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/MedicationDispense.hxx"
 #include "erp/model/MetaData.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/WorkflowParameters.hxx"
-#include "fhirtools/util/Gsl.hxx"
 #include "shared/crypto/CMAC.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
-#include "shared/crypto/Certificate.hxx"
-#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/crypto/Jwt.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/AuditEvent.hxx"
 #include "shared/model/Bundle.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/network/message/MimeType.hxx"
-#include "shared/util/Base64.hxx"
-#include "shared/util/Configuration.hxx"
-#include "shared/util/Environment.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/UrlHelper.hxx"
 #include "shared/util/Uuid.hxx"
@@ -297,10 +290,6 @@ public:
         const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
         const model::Timestamp& timestamp);
-
-    std::optional<model::MedicationDispense> medicationDispenseGet(
-        const std::string& kvnr,
-        const std::string& medicationDispenseId);
 
     std::optional<model::Bundle> medicationDispenseGetAll(const std::string_view& searchArguments = {},
                                                           const std::optional<JWT>& jwt = std::nullopt);
@@ -594,11 +583,6 @@ private:
         const std::optional<std::string>& expectedErrorText = std::nullopt,
         const std::optional<std::string>& encodedPnw = std::nullopt,
         const std::optional<std::string>& telematikId = std::nullopt);
-
-    void medicationDispenseGetInternal(
-        std::optional<model::MedicationDispense>& medicationDispense,
-        const std::string& kvnr,
-        const std::string& medicationDispenseId);
 
     void medicationDispenseGetAllInternal(
         std::optional<model::Bundle>& medicationDispenseBundle,

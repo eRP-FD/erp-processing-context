@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,7 @@
 
 #include "shared/common/Constants.hxx"
 #include "shared/enrolment/EnrolmentModel.hxx"
+#include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/hsm/ErpTypes.hxx"
 #include "shared/network/client/HttpClient.hxx"
 #include "shared/network/client/HttpsClient.hxx"
@@ -18,7 +19,6 @@
 #include "shared/network/message/HttpMethod.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
-#include "src/shared/enrolment/VsdmHmacKey.hxx"
 
 #include <chrono>
 #include <optional>

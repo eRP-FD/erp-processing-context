@@ -38,6 +38,7 @@ function(add_erp_config target)
                     -DERP_RUNTIME_RESOURCE_DIR="${CMAKE_BINARY_DIR}/bin/resources"
                     -DERP_CONFIGURATION_FILE_IN="${template}"
                     -DERP_CONFIGURATION_FILE="${builddir_output_name}"
+                    -DERP_RELEASE_VERSION="${ERP_RELEASE_VERSION}"
                     -P "${install_config}"
     )
     foreach (component ${arg_COMPONENTS})
@@ -45,6 +46,7 @@ function(add_erp_config target)
             "set(ERP_RUNTIME_RESOURCE_DIR \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/${CMAKE_PROJECT_NAME}\") \n\
              set(ERP_CONFIGURATION_FILE_IN \"${template}\") \n\
              set(ERP_CONFIGURATION_FILE \"\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/${output_name}\") \n\
+             set(ERP_RELEASE_VERSION \"${ERP_RELEASE_VERSION}\") \n\
              include(\"${install_config}\")"
             COMPONENT "${component}"
         )

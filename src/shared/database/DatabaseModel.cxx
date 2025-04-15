@@ -1,17 +1,15 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/database/DatabaseModel.hxx"
 
-#include "shared/ErpRequirements.hxx"
 #include "shared/crypto/Pbkdf2Hmac.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"
-#include "fhirtools/util/Gsl.hxx"
 
 #include <algorithm>
 
@@ -84,3 +82,19 @@ HashedTelematikId HashedTelematikId::fromTelematikId(const model::TelematikId& i
 HashedTelematikId::HashedTelematikId(HashedId&& id)
     : HashedId{std::move(id)}
 {}
+
+AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId eventId,
+                     std::optional<EncryptedBlob> metaData, model::AuditEvent::Action action, HashedKvnr insurantKvnr,
+                     int16_t deviceId, std::optional<model::PrescriptionId> prescriptionId,
+                     std::optional<BlobId> blobId)
+    : agentType(agentType)
+    , eventId(eventId)
+    , metaData(std::move(metaData))
+    , action(action)
+    , insurantKvnr(std::move(insurantKvnr))
+    , deviceId(deviceId)
+    , prescriptionId(std::move(prescriptionId))
+    , blobId(blobId)
+    , recorded(model::Timestamp::now())
+{
+}

@@ -1,14 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/model/Kvnr.hxx"
-#include "erp/model/Iknr.hxx"
 #include "erp/model/Lanr.hxx"
-#include "erp/model/Pzn.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/Iknr.hxx"
+#include "shared/model/Pzn.hxx"
 
 #include <gtest/gtest.h>
 

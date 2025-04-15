@@ -1,4 +1,4 @@
-#include "erp/model/GemErpPrMedication.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"

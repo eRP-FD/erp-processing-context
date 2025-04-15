@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -140,6 +140,31 @@ TEST_F(TslParsingTests, WansimBnaXmlIsParsedCorrectly)
     // Just use an outdated TSL.xml to test parsing
     TslParser tslParser{
         ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml"),
+        TslMode::BNA,
+        *StaticData::getXmlValidator()};
+
+    EXPECT_EQ(tslParser.getId(), "ID31028220210914152511Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "10282");
+}
+
+
+TEST_F(TslParsingTests, BnaXmlRsa512)
+{
+    // Just use an outdated TSL.xml to test parsing
+    TslParser tslParser{
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_RSA_valid_sha512.xml"),
+        TslMode::BNA,
+        *StaticData::getXmlValidator()};
+
+    EXPECT_EQ(tslParser.getId(), "ID31028220210914152511Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "10282");
+}
+
+TEST_F(TslParsingTests, BnaXmlRsa256)
+{
+    // Just use an outdated TSL.xml to test parsing
+    TslParser tslParser{
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_RSA_valid_sha256.xml"),
         TslMode::BNA,
         *StaticData::getXmlValidator()};
 

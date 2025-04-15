@@ -1,17 +1,17 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/util/ResourceManager.hxx"
-#include "shared/model/Resource.hxx"
 #include "erp/model/ChargeItem.hxx"
+#include "shared/model/Resource.hxx"
 #include "shared/util/Uuid.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
-#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,8 +9,6 @@
 #define ERP_PROCESSING_CONTEXT_DATABASE_COMMONDATABASEFRONTEND_HXX
 
 #include "DatabaseCodec.hxx"
-#include "DatabaseConnectionInfo.hxx"
-#include "erp/database/ErpDatabaseBackend.hxx"
 #include "shared/compression/Compression.hxx"
 #include "shared/database/DatabaseBackend.hxx"
 #include "shared/hsm/ErpTypes.hxx"

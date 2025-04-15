@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -169,7 +169,7 @@ void XmlValidator::warningCallback(void* context, const char* msg, ...)
         *static_cast<std::exception_ptr*>(context) = std::current_exception();
     }
 }
-void XmlValidator::structuredErrorCallback(void* context, xmlErrorPtr error)
+void XmlValidator::structuredErrorCallback(void* context, const xmlError* error)
 {
     try
     {

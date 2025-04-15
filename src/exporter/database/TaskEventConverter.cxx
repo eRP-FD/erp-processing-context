@@ -1,14 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/database/TaskEventConverter.hxx"
 #include "exporter/model/HashedKvnr.hxx"
-#include "erp/database/ErpDatabaseModel.hxx"
-#include "erp/model/Binary.hxx"
+#include "shared/database/AccessTokenIdentity.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/crypto/Jwt.hxx"
 #include "shared/util/JsonLog.hxx"
 

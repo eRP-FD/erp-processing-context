@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -166,9 +166,9 @@ util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
 }
 
 
-std::string Base64::decodeToString (const std::string_view& base64)
+std::string Base64::decodeToString(const std::string_view& base64, bool skipWhiteSpace)
 {
-    auto result = decode(base64);
+    auto result = decode(base64, skipWhiteSpace);
     return std::string(reinterpret_cast<const char*>(result.data()), result.size());
 }
 

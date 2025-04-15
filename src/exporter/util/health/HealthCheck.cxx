@@ -1,12 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/util/health/HealthCheck.hxx"
-#include "erp/database/Database.hxx"
 #include "shared/database/DatabaseConnectionInfo.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/ExceptionHelper.hxx"

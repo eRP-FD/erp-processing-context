@@ -1,28 +1,25 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "TaskHandler.hxx"
+#include "erp/model/Task.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/crypto/Jws.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/Device.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "shared/model/ModelException.hxx"
-#include "erp/model/Signature.hxx"
-#include "erp/model/Task.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/Device.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/Signature.hxx"
 #include "shared/model/Timestamp.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/TLog.hxx"
 
 
-#include <algorithm>
 #include <cstddef>
 #include <chrono>
 #include <ctime>

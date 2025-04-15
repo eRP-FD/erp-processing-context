@@ -1,21 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MODEL_TASKEVENT_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MODEL_TASKEVENT_HXX
 
-#include "erp/crypto/SignedPrescription.hxx"
 #include "exporter/model/HashedKvnr.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/TelematikId.hxx"
 #include "shared/model/Timestamp.hxx"
-
-#include <date/date.h>
 
 namespace model
 {
@@ -55,6 +53,7 @@ public:
     virtual Timestamp getMedicationRequestAuthoredOn() const;
     virtual Timestamp getLastModified() const;
     virtual std::int32_t getRetryCount() const;
+    virtual const std::string& getXRequestId() const;
 
 private:
     id_t mId;
@@ -67,6 +66,7 @@ private:
     Bundle mKbvBundle;
     model::Timestamp mLastModified;
     std::int32_t mRetryCount{0};
+    std::string mXRequestId{Uuid{}.toString()};
 };
 
 struct BareTaskEvent

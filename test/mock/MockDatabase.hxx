@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,14 +9,11 @@
 #define ERP_PROCESSING_CONTEXT_TEST_MOCK_MOCKDATABASE_HXX
 
 #include "erp/database/ErpDatabaseBackend.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
-#include "erp/model/MedicationDispense.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/crypto/CMAC.hxx"
 #include "shared/database/DatabaseCodec.hxx"
 #include "shared/database/DatabaseModel.hxx"
-#include "shared/hsm/HsmClient.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/model/AuditData.hxx"
 #include "shared/model/Timestamp.hxx"
@@ -29,8 +26,6 @@
 #include <list>
 #include <map>
 #include <mutex>
-#include <set>
-#include <unordered_map>
 
 class Database;
 

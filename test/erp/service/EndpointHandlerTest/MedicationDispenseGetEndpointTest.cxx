@@ -1,9 +1,9 @@
 #include "EndpointHandlerTestFixture.hxx"
 
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
 #include "erp/service/task/DispenseTaskHandler.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceTemplates.hxx"

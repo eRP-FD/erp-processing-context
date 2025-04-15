@@ -1,28 +1,17 @@
 # Customized conan packages
 
-## hiredis
-
-Added `version = "1.2.0"` to conanfile.py and fixed an issue with
-conan versions < 2.0 in combination with the with_ssl option by
-changing variables to cache_variables.
-
 ## openssl
 
 See the patches/ folder
 
 ## Export and upload
 
-Go into the package folder (for exmaple hiredis) and
+Go into the package folder (for example hiredis) and
 export the recipe, locally with:
 
 `conan export . erp/stable`
 
 openssl:
-`conan export --version 3.1.8 --user erp --channel public .`
+`conan create conanfile.py --version 3.1.8+erp --build=missing`
+`conan upload -r erp-conan-2 openssl/3.1.8+erp`
 
-Then, upload to the appropriate remote (here, erp):
-
-`conan upload -r erp hiredis/1.2.0@erp/stable`
-
-The reference `erp/stable` must match in both steps in order
-to address the recipe from the proper remote.

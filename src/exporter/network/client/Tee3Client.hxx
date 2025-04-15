@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -56,13 +56,14 @@ public:
     [[nodiscard]] boost::asio::awaitable<void> ensureConnected();
 
     [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>>
-    sendInner(Request request, std::unordered_map<std::string, std::any> logDataBag);
+    sendInner(std::string xRequestId, Request request, std::unordered_map<std::string, std::any> logDataBag);
 
 
     static const boost::system::error_category& errorCategory();
 
     [[nodiscard]] const boost::asio::ip::tcp::endpoint& currentEndpoint() const;
 
+    [[nodiscard]] bool isTlsConnected();
     [[nodiscard]] boost::asio::awaitable<void> closeTlsSession();
     void closeTeeSession();
 
@@ -99,7 +100,8 @@ private:
     boost::asio::awaitable<std::string> sendAuthorizationRequest(gsl::not_null<HsmPool*> hsmPool,
                                                                  std::string freshness);
 
-    [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendOuter(Request request);
+    [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendOuter(std::string xRequestId,
+                                                                                    Request request);
 
     static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType,
                                       std::string_view userAgent);

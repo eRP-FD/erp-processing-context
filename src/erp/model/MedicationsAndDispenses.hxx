@@ -1,8 +1,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MEDICATIONS_AND_DISPENSES_HXX
 #define ERP_PROCESSING_CONTEXT_MEDICATIONS_AND_DISPENSES_HXX
 
-#include "erp/model/GemErpPrMedication.hxx"
-#include "erp/model/MedicationDispense.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/MedicationDispense.hxx"
 
 #include <vector>
 

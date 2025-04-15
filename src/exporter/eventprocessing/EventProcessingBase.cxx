@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -61,7 +61,8 @@ JsonLog EventProcessingBase::log(JsonLog::LogReceiver&& logReceiver, const model
 {
     JsonLog log(LogId::INFO, std::move(logReceiver), false);
     log << model::HashedKvnr(event.getHashedKvnr()) << KeyValue("prescription_id", event.getPrescriptionId().toString())
-         << KeyValue("usecase", magic_enum::enum_name(event.getUseCase()));
+        << KeyValue("usecase", magic_enum::enum_name(event.getUseCase()))
+        << KeyValue("x-request-id", event.getXRequestId());
     return log;
 }
 

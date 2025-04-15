@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -94,7 +94,7 @@ void ApplicationHealthAndRegistrationUpdater::executeJob(void)
             ++tryCount;
             mRegistration->heartbeat();
 
-            // If we get here the call was successful and we don't have to retry.
+            // If we get here the call was successful, we don't have to try again.
             return;
         }
         catch (const std::exception& e)

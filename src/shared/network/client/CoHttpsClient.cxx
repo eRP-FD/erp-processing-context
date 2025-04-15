@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -11,15 +11,19 @@
 #include "shared/network/message/Header.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
-#include "shared/util/TimeoutHelper.hxx"
 
 #include <boost/asio/as_tuple.hpp>
-#include <boost/asio/bind_cancellation_slot.hpp>
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/cancel_after.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/deferred.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
 
+
+
+using boost::asio::as_tuple;
+using boost::asio::deferred;
 
 CoHttpsClient::CoHttpsClient(std::shared_ptr<Strand> strand, const ConnectionParameters& params)
     : mHostname{params.hostname}
@@ -96,14 +100,14 @@ boost::asio::ssl::context CoHttpsClient::createSslContext(const std::optional<st
 boost::asio::awaitable<boost::system::error_code> CoHttpsClient::connectToEndpoint(boost::asio::ip::tcp::endpoint endpoint)
 {
     mTcpSocket = std::make_unique<TcpSocket>(*mStrand);
-    auto timeout = std::make_shared<TimeoutHelper>(*mStrand, mConnectionTimeout);
-    auto [ec] = co_await mTcpSocket->async_connect(endpoint, (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
-    timeout->done();
+    auto [ec] = co_await mTcpSocket->async_connect(endpoint, cancel_after(mConnectionTimeout, as_tuple(deferred)));
     if (ec)
     {
-        TLOG(INFO) << "Connection to " << endpoint.address() << ":" << endpoint.port() << " failed: " << ec.message()
-                   << ", timeout: " << timeout->timedOut();
-        co_return timeout->timedOut() ? boost::asio::error::timed_out : ec;
+        if (ec == boost::system::errc::operation_canceled)
+        {
+            ec = boost::asio::error::timed_out;
+        }
+        TLOG(INFO) << "Connection to " << endpoint.address() << ":" << endpoint.port() << " failed: " << ec.message();
     }
     mCurrentEndpoint = endpoint;
     mSslStream = std::make_unique<SslStream>(std::move(*mTcpSocket), mSslContext);
@@ -130,11 +134,8 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::connectToEndpoi
     }
 
     boost::asio::cancellation_signal signal;
-    boost::asio::steady_timer timer{*mStrand, mConnectionTimeout};
     std::tie(ec) = co_await mSslStream->async_handshake(
-        boost::asio::ssl::stream_base::client,
-        boost::asio::as_tuple(boost::asio::bind_cancellation_slot(signal.slot(), boost::asio::deferred)));
-    timer.cancel();
+        boost::asio::ssl::stream_base::client, cancel_after(mConnectionTimeout, as_tuple(deferred)));
     if (ec.category() == boost::asio::error::ssl_category)
     {
         TLOG(ERROR) << "Error during TLS handshake on " << mHostname << ":" << mPort << " (" << endpoint.address()
@@ -148,8 +149,7 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::resolveAndConne
     static const size_t maxConnectTriesPerAddress = static_cast<size_t>(Configuration::instance().getOptionalIntValue(ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS, 3));
     static const auto retryTimeout = std::chrono::milliseconds{Configuration::instance().getOptionalIntValue(ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRY_TIMEOUT_MILLISECONDS, 3000)};
     auto resolver = Resolver{*mStrand};
-    auto [ec, addresses] =
-        co_await resolver.async_resolve(mHostname, std::to_string(mPort), boost::asio::as_tuple(boost::asio::deferred));
+    auto [ec, addresses] = co_await resolver.async_resolve(mHostname, std::to_string(mPort), as_tuple(deferred));
     if (ec) {
         TLOG(INFO) << "host resolution failure: " << ec.message() << ": " << mHostname;
         co_return ec;
@@ -165,7 +165,7 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::resolveAndConne
             {
                 // delay when we've tried all endpoints once
                 boost::asio::steady_timer timer{*mStrand, retryTimeout};
-                std::tie(timeoutEc) = co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                std::tie(timeoutEc) = co_await timer.async_wait(as_tuple(deferred));
                 if (timeoutEc.failed())
                 {
                     TLOG(INFO) << "tee 3 client stopping connect: " << timeoutEc.message() << ": " << mHostname << ":"
@@ -194,7 +194,8 @@ boost::asio::awaitable<boost::system::error_code> CoHttpsClient::resolveAndConne
 }
 
 
-boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsClient::send(Request request)
+boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>>
+CoHttpsClient::send(std::string xRequestId, Request request)
 {
     using namespace std::string_literals;
     static const auto fullMessageSendTimeout = std::chrono::milliseconds{Configuration::instance().getOptionalIntValue(ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_MESSAGE_SEND_TIMEOUT_MILLISECONDS, 3000)};
@@ -206,15 +207,13 @@ boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsCl
     }
     // send request
     {
-        setMandatoryFields(request);
-        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, fullMessageSendTimeout);
+        setMandatoryFields(xRequestId, request);
         boost::system::error_code ec;
         std::tie(ec, std::ignore) =
-            co_await async_write(*mSslStream, request, (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout->done();
+            co_await async_write(*mSslStream, request, cancel_after(fullMessageSendTimeout, as_tuple(deferred)));
         if (ec.failed())
         {
-            if (timeout->timedOut())
+            if (ec == boost::system::errc::operation_canceled)
             {
                 ec = boost::asio::error::timed_out;
             }
@@ -227,16 +226,14 @@ boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsCl
     // receive response
     Response response;
     {
-        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, fullMessageReceiveTimeout);
         boost::system::error_code ec;
         std::string buffer;
         boost::asio::dynamic_string_buffer dynBuf{buffer};
         std::tie(ec, std::ignore) = co_await async_read(*mSslStream, dynBuf, response,
-                                                        (*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout->done();
+                                                        cancel_after(fullMessageReceiveTimeout, as_tuple(deferred)));
         if (ec.failed())
         {
-            if (timeout->timedOut())
+            if (ec == boost::system::errc::operation_canceled)
             {
                 ec = boost::asio::error::timed_out;
             }
@@ -250,13 +247,13 @@ boost::asio::awaitable<boost::system::result<CoHttpsClient::Response>> CoHttpsCl
 
 boost::asio::awaitable<void> CoHttpsClient::close()
 {
+    using namespace std::chrono_literals;
     if (mSslStream)
     {
+        auto executor = co_await boost::asio::this_coro::executor;
         TVLOG(2) << "shutdown TLS session";
         mSslStream->next_layer().cancel();
-        auto timeout = std::make_shared<TimeoutHelper>(*mStrand, std::chrono::seconds{1});
-        co_await mSslStream->async_shutdown((*timeout)(boost::asio::as_tuple(boost::asio::deferred)));
-        timeout->done();
+        co_await mSslStream->async_shutdown(cancel_after(1s, bind_executor(executor, as_tuple(deferred))));
         TVLOG(2) << "Closing socket";
         mSslStream->next_layer().close();
         mSslStream.reset();
@@ -293,7 +290,7 @@ CoHttpsClient::Strand& CoHttpsClient::strand() const
     return *mStrand;
 }
 
-void CoHttpsClient::setMandatoryFields(Request& request)
+void CoHttpsClient::setMandatoryFields(const std::string& xRequestId, Request& request) const
 {
 
     if (! request.has_content_length())
@@ -310,4 +307,5 @@ void CoHttpsClient::setMandatoryFields(Request& request)
     {
         request.set(Header::Host, hostname());
     }
+    request.set(Header::XRequestId, xRequestId);
 }

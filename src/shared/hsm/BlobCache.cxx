@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -177,14 +177,41 @@ void BlobCache::recreateDatabaseConnection()
     mDatabase->recreateConnection();
 }
 
+void BlobCache::registerCacheUpdateCallback(std::function<void()>&& callback)
+{
+    mCacheUpdateCallback = std::move(callback);
+}
+
 std::vector<bool> BlobCache::hasValidBlobsOfType(std::vector<BlobType>&& blobTypes) const
 {
     std::unique_lock lock(mDatabaseMutex);
     return mDatabase->hasValidBlobsOfType(std::move(blobTypes));
 }
 
+namespace
+{
+struct RecursionBreaker {
+    explicit RecursionBreaker(std::function<void()>& callback)
+        : callbackRef(callback)
+        , callback(callback)
+    {
+        callbackRef = nullptr;
+    }
+    ~RecursionBreaker()
+    {
+        callbackRef = callback;
+    }
+    std::function<void()>& callbackRef;
+    std::function<void()> callback;
 
-void BlobCache::rebuildCache(void)
+    RecursionBreaker(const RecursionBreaker&) = delete;
+    RecursionBreaker& operator=(const RecursionBreaker&) = delete;
+    RecursionBreaker(RecursionBreaker&&) = delete;
+    RecursionBreaker&& operator=(RecursionBreaker&&) = delete;
+};
+}
+
+void BlobCache::rebuildCache()
 {
     // First, without locking the mutex, ask the database for all its blobs and rebuild the two maps from it.
     // As the database can be manipulated by other instances of the processing context on the same and on other machines,
@@ -209,9 +236,16 @@ void BlobCache::rebuildCache(void)
         }
     }
 
-    ::std::unique_lock lock(mMutex);
-    mEntriesById.swap(entriesById);
-    mEntriesByType.swap(entriesByType);
+    {
+        ::std::unique_lock lock(mMutex);
+        mEntriesById.swap(entriesById);
+        mEntriesByType.swap(entriesByType);
+    }
+    if (mCacheUpdateCallback)
+    {
+        RecursionBreaker recursionBreaker{mCacheUpdateCallback};
+        recursionBreaker.callback();
+    }
 }
 
 template<class Map, typename Key>

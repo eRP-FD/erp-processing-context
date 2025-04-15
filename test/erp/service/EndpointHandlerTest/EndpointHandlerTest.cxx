@@ -1,21 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/Device.hxx"
-#include "erp/model/ErxReceipt.hxx"
-#include "erp/model/KbvBundle.hxx"
+#include "erp/model/ChargeItem.hxx"
 #include "erp/model/MetaData.hxx"
+#include "erp/model/ErxReceipt.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "shared/server/request/ServerRequest.hxx"
-#include "shared/server/response/ServerResponse.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/DeviceHandler.hxx"
 #include "erp/service/MetaDataHandler.hxx"
@@ -32,24 +27,25 @@
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
-#include "mock/util/MockConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
-#include "shared/audit/AuditEventCreator.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/hsm/production/ProductionBlobDatabase.hxx"
+#include "shared/model/Device.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
-#include "test/mock/RegistrationMock.hxx"
 #include "test/util/CertificateDirLoader.h"
-#include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
+#include "test_config.h"
 
 #include <gtest/gtest.h>
 #include <variant>

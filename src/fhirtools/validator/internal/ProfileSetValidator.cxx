@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2024
-// (C) Copyright IBM Corp. 2021, 2024
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
 //
 // non-exclusively licensed to gematik GmbH
 
@@ -273,6 +273,10 @@ void fhirtools::ProfileSetValidator::incrementCounters(const Element& element)
         std::set<CounterKey> incrementedCounters;
         for (const auto& profVal : mProfileValidators)
         {
+            if (profVal.first.element()->isRoot())
+            {
+                continue;
+            }
             CounterKey key{profVal.second.counterKey()};
             auto counter = mParent->mChildCounters.find(key);
             if (counter == mParent->mChildCounters.end() || ! incrementedCounters.insert(std::move(key)).second)

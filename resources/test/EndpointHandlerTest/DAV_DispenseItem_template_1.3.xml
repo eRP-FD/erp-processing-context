@@ -126,6 +126,31 @@
                     </coding>
                 </type>
                 <whenHandedOver value="###WHEN_HANDED_OVER###" />
+                <substitution>
+                    <extension
+                            url="http://fhir.abda.de/eRezeptAbgabedaten/StructureDefinition/DAV-EX-ERP-Rezeptaenderung">
+                        <extension url="ArtRezeptaenderung">
+                            <valueCodeableConcept>
+                                <coding>
+                                    <system value="http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-PKV-CS-ERP-ArtRezeptaenderung"/>
+                                    <code value="10"/>
+                                </coding>
+                            </valueCodeableConcept>
+                        </extension>
+                        <extension url="RueckspracheArzt">
+                            <valueCodeableConcept>
+                                <coding>
+                                    <system value="http://fhir.abda.de/eRezeptAbgabedaten/CodeSystem/DAV-CS-ERP-RueckspracheArzt"/>
+                                    <code value="2"/>
+                                </coding>
+                            </valueCodeableConcept>
+                        </extension>
+                        <extension url="DatumRezeptaenderung">
+                            <valueDate value="2025-03-12"/>
+                        </extension>
+                    </extension>
+                    <wasSubstituted value="true"/>
+                </substitution>
             </MedicationDispense>
         </resource>
     </entry>

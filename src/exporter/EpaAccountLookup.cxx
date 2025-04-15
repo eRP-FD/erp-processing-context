@@ -1,19 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "exporter/EpaAccountLookup.hxx"
 #include "ExporterRequirements.hxx"
+#include "exporter/model/ConsentDecisionsResponseType.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/UrlHelper.hxx"
-#include "exporter/model/ConsentDecisionsResponseType.hxx"
 
 #include <boost/system/system_error.hpp>
-#include <ranges>
 #include <random>
+#include <ranges>
 
 EpaAccountLookup::EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient)
     : mLookupClient(std::move(lookupClient))
@@ -29,7 +29,7 @@ EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceCont
 {
 }
 
-EpaAccount EpaAccountLookup::lookup(const model::Kvnr& kvnr)
+EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr)
 {
     static const auto epaFqdns = [] {
         auto fqdns = Configuration::instance().epaFQDNs();
@@ -42,20 +42,20 @@ EpaAccount EpaAccountLookup::lookup(const model::Kvnr& kvnr)
         return hostPortList;
     }();
     static std::random_device rd;
-    std::mt19937 gen {rd()};
+    std::mt19937 gen{rd()};
     auto shuffledEpaFqdns{epaFqdns};
     std::ranges::shuffle(shuffledEpaFqdns, gen);
-    return lookup(kvnr, shuffledEpaFqdns);
+    return lookup(xRequestId, kvnr, shuffledEpaFqdns);
 }
 
-EpaAccount EpaAccountLookup::lookup(const model::Kvnr& kvnr,
+EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
                                     const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList)
 {
     A_25951.start("check consent");
     bool allNotFound = true;
     for (const auto& [host, port] : epaAsHostPortList)
     {
-        auto result = checkConsent(kvnr, host, port);
+        auto result = checkConsent(xRequestId, kvnr, host, port);
         switch (result)
         {
             case EpaAccount::Code::allowed:
@@ -76,9 +76,10 @@ EpaAccount EpaAccountLookup::lookup(const model::Kvnr& kvnr,
     A_25951.finish();
 }
 
-EpaAccount::Code EpaAccountLookup::checkConsent(const model::Kvnr& kvnr, const std::string& host, uint16_t port)
+EpaAccount::Code EpaAccountLookup::checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                                const std::string& host, uint16_t port)
 {
-    const auto response = mLookupClient->sendConsentDecisionsRequest(kvnr, host, port);
+    const auto response = mLookupClient->sendConsentDecisionsRequest(xRequestId, kvnr, host, port);
     if (response.getHeader().status() == HttpStatus::OK)
     {
         model::ConsentDecisionsResponseType consentDecisionsResponse{response.getBody()};

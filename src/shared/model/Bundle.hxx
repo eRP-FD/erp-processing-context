@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_BUNDLE_HXX
 #define ERP_PROCESSING_CONTEXT_BUNDLE_HXX
 
-#include "erp/model/Link.hxx"
-#include "erp/model/Signature.hxx"
+#include "shared/model/Link.hxx"
+#include "shared/model/Signature.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/Expect.hxx"

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,14 +9,11 @@
 #define ERP_EXPORTER_POSTGRESDATABASETEST_HXX
 
 #include "erp/database/DatabaseFrontend.hxx"
-#include "erp/database/ErpDatabaseModel.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "exporter/TelematikLookup.hxx"
 #include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
-#include "mock/hsm/HsmMockFactory.hxx"
-#include "mock/hsm/MockBlobCache.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/model/Kvnr.hxx"

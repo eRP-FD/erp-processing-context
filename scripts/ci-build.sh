@@ -1,7 +1,7 @@
 #!/bin/bash -ex
 
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -80,7 +80,7 @@ fi
 test -n "${erp_build_version}" || die "missing argument --build_version="
 test -n "${erp_release_version}" || die "missing argument --release_version="
 
-pip3 install "conan<2.14" --upgrade
+pip3 install "conan<3" --upgrade
 pip3 install --user packageurl-python
 export CONAN_TRACE_FILE=$(pwd)/conan_trace.log
 conan --version

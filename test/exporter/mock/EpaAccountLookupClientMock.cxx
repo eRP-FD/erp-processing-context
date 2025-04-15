@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -18,8 +18,8 @@ EpaAccountLookupClientMock& EpaAccountLookupClientMock::setResponseBody(std::str
     return *this;
 }
 
-ClientResponse EpaAccountLookupClientMock::sendConsentDecisionsRequest(const model::Kvnr&, const std::string&,
-                                                                       uint16_t)
+ClientResponse EpaAccountLookupClientMock::sendConsentDecisionsRequest(const std::string&, const model::Kvnr&,
+                                                                       const std::string&, uint16_t)
 {
     return ClientResponse(Header{mHttpStatus}, mResponseBody);
 }

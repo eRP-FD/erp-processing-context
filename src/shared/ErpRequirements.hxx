@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -42,7 +42,7 @@ static constexpr Requirement A_19391_01 ("E-Rezept-Fachdienst - Authentifizierun
 static constexpr Requirement A_19392    ("E-Rezept-Fachdienst - Authentifizierung Nutzerkennung");
 static constexpr Requirement A_19439_02 ("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
 static constexpr Requirement A_19395    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest AuditEvent");
-static constexpr Requirement A_19405    ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest MedicationDispense");
+static constexpr Requirement A_19405_02 ("E-Rezept-Fachdienst - Rollenpruefung Versicherter liest MedicationDispense");
 static constexpr Requirement A_19446_02 ("E-Rezept-Fachdienst - Rollenpruefung Versicherter oder Apotheker liest Rezept");
 static constexpr Requirement A_24279    ("E-Rezept-Fachdienst - Rollenpruefung Abgebender stellt Dispensierinformationen bereit");
 // PKV related Rollenprüfung:
@@ -187,6 +187,7 @@ static constexpr Requirement A_24280    ("E-Rezept-Fachdienst - Dispensierinform
 static constexpr Requirement A_24281_02 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Schemaprüfung und Speicherung MedicationDispense");
 static constexpr Requirement A_24298    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Prüfung Status");
 static constexpr Requirement A_24285_01 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Zeitstempel");
+static constexpr Requirement A_24283_02 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
 
 // Requirements for endpoint POST /Task/$close
 static constexpr Requirement A_19231_02 ("E-Rezept-Fachdienst - Task schliessen - Prüfung Secret");
@@ -194,8 +195,8 @@ static constexpr Requirement A_19248_05 ("E-Rezept-Fachdienst - Task schliessen 
 static constexpr Requirement A_19232    ("E-Rezept-Fachdienst - Status beenden");
 static constexpr Requirement A_20513    ("E-Rezept-Fachdienst - nicht mehr benötigte Einlösekommunikation");
 static constexpr Requirement A_19233_05 ("E-Rezept-Fachdienst - Task schliessen - Quittung erstellen");
-static constexpr Requirement A_22069    ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
-static constexpr Requirement A_22070_02 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
+static constexpr Requirement A_22069_01 ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
+static constexpr Requirement A_22070_03 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
 static constexpr Requirement A_23384_01 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
 static constexpr Requirement A_24287    ("E-Rezept-Fachdienst - Task schließen - Aufruf ohne MedicationDispense");
 static constexpr Requirement A_26337    ("E-Rezept-Fachdienst - Task schließen - Zeitstempel MedicationDispense");

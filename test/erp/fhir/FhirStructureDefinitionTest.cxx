@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -80,6 +80,7 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
     auto rootElement = FhirElement::Builder{}
         .name(typeId)
         .isArray(true)
+        .isRoot(true)
         .getAndReset();
 
     auto valueElement = FhirElement::Builder{}

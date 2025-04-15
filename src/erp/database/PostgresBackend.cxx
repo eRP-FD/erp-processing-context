@@ -1,25 +1,22 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/PostgresBackend.hxx"
-
+#include "erp/database/ErpDatabaseModel.hxx"
+#include "erp/model/Consent.hxx"
+#include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CMAC.hxx"
-#include "shared/database/DatabaseConnectionInfo.hxx"
-#include "erp/database/ErpDatabaseModel.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/Consent.hxx"
+#include "shared/model/Binary.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/JsonLog.hxx"
-#include "erp/util/search/UrlArguments.hxx"
 
 #include <boost/algorithm/string.hpp>
-#include <iostream>
 #include <pqxx/pqxx>
 
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,8 @@
 
 #include "exporter/server/SessionContext.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
+
+namespace exporter {
 
 class HealthHandler : public RequestHandlerInterface
 {
@@ -32,5 +34,7 @@ public:
 private:
     void handleRequest(SessionContext& session);
 };
+
+} // namespace exporter
 
 #endif

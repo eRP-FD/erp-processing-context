@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,11 +8,11 @@
 #include "EnrolmentApiClient.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "shared/common/Constants.hxx"
+#include "shared/enrolment/EnrolmentRequestHandler.hxx"
 #include "shared/network/message/HttpMethod.hxx"
 #include "shared/tpm/PcrSet.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
-#include "src/shared/enrolment/EnrolmentRequestHandler.hxx"
 
 #include <boost/format.hpp>
 

@@ -7,8 +7,8 @@
 
 #include "erp/model/EvdgaBundle.hxx"
 #include "erp/model/EvdgaHealthAppRequest.hxx"
-#include "KbvCoverage.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/model/KbvCoverage.hxx"
 
 namespace model
 {

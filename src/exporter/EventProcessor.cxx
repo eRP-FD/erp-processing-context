@@ -18,7 +18,12 @@ using namespace std::chrono_literals;
 
 EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
     : jsonLog([] {
-        return JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false);
+        JsonLog jlog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false);
+        if (tlogContext.has_value())
+        {
+            jlog << KeyValue("x-request-id", *tlogContext);
+        }
+        return jlog;
     })
     , mServiceContext(serviceContext)
     , mRetryDelaySeconds(
@@ -68,10 +73,12 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
         if (! events.empty())
         {
             const auto& firstEvent = *events.front();
+            ScopedLogContext scopedLogContext{firstEvent.getXRequestId()};
 
-
+            auto durationConsumerGuard{std::make_unique<DurationConsumerGuard>(firstEvent.getXRequestId())};
             // Workflow step 3 - decodedKvnr = decrypt(events.front()).kvnr
             auto epaAccount = ePaAccountLookup(firstEvent);
+            durationConsumerGuard.reset();
 
             // Workflow step 4 - ePA account lookup
             switch (epaAccount.lookupResult)
@@ -129,23 +136,23 @@ bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr)
             {
                 case model::TaskEvent::UseCase::providePrescription:
                     A_25962.start("Die Verordnung konnte nicht in die Patientenakte übertragen werden.");
-                auditDataCollector.setAction(model::AuditEvent::Action::create);
-                auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed);
-                A_25962.finish();
-                break;
+                    auditDataCollector.setAction(model::AuditEvent::Action::create);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed);
+                    A_25962.finish();
+                    break;
                 case model::TaskEvent::UseCase::cancelPrescription:
                     A_25962.start(
                         "Die Löschinformation zum E-Rezept konnte nicht in die Patientenakte übermittelt werden.");
-                auditDataCollector.setAction(model::AuditEvent::Action::del);
-                auditDataCollector.setEventId(model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed);
-                A_25962.finish();
-                break;
+                    auditDataCollector.setAction(model::AuditEvent::Action::del);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed);
+                    A_25962.finish();
+                    break;
                 case model::TaskEvent::UseCase::provideDispensation:
                     A_25962.start("Die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");
-                auditDataCollector.setAction(model::AuditEvent::Action::create);
-                auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
-                A_25962.finish();
-                break;
+                    auditDataCollector.setAction(model::AuditEvent::Action::create);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
+                    A_25962.finish();
+                    break;
                 case model::TaskEvent::UseCase::cancelDispensation:// unreachable
                     break;
             }
@@ -182,6 +189,8 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
     // Workflow step 5 - iterate over all events
     for (const auto& event : events)
     {
+        ScopedLogContext scopedLogContext{event->getXRequestId()};
+        DurationConsumerGuard durationConsumerGuard{event->getXRequestId()};
         Expect(event, "No or bad events for kvnr");
 
         // Workflow step 6 - check deadletter
@@ -195,6 +204,7 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 kvnr, event->getPrescriptionId(), event->getPrescriptionType());
             TVLOG(1) << "marked events as deadletterQueue: " << skipped;
             jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+                      << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                       << KeyValue("prescription_id", event->getPrescriptionId().toString());
             continue;
         }
@@ -216,7 +226,8 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         // Workflow step 11 - check ePA response
         switch (outcome)
         {
-            case eventprocessing::Outcome::Success: {// Workflow step 11a - Success -> Workflow step 15
+            case eventprocessing::Outcome::Success:
+            case eventprocessing::Outcome::SuccessAuditFail: {// Workflow step 11a - Success -> Workflow step 15
                 // Workflow step 12 - delete successfully transmitted event
                 jsonLog() << kvnr << KeyValue("event", "Deleting event after successful transmission")
                           << KeyValue("prescription_id", event->getPrescriptionId().toString());
@@ -244,6 +255,7 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                     kvnr, event->getPrescriptionId(), event->getPrescriptionType());
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
                 jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+                          << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                           << KeyValue("prescription_id", event->getPrescriptionId().toString());
                 break;
         }
@@ -310,7 +322,7 @@ EpaAccount EventProcessor::ePaAccountLookup(const model::TaskEvent& taskEvent)
         .addLogAttribute(BDEMessage::lastModifiedTimestampKey, taskEvent.getLastModified())
         .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString())
         .addLogAttribute(BDEMessage::hashedKvnrKey,  std::make_optional<model::HashedKvnr>(taskEvent.getHashedKvnr()));
-    return accountLookup.lookup(taskEvent.getKvnr());
+    return accountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
 }
 
 void EventProcessor::scheduleRetryQueue(const model::EventKvnr& kvnr)

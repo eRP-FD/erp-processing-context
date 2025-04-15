@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -30,7 +30,7 @@ XmlDocument::XmlDocument (const std::string_view xml)
       mXPathContext(),
       mPathHead()
 {
-    xmlSetStructuredErrorFunc(nullptr, [](void*, xmlErrorPtr) {
+    xmlSetStructuredErrorFunc(nullptr, [](void*, const xmlError*) {
         // suppress any output, we'll get the last error below, anyways
     });
     xmlSetGenericErrorFunc(nullptr, genericSuppressingErrorCallback);

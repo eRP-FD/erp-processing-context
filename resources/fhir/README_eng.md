@@ -5,6 +5,7 @@
 |------------------------------------------------|------------|--------------------------------------------------------------------------------|
 | kbv.ita.erp                                    | 1.1.2      | https://simplifier.net/packages/kbv.ita.erp/1.1.2                              |
 | kbv.ita.for                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.for/1.1.0                              |
+| kbv.itv.egdva*                                 | 1.1.1      | https://simplifier.net/packages/kbv.itv.evdga/1.1.1                           |
 | kbv.basis                                      | 1.3.0      | https://simplifier.net/packages/kbv.basis/1.3.0                               |
 | de.basisprofil.r4                              | 1.3.2      | https://simplifier.net/packages/de.basisprofil.r4/1.3.2                      |
 | de.basisprofil.r4                              | 1.5.0      | https://simplifier.net/packages/de.basisprofil.r4/1.5.0                       |
@@ -19,6 +20,8 @@
 | de.gematik.erezept-patientenrechnung.r4        | 1.0.4      | https://simplifier.net/packages/de.gematik.erezept-patientenrechnung.r4/1.0.4  |
 | de.gematik.fhir.directory                      | 0.11.12    | https://simplifier.net/packages/de.gematik.fhir.directory/0.11.12             |
 | de.ihe-d.terminology                           | 3.0.0      | https://simplifier.net/packages/de.ihe-d.terminology/3.0.0                    |
+
+\* kbv.itv.egdva: As an interim solution to follow the planned versioning scheme the profile version has been truncated from `1.1.1` to `1.1`.
 
 # Used FHIR Components
 ## The following FHIR components are used and included in the respective versions:

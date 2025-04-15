@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,8 +8,6 @@
 #include "erp/service/VauRequestHandler.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
-#include "erp/model/Device.hxx"
-#include "erp/model/MedicationDispenseId.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
@@ -24,7 +22,8 @@
 #include "shared/crypto/CMAC.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/hsm/HsmException.hxx"
-#include "shared/model/Coding.hxx"
+#include "shared/model/Device.hxx"
+#include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/tsl/error/TslError.hxx"
@@ -36,8 +35,6 @@
 #include <boost/exception/diagnostic_information.hpp>
 #include <pqxx/except>
 #include <typeinfo>
-#include <unordered_set>
-
 
 namespace
 {
@@ -612,7 +609,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19230_01.start("Check if professionOID claim is allowed for this endpoint");
     A_19390.start("Check if professionOID claim is allowed for this endpoint");
     A_19395.start("Check if professionOID claim is allowed for this endpoint");
-    A_19405.start("Check if professionOID claim is allowed for this endpoint");
+    A_19405_02.start("Check if professionOID claim is allowed for this endpoint");
     A_19446_02.start("Check if professionOID claim is allowed for this endpoint");
     A_22362_01.start("Check if professionOID claim is allowed for this endpoint");
     A_24279.start("Check if professionOID claim is allowed for this endpoint");
@@ -631,7 +628,7 @@ bool VauRequestHandler::checkProfessionOID(
         A_19230_01.finish();
         A_19390.finish();
         A_19395.finish();
-        A_19405.finish();
+        A_19405_02.finish();
         A_19446_02.finish();
         A_22362_01.finish();
         A_24279.finish();

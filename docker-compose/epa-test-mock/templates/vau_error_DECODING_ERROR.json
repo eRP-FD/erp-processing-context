@@ -1,0 +1,5 @@
+{
+	"MessageType" : "Error",
+    "ErrorCode" : 1,
+    "ErrorMessage" : "Decoding Error"
+} 

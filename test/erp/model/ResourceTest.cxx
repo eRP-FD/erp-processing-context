@@ -1,18 +1,16 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/MedicationDispense.hxx"
-#include "erp/model/GemErpPrMedication.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "shared/model/Parameters.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceFactory.hxx"
-#include "shared/util/Configuration.hxx"
 #include "shared/util/ErpException.hxx"
 #include "shared/util/String.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"

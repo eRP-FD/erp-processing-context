@@ -1,25 +1,23 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/task/AcceptTaskHandler.hxx"
-#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/model/Binary.hxx"
 #include "erp/model/Consent.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/Task.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/SecureRandomGenerator.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/PrescriptionId.hxx"
-#include "shared/network/message/MimeType.hxx"
-#include "shared/server/response/ServerResponse.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/TLog.hxx"

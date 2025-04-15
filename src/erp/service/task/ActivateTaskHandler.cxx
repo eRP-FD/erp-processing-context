@@ -1,29 +1,28 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/service/task/ActivateTaskHandler.hxx"
-#include "erp/crypto/SignedPrescription.hxx"
 #include "erp/database/Database.hxx"
-#include "erp/model/Binary.hxx"
-#include "erp/model/Composition.hxx"
 #include "erp/model/EvdgaBundle.hxx"
-#include "erp/model/KbvBundle.hxx"
-#include "erp/model/KbvCoverage.hxx"
-#include "erp/model/KbvMedicationBase.hxx"
-#include "erp/model/KbvMedicationCompounding.hxx"
-#include "erp/model/KbvMedicationRequest.hxx"
 #include "erp/model/KbvPractitioner.hxx"
-#include "erp/model/Patient.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/WorkflowParameters.hxx"
-#include "erp/model/extensions/KBVMultiplePrescription.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/Composition.hxx"
+#include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvCoverage.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
+#include "shared/model/KbvMedicationCompounding.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
+#include "shared/model/Patient.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/tsl/error/TslError.hxx"
 #include "shared/util/Expect.hxx"
@@ -42,8 +41,10 @@ ActivateTaskHandler::ActivateTaskHandler(const std::initializer_list<std::string
 
 void ActivateTaskHandler::handleRequest(PcSessionContext& session)
 {
+    // GEMREQ-start A_19716#sampleUsage
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
     TVLOG(2) << "request body is '" << session.request.getBody() << "'";
+    // GEMREQ-end A_19716#sampleUsage
 
     const auto prescriptionId = parseId(session.request, session.accessLog);
 

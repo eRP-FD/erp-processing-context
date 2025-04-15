@@ -43,7 +43,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
 
 # Update certificates and install latest version of cmake
 RUN update-ca-certificates && \
-    pip install --upgrade cmake 'conan<2.14'
+    pip install --upgrade cmake 'conan'
 
 # Tool for converting json sbom to xml
 RUN wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.2/cyclonedx-linux-x64 -O /usr/bin/cyclonedx && \

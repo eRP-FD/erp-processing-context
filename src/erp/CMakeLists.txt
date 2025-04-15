@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -34,7 +34,6 @@ list(
         ErpProcessingContext.cxx
         admin/AdminServer.cxx
         admin/PutRuntimeConfigHandler.cxx
-        crypto/SignedPrescription.cxx
         crypto/VsdmProof.cxx
         database/Database.cxx
         database/DatabaseConnectionTimer.cxx
@@ -47,48 +46,25 @@ list(
         database/redis/RateLimiter.cxx
         database/redis/TaskRateLimiter.cxx
         model/AbgabedatenPkvBundle.cxx
-        model/Binary.cxx
         model/ChargeItem.cxx
         model/Communication.cxx
         model/CommunicationPayload.cxx
-        model/Composition.cxx
         model/Consent.cxx
-        model/Device.cxx
-        model/ErxReceipt.cxx
-        model/EvdgaBundle.cxx
-        model/EvdgaHealthAppRequest.cxx
         model/extensions/ChargeItemMarkingFlags.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
-        model/extensions/KBVMedicationCategory.cxx
-        model/extensions/KBVMultiplePrescription.cxx
-        model/GemErpPrMedication.cxx
-        model/Iknr.cxx
-        model/KbvBundle.cxx
-        model/KbvComposition.cxx
-        model/KbvCoverage.cxx
-        model/KbvMedicationCompounding.cxx
+        model/EvdgaBundle.cxx
+        model/EvdgaHealthAppRequest.cxx
+        model/ErxReceipt.cxx
         model/KbvMedicationFreeText.cxx
         model/KbvMedicationIngredient.cxx
-        model/KbvMedicationPzn.cxx
-        model/KbvMedicationRequest.cxx
-        model/KbvOrganization.cxx
         model/KbvPractitioner.cxx
         model/KbvPracticeSupply.cxx
         model/Lanr.cxx
-        model/Link.cxx
-        model/MedicationDispense.cxx
-        model/MedicationDispenseBundle.cxx
-        model/MedicationDispenseId.cxx
-        model/MedicationDispenseOperationParameters.cxx
         model/MedicationsAndDispenses.cxx
         model/MetaData.cxx
         model/OuterResponseErrorData.cxx
-        model/Patient.cxx
-        model/Pzn.cxx
-        model/Reference.cxx
         model/ResourceInstances.cxx
-        model/Signature.cxx
         model/Subscription.cxx
         model/Task.cxx
         model/WorkflowParameters.cxx
@@ -163,11 +139,6 @@ target_compile_definitions(erp-processing-context-files
         $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:WITH_HSM_TPM_PRODUCTION=1>
 )
 
-target_include_directories (
-    erp-processing-context-files
-        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..
-        PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
-)
 
 target_link_libraries (
     erp-processing-context-files
@@ -196,11 +167,6 @@ target_link_libraries (
 add_executable(erp-processing-context erp-main.cxx)
 # Add -rdynamic to enrich the symbol table so that stack traces become more readable.
 set_property(TARGET erp-processing-context PROPERTY ENABLE_EXPORTS ON)
-
-target_include_directories (
-    erp-processing-context
-        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.. # Include the erp/ and fhirtools/ prefixes in include statements.
-)
 
 target_link_libraries (
     erp-processing-context

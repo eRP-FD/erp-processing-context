@@ -31,6 +31,8 @@ add_executable(exporter-test
 target_link_libraries(
     exporter-test
         erp-medication-exporter-files
+        erp-shared
+        erp-processing-context-files
         erp-hsm-tpm-mock
         gtest::gtest
         erp-test-util-lib

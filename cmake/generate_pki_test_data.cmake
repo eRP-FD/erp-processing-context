@@ -1,12 +1,13 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2024
-# (C) Copyright IBM Corp. 2021, 2024
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
 #
 # non-exclusively licensed to gematik GmbH
 #
 
 # Enforce use of conan-provided OpenSSL
 unset(OPENSSL CACHE)
+unset(XMLSEC1 CACHE)
 
 find_program(OPENSSL
     NAMES openssl
@@ -41,7 +42,7 @@ mark_as_advanced(XMLSEC1)
 
 execute_process(
     COMMAND
-        ${CMAKE_COMMAND} -E env "OPENSSL=${OPENSSL}" "LD_LIBRARY_PATH=${OPENSSL_LD_LIBARAY_PATH}:$ENV{LD_LIBRARY_PATH}"
+        ${CMAKE_COMMAND} -E env "OPENSSL=${OPENSSL}" "OPENSSL_CONF=/dev/null" "XMLSEC1=${XMLSEC1}" "LD_LIBRARY_PATH=${OPENSSL_LD_LIBARAY_PATH}:$ENV{LD_LIBRARY_PATH}"
             ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_pki_test_data.sh --clean --output-dir=${CMAKE_BINARY_DIR}
     COMMAND_ECHO STDOUT
     OUTPUT_VARIABLE OUTPUT_GENERATE_PKI_TEST_DATA

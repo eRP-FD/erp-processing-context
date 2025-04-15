@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2024
- * (C) Copyright IBM Corp. 2021, 2024
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -446,6 +446,98 @@ TEST_F(ElementTest, QuantityConstructor)
     EXPECT_EQ(q7.unit(), "");
 }
 
+TEST_F(ElementTest, Equals1)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6"})");
+    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
+                                                   "Test", &testResource);
+    auto element1 = erpElement->subElements("stringPrimitive")[0];
+    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    ASSERT_TRUE(element1);
+    EXPECT_TRUE(element1->equals(*element2) == true);
+    EXPECT_TRUE(element2->equals(*element1) == true);
+}
+
+TEST_F(ElementTest, Equals2)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
+    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
+                                                   "Test", &testResource);
+    auto element1 = erpElement->subElements("stringPrimitive")[0];
+    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    ASSERT_TRUE(element1);
+    EXPECT_TRUE(element1->equals(*element2) == true);
+    EXPECT_TRUE(element2->equals(*element1) == true);
+}
+
+TEST_F(ElementTest, NotEquals1)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
+    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
+                                                   "Test", &testResource);
+    auto element1 = erpElement->subElements("stringPrimitive")[0];
+    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    ASSERT_TRUE(element1);
+    EXPECT_FALSE(element1->equals(*element2) == true);
+    EXPECT_FALSE(element2->equals(*element1) == true);
+}
+
+TEST_F(ElementTest, NotEquals2)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
+    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
+                                                   "Test", &testResource);
+    auto element1 = erpElement->subElements("stringPrimitive")[0];
+    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 7");
+    ASSERT_TRUE(element1);
+    EXPECT_FALSE(element1->equals(*element2) == true);
+    EXPECT_FALSE(element2->equals(*element1) == true);
+}
+
+TEST_F(ElementTest, NotEquals3)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6"})");
+    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
+                                                   "Test", &testResource);
+    auto element1 = erpElement->subElements("stringPrimitive")[0];
+    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 7");
+    ASSERT_TRUE(element1);
+    EXPECT_FALSE(element1->equals(*element2) == true);
+    EXPECT_FALSE(element2->equals(*element1) == true);
+}
+
+TEST_F(ElementTest, asRaw)
+{
+    auto testResource = model::NumberAsStringParserDocument::fromJson(
+        ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
+
+    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test", &testResource);
+
+    auto testElement = [&](const std::string& subElementName, const std::string& expectedValue) {
+        const auto& subElements = erpElement.subElements(subElementName);
+        ASSERT_EQ(subElements.size(), 1);
+        ASSERT_EQ(subElements[0]->asRaw(), expectedValue);
+    };
+
+    testElement("boolean", "true");
+    testElement("string", "value");
+    testElement("num", "12");
+    testElement("dec", "1.2");
+    testElement("intAsString", "32");
+    testElement("decimalAsString", "3.14");
+    testElement("boolAsString", "T");
+    testElement("date", "2022-04-29");
+    testElement("dateTime", "2022-04-29T11:47:30");
+    testElement("time", "11:47:30");
+    testElement("quantity", R"({"value":10,"unit":"km"})");
+
+}
+
 class ElementNavigationTest : public ElementTest
 {
 public:
@@ -808,11 +900,13 @@ TEST_F(ElementNavigationTest, documentRoot)
     EXPECT_EQ(entry1BundleEntry0ResourceId[0]->documentRoot(), bundle);
 }
 
-class ElementNavigationTest2 : public testing::Test {
+class ElementNavigationTest2 : public testing::Test
+{
 protected:
     using ElementPtr = std::shared_ptr<const fhirtools::Element>;
 
-    void SetUp() override  {
+    void SetUp() override
+    {
         static constexpr char miniFhirAndParameters[] = "mini-fhir+parameters";
         fhirtools::FhirResourceGroupConst resolver{miniFhirAndParameters};
         backend.load(
@@ -828,7 +922,7 @@ protected:
     ElementPtr eval(const ElementPtr& element, std::string_view fhirPath)
     {
         ElementPtr result;
-        auto elementAsJson = [&]{
+        auto elementAsJson = [&] {
             std::ostringstream out;
             element->json(out);
             return std::move(out).str();
