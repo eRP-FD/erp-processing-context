@@ -33,7 +33,7 @@ std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
-    Versions::KBV_EVDGA_1_1_1,
+    Versions::KBV_EVDGA_1_1,
 };
 
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
@@ -74,13 +74,13 @@ Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[
 
 Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference [[maybe_unused]])
 {
-    return KBV_EVDGA_1_1_1;
+    return KBV_EVDGA_1_1;
 }
 
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
 {
     auto taskKey = latest(model::resource::structure_definition::task, reference);
-    return taskKey.version ? GEM_ERP{*taskKey.version} : GEM_ERP_1_3;
+    return GEM_ERP{taskKey.version.value_or(GEM_ERP_1_4)};
 }
 
 Versions::DAV_PKV::DAV_PKV(FhirVersion ver)
@@ -322,10 +322,6 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
         }
         std::string operator()(const model::Timestamp& timestamp) const
         {
-            if (includeTime)
-            {
-                return timestamp.toXsDateTime();
-            }
             return timestamp.toGermanDate();
         }
         std::string operator()(const std::string& str)
@@ -340,17 +336,14 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
         {
             return medicationDispenseId.toString();
         }
-        bool includeTime;
     };
-    ToString toString{false};
-    ToString whenHandenOverToString{.includeTime = medicationDispenseOptions.gematikVersion < Versions::GEM_ERP_1_3};
-    ToString whenPreparedToString{.includeTime = medicationDispenseOptions.gematikVersion < Versions::GEM_ERP_1_4};
+    ToString toString{};
     boost::replace_all(bundle, "###MEDICATION_DISPENSE_ID###", std::visit(toString, medicationDispenseOptions.id));
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", std::visit(toString, medicationDispenseOptions.prescriptionId));
     boost::replace_all(bundle, "###INSURANT_KVNR###", medicationDispenseOptions.kvnr);
     boost::replace_all(bundle, "###TELEMATIK_ID###", medicationDispenseOptions.telematikId);
     boost::replace_all(bundle, "###WHENHANDEDOVER###",
-                       std::visit(whenHandenOverToString, medicationDispenseOptions.whenHandedOver));
+                       std::visit(toString, medicationDispenseOptions.whenHandedOver));
     struct InsertMedication {
         void operator()(const ResourceTemplates::MedicationDispenseOptions::MedicationReference& ref)
         {
@@ -385,7 +378,7 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
     std::string whenPrepared;
     if (!std::holds_alternative<std::monostate>(medicationDispenseOptions.whenPrepared))
     {
-        whenPrepared = "<whenPrepared value=\"" + visit(whenPreparedToString, medicationDispenseOptions.whenPrepared) + "\" />";
+        whenPrepared = "<whenPrepared value=\"" + visit(toString, medicationDispenseOptions.whenPrepared) + "\" />";
     }
     boost::replace_all(bundle, "###WHENPREPARED###", whenPrepared);
     return bundle;
@@ -436,6 +429,16 @@ std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& optio
     boost::replace_all(medicationDispense, "##KVNR##", options.kvnr);
     boost::replace_all(medicationDispense, "##TELEMATIK_ID##", options.telematikId);
     boost::replace_all(medicationDispense, "##WHENHANDEDOVER##", options.whenHandedOver);
+    const auto redeemCodeExtension =
+        options.withRedeemCode
+            ? R"(<extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_RedeemCode"><valueString value="DE12345678901234" /></extension>)"
+            : "";
+    const auto dataAbsentExtension =
+        options.withRedeemCode
+            ? ""
+            : R"(<extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason"><valueCode value="asked-declined"/></extension>)";
+    boost::replace_all(medicationDispense, "##REDEEM_CODE_EXTENSION##", redeemCodeExtension);
+    boost::replace_all(medicationDispense, "##DATA_ABSENT_EXTENSION##", dataAbsentExtension);
     return medicationDispense;
 }
 

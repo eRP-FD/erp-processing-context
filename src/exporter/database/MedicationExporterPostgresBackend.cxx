@@ -112,7 +112,8 @@ UPDATE
   erp_event.kvnr
 SET
   state = 'processed',
-  retry_count = 0
+  retry_count = 0,
+  next_export = null
 WHERE
   kvnr_hashed = $1::bytea AND state = 'processing';
     )");
@@ -129,8 +130,8 @@ LIMIT
 
 thread_local PostgresConnection MedicationExporterPostgresBackend::mConnection{defaultConnectString()};
 
-MedicationExporterPostgresBackend::MedicationExporterPostgresBackend()
-    : CommonPostgresBackend(mConnection, defaultConnectString())
+MedicationExporterPostgresBackend::MedicationExporterPostgresBackend(TransactionMode mode)
+    : CommonPostgresBackend(mConnection, defaultConnectString(), mode)
 {
 }
 
@@ -186,9 +187,9 @@ std::optional<model::EventKvnr> MedicationExporterPostgresBackend::processNextKv
     checkCommonPreconditions();
     TVLOG(2) << sqlProcessNextKvnr.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:processNextKvnr");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "processnextkvnr");
 
-    const auto results = mTransaction->exec(sqlProcessNextKvnr.query);
+    const auto results = transaction()->exec(sqlProcessNextKvnr.query);
     TVLOG(2) << "got " << results.size() << " results";
 
     if (results.empty())
@@ -222,11 +223,11 @@ MedicationExporterPostgresBackend::getAllEventsForKvnr(const model::EventKvnr& e
     checkCommonPreconditions();
     TVLOG(2) << sqlGetAllEventsForKvnr.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:getAllEventsForKvnr");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "getalleventsforkvnr");
 
     if (not eventKvnr.kvnrHashed().empty())
     {
-        const auto results = mTransaction->exec_params(sqlGetAllEventsForKvnr.query, eventKvnr.kvnrHashed());
+        const auto results = transaction()->exec_params(sqlGetAllEventsForKvnr.query, eventKvnr.kvnrHashed());
         TVLOG(2) << "got " << results.size() << " results";
 
         std::vector<db_model::TaskEvent> models{};
@@ -276,11 +277,11 @@ bool MedicationExporterPostgresBackend::isDeadLetter(const model::EventKvnr& kvn
     checkCommonPreconditions();
     TVLOG(2) << sql.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:sqlCheckDeadletter");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "sqlcheckdeadletter");
 
     const auto result =
-        mTransaction->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
-                                  static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
+        transaction()->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
+                                   static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
     TVLOG(2) << "got " << result.size() << " results";
     std::int64_t count = 0;
     Expect(result.at(0, 0).to(count), "Could not retrieve count of deadletters as int64_t");
@@ -295,11 +296,11 @@ int MedicationExporterPostgresBackend::markDeadLetter(const model::EventKvnr& kv
     checkCommonPreconditions();
     TVLOG(2) << sql.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:markCheckDeadletter");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "markcheckdeadletter");
 
     const auto result =
-        mTransaction->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
-                                  static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
+        transaction()->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
+                                   static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
     return result.affected_rows();
 }
 
@@ -310,9 +311,9 @@ MedicationExporterPostgresBackend::markFirstEventDeadLetter(const model::EventKv
     checkCommonPreconditions();
     TVLOG(2) << sql.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:markFirstEventDeadLetter");
+                                                                        "markfirsteventdeadletter");
 
-    const auto result = mTransaction->exec_params(sql.query, kvnr.kvnrHashed());
+    const auto result = transaction()->exec_params(sql.query, kvnr.kvnrHashed());
 
     if (! result.empty())
     {
@@ -347,13 +348,13 @@ void MedicationExporterPostgresBackend::deleteAllEventsForKvnr(const model::Even
     checkCommonPreconditions();
     TVLOG(2) << sqlDeleteAllEventsForKvnr.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:deleteAllEventsForKvnr");
+                                                                        "deletealleventsforkvnr");
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
     std::basic_string<std::byte> s{kvnr.kvnrHashed().data(), kvnr.kvnrHashed().size()};
 
-    const auto results = mTransaction->exec_params(sqlDeleteAllEventsForKvnr.query, s);
+    const auto results = transaction()->exec_params(sqlDeleteAllEventsForKvnr.query, s);
     TVLOG(2) << "got " << results.size() << " results";
 }
 
@@ -364,11 +365,11 @@ void MedicationExporterPostgresBackend::updateProcessingDelay(std::int32_t newRe
     TVLOG(2) << sql.query;
 
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:postponeProcessing24h");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "postponeprocessing24h");
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
-    const auto results = mTransaction->exec_params(sql.query, newRetry, delay.count(), kvnr.kvnrHashed());
+    const auto results = transaction()->exec_params(sql.query, newRetry, delay.count(), kvnr.kvnrHashed());
     TVLOG(2) << "affected " << results.affected_rows() << " rows";
 }
 
@@ -378,13 +379,13 @@ void MedicationExporterPostgresBackend::deleteOneEventForKvnr(const model::Event
     checkCommonPreconditions();
     TVLOG(2) << sqlDeleteOneEventForFKvnr.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:sqlDeleteOneEventForFKvnr");
+                                                                        "sqldeleteoneeventforfkvnr");
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
     std::basic_string<std::byte> s{kvnr.kvnrHashed().data(), kvnr.kvnrHashed().size()};
 
-    const auto results = mTransaction->exec_params(sqlDeleteOneEventForFKvnr.query, s, id);
+    const auto results = transaction()->exec_params(sqlDeleteOneEventForFKvnr.query, s, id);
     TVLOG(2) << "got " << results.size() << " results";
 }
 
@@ -393,13 +394,13 @@ void MedicationExporterPostgresBackend::finalizeKvnr(const model::EventKvnr& kvn
     checkCommonPreconditions();
     TVLOG(2) << sqlFinalizeKvnr.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:sqlFinalizeKvnr");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "sqlfinalizekvnr");
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
     std::basic_string<std::byte> s{kvnr.kvnrHashed().data(), kvnr.kvnrHashed().size()};
 
-    const auto results = mTransaction->exec_params(sqlFinalizeKvnr.query, s);
+    const auto results = transaction()->exec_params(sqlFinalizeKvnr.query, s);
     TVLOG(2) << "got " << results.size() << " results";
 }
 
@@ -409,7 +410,7 @@ void MedicationExporterPostgresBackend::healthCheck()
     checkCommonPreconditions();
     TVLOG(2) << sqlHealthCheck.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:healthCheck");
-    const auto result = mTransaction->exec(sqlHealthCheck.query);
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "healthcheck");
+    const auto result = transaction()->exec(sqlHealthCheck.query);
     TVLOG(2) << "got " << result.size() << " results";
 }

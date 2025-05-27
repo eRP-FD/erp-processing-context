@@ -24,7 +24,7 @@ namespace model
 class ErxReceipt : public BundleBase<ErxReceipt>
 {
 public:
-    static constexpr auto profileType = ProfileType::Gem_erxReceiptBundle;
+    static constexpr auto profileType = ProfileType::GEM_ERP_PR_Bundle;
 
     ErxReceipt(const Uuid& bundleId, const std::string& selfLink, const model::PrescriptionId& prescriptionId,
                const model::Composition& composition, const std::string& deviceIdentifier, const model::Device& device,

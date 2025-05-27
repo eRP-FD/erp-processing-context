@@ -28,7 +28,7 @@ class Task : public Resource<Task>
 {
 public:
     static constexpr auto resourceTypeName = "Task";
-    static constexpr auto profileType = ProfileType::Gem_erxTask;
+    static constexpr auto profileType = ProfileType::GEM_ERP_PR_Task;
 
     // we support a subset of https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/80166
     // as defined in table TAB_SYSLERP_006 of gemSysL_eRp

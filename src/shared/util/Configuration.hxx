@@ -68,9 +68,6 @@ enum class ConfigurationKey
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
     SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF,
     SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE,
-    SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE,
-    SERVICE_TASK_CLOSE_DEVICE_REF_TYPE,
-    SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,
     SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,
     SERVICE_TASK_GET_ENFORCE_HCV_CHECK,
     SERVICE_TASK_GET_RATE_LIMIT,
@@ -97,7 +94,6 @@ enum class ConfigurationKey
     PUBLIC_E_PRESCRIPTION_SERVICE_URL,
     REGISTRATION_HEARTBEAT_INTERVAL_SEC,
     TSL_TI_OCSP_PROXY_URL,
-    TSL_FRAMEWORK_SSL_ROOT_CA_PATH,
     TSL_INITIAL_DOWNLOAD_URL,
     TSL_INITIAL_CA_DER_PATH,
     TSL_INITIAL_CA_DER_PATH_NEW,
@@ -219,6 +215,7 @@ enum class ConfigurationKey
     MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRY_TIMEOUT_MILLISECONDS,
     MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS,
     MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS,
+    MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_STICKY,
     MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD,
 
     MEDICATION_EXPORTER_SERNO2TID_PATH,
@@ -262,6 +259,11 @@ public:
 
     struct ProfileTypeRequirement {
         std::set<std::string> onlyViews{};
+    };
+
+    enum class ProcessType {
+        ERP,
+        MedicationExporter,
     };
 
     struct ERP {
@@ -569,33 +571,15 @@ public:
     enum class AnrChecksumValidationMode {
         warning, error,
     };
-    enum class PrescriptionDigestRefType
-    {
-        relative,
-        uuid
-    };
-    enum class DeviceRefType
-    {
-        url,
-        uuid
-    };
-    enum class MvoIdValidationMode : uint8_t
-    {
-        disable,
-        error
-    };
 
     static const Configuration& instance();
-    void check() const;
+    void check(ProcessType processType) const;
 
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
     [[nodiscard]] NonLiteralAuthorRefMode kbvValidationNonLiteralAuthorRef() const;
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
     fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType) const;
     AnrChecksumValidationMode anrChecksumValidationMode() const;
-    [[nodiscard]] PrescriptionDigestRefType prescriptionDigestRefType() const;
-    [[nodiscard]] DeviceRefType closeTaskDeviceRefType() const;
-    [[nodiscard]] MvoIdValidationMode mvoIdValidationMode() const;
 
     template <config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::FhirResourceGroupConfiguration fhirResourceGroupConfiguration() const;

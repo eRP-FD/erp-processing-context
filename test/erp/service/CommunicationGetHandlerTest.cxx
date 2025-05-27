@@ -283,10 +283,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
 
     EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication1.serializeToXmlString(),
                                                                                  *StaticData::getXmlValidator(), {})
-                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
+                        .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative));
     EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication2.serializeToXmlString(),
                                                                                  *StaticData::getXmlValidator(), {})
-                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
+                        .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative));
 
     ASSERT_TRUE(communication1.id() == givenCommunication1.id() || communication1.id() == givenCommunication3.id());
     ASSERT_TRUE(communication2.id() == givenCommunication1.id() || communication2.id() == givenCommunication3.id());
@@ -1360,7 +1360,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_success)
     std::optional<model::Communication> communication;
     ASSERT_NO_THROW(communication = model::ResourceFactory<model::Communication>::fromJson(
                                         innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-                                        .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative));
+                                        .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative));
 
     ASSERT_EQ(communication->id(), givenCommunication1.id());
 }

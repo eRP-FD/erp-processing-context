@@ -67,8 +67,8 @@ RUN chmod 755 template.bash create_gramine_manifest.bash
 RUN ./template.bash -b erp-processing-context  -l gramine.log          -r /erp                                                                                        /erp/bin/manifest.template > /erp/bin/erp-processing-context.manifest
 RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -r /erp -a \"file:/var/config/erp/config/SerNo2TID.csv\"                                       /erp/bin/manifest.template > /erp/bin/exporter.manifest
 
-RUN ./template.bash -b erp-processing-context  -l gramine.log          -r /erp -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\"                                               /erp/bin/manifest-kubernetes.template > /erp/bin/erp-processing-context-kubernetes.manifest
-RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -r /erp -a \"file:/var/config/erp/config/SerNo2TID.csv\",\"file:/erp/tsl/tsl-ssl-root-ca.pem\" /erp/bin/manifest-kubernetes.template > /erp/bin/exporter-kubernetes.manifest
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -r /erp                                                  /erp/bin/manifest-kubernetes.template > /erp/bin/erp-processing-context-kubernetes.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -r /erp -a \"file:/var/config/erp/config/SerNo2TID.csv\" /erp/bin/manifest-kubernetes.template > /erp/bin/exporter-kubernetes.manifest
 
 RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/erp-processing-context.manifest
 RUN ./create_gramine_manifest.bash install_manifest.txt /erp/bin/exporter.manifest
@@ -98,8 +98,8 @@ RUN chmod 755 template.bash create_gramine_manifest.bash
 RUN ./template.bash -b erp-processing-context  -l gramine.log          -d /debug -r /debug                                                                                        /debug/erp/bin/manifest.template > /debug/erp/bin/erp-processing-context.manifest
 RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -d /debug -r /debug -a \"file:/var/config/erp/config/SerNo2TID.csv\"                                       /debug/erp/bin/manifest.template > /debug/erp/bin/exporter.manifest
 
-RUN ./template.bash -b erp-processing-context  -l gramine.log          -d /debug -r /debug -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\"                                               /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/erp-processing-context-kubernetes.manifest
-RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -d /debug -r /debug -a \"file:/erp/tsl/tsl-ssl-root-ca.pem\",\"file:/var/config/erp/config/SerNo2TID.csv\" /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/exporter-kubernetes.manifest
+RUN ./template.bash -b erp-processing-context  -l gramine.log          -d /debug -r /debug                                                  /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/erp-processing-context-kubernetes.manifest
+RUN ./template.bash -b erp-medication-exporter -l gramine-exporter.log -d /debug -r /debug -a \"file:/var/config/erp/config/SerNo2TID.csv\" /debug/erp/bin/manifest-kubernetes.template > /debug/erp/bin/exporter-kubernetes.manifest
 
 RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/erp-processing-context.manifest
 RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/erp-processing-context-kubernetes.manifest

@@ -33,7 +33,7 @@ public:
     using Resource<MedicationDispenseBundle>::fromJson;
 
     void prepare() override;
-    Timestamp whenHandedOver() const;
+    Timestamp maxWhenHandedOver() const;
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 };
 

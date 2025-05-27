@@ -33,6 +33,7 @@ TEST_F(Erp5895Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle(),
                                          HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
 

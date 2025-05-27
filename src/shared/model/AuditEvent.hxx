@@ -23,7 +23,7 @@ class AuditEvent : public Resource<AuditEvent>
 {
 public:
     static constexpr auto resourceTypeName = "AuditEvent";
-    static constexpr auto profileType = ProfileType::Gem_erxAuditEvent;
+    static constexpr auto profileType = ProfileType::GEM_ERP_PR_AuditEvent;
 
     // Type is fixed to "rest";
     enum class SubType

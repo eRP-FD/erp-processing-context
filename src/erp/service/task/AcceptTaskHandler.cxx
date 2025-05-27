@@ -194,7 +194,7 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
 
 void AcceptTaskHandler::checkMultiplePrescription(PcSessionContext& session, const model::KbvBundle& prescription)
 {
-    A_22635.start("check MVO period start");
+    A_22635_02.start("check MVO period start");
     const auto now = std::chrono::system_clock::now();
     const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
     if (!medicationRequests.empty())
@@ -214,7 +214,8 @@ void AcceptTaskHandler::checkMultiplePrescription(PcSessionContext& session, con
             {
                 std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
                 std::ostringstream ss;
-                ss << "Teilverordnung ab " << germanFmtTs << " einlösbar.";
+                ss << "Teilverordnung zur Mehrfachverordnung " << mPExt->mvoId().value_or("<unknown>") << " ist ab "
+                   << germanFmtTs << " einlösbar.";
                 ErpFail(HttpStatus::Forbidden, ss.str());
             }
         }

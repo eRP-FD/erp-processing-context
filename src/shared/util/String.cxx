@@ -342,6 +342,11 @@ std::string String::toHexString(const std::string_view& input)
     return sstr.str();
 }
 
+bool String::isHexString(const std::string& input)
+{
+    return input.length() % 2 == 0 && std::regex_match(input, std::regex("^[0-9a-fA-F]*$"));
+}
+
 
 void String::copyMemorySafely(void* dest, size_t destSize, const void* src, size_t count)
 {

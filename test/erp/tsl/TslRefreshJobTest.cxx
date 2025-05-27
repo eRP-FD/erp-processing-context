@@ -51,13 +51,13 @@ TEST_F(TslRefreshJobTest, triggerRefreshSuccess)
 
     // wait till the actions are triggered, but not longer than 10 seconds
     size_t counter = 0;
-    while(counter < 100 && manager->updateCount.operator int() < 2)
+    while(counter < 100 && manager->updateCount.operator int() <= 2)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         counter++;
     }
 
-    EXPECT_TRUE(manager->updateCount.operator int() > 2);
+    EXPECT_GT(manager->updateCount.operator int(), 2);
 
     refreshJob.shutdown();
 }

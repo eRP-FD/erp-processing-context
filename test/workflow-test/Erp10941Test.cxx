@@ -32,6 +32,7 @@ TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
 
     const auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> chargeItem;
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
                                 *prescriptionId,
                                 kvnr,

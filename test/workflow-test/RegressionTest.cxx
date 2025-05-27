@@ -25,6 +25,7 @@ TEST_F(RegressionTest, Erp10674)
     ASSERT_TRUE(task.has_value());
     kbv_bundle_xml = String::replaceAll(kbv_bundle_xml, "160.000.008.870.312.04", task->prescriptionId().toString());
     kbv_bundle_xml = patchVersionsInBundle(kbv_bundle_xml);
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     std::string accessCode{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(
         taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
@@ -142,6 +143,7 @@ TEST_F(RegressionTest, Erp11142)
     auto kbv_bundle_xml = String::replaceAll(kbv_bundle_orig_xml,
                                              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbv_version,
                                              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle");
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
@@ -155,6 +157,7 @@ TEST_F(RegressionTest, Erp11142)
     kbv_bundle_xml =
         String::replaceAll(kbv_bundle_orig_xml, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
                            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbv_version);
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "";
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
@@ -180,6 +183,7 @@ TEST_F(RegressionTest, Erp10892)
     const auto kbv_bundle_xml = converter.jsonToXmlString(kbvBundleJson, true);
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskActivateResult = taskActivateWithOutcomeValidation(
                                 task->prescriptionId(), accessCode, toCadesBesSignature(kbv_bundle_xml, now),
                                 HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
@@ -198,6 +202,7 @@ TEST_F(RegressionTest, Erp11050)
     kbv_bundle_500_xml = String::replaceAll(kbv_bundle_500_xml, "160.000.000.040.284.67", task->prescriptionId().toString());
     std::string accessCode{task->accessCode()};
     std::optional<model::Task> taskActivateResult;
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(
         taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,

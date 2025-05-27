@@ -28,7 +28,7 @@ public:
     void handleRequest(PcSessionContext& session) override;
 
 private:
-    static std::string generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase);
+    static std::string generateCloseTaskDeviceRef();
 
 };
 

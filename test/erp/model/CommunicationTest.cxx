@@ -43,7 +43,7 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
                ResourceTemplates::Versions::GEM_ERP_current());
     ASSERT_NO_THROW(communication1 = model::ResourceFactory<Communication>::fromJson(
                                          bodyRequest, *StaticData::getJsonValidator(), {})
-                                         .getValidated(ProfileType::Gem_erxCommunicationInfoReq, repoView));
+                                         .getValidated(ProfileType::GEM_ERP_PR_Communication_InfoReq, repoView));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
@@ -96,7 +96,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cogn
     std::optional<Communication> communication1;
     ASSERT_NO_THROW(communication1 =
                         ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
-                            .getValidated(ProfileType::Gem_erxCommunicationReply));
+                            .getValidated(ProfileType::GEM_ERP_PR_Communication_Reply));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
@@ -120,7 +120,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cogn
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::Reply);
-    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationReply);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::GEM_ERP_PR_Communication_Reply);
     EXPECT_EQ(communication.messageTypeAsString(), "Reply");
     EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationReply);
 
@@ -147,7 +147,7 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
     std::optional<Communication> communication1;
     ASSERT_NO_THROW(communication1 =
                         ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
-                            .getValidated(ProfileType::Gem_erxCommunicationDispReq));
+                            .getValidated(ProfileType::GEM_ERP_PR_Communication_DispReq));
     auto& communication = *communication1;
 
 
@@ -173,7 +173,7 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyA");
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::DispReq);
-    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationDispReq);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::GEM_ERP_PR_Communication_DispReq);
     EXPECT_EQ(communication.messageTypeAsString(), "DispReq");
     EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationDispReq);
 
@@ -202,7 +202,7 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-func
     std::optional<Communication> communication1;
     ASSERT_NO_THROW(communication1 =
                         ResourceFactory<Communication>::fromJson(bodyRequest, *StaticData::getJsonValidator(), {})
-                            .getValidated(ProfileType::Gem_erxCommunicationRepresentative));
+                            .getValidated(ProfileType::GEM_ERP_PR_Communication_Representative));
     auto& communication = *communication1;
 
     ASSERT_NE(Communication::resourceTypePointer.Get(communication.jsonDocument()), nullptr);
@@ -227,7 +227,7 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-func
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
 
     EXPECT_EQ(communication.messageType(), Communication::MessageType::Representative);
-    EXPECT_EQ(communication.profileType(), model::ProfileType::Gem_erxCommunicationRepresentative);
+    EXPECT_EQ(communication.profileType(), model::ProfileType::GEM_ERP_PR_Communication_Representative);
     EXPECT_EQ(communication.messageTypeAsString(), "Representative");
     EXPECT_EQ(communication.messageTypeAsProfileUrl(), structure_definition::communicationRepresentative);
 
@@ -946,10 +946,10 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
 
     const auto chargChangeReqComm =
         ResourceFactory<Communication>::fromJson(std::move(body), *StaticData::getJsonValidator(), {})
-            .getValidated(ProfileType::Gem_erxCommunicationChargChangeReq);
+            .getValidated(ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq);
 
     EXPECT_EQ(chargChangeReqComm.messageType(), Communication::MessageType::ChargChangeReq);
-    EXPECT_EQ(chargChangeReqComm.profileType(), model::ProfileType::Gem_erxCommunicationChargChangeReq);
+    EXPECT_EQ(chargChangeReqComm.profileType(), model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq);
     EXPECT_EQ(chargChangeReqComm.messageTypeAsString(), "ChargChangeReq");
     EXPECT_EQ(chargChangeReqComm.messageTypeAsProfileUrl(), structure_definition::communicationChargChangeReq);
     EXPECT_FALSE(chargChangeReqComm.id().has_value());
@@ -990,10 +990,10 @@ TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
 
     const auto chargChangeReplyComm =
     ResourceFactory<Communication>::fromJson(std::move(body), *StaticData::getJsonValidator(), {})
-    .getValidated(ProfileType::Gem_erxCommunicationChargChangeReply);
+    .getValidated(ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply);
 
     EXPECT_EQ(chargChangeReplyComm.messageType(), Communication::MessageType::ChargChangeReply);
-    EXPECT_EQ(chargChangeReplyComm.profileType(), model::ProfileType::Gem_erxCommunicationChargChangeReply);
+    EXPECT_EQ(chargChangeReplyComm.profileType(), model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply);
     EXPECT_EQ(chargChangeReplyComm.messageTypeAsString(), "ChargChangeReply");
     EXPECT_EQ(chargChangeReplyComm.messageTypeAsProfileUrl(), structure_definition::communicationChargChangeReply);
     EXPECT_FALSE(chargChangeReplyComm.id().has_value());

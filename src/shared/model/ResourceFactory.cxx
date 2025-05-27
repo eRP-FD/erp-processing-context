@@ -109,23 +109,8 @@ model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureReposi
     resourceTypeName = resource().getResourceType();
     rootElement = std::make_shared<ErpElement>(repo.shared_from_this(), std::weak_ptr<const fhirtools::Element>{},
                                                resourceTypeName, &resource().jsonDocument());
-    std::ostringstream profileStr;
-    std::string_view sep;
-    for (const auto& prof : rootElement->profiles())
-    {
-        profileStr << sep << prof;
-        sep = ", ";
-    }
-    for (const auto& prof : profiles)
-    {
-        profileStr << sep << prof;
-        sep = ", ";
-    }
 
-    auto timer = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryFhirValidation, "Generic FHIR Validation",
-        {{"resourceType", resourceTypeName}, {std::string{"profiles"}, profileStr.str()}});
-
+    auto timer = resource().timingLogTimer();
     return fhirtools::FhirPathValidator::validateWithProfiles(rootElement, resourceTypeName, profiles, options);
 }
 

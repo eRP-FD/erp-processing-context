@@ -14,6 +14,7 @@
 #include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
+#include "shared/database/TransactionMode.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/model/Kvnr.hxx"
@@ -86,15 +87,10 @@ public:
         }
     }
 
-    MedicationExporterDatabaseBackendCommitGuard createDbBackendCommitGuard()
+    MedicationExporterDatabaseFrontendCommitGuard createDbFrontendCommitGuard(TransactionMode mode)
     {
-        auto db = std::make_unique<MedicationExporterPostgresBackend>();
-        return MedicationExporterDatabaseBackendCommitGuard(std::move(db));
-    }
-
-    MedicationExporterDatabaseFrontendCommitGuard createDbFrontendCommitGuard()
-    {
-        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(std::make_unique<MedicationExporterPostgresBackend>(), *mKeyDerivation, mTelematikLookup);
+        auto db = std::make_unique<MedicationExporterDatabaseFrontend>(
+            std::make_unique<MedicationExporterPostgresBackend>(mode), *mKeyDerivation, mTelematikLookup);
         return MedicationExporterDatabaseFrontendCommitGuard(std::move(db));
     }
 
@@ -103,7 +99,9 @@ public:
         if (! mDatabase || mDatabase->getBackend().isCommitted())
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
-            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>( std::make_unique<MedicationExporterPostgresBackend>(), *mKeyDerivation, mTelematikLookup);
+            mDatabase = std::make_unique<MedicationExporterDatabaseFrontend>(
+                std::make_unique<MedicationExporterPostgresBackend>(TransactionMode::transaction), *mKeyDerivation,
+                mTelematikLookup);
         }
         return *mDatabase;
     }
@@ -121,10 +119,12 @@ public:
         return db_model::postgres_bytea(encryptedBlobPrescription.binarystring());
     }
 
-    void insertTaskEvent(const model::Kvnr& kvnr, std::string_view prescription_id, model::TaskEvent::UseCase usecase,
-                         model::TaskEvent::State state, std::optional<std::string> healthcareProviderPrescription,
-                         std::optional<std::string> medicationDispense, std::optional<std::string> doctorIdentity,
-                         std::optional<std::string> pharmacyIdentity)
+    model::TaskEvent::id_t insertTaskEvent(const model::Kvnr& kvnr, std::string_view prescription_id,
+                                           model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
+                                           std::optional<std::string> healthcareProviderPrescription,
+                                           std::optional<std::string> medicationDispense,
+                                           std::optional<std::string> doctorIdentity,
+                                           std::optional<std::string> pharmacyIdentity)
     {
         const fhirtools::DefinitionKey binaryProfile{std::string{model::resource::structure_definition::binary},
                                                      ResourceTemplates::Versions::GEM_ERP_1_3};
@@ -167,7 +167,7 @@ public:
             optPharmacyIdentity =
                 mCodec.encode(*pharmacyIdentity, key, Compression::DictionaryUse::Default_json).binarystring();
         }
-
+        auto id = gsl::narrow<model::TaskEvent::id_t>(++mEventIdCounter);
         txn.exec_params(
             "INSERT INTO erp_event.task_event "
             "(id, prescription_type, prescription_id, kvnr, kvnr_hashed, status, usecase, state, salt, "
@@ -176,13 +176,16 @@ public:
             "medication_dispense_bundle, doctor_identity, pharmacy_identity)"
             " VALUES "
             "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
-            ++mEventIdCounter, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
+            id, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
             prescriptionId.toDatabaseId(), encrypedKvnr.binarystring(), kvnr_hashed, 1, magic_enum::enum_name(usecase),
             magic_enum::enum_name(state), salt.binarystring(), std::to_string(derivationData.blobId),
             optHealthcareProviderPrescription, optBlobIdMedicationDispense, optSaltMedicationDispense,
             optMedicationDispense, optDoctorIdentity, optPharmacyIdentity);
         txn.commit();
+        return id;
     }
+
+    bool eventExists(model::TaskEvent::id_t id);
 
     void insertTaskKvnr(const model::Kvnr& kvnr, std::int32_t retry = 0)
     {

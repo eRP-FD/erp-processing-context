@@ -9,6 +9,7 @@
 
 #include "exporter/client/EpaMedicationClient.hxx"
 #include "exporter/network/client/Tee3Client.hxx"
+#include "exporter/network/client/Tee3ClientPool.hxx"
 #include "shared/model/Kvnr.hxx"
 
 #include <boost/asio/io_context.hpp>
@@ -57,6 +58,8 @@ private:
     std::string mHostname;
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
     std::unordered_map<std::string, std::any> mLogDataBag;
+    Tee3ClientPool::Tee3ClientPtr mStickyClient;
+    bool mUseStickyClient;
 };
 
 #endif//MEDICATION_EXPORTER_EPAMEDICATIONCLIENTIMPL_HXX

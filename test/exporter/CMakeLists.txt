@@ -12,20 +12,18 @@ add_executable(exporter-test
         eventprocessing/ProvideDispensationTest.cxx
         eventprocessing/ProvidePrescriptionTest.cxx
         mock/EpaAccountLookupClientMock.cxx
+        mock/EpaAccountLookupMock.cxx
         mock/EpaMedicationClientMock.cxx
+        mock/MedicationExporterDatabaseFrontendMock.cxx
         model/ConsentDecisionResponseTypeTest.cxx
+        pc/MedicationExporterServiceContextTest.cxx
+        util/MedicationExporterStaticData.cxx
         EpaAccountLookupTest.cxx
         EventProcessorTest.cxx
         ExporterConfigurationTest.cxx
         VauAutTokenSignerTest.cxx
         TelematikLookupTest.cxx
         it/EpaAccountLookupIt.cxx
-        ../util/BlobDatabaseHelper.cxx
-        ../mock/MockBlobDatabase.cxx
-        ../mock/MockVsdmKeyBlobDatabase.cxx
-        ../util/HsmTestBase.cxx
-        ../util/CryptoHelper.cxx
-        ../util/JwtBuilder.cxx
 )
 
 target_link_libraries(
@@ -34,6 +32,6 @@ target_link_libraries(
         erp-shared
         erp-processing-context-files
         erp-hsm-tpm-mock
-        gtest::gtest
         erp-test-util-lib
+        GTest::gmock
 )

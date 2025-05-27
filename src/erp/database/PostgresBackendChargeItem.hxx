@@ -11,7 +11,7 @@
 #include "erp/database/ErpDatabaseBackend.hxx"// for fwd declarations and model includes
 #include "shared/database/CommonPostgresBackend.hxx"
 
-#include <pqxx/transaction>
+#include <pqxx/transaction_base>
 
 class PostgresConnection;
 
@@ -20,28 +20,28 @@ class PostgresBackendChargeItem
 public:
     PostgresBackendChargeItem();
 
-    void storeChargeInformation(::pqxx::work& transaction, const ::db_model::ChargeItem& chargeItem,
+    void storeChargeInformation(::pqxx::transaction_base& transaction, const ::db_model::ChargeItem& chargeItem,
                                 const ::db_model::HashedKvnr& hashedKvnr) const;
-    void updateChargeInformation(::pqxx::work& transaction, const ::db_model::ChargeItem& chargeItem) const;
+    void updateChargeInformation(::pqxx::transaction_base& transaction, const ::db_model::ChargeItem& chargeItem) const;
 
-    void deleteChargeInformation(::pqxx::work& transaction, const ::model::PrescriptionId& id) const;
-    void clearAllChargeInformation(::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr) const;
+    void deleteChargeInformation(::pqxx::transaction_base& transaction, const ::model::PrescriptionId& id) const;
+    void clearAllChargeInformation(::pqxx::transaction_base& transaction, const ::db_model::HashedKvnr& kvnr) const;
 
-    [[nodiscard]] ::db_model::ChargeItem retrieveChargeInformation(::pqxx::work& transaction,
+    [[nodiscard]] ::db_model::ChargeItem retrieveChargeInformation(::pqxx::transaction_base& transaction,
                                                                    const ::model::PrescriptionId& id) const;
-    [[nodiscard]] ::db_model::ChargeItem retrieveChargeInformationForUpdate(::pqxx::work& transaction,
+    [[nodiscard]] ::db_model::ChargeItem retrieveChargeInformationForUpdate(::pqxx::transaction_base& transaction,
                                                                             const ::model::PrescriptionId& id) const;
 
     [[nodiscard]] ::std::vector<::db_model::ChargeItem>
-    retrieveAllChargeItemsForInsurant(::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr,
+    retrieveAllChargeItemsForInsurant(::pqxx::transaction_base& transaction, const ::db_model::HashedKvnr& kvnr,
                                       const ::std::optional<UrlArguments>& search) const;
 
-    [[nodiscard]] uint64_t countChargeInformationForInsurant(pqxx::work& transaction,
+    [[nodiscard]] uint64_t countChargeInformationForInsurant(pqxx::transaction_base& transaction,
                                                              const ::db_model::HashedKvnr& kvnr,
                                                              const ::std::optional<UrlArguments>& search) const;
 
 private:
-    ::db_model::ChargeItem retrieveChargeInformation(::pqxx::work& transaction, const ::std::string& query,
+    ::db_model::ChargeItem retrieveChargeInformation(::pqxx::transaction_base& transaction, const ::std::string& query,
                                                      const ::model::PrescriptionId& id) const;
     [[nodiscard]] ::db_model::ChargeItem chargeItemFromQueryResultRow(const ::pqxx::row& row, bool allInsurantChargeItems = false) const;
 

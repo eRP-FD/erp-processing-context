@@ -12,8 +12,8 @@
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 
-#include <pqxx/transaction>
 #include <gtest/gtest.h>
+#include <pqxx/transaction_base>
 
 class SortArgumentTest : public testing::Test
 {

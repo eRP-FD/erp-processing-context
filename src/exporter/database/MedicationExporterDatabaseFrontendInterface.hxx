@@ -26,6 +26,7 @@ class MedicationExporterDatabaseBackend;
 
 struct DatabaseConnectionInfo;
 
+enum class TransactionMode : uint8_t;
 
 class MedicationExporterDatabaseFrontendInterface
 {
@@ -35,7 +36,7 @@ public:
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
     using Factory =
-        std::function<std::unique_ptr<MedicationExporterDatabaseFrontendInterface>(KeyDerivation&)>;
+        std::function<std::unique_ptr<MedicationExporterDatabaseFrontendInterface>(KeyDerivation&, TransactionMode)>;
 
     virtual ~MedicationExporterDatabaseFrontendInterface() = default;
 

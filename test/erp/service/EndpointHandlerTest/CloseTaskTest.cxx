@@ -16,7 +16,7 @@
 #include "shared/util/ByteHelper.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/erp/service/EndpointHandlerTest/MedicationDispenseFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/CryptoHelper.hxx"
@@ -26,15 +26,9 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
-class CloseTaskTest : public EndpointHandlerTest
+class CloseTaskTest : public MedicationDispenseFixture
 {
 protected:
-    enum class ExpectedResult
-    {
-        success,
-        failure,
-        noCatch,
-    };
 
     ServerRequest createRequest(std::string body)
     {
@@ -103,22 +97,8 @@ protected:
         }();
         using BundleFactory = model::ResourceFactory<model::ErxReceipt>;
         BundleFactory::Options opt;
-        switch (Configuration::instance().prescriptionDigestRefType())
-        {
-            case Configuration::PrescriptionDigestRefType::relative:
-                opt.validatorOptions = fhirtools::ValidatorOptions{
-                    .levels =
-                        {
-                            .unreferencedBundledResource = fhirtools::Severity::warning,
-                            .mandatoryResolvableReferenceFailure = fhirtools::Severity::warning,
-                        },
-                };
-                break;
-            case Configuration::PrescriptionDigestRefType::uuid:
-                break;
-        }
         auto doc = BundleFactory::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), opt)
-                       .getValidated(model::ProfileType::Gem_erxReceiptBundle);
+                       .getValidated(model::ProfileType::GEM_ERP_PR_Bundle);
         auto bundleElement = std::make_shared<Element>(repo, std::move(doc).jsonDocument(), "Bundle");
         return fhirtools::Collection{std::shared_ptr<fhirtools::Element>(bundleElement, bundleElement->mElement.get())};
     }
@@ -139,9 +119,6 @@ protected:
         return prescriptionDigest;
     }
 
-    const JWT jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
-    const std::string telematikId = jwtPharmacy.stringForClaim(JWT::idNumberClaim).value();
-
     static const inline model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
 
@@ -159,62 +136,15 @@ protected:
 
 };
 
-class CloseTaskInputTest : public CloseTaskTest , public testing::WithParamInterface<std::string(CloseTaskInputTest::*)()>
+
+class CloseTaskInputTest : public CloseTaskTest , public testing::WithParamInterface<MedicationDispenseFixture::BodyType>
 {
 public:
     static constexpr char notSupported[] = "not supported";
 
-    std::string medicationDispenseXml()
-    {
-        dispenseOptions.gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, dispenseOptions.gematikVersion);
-        return ResourceTemplates::medicationDispenseXml(dispenseOptions);
-    }
-    std::string medicationDispenseBundleXml()
-    {
-        for (auto& opt: multiDispenseOptions)
-        {
-            opt.gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, opt.gematikVersion);
-        }
-        return ResourceTemplates::medicationDispenseBundleXml({
-            .gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, ResourceTemplates::Versions::GEM_ERP_current()),
-            .medicationDispenses = multiDispenseOptions,
-        });
-    }
-    std::string medicationDispenseBundleXmlNoProfile()
-    {
-        /* ERP-22297: remove meta/profile */
-        const std::string profileUrl{profile(model::ProfileType::MedicationDispenseBundle).value()};
-        std::string result =
-            regex_replace(medicationDispenseBundleXml(),
-                          std::regex{"<meta><profile value=\"" + profileUrl + "\\|" +
-                                     to_string(ResourceTemplates::Versions::GEM_ERP_current()) + "\"/></meta>"},
-                          "");
-        EXPECT_EQ(
-            result.find(R"("https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle")"),
-            std::string::npos);
-        return result;
-    }
-    std::string closeOperationInputParamers()
-    {
-        if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
-        {
-            return notSupported;
-        }
-        return ResourceTemplates::medicationDispenseOperationParametersXml({
-            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
-            .medicationDispenses = multiDispenseOptions,
-        });
-    }
-protected:
+public:
     const model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
-    ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
-                                                                                     .telematikId = telematikId};
-    std::list<ResourceTemplates::MedicationDispenseOptions> multiDispenseOptions{
-        {.id{model::MedicationDispenseId{prescriptionId, 0}}, .telematikId = telematikId},
-        {.id{model::MedicationDispenseId{prescriptionId, 1}}, .telematikId = telematikId},
-    };
-
 };
 
 TEST_P(CloseTaskInputTest, CloseTask)
@@ -234,7 +164,7 @@ TEST_P(CloseTaskInputTest, CloseTask)
     serverRequest.setAccessToken(jwtPharmacy);
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
 
-    const auto& payload = (this->*GetParam())();
+    const auto& payload = medicationDispenseBody({EndpointType::close, GetParam()});
     if (payload == notSupported)
     {
         GTEST_SKIP_("input type not supported");
@@ -251,7 +181,7 @@ TEST_P(CloseTaskInputTest, CloseTask)
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext)) << serverRequest.getBody();
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
 
@@ -311,12 +241,8 @@ TEST_P(CloseTaskInputTest, CloseTask)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(valid, CloseTaskInputTest, testing::Values(
-    &CloseTaskInputTest::medicationDispenseXml,
-    &CloseTaskInputTest::medicationDispenseBundleXml,
-    &CloseTaskInputTest::medicationDispenseBundleXmlNoProfile,
-    &CloseTaskInputTest::closeOperationInputParamers
-));
+INSTANTIATE_TEST_SUITE_P(valid, CloseTaskInputTest,
+                         testing::ValuesIn(magic_enum::enum_values<MedicationDispenseFixture::BodyType>()));
 
 // Regression Test for Bugticket ERP-5656
 TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readability-function-cognitive-complexity)
@@ -414,6 +340,36 @@ TEST_F(CloseTaskTest, CloseTaskPartialDateTimeErp6513)//NOLINT(readability-funct
     }
 }
 
+TEST_F(CloseTaskTest, WhenHandedOverNotTimestamp)
+{
+    A_22073_01.test("whenHandedOver not allowed as timestamp");
+    std::list<ResourceTemplates::MedicationDispenseOptions> dispenseOptions{
+        {.id{model::MedicationDispenseId{prescriptionId, 0}},
+         .telematikId = telematikId,
+         .whenHandedOver = "2025-04-17T15:50:00Z"},
+    };
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+            .medicationDispenses = dispenseOptions,
+        });
+    test(body, ExpectedResult::failure);
+}
+
+TEST_F(CloseTaskTest, WhenPreparedNotTimestamp)
+{
+    A_22073_01.test("whenPrepared not allowed as timestamp");
+    std::list<ResourceTemplates::MedicationDispenseOptions> dispenseOptions{
+            {.id{model::MedicationDispenseId{prescriptionId, 0}},
+             .telematikId = telematikId,
+             .whenPrepared = "2025-04-17T15:50:00Z"},
+        };
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+            .medicationDispenses = dispenseOptions,
+        });
+    test(body, ExpectedResult::failure);
+}
+
 TEST_F(CloseTaskTest, whenHandedOver)
 {
     using namespace date::literals;
@@ -445,8 +401,8 @@ TEST_F(CloseTaskTest, whenHandedOver)
         bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
         bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
         // LYE is valid early for 1.2
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
         // failure is expected due to parameters only allowed with workflow 1.4
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
     }
@@ -458,8 +414,8 @@ TEST_F(CloseTaskTest, whenHandedOver)
         bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
         bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
         // LYE is valid early for 1.3
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
         // failure is expected due to parameters only allowed with workflow 1.4
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
     }
@@ -471,9 +427,9 @@ TEST_F(CloseTaskTest, whenHandedOver)
         bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
         bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
         // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
         // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
         // -LYE not valid yet- The view now allows LYE early.
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::success));
     }
@@ -507,7 +463,6 @@ TEST_F(CloseTaskTest, whenHandedOverConsistentInBundle)
 TEST_F(CloseTaskTest, NoEnvMetaVersionId)
 {
     std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, std::nullopt);
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
@@ -522,7 +477,6 @@ TEST_F(CloseTaskTest, NoEnvMetaVersionId)
 TEST_F(CloseTaskTest, SetMetaVersionId)
 {
     std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "isSet");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
@@ -537,7 +491,6 @@ TEST_F(CloseTaskTest, SetMetaVersionId)
 TEST_F(CloseTaskTest, NoMetaVersionEmptyEnv)
 {
     std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
@@ -551,7 +504,6 @@ TEST_F(CloseTaskTest, NoMetaVersionEmptyEnv)
 TEST_F(CloseTaskTest, prescriptionDigestRefTypeUUID)
 {
     std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "uuid");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection bundle;
     ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
@@ -577,70 +529,9 @@ TEST_F(CloseTaskTest, prescriptionDigestRefTypeUUID)
     EXPECT_TRUE(Uuid{id.front()->asString()}.isValidIheUuid()) << binary;
 }
 
-TEST_F(CloseTaskTest, prescriptionDigestRefTypeRelative)
-{
-    auto linkBase = Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
-    std::string expectRef{"Binary/PrescriptionDigest-160.000.000.004.715.74"};
-    auto expectFullUrl = linkBase + "/" + expectRef;
-    std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, "relative");
-    const auto& repo = Fhir::instance().backend().defaultView();
-    fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
-    ASSERT_EQ(bundle.size(), 1);
-    auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry[0].resource.section.entry[0].reference");
-    auto refInComposition = refInCompositionExpr->eval(bundle);
-    ASSERT_EQ(refInComposition.size(), 1) << bundle;
-    EXPECT_EQ(refInComposition.front()->asString(), expectRef) << bundle;
-    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(repo.get(), "Bundle.entry.resource.ofType(Binary)");
-    auto binary = binaryResourceExpr->eval(bundle);
-    ASSERT_EQ(binary.size(), 1) << bundle;
-    fhirtools::Collection binaryEntry{binary.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get(), "fullUrl");
-    auto fullUrl = fullUrlExpr->eval(binaryEntry);
-    ASSERT_EQ(fullUrl.size(), 1);
-    EXPECT_EQ(fullUrl.front()->asString(), expectFullUrl);
-    auto idExpr = fhirtools::FhirPathParser::parse(repo.get(), "id");
-    auto id = idExpr->eval(binary);
-    ASSERT_EQ(id.size(), 1) << binary;
-    EXPECT_EQ("Binary/" + id.front()->asString(), refInComposition.front()->asString()) << binary;
-}
-
-TEST_F(CloseTaskTest, deviceRefUrl)
-{
-    auto linkBase = Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
-    auto expectFullUrl = linkBase + "/Device/1";
-    std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, "url");
-    const gsl::not_null repo = Fhir::instance().backend().defaultView();
-    fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
-    ASSERT_EQ(bundle.size(), 1);
-    auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.author.reference");
-    auto refInComposition = refInCompositionExpr->eval(bundle);
-    ASSERT_EQ(refInComposition.size(), 1) << bundle;
-    EXPECT_EQ(refInComposition.front()->asString(), expectFullUrl) << bundle;
-    auto deviceResourceExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry.resource.ofType(Device)");
-    auto device = deviceResourceExpr->eval(bundle);
-    ASSERT_EQ(device.size(), 1) << bundle;
-    fhirtools::Collection deviceEntry{device.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "fullUrl");
-    auto fullUrl = fullUrlExpr->eval(deviceEntry);
-    ASSERT_EQ(fullUrl.size(), 1);
-    EXPECT_EQ(fullUrl.front()->asString(), expectFullUrl);
-    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.signature.who.reference");
-    auto signatureWho = signatureWhoExpr->eval(bundle);
-    ASSERT_EQ(signatureWho.size(), 1);
-    EXPECT_EQ(signatureWho.front()->asString(), expectFullUrl);
-}
-
 TEST_F(CloseTaskTest, deviceRefUuid)
 {
     std::vector<EnvironmentVariableGuard> guards;
-    guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, "uuid");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection bundle;
     ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
@@ -780,12 +671,8 @@ TEST_F(CloseTaskTest, ErpExceptionWithOldProfile)//NOLINT(readability-function-c
 TEST(CloseTaskConfigTest, defaultValues)
 {
     std::vector<EnvironmentVariableGuard> unsetEnv;
-    unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE, std::nullopt);
-    unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE, std::nullopt);
     unsetEnv.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, std::nullopt);
     const auto& config = Configuration::instance();
-    EXPECT_EQ(config.closeTaskDeviceRefType(), Configuration::DeviceRefType::url);
-    EXPECT_EQ(config.prescriptionDigestRefType(), Configuration::PrescriptionDigestRefType::relative);
     const auto& metaVersionId = config.getOptionalStringValue(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID);
     ASSERT_TRUE(metaVersionId.has_value());
     EXPECT_EQ(*metaVersionId, "1");
@@ -894,6 +781,62 @@ TEST_F(CloseTaskTest, CloseTask_IgnoreFutureLastModified)
     mockDatabase.reset();
 }
 
+TEST_F(CloseTaskTest, DigaRedeemCodeHeader1)
+{
+    auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml(
+        {.medicationDispenses = {},
+         .medicationDispensesDiGA = {{.prescriptionId = prescriptionId.toString(), .withRedeemCode = true}}});
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(mJwtBuilder->makeJwtKostentraeger());
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    serverRequest.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+    CloseTaskHandler handler({});
+    handler.handleRequest(sessionContext);
+
+    ASSERT_TRUE(sessionContext.getOuterResponseHeaderFields().contains(Header::DigaRedeemCode));
+    EXPECT_EQ(sessionContext.getOuterResponseHeaderFields().at(Header::DigaRedeemCode), "1");
+}
+
+TEST_F(CloseTaskTest, DigaRedeemCodeHeader0)
+{
+    auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml(
+        {.medicationDispenses = {},
+         .medicationDispensesDiGA = {{.prescriptionId = prescriptionId.toString(), .withRedeemCode = false}}});
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(mJwtBuilder->makeJwtKostentraeger());
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    serverRequest.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+    CloseTaskHandler handler({});
+    handler.handleRequest(sessionContext);
+
+    ASSERT_TRUE(sessionContext.getOuterResponseHeaderFields().contains(Header::DigaRedeemCode));
+    EXPECT_EQ(sessionContext.getOuterResponseHeaderFields().at(Header::DigaRedeemCode), "0");
+}
+
 class CloseTaskWrongInputTest : public CloseTaskTest, public testing::WithParamInterface<model::PrescriptionType>
 {
 };
@@ -950,3 +893,37 @@ TEST_P(CloseTaskWrongInputTest, test)
 }
 INSTANTIATE_TEST_SUITE_P(x, CloseTaskWrongInputTest,
                          testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+
+
+class CloseTaskProfileValidityTest : public CloseTaskTest,
+public ::testing::WithParamInterface< MedicationDispenseFixture::ProfileValidityTestParams>
+{
+};
+
+TEST_P(CloseTaskProfileValidityTest, run)
+{
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({EndpointType::close, GetParam().bodyType,
+        GetParam().version, {testutils::shiftDate(GetParam().date)}}),
+                                 GetParam().result));
+}
+
+INSTANTIATE_TEST_SUITE_P(parameters, CloseTaskProfileValidityTest,
+                         ::testing::ValuesIn(MedicationDispenseFixture::profileValidityTestParameters()));
+
+
+class CloseTaskMaxWhenHandedOverTest : public CloseTaskTest,
+public ::testing::WithParamInterface< MedicationDispenseFixture::MaxWhenHandedOverTestParams>
+{
+};
+
+TEST_P(CloseTaskMaxWhenHandedOverTest, run)
+{
+    std::list<std::string> overrideWhenHandedOver;
+    std::ranges::transform(GetParam().whenHandedOver, back_inserter(overrideWhenHandedOver), &testutils::shiftDate);
+    ASSERT_NO_FATAL_FAILURE(test(
+        medicationDispenseBody({EndpointType::close, GetParam().bodyType, GetParam().version, overrideWhenHandedOver}),
+        GetParam().result));
+}
+
+INSTANTIATE_TEST_SUITE_P(parameters, CloseTaskMaxWhenHandedOverTest,
+                         ::testing::ValuesIn(MedicationDispenseFixture::maxWhenHandedOverTestParameters()));

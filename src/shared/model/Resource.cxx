@@ -4,6 +4,7 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/Extension.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/Parameters.hxx"
@@ -128,6 +129,21 @@ void FhirResourceBase::setId(const std::string_view& id)
     setValue(idPointer, id);
 }
 
+DurationTimer FhirResourceBase::timingLogTimer() const
+{
+    std::string metric{getResourceType()};
+    std::unordered_map<std::string, std::string> keyValueMap;
+    if (const auto profileUrl = getProfileName())
+    {
+        fhirtools::DefinitionKey defKey{*profileUrl};
+        metric = defKey.shortProfile();
+        if (defKey.version.has_value())
+        {
+            keyValueMap.emplace("profile_version", to_string(defKey.version.value()));
+        }
+    }
+    return DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation, metric, keyValueMap);
+}
 
 std::optional<NumberAsStringParserDocument> FhirResourceBase::getExtensionDocument(const std::string_view& url) const
 {
@@ -215,16 +231,31 @@ fhirtools::DefinitionKey FhirResourceBase::getDefinitionKeyFromMeta() const
     ModelFail("Could not get profileName from meta.profile");
 }
 
+std::optional<fhirtools::FhirVersion> FhirResourceBase::getProfileVersionChecked() const
+{
+    if (auto metaProfile = getProfileName())
+    {
+        if (auto version = fhirtools::DefinitionKey{*metaProfile}.version)
+        {
+            version->verifyStrict();
+            return version;
+        }
+    }
+    return std::nullopt;
+}
+
 
 gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
 model::FhirResourceBase::getValidationView(ProfileType profileType) const
 {
     const auto& fhirInstance = Fhir::instance();
     const auto* backend = std::addressof(fhirInstance.backend());
+    A_23384_03.start("Use Reference-Timestamp applicable for resourceType");
     const auto referenceTimestamp = getValidationReferenceTimestamp();
     ModelExpect(referenceTimestamp.has_value(), "missing reference timestamp.");
     const auto viewList = Fhir::instance().structureRepository(*referenceTimestamp);
     ModelExpect(! viewList.empty(), "Invalid reference timestamp: " + referenceTimestamp->toXsDateTime());
+    A_23384_03.finish();
     std::shared_ptr<const fhirtools::FhirStructureRepository> repoView;
     const auto profileName = getProfileName();
     ModelExpect(profileName.has_value() || ! mandatoryMetaProfile(profileType), "missing mandatory meta.profile");

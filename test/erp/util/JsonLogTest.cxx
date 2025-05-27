@@ -41,10 +41,8 @@ TEST_F(JsonLogTest, logWithDetails)
             .details("only shown in debug builds");
     }
 
-    const auto& config = Configuration::instance();
     std::stringstream expected;
-    expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"info":"this is the log message","details":"only shown in debug builds"})";
+    expected << R"({"info":"this is the log message","details":"only shown in debug builds"})";
 
     ASSERT_EQ(result.str(), expected.str());
 }
@@ -60,10 +58,8 @@ TEST_F(JsonLogTest, logWithoutDetails)
             .details("only shown in debug builds");
     }
 
-    const auto& config = Configuration::instance();
     std::stringstream expected;
-    expected << R"({"id":285212673,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"info":"this is the log message"})";
+    expected << R"({"info":"this is the log message"})";
     ASSERT_EQ(result.str(), expected.str());
 }
 
@@ -92,10 +88,8 @@ TEST_F(JsonLogTest, keyValueDouble_1_234)
         log.keyValue("key", 1.234);
     }
 
-    const auto& config = Configuration::instance();
     std::stringstream expected;
-    expected << R"({"id":0,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"key":1.234})";
+    expected << R"({"key":1.234})";
     ASSERT_EQ(result.str(), expected.str());
 }
 
@@ -106,12 +100,10 @@ TEST_F(JsonLogTest, keyValueDouble_12345_6789)
 
     {
         JsonLog log (static_cast<LogId>(0), result, false);
-        log.keyValue("key", 12345.6789, 4);
+        log.keyValue("key", 12345.6789);
     }
 
-    const auto& config = Configuration::instance();
     std::stringstream expected;
-    expected << R"({"id":0,"host":")" << config.serverHost() << R"(","port":)" << config.serverPort()
-             << R"(,"key":12345.6789})";
+    expected << R"({"key":12345.6789})";
     ASSERT_EQ(result.str(), expected.str());
 }

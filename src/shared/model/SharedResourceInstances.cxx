@@ -35,6 +35,7 @@ template class Resource<Bundle>;
 template class Resource<Composition>;
 template class Resource<Device>;
 template class Resource<Dosage>;
+template class Resource<GemErpExRedeemCode>;
 template class Resource<GemErpPrMedication>;
 template class Resource<KbvBundle >;
 template class Resource<KbvComposition>;

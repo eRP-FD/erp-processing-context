@@ -64,18 +64,35 @@ pipeline {
                         echo buildNumber
                         echo "running integration tests against ${env.ERP_SERVER_HOSTNAME}:${env.ERP_SERVER_PORT}"
                         sh """
-                            tar -xf erp-tests.tar.gz
+                            tar xf erp-tests.tar.gz
                             rm erp-tests.tar.gz
+                            #
+                            # Download installation artifact from previous stage ...
+                            #
                             mkdir erp-processing-context
-                            wget --user="${env.NEXUS_USERNAME}" --password="${env.NEXUS_PASSWORD}" "https://nexus.epa-dev.net/repository/erp-raw-releases/com/ibm/erp/erp-processing-context/${buildNumber}/erp-processing-context-${buildNumber}.tar.gz"
-                            tar -xf "erp-processing-context-${buildNumber}.tar.gz" -C ./erp-processing-context
+                            wget --no-verbose --user="${env.NEXUS_USERNAME}" --password="${env.NEXUS_PASSWORD}" "https://nexus.epa-dev.net/repository/erp-raw-releases/com/ibm/erp/erp-processing-context/${buildNumber}/erp-processing-context-${buildNumber}.tar.gz"
+                            tar xf "erp-processing-context-${buildNumber}.tar.gz" -C ./erp-processing-context
                             rm "erp-processing-context-${buildNumber}.tar.gz"
+                            #
+                            # and copy the shared objects into this environment:
+                            #
+                            mkdir -p build/RelWithDebInfo/lib
                             mv erp-processing-context/erp/lib/* build/RelWithDebInfo/lib
                             rm -rf erp-processing-context
-                            export TEST_RESOURCE_MANAGER_PATH=`pwd`"/resources"
+                            #
+                            #
+                            #
+                            export TEST_BASE=`pwd`
+                            export TEST_RESOURCE_MANAGER_PATH=\${TEST_BASE}"/resources"
                             cd build/RelWithDebInfo/bin
-                            sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./01_production.config.json
-                            sed -i 's|${ERP_BUILD_ROOT}|${env.WORKSPACE}|g' ./02_development.config.json
+                            #
+                            # The references resources have different base paths due to mixing of different build artifacts. Fixt it:
+                            #
+                            sed -i "s|${ERP_BUILD_ROOT}|\${TEST_BASE}|g" ./01_production.config.json
+                            sed -i "s|${ERP_BUILD_ROOT}|\${TEST_BASE}|g" ./02_development.config.json
+                            #
+                            # Execute tests
+                            #
                             LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
                             LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """
@@ -107,7 +124,7 @@ pipeline {
                     script {
                         slackSendClient(
                             message: "${env.JOB_NAME} (<${env.BUILD_URL}/console|${currentBuild.displayName}>) failed",
-                            channel: '#erp-its-alerts-dev-envs', color: 'danger'
+                            channel: '#erp-cpp', color: 'danger'
                         )
                     }
                 }
@@ -115,7 +132,7 @@ pipeline {
                     script {
                         slackSendClient(
                             message: "${env.JOB_NAME} is now successful again :green_heart:",
-                            channel: '#erp-its-alerts-dev-envs')
+                            channel: '#erp-cpp')
                     }
                 }
             }

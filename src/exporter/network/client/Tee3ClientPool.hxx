@@ -47,15 +47,6 @@ public:
     boost::asio::awaitable<Tee3ClientPtr> acquire(std::string hostname);
 
     /**
-     * wait for a free tee3 client and use that to send a TEE request
-     * to the given endpoint.
-     * In case the server mandates a TEE reconnect, it is executed automatically.
-     */
-    boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
-    sendTeeRequest(std::string hostname, std::string xRequestId, Tee3Client::Request req,
-                   std::unordered_map<std::string, std::any> logDataBag);
-
-    /**
      * Add a connection pool for the given hostname, it must be called before trying
      * to acquire any TEE clients.
      *
@@ -68,12 +59,10 @@ private:
                    std::chrono::steady_clock::duration endpointRefreshInterval);
 
     void setupRefreshEndpointsTimer();
-    static void refreshEndpoints(std::weak_ptr<Tee3ClientPool> weakSelf, boost::system::error_code ec);
+    static void refreshEndpoints(const std::weak_ptr<Tee3ClientPool>& weakSelf, const boost::system::error_code& ec);
 
     boost::asio::awaitable<boost::system::result<std::unique_ptr<Tee3ClientsForHost>>>
     setupPool(std::string hostname, std::uint16_t port, size_t connectionCount);
-
-    friend struct Tee3ClientDeleter;
 
     boost::asio::io_context& mIoContext;
     boost::asio::strand<boost::asio::any_io_executor> mStrand;

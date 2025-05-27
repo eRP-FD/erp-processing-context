@@ -12,6 +12,7 @@
 #include "shared/compression/ZStd.hxx"
 #include "test/exporter/database/PostgresDatabaseTest.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 
 // using namespace model;
@@ -45,6 +46,14 @@ PostgresDatabaseTest::PostgresDatabaseTest()
         std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(mBlobCache)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     mKeyDerivation = std::make_unique<KeyDerivation>(*mHsmPool);
+}
+
+bool PostgresDatabaseTest::eventExists(model::TaskEvent::id_t id)
+{
+    auto txn{createTransaction()};
+    return txn.exec_params("SELECT count(*) FROM erp_event.task_event where id = $1 LIMIT 1", id)
+               .one_field()
+               .as<int>() > 0;
 }
 
 std::string printBasicString(const std::basic_string<std::byte>& byteString)
@@ -397,3 +406,56 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
         transaction.commit();
     }
 }
+
+class PostgresDatabaseTransactionModeTest : public PostgresDatabaseTest,
+                                            public testing::WithParamInterface<TransactionMode>
+{
+};
+
+
+
+TEST_P(PostgresDatabaseTransactionModeTest, modes)
+{
+    struct DummyError : std::runtime_error {
+        DummyError()
+            : runtime_error{"dummy"}
+        {
+        }
+    };
+    const std::string kvnr_str{"X000000012"};
+    const model::Kvnr kvnr{kvnr_str};
+    const auto hashedKvnr = kvnrHashed(kvnr);
+    model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
+
+
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05");
+
+    insertTaskKvnr(kvnr);
+    auto eventId = insertTaskEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::providePrescription,
+                                   model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt,
+                                   mDoctorIdentity, std::nullopt);
+    try
+    {
+        CommitGuard guard{std::make_unique<MedicationExporterDatabaseFrontend>(
+            std::make_unique<MedicationExporterPostgresBackend>(GetParam()), *mKeyDerivation, mTelematikLookup)};
+        guard.db().deleteOneEventForKvnr(eventKvnr, eventId);
+        throw DummyError{};
+    }
+    catch (const DummyError&)
+    {
+    }
+    switch (GetParam())
+    {
+        case TransactionMode::autocommit:
+            EXPECT_FALSE(eventExists(eventId));
+            break;
+        case TransactionMode::transaction:
+            EXPECT_TRUE(eventExists(eventId));
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(all, PostgresDatabaseTransactionModeTest,
+                         testing::ValuesIn(magic_enum::enum_values<TransactionMode>()),
+                         [](testing::TestParamInfo<TransactionMode> info) {
+                             return std::string{magic_enum::enum_name(info.param)};
+                         });

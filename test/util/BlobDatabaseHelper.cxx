@@ -11,6 +11,7 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/util/TestConfiguration.hxx"
 
+#include <pqxx/transaction>
 
 void BlobDatabaseHelper::removeUnreferencedBlobs (void)
 {

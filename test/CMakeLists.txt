@@ -53,9 +53,21 @@ target_include_directories(erp-test-resourcemanager
     )
 
 set(ERP_TEST_UTIL_SOURCES
-        util/TestUtils.cxx
+        mock/MockBlobDatabase.cxx
+        mock/MockVsdmKeyBlobDatabase.cxx
+        util/BlobDatabaseHelper.cxx
+        util/CommonStaticData.cxx
+        util/CryptoHelper.cxx
+        util/JwtBuilder.cxx
         util/ResourceTemplates.cxx
-        )
+        util/TestUtils.cxx
+
+    )
+
+if(ERP_WITH_HSM_TPM_PRODUCTION)
+    list(APPEND ERP_TEST_UTIL_SOURCES util/HsmTestBase.cxx)
+endif()
+
 
 add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
 target_link_libraries(erp-test-util-lib
@@ -77,7 +89,6 @@ target_link_libraries(erp-test-util-lib
 set(ERP_TEST_LIB_SOURCES
         erp/enrolment/DerivationKeyUpdateTest.cxx
         mock/ClientTeeProtocol.cxx
-        mock/MockBlobDatabase.cxx
         mock/MockRedisStore.cxx
         mock/MockDatabase.cxx
         mock/MockAccountTable.cxx
@@ -89,7 +100,6 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockChargeItemTable.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
-        mock/MockVsdmKeyBlobDatabase.cxx
         mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
         util/JsonTestUtils.cxx
@@ -125,9 +135,7 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/MultipleMedicationDispenses.cxx
         workflow-test/RegressionTest.cxx
         util/CertificateDirLoader.cxx
-        util/CryptoHelper.cxx
         util/EnvironmentVariableGuard.hxx
-        util/JwtBuilder.cxx
         util/StaticData.cxx
 )
 
@@ -138,6 +146,7 @@ target_link_libraries(erp-test-lib
         erp-test-util-lib
         glog::glog
         GTest::gtest
+        GTest::gmock
         gsl::gsl-lite
         rapidjson
     )
@@ -292,6 +301,7 @@ list(
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.cxx
         erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
+        erp/service/EndpointHandlerTest/MedicationDispenseFixture.cxx
         erp/service/EndpointHandlerTest/MedicationDispenseGetEndpointTest.cxx
         erp/service/EndpointHandlerTest/RejectTaskTest.cxx
         erp/service/ErpRequestHandlerTest.cxx
@@ -356,7 +366,6 @@ list(
         erp/xml/XmlStringViewTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx
-        util/BlobDatabaseHelper.cxx
         util/LogTestBase.cxx
         util/MockAndProductionTestBase.cxx
         util/ServerTestBase.cxx
@@ -379,7 +388,6 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
             erp/hsm/TeeTokenUpdaterTest.cxx
             erp/tpm/TpmTest.cxx
             erp/tpm/TpmProductionTest.cxx
-            util/HsmTestBase.cxx
     )
 endif()
 

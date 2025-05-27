@@ -22,7 +22,7 @@ class Device : public Resource<Device>
 {
 public:
     static constexpr auto resourceTypeName = "Device";
-    static constexpr auto profileType = ProfileType::Gem_erxDevice;
+    static constexpr auto profileType = ProfileType::GEM_ERP_PR_Device;
 
     static constexpr uint16_t Id = 1;
     static constexpr std::string_view Name = "E-Rezept Fachdienst";

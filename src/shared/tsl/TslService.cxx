@@ -180,6 +180,11 @@ namespace
         return certificate.checkCertificatePolicy(TslService::oid_smc_b_osig);
     }
 
+    bool checkC_ZD_TLS_S(const X509Certificate& certificate) // NOLINT(readability-identifier-naming)
+    {
+        return certificate.checkCertificatePolicy(TslService::oid_zd_tls_s);
+    }
+
     bool isCertificateOfType(const X509Certificate& certificate, CertificateType certificateType)
     {
         switch (certificateType)
@@ -208,9 +213,10 @@ namespace
                 return checkC_CH_QES(certificate);
             case CertificateType::C_HP_ENC:
                 return checkC_HP_ENC(certificate);
-            default:
-                return false;
+            case CertificateType::C_ZD_TLS_S:
+                return checkC_ZD_TLS_S(certificate);
         }
+        return false;
     }
 
 
@@ -234,6 +240,8 @@ namespace
             case CertificateType::C_CH_QES:
             case CertificateType::C_HP_ENC:
                 return std::vector<ExtendedKeyUsage>{};
+            case CertificateType::C_ZD_TLS_S:
+                return {ExtendedKeyUsage::sslServer};
         }
 
         TslFail("Unexpected certificate type", TslErrorCode::CERT_TYPE_MISMATCH);
@@ -258,16 +266,9 @@ namespace
                 // our implementation checks only required key usages
                 return {KeyUsage::digitalSignature};
                 //A_17989 end
-            case CertificateType::C_HCI_AUT: // NOLINT(bugprone-branch-clone)
-                if (certificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
-                {
-                    return {KeyUsage::digitalSignature};
-                }
-                else
-                {
-                    return {KeyUsage::digitalSignature, KeyUsage::keyEncipherment};
-                }
+            case CertificateType::C_HCI_AUT:
             case CertificateType::C_FD_AUT:
+            case CertificateType::C_ZD_TLS_S:
                 if (certificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
                 {
                     return {KeyUsage::digitalSignature};
@@ -277,11 +278,9 @@ namespace
                     return {KeyUsage::digitalSignature, KeyUsage::keyEncipherment};
                 }
             case CertificateType::C_FD_SIG:
-                return {KeyUsage::digitalSignature};
-            case CertificateType::C_FD_OSIG:
-                return {KeyUsage::nonRepudiation};
             case CertificateType::C_FD_TLS_S:
                 return {KeyUsage::digitalSignature};
+
             case CertificateType::C_HCI_ENC:
                 if (certificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
                 {
@@ -291,15 +290,10 @@ namespace
                 {
                     return {KeyUsage::dataEncipherment, KeyUsage::keyEncipherment};
                 }
-            case CertificateType::C_HCI_OSIG: // NOLINT(bugprone-branch-clone)
-                return {KeyUsage::nonRepudiation};
-
+            case CertificateType::C_FD_OSIG:
+            case CertificateType::C_HCI_OSIG:
             case CertificateType::C_HP_QES:
-                return {KeyUsage::nonRepudiation};
-
             case CertificateType::C_CH_QES:
-                return {KeyUsage::nonRepudiation};
-
             case CertificateType::C_HP_ENC:
                 return {KeyUsage::nonRepudiation};
         }
@@ -349,6 +343,8 @@ namespace
                 return "C_CH_QES";
             case CertificateType::C_HP_ENC:
                 return "C_HP_ENC";
+            case CertificateType::C_ZD_TLS_S:
+                return "C_ZD_TLS_S";
         }
 
         TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
@@ -384,6 +380,8 @@ namespace
                 return TslService::oid_egk_qes;
             case CertificateType::C_HP_ENC:
                 return TslService::oid_vk_eaa_enc;
+            case CertificateType::C_ZD_TLS_S:
+                return TslService::oid_zd_tls_s;
         }
 
         TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
@@ -407,6 +405,7 @@ namespace
             case CertificateType::C_HP_QES:
             case CertificateType::C_CH_QES:
             case CertificateType::C_HP_ENC:
+            case CertificateType::C_ZD_TLS_S:
                 return {NID_key_usage, NID_basic_constraints};
         }
 
@@ -590,10 +589,14 @@ namespace
         {
             try
             {
-                auto newHashValue = downloadNewHashValue(
-                    requestSender, updateUrlString);
+                auto newHashValue = String::toLower(String::trim(downloadNewHashValue(requestSender, updateUrlString)));
                 if (! newHashValue.empty())
                 {
+                    if (!String::isHexString(newHashValue))
+                    {
+                        LOG(WARNING) << "Downloaded hash value of TrustServiceStatusList is not a valid hex string";
+                        newHashValue = String::toHexString(newHashValue);
+                    }
                     return newHashValue;
                 }
             }
@@ -618,6 +621,7 @@ namespace
             needsUpdate = trustStore.isTslTooOld();
             if (! needsUpdate)
             {
+                TslExpect(newHash.has_value(), "Hash value missing", TslErrorCode::TSL_DOWNLOAD_ERROR);
                 // if the new version of TSL.xml is available according to hash check
                 // or if the current version is outdated ( and hash is not available )
                 // the TSL should be refreshed
@@ -952,13 +956,17 @@ TslService::refreshTslIfNecessary(
         }
 
         TslExpect(! tslContent.empty(),
-                  "Can not download new TrustServiceStatusList version. Hash: " +
-                      String::toHexString(newHash.value_or("")),
+                  "Can not download new TrustServiceStatusList version. Hash: " + newHash.value_or(""),
                   TslErrorCode::TSL_DOWNLOAD_ERROR);
         TLOG(INFO) << "Successfully downloaded " << magic_enum::enum_name(trustStore.getTslMode())
-                      << " with hash " + String::toHexString(newHash.value_or(""));
-        const auto contentHash = Hash::sha256(tslContent);
-        TVLOG(1) << "Content hash: " << String::toHexString(contentHash);
+                   << " with hash " + newHash.value_or("");
+        const auto contentHash = String::toLower(String::toHexString(Hash::sha256(tslContent)));
+        TVLOG(1) << "Downloaded TSL calculated hash: " << contentHash;
+        if (newHash.has_value() && contentHash != newHash)
+        {
+            TLOG(WARNING) << "Downloaded " << magic_enum::enum_name(trustStore.getTslMode())
+                          << " has wrong hash. Expected: " << newHash.value_or("") << ", calculated: " << contentHash;
+        }
 
         return attemptTslParsing(tslContent, xmlValidator, trustStore, expectedSignerCertificates);
     }
@@ -1035,7 +1043,14 @@ TslService::UpdateResult TslService::triggerTslUpdateIfNecessary(
     {
         try
         {
-            const std::optional<std::string> hash = getTslHashValue(requestSender, trustStore);
+            std::optional<std::string> hash;
+            if (trustStore.hasTsl())
+            {
+                // only download a new hash value if we already have downloaded it
+                // once, otherwise we do not have a root store to validate the HTTPS
+                // connection against
+                hash = getTslHashValue(requestSender, trustStore);
+            }
             auto returnedTslParser = refreshTslIfNecessary(
                 requestSender, xmlValidator, trustStore, hash, expectedSignerCertificates);
 
@@ -1050,9 +1065,8 @@ TslService::UpdateResult TslService::triggerTslUpdateIfNecessary(
                         trustStore); // old trust store is provided here for cached data
                 }
 
-                refreshTrustStore(returnedTslParser,
-                                  trustStore);
-                trustStore.setTslHashValue(hash);
+                refreshTrustStore(returnedTslParser, trustStore);
+                trustStore.setTslHashValue(returnedTslParser->getSha256());
                 updateResult = UpdateResult::Updated;
             }
         }
@@ -1080,22 +1094,7 @@ CertificateType TslService::getCertificateType(const X509Certificate& certificat
               "All supported certificate types must have policy set",
               TslErrorCode::CERT_TYPE_INFO_MISSING);
 
-    std::vector<CertificateType> certificateTypes = {
-        CertificateType::C_HP_QES,
-        CertificateType::C_CH_QES,
-        CertificateType::C_CH_AUT,
-        CertificateType::C_CH_AUT_ALT,
-        CertificateType::C_FD_AUT,
-        CertificateType::C_FD_SIG,
-        CertificateType::C_FD_TLS_S,
-        CertificateType::C_FD_OSIG,
-        CertificateType::C_HCI_ENC,
-        CertificateType::C_HCI_AUT,
-        CertificateType::C_HCI_OSIG,
-        CertificateType::C_HP_ENC
-    };
-
-    for (const CertificateType certificateType : certificateTypes)
+    for (const CertificateType certificateType : magic_enum::enum_values<CertificateType>())
     {
         if (isCertificateOfType(certificate, certificateType))
         {

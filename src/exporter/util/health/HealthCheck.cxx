@@ -107,10 +107,10 @@ void HealthCheck::checkTsl(MedicationExporterServiceContext& context)
 
 void HealthCheck::checkEventDb(MedicationExporterServiceContext& context)
 {
-    auto connection = context.medicationExporterDatabaseFactory();
-    connection->healthCheck();
-    auto connectionInfo = connection->getConnectionInfo();
-    connection->commitTransaction();
+    auto connectionInfo = context.transaction(TransactionMode::autocommit, [&](auto& connection) {
+        connection.healthCheck();
+        return connection.getConnectionInfo();
+    });
     if (connectionInfo)
     {
         context.applicationHealth().setServiceDetails(ApplicationHealth::Service::EventDb,

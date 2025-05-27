@@ -15,6 +15,8 @@ public:
     void addFromBundle(const MedicationDispenseBundle& bundle);
     MedicationsAndDispenses filter(const MedicationDispenseId& medicationDispenseId) &&;
 
+    bool containsDigaRedeemCode() const;
+
     std::vector<model::MedicationDispense> medicationDispenses{};
     std::vector<model::GemErpPrMedication> medications{};
 };

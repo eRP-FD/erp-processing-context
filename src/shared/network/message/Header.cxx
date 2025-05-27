@@ -35,6 +35,11 @@ const std::string Header::MvoNumber = "Mvo-Number";
 const std::string Header::ANR = "LANR";
 const std::string Header::ZANR = "ZANR";
 const std::string Header::PrescriptionId = "Prescription-ID";
+const std::string Header::DigaRedeemCode = "Diga-Redeem-Code";
+const std::string Header::GematikWorkflowProfil = "Gematik-Workflow-Profil";
+const std::string Header::GematikPatientenrechnung = "Gematik-Patientenrechnung";
+const std::string Header::KbvVerordnungsdaten = "KBV-Verordnungsdaten";
+const std::string Header::DavAbgabedaten = "DAV-Abgabedaten";
 
 const std::string Header::Tee3::VauCid = "VAU-CID";
 const std::string Header::Tee3::XUserAgent = "x-useragent";
@@ -366,7 +371,7 @@ void Header::setContentLength(size_t contentLength)
     }
 
     // handle when to set Content-Length: 0 and when to delete Content-Length:
-    switch(mMethod)
+    switch (mMethod)
     {
         case HttpMethod::UNKNOWN: {
             // response
@@ -385,6 +390,69 @@ void Header::setContentLength(size_t contentLength)
             return;
     }
     LogicErrorFail("uninitialized enum mHeader.method()");
+}
+
+std::string Header::profileVersionHeader(model::ProfileType profileType)
+{
+    switch (profileType)
+    {
+        case model::ProfileType::ActivateTaskParameters:
+        case model::ProfileType::CreateTaskParameters:
+        case model::ProfileType::GEM_ERP_PR_AuditEvent:
+        case model::ProfileType::GEM_ERP_PR_Binary:
+        case model::ProfileType::GEM_ERP_PR_Communication_DispReq:
+        case model::ProfileType::GEM_ERP_PR_Communication_InfoReq:
+        case model::ProfileType::GEM_ERP_PR_Communication_Reply:
+        case model::ProfileType::GEM_ERP_PR_Communication_Representative:
+        case model::ProfileType::GEM_ERP_PR_Composition:
+        case model::ProfileType::GEM_ERP_PR_Device:
+        case model::ProfileType::GEM_ERP_PR_Digest:
+        case model::ProfileType::GEM_ERP_PR_Medication:
+        case model::ProfileType::GEM_ERP_PR_MedicationDispense:
+        case model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA:
+        case model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input:
+        case model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input:
+        case model::ProfileType::MedicationDispenseBundle:
+        case model::ProfileType::GEM_ERP_PR_Bundle:
+        case model::ProfileType::GEM_ERP_PR_Task:
+            return GematikWorkflowProfil;
+        case model::ProfileType::fhir:
+        case model::ProfileType::Subscription:
+        case model::ProfileType::OperationOutcome:
+        case model::ProfileType::EPAOpRxPrescriptionERPOutputParameters:
+        case model::ProfileType::EPAOpRxDispensationERPOutputParameters:
+        case model::ProfileType::ProvidePrescriptionErpOp:
+        case model::ProfileType::CancelPrescriptionErpOp:
+        case model::ProfileType::ProvideDispensationErpOp:
+        case model::ProfileType::OrganizationDirectory:
+        case model::ProfileType::EPAMedicationPZNIngredient:
+        case model::ProfileType::KBV_PR_EVDGA_HealthAppRequest:
+            return {};
+        case model::ProfileType::GEM_ERPCHRG_PR_ChargeItem:
+        case model::ProfileType::GEM_ERPCHRG_PR_Consent:
+        case model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
+        case model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
+        case model::ProfileType::PatchChargeItemParameters:
+            return GematikPatientenrechnung;
+        case model::ProfileType::KBV_PR_EVDGA_Bundle:
+        case model::ProfileType::KBV_PR_ERP_Bundle:
+        case model::ProfileType::KBV_PR_ERP_Composition:
+        case model::ProfileType::KBV_PR_ERP_Medication_Compounding:
+        case model::ProfileType::KBV_PR_ERP_Medication_FreeText:
+        case model::ProfileType::KBV_PR_ERP_Medication_Ingredient:
+        case model::ProfileType::KBV_PR_ERP_Medication_PZN:
+        case model::ProfileType::KBV_PR_ERP_PracticeSupply:
+        case model::ProfileType::KBV_PR_ERP_Prescription:
+        case model::ProfileType::KBV_PR_FOR_Coverage:
+        case model::ProfileType::KBV_PR_FOR_Organization:
+        case model::ProfileType::KBV_PR_FOR_Patient:
+        case model::ProfileType::KBV_PR_FOR_Practitioner:
+        case model::ProfileType::KBV_PR_FOR_PractitionerRole:
+            return KbvVerordnungsdaten;
+        case model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle:
+            return DavAbgabedaten;
+    }
+    return {};
 }
 
 void Header::setContentLengthZeroMethodUnknown()

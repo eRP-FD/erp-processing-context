@@ -221,6 +221,12 @@ private:
             LOG(ERROR) << "failed to verify server certificate: " << exception.what();
         }
 
+        if (! result)
+        {
+            LOG(WARNING) << "validation of server certficate failed: "
+                         << (certificate.has_value() ? certificate->toBase64() : "");
+        }
+
 #if 0 // NOLINT(readability-avoid-unconditional-preprocessor-if)
         // this callback is registered to better debug certificate verification problems,
         // it is not necessary for production and should be disabled
@@ -342,8 +348,12 @@ protected:
             SSL* ssl = static_cast<SSL*>(
                 ::X509_STORE_CTX_get_ex_data(context.native_handle(), ::SSL_get_ex_data_X509_STORE_CTX_idx()));
             OpenSslExpect(ssl != nullptr, "Unable to obtain ssl handle");
+            // use the params set by TlsSession
+            auto flags = X509_VERIFY_PARAM_get_hostflags(SSL_get0_param(ssl));
             const auto hostname = std::string{SSL_get_servername(ssl, TLSEXT_NAMETYPE_host_name)};
-            if (! verifySubjectAlternativeDnsName(hostname, certificate.value()))
+            const auto* x509Certificate = certificate->getX509ConstPtr();
+            if (X509_check_host(const_cast<X509*>(x509Certificate),// NOLINT(cppcoreguidelines-pro-type-const-cast)
+                                hostname.c_str(), hostname.length(), flags, nullptr) != 1)
             {
                 return false;
             }
@@ -362,11 +372,16 @@ protected:
     {
         try
         {
+            std::unordered_set<CertificateType> typeRestrictions;
+            if (mTslValidationParameters.certificateType.has_value()) {
+                typeRestrictions.insert(mTslValidationParameters.certificateType.value());
+            }
             mTslManager.verifyCertificate(mTslValidationParameters.tslMode, certificate,
-                                          {mTslValidationParameters.certificateType},
+                                          typeRestrictions,
                                           {.mode = mTslValidationParameters.ocspCheckMode,
                                            .timeSettings = {std::nullopt, mTslValidationParameters.ocspGracePeriod},
-                                           .providedOcspResponse = std::move(providedOcspResponse)});
+                                           .providedOcspResponse = std::move(providedOcspResponse)},
+                                           mTslValidationParameters.allowTslUpdate);
             return true;
         }
         catch (const TslError&)

@@ -42,6 +42,7 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
              << BoostBeastStringWriter::serializeRequest(request.getHeader(), request.getBody());
 
     auto client = mServiceContext.httpsClientPool(host)->acquire();
+    Expect(client, "Cannot connect to " + host + ':' + std::to_string(port));
 
     BDEMessage bde;
     bde.mStartTime = model::Timestamp::now();
@@ -69,7 +70,14 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
         bde.mResponseCode = static_cast<unsigned int>(toNumericalValue(result.getHeader().status()));
         bde.mEndTime = model::Timestamp::now();
         return result;
-    } catch (const std::exception& e)
+    }
+    catch (const ExceptionWrapper<boost::beast::system_error>& e)
+    {
+        bde.mEndTime = model::Timestamp::now();
+        bde.mError = e.code().message();
+        Fail(e.code().message());
+    }
+    catch (const std::exception& e)
     {
         bde.mEndTime = model::Timestamp::now();
         bde.mError = e.what();

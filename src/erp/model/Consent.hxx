@@ -22,7 +22,7 @@ class Consent : public Resource<Consent>
 {
 public:
     static constexpr auto resourceTypeName = "Consent";
-    static constexpr ProfileType profileType = ProfileType::Gem_erxConsent;
+    static constexpr ProfileType profileType = ProfileType::GEM_ERPCHRG_PR_Consent;
     enum class Type
     {
         CHARGCONS

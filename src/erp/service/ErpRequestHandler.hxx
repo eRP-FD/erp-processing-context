@@ -8,26 +8,27 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_ERPREQUESTHANDLER_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_ERPREQUESTHANDLER_HXX
 
-#include <string>
-#include <unordered_set>
-
+#include "erp/pc/PcServiceContext.hxx"
+#include "erp/server/context/SessionContext.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceFactory.hxx"
 #include "shared/network/message/Header.hxx"
 #include "shared/network/message/HttpStatus.hxx"
 #include "shared/network/message/MimeType.hxx"
-#include "shared/fhir/Fhir.hxx"
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "shared/model/Resource.hxx"
-#include "shared/model/ResourceFactory.hxx"
-#include "erp/pc/PcServiceContext.hxx"
-#include "erp/server/context/SessionContext.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/service/Operation.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/validation/JsonValidator.hxx"
 #include "shared/validation/XmlValidator.hxx"
-#include "fhirtools/util/SaxHandler.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
+
+#include <string>
+#include <unordered_set>
 
 
 class JWT;
@@ -70,7 +71,7 @@ protected:
 
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
     template<class TModel>
-    [[nodiscard]] static TModel parseAndValidateRequestBody(const SessionContext& context, bool validateGeneric = true);
+    [[nodiscard]] static TModel parseAndValidateRequestBody(SessionContext& context, bool validateGeneric = true);
 
     static std::optional<std::string> getLanguageFromHeader(const Header& requestHeader);
 
@@ -95,14 +96,29 @@ public:
 };
 
 template<class TModel>
-TModel ErpRequestHandler::parseAndValidateRequestBody(const SessionContext& context, bool validateGeneric)
+TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context, bool validateGeneric)
 {
     auto resourceFactory = createResourceFactory<TModel>(context);
-    if (!validateGeneric)
+    if (! validateGeneric)
     {
         resourceFactory.genericValidationMode(model::GenericValidationMode::disable);
     }
     auto profileType = resourceFactory.profileType();
+    try
+    {
+        auto profileVersion = resourceFactory.profileVersion();
+        auto profileHeader = Header::profileVersionHeader(profileType);
+        if (! profileHeader.empty() && profileVersion && profileVersion->version())
+        {
+            A_23090_06.start("$gematikworkflowprofil, $gematikpatientenrechnung, $kbvverordnungsdaten, $davabgabedaten");
+            context.addOuterResponseHeaderField(profileHeader, *profileVersion->version());
+            A_23090_06.finish();
+        }
+    }
+    catch (const model::ModelException& mex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", mex.what());
+    }
     return std::move(resourceFactory).getValidated(profileType, nullptr);
 }
 

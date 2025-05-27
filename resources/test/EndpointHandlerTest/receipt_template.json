@@ -3,7 +3,7 @@
   "id": "a0010000-0000-0000-0003-000000000000",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle|1.2"
+      "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Bundle|1.4"
     ],
     "tag": [
       {
@@ -25,7 +25,7 @@
         "id": "c624cf47-e235-4624-af71-0a09dc9254dc",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Composition|1.2"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Composition|1.4"
           ]
         },
         "status": "final",
@@ -80,7 +80,7 @@
         "id": "1",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.2"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.4"
           ]
         },
         "status": "active",
@@ -111,7 +111,7 @@
         "id": "01e47535-632b-4d43-9fdc-86e165e14d9d",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Digest|1.2"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Digest|1.4"
           ]
         },
         "contentType": "application/octet-stream",

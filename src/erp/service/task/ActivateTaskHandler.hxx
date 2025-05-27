@@ -45,7 +45,7 @@ private:
                                   const SignedPrescription& cadesBesSignature);
 
     template<typename KbvOrEvdgaBundle>
-    static std::tuple<HttpStatus, KbvOrEvdgaBundle> prescriptionBundleFromXml(PcServiceContext& serviceContext,
+    static std::tuple<HttpStatus, KbvOrEvdgaBundle> prescriptionBundleFromXml(SessionContext& sessionContext,
                                                                               std::string_view prescription);
     static void checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,
                                           const model::PrescriptionType prescriptionType,
@@ -73,6 +73,8 @@ private:
     static void checkBundlePrescriptionId(const model::Task& task, const KbvOrEvdgaBundle& bundle);
     static std::vector<std::string_view>
     allowedProfessionOidsForQesSignature(model::PrescriptionType prescriptionType);
+    template<typename KbvOrEvdgaBundle>
+    static void setProfileVersionHeader(const KbvOrEvdgaBundle& bundle, SessionContext& session);
 };
 
 

@@ -15,12 +15,12 @@
 
 
 class PostgresConnection;
-
+enum class TransactionMode : uint8_t;
 
 class MedicationExporterPostgresBackend : public CommonPostgresBackend, public MedicationExporterDatabaseBackend
 {
 public:
-    MedicationExporterPostgresBackend();
+    MedicationExporterPostgresBackend(TransactionMode mode);
     ~MedicationExporterPostgresBackend() override = default;
 
     PostgresConnection& connection() const override;

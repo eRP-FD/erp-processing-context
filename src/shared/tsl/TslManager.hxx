@@ -68,13 +68,15 @@ public:
      * @param certificate               the certificate to check
      * @param typeRestrictions          if provided, the certificate type must be in the set
      * @param ocspCheckDescriptor       specifies how the OCSP check should be done
+     * @param allowTslUpdate            allow updating the TSL, should be false for TSL internal updates only
      *
      * @throws TslError in case of problems
      */
     virtual void verifyCertificate(const TslMode tslMode,
                                    const X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspCheckDescriptor& ocspCheckDescriptor);
+                                   const OcspCheckDescriptor& ocspCheckDescriptor,
+                                   bool allowTslUpdate = true);
 
     /**
      * Allows to get OCSP-response for the provided certificate according to specified OCSP check descriptor.

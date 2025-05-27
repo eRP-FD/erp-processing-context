@@ -10,13 +10,21 @@
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/audit/AuditDataCollector.hxx"
+#include "shared/database/AccessTokenIdentity.hxx"
+#include "shared/database/TransactionMode.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/JsonLog.hxx"
 
 using namespace std::chrono_literals;
 
-EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
+template<typename FuncT>
+decltype(auto) EventProcessor::autocommit(FuncT&& function)
+{
+    return mServiceContext->transaction(TransactionMode::autocommit, std::forward<FuncT>(function));
+}
+
+EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext, IEpaAccountLookup& epaAccountLookup)
     : jsonLog([] {
         JsonLog jlog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false);
         if (tlogContext.has_value())
@@ -26,6 +34,7 @@ EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceCo
         return jlog;
     })
     , mServiceContext(serviceContext)
+    , mEpaAccountLookup(epaAccountLookup)
     , mRetryDelaySeconds(
           Configuration::instance().getIntValue(ConfigurationKey::MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS))
     , mHealthRecordRelocationWaitMinutes(
@@ -38,13 +47,23 @@ EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceCo
 bool EventProcessor::process()
 {
     // Workflow step 1
-    const auto kvnr = createMedicationExporterCommitGuard().db().processNextKvnr();
+    const auto kvnr = autocommit([&](auto& db) {
+        return db.processNextKvnr();
+    });
 
     if (kvnr)
     {
         try
         {
             processOne(*kvnr);
+        }
+        catch (const db_model::AccessTokenIdentity::Exception& e)
+        {
+            jsonLog() << *kvnr << KeyValue("event", "Processing task events: Unexpected error. Mark first event as deadletter")
+                      << KeyValue("reason", e.what());
+            autocommit([&](auto& db) {
+                db.markFirstEventDeadLetter(*kvnr);
+            });
         }
         catch (const std::exception& e)
         {
@@ -66,7 +85,9 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
     if (checkRetryCount(kvnr))
     {
         // Workflow step 2
-        const auto events = createMedicationExporterCommitGuard().db().getAllEventsForKvnr(kvnr);
+        const auto events = autocommit([&](auto& db) {
+            return db.getAllEventsForKvnr(kvnr);
+        });
 
         jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                   << KeyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events");
@@ -108,7 +129,9 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
         else
         {
             // Workflow step 13 - set kvnr to processed
-            createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
+            autocommit([&](auto& db) {
+                db.finalizeKvnr(kvnr);
+            });
             TLOG(WARNING) << "KVNR to process had no events";
         }
     }
@@ -127,7 +150,9 @@ bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr)
         auditDataCollector.setDeviceId(ExporterDeviceId);
 
         // Workflow step 19 mark first event as deadletter-queue
-        if (const auto unexpandedTaskEvent = createMedicationExporterCommitGuard().db().markFirstEventDeadLetter(kvnr))
+        if (const auto unexpandedTaskEvent = autocommit([&](MedicationExporterDatabaseFrontendInterface& db) {
+                return db.markFirstEventDeadLetter(kvnr);
+            }))
         {
             auditDataCollector.setPrescriptionId(unexpandedTaskEvent->prescriptionId);
             auditDataCollector.setInsurantKvnr(unexpandedTaskEvent->kvnr);
@@ -173,7 +198,9 @@ bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr)
         }
 
         // Workflow step 21 set KVNR to pending, retry_count to 0 and reschedule in delay-seconds
-        createMedicationExporterCommitGuard().db().updateProcessingDelay(0, mRetryDelaySeconds, kvnr);
+        autocommit([&](auto& db) {
+            db.updateProcessingDelay(0, mRetryDelaySeconds, kvnr);
+        });
         return false;
     }
     return true;
@@ -194,14 +221,16 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         Expect(event, "No or bad events for kvnr");
 
         // Workflow step 6 - check deadletter
-        bool deadLetter = createMedicationExporterCommitGuard().db().isDeadLetter(kvnr, event->getPrescriptionId(),
-                                                                                  event->getPrescriptionType());
+        bool deadLetter = autocommit([&](auto& db) {
+            return db.isDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+        });
         // Workflow step 6b - if event in deadletterQueue -> Workflow step 17
         if (deadLetter)
         {
             // Workflow step 17 - set deadletter
-            const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
-                kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+            const auto skipped = autocommit([&](auto& db) {
+                return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+            });
             TVLOG(1) << "marked events as deadletterQueue: " << skipped;
             jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
                       << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
@@ -231,7 +260,9 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 // Workflow step 12 - delete successfully transmitted event
                 jsonLog() << kvnr << KeyValue("event", "Deleting event after successful transmission")
                           << KeyValue("prescription_id", event->getPrescriptionId().toString());
-                createMedicationExporterCommitGuard().db().deleteOneEventForKvnr(kvnr, event->getId());
+                autocommit([&](auto& db) {
+                    db.deleteOneEventForKvnr(kvnr, event->getId());
+                });
             }
             break;
             case eventprocessing::Outcome::Retry:// Workflow step 11c - RetryQueue -> Workflow step 15
@@ -251,8 +282,9 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 break;
             case eventprocessing::Outcome::DeadLetter:// Workflow step 11b - DeadletterQueue -> Workflow step 17
                 // Workflow step 17 - set deadletter
-                const auto skipped = createMedicationExporterCommitGuard().db().markDeadLetter(
-                    kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+                const auto skipped = autocommit([&](auto& db) {
+                    return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+                });
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
                 jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
                           << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
@@ -261,7 +293,9 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         }
     }
     // Workflow step 13 - set kvnr to procesesd
-    createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
+    autocommit([&](auto& db) {
+        db.finalizeKvnr(kvnr);
+    });
     jsonLog() << kvnr << KeyValue("event", "KVNR processed");
 }
 
@@ -270,12 +304,16 @@ void EventProcessor::processEpaDeniedOrNotFound(const model::EventKvnr& kvnr)
     TVLOG(1) << "account lookup denied / not found with given kvnr";
 
     // Workflow step 14 - delete kvnr events
-    createMedicationExporterCommitGuard().db().deleteAllEventsForKvnr(kvnr);
+    autocommit([&](auto& db) {
+        db.deleteAllEventsForKvnr(kvnr);
+    });
 
     jsonLog() << kvnr << KeyValue("event", "Delete all Task Events for KVNR");
 
     // Workflow step 13 - set kvnr to procesesd
-    createMedicationExporterCommitGuard().db().finalizeKvnr(kvnr);
+    autocommit([&](auto& db) {
+        db.finalizeKvnr(kvnr);
+    });
 }
 
 void EventProcessor::processEpaConflict(const model::EventKvnr& kvnr)
@@ -299,7 +337,7 @@ void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollecto
     try
     {
         model::AuditData auditData = auditDataCollector.createData();
-        MainDatabaseCommitGuard(mServiceContext->erpDatabaseFactory()).db().storeAuditEventData(auditData);
+        CommitGuard{mServiceContext->erpDatabaseFactory()}.db().storeAuditEventData(auditData);
     }
     catch (const MissingAuditDataException& exc)
     {
@@ -317,37 +355,37 @@ void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollecto
 
 EpaAccount EventProcessor::ePaAccountLookup(const model::TaskEvent& taskEvent)
 {
-    auto accountLookup = EpaAccountLookup(*mServiceContext);
-    accountLookup.lookupClient()
+    mEpaAccountLookup.lookupClient()
         .addLogAttribute(BDEMessage::lastModifiedTimestampKey, taskEvent.getLastModified())
         .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString())
         .addLogAttribute(BDEMessage::hashedKvnrKey,  std::make_optional<model::HashedKvnr>(taskEvent.getHashedKvnr()));
-    return accountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
+    return mEpaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
 }
 
 void EventProcessor::scheduleRetryQueue(const model::EventKvnr& kvnr)
 {
     auto retry = kvnr.getRetryCount();
     std::chrono::seconds retryDelaySeconds = calculateExponentialBackoffDelay(retry);
-    createMedicationExporterCommitGuard().db().updateProcessingDelay(++retry, retryDelaySeconds, kvnr);
+    autocommit([&](auto& db) {
+        db.updateProcessingDelay(++retry, retryDelaySeconds, kvnr);
+    });
 }
 
 void EventProcessor::scheduleHealthRecordRelocation(const model::EventKvnr& kvnr)
 {
-    createMedicationExporterCommitGuard().db().updateProcessingDelay(0, mHealthRecordRelocationWaitMinutes, kvnr);
+    autocommit([&](auto& db) {
+        db.updateProcessingDelay(0, mHealthRecordRelocationWaitMinutes, kvnr);
+    });
 }
 
 void EventProcessor::scheduleHealthRecordConflict(const model::EventKvnr& kvnr)
 {
-    createMedicationExporterCommitGuard().db().updateProcessingDelay(0, 24h, kvnr);
+    autocommit([&](auto& db) {
+        db.updateProcessingDelay(0, 24h, kvnr);
+    });
 }
 
 std::chrono::seconds EventProcessor::calculateExponentialBackoffDelay(std::int32_t retry)
 {
     return std::chrono::seconds(static_cast<std::int32_t>(std::pow(3, std::max(retry, 0))) * 60);
-}
-
-MedicationExporterCommitGuard EventProcessor::createMedicationExporterCommitGuard()
-{
-    return MedicationExporterCommitGuard(mServiceContext->medicationExporterDatabaseFactory());
 }

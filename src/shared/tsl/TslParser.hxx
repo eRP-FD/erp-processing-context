@@ -81,6 +81,11 @@ public:
     const ServiceInformationMap& getServiceInformationMap() const;
 
     /**
+     * Return the hex of the sha256 sum of the passed TSL
+     */
+    const std::string& getSha256() const;
+
+    /**
      * Returns the list of update urls for this TSL,
      * first element must be the primary URL,
      * second element must be backup URL
@@ -110,6 +115,7 @@ private:
     CertificateList mOcspCertificateList;
     ServiceInformationMap mServiceInformationMap;
     std::vector<CertificateId> mNewTslSignerCaIdList;
+    std::string mSha256Hash;
 
     BnaServiceInformation mBnaServiceInformation;
 

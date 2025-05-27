@@ -748,7 +748,7 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
     const auto& config = Configuration::instance();
     auto client =
         HttpClient("127.0.0.1", gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ADMIN_SERVER_PORT)),
-                   30 /*connectionTimeoutSeconds*/, Constants::resolveTimeout);
+                   std::chrono::seconds{30} /*connectionTimeout*/, Constants::resolveTimeout);
 
     // As the server does not understand HTTP without TLS it can not send a proper error response.
     // But we can detect that the response is not sent completely (if at all) by looking for an exception.

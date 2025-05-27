@@ -13,6 +13,7 @@
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/util/Demangle.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/erp/service/EndpointHandlerTest/MedicationDispenseFixture.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
@@ -26,20 +27,9 @@
  * @brief Endpoint tests of DispenseTaskHandler
  *
  */
-class DispenseTaskTest : public EndpointHandlerTest
+class DispenseTaskTest : public MedicationDispenseFixture
 {
-public:
-
 protected:
-    enum class ExpectedResult
-    {
-        success,
-        failure,
-        noCatch,
-    };
-
-    JWT jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke();
-    const std::string telematikId = jwtPharmacy.stringForClaim(JWT::idNumberClaim).value();
 
     static const inline model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
@@ -289,7 +279,7 @@ struct  DispenseTaskEmptyCloseParam
         MedicationDispense,
         MedicationDispenseBundle,
     };
-    std::string (DispenseTaskEmptyClose_ERP_23917::*dispense)();
+    MedicationDispenseFixture::BodyType bodyType;
     ReturnType getReturns;
     size_t expectedDispenseCount;
     size_t expectedMedicationCount;
@@ -298,52 +288,6 @@ struct  DispenseTaskEmptyCloseParam
 class DispenseTaskEmptyClose_ERP_23917 : public DispenseTaskTest, public testing::WithParamInterface<DispenseTaskEmptyCloseParam>
 {
 public:
-    static constexpr char notSupported[] = "not supported";
-
-    std::string medicationDispenseXml()
-    {
-        dispenseOptions.gematikVersion =
-            std::min(ResourceTemplates::Versions::GEM_ERP_1_3, dispenseOptions.gematikVersion);
-        return ResourceTemplates::medicationDispenseXml(dispenseOptions);
-    }
-    std::string medicationDispenseBundleXml()
-    {
-        for (auto& opt: multiDispenseOptions)
-        {
-            opt.gematikVersion = std::min(ResourceTemplates::Versions::GEM_ERP_1_3, opt.gematikVersion);
-        }
-        return ResourceTemplates::medicationDispenseBundleXml({
-            .gematikVersion =
-                std::min(ResourceTemplates::Versions::GEM_ERP_1_3, ResourceTemplates::Versions::GEM_ERP_current()),
-            .medicationDispenses = multiDispenseOptions,
-        });
-    }
-    std::string medicationDispenseBundleXmlNoProfile()
-    {
-        /* ERP-22297: remove meta/profile */
-        const std::string profileUrl{profile(model::ProfileType::MedicationDispenseBundle).value()};
-        std::string result =
-            regex_replace(medicationDispenseBundleXml(),
-                          std::regex{"<meta><profile value=\"" + profileUrl + "\\|" +
-                                     to_string(ResourceTemplates::Versions::GEM_ERP_current()) + "\"/></meta>"},
-                          "");
-        EXPECT_EQ(
-            result.find(R"("https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_CloseOperationInputBundle")"),
-            std::string::npos);
-        return result;
-    }
-    std::string dispenseOperationInputParamers()
-    {
-        if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
-        {
-            return notSupported;
-        }
-        return ResourceTemplates::medicationDispenseOperationParametersXml({
-            .profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
-            .medicationDispenses = multiDispenseOptions,
-        });
-    }
-
     void closeTask()
     {
         Header requestHeader{HttpMethod::POST,
@@ -363,27 +307,18 @@ public:
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     }
-
-protected:
-    const model::PrescriptionId prescriptionId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
-    ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
-                                                                       .telematikId = telematikId};
-    std::list<ResourceTemplates::MedicationDispenseOptions> multiDispenseOptions{
-        {.id{model::MedicationDispenseId{prescriptionId, 0}}, .telematikId = telematikId},
-        {.id{model::MedicationDispenseId{prescriptionId, 1}}, .telematikId = telematikId},
-    };
 };
 
 TEST_P(DispenseTaskEmptyClose_ERP_23917, closeEmptyBody)
 {
+
     if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4 &&
-        GetParam().dispense == &DispenseTaskEmptyClose_ERP_23917::dispenseOperationInputParamers)
+        GetParam().bodyType == MedicationDispenseFixture::BodyType::parameters)
     {
         GTEST_SKIP_("GEM_ERP_PR_PAR_DispenseOperation_Input not supported");
     }
     using namespace std::string_literals;
-    auto input = (this->*GetParam().dispense)();
+    auto input = medicationDispenseBody({EndpointType::dispense, GetParam().bodyType});
     ASSERT_NO_FATAL_FAILURE(test(input, ExpectedResult::success)) << input;
     ASSERT_NO_FATAL_FAILURE(closeTask());
     std::optional<model::UnspecifiedResource> unspec;
@@ -414,27 +349,62 @@ TEST_P(DispenseTaskEmptyClose_ERP_23917, closeEmptyBody)
 INSTANTIATE_TEST_SUITE_P(input, DispenseTaskEmptyClose_ERP_23917,
                          testing::ValuesIn(std::initializer_list<DispenseTaskEmptyCloseParam>{
                              {
-                                 .dispense = &DispenseTaskEmptyClose_ERP_23917::medicationDispenseXml,
+                                 .bodyType = MedicationDispenseFixture::BodyType::single,
                                  .getReturns = DispenseTaskEmptyCloseParam::MedicationDispense,
                                  .expectedDispenseCount = 1,
                                  .expectedMedicationCount = 0,
                              },
                              {
-                                 .dispense = &DispenseTaskEmptyClose_ERP_23917::medicationDispenseBundleXml,
+                                 .bodyType = MedicationDispenseFixture::BodyType::bundle,
                                  .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
                                  .expectedDispenseCount = 2,
                                  .expectedMedicationCount = 0,
                              },
                              {
-                                 .dispense = &DispenseTaskEmptyClose_ERP_23917::medicationDispenseBundleXmlNoProfile,
+                                 .bodyType = MedicationDispenseFixture::BodyType::bundleNoProfile,
                                  .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
                                  .expectedDispenseCount = 2,
                                  .expectedMedicationCount = 0,
                              },
                              {
-                                 .dispense = &DispenseTaskEmptyClose_ERP_23917::dispenseOperationInputParamers,
+                                 .bodyType = MedicationDispenseFixture::BodyType::parameters,
                                  .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
                                  .expectedDispenseCount = 2,
                                  .expectedMedicationCount = 2,
                              }
                          }));
+
+
+
+
+class DispenseTaskProfileValidityTest : public DispenseTaskTest,
+                                        public ::testing::WithParamInterface< MedicationDispenseFixture::ProfileValidityTestParams>
+{
+};
+
+TEST_P(DispenseTaskProfileValidityTest, run)
+{
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({EndpointType::dispense, GetParam().bodyType,
+                                                         GetParam().version, {testutils::shiftDate(GetParam().date)}}),
+                                 GetParam().result));
+}
+
+INSTANTIATE_TEST_SUITE_P(parameters, DispenseTaskProfileValidityTest,
+                         ::testing::ValuesIn(MedicationDispenseFixture::profileValidityTestParameters()));
+
+class DispenseTaskMaxWhenHandedOverTest : public DispenseTaskTest,
+public ::testing::WithParamInterface< MedicationDispenseFixture::MaxWhenHandedOverTestParams>
+{
+};
+
+TEST_P(DispenseTaskMaxWhenHandedOverTest, run)
+{
+    std::list<std::string> overrideWhenHandedOver;
+    std::ranges::transform(GetParam().whenHandedOver, back_inserter(overrideWhenHandedOver), &testutils::shiftDate);
+    ASSERT_NO_FATAL_FAILURE(test(
+        medicationDispenseBody({EndpointType::dispense, GetParam().bodyType, GetParam().version, overrideWhenHandedOver}),
+                                 GetParam().result));
+}
+
+INSTANTIATE_TEST_SUITE_P(parameters, DispenseTaskMaxWhenHandedOverTest,
+                         ::testing::ValuesIn(MedicationDispenseFixture::maxWhenHandedOverTestParameters()));

@@ -6,6 +6,16 @@
 
 #include <ostream>
 
+std::string_view fhirtools::DefinitionKey::shortProfile() const
+{
+    std::string_view s{std::string_view{url}.substr(url.find_last_of('/'))};
+    if (!s.empty())
+    {
+        return s.substr(1);
+    }
+    return {};
+}
+
 std::ostream& fhirtools::operator<<(std::ostream& out, const DefinitionKey& definitionKey)
 {
     out << definitionKey.url;

@@ -60,6 +60,8 @@ private:
     boost::asio::awaitable<Tee3ClientsForHost::Tee3ClientPtr> acquireInternal(std::shared_ptr<Tee3ClientPool> pool);
     boost::asio::awaitable<void> release(std::shared_ptr<Tee3ClientPool> pool, std::unique_ptr<Tee3Client> instance);
 
+    void setEndpoints(const Resolver::results_type& endpointResult);
+
     std::weak_ptr<Tee3ClientPool> mOwningPool;
     std::string mHostname;
     uint16_t mPort;

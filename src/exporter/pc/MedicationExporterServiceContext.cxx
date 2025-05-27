@@ -89,8 +89,8 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
                 return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
             });
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
-    auto poolSize = configuration.getIntValue(
-              ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN);
+    auto poolSize = static_cast<size_t>(
+        configuration.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN));
     for (const auto& fqdn : fqdns)
     {
         ConnectionParameters params{
@@ -102,16 +102,17 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
               ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS)},
             .tlsParameters = TlsConnectionParameters{.certificateVerifier = verifier}
         };
-        mHttpsClientPools.emplace(fqdn.hostName, std::make_shared<HttpsClientPool>(std::move(params), poolSize));
+        mHttpsClientPools.emplace(fqdn.hostName,
+                                  HttpsClientPool::create(&mIoContext, std::move(params), poolSize, refreshInterval()));
     }
 }
 
 MedicationExporterServiceContext::~MedicationExporterServiceContext() = default;
 
 std::unique_ptr<MedicationExporterDatabaseFrontendInterface>
-MedicationExporterServiceContext::medicationExporterDatabaseFactory()
+MedicationExporterServiceContext::medicationExporterDatabaseFactory(TransactionMode mode)
 {
-    return mExporterDatabaseFactory(mKeyDerivation);
+    return mExporterDatabaseFactory(mKeyDerivation, mode);
 }
 
 std::unique_ptr<exporter::MainDatabaseFrontend> MedicationExporterServiceContext::erpDatabaseFactory()

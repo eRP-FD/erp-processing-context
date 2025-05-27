@@ -39,6 +39,7 @@
 [[maybe_unused]] static Requirement F_016("Zwei Practitioner im kbv_pr_erp_bundle ANFERB-2780");
 [[maybe_unused]] static Requirement F_017("KBV_PR_ERP_Medication_Compounding  mapping von itemCodeableConcept.coding - PZN ANFERP-2911");
 [[maybe_unused]] static Requirement F_018_01("Verordnungen von Kombipackungen");
+[[maybe_unused]] static const Requirement F_019("no mapping of Practitioner.qualification");
 // clang-format on
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EXPORTERREQUIREMENTS_HXX

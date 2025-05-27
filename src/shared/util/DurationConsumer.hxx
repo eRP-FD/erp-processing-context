@@ -29,18 +29,18 @@ public:
     using Receiver = std::function<void(
         std::chrono::steady_clock::duration duration,
         const std::string& category,
-        const std::string& description,
+        const std::string& metric,
         const std::string& sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap,
         const std::optional<JsonLog::LogReceiver>& logReceiverOverride)>;
 
     explicit DurationTimer (
         Receiver& receiver,
-        const std::string& category,
-        const std::string& description,
-        const std::string& sessionIdentifier,
+        std::string  category,
+        std::string  metric,
+        std::string  sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap);
-    ~DurationTimer (void);
+    ~DurationTimer();
 
     void notifyFailure(const std::string& description);
     void keyValue(const std::string& key, const std::string& value);
@@ -48,7 +48,7 @@ public:
 private:
     Receiver mReceiver;
     std::string mCategory;
-    std::string mDescription;
+    std::string mMetric;
     std::string mSessionIdentifier;
     std::unordered_map<std::string, std::string> mKeyValueMap;
     std::optional<std::chrono::steady_clock::time_point> mStart;
@@ -64,23 +64,22 @@ private:
 class DurationConsumer
 {
 public:
+    // Keep these names in sync with the configuration:
     static constexpr auto categoryRedis = "redis";
     static constexpr auto categoryPostgres = "postgres";
-    static constexpr auto categoryUrlRequestSender = "http-client";
-    static constexpr auto categoryFhirValidation = "fhir-validation";
-    static constexpr auto categoryOcspRequest = "ocsp-request";
+    static constexpr auto categoryUrlRequestSender = "httpclient";
+    static constexpr auto categoryFhirValidation = "fhirvalidation";
+    static constexpr auto categoryOcspRequest = "ocsprequest";
     static constexpr auto categoryHsm = "hsm";
     static constexpr auto categoryEnrolmentHelper = "enrolment";
 
-    static DurationConsumer& getCurrent (void);
+    static DurationConsumer& getCurrent();
 
 
-    void initialize (
-        const std::string& sessionIdentifier,
-        DurationTimer::Receiver&& receiver);
-    void reset (void) noexcept;
-    bool isInitialized (void) const;
-    std::optional<std::string> getSessionIdentifier (void) const;
+    void initialize(const std::string& sessionIdentifier, DurationTimer::Receiver&& receiver);
+    void reset() noexcept;
+    bool isInitialized() const;
+    std::optional<std::string> getSessionIdentifier() const;
 
     /**
      * @brief
@@ -89,7 +88,7 @@ public:
     static void defaultReceiver(
         std::chrono::steady_clock::duration duration,
         const std::string& category,
-        const std::string& description,
+        const std::string& metric,
         const std::string& sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap,
         const std::optional<JsonLog::LogReceiver>& logReceiverOverride);
@@ -97,7 +96,7 @@ public:
     /**
      * Return a timer that measures how long it takes until its destructor is called.
      */
-    DurationTimer getTimer(const std::string& category, const std::string& description,
+    DurationTimer getTimer(const std::string& category, const std::string& metric,
                            const std::unordered_map<std::string, std::string>& keyValueMap = {});
 
 private:

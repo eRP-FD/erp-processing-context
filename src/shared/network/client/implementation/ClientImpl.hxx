@@ -44,6 +44,9 @@ public:
 
     void close (void);
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
+
+
 private:
     std::chrono::milliseconds mConnectionTimeout;
     std::string mHostName;

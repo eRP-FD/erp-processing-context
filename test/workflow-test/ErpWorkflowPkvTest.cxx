@@ -855,6 +855,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     A_22146.test("Telematik-ID check");
     const auto telematikIdPharmacy2 = telematikIdPharmacy1 + "_noaccess";
     const auto jwtPharmacy2 = JwtBuilder::testBuilder().makeJwtApotheke(telematikIdPharmacy2);
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(
         changedChargeItem = chargeItemPut(jwtPharmacy2, ContentMimeType::fhirXmlUtf8, *createdChargeItem,
                                           dispenseBundle.serializeToXmlString(), chargeItemAccessCode,
@@ -934,11 +935,21 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     ASSERT_TRUE(task->owner().has_value());
     ASSERT_EQ(task->owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
 
-    const auto lastStatusChangeDate = client->getContext()
-                                          ->databaseFactory()
-                                          ->retrieveTaskForUpdate(task->prescriptionId())
-                                          ->task.lastStatusChangeDate();
-    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastStatusChangeDate, communications));
+
+
+    if (runsInErpTest())
+    {
+
+        const auto lastStatusChangeDate = client->getContext()
+                                              ->databaseFactory()
+                                              ->retrieveTaskForUpdate(task->prescriptionId())
+                                              ->task.lastStatusChangeDate();
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastStatusChangeDate, communications));
+    }
+    else
+    {
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, std::nullopt, communications));
+    }
 
     auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematikId.has_value());

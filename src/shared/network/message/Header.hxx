@@ -8,15 +8,15 @@
 #ifndef E_LIBRARY_COMMON_HEADER_HXX
 #define E_LIBRARY_COMMON_HEADER_HXX
 
+#include "shared/model/ProfileType.hxx"
 #include "shared/network/message/HttpMethod.hxx"
 #include "shared/network/message/HttpStatus.hxx"
+#include "shared/network/message/MimeType.hxx"
 #include "shared/util/String.hxx"
 
-#include "shared/network/message/MimeType.hxx"
-
-#include <unordered_map>
-#include <string>
 #include <optional>
+#include <string>
+#include <unordered_map>
 
 
 struct StringHashCaseInsensitive
@@ -109,7 +109,8 @@ public:
 
     void setContentLength (size_t contentLength);
 
-    // Please expand this list when you find a header field that is missing.
+    static std::string profileVersionHeader(model::ProfileType profileType);
+
     static const std::string Accept;
     static const std::string AcceptLanguage;
     static const std::string Authorization;
@@ -147,6 +148,11 @@ public:
     static const std::string ANR;
     static const std::string ZANR;
     static const std::string PrescriptionId;
+    static const std::string DigaRedeemCode;
+    static const std::string GematikWorkflowProfil;
+    static const std::string GematikPatientenrechnung;
+    static const std::string KbvVerordnungsdaten;
+    static const std::string DavAbgabedaten;
 
     struct Tee3 {
         static const std::string VauCid;

@@ -27,17 +27,17 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case OrganizationDirectory:
         case EPAMedicationPZNIngredient:
             return false;
-        case Gem_erxAuditEvent:
-        case Gem_erxBinary:
-        case Gem_erxCommunicationDispReq:
-        case Gem_erxCommunicationInfoReq:
-        case Gem_erxCommunicationChargChangeReq:
-        case Gem_erxCommunicationChargChangeReply:
-        case Gem_erxCommunicationReply:
-        case Gem_erxCommunicationRepresentative:
-        case Gem_erxCompositionElement:
-        case Gem_erxDevice:
-        case Gem_erxDigest:
+        case GEM_ERP_PR_AuditEvent:
+        case GEM_ERP_PR_Binary:
+        case GEM_ERP_PR_Communication_DispReq:
+        case GEM_ERP_PR_Communication_InfoReq:
+        case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
+        case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
+        case GEM_ERP_PR_Communication_Reply:
+        case GEM_ERP_PR_Communication_Representative:
+        case GEM_ERP_PR_Composition:
+        case GEM_ERP_PR_Device:
+        case GEM_ERP_PR_Digest:
         case GEM_ERP_PR_Medication:
         case GEM_ERP_PR_PAR_CloseOperation_Input:
         case GEM_ERP_PR_PAR_DispenseOperation_Input:
@@ -59,11 +59,11 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case GEM_ERP_PR_MedicationDispense:
         case GEM_ERP_PR_MedicationDispense_DiGA:
         case MedicationDispenseBundle:
-        case Gem_erxReceiptBundle:
-        case Gem_erxTask:
-        case Gem_erxChargeItem:
-        case Gem_erxConsent:
-        case DAV_DispenseItem:
+        case GEM_ERP_PR_Bundle:
+        case GEM_ERP_PR_Task:
+        case GEM_ERPCHRG_PR_ChargeItem:
+        case GEM_ERPCHRG_PR_Consent:
+        case DAV_PKV_PR_ERP_AbgabedatenBundle:
             return true;
     }
     Fail("invalid value for ProfileType: " + std::to_string(static_cast<uintmax_t>(profileType)));

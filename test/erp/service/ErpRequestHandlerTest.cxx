@@ -76,12 +76,12 @@ public:
         switch (profileType)
         {
             using enum model::ProfileType;
-            case Gem_erxCommunicationDispReq:
-            case Gem_erxCommunicationInfoReq:
-            case Gem_erxCommunicationChargChangeReq:
-            case Gem_erxCommunicationChargChangeReply:
-            case Gem_erxCommunicationReply:
-            case Gem_erxCommunicationRepresentative:
+            case GEM_ERP_PR_Communication_DispReq:
+            case GEM_ERP_PR_Communication_InfoReq:
+            case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
+            case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
+            case GEM_ERP_PR_Communication_Reply:
+            case GEM_ERP_PR_Communication_Representative:
                 // parseAndValidateRequestBody not used for Communication
                 break;
             case GEM_ERP_PR_MedicationDispense:
@@ -98,10 +98,10 @@ public:
                 testParseAndValidateRequestBodyT<model::CreateTaskParameters>(body, contentMimeType, expectFail);
                 break;
             case fhir:
-            case Gem_erxReceiptBundle:
-            case Gem_erxTask:
-            case Gem_erxAuditEvent:
-            case Gem_erxBinary:
+            case GEM_ERP_PR_Bundle:
+            case GEM_ERP_PR_Task:
+            case GEM_ERP_PR_AuditEvent:
+            case GEM_ERP_PR_Binary:
             case KBV_PR_ERP_Composition:
             case KBV_PR_ERP_Medication_Compounding:
             case KBV_PR_ERP_Medication_FreeText:
@@ -114,9 +114,9 @@ public:
             case KBV_PR_FOR_Coverage:
             case KBV_PR_FOR_Organization:
             case KBV_PR_FOR_Practitioner:
-            case Gem_erxCompositionElement:
-            case Gem_erxDevice:
-            case Gem_erxDigest:
+            case GEM_ERP_PR_Composition:
+            case GEM_ERP_PR_Device:
+            case GEM_ERP_PR_Digest:
             case GEM_ERP_PR_Medication:
             case GEM_ERP_PR_PAR_CloseOperation_Input:
             case GEM_ERP_PR_PAR_DispenseOperation_Input:
@@ -124,7 +124,7 @@ public:
             case KBV_PR_FOR_PractitionerRole:
             case KBV_PR_FOR_Patient:
             case PatchChargeItemParameters:
-            case DAV_DispenseItem:
+            case DAV_PKV_PR_ERP_AbgabedatenBundle:
             case Subscription:
             case OperationOutcome:
             case ProvidePrescriptionErpOp:
@@ -136,10 +136,10 @@ public:
             case EPAMedicationPZNIngredient:
                 FAIL() << "wrong SchemaType for this test";
                 break;
-            case Gem_erxChargeItem:
+            case GEM_ERPCHRG_PR_ChargeItem:
                 testParseAndValidateRequestBodyT<model::ChargeItem>(body, contentMimeType, expectFail);
                 break;
-            case Gem_erxConsent:
+            case GEM_ERPCHRG_PR_Consent:
                 testParseAndValidateRequestBodyT<model::Consent>(body, contentMimeType, expectFail);
                 break;
         }
@@ -229,10 +229,10 @@ INSTANTIATE_TEST_SUITE_P(gematikExamples, ErpRequestHandlerTest,
                              SampleFile{
                                  "chargeItem_simplifier.xml",
                                  "chargeItem_simplifier.json",
-                                 model::ProfileType::Gem_erxChargeItem,
+                                 model::ProfileType::GEM_ERPCHRG_PR_ChargeItem,
                              },
                              SampleFile{
                                  "consent_simplifier.xml",
                                  "consent_simplifier.json",
-                                 model::ProfileType::Gem_erxConsent,
+                                 model::ProfileType::GEM_ERPCHRG_PR_Consent,
                              }));

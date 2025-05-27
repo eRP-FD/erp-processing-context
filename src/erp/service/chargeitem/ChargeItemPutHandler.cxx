@@ -150,7 +150,7 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
     A_22151_01.start("Pharmacy: check signature certificate of PKV dispense bundle");
     auto [dispenseItemBundle, containedBinaryWithOcsp] = validatedBundleFromSigned(
         *rawContainedBinary,
-        session.serviceContext,
+        session,
         ::VauErrorCode::invalid_dispense);
     A_22151_01.finish();
     A_22149.finish();

@@ -63,6 +63,11 @@ public:
         }
     }
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const
+    {
+        return mTlsSession.currentEndpoint();
+    }
+
 private:
     TlsSession mTlsSession;
     bool mIsEstablished;
@@ -91,6 +96,11 @@ public:
     }
 
     void teardown() { mTcpStream.shutdown(); }
+
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const
+    {
+        return mTcpStream.currentEndpoint();
+    }
 
 private:
     TcpStream mTcpStream;

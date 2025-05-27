@@ -20,10 +20,26 @@ UrlRequestSender::UrlRequestSender(std::string rootCertificates, const uint16_t 
     : mTlsCertificateVerifier{rootCertificates.empty()
                                   ? TlsCertificateVerifier::withBundledRootCertificates()
                                   : TlsCertificateVerifier::withCustomRootCertificates(std::move(rootCertificates))}
-    , mConnectionTimeoutSeconds(connectionTimeoutSeconds)
+    , mConnectionTimeout(std::chrono::seconds{connectionTimeoutSeconds})
     , mResolveTimeout{resolveTimeout}
     , mDurationConsumer()
 {
+}
+
+UrlRequestSender::UrlRequestSender(TlsCertificateVerifier certificateVerifier,
+                                   std::chrono::milliseconds connectionTimeout,
+                                   std::chrono::milliseconds resolveTimeout)
+    : mTlsCertificateVerifier{std::move(certificateVerifier)}
+    , mConnectionTimeout(connectionTimeout)
+    , mResolveTimeout{resolveTimeout}
+    , mDurationConsumer()
+{
+}
+
+
+void UrlRequestSender::setTlsCertificateVerifier(TlsCertificateVerifier certificateVerifier)
+{
+    mTlsCertificateVerifier = std::move(certificateVerifier);
 }
 
 
@@ -35,8 +51,8 @@ ClientResponse UrlRequestSender::send(
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn) const
 {
-    // TODO: add non-sensitive part of the url to the description.
-    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, "sending request");
+    const auto urlParts = UrlHelper::parseUrl(url);
+    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, urlParts.mHost);
 
     try
     {
@@ -61,8 +77,8 @@ ClientResponse UrlRequestSender::send(
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn) const
 {
-    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender,
-                                            "sending request to host " + url.mHost + ":" + std::to_string(url.mPort));
+    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, url.mHost);
+    timer.keyValue("port", std::to_string(url.mPort));
 
     try
     {
@@ -82,13 +98,8 @@ ClientResponse UrlRequestSender::send(const boost::asio::ip::tcp::endpoint& ep, 
                                       const HttpMethod method, const std::string& body, const std::string& contentType,
                                       const std::optional<std::string>& forcedCiphers, const bool trustCn) const
 {
-    auto timer =
-        mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, std::string{"sending request to host "}
-                                                                                   .append(url.mHost)
-                                                                                   .append(std::to_string(ep.port()))
-                                                                                   .append(" (")
-                                                                                   .append(ep.address().to_string())
-                                                                                   .append(")"));
+    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, url.mHost);
+    timer.keyValue("ip", ep.address().to_string());
 
     try
     {
@@ -151,7 +162,7 @@ ClientResponse UrlRequestSender::doSend(
         auto params = ConnectionParameters{
                 .hostname =  url.mHost,
                 .port = std::to_string(url.mPort),
-                .connectionTimeout = std::chrono::seconds{mConnectionTimeoutSeconds},
+                .connectionTimeout = mConnectionTimeout,
                 .resolveTimeout = mResolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
                     .certificateVerifier = mTlsCertificateVerifier,
@@ -169,9 +180,9 @@ ClientResponse UrlRequestSender::doSend(
     {
         if (ep != nullptr)
         {
-            return HttpClient(*ep, url.mHost, mConnectionTimeoutSeconds).send(request);
+            return HttpClient(*ep, url.mHost, mConnectionTimeout).send(request);
         }
-        return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeoutSeconds, mResolveTimeout)
+        return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeout, mResolveTimeout)
             .send(request);
     }
     else

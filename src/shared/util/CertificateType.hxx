@@ -25,7 +25,8 @@ enum class CertificateType
     /**
      * The following certificate type is introduced to comply with updated requirement A_20159-*
      */
-    C_HP_ENC
+    C_HP_ENC,
+    C_ZD_TLS_S,
 };
 
 #endif

@@ -33,8 +33,8 @@ public:
 class EventProcessor : public EventProcessorInterface
 {
 public:
-    explicit EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
-
+    explicit EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext,
+                   IEpaAccountLookup& epaAccountLookup);
     bool process() override;
     virtual void processOne(const model::EventKvnr& kvnr);
     virtual bool checkRetryCount(const model::EventKvnr& kvnr);
@@ -54,10 +54,13 @@ public:
     static std::chrono::seconds calculateExponentialBackoffDelay(std::int32_t retry);
 
 private:
+    template<typename FuncT>
+    decltype(auto) autocommit(FuncT&& function);
+
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
-    MedicationExporterCommitGuard createMedicationExporterCommitGuard();
     std::function<JsonLog()> jsonLog;
     const std::shared_ptr<MedicationExporterServiceContext>& mServiceContext;
+    IEpaAccountLookup& mEpaAccountLookup;
     std::chrono::seconds mRetryDelaySeconds;
     std::chrono::minutes mHealthRecordRelocationWaitMinutes;
     int mMaxRetryAttempts;

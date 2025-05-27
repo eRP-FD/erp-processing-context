@@ -50,10 +50,12 @@ void bestEffortValidate(const model::UnspecifiedResource& res);
 template<typename BundleT = model::ErxReceipt>
 [[nodiscard]] BundleT
 getValidatedErxReceiptBundle(std::string_view xmlDoc,
-                             model::ProfileType profileType = model::ProfileType::Gem_erxReceiptBundle);
+                             model::ProfileType profileType = model::ProfileType::GEM_ERP_PR_Bundle);
 
 extern template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
 extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+
+std::string shiftDate(const std::string& realDate);
 
 class ShiftFhirResourceViewsGuard {
 public:

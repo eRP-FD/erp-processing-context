@@ -33,6 +33,8 @@ TEST_P(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
     auto secret = tasks[0].secret();
     ASSERT_TRUE(secret.has_value());
     using IssueType = model::OperationOutcome::Issue::Type;
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
+    mChargeItemRequestArgs.overrideExpectedPatientenrechnungVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(chargeItemPost(tasks[0].prescriptionId(), kvnr, *telematikId, std::string{*secret},
                                            HttpStatus::Conflict, IssueType::conflict));
 }

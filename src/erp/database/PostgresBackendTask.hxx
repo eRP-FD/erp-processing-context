@@ -11,7 +11,7 @@
 #include "erp/database/ErpDatabaseBackend.hxx"// for fwd declarations and model includes
 #include "shared/database/CommonPostgresBackend.hxx"
 
-#include <pqxx/transaction>
+#include <pqxx/transaction_base>
 
 class PostgresConnection;
 
@@ -27,51 +27,44 @@ public:
 
     explicit PostgresBackendTask(model::PrescriptionType prescriptionType);
 
-    std::tuple<model::PrescriptionId, model::Timestamp> createTask(pqxx::work& transaction,
-                                                                   model::Task::Status taskStatus,
-                                                                   const model::Timestamp& lastUpdated,
-                                                                   const model::Timestamp& created,
-                                                                   const model::Timestamp& lastStatusUpdate);
+    std::tuple<model::PrescriptionId, model::Timestamp>
+    createTask(pqxx::transaction_base& transaction, model::Task::Status taskStatus, const model::Timestamp& lastUpdated,
+               const model::Timestamp& created, const model::Timestamp& lastStatusUpdate);
 
-    void updateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
+    void updateTask(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                     const db_model::EncryptedBlob& accessCode, uint32_t blobId, const db_model::Blob& salt) const;
 
-    std::tuple<BlobId, db_model::Blob, model::Timestamp> getTaskKeyData(pqxx::work& transaction,
+    std::tuple<BlobId, db_model::Blob, model::Timestamp> getTaskKeyData(pqxx::transaction_base& transaction,
                                                                         const model::PrescriptionId& taskId) const;
 
-    void updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
+    void updateTaskStatusAndSecret(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                    model::Task::Status status, const model::Timestamp& lastModifiedDate,
                                    const std::optional<db_model::EncryptedBlob>& secret,
                                    const std::optional<db_model::EncryptedBlob>& owner,
                                    const model::Timestamp& lastStatusUpdate) const;
 
-    void activateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
+    void activateTask(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                       const db_model::EncryptedBlob& encryptedKvnr, const db_model::HashedKvnr& hashedKvnr,
                       model::Task::Status taskStatus, const model::Timestamp& lastModified,
                       const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
-                      const db_model::EncryptedBlob& doctorIdentity,
-                      const model::Timestamp& lastStatusUpdate) const;
+                      const db_model::EncryptedBlob& doctorIdentity, const model::Timestamp& lastStatusUpdate) const;
 
-    void updateTaskReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId,
+    void updateTaskReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                            const model::Task::Status& taskStatus, const model::Timestamp& lastModified,
-                           const db_model::EncryptedBlob& receipt,
-                           const db_model::EncryptedBlob& pharmacyIdentity,
+                           const db_model::EncryptedBlob& receipt, const db_model::EncryptedBlob& pharmacyIdentity,
                            const model::Timestamp& lastStatusUpdate) const;
-    void updateTaskMedicationDispense(
-        pqxx::work& transaction,
-        const model::PrescriptionId& taskId,
-        const model::Timestamp& lastModified,
-        const model::Timestamp& lastMedicationDispense,
-        const db_model::EncryptedBlob& medicationDispense,
-        BlobId medicationDispenseBlobId,
-        const db_model::HashedTelematikId& telematikId,
-        const model::Timestamp& whenHandedOver,
-        const std::optional<model::Timestamp>& whenPrepared,
-        const db_model::Blob& medicationDispenseSalt) const;
+    void updateTaskMedicationDispense(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
+                                      const model::Timestamp& lastModified,
+                                      const model::Timestamp& lastMedicationDispense,
+                                      const db_model::EncryptedBlob& medicationDispense,
+                                      BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
+                                      const model::Timestamp& whenHandedOver,
+                                      const std::optional<model::Timestamp>& whenPrepared,
+                                      const db_model::Blob& medicationDispenseSalt) const;
 
     void updateTaskMedicationDispenseReceipt(
-        pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+        pqxx::transaction_base& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
         BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
         const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
@@ -79,30 +72,31 @@ public:
         const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
         const model::Timestamp& lastStatusUpdate) const;
 
-    void updateTaskDeleteMedicationDispense(
-        pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Timestamp& lastModified) const;
+    void updateTaskDeleteMedicationDispense(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
+                                            const model::Timestamp& lastModified) const;
 
-    void updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
+    void updateTaskClearPersonalData(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus, const model::Timestamp& lastModified,
                                      const model::Timestamp& lastStatusUpdate) const;
 
-    std::optional<db_model::Task> retrieveTaskForUpdate(pqxx::work& transaction, const model::PrescriptionId& taskId);
+    std::optional<db_model::Task> retrieveTaskForUpdate(pqxx::transaction_base& transaction,
+                                                        const model::PrescriptionId& taskId);
     [[nodiscard]] ::std::optional<::db_model::Task>
-    retrieveTaskForUpdateAndPrescription(::pqxx::work& transaction, const ::model::PrescriptionId& taskId);
+    retrieveTaskForUpdateAndPrescription(::pqxx::transaction_base& transaction, const ::model::PrescriptionId& taskId);
 
-    [[nodiscard]] std::optional<db_model::Task> retrieveTaskAndReceipt(pqxx::work& transaction,
+    [[nodiscard]] std::optional<db_model::Task> retrieveTaskAndReceipt(pqxx::transaction_base& transaction,
                                                                        const model::PrescriptionId& taskId);
 
-    [[nodiscard]] std::optional<db_model::Task>
-    retrieveTaskAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId);
+    [[nodiscard]] std::optional<db_model::Task> retrieveTaskAndPrescription(pqxx::transaction_base& transaction,
+                                                                            const model::PrescriptionId& taskId);
 
     [[nodiscard]] std::optional<db_model::Task>
-    retrieveTaskWithSecretAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId);
+    retrieveTaskWithSecretAndPrescription(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId);
 
     [[nodiscard]] std::optional<db_model::Task>
-    retrieveTaskAndPrescriptionAndReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId);
+    retrieveTaskAndPrescriptionAndReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId);
 
-    [[nodiscard]] std::vector<db_model::Task> retrieveAllTasksWithAccessCode(::pqxx::work& transaction,
+    [[nodiscard]] std::vector<db_model::Task> retrieveAllTasksWithAccessCode(::pqxx::transaction_base& transaction,
                                                                              const db_model::HashedKvnr& kvnrHashed,
                                                                              const std::optional<UrlArguments>& search);
 

@@ -5,6 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include <utility>
+
 #include "shared/util/DurationConsumer.hxx"
 
 #include "shared/util/Configuration.hxx"
@@ -14,39 +16,37 @@
 
 DurationTimer::DurationTimer (
     Receiver& receiver,
-    const std::string& category,
-    const std::string& description,
-    const std::string& sessionIdentifier,
+    std::string category,
+    std::string metric,
+    std::string sessionIdentifier,
     const std::unordered_map<std::string, std::string>& keyValueMap)
     : mReceiver(receiver),
-      mCategory(category),
-      mDescription(description),
-      mSessionIdentifier(sessionIdentifier),
+      mCategory(std::move(category)),
+      mMetric(std::move(metric)),
+      mSessionIdentifier(std::move(sessionIdentifier)),
       mKeyValueMap(keyValueMap),
       mStart(std::chrono::steady_clock::now())
 {
 }
 
 
-DurationTimer::~DurationTimer (void)
+DurationTimer::~DurationTimer()
 {
     const auto end = std::chrono::steady_clock::now();
-    std::string description = mDescription;
     std::optional<JsonLog::LogReceiver> logReceiver;
     if (std::uncaught_exceptions() > mUncaughtExceptions)
     {
         // Sadly, we can not use the ExceptionHelper to get detailed information about the exception because we can
         // not rethrow it.
-        description.append(" failed due to uncaught exception");
+        if (!mKeyValueMap.contains("error"))
+        {
+            mKeyValueMap.emplace("error", "uncaught exception");
+        }
         logReceiver.emplace(JsonLog::makeWarningLogReceiver());
-    }
-    else
-    {
-        description.append(" was successful");
     }
     if (mStart.has_value() && mReceiver)
     {
-        mReceiver(end - mStart.value(), mCategory, description, mSessionIdentifier, mKeyValueMap, logReceiver);
+        mReceiver(end - mStart.value(), mCategory, mMetric, mSessionIdentifier, mKeyValueMap, logReceiver);
     }
 }
 
@@ -56,7 +56,8 @@ void DurationTimer::notifyFailure(const std::string& description)
     const auto end = std::chrono::steady_clock::now();
     if (mStart.has_value() && mReceiver)
     {
-        mReceiver(end - mStart.value(), mCategory, mDescription + " failed: " + description, mSessionIdentifier,
+        mKeyValueMap.emplace("error", description);
+        mReceiver(end - mStart.value(), mCategory, mMetric, mSessionIdentifier,
                   mKeyValueMap, JsonLog::makeErrorLogReceiver());
         mStart = std::nullopt;
     }
@@ -68,21 +69,16 @@ void DurationTimer::keyValue(const std::string& key, const std::string& value)
 }
 
 
-DurationTimer DurationConsumer::getTimer(const std::string& category, const std::string& description,
+DurationTimer DurationConsumer::getTimer(const std::string& category, const std::string& metric,
                                          const std::unordered_map<std::string, std::string>& keyValueMap)
 {
     DurationTimer::Receiver receiver = DurationConsumer::defaultReceiver;
-    return DurationTimer(receiver, category, description, mSessionIdentifier.value_or("unknown"), keyValueMap);
+    return DurationTimer(receiver, category, metric, mSessionIdentifier.value_or("unknown"), keyValueMap);
 }
 
-DurationConsumer& DurationConsumer::getCurrent (void)
+DurationConsumer& DurationConsumer::getCurrent ()
 {
-#ifndef _WIN32
     thread_local static DurationConsumer mDurationConsumer;
-#else
-    // For windows there is only a single duration consumer, which is never activated and which acts as a /dev/null device.
-    static DurationConsumer mDurationConsumer;
-#endif
     return mDurationConsumer;
 }
 
@@ -100,7 +96,7 @@ void DurationConsumer::initialize (
 }
 
 
-void DurationConsumer::reset (void) noexcept
+void DurationConsumer::reset () noexcept
 {
     mIsInitialized = false;
     mSessionIdentifier = std::nullopt;
@@ -108,24 +104,21 @@ void DurationConsumer::reset (void) noexcept
 }
 
 
-bool DurationConsumer::isInitialized (void) const
+bool DurationConsumer::isInitialized () const
 {
     return mIsInitialized;
 }
 
 
-std::optional<std::string> DurationConsumer::getSessionIdentifier (void) const
+std::optional<std::string> DurationConsumer::getSessionIdentifier () const
 {
     return mSessionIdentifier;
 }
 
-void DurationConsumer::defaultReceiver(
-    std::chrono::steady_clock::duration duration,
-    const std::string &category,
-    const std::string &description,
-    const std::string &sessionIdentifier,
-    const std::unordered_map<std::string, std::string> &keyValueMap,
-    const std::optional<JsonLog::LogReceiver> &logReceiverOverride)
+void DurationConsumer::defaultReceiver(std::chrono::steady_clock::duration duration, const std::string& category,
+                                       const std::string& metric, const std::string& sessionIdentifier,
+                                       const std::unordered_map<std::string, std::string>& keyValueMap,
+                                       const std::optional<JsonLog::LogReceiver>& logReceiverOverride)
 {
     const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
     auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
@@ -137,19 +130,20 @@ void DurationConsumer::defaultReceiver(
     };
     const auto durationMusecs = std::chrono::duration_cast<std::chrono::microseconds>(duration);
     JsonLog log(LogId::INFO, getLogReceiver());
-    log.keyValue("log-type", "timing")
-        .keyValue("x-request-id", sessionIdentifier)
+    log.keyValue("log_type", "timing")
+        .keyValue("x_request_id", sessionIdentifier)
         .keyValue("category", category)
-        .keyValue("description", description);
+        .keyValue("metric", metric);
     for (const auto& item : keyValueMap)
     {
         log.keyValue(item.first, item.second);
     }
-    log.keyValue("duration-us", gsl::narrow<size_t>(durationMusecs.count()));
+    log.keyValue("duration_us", gsl::narrow<size_t>(durationMusecs.count()));
 
-    DurationTimer::Receiver receiver = getCurrent().mReceiver;
-    if(receiver){
-        receiver(duration, category, description, sessionIdentifier, keyValueMap, logReceiverOverride);
+    const DurationTimer::Receiver receiver = getCurrent().mReceiver;
+    if (receiver)
+    {
+        receiver(duration, category, metric, sessionIdentifier, keyValueMap, logReceiverOverride);
     }
 }
 

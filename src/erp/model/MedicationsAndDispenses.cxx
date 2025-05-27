@@ -32,11 +32,13 @@ void model::MedicationsAndDispenses::addFromBundle(const MedicationDispenseBundl
     }
 }
 
-model::MedicationsAndDispenses model::MedicationsAndDispenses::filter(const MedicationDispenseId& medicationDispenseId) &&
+model::MedicationsAndDispenses
+model::MedicationsAndDispenses::filter(const MedicationDispenseId& medicationDispenseId) &&
 {
     static constexpr std::string_view urnUuid{"urn:uuid:"};
     model::MedicationsAndDispenses result;
-    auto dispenseIt = std::ranges::find(medicationDispenses, medicationDispenseId.toString(), &model::MedicationDispense::getId);
+    auto dispenseIt =
+        std::ranges::find(medicationDispenses, medicationDispenseId.toString(), &model::MedicationDispense::getId);
     if (dispenseIt == medicationDispenses.end())
     {
         return result;
@@ -53,4 +55,16 @@ model::MedicationsAndDispenses model::MedicationsAndDispenses::filter(const Medi
     ModelExpect(medicationIt != medications.end(), "Missing medication for MedicationDispense");
     medications.emplace_back(std::move(*medicationIt));
     return result;
+}
+
+bool model::MedicationsAndDispenses::containsDigaRedeemCode() const
+{
+    return std::ranges::any_of(medicationDispenses, [](const MedicationDispense& dispense) {
+        if (const auto ext = dispense.getExtension<GemErpExRedeemCode>())
+        {
+            const auto val = ext->valueString();
+            return val && ! val->empty();
+        }
+        return false;
+    });
 }

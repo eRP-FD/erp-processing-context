@@ -35,7 +35,7 @@
     }
   },
   "erp-medication-exporter": {
-      "postgres": {
+    "postgres": {
       "host": "localhost",
       "port": "9006",
       "user": "erp_admin",
@@ -51,6 +51,9 @@
       "targetSessionAttrs": "read-write",
       "enableScramAuthentication": "false",
       "connectionMaxAgeMinutes": "120"
+    },
+    "epa-account-lookup": {
+      "epaAsFqdn": [ "epa-as-1-mock:18888" ]
     }
   },
   "test": {

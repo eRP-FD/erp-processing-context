@@ -59,7 +59,7 @@ int main(int argc, char** argv)
     TestClient::setFactory(&EndpointTestClient::factory);
     ThreadNames::instance().setCurrentThreadName("test-runner");
     MockTerminationHandler::setupForTesting();
-    Configuration::instance().check();
+    Configuration::instance().check(Configuration::ProcessType::ERP);
     Fhir::init<ConfigurationBase::ERP>(Fhir::Init::later);
     return RUN_ALL_TESTS();
 }

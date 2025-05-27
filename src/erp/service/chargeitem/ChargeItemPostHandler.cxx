@@ -149,7 +149,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     A_22141.start("Check signature certificate SMC-B");
     auto [dispenseItemBundle, dispenseItemWithOcsp] = validatedBundleFromSigned(
         *rawDispenseItem,
-        session.serviceContext,
+        session,
         ::VauErrorCode::invalid_dispense);
 
     A_22141.finish();

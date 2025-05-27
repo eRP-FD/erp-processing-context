@@ -77,8 +77,9 @@ namespace
                                  const OcspUrl& url,
                                  const util::Buffer& request)
     {
-        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryOcspRequest, "OCSP response",
-                                                             {{"url", url.url}});
+        const auto urlParts = UrlHelper::parseUrl(url.url);
+        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryOcspRequest, urlParts.mHost);
+        timer.keyValue("url", url.url);
 
         try
         {
@@ -96,7 +97,7 @@ namespace
             TVLOG(2) << "OCSP response, status=" << response.getHeader().status()
                     << " (base-encoded):\n" << Base64::encode(response.getBody()) << "\n\n";
 
-            timer.keyValue("response-code", std::to_string(toNumericalValue(response.getHeader().status())));
+            timer.keyValue("response_code", std::to_string(toNumericalValue(response.getHeader().status())));
 
             if (response.getHeader().status() != HttpStatus::OK)
             {

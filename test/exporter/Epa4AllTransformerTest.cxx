@@ -335,6 +335,11 @@ std::vector<std::string> propertyValuesWillBeRetained {
 "Practitioner.name.prefix",
 "Practitioner.name.suffix"
 };
+const std::vector<std::string> propertyValuesNotInTarget {
+// F_019.test("Practitioner.qualification shall not be retained")
+"Practitioner.qualification"
+};
+
 
 // clang-format on
 }
@@ -487,6 +492,7 @@ void Epa4AllTransformerTest::checkOrganization(const rapidjson::Value& source, c
 void Epa4AllTransformerTest::checkPractitioner(const rapidjson::Value& source, const rapidjson::Value& target)
 {
     checkRetainedProperties(source, target, Practitioner::propertyValuesWillBeRetained);
+    checkPropertiesNotInTarget(target, Practitioner::propertyValuesNotInTarget);
 
     A_25946.test("Überschreiben/Setzen der \"identifier:Telematik-ID\" des Arztes aus dem Signaturzertifikat der QES");
     checkIdentifier(target, model::resource::naming_system::telematicID, telematikIdFromQes.id());

@@ -121,31 +121,27 @@ void RedisClient::healthCheck()
 
 bool RedisClient::exists(const std::string_view& key)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:exists(", key, ")"));
+    const auto tlt = timingLogTimer("exists");
     return mConnection->exists(key);
 }
 
 std::optional<std::string> RedisClient::fieldValueForKey(const std::string_view& key,
                                                          const std::string_view& field)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:fieldValueForKey(", key, ",", field, ")"));
+    const auto tlt = timingLogTimer("fieldvalueforkey");
     return mConnection->hget(key, field);
 }
 
 bool RedisClient::hasKeyWithField(const std::string_view& key, const std::string_view& field)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:hasKeyWithField(", key, ",", field, ")"));
+    const auto tlt = timingLogTimer("haskeywithfield");
     return mConnection->hexists(key, field);
 }
 
 void RedisClient::setKeyFieldValue(const std::string_view& key, const std::string_view& field,
                                    const std::string_view& value)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:setKeyFieldValue(", key, ",", field, ")"));
+    const auto tlt = timingLogTimer("setkeyfieldvalue");
     using namespace sw::redis;
     mConnection->hset(key, field, value);
 }
@@ -154,35 +150,35 @@ void RedisClient::setKeyExpireAt(
     const std::string_view& key,
     const std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>& timestamp)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:setKeyExpireAt(", key, ")"));
+    const auto tlt = timingLogTimer("setkeyexpireat");
     mConnection->pexpireat(key, timestamp);
 }
 
 int64_t RedisClient::incr(const std::string_view& key)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:incr(", key, ")"));
+    const auto tlt = timingLogTimer("incr");
     return mConnection->incr(key);
 }
 
 void RedisClient::publish(const std::string_view& channel, const std::string_view& message)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:publish(", channel, ")"));
+    const auto tlt = timingLogTimer("publish");
     mConnection->publish(channel, message);
 }
 
 int64_t RedisClient::getIntValue(std::string_view key)
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:getIntValue()"));
+    const auto tlt = timingLogTimer("getintvalue");
     return std::strtoll(mConnection->get(key).value_or("0").c_str(), nullptr, 10);
 }
 
 void RedisClient::flushdb()
 {
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryRedis, String::concatenateItems("Redis:flushdb()"));
+    const auto tlt = timingLogTimer("flushdb");
     mConnection->flushdb();
+}
+
+DurationTimer RedisClient::timingLogTimer(const std::string& metric)
+{
+    return DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryRedis, metric);
 }

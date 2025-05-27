@@ -74,9 +74,9 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
 
     session.accessLog.prescriptionId(prescriptionId);
 
-    A_23090_02.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
+    A_23090_06.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
     session.addOuterResponseHeaderField(Header::PrescriptionId, prescriptionId.toString());
-    A_23090_02.finish();
+    A_23090_06.finish();
     session.addOuterResponseHeaderField(Header::InnerRequestFlowtype,
                                         std::to_string(magic_enum::enum_integer(prescriptionId.type())));
 

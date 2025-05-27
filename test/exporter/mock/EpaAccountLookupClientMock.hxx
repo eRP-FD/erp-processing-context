@@ -20,15 +20,19 @@ public:
 
     IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override
     {
-        (void) key;
-        (void) value;
+        mLogAttributes[key] = value;
         return *this;
+    }
+
+    virtual const std::map<std::string, std::any>& getLogAttributes() const
+    {
+        return mLogAttributes;
     }
 
 private:
     HttpStatus mHttpStatus{HttpStatus::OK};
     std::string mResponseBody;
+    std::map<std::string, std::any> mLogAttributes;
 };
-
 
 #endif//ERP_PROCESSING_CONTEXT_TEST_EXPORTER_MOCK_EPAACCOUNTLOOKUPCLIENTMOCK_HXX

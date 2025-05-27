@@ -447,7 +447,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
     std::optional<Communication> communication;
     ASSERT_NO_THROW(communication.emplace(
         ResourceFactory<Communication>::fromXml(innerResponse.getBody(), *StaticData::getXmlValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationReply)));
+            .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Reply)));
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
     ASSERT_TRUE(communication->id()->isValidIheUuid());
@@ -505,7 +505,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
     std::optional<Communication> communication1;
     ASSERT_NO_THROW(communication1.emplace(
         ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationDispReq)));
+            .getValidated(model::ProfileType::GEM_ERP_PR_Communication_DispReq)));
 
     auto& communication = *communication1;
 
@@ -580,7 +580,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     std::optional<Communication> communication1;
     ASSERT_NO_THROW(communication1.emplace(
         ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+            .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative)));
     auto& communicationByInsurant = *communication1;
 
     // The communication id must have been added to the json body.
@@ -631,7 +631,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     std::optional<Communication> communicationOpt;
     ASSERT_NO_THROW(communicationOpt.emplace(
         ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+            .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative)));
 
     auto& communicationByRepresentative = *communicationOpt;
 
@@ -865,7 +865,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
             std::optional<Communication> communication1;
             ASSERT_NO_THROW(communication1.emplace(
                 ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-                    .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+                    .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative)));
 
             auto& communication = *communication1;
 
@@ -994,7 +994,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
             std::optional<Communication> communication1;
             ASSERT_NO_THROW(communication1.emplace(
                 ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-                    .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+                    .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative)));
 
             auto& communication = *communication1;
 
@@ -1502,7 +1502,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         std::optional<Communication> communication1;
         ASSERT_NO_THROW(communication1.emplace(
             ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-                .getValidated(model::ProfileType::Gem_erxCommunicationRepresentative)));
+                .getValidated(model::ProfileType::GEM_ERP_PR_Communication_Representative)));
 
         auto& communication = *communication1;
 
@@ -2204,7 +2204,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-functio
     std::optional<Communication> communication;
     ASSERT_NO_THROW(communication.emplace(
         ResourceFactory<Communication>::fromJson(innerResponse.getBody(), *StaticData::getJsonValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationChargChangeReq)));
+            .getValidated(model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq)));
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());
@@ -2265,7 +2265,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
     std::optional<Communication> communication;
     ASSERT_NO_THROW(communication.emplace(
         ResourceFactory<Communication>::fromXml(innerResponse.getBody(), *StaticData::getXmlValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationChargChangeReply)));
+            .getValidated(model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply)));
 
     // The communication id must have been added to the json body.
     ASSERT_TRUE(communication->id().has_value());

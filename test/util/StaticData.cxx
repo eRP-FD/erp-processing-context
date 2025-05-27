@@ -34,9 +34,11 @@ RAIgCg4yZDWmyBirgxzawz/S8DJnRFKtYU/YGNlRc7+kBHcCIBuzba3GspqSmoP1
 VwMeNNKNaLsgV8vMbDJb30aqaiX1
 -----END CERTIFICATE-----)");
 
+
 Factories StaticData::makeMockFactories()
 {
     Factories factories;
+    fillMockBaseFactories(factories);
     factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) -> std::unique_ptr<Database> {
         std::unique_ptr<ErpDatabaseBackend> backend;
         if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
@@ -45,42 +47,15 @@ Factories StaticData::makeMockFactories()
             backend = std::make_unique<MockDatabase>(hsmPool);
         return std::make_unique<DatabaseFrontend>(std::move(backend), hsmPool, keyDerivation);
     };
-    factories.blobCacheFactory = [] {
-        return MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
-    };
-    factories.hsmClientFactory = [] {
-        return std::make_unique<HsmMockClient>();
-    };
-    factories.hsmFactoryFactory = [](std::unique_ptr<HsmClient>&& client, std::shared_ptr<BlobCache> blobCache) {
-        return std::make_unique<HsmMockFactory>(std::move(client), std::move(blobCache));
-    };
-    factories.teeTokenUpdaterFactory = TeeTokenUpdater::createMockTeeTokenUpdaterFactory();
-
-    factories.tslManagerFactory = MockTslManager::createMockTslManager;
-
-    factories.redisClientFactory = [] (std::chrono::milliseconds socketTimeout) {
+    factories.redisClientFactory = [](std::chrono::milliseconds socketTimeout) {
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
                    ? std::unique_ptr<RedisInterface>(new MockRedisStore())
                    : std::unique_ptr<RedisInterface>(new RedisClient(socketTimeout));
     };
-    factories.vsdmKeyBlobDatabaseFactory = []() -> std::unique_ptr<VsdmKeyBlobDatabase> {
-        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
-            return std::make_unique<ProductionVsdmKeyBlobDatabase>();
-        else
-            return std::make_unique<MockVsdmKeyBlobDatabase>();
-    };
 
-    factories.tpmFactory = TpmMock::createFactory();
-    factories.xmlValidatorFactory = StaticData::getXmlValidator;
     factories.jsonValidatorFactory = StaticData::getJsonValidator;
 
-    factories.teeServerFactory = [](const std::string_view, uint16_t, RequestHandlerManager&&, BaseServiceContext&, bool,
-                                    const SafeString&) {
-        return std::unique_ptr<HttpsServer>{nullptr};
-    };
-
-    factories.enrolmentServerFactory = factories.teeServerFactory;
-    factories.adminServerFactory = factories.teeServerFactory;
+    factories.teeServerFactory = &StaticData::nullHttpsServer;
 
     return factories;
 }

@@ -359,7 +359,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readabili
         std::string{TEST_DATA_DIR} + "/validation/xml/v_2023_07_01/dav/AbgabedatenBundle/"
                                      "Bundle_invalid_AbgabedatenBundle-missing-Bankverbindung.xml");
     dispenseBundleXml = regex_replace(dispenseBundleXml, std::regex{R"(<whenHandedOver value="[0-9-]+" />)"},
-                                      "<whenHandedOver value=\"" + model::Timestamp::now().toXsDateTime() + "\"/>");
+                                      "<whenHandedOver value=\"" + model::Timestamp::now().toGermanDate() + "\"/>");
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
                                         std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
@@ -383,7 +383,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readabili
 
 TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string davDispenseItemProfile{profile(model::ProfileType::DAV_DispenseItem).value()};
+    const std::string davDispenseItemProfile{profile(model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle).value()};
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};

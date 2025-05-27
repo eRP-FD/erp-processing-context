@@ -114,14 +114,15 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, serverResponse) =
             send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt)).withExpectedActivationCode162(isDiga(GetParam())?"1":"XXX")));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
 
     // Test that any further close request is denied.
-    ASSERT_NO_FATAL_FAILURE(
-        std::tie(std::ignore, serverResponse) =
-            send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+    ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
+                                send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
+                                         .withJwt(jwt)
+                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                                         .withOverrideExpectedWorkflowVersion("XXX")));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
 }
 
@@ -159,7 +160,7 @@ TEST_P(ErpWorkflowTestP, TaskClose_EmptyBody_WithMedicationDispense)//NOLINT(rea
 
     // Test that close request without body (0 medicationDispenses) succeeds.
     std::vector<model::Communication> communications;
-    checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications, 0);
+    checkTaskClose(*prescriptionId, kvnr, secret, lastModifiedDate, communications, 0);
 }
 
 // GEMREQ-start A_19169-01#TaskLifecycleNormal
@@ -185,7 +186,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
 // GEMREQ-end A_19169-01#TaskLifecycleNormal
 
     // Close task
-    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications));
+    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastModifiedDate, communications));
 
     std::optional<model::Bundle> taskBundle;
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskGet(kvnr));
@@ -357,7 +358,7 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
     // Close task
-    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications));
+    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastModifiedDate, communications));
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
@@ -416,7 +417,7 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
         ASSERT_NO_FATAL_FAILURE(
             communicationsBundle = communicationsGet(
                 jwtApotheke(), "identifier=eq" + model::Timestamp::now().toGermanDate()));
-        ASSERT_EQ(communicationsBundle->getResourceCount(), expected);
+        ASSERT_GE(communicationsBundle->getResourceCount(), expected);
     }
 
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId1, jwtArzt(), kvnr, accessCode1, {}, communications1));
@@ -494,7 +495,7 @@ TEST_P(ErpWorkflowTestP, TaskSearchStatus) // NOLINT
 
     std::string secret2;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret2, lastModifiedDate, *prescriptionId2, kvnr, accessCode2, qesBundle2));
-    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId2, kvnr, secret2, *lastModifiedDate, communications2));
+    ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId2, kvnr, secret2, lastModifiedDate, communications2));
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId3, jwtArzt(), kvnr, accessCode3, {}, communications3));
 
     {
@@ -810,7 +811,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
         std::string secret;
         std::optional<model::Timestamp> lastModifiedDate;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
-        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModifiedDate, communications));
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastModifiedDate, communications));
         if(i % 2 == 0)
         {
             ASSERT_NO_FATAL_FAILURE(
@@ -856,7 +857,7 @@ TEST_F(ErpWorkflowTest, AuditEventFilterInsurantKvnr) // NOLINT
         std::optional<model::Timestamp> lastModifiedDate;
         ASSERT_NO_FATAL_FAILURE(
             checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr1, accessCode, qesBundle));
-        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr1, secret, *lastModifiedDate, communications));
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr1, secret, lastModifiedDate, communications));
     }
 
     std::string kvnr2;
@@ -1380,10 +1381,12 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskAbort(prescriptionId, JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle,
                                          HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskAccept(prescriptionId, accessCode,
                                        HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+    mCloseTaskRequestArgs.overrideExpectedWorkflowVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskClose(prescriptionId, {}, kvnr,
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskReject(prescriptionId, {},
@@ -1509,6 +1512,7 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     args.overrideExpectedInnerClientId = "XXX";
     args.overrideExpectedLeips = "XXX";
     args.overrideExpectedPrescriptionId = "XXX";
+    args.overrideExpectedWorkflowVersion = "XXX";
     ClientResponse innerResponse;
 
     // Send request with missing ContentLength header
@@ -1558,6 +1562,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     const std::string activePath = "/Task/" + prescriptionId_apothekenpflichigeArzneimittel.toString() + "/$activate";
     RequestArguments args{HttpMethod::POST, activePath, {}};
     args.jwt = JwtBuilder::testBuilder().makeJwtArzt();
+    args.overrideExpectedKbvVersion = "XXX";
 
     // Send request with PrescriptionType =  apothekenpflichigeArzneimittel
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
@@ -1699,6 +1704,7 @@ TEST_F(ErpWorkflowTest, CommunicationJsonValidationError)
     std::string communication =
         R"___({"resourceType":"Communication","meta":{"lastUpdated":null,"profile":["https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq"]},"basedOn":[{"reference":"Task/160.000.226.093.129.57/$accept?ac=5edb4d3d90e21fbba2b72855e851e8e5dc7ca1ef470a727103d069627687c8b4","type":null,"identifier":null,"display":null}],"status":"unknown","recipient":[{"reference":null,"type":null,"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/sid/telematik-id","value":"3-10.2.0110201000.579","period":null},"display":null}],"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/NamingSystem/OrderID","value":"6e59e060-0131-4020-ad05-1b4196a75f5e","period":null},"contained":[],"payload":[{"extension":null,"contentString":"{\"supplyOptionsType\":\"onPremise\",\"hint\":\"\"}"}]})___";
     RequestArguments reqArgs(HttpMethod::POST, "/Communication", communication, "application/json");
+    reqArgs.overrideExpectedWorkflowVersion = "XXX";
     auto [outerResonse, innerResponse] = send(reqArgs);
     checkOperationOutcome(
         operationOutcomeFromResponse(innerResponse.getBody(), true), model::OperationOutcome::Issue::Type::invalid,
@@ -1761,7 +1767,7 @@ TEST_F(ErpWorkflowTest, GetAuditEvents_PrescriptionId) // NOLINT
         std::string secret;
         std::optional<model::Timestamp> lastModifiedDate;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, prescriptionId, kvnr1, accessCode, qesBundle));
-        ASSERT_NO_FATAL_FAILURE(checkTaskClose(prescriptionId, kvnr1, secret, *lastModifiedDate, communications));
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(prescriptionId, kvnr1, secret, lastModifiedDate, communications));
     }
 
     // The database contains two tasks and the corresponding audit events.

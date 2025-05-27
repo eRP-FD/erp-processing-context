@@ -10,6 +10,7 @@
 
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Environment.hxx"
+#include "test/util/TestConfiguration.hxx"
 
 #include <boost/noncopyable.hpp>
 #include <string>
@@ -27,6 +28,11 @@ public:
 
     EnvironmentVariableGuard(ConfigurationKey key, const std::optional<std::string>& value)
         : EnvironmentVariableGuard(Configuration::instance().getEnvironmentVariableName(key), value)
+    {
+    }
+
+    EnvironmentVariableGuard(TestConfigurationKey key, const std::optional<std::string>& value)
+        : EnvironmentVariableGuard(TestConfiguration::instance().getEnvironmentVariableName(key), value)
     {
     }
 

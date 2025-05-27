@@ -67,6 +67,12 @@ void ClientBase<StreamClass>::close (void)
     mImplementation->close();
 }
 
+template<typename StreamClass>
+std::optional<boost::asio::ip::tcp::endpoint> ClientBase<StreamClass>::currentEndpoint() const
+{
+    return mImplementation ? mImplementation->currentEndpoint() : std::nullopt;
+}
+
 
 template class ClientBase<SslStream>;
 template class ClientBase<TcpStream>;

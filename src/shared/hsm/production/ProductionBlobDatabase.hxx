@@ -15,10 +15,9 @@
 
 #include <mutex>
 #include <optional>
+#include <pqxx/transaction_base>
 #include <unordered_map>
 #include <vector>
-
-#include <pqxx/transaction>
 
 namespace pqxx {class connection;}
 
@@ -29,14 +28,14 @@ namespace pqxx {class connection;}
 class ProductionBlobDatabase : public BlobDatabase
 {
 public:
-    ProductionBlobDatabase (void);
+    ProductionBlobDatabase();
     explicit ProductionBlobDatabase (const std::string& connectionString);
 
     Entry getBlob (
         BlobType type,
         BlobId id) const override;
     Entry getBlob(BlobType type, const ErpVector& name) const override;
-    std::vector<Entry> getAllBlobsSortedById (void) const override;
+    std::vector<Entry> getAllBlobsSortedById() const override;
 
     BlobId storeBlob (Entry&& entry) override;
 
@@ -47,15 +46,15 @@ public:
     class Transaction
     {
     public:
-        explicit Transaction (std::unique_ptr<pqxx::work>&& transaction);
+        explicit Transaction(std::unique_ptr<pqxx::transaction_base>&& transaction);
 
-        void commit (void);
-        pqxx::work* operator-> (void); // This exists for historical reasons.
+        void commit();
+        pqxx::transaction_base* operator->();
 
     private:
-        std::unique_ptr<pqxx::work> mWork;
+        std::unique_ptr<pqxx::transaction_base> mWork;
     };
-    Transaction createTransaction(void) const;
+    Transaction createTransaction() const;
     void recreateConnection() override;
 
 private:
@@ -64,7 +63,7 @@ private:
     static BlobDatabase::Entry convertEntry (const pqxx::row& dbEntry);
 
     [[noreturn]]
-    void processStoreBlobException (void);
+    static void processStoreBlobException();
 };
 
 #endif

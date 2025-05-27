@@ -52,7 +52,7 @@ TEST_F(Erp9230Test, PresetReceivedMustBeDiscarded)//NOLINT(readability-function-
 
     auto communicationEcho =
         model::ResourceFactory<model::Communication>::fromJson(serverResponse.getBody(), *getJsonValidator(), {})
-            .getValidated(model::ProfileType::Gem_erxCommunicationDispReq);
+            .getValidated(model::ProfileType::GEM_ERP_PR_Communication_DispReq);
 
     // Before the fix this check failed:
     EXPECT_FALSE(communicationEcho.timeReceived().has_value());

@@ -71,10 +71,8 @@ spec:
               value: "20"
             - name: ERP_REDIS_CERTIFICATE_PATH
               value: "/erp/redis/REDIS_CERT"
-            - name: ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH
-              value: "/erp/tsl/tsl-ssl-root-ca.pem"
             - name: ERP_TSL_INITIAL_DOWNLOAD_URL
-              value: "https://download-test.tsl.telematik-test/ECC/ECC-RSA_TSL-test.xml"
+              value: "http://download-test.tsl.telematik-test/ECC/ECC-RSA_TSL-test.xml"
             - name: ERP_TSL_INITIAL_CA_DER_PATH
               value: "/erp/tsl/tsl-ca.der"
             - name: ERP_TSL_DOWNLOAD_CIPHERS

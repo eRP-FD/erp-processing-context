@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_MEDICATIONDISPENSE_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_MEDICATIONDISPENSE_HXX
 
+#include "shared/model/Extension.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/ProfileType.hxx"
@@ -49,13 +50,24 @@ public:
 
     static constexpr auto resourceTypeName = "MedicationDispense";
 
+    void additionalValidation() const override;
+
 private:
     friend Resource<MedicationDispense>;
     explicit MedicationDispense(NumberAsStringParserDocument&& jsonTree);
 };
 
+class GemErpExRedeemCode : public Extension<GemErpExRedeemCode>
+{
+public:
+    using Extension::Extension;
+    static constexpr auto url = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_RedeemCode";
+};
+
 // NOLINTNEXTLINE(bugprone-exception-escape)
 extern template class Resource<MedicationDispense>;
+extern template class Extension<GemErpExRedeemCode>;
+extern template class Resource<GemErpExRedeemCode>;
 }
 
 

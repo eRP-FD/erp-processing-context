@@ -462,6 +462,11 @@ TEST_F(GetTaskByPharmacyWfTest, recoverSecret)
 
 TEST_F(GetTaskByPharmacyWfTest, RateLimit_PN2HcvMismatch)
 {
+    if (!client->getContext())
+    {
+        // Skip as integration test
+        GTEST_SKIP();
+    }
     EnvironmentVariableGuard limit{ConfigurationKey::SERVICE_TASK_GET_RATE_LIMIT, "3"};
 
     client->getContext()->getRedisClient()->flushdb();

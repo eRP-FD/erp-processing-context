@@ -15,6 +15,7 @@
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 
 
@@ -46,12 +47,14 @@ public:
 
     struct TslValidationParameters {
         TslMode tslMode = TslMode::TSL;
-        CertificateType certificateType;
+        // passing std::nullopt disables certificate type restrictions
+        std::optional<CertificateType> certificateType;
         OcspCheckDescriptor::OcspCheckMode ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE;
         std::chrono::system_clock::duration ocspGracePeriod;
         // performs a hostname validation based on the host set in SNI
         // with the Subject Alternative Addresses from the certificate
         bool withSubjectAlternativeAddressValidation;
+        bool allowTslUpdate = true;
     };
     /**
      * All cryptography must comply with gematik standards. The end-entity certificate is verified

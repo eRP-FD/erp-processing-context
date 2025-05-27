@@ -442,3 +442,25 @@ TEST_F(StringTest, toHexString)
     EXPECT_EQ(String::toHexString(""), "");
     EXPECT_EQ(String::toHexString("hallo"), "68616c6c6f");
 }
+
+TEST_F(StringTest, isHexString)
+{
+    EXPECT_TRUE(String::isHexString("00010211ff"));
+    EXPECT_TRUE(String::isHexString("00010211FF"));
+    EXPECT_FALSE(String::isHexString("test"));
+    EXPECT_TRUE(String::isHexString(""));
+
+    EXPECT_FALSE(String::isHexString("0"));
+    EXPECT_TRUE(String::isHexString("00"));
+    EXPECT_FALSE(String::isHexString("000"));
+
+    EXPECT_FALSE(String::isHexString(" 00"));
+    EXPECT_FALSE(String::isHexString("00 "));
+    EXPECT_FALSE(String::isHexString("0 0"));
+    EXPECT_FALSE(String::isHexString("\t00"));
+    EXPECT_FALSE(String::isHexString("00\n"));
+
+    EXPECT_TRUE(String::isHexString(String::toHexString("test")));
+    EXPECT_TRUE(String::isHexString(String::toHexString("0")));
+    EXPECT_TRUE(String::isHexString(String::toHexString("")));
+}

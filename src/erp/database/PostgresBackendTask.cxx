@@ -170,15 +170,14 @@ std::string PostgresBackendTask::taskTableName() const
 }
 
 
-std::tuple<model::PrescriptionId, model::Timestamp> PostgresBackendTask::createTask(pqxx::work& transaction,
-                                                                                    model::Task::Status taskStatus,
-                                                                                    const model::Timestamp& lastUpdated,
-                                                                                    const model::Timestamp& created,
-                                                                                    const model::Timestamp& lastStatusUpdate)
+std::tuple<model::PrescriptionId, model::Timestamp>
+PostgresBackendTask::createTask(pqxx::transaction_base& transaction, model::Task::Status taskStatus,
+                                const model::Timestamp& lastUpdated, const model::Timestamp& created,
+                                const model::Timestamp& lastStatusUpdate)
 {
     TVLOG(2) << mQueries.createTask.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:createTask");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "createtask");
 
     const auto status = gsl::narrow<int>(model::Task::toNumericalStatus(taskStatus));
     auto result = transaction.exec_params1(mQueries.createTask.query, lastUpdated.toXsDateTime(),
@@ -194,13 +193,13 @@ std::tuple<model::PrescriptionId, model::Timestamp> PostgresBackendTask::createT
 }
 
 
-void PostgresBackendTask::updateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
+void PostgresBackendTask::updateTask(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                      const db_model::EncryptedBlob& accessCode, uint32_t blobId,
                                      const db_model::Blob& salt) const
 {
     TVLOG(2) << mQueries.updateTask.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:updateTask");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "updatetask");
 
     auto result = transaction.exec_params(mQueries.updateTask.query, taskId.toDatabaseId(), blobId, salt.binarystring(),
                                           accessCode.binarystring());
@@ -211,11 +210,11 @@ void PostgresBackendTask::updateTask(pqxx::work& transaction, const model::Presc
 
 
 std::tuple<BlobId, db_model::Blob, model::Timestamp>
-PostgresBackendTask::getTaskKeyData(pqxx::work& transaction, const model::PrescriptionId& taskId) const
+PostgresBackendTask::getTaskKeyData(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId) const
 {
     TVLOG(2) << mQueries.getTaskKeyData.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:getTaskKeyData");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "gettaskkeydata");
 
     auto result = transaction.exec_params(mQueries.getTaskKeyData.query, taskId.toDatabaseId());
     TVLOG(2) << "got " << result.size() << " results";
@@ -228,15 +227,15 @@ PostgresBackendTask::getTaskKeyData(pqxx::work& transaction, const model::Prescr
 }
 
 
-void PostgresBackendTask::updateTaskStatusAndSecret(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                                    model::Task::Status status,
+void PostgresBackendTask::updateTaskStatusAndSecret(pqxx::transaction_base& transaction,
+                                                    const model::PrescriptionId& taskId, model::Task::Status status,
                                                     const model::Timestamp& lastModifiedDate,
                                                     const std::optional<db_model::EncryptedBlob>& secret,
                                                     const std::optional<db_model::EncryptedBlob>& owner,
                                                     const model::Timestamp& lastStatusUpdate) const
 {
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:updateTaskStatusAndSecret");
+                                                                        "updatetaskstatusandsecret");
 
     // GEMREQ-start A_24174#call-sql
     // It is possible to set or delete the secret using this query
@@ -263,7 +262,7 @@ void PostgresBackendTask::updateTaskStatusAndSecret(pqxx::work& transaction, con
 }
 
 
-void PostgresBackendTask::activateTask(pqxx::work& transaction, const model::PrescriptionId& taskId,
+void PostgresBackendTask::activateTask(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                        const db_model::EncryptedBlob& encryptedKvnr,
                                        const db_model::HashedKvnr& hashedKvnr, model::Task::Status taskStatus,
                                        const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
@@ -274,7 +273,7 @@ void PostgresBackendTask::activateTask(pqxx::work& transaction, const model::Pre
 {
     TVLOG(2) << mQueries.updateTask_activateTask.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:activateTask");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "activatetask");
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
 
@@ -288,8 +287,8 @@ void PostgresBackendTask::activateTask(pqxx::work& transaction, const model::Pre
     Expect(result.empty(), "Expected an empty result");
 }
 
-void PostgresBackendTask::updateTaskReceipt(pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
-                                            const model::Timestamp& lastModified,
+void PostgresBackendTask::updateTaskReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
+                                            const model::Task::Status& taskStatus, const model::Timestamp& lastModified,
                                             const db_model::EncryptedBlob& receipt,
                                             const db_model::EncryptedBlob& pharmacyIdentity,
                                             const model::Timestamp& lastStatusUpdate) const
@@ -297,7 +296,7 @@ void PostgresBackendTask::updateTaskReceipt(pqxx::work& transaction, const model
     Expect3(taskId.type() == mPrescriptionType, "Wrong prescription type for table", std::logic_error);
     TVLOG(2) << mQueries.updateTask_receipt.query;
     const auto timerKeepAlive =
-    DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:updateTaskReceipt");
+    DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "updatetaskreceipt");
     const auto status = model::Task::toNumericalStatus(taskStatus);
     const pqxx::result result = transaction.exec_params(
         mQueries.updateTask_receipt.query, taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
@@ -307,16 +306,15 @@ void PostgresBackendTask::updateTaskReceipt(pqxx::work& transaction, const model
 }
 
 void PostgresBackendTask::updateTaskMedicationDispense(
-    pqxx::work& transaction, const model::PrescriptionId& taskId,
-    const model::Timestamp& lastModified, const model::Timestamp& lastMedicationDispense,
-    const db_model::EncryptedBlob& medicationDispense,
+    pqxx::transaction_base& transaction, const model::PrescriptionId& taskId, const model::Timestamp& lastModified,
+    const model::Timestamp& lastMedicationDispense, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
     const db_model::Blob& medicationDispenseSalt) const
 {
     TVLOG(2) << mQueries.updateTask_medicationDispense.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:updateTaskMedicationDispense");
+        DurationConsumer::categoryPostgres, "updatetaskmedicationdispense");
 
     const pqxx::result result = transaction.exec_params(
         mQueries.updateTask_medicationDispense.query, taskId.toDatabaseId(),
@@ -330,7 +328,7 @@ void PostgresBackendTask::updateTaskMedicationDispense(
 }
 
 void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
-    pqxx::work& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
+    pqxx::transaction_base& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
     const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
@@ -340,7 +338,7 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
 {
     TVLOG(2) << mQueries.updateTask_medicationDispenseReceipt.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:updateTaskMedicationDispenseReceipt");
+        DurationConsumer::categoryPostgres, "updatetaskmedicationdispensereceipt");
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
     const pqxx::result result = transaction.exec_params(
@@ -357,12 +355,13 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
 
 
 // GEMREQ-start A_24286-02#query-call-updateTaskDeleteMedicationDispense
-void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::work& transaction, const model::PrescriptionId& taskId,
-                                                      const model::Timestamp& lastModified) const
+void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::transaction_base& transaction,
+                                                             const model::PrescriptionId& taskId,
+                                                             const model::Timestamp& lastModified) const
 {
     TVLOG(2) << mQueries.updateTask_deleteMedicationDispense.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:updateTaskDeleteMedicationDispense");
+                                                                        "updatetaskdeletemedicationdispense");
 
     const pqxx::result result =
         transaction.exec_params(mQueries.updateTask_deleteMedicationDispense.query, taskId.toDatabaseId(),
@@ -374,14 +373,15 @@ void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::work& transac
 // GEMREQ-end A_24286-02#query-call-updateTaskDeleteMedicationDispense
 
 // GEMREQ-start A_19027-06#query-call-updateTaskClearPersonalData
-void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, const model::PrescriptionId& taskId,
+void PostgresBackendTask::updateTaskClearPersonalData(pqxx::transaction_base& transaction,
+                                                      const model::PrescriptionId& taskId,
                                                       model::Task::Status taskStatus,
                                                       const model::Timestamp& lastModified,
                                                       const model::Timestamp& lastStatusUpdate) const
 {
     TVLOG(2) << mQueries.updateTask_deletePersonalData.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:updateTaskClearPersonalData");
+                                                                        "updatetaskclearpersonaldata");
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
 
@@ -395,11 +395,11 @@ void PostgresBackendTask::updateTaskClearPersonalData(pqxx::work& transaction, c
 // GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
 
-std::optional<db_model::Task> PostgresBackendTask::retrieveTaskForUpdate(pqxx::work& transaction,
+std::optional<db_model::Task> PostgresBackendTask::retrieveTaskForUpdate(pqxx::transaction_base& transaction,
                                                                          const model::PrescriptionId& taskId)
 {
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:retrieveTaskForUpdate");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "retrievetaskforupdate");
 
     std::string query(mQueries.retrieveTaskById.query);
     query.append("    FOR UPDATE");
@@ -420,13 +420,13 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskForUpdate(pqxx::w
 
 
 ::std::optional<::db_model::Task>
-PostgresBackendTask::retrieveTaskForUpdateAndPrescription(::pqxx::work& transaction,
+PostgresBackendTask::retrieveTaskForUpdateAndPrescription(::pqxx::transaction_base& transaction,
                                                           const ::model::PrescriptionId& taskId)
 {
     TVLOG(2) << mQueries.retrieveTaskByIdForUpdatePlusPrescription.query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:retrieveTaskForUpdateAndPrescription");
+        DurationConsumer::categoryPostgres, "retrievetaskforupdateandprescription");
 
     const auto result =
         transaction.exec_params(mQueries.retrieveTaskByIdForUpdatePlusPrescription.query, taskId.toDatabaseId());
@@ -446,12 +446,12 @@ PostgresBackendTask::retrieveTaskForUpdateAndPrescription(::pqxx::work& transact
 }
 
 
-std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndReceipt(pqxx::work& transaction,
+std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndReceipt(pqxx::transaction_base& transaction,
                                                                           const model::PrescriptionId& taskId)
 {
     TVLOG(2) << mQueries.retrieveTaskByIdPlusReceipt.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:retrieveTaskAndReceipt");
+                                                                        "retrievetaskandreceipt");
 
     const pqxx::result result =
         transaction.exec_params(mQueries.retrieveTaskByIdPlusReceipt.query, taskId.toDatabaseId());
@@ -474,12 +474,12 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndReceipt(pqxx::
 }
 
 
-std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(pqxx::work& transaction,
+std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(pqxx::transaction_base& transaction,
                                                                                const model::PrescriptionId& taskId)
 {
     TVLOG(2) << mQueries.retrieveTaskByIdPlusPrescription.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:retrieveTaskAndPrescription");
+                                                                        "retrievetaskandprescription");
 
     const pqxx::result result =
         transaction.exec_params(mQueries.retrieveTaskByIdPlusPrescription.query, taskId.toDatabaseId());
@@ -501,11 +501,12 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(p
 }
 
 std::optional<db_model::Task>
-PostgresBackendTask::retrieveTaskWithSecretAndPrescription(pqxx::work& transaction, const model::PrescriptionId& taskId)
+PostgresBackendTask::retrieveTaskWithSecretAndPrescription(pqxx::transaction_base& transaction,
+                                                           const model::PrescriptionId& taskId)
 {
     TVLOG(2) << mQueries.retrieveTaskWithSecretByIdPlusPrescription.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:retrieveTaskWithSecretAndPrescription");
+                                                                        "retrievetaskwithsecretandprescription");
 
     const pqxx::result result =
     transaction.exec_params(mQueries.retrieveTaskWithSecretByIdPlusPrescription.query, taskId.toDatabaseId());
@@ -527,13 +528,13 @@ PostgresBackendTask::retrieveTaskWithSecretAndPrescription(pqxx::work& transacti
 
 // GEMREQ-start A_22135-01#retrieveTask, A_22134#retrieveTask
 ::std::optional<::db_model::Task>
-PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transaction,
+PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::transaction_base& transaction,
                                                            const ::model::PrescriptionId& taskId)
 {
     TVLOG(2) << mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:retrieveTaskByIdPlusPrescriptionPlusReceipt");
+        DurationConsumer::categoryPostgres, "retrievetaskbyidplusprescriptionplusreceipt");
 
     const auto result =
         transaction.exec_params(mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query, taskId.toDatabaseId());
@@ -557,7 +558,8 @@ PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::work& transac
 // GEMREQ-end A_22135-01#retrieveTask, A_22134#retrieveTask
 
 std::vector<db_model::Task>
-PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::work& transaction, const db_model::HashedKvnr& kvnrHashed,
+PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::transaction_base& transaction,
+                                                    const db_model::HashedKvnr& kvnrHashed,
                                                     const std::optional<UrlArguments>& search)
 {
     auto query = mQueries.retrieveAllTasksByKvnrWithAccessCode.query;
@@ -568,7 +570,7 @@ PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::work& transaction, c
     TVLOG(2) << query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:retrieveAllTasksByKvnrWithAccessCode");
+        DurationConsumer::categoryPostgres, "retrievealltasksbykvnrwithaccesscode");
 
     const auto results = transaction.exec_params(query, kvnrHashed.binarystring());
 

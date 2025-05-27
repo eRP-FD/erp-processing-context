@@ -110,7 +110,7 @@ void ActivateTaskHandler::handlePrescriptionRequest(PcSessionContext& session, D
     const auto& prescription = cadesBesSignature.payload();
 
     auto [responseStatus, prescriptionBundle] =
-        prescriptionBundleFromXml<model::KbvBundle>(session.serviceContext, prescription);
+        prescriptionBundleFromXml<model::KbvBundle>(session, prescription);
 
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
     ErpExpect(compositions.size() == 1, HttpStatus::BadRequest,
@@ -257,7 +257,7 @@ void ActivateTaskHandler::handleDigaRequest(PcSessionContext& session, Database:
     const auto& evdgaPayload = cadesBesSignature.payload();
 
     auto [responseStatus, evdgaBundle] =
-        prescriptionBundleFromXml<model::EvdgaBundle>(session.serviceContext, evdgaPayload);
+        prescriptionBundleFromXml<model::EvdgaBundle>(session, evdgaPayload);
 
     handleGeneric(session, taskAndKey, cadesBesSignature, evdgaBundle, responseStatus, false, std::nullopt);
 }
@@ -322,18 +322,27 @@ void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const KbvOrEvdgaBundl
 
 template<typename KbvOrEvdgaBundle>
 std::tuple<HttpStatus, KbvOrEvdgaBundle>
-ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext, std::string_view prescription)
+ActivateTaskHandler::prescriptionBundleFromXml(SessionContext& sessionContext, std::string_view prescription)
 {
     using namespace std::string_literals;
     using KbvBundleFactory = model::ResourceFactory<KbvOrEvdgaBundle>;
     using OnUnknownExtension = Configuration::OnUnknownExtension;
 
     const auto& config = Configuration::instance();
-    const auto& xmlValidator = serviceContext.getXmlValidator();
+    const auto& xmlValidator = sessionContext.serviceContext.getXmlValidator();
 
     try
     {
         auto factory = KbvBundleFactory::fromXml(prescription, xmlValidator);
+
+        const auto header = Header::profileVersionHeader(KbvOrEvdgaBundle::profileType);
+        if (! header.empty())
+        {
+            if (const auto profileVersion = factory.profileVersion())
+            {
+                sessionContext.addOuterResponseHeaderField(header, to_string(*profileVersion));
+            }
+        }
 
         const auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
         factory.enableAdditionalValidation(false);
@@ -348,11 +357,11 @@ ActivateTaskHandler::prescriptionBundleFromXml(PcServiceContext& serviceContext,
         }
         const auto valOpts = config.defaultValidatorOptions(factory.profileType());
         factory.validatorOptions(valOpts);
-        A_23384_01.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
+        A_23384_03.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
         const gsl::not_null view = factory.getValidationView();
         TVLOG(1) << "using view " << view->id() << " for " <<  factory.getProfileName().value_or("UNKNOWN");
         factory.validate(factory.profileType(), view);
-        A_23384_01.finish();
+        A_23384_03.finish();
         auto status = HttpStatus::OK;
         if (onUnknownExtension != OnUnknownExtension::ignore)
         {
@@ -387,17 +396,10 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
         {
             mvoIdValid = Uuid::isValidUrnUuid(*mvoId, true);
         }
-        switch (Configuration::instance().mvoIdValidationMode())
-        {
-            case Configuration::MvoIdValidationMode::disable:
-                break;
-            case Configuration::MvoIdValidationMode::error:
-                ErpExpectWithDiagnostics(
-                    mvoIdValid, HttpStatus::BadRequest, "MVO-ID entspricht nicht urn:uuid format",
-                    "urn:uuid format pattern: urn:uuid:<XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX>, found: " +
-                        std::string{mvoId.value_or("")});
-                break;
-        }
+        ErpExpectWithDiagnostics(
+            mvoIdValid, HttpStatus::BadRequest, "MVO-ID entspricht nicht urn:uuid format",
+            "urn:uuid format pattern: urn:uuid:<XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX>, found: " +
+                std::string{mvoId.value_or("")});
         A_24901.finish();
 
         A_23164.start("Fehlercode 400 wenn das Ende der Einlösefrist vor dem Beginn liegt.");
@@ -577,20 +579,20 @@ bool ActivateTaskHandler::checkPractitioner(const KbvOrEvdgaBundle& bundle, PcSe
         auto anr = practitioner.anr();
         if (anr.has_value() && ! anr->validChecksum())
         {
-            A_23090_02.start("\"anr\": $anrvalue: Der Wert des Feldes identifier:ANR.value bei aufgetretenem "
+            A_23090_06.start("\"anr\": $anrvalue: Der Wert des Feldes identifier:ANR.value bei aufgetretenem "
                              "Prüfungsfehler gem. A_24032, Datentyp Integer");
             session.addOuterResponseHeaderField(Header::ANR, anr->id());
-            A_23090_02.finish();
+            A_23090_06.finish();
             return false;
         }
 
         auto zanr = practitioner.zanr();
         if (zanr.has_value() && ! zanr->validChecksum())
         {
-            A_23090_02.start("\"zanr\": $zanrvalue: Der Wert des Feldes identifier:ZANR.value bei aufgetretenem "
+            A_23090_06.start("\"zanr\": $zanrvalue: Der Wert des Feldes identifier:ZANR.value bei aufgetretenem "
                              "Prüfungsfehler gem. A_24032, Datentyp Integer");
             session.addOuterResponseHeaderField(Header::ZANR, zanr->id());
-            A_23090_02.finish();
+            A_23090_06.finish();
             return false;
         }
         A_23891.finish();

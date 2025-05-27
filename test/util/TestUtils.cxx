@@ -149,6 +149,19 @@ void bestEffortValidate(const model::UnspecifiedResource& res)
 template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
 template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
 
+std::string shiftDate(const std::string& realDate)
+{
+    using namespace date::literals;
+    static const char format[] = "%Y-%m-%d";
+    const date::days globalOffset{Configuration::instance().getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS)};
+
+    std::istringstream realDateStream{realDate};
+    date::sys_days realDateAsDate;
+    date::from_stream(realDateStream, format, realDateAsDate);
+
+    return date::format(format, realDateAsDate + globalOffset);
+}
+
 testutils::ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const AsConfiguredTag&)
 {
     const auto& dirtyViews = Fhir::instance().fhirResourceViewConfiguration().allViews();

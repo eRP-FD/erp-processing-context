@@ -9,9 +9,6 @@
 #define ERP_PROCESSING_CONTEXT_EXPORTER_COMMITGUARD_HXX
 
 #include "exporter/database/CommitGuard_policies.hxx"
-#include "exporter/database/MainDatabaseFrontend.hxx"
-#include "exporter/database/MedicationExporterDatabaseFrontendInterface.hxx"
-#include "exporter/pc/MedicationExporterServiceContext.hxx"
 
 #include <memory>
 
@@ -29,11 +26,12 @@ public:
     }
 
     CommitGuard()
+        requires std::is_default_constructible_v<Database>
         : mDb(std::make_unique<database_t>())
     {
     }
 
-    ~CommitGuard()
+    ~CommitGuard() noexcept(false)
     {
         if (std::uncaught_exceptions() > 0)
         {
@@ -54,11 +52,7 @@ private:
     std::unique_ptr<database_t> mDb;
 };
 
-using MedicationExporterCommitGuard =
-    CommitGuard<MedicationExporterDatabaseFrontendInterface, commit_guard_policies::ExceptionAbortStrategy>;
-
-using MainDatabaseCommitGuard =
-    CommitGuard<exporter::MainDatabaseFrontend, commit_guard_policies::ExceptionAbortStrategy>;
-
+template <typename T>
+CommitGuard(std::unique_ptr<T>) -> CommitGuard<T, commit_guard_policies::ExceptionAbortStrategy>;
 
 #endif//ERP_PROCESSING_CONTEXT_EXPORTER_COMMITGUARD_HXX

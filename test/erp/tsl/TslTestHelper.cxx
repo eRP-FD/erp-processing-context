@@ -198,7 +198,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createTslTrustStore(const std::option
 
     UrlRequestSenderMock requestSender(
         std::unordered_map<std::string, std::string>{
-            {shaDownloadUrl, Hash::sha256(tslContentToUse)},
+            {shaDownloadUrl, String::toHexString(Hash::sha256(tslContentToUse))},
             {tslDownloadUrl, tslContentToUse}});
 
     setOcspUslRequestHandlerTslSigner(requestSender);
@@ -234,7 +234,7 @@ std::unique_ptr<TrustStore> TslTestHelper::createOutdatedTslTrustStore(
 
     UrlRequestSenderMock requestSender(
         std::unordered_map<std::string, std::string>{
-            {shaDownloadUrl, Hash::sha256(tslContentToUse)},
+            {shaDownloadUrl, String::toHexString(Hash::sha256(tslContentToUse))},
             {url, tslContentToUse}});
 
     setOcspUslRequestHandlerTslSigner(requestSender);
@@ -279,10 +279,10 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
     {
         requestSender = std::make_shared<UrlRequestSenderMock>(
             std::unordered_map<std::string, std::string>{
-                {shaDownloadUrl, Hash::sha256(tslContent)},
+                {shaDownloadUrl, String::toHexString(Hash::sha256(tslContent))},
                 {tslDownloadUrl, tslContent},
                 {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-                {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+                {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", String::toHexString(Hash::sha256(bnaContent))}});
     }
 
     setOcspUslRequestHandlerTslSigner(*requestSender);

@@ -19,6 +19,8 @@ struct DefinitionKey {
     std::string url;
     std::optional<FhirVersion> version;
 
+    std::string_view shortProfile() const;
+
     DefinitionKey(const DefinitionKey&) = default;
     DefinitionKey(DefinitionKey&&) = default;
     DefinitionKey& operator=(const DefinitionKey&) = default;

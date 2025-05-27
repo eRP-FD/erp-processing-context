@@ -170,6 +170,11 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     addMetaTagOriginLdap(transformedPractitioner);
     F_013.finish();
     A_25946.finish();
+
+    F_019.start("Kein mapping von Practitioner.qualification");
+    remove(transformedPractitioner, rapidjson::Pointer("/qualification"));
+    F_019.finish();
+
     parameters.setPractitioner(transformedPractitioner);
 
     parameters.removeEmptyObjectsAndArrays();

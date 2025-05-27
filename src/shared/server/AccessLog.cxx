@@ -58,8 +58,7 @@ void AccessLog::markEnd (void)
     {
         mLog.keyValue(
             "response_time",
-            static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endTime - mStartTime.value()).count())/1000.0,
-            3);
+            static_cast<double>(std::chrono::duration_cast<std::chrono::microseconds>(endTime - mStartTime.value()).count())/1000.0);
         mStartTime = std::nullopt;
     }
 }

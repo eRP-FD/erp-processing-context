@@ -56,16 +56,17 @@ public:
 TEST_F(TslServiceTest, providedTsl)
 {
     const std::unordered_map<std::string, std::string> expectedBnaOcspMapping {
-        {"http://ehca.gematik.de/ecc-qocsp", "http://ehca-testref.komp-ca.telematik-test:8080/status/ecc-qocsp"},
         {"http://ehca.gematik.de/ocsp/", "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp"},
-        {"http://ocsp-qes.egk-test-tsp.de", "http://ocsp-qes-testref.atos.tsp-hba.telematik-test"},
+        {"http://qocsp-ePTA.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
+        {"http://qocsp-zod2.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
         {"http://ocsp.pki.telematik-test:8080/CMOCSP/OCSP", "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp"},
         {"http://qocsp-eA.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
-        {"http://qocsp-ePTA.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
+        {"http://ocsp-qes.egk-test-tsp.de", "http://ocsp-qes-testref.atos.tsp-hba.telematik-test"},
+        {"http://qca10-qocsp-hba.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
+        {"http://ehca.gematik.de/ecc-qocsp", "http://ehca-testref.komp-ca.telematik-test:8080/status/ecc-qocsp"},
         {"http://qocsp-eZAA.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
-        {"http://qocsp-hba.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
-        {"http://qocsp-zod2.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
         {"http://qocsp.hba.test.telesec.de/ocspr", "http://qocsp-hba-testref.tsi.tsp-hba.telematik-test/ocspr"},
+        {"http://qocsp-hba.testumgebung.dgnservice.de:8080/ocsp", "http://titu-qocsp-hba.medisign.tsp-hba.telematik-test:8080/ocsp"},
         {"http://staging.ocsp.d-trust.net", "http://ocsp.bdr.tsp-hba.telematik-test"}
     };
 

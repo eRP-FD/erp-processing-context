@@ -42,7 +42,8 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
                 using enum model::EPAOperationOutcome::EPAOperationOutcomeCS;
                 case MEDICATIONSVC_OPERATION_SUCCESS:
                 case MEDICATIONSVC_PRESCRIPTION_NO_EXIST:
-                case MEDICATIONSVC_DISPENSATION_STATUS:
+                    break;
+                case MEDICATIONSVC_PRESCRIPTION_STATUS:
                     logWarning(erpEvent)
                         << KeyValue("event", "Processing task event: Unexpected operation outcome")
                         << KeyValue("reason",
@@ -51,7 +52,7 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
                 case SVC_IDENTITY_MISMATCH:
                 case MEDICATIONSVC_NO_VALID_STRUCTURE:
                 case MEDICATIONSVC_PRESCRIPTION_DUPLICATE:
-                case MEDICATIONSVC_PRESCRIPTION_STATUS:
+                case MEDICATIONSVC_DISPENSATION_STATUS:
                 case MEDICATIONSVC_DISPENSATION_NO_EXIST:
                 case MEDICATIONSVC_PARAMETERS_REFERENCE_NO_EXIST:
                 case MEDICATIONSVC_MEDICATIONPLAN_NO_EXIST:

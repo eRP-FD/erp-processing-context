@@ -5,6 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
@@ -65,16 +66,21 @@ void MedicationDispenseBundle::prepare()
         setProfile(value(model::profileWithVersion(ProfileType::MedicationDispenseBundle, *repoView)));
     }
 }
-Timestamp model::MedicationDispenseBundle::whenHandedOver() const
+
+Timestamp model::MedicationDispenseBundle::maxWhenHandedOver() const
 {
     const auto medications = getResourcesByType<model::MedicationDispense>();
-    ModelExpect(! medications.empty(), "Expected at least one MedicationDispense in MedicationDispenseBundle");
-    return medications[0].whenHandedOver();
+    const auto latestDispense = std::ranges::max_element(medications, {}, &MedicationDispense::whenHandedOver);
+    ModelExpect(latestDispense != medications.end(), "Expected at least one MedicationDispense in MedicationDispenseBundle");
+    return latestDispense->whenHandedOver();
 }
 
 std::optional<model::Timestamp> MedicationDispenseBundle::getValidationReferenceTimestamp() const
 {
-    return whenHandedOver();
+    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    auto result = maxWhenHandedOver();
+    A_23384_03.finish();
+    return result;
 }
 
 }// namespace model

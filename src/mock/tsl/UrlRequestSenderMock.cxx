@@ -16,14 +16,27 @@ UrlRequestSenderMock::UrlRequestSenderMock(std::unordered_map<std::string, std::
 {
 }
 
+UrlRequestSenderMock::UrlRequestSenderMock(TlsCertificateVerifier certificateVerifier,
+                                           std::chrono::milliseconds connectionTimeout,
+                                           std::chrono::milliseconds resolveTimeout)
+    : UrlRequestSender(std::move(certificateVerifier), connectionTimeout, resolveTimeout)
+{}
+
+
+void UrlRequestSenderMock::setStrict(bool strict)
+{
+    mStrict = strict;
+}
+
+
 ClientResponse UrlRequestSenderMock::doSend(
     const std::string& url,
-    const HttpMethod,
+    const HttpMethod method,
     const std::string& body,
-    const std::string&,
-    const std::optional<std::string>&,
-    const bool,
-    const boost::asio::ip::tcp::endpoint*) const
+    const std::string& contentType,
+    const std::optional<std::string>& forcedCiphers,
+    const bool trustCn,
+    const boost::asio::ip::tcp::endpoint* ep) const
 {
     std::lock_guard lock(mMutex);
 
@@ -35,7 +48,18 @@ ClientResponse UrlRequestSenderMock::doSend(
     else
     {
         const auto iterator = mResponses.find(url);
-        Expect(iterator != mResponses.end(), "Unexpected request to " + url);
+        const bool hasResponse = iterator != mResponses.end();
+        if (! hasResponse)
+        {
+            if (mStrict)
+            {
+                Fail("Unexpected request to " + url);
+            }
+
+            LOG(INFO) << "Passing request to RequestSender for " << url;
+            const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
+            return UrlRequestSender::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
+        }
 
         Header header;
         header.setStatus(HttpStatus::OK);
@@ -53,9 +77,9 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint*) const
+    const boost::asio::ip::tcp::endpoint* ep) const
 {
-    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn);
+    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn, ep);
 }
 
 void UrlRequestSenderMock::setUrlHandler(

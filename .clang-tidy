@@ -10,6 +10,7 @@ Checks: >-
   -cert-err58-cpp,
   -clang-analyzer-*,
   -clang-diagnostic-*,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
   -fuchsia-*,
   -google-*,
   google-runtime-operator,
@@ -50,6 +51,7 @@ Checks: >-
   -misc-non-private-member-variables-in-classes
 HeaderFilterRegex: '(src|test)/.*'
 CheckOptions:
+  - { key: cppcoreguidelines-avoid-c-arrays.AllowStringArrays,     value: true       }
   - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
   - { key: readability-identifier-naming.FunctionCase,             value: camelBack  }
   - { key: readability-identifier-naming.GlobalConstantCase,       value: aNy_CasE   }

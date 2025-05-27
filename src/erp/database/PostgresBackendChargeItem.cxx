@@ -117,14 +117,14 @@ PostgresBackendChargeItem::PostgresBackendChargeItem()
 }
 
 // GEMREQ-start storeChargeInformation
-void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction,
+void PostgresBackendChargeItem::storeChargeInformation(::pqxx::transaction_base& transaction,
                                                        const ::db_model::ChargeItem& chargeItem,
                                                        const ::db_model::HashedKvnr& hashedKvnr) const
 {
     TVLOG(2) << mQueries.storeChargeInformation.query;
 
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:storeChargeInformation");
+                                                                        "storechargeinformation");
 
     const auto markingFlag = [&chargeItem]() -> ::std::optional<::db_model::postgres_bytea_view> {
         if (chargeItem.markingFlags)
@@ -150,13 +150,13 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::work& transaction
 // GEMREQ-end storeChargeInformation
 
 // GEMREQ-start updateChargeInformation
-void PostgresBackendChargeItem::updateChargeInformation(::pqxx::work& transaction,
+void PostgresBackendChargeItem::updateChargeInformation(::pqxx::transaction_base& transaction,
                                                         const ::db_model::ChargeItem& chargeItem) const
 {
     TVLOG(2) << mQueries.updateChargeInformation.query;
 
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:updateChargeInformation");
+                                                                        "updatechargeinformation");
 
     const auto markingFlags =
         chargeItem.markingFlags ? ::std::make_optional(chargeItem.markingFlags->binarystring()) : ::std::nullopt;
@@ -170,13 +170,13 @@ void PostgresBackendChargeItem::updateChargeInformation(::pqxx::work& transactio
 // GEMREQ-end updateChargeInformation
 
 // GEMREQ-start A_22117-01#query-call
-void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::work& transaction,
+void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::transaction_base& transaction,
                                                         const model::PrescriptionId& id) const
 {
     TVLOG(2) << mQueries.deleteChargeInformation.query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                          "PostgreSQL:deleteChargeInformation");
+                                                                          "deletechargeinformation");
 
     transaction.exec_params0(mQueries.deleteChargeInformation.query, static_cast<uint32_t>(id.type()),
                              id.toDatabaseId());
@@ -184,26 +184,26 @@ void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::work& transactio
 // GEMREQ-end A_22117-01#query-call
 
 // GEMREQ-start A_22157#query-call
-void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::work& transaction,
+void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::transaction_base& transaction,
                                                           const ::db_model::HashedKvnr& kvnr) const
 {
     TVLOG(2) << mQueries.clearAllChargeInformation.query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                          "PostgreSQL:clearAllChargeInformation");
+                                                                          "clearallchargeinformation");
 
     transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
 }
 // GEMREQ-end A_22157#query-call
 
-::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::work& transaction,
+::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::transaction_base& transaction,
                                                                             const ::model::PrescriptionId& id) const
 {
     return retrieveChargeInformation(transaction, mQueries.retrieveChargeInformation.query, id);
 }
 
 ::db_model::ChargeItem
-PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& transaction,
+PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::transaction_base& transaction,
                                                               const ::model::PrescriptionId& id) const
 {
     auto query = mQueries.retrieveChargeInformation.query;
@@ -213,8 +213,10 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
 }
 
 // GEMREQ-start A_22119#query-call
-::std::vector<::db_model::ChargeItem> PostgresBackendChargeItem::retrieveAllChargeItemsForInsurant(
-    ::pqxx::work& transaction, const ::db_model::HashedKvnr& kvnr, const ::std::optional<UrlArguments>& search) const
+::std::vector<::db_model::ChargeItem>
+PostgresBackendChargeItem::retrieveAllChargeItemsForInsurant(::pqxx::transaction_base& transaction,
+                                                             const ::db_model::HashedKvnr& kvnr,
+                                                             const ::std::optional<UrlArguments>& search) const
 {
     auto query = mQueries.retrieveAllChargeItemsForInsurant.query;
     if (search.has_value())
@@ -224,7 +226,7 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
     TVLOG(2) << query;
     TVLOG(2) << "hashedId = " << kvnr.toHex();
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                          "PostgreSQL:retrieveAllChargeItems");
+                                                                          "retrieveallchargeitems");
 
     const auto dbResult = transaction.exec_params(query, kvnr.binarystring());
 
@@ -239,24 +241,24 @@ PostgresBackendChargeItem::retrieveChargeInformationForUpdate(::pqxx::work& tran
 }
 // GEMREQ-end A_22119#query-call
 
-uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::work& transaction,
+uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::transaction_base& transaction,
                                                                       const ::db_model::HashedKvnr& kvnr,
                                                                       const ::std::optional<UrlArguments>& search) const
 {
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "PostgreSQL:countChargeInformationForInsurant");
+        DurationConsumer::categoryPostgres, "countchargeinformationforinsurant");
     return ::PostgresBackend::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
                                                 kvnr, search, "ChargeItem for insurant");
 }
 
-::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::work& transaction,
+::db_model::ChargeItem PostgresBackendChargeItem::retrieveChargeInformation(::pqxx::transaction_base& transaction,
                                                                             const ::std::string& query,
                                                                             const ::model::PrescriptionId& id) const
 {
     TVLOG(2) << query;
 
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                          "PostgreSQL:retrieveChargeInformation");
+                                                                          "retrievechargeinformation");
 
     const auto dbResult =
         transaction.exec_params(query, static_cast<int16_t>(::magic_enum::enum_integer(id.type())), id.toDatabaseId());

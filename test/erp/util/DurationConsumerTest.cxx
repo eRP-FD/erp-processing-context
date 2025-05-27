@@ -8,12 +8,12 @@
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/deprecated/TimerJobBase.hxx"
 #include "shared/util/PeriodicTimer.hxx"
-
 #include "shared/util/TLog.hxx"
 
-#include <atomic>
 #include <boost/asio/io_context.hpp>
 #include <gtest/gtest.h>
+#include <atomic>
+#include <regex>
 #include <thread>
 
 static constexpr std::chrono::milliseconds interval(200);
@@ -156,7 +156,7 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
         // Expect this exception to be picked up by the DurationTimer and turned into some kind of failure message.
         throw std::runtime_error("exception details");
     }
-    catch(const std::exception&)
+    catch (const std::exception&)
     {
     }
 
@@ -166,11 +166,12 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
     ASSERT_GT(duration.count(), 0);
     ASSERT_EQ(category, "category");
     ASSERT_FALSE(sessionIdentifier.empty());
-    ASSERT_NE(description.find("failed"), std::string::npos)
-        << "exception is not recogonized and reported";
-    ASSERT_EQ(keyValueMap.size(), 1);
-    ASSERT_EQ(keyValueMap.begin()->first, "key");
-    ASSERT_EQ(keyValueMap.begin()->second, "value");
+    EXPECT_EQ(description, "test");
+    ASSERT_EQ(keyValueMap.size(), 2);
+    ASSERT_TRUE(keyValueMap.contains("key"));
+    EXPECT_EQ(keyValueMap.at("key"), "value");
+    ASSERT_TRUE(keyValueMap.contains("error")) << "exception is not recogonized and reported";
+    EXPECT_EQ(keyValueMap.at("error"), "uncaught exception");
 }
 
 TEST_F(DurationConsumerTest, TimerJob)
@@ -198,7 +199,9 @@ TEST_F(DurationConsumerTest, TimerJob)
 
     std::string output = testing::internal::GetCapturedStderr();
     TLOG(INFO) << output;
-    ASSERT_TRUE(output.find("TEST:executeJob was successful") != std::string::npos);
+    ASSERT_TRUE(output.find("TEST:executeJob") != std::string::npos);
+    ASSERT_TRUE(output.find("error") == std::string::npos);
+    ASSERT_TRUE(output.find("fail") == std::string::npos);
 }
 
 TEST_F(DurationConsumerTest, PeriodicTimer)
@@ -221,7 +224,9 @@ TEST_F(DurationConsumerTest, PeriodicTimer)
 
     std::string output = testing::internal::GetCapturedStderr();
     TLOG(INFO) << output;
-    ASSERT_TRUE(output.find("TEST:timerHandler was successful") != std::string::npos);
+    ASSERT_TRUE(output.find("TEST:timerHandler") != std::string::npos);
+    ASSERT_TRUE(output.find("error") == std::string::npos);
+    ASSERT_TRUE(output.find("fail") == std::string::npos);
 }
 
 TEST_F(DurationConsumerTest, Blockduration)
@@ -244,5 +249,53 @@ TEST_F(DurationConsumerTest, Blockduration)
 
     std::string output = testing::internal::GetCapturedStderr();
     TLOG(INFO) << output;
-    ASSERT_TRUE(output.find("TEST:Blockduration was successful") != std::string::npos);
+    ASSERT_TRUE(output.find("TEST:Blockduration") != std::string::npos);
+    ASSERT_TRUE(output.find("error") == std::string::npos);
+    ASSERT_TRUE(output.find("fail") == std::string::npos);
+}
+
+TEST_F(DurationConsumerTest, DurationTimerExpectedFormat)
+{
+    std::string expected =
+        R"({"log_type":"timing","x_request_id":"d85f6714-35f7-400e-9d17-52bd086b72b7","category":"fhirvalidation","metric":"GEM_ERP_PR_PAR_CloseOperation_Input","profile_version":"1.4","duration_us":)";
+
+    {
+        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7",
+                                    [&](const auto, const std::string&, const auto&, const auto&,
+                                        const std::unordered_map<std::string, std::string>&,
+                                        const std::optional<JsonLog::LogReceiver>&) {
+                                    });
+        testing::internal::CaptureStderr();
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation, "GEM_ERP_PR_PAR_CloseOperation_Input", {{"profile_version", "1.4"}});
+    }
+    std::string output = testing::internal::GetCapturedStderr();
+    TLOG(INFO) << output;
+    ASSERT_NE(output.find(expected), std::string::npos)  << output;
+}
+TEST_F(DurationConsumerTest, DurationTimerFailedExpectedFormat)
+{
+    std::string expected =
+        R"({"log_type":"timing","x_request_id":"d85f6714-35f7-400e-9d17-52bd086b72b7","category":"fhirvalidation","metric":"GEM_ERP_PR_PAR_CloseOperation_Input","error":"uncaught exception","profile_version":"1.4","duration_us":)";
+
+    {
+        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7",
+                                    [&](const auto, const std::string&, const auto&, const auto&,
+                                        const std::unordered_map<std::string, std::string>&,
+                                        const std::optional<JsonLog::LogReceiver>&) {
+                                    });
+        testing::internal::CaptureStderr();
+        try
+        {
+            auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation,
+                                                                 "GEM_ERP_PR_PAR_CloseOperation_Input",
+                                                                 {{"profile_version", "1.4"}});
+            throw std::runtime_error("fhir validation failed");
+        }
+        catch (const std::exception&)
+        {
+        }
+    }
+    std::string output = testing::internal::GetCapturedStderr();
+    TLOG(INFO) << output;
+    ASSERT_NE(output.find(expected), std::string::npos) << output;
 }

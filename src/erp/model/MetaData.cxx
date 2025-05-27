@@ -295,13 +295,13 @@ std::string baseType(const fhirtools::FhirStructureRepositoryBackend& backend,
 
 
 std::map<std::string, std::list<ProfileType>> supportedProfileTypes{
-    {"Task", {ProfileType::Gem_erxTask}},
+    {"Task", {ProfileType::GEM_ERP_PR_Task}},
     {"Communication", model::Communication::acceptedCommunications},
     {"MedicationDispense", {ProfileType::GEM_ERP_PR_MedicationDispense, ProfileType::GEM_ERP_PR_MedicationDispense_DiGA}},
-    {"AuditEvent", {ProfileType::Gem_erxAuditEvent}},
-    {"Device", {ProfileType::Gem_erxDevice}},
-    {"ChargeItem", {ProfileType::Gem_erxChargeItem}},
-    {"Consent", {ProfileType::Gem_erxConsent}},
+    {"AuditEvent", {ProfileType::GEM_ERP_PR_AuditEvent}},
+    {"Device", {ProfileType::GEM_ERP_PR_Device}},
+    {"ChargeItem", {ProfileType::GEM_ERPCHRG_PR_ChargeItem}},
+    {"Consent", {ProfileType::GEM_ERPCHRG_PR_Consent}},
 };
 
 }// anonymous namespace

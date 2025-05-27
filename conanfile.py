@@ -46,7 +46,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.17.1-DEVELOP",
+        'release_version': "1.18.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -64,7 +64,7 @@ class ErpProcessingContext(ConanFile):
         'gsl-lite/0.41.0',
         'gtest/1.16.0',
         'hiredis/1.2.0',
-        'libpqxx/7.10.0',
+        'libpqxx/7.10.1',
         'libxml2/2.13.6',
         'magic_enum/0.9.7',
         'openssl/3.1.8+erp',
@@ -84,7 +84,7 @@ class ErpProcessingContext(ConanFile):
             self.requires('tpmclient/0.15.0-b40')
             self.requires('hsmclient/2.13.0-b89')
         self.requires('libunwind/1.8.1', override=True) # Conflict originates from glog/0.7.1
-        self.requires('libpq/15.12', override=True) # Conflict originates from libpqxx/7.10.0
+        self.requires('libpq/16.8', override=True) # Conflict originates from libpqxx/7.10.1
 
     def build_requirements(self):
         self.tool_requires('xmlsec/1.3.6', options={"shared": False})

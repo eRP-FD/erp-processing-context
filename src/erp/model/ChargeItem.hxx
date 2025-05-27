@@ -27,7 +27,7 @@ class ChargeItem : public Resource<ChargeItem>
 {
 public:
     static constexpr auto resourceTypeName = "ChargeItem";
-    static constexpr auto profileType = ProfileType::Gem_erxChargeItem;
+    static constexpr auto profileType = ProfileType::GEM_ERPCHRG_PR_ChargeItem;
 
     enum class SupportingInfoType : int8_t
     {

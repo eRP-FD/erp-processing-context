@@ -143,6 +143,31 @@ public:
             queryParams = std::move(queryParamsArg);
             return std::move(*this);
         }
+        RequestArguments&& withExpectedActivationCode162(const std::string& expectedActivationCode162)
+        {
+            this->expectedActivationCode162 = expectedActivationCode162;
+            return std::move(*this);
+        }
+        RequestArguments&& withOverrideExpectedWorkflowVersion(const std::string& value)
+        {
+            overrideExpectedWorkflowVersion = value;
+            return std::move(*this);
+        }
+        RequestArguments&& withOverrideExpectedPatientenrechnungVersion(const std::string& value)
+        {
+            overrideExpectedPatientenrechnungVersion = value;
+            return std::move(*this);
+        }
+        RequestArguments&& withOverrideExpectedKbvVersion(const std::string& value)
+        {
+            overrideExpectedKbvVersion = value;
+            return std::move(*this);
+        }
+        RequestArguments&& withOverrideExpectedDavVersion(const std::string& value)
+        {
+            overrideExpectedDavVersion = value;
+            return std::move(*this);
+        }
 
         std::string serializeTarget() const
         {
@@ -182,6 +207,11 @@ public:
         std::string expectedLANR = "XXX";
         std::string expectedZANR = "XXX";
         std::string overrideExpectedPrescriptionId;
+        std::string expectedActivationCode162 = "XXX";
+        std::string overrideExpectedWorkflowVersion;
+        std::string overrideExpectedPatientenrechnungVersion;
+        std::string overrideExpectedKbvVersion;
+        std::string overrideExpectedDavVersion;
 
         RequestArguments(const RequestArguments&) = default;
         RequestArguments(RequestArguments&&) = default;
@@ -193,6 +223,7 @@ public:
     RequestArguments mAcceptTaskRequestArgs;
     RequestArguments mDispenseTaskRequestArgs;
     RequestArguments mCloseTaskRequestArgs;
+    RequestArguments mChargeItemRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
@@ -423,7 +454,7 @@ public:
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
         const std::string& secret,
-        const model::Timestamp& lastStatusUpdateDate,
+        const std::optional<model::Timestamp>& lastStatusUpdateDate,
         const std::vector<model::Communication>& communications,
         size_t numMedicationDispenses = 1);
 
@@ -691,6 +722,10 @@ private:
     std::string toExpectedRole(const RequestArguments& args) const;
     std::string toExpectedClientId(const ErpWorkflowTestBase::RequestArguments& args) const;
     std::string toExpectedLeips(const RequestArguments& args) const;
+
+    /// @ret val: {workflow, patientenrechnung, kbv, dav}
+    std::tuple<std::string, std::string, std::string, std::string>
+    toExpectedProfileVersions(const RequestArguments& args) const;
 
 public:
     mutable ClientTeeProtocol teeProtocol;

@@ -17,8 +17,8 @@
 #include "test/util/ResourceTemplates.hxx"
 #include "test_config.h"
 
-#include <pqxx/transaction>
 #include <gtest/gtest-spi.h>
+#include <pqxx/transaction_base>
 
 
 /**

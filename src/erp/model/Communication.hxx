@@ -29,11 +29,11 @@ public:
     static constexpr std::initializer_list<ProfileType> acceptedCommunications{
         // see ERP-21119 - CommunicationInfoReq currently disabled:
         //    ProfileType::Gem_erxCommunicationInfoReq,
-        ProfileType::Gem_erxCommunicationReply,
-        ProfileType::Gem_erxCommunicationDispReq,
-        ProfileType::Gem_erxCommunicationRepresentative,
-        ProfileType::Gem_erxCommunicationChargChangeReq,
-        ProfileType::Gem_erxCommunicationChargChangeReply,
+        ProfileType::GEM_ERP_PR_Communication_Reply,
+        ProfileType::GEM_ERP_PR_Communication_DispReq,
+        ProfileType::GEM_ERP_PR_Communication_Representative,
+        ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq,
+        ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply,
     };
     // GEMREQ-end A_19450-01#acceptedCommunications
     enum class MessageType : int8_t

@@ -167,8 +167,8 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
     EXPECT_NO_THROW(cFdSigErpManager.healthCheck());
     EXPECT_TRUE(cFdSigErpManager.getCertificate().toX509().isSet());
 
-    // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
-    ASSERT_EQ(requestSender->getCounterMapSize(), 6);
+    // 1 URLs for TSL + 1 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
+    ASSERT_EQ(requestSender->getCounterMapSize(), 4);
     // after the first OCSP-Request the following calls to CFdSigErpManager must use the cached OCSP-Response
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
@@ -195,8 +195,8 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
 
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
 
-    // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
-    ASSERT_EQ(requestSender->getCounterMapSize(), 6);
+    // 1 URLs for TSL + 1 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
+    ASSERT_EQ(requestSender->getCounterMapSize(), 4);
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
     // wait two seconds, the timer must do the validation again during this time
@@ -221,8 +221,8 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
 
     CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
 
-    // 2 URLs for TSL + 2 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
-    ASSERT_EQ(requestSender->getCounterMapSize(), 6);
+    // 1 URLs for TSL + 1 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
+    ASSERT_EQ(requestSender->getCounterMapSize(), 4);
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
     requestSender->setUrlHandler(ocspUrl,

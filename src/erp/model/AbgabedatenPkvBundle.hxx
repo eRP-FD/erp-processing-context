@@ -18,7 +18,7 @@ class AbgabedatenPkvBundle final : public BundleBase<AbgabedatenPkvBundle>
 {
 public:
     static constexpr auto resourceTypeName = "Bundle";
-    static constexpr auto profileType = ProfileType::DAV_DispenseItem;
+    static constexpr auto profileType = ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle;
 
     using BundleBase<AbgabedatenPkvBundle>::BundleBase;
     using Resource<AbgabedatenPkvBundle>::fromXml;

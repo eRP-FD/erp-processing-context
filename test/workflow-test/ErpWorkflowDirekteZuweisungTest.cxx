@@ -51,7 +51,7 @@ TEST_P(ErpWorkflowDirekteZuweisungTestP, PatientAbortOnlyCompletedTasks)//NOLINT
                                       model::OperationOutcome::Issue::Type::forbidden));
 
     ASSERT_NO_FATAL_FAILURE(
-        checkTaskClose(prescriptionId.value(), kvnr, secret, lastModifiedDate.value(), communications));
+        checkTaskClose(prescriptionId.value(), kvnr, secret, lastModifiedDate, communications));
 
     // Abort is allowed for completed tasks
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(prescriptionId.value(), jwt, kvnr, accessCode, secret, {}));

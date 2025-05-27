@@ -27,6 +27,8 @@ public:
     [[nodiscard]] std::list<MedicationDispense> medicationDispensesDiga() const;
     [[nodiscard]] std::list<std::pair<MedicationDispense, GemErpPrMedication>> medicationDispenses() const;
 
+    [[nodiscard]] Timestamp maxWhenHandedOver() const;
+
 private:
     [[nodiscard]] std::list<std::pair<MedicationDispense, std::optional<GemErpPrMedication>>>
     collectMedicationDispenses() const;

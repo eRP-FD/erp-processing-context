@@ -609,6 +609,7 @@ struct MedicationDispenseDateTimeTestParam {
     std::string whenHandedOver;
     std::string whenPrepared;
     bool expectOK;
+    std::string diag;
 };
 
 class MedicationDispenseDateTimeTest : public testing::TestWithParam<MedicationDispenseDateTimeTestParam>
@@ -640,7 +641,7 @@ TEST_P(MedicationDispenseDateTimeTest, whenHandedOverWhenPreparedDateTime)
         {
             ASSERT_TRUE(ex.diagnostics().has_value());
             const auto& diag = *ex.diagnostics();
-            ASSERT_FALSE(std::ranges::search(diag, "workflow-abgabeDatumsFormat"sv).empty()) << diag;
+            ASSERT_FALSE(std::ranges::search(diag, GetParam().diag).empty()) << diag;
         }
     }
 }
@@ -651,43 +652,50 @@ INSTANTIATE_TEST_SUITE_P(valid, MedicationDispenseDateTimeTest,
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_2,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01T00:00:00+01:00",
-                                 .expectOK = true,
+                                 .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_2,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2025-03-01T00:00:00+01:00",
-                                 .expectOK = true,
+                                 .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_2,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01",
-                                 .expectOK = true,
+                                 .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_2,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2025-03-01",
                                  .expectOK = true,
+                                 .diag = ""
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_3,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2024-11-01T00:00:00+01:00",
-                                 .expectOK = true,
+                                 .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_3,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2025-03-01",
                                  .expectOK = true,
+                                 .diag = ""
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_4,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2025-03-01",
                                  .expectOK = true,
+                                 .diag = ""
                              },
                          }));
 
@@ -698,29 +706,34 @@ INSTANTIATE_TEST_SUITE_P(invalidDateTime, MedicationDispenseDateTimeTest,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01T00:00:00+01:00",
                                  .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_3,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01",
                                  .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_4,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01T00:00:00+01:00",
                                  .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_4,
                                  .whenHandedOver = "2025-03-02",
                                  .whenPrepared = "2025-03-01T00:00:00+01:00",
                                  .expectOK = false,
+                                 .diag = "workflow-abgabeDatumsFormat"
                              },
                              {
                                  .version = ResourceTemplates::Versions::GEM_ERP_1_4,
                                  .whenHandedOver = "2025-03-02T00:00:00+01:00",
                                  .whenPrepared = "2025-03-01",
                                  .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
                              },
                          }));

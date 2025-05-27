@@ -126,7 +126,7 @@ int ErpMain::runApplication (
 #define log TLOG(INFO) << "Initialization: "
 
     const auto& configuration = Configuration::instance();
-    configuration.check();
+    configuration.check(Configuration::ProcessType::ERP);
 
     log << "setting up signal handler";
     state = MainState::Initializing;

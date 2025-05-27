@@ -12,7 +12,6 @@
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/tsl/OcspHelper.hxx"
-#include "shared/tsl/OcspService.hxx"
 #include "shared/tsl/TrustStore.hxx"
 #include "shared/tsl/TslService.hxx"
 #include "shared/tsl/error/TslError.hxx"
@@ -22,9 +21,9 @@
 #include "mock/tsl/MockOcsp.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/erp/tsl/TslParsingExpectations.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <test_config.h>
@@ -72,7 +71,6 @@ namespace
         "/C=DE/O=BITMARCK Technik GmbH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-RU-BITMARCK",
         "/C=DE/O=BITMARCK Technik GmbH TEST-ONLY - NOT-VALID/CN=SGD1-EPA-TU-BITMARCK",
         R"(/C=DE/O=medisign GmbH/OU=Testumgebung/CN=DEMDS CA f\xC3\xBCr Zahn\xC3\xA4rzte2:PN)",
-        "/C=DE/O=Pseudo Federal Network Agency/CN=Pseudo German Trusted List Signer 4",
         "/C=DE/O=dgnservice GmbH/OU=Testumgebung/CN=dgnservice OCSP 7 Type A:PN",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP1 TEST-ONLY",
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/CN=ATOS.EGK-OCSP2 TEST-ONLY",
@@ -247,8 +245,6 @@ namespace
         "/C=DE/O=Atos Information Technology GmbH NOT-VALID/OU=Elektronische Gesundheitskarte-CA der Telematikinfrastruktur/CN=ATOS.EGK-CA205 TEST-ONLY",
         // The following certificate is explicitly inserted by test to allow to manipulate ocsp response validation
         R"(/C=DE/O=gematik Musterkasse1GKVNOT-VALID/OU=999567890/OU=X110506918/SN=D\xC3\xA5mmer-Meningham/GN=Sam/title=Dr./CN=Dr. Sam D\xC3\xA5mmer-MeninghamTEST-ONLY)",
-        "/C=DE/CN=Pseudo German Trusted List Signer 5/O=Pseudo Federal Network Agency",
-        "/C=DE/CN=Pseudo German Trusted List Signer 6/O=Pseudo Federal Network Agency",
         "/C=DE/O=medisign GmbH NOT-VALID/OU=Heilberufsausweis-CA der Telematikinfrastruktur/CN=MESIG.HBA-CA10 TEST-ONLY",
         "/C=DE/O=medisign GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=MESIG.SMCB-CA10 TEST-ONLY",
         "/C=DE/O=arvato Systems GmbH NOT-VALID/CN=GEM.CRL7 TEST-ONLY",
@@ -274,10 +270,14 @@ namespace
         "/C=DE/O=gematik GmbH NOT-VALID/OU=eGK alternative Vers-Ident-CA der Telematikinfrastruktur/CN=GEM.EGK-ALVI-CA51 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA41 TEST-ONLY",
         "/C=DE/O=gematik GmbH NOT-VALID/OU=Institution des Gesundheitswesens-CA der Telematikinfrastruktur/CN=GEM.SMCB-CA51 TEST-ONLY",
+        "/C=DE/O=achelos GmbH NOT-VALID/OU=Fachanwendungsspezifischer Dienst-CA der Telematikinfrastruktur/CN=ACLOS.FD-CA4 TEST-ONLY",
         // The following certificate is inserted in TSL and is used as TSL-Signer-CA of the Test-TSLs
         "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1",
         "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=BNA signer",
-        "/CN=Pseudo German Trusted List Signer 9/O=Pseudo Federal Network Agency/C=DE"
+        "/C=DE/O=Pseudo Federal Network Agency/CN=Pseudo German Trusted List Signer 4",
+        "/CN=Pseudo German Trusted List Signer 11/O=Pseudo Federal Network Agency/C=DE",
+        "/CN=Pseudo German Trusted List Signer 10/O=Pseudo Federal Network Agency/C=DE",
+        "/CN=Pseudo German Trusted List Signer 9/O=Pseudo Federal Network Agency/C=DE",
     };
 }
 
@@ -292,10 +292,15 @@ public:
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
+        testing::internal::CaptureStderr();
     }
 
     void TearDown() override
     {
+        std::string output = testing::internal::GetCapturedStderr();
+        EXPECT_FALSE(output.empty());
+        EXPECT_EQ(output.find("wrong hash"), std::string::npos);
+        EXPECT_EQ(output.find("not a valid hex string"), std::string::npos);
         mCaDerPathGuard.reset();
     }
 
@@ -377,8 +382,13 @@ public:
         // the long life test BNetzA-VL contains more certificates,
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
-        // so there are only 195 unique not withdrawn certificates
-        ASSERT_EQ(196, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        // so there are only 201 unique not withdrawn certificates
+        ASSERT_EQ(202, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+    }
+
+    static std::string sha256HexRN(const std::string& input)
+    {
+        return String::toHexString(Hash::sha256(input)) + "\r\n";
     }
 };
 
@@ -424,7 +434,7 @@ TEST_F(TslManagerTest, outdatedTslUpdateGetsOutdated_Fail)//NOLINT(readability-f
     const std::string tslDownloadUrl = "https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.xml";
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(newTslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(newTslContent)},
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", newTslContent},
             {tslDownloadUrl, newTslContent}});
 
@@ -453,9 +463,9 @@ TEST_F(TslManagerTest, validTslOutdatedBna_Fail)//NOLINT(readability-function-co
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     const std::vector<TslErrorCode> errorCodes{TslErrorCode::VL_UPDATE_ERROR, TslErrorCode::TSL_SCHEMA_NOT_VALID};
     auto mgr = TslTestHelper::createTslManager<TslManager>(requestSender);
@@ -468,23 +478,21 @@ TEST_F(TslManagerTest, validTslOutdatedBna_Fail)//NOLINT(readability-function-co
 
 TEST_F(TslManagerTest, validTslNoHttpSha2_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string tslContent =
-        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
-    std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
-        std::unordered_map<std::string, std::string>{
-            {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+    const std::string newTslContent =
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_outdated.xml");
+
+    const std::string tslDownloadUrl = "https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.xml";
+    std::shared_ptr<UrlRequestSenderMock> requestSender =
+        std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+            {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", newTslContent},
+            {tslDownloadUrl, newTslContent}});
+    // only an outdated trust store will try to download the sha2 file
+    auto mgr = TslTestHelper::createTslManager<TslManager>(requestSender, {}, {}, std::nullopt,
+                                                           TslTestHelper::createOutdatedTslTrustStore(tslDownloadUrl));
 
     // fail if no sha2 per https is available
-    const std::vector<TslErrorCode> errorCodes{TslErrorCode::TSL_INIT_ERROR, TslErrorCode::TSL_DOWNLOAD_ERROR};
-    auto mgr = TslTestHelper::createTslManager<TslManager>(requestSender);
-
-    EXPECT_TSL_ERROR_THROW(mgr->updateTrustStoresOnDemand(),
-                           errorCodes,
-                           HttpStatus::InternalServerError);
+    const std::vector<TslErrorCode> errorCodes{TslErrorCode::VALIDITY_WARNING_2, TslErrorCode::TSL_DOWNLOAD_ERROR};
+    EXPECT_TSL_ERROR_THROW(mgr->updateTrustStoresOnDemand(), errorCodes, HttpStatus::InternalServerError);
 }
 
 
@@ -496,9 +504,9 @@ TEST_F(TslManagerTest, loadTslWithInvalidTslSignerCertificate_Fail)//NOLINT(read
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     const std::vector<TslErrorCode> errorCodes{TslErrorCode::TSL_INIT_ERROR, TslErrorCode::WRONG_EXTENDEDKEYUSAGE};
     auto mgr = TslTestHelper::createTslManager<TslManager>(requestSender);
@@ -550,9 +558,9 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAButValid_Success)
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
@@ -583,9 +591,9 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAInvalid_Failure)
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
@@ -957,9 +965,9 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+            {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     const std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
@@ -1002,9 +1010,9 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readab
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-            {tslSha2Url, Hash::sha256(tslContent)},
+            {tslSha2Url, sha256HexRN(tslContent)},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+            {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
@@ -1308,10 +1316,10 @@ TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-com
     const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
 
     auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
-        {TslTestHelper::shaDownloadUrl, Hash::sha256(tslContent)},
+        {TslTestHelper::shaDownloadUrl, sha256HexRN(tslContent)},
         {TslTestHelper::tslDownloadUrl, tslContent},
         {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)},
+        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)},
     });
     TslTestHelper::setOcspUslRequestHandlerTslSigner(*requestSender);
     std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
@@ -1402,4 +1410,34 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
             TslError);
     }
 // GEMREQ-end A_24913
+}
+
+
+/**
+ * Test the download of the TSL followed by the BNA download.
+ * To test, adjust template_TSL_valid.xml to point to the download server in ServiceSupplyPoint and
+ * make both XML files accessible, TSL with HTTP, BNA-TSL via HTTPS, using the TSL root store.
+ * The sha2 files are not downloaded on initial update, but during updateTrustStoresOnDemand().
+ */
+TEST_F(TslManagerTest, DISABLED_downloadBNAWithTSLStore)
+{
+    EnvironmentVariableGuard gurad{ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL,
+                                   "http://epa-as-1-mock.erp-system.svc.cluster.local:80/TSL.xml"};
+    auto requestSender = std::make_shared<UrlRequestSenderMock>(
+        TlsCertificateVerifier::withCustomRootCertificates(""),
+        std::chrono::seconds{
+            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+        std::chrono::milliseconds{
+            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
+    requestSender->setStrict(false);
+    // Adding the OCSP response here requires the ocsp signer certificate to be part of the TSL
+    requestSender->setOcspUrlRequestHandler(
+        "http://ocsp-testref.tsl.telematik-test/ocsp",
+        {{TslTestHelper::getTslSignerCertificate(), TslTestHelper::getTslSignerCACertificate(),
+          MockOcsp::CertificateOcspTestMode::SUCCESS}},
+        TslTestHelper::getDefaultOcspCertificate(), TslTestHelper::getDefaultOcspPrivateKey());
+    auto manager = TslManager(std::move(requestSender), StaticData::getXmlValidator());
+    ASSERT_NE(nullptr, manager.getTslTrustedCertificateStore(TslMode::TSL, std::nullopt).getStore());
+    ASSERT_NE(nullptr, manager.getTslTrustedCertificateStore(TslMode::BNA, std::nullopt).getStore());
+    manager.updateTrustStoresOnDemand();
 }

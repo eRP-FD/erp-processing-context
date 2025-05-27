@@ -36,7 +36,10 @@ public:
     void publish(const std::string_view& channel, const std::string_view& message) override;
     int64_t getIntValue(std::string_view key) override;
     void flushdb() override;
+
 private:
+    static class DurationTimer timingLogTimer(const std::string& metric);
+
     std::unique_ptr<sw::redis::Redis> mConnection;
     sw::redis::ConnectionOptions mOptions{};
     sw::redis::ConnectionPoolOptions mPoolOptions;

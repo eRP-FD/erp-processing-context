@@ -70,7 +70,9 @@ MedicationDispenseOperationParameters::getValidationView() const
     ModelExpect(myKey.version.has_value(), "missing profile version in meta.profile");
     const auto& fhirInstance = Fhir::instance();
     const auto& backend = fhirInstance.backend();
-    auto views = fhirInstance.structureRepository(model::Timestamp::now());
+    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    auto views = fhirInstance.structureRepository(maxWhenHandedOver());
+    A_23384_03.finish();
     views = views.matchAll(backend, myKey.url, *myKey.version);
     // we cannot use `findParameter` because `rxDispensation` might appear more than once
     const auto* parameterArrayValue = parameterArrayPointer.Get(jsonDocument());
@@ -99,10 +101,23 @@ MedicationDispenseOperationParameters::getValidationView() const
     return views.latest().view(&backend);
 }
 
+Timestamp model::MedicationDispenseOperationParameters::maxWhenHandedOver() const
+{
+    static constexpr auto whenHandedOver =[](const auto& pair) -> Timestamp {
+        return pair.first.whenHandedOver();
+    };
+    const auto& medicationDispenses = collectMedicationDispenses();
+    auto latestDispense = std::ranges::max_element(medicationDispenses, {}, whenHandedOver);
+    ModelExpect(latestDispense != medicationDispenses.end(), "Expected at least one MedicationDispense in Parameters");
+    return whenHandedOver(*latestDispense);
+}
 
 std::optional<model::Timestamp> model::MedicationDispenseOperationParameters::getValidationReferenceTimestamp() const
 {
-    Fail2("getValidationReferenceTimestamp not applicable for MedicationDispenseOperationParameters", std::logic_error);
+    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    auto result = maxWhenHandedOver();
+    A_23384_03.finish();
+    return result;
 }
 
 std::list<MedicationDispense> MedicationDispenseOperationParameters::medicationDispensesDiga() const

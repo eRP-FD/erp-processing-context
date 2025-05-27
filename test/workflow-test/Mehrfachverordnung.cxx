@@ -53,7 +53,6 @@ public:
 
     std::optional<model::Task> task;
     model::Timestamp authoredOn = model::Timestamp::now();
-    EnvironmentVariableGuard mvoCheckEnabler{ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE, "error"};
 };
 
 class MVO_A_22628 : public Mehrfachverordnung
@@ -388,20 +387,22 @@ class MVO_A_22635Test : public Mehrfachverordnung
 
 TEST_F(MVO_A_22635Test, Step_01_FutureStartDate)
 {
-    TestStep(A_22635, "ERP-A_22635.01 Apotheker ruft Accept Task für eine MVO mit Start-Datum in der Zukunft");
+    TestStep(A_22635_02, "ERP-A_22635.01 Apotheker ruft Accept Task für eine MVO mit Start-Datum in der Zukunft");
     using namespace std::chrono_literals;
     const auto tomorrow = authoredOn + 24h;
-    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
-                                                  .authoredOn = authoredOn,
-                                                  .redeemPeriodStart = tomorrow.toGermanDate(),
-                                                  .redeemPeriodEnd = {}});
+    ResourceTemplates::KbvBundleMvoOptions mvoOptions{.prescriptionId = task->prescriptionId(),
+                                                      .authoredOn = authoredOn,
+                                                      .redeemPeriodStart = tomorrow.toGermanDate(),
+                                                      .redeemPeriodEnd = {}};
+    const auto mvoPrescription = kbvBundleMvoXml(mvoOptions);
     std::string tomorrowStr = tomorrow.toGermanDateFormat();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     ASSERT_NO_FATAL_FAILURE(
         taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, authoredOn)));
-    ASSERT_NO_FATAL_FAILURE(taskAccept(task->prescriptionId(), std::string{task->accessCode()}, HttpStatus::Forbidden,
-                                       model::OperationOutcome::Issue::Type::forbidden,
-                                       "Teilverordnung ab " + tomorrowStr + " einlösbar."));
+    ASSERT_NO_FATAL_FAILURE(
+        taskAccept(task->prescriptionId(), std::string{task->accessCode()}, HttpStatus::Forbidden,
+                   model::OperationOutcome::Issue::Type::forbidden,
+                   "Teilverordnung zur Mehrfachverordnung " + mvoOptions.mvoId + " ist ab " + tomorrowStr + " einlösbar."));
 }
 
 TEST_F(MVO_A_22635Test, Step_01_Zeitraum_InvalidDate)
@@ -625,27 +626,4 @@ TEST_F(MVO_A_24901Test, InvalidMvoIdCheckEnabled)
     const auto& outcome = std::get<model::OperationOutcome>(*result);
     ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
                                                      "MVO-ID entspricht nicht urn:uuid format", {}));
-}
-
-TEST_F(MVO_A_24901Test, InvalidMvoIdCheckDisabled)
-{
-    TestStep(A_23539_01, "ERP-A_24901.02 MVO-ID ungültig, Prüfung abgeschaltet");
-    if (runsInCloudEnv())
-    {
-        GTEST_SKIP_("Cannot control environment in cloud env");
-    }
-
-    EnvironmentVariableGuard mvoCheckDisabler(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE, "disable");
-
-    using namespace std::chrono_literals;
-    const auto today = authoredOn;
-    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
-                                                  .authoredOn = authoredOn,
-                                                  .redeemPeriodStart = today.toGermanDate(),
-                                                  .redeemPeriodEnd = today.toGermanDate(),
-                                                  .mvoId = "urn::uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0"});
-    RecordProperty("Prescription", Base64::encode(mvoPrescription));
-    std::optional<std::variant<model::Task, model::OperationOutcome>> result;
-    ASSERT_NO_FATAL_FAILURE(result = taskActivate(task->prescriptionId(), task->accessCode(),
-                                                  toCadesBesSignature(mvoPrescription, authoredOn), HttpStatus::OK));
 }

@@ -103,6 +103,7 @@ TEST_F(Erp11543Test, PostChargeItemWithBadKbvBundleSignature)
         return Base64::encode(badSignature);
     };
 
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     std::optional<model::ChargeItem> chargeItem{};
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
                                 *mPrescriptionId,
@@ -128,6 +129,7 @@ TEST_F(Erp11543Test, PostChargeItemWithBadKbvBundleSignatureCertificate)
                                  std::nullopt}.getBase64();
     };
 
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     std::optional<model::ChargeItem> chargeItem{};
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
                                 *mPrescriptionId,
@@ -165,6 +167,7 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignature)
         return Base64::encode(badSignature);
     };
 
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     std::variant<model::ChargeItem, model::OperationOutcome> chargeItem{model::OperationOutcome(model::OperationOutcome::Issue{})};
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *mCreatedChargeItem,
                                                        *mDispenseItem, mCreatedChargeItem->accessCode().value(),
@@ -192,6 +195,7 @@ TEST_F(Erp11543Test, PutChargeItemWithBadKbvBundleSignatureCertificate)
                                  std::nullopt}.getBase64();
     };
 
+    mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
     std::variant<model::ChargeItem, model::OperationOutcome> chargeItem{model::OperationOutcome(model::OperationOutcome::Issue{})};
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPut(jwtApotheke(), ContentMimeType::fhirXmlUtf8, *mCreatedChargeItem,
                                                        *mDispenseItem, mCreatedChargeItem->accessCode().value(),

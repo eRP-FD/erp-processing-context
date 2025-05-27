@@ -60,9 +60,9 @@ Binary::Binary(std::string_view id, std::string_view data, const Type type,
                  switch (type)
                  {
                      case Type::PKCS7:
-                         return ProfileType::Gem_erxBinary;
+                         return ProfileType::GEM_ERP_PR_Binary;
                      case Type::Digest:
-                         return ProfileType::Gem_erxDigest;
+                         return ProfileType::GEM_ERP_PR_Digest;
                  }
                  Fail("Unhandled type value.");
                  return Resource::NoProfile;

@@ -281,6 +281,10 @@ void TlsSession::inheritTicketFrom (const TlsSession& session)
     mTicket->save(*session.mTicket);
 }
 
+std::optional<boost::asio::ip::tcp::endpoint> TlsSession::currentEndpoint() const
+{
+    return mForcedEndpoint ? mForcedEndpoint : mSslStream.currentEndpoint();
+}
 
 void TlsSession::configureContext(const ConnectionParameters& params)
 {

@@ -333,7 +333,8 @@ std::string CommunicationJsonStringBuilder::senderIdentifierType() const
         case Communication::MessageType::InfoReq:
         case Communication::MessageType::DispReq:
         case Communication::MessageType::Representative:
-            if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
+            if (mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current()) >=
+                ResourceTemplates::Versions::GEM_ERP_1_4)
             {
                 return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
             }
@@ -360,7 +361,8 @@ std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::Reply:
         case Communication::MessageType::Representative:
-            if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
+            if (mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current()) >=
+                ResourceTemplates::Versions::GEM_ERP_1_4)
             {
                 return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
             }

@@ -10,6 +10,7 @@
 
 #include "shared/model/TelematikId.hxx"
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,11 @@ public:
 
     static AccessTokenIdentity fromJson(const std::string& json);
 
+    class Exception : public std::runtime_error
+    {
+    public:
+        explicit Exception(const std::string& what);
+    };
 private:
     model::TelematikId mId;
     std::string mName;

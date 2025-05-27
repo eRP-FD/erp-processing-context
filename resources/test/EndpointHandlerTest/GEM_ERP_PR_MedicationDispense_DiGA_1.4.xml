@@ -3,15 +3,14 @@
     <meta>
         <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense_DiGA|1.4" />
     </meta>
-    <extension url="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_RedeemCode">
-        <valueString value="DE12345678901234" />
-    </extension>
+    ##REDEEM_CODE_EXTENSION##
     <identifier>
         <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
         <value value="##PRESCRIPTION_ID##" />
     </identifier>
     <status value="completed" />
     <medicationReference>
+        ##DATA_ABSENT_EXTENSION##
         <identifier>
             <system value="http://fhir.de/CodeSystem/ifa/pzn" />
             <value value="12345678" />
@@ -33,4 +32,7 @@
         </actor>
     </performer>
     <whenHandedOver value="##WHENHANDEDOVER##" />
+    <note>
+        <text value="A Note"/>
+    </note>
 </MedicationDispense>

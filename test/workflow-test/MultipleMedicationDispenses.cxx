@@ -52,9 +52,10 @@ public:
         std::string secret;
         std::optional<model::Timestamp> lastModified;
         ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModified, *prescriptionId, kvnr, accessCode, qesBundle));
-        ASSERT_TRUE(lastModified.has_value());
+        ASSERT_TRUE(lastModified.has_value() || !runsInErpTest());
 
-        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, *lastModified, communications,
+
+        ASSERT_NO_FATAL_FAILURE(checkTaskClose(*prescriptionId, kvnr, secret, lastModified, communications,
                                                GetParam().numMedicationDispenses));
     }
 };

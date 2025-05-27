@@ -176,7 +176,7 @@ FhirResourceViewConfiguration::FhirResourceViewConfiguration(
             FPExpect(inserted, "duplicate group in view "s.append(envName).append(": ").append(groupS));
         }
         using namespace date::literals;
-        TVLOG(1) << "view " << envName << " valid-from: " << start.value_or(date::local_days{})
+        TVLOG(2) << "view " << envName << " valid-from: " << start.value_or(date::local_days{})
                  << " valid-until: " << end.value_or(date::local_days{std::numeric_limits<std::chrono::days>::max()});
         mResourceViews.emplace(std::piecewise_construct, std::forward_as_tuple(end.value_or(date::local_days::max())),
                                std::forward_as_tuple(std::make_shared<ViewConfigInternal>(

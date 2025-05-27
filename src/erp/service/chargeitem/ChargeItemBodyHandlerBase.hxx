@@ -30,7 +30,7 @@ protected:
     static std::optional<model::Binary> getDispenseItemBinary(const model::ChargeItem& chargeItem);
     static std::pair<::model::AbgabedatenPkvBundle, std::string> validatedBundleFromSigned(
         const ::model::Binary& containedBinary,
-        ::PcServiceContext& serviceContext,
+        SessionContext& sessionContext,
         ::VauErrorCode onError);
 };
 

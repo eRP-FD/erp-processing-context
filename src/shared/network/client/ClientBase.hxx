@@ -39,6 +39,8 @@ public:
 
     void close (void);
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
+
 protected:
     ClientBase(const ConnectionParameters& params);
 

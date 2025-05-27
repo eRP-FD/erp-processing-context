@@ -34,6 +34,10 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessio
         A_24283_02.start("Detect input resource type: Bundle or MedicationDispense");
         auto unspec = createResourceFactory<model::UnspecifiedResource>(session);
         const auto resourceType = unspec.getResourceType();
+        if (const auto profileVersion = unspec.profileVersion())
+        {
+            session.addOuterResponseHeaderField(Header::GematikWorkflowProfil, to_string(*profileVersion));
+        }
 
         if (resourceType == model::Bundle::resourceTypeName)
         {

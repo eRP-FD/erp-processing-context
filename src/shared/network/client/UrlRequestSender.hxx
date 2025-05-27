@@ -23,6 +23,8 @@ class UrlRequestSender
 public:
     explicit UrlRequestSender(std::string rootCertificates, const uint16_t connectionTimeoutSeconds,
                               std::chrono::milliseconds resolveTimeout);
+    explicit UrlRequestSender(TlsCertificateVerifier certificateVerifier, std::chrono::milliseconds connectionTimeout,
+                              std::chrono::milliseconds resolveTimeout);
     virtual ~UrlRequestSender() = default;
 
     /**
@@ -52,6 +54,8 @@ public:
 
     void setDurationConsumer (DurationConsumer&& durationConsumer);
 
+    void setTlsCertificateVerifier(TlsCertificateVerifier certificateVerifier);
+
 protected:
     virtual ClientResponse doSend (
         const std::string& url,
@@ -72,7 +76,7 @@ protected:
 
 private:
     TlsCertificateVerifier mTlsCertificateVerifier;
-    const uint16_t mConnectionTimeoutSeconds;
+    std::chrono::milliseconds mConnectionTimeout;
     std::chrono::milliseconds mResolveTimeout;
     mutable DurationConsumer mDurationConsumer;
 };

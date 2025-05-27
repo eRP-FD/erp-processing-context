@@ -26,11 +26,12 @@ namespace
 }
 
 
-CommonPostgresBackend::CommonPostgresBackend(PostgresConnection& connection, const std::string_view& connectionString)
+CommonPostgresBackend::CommonPostgresBackend(PostgresConnection& connection, const std::string_view& connectionString,
+                                             TransactionMode mode)
 {
     connection.setConnectionString(connectionString);
     connection.connectIfNeeded();
-    mTransaction = connection.createTransaction();
+    mTransaction = connection.createTransaction(mode);
 }
 
 CommonPostgresBackend::~CommonPostgresBackend (void) = default;
@@ -64,7 +65,7 @@ void CommonPostgresBackend::commitTransaction()
 
 bool CommonPostgresBackend::isCommitted() const
 {
-    return !mTransaction;
+    return ! mTransaction;
 }
 
 void CommonPostgresBackend::closeConnection()
@@ -80,7 +81,7 @@ std::string CommonPostgresBackend::retrieveSchemaVersion()
     checkCommonPreconditions();
     TVLOG(2) << retrieveSchemaVersionQuery.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:retrieveSchemaVersion");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "retrieveschemaversion");
 
     const auto results = mTransaction->exec(retrieveSchemaVersionQuery.query);
     TVLOG(2) << "got " << results.size() << " results";
@@ -101,6 +102,12 @@ void CommonPostgresBackend::checkCommonPreconditions() const
     Expect3(mTransaction, "Transaction already committed", std::logic_error);
 }
 
+const std::unique_ptr<pqxx::transaction_base>& CommonPostgresBackend::transaction() const
+{
+    return mTransaction;
+}
+
+
 std::optional<db_model::Blob> CommonPostgresBackend::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
                                                                              db_model::MasterKeyType masterKeyType,
                                                                              BlobId blobId, const db_model::Blob& salt)
@@ -108,7 +115,7 @@ std::optional<db_model::Blob> CommonPostgresBackend::insertOrReturnAccountSalt(c
     checkCommonPreconditions();
     TVLOG(2) << ::insertOrReturnAccountSalt.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:insertOrReturnAccountSalt");
+                                                                        "insertorreturnaccountsalt");
 
     auto result =
         mTransaction->exec_params(::insertOrReturnAccountSalt.query, accountId.binarystring(),
@@ -130,7 +137,7 @@ std::optional<db_model::Blob> CommonPostgresBackend::retrieveSaltForAccount(cons
     checkCommonPreconditions();
     TVLOG(2) << ::retrieveSaltForAccount.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "PostgreSQL:retrieveSaltForAccount");
+                                                                        "retrievesaltforaccount");
 
     auto result = mTransaction->exec_params(::retrieveSaltForAccount.query, accountId.binarystring(),
                                             gsl::narrow<int>(masterKeyType), gsl::narrow<int32_t>(blobId));
@@ -148,7 +155,7 @@ std::string CommonPostgresBackend::storeAuditEventData(db_model::AuditData& audi
     checkCommonPreconditions();
     TVLOG(2) << insertAuditEventData.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "PostgreSQL:storeAuditEventData");
+        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "storeauditeventdata");
 
     const std::string actionString(1, static_cast<char>(auditData.action));
     const auto recorded = model::Timestamp::now();

@@ -39,6 +39,8 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::direkteZuweisung:
             A_22731.test("wrong flow type for ChargeItem");
+            mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
+            mChargeItemRequestArgs.overrideExpectedPatientenrechnungVersion = "XXX";
             ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
                                         *prescriptionId,
                                         kvnr,

@@ -26,7 +26,7 @@
 #include <iostream>
 #include <memory>
 #include <pqxx/result>
-#include <pqxx/transaction>
+#include <pqxx/transaction_base>
 #include <string>
 #include <utility>
 
@@ -116,7 +116,7 @@ class DerivationKeyUpdateTest : public ErpWorkflowTestTemplate<::testing::TestWi
 public:
     DerivationKeyUpdateTest()
     {
-        if (! runsInCloudEnv())
+        if (runsInErpTest())
         {
             if (::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
             {
@@ -130,7 +130,7 @@ public:
 
     void SetUp() override
     {
-        if (runsInCloudEnv() ||
+        if (!runsInErpTest() ||
             ! ::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
         {
             // These Test can only run, when
@@ -229,7 +229,7 @@ protected:
     }
 
     ::std::unique_ptr<::PostgresConnection> mConnection;
-    ::std::unique_ptr<::pqxx::work> mTransaction;
+    ::std::unique_ptr<::pqxx::transaction_base> mTransaction;
     ::std::unique_ptr<TestClient> mTestClient;
 };
 
@@ -299,7 +299,7 @@ public:
         ::std::cout << "Closing Task for KVNr " << mKvnr << ::std::endl;
         mTest.forceUpdateBlobCache();
         ASSERT_NO_FATAL_FAILURE(
-            mTest.checkTaskClose(*mPrescriptionId, mKvnr.id(), mSecret, *mLastModifiedDate, mCommunications));
+            mTest.checkTaskClose(*mPrescriptionId, mKvnr.id(), mSecret, mLastModifiedDate, mCommunications));
 
         ::std::optional<::model::Bundle> taskBundle;
         ASSERT_NO_FATAL_FAILURE(taskBundle = mTest.taskGet(mKvnr.id()));

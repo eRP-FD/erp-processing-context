@@ -24,6 +24,9 @@ public:
     explicit UrlRequestSenderMock(std::unordered_map<std::string, std::string> responses);
     ~UrlRequestSenderMock() override = default;
 
+    explicit UrlRequestSenderMock(TlsCertificateVerifier certificateVerifier, std::chrono::milliseconds connectionTimeout,
+        std::chrono::milliseconds resolveTimeout);
+
     void setUrlHandler(const std::string& url, std::function<ClientResponse(const std::string&)> responseGenerator);
     void setResponse(const std::string& url, const std::string& response);
 
@@ -32,6 +35,11 @@ public:
                                   const std::vector<MockOcsp::CertificatePair>& ocspResponderKnownCertificateCaPairs,
                                   const Certificate& defaultOcspCertificate, shared_EVP_PKEY defaultOcspPrivateKey);
 
+    /**
+     * Enforce strict mode (default). If using non-strict mode, will pass
+     * urls to normal UrlRequestSender
+     */
+    void setStrict(bool strictMode);
 protected:
     ClientResponse doSend (
         const std::string& url,
@@ -55,6 +63,7 @@ private:
 
     std::unordered_map<std::string, std::string> mResponses;
     std::unordered_map<std::string, std::function<ClientResponse(const std::string&)>> mResponseGenerators;
+    bool mStrict = true;
 };
 
 

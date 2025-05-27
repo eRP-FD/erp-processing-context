@@ -6,6 +6,7 @@
  */
 
 #include "shared/fhir/Fhir.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/GLogConfiguration.hxx"
 
@@ -23,6 +24,18 @@ int main(int argc, char** argv)
     auto args = std::span(argv, size_t(argc));
     GLogConfiguration::initLogging(args[0]);
     ::testing::InitGoogleTest(&argc, argv);
+    const auto& config = Configuration::instance();
+    try
+    {
+        config.epaFQDNs();
+    }
+    catch (const std::runtime_error&)
+    {
+        Environment::set(Configuration::instance().getEnvironmentVariableName(
+                             ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN),
+                         "none:1");
+    }
+    config.check(Configuration::ProcessType::MedicationExporter);
     Fhir::init<ConfigurationBase::MedicationExporter>(Fhir::Init::later);
     return RUN_ALL_TESTS();
 }

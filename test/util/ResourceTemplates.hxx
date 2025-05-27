@@ -50,7 +50,7 @@ struct Versions {
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
     static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
-    static inline KBV_EVDGA KBV_EVDGA_1_1_1{"1.1.1"};
+    static inline KBV_EVDGA KBV_EVDGA_1_1{"1.1"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
@@ -145,6 +145,7 @@ struct MedicationDispenseDiGAOptions {
     std::string kvnr = "X234567891";
     std::string telematikId = "3-SMC-B-Testkarte-883110000120312";
     std::string whenHandedOver = "2025-02-06";
+    bool withRedeemCode = true;
 };
 std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& options);
 

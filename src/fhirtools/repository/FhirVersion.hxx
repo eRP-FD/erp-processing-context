@@ -32,6 +32,9 @@ public:
     auto operator<=>(NotVersioned) const;
     bool operator==(NotVersioned) const;
 
+    static constexpr auto* strictPattern = "^[0-9a-zA-Z.\\-+]+$";
+    void verifyStrict() const;
+
 private:
     std::optional<Version> mVersion;
 

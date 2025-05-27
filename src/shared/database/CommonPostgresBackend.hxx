@@ -16,14 +16,15 @@
 #include <memory>
 #include <string>
 #include <pqxx/binarystring>
-#include <pqxx/transaction>
+#include <pqxx/transaction_base>
 
 namespace pqxx {class connection;}
 
 class CommonPostgresBackend : virtual public DatabaseBackend
 {
 public:
-    CommonPostgresBackend (PostgresConnection& connection, const std::string_view& connectionString);
+    CommonPostgresBackend(PostgresConnection& connection, const std::string_view& connectionString,
+                          TransactionMode mode = TransactionMode::transaction);
     CommonPostgresBackend() = delete;
     ~CommonPostgresBackend (void) override;
 
@@ -55,7 +56,10 @@ public:
 protected:
     void checkCommonPreconditions() const;
 
-    std::unique_ptr<pqxx::work> mTransaction;
+    const std::unique_ptr<pqxx::transaction_base>& transaction() const;
+
+private:
+    std::unique_ptr<pqxx::transaction_base> mTransaction;
 };
 
 using QueryDefinition = CommonPostgresBackend::QueryDefinition;

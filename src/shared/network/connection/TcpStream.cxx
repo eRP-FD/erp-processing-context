@@ -100,3 +100,12 @@ void TcpStream::expiresAfter(const std::chrono::steady_clock::duration& duration
 {
     mTcpStream->expires_after(duration);
 }
+
+std::optional<boost::asio::ip::tcp::endpoint> TcpStream::currentEndpoint() const
+{
+    if (mTcpStream && mTcpStream->socket().is_open())
+    {
+        return mTcpStream->socket().remote_endpoint();
+    }
+    return std::nullopt;
+}

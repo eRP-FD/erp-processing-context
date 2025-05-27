@@ -45,12 +45,9 @@
           "easterCsv": "@ERP_RUNTIME_RESOURCE_DIR@/easter.csv",
           "kbvValidationOnUnknownExtension": "reject",
           "kbvValidationNonLiteralAuthorRef": "allow",
-          "anrChecksumValidationMode": "warning",
-          "mvoIdValidationMode": "error"
+          "anrChecksumValidationMode": "warning"
         },
         "close": {
-          "deviceRefType": "url",
-          "prescriptionDigestRefType": "relative",
           "prescriptionDigestMetaVersionId": "1"
         },
         "get": {
@@ -679,8 +676,8 @@
     },
     "entropy_fetch_interval_seconds": "60",
     "timingCategories": [
-      "fhir-validation",
-      "ocsp-request"
+      "fhirvalidation",
+      "ocsprequest"
     ],
     "vsdmValiditySeconds": "1800"
   }

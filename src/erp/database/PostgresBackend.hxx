@@ -16,7 +16,7 @@
 
 #include <memory>
 #include <pqxx/binarystring>
-#include <pqxx/transaction>
+#include <pqxx/transaction_base>
 
 namespace pqxx {class connection;}
 
@@ -30,8 +30,10 @@ public:
 
     void healthCheck() override;
 
-    [[nodiscard]] static uint64_t executeCountQuery(pqxx::work& transaction, const std::string_view& query, const db_model::Blob& paramValue,
-                                                    const std::optional<UrlArguments>& search, const std::string_view& context);
+    [[nodiscard]] static uint64_t executeCountQuery(pqxx::transaction_base& transaction, const std::string_view& query,
+                                                    const db_model::Blob& paramValue,
+                                                    const std::optional<UrlArguments>& search,
+                                                    const std::string_view& context);
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,

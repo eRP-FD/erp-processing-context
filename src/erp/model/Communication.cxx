@@ -187,17 +187,17 @@ ProfileType Communication::messageTypeToProfileType(MessageType messageType)
     switch (messageType)
     {
     case model::Communication::MessageType::InfoReq:
-            return ProfileType::Gem_erxCommunicationInfoReq;
+            return ProfileType::GEM_ERP_PR_Communication_InfoReq;
     case model::Communication::MessageType::ChargChangeReq:
-            return ProfileType::Gem_erxCommunicationChargChangeReq;
+            return ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq;
     case model::Communication::MessageType::ChargChangeReply:
-            return ProfileType::Gem_erxCommunicationChargChangeReply;
+            return ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply;
     case model::Communication::MessageType::Reply:
-            return ProfileType::Gem_erxCommunicationReply;
+            return ProfileType::GEM_ERP_PR_Communication_Reply;
     case model::Communication::MessageType::DispReq:
-            return ProfileType::Gem_erxCommunicationDispReq;
+            return ProfileType::GEM_ERP_PR_Communication_DispReq;
     case model::Communication::MessageType::Representative:
-            return ProfileType::Gem_erxCommunicationRepresentative;
+            return ProfileType::GEM_ERP_PR_Communication_Representative;
     }
     ModelFail("Converting Communication::messageType to SchemaType failed");
 }
@@ -206,26 +206,26 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
 {
     switch (profileType)
     {
-    case ProfileType::Gem_erxCommunicationInfoReq:
+    case ProfileType::GEM_ERP_PR_Communication_InfoReq:
             return model::Communication::MessageType::InfoReq;
-    case ProfileType::Gem_erxCommunicationChargChangeReq:
+    case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
             return  model::Communication::MessageType::ChargChangeReq;
-    case ProfileType::Gem_erxCommunicationChargChangeReply:
+    case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
             return model::Communication::MessageType::ChargChangeReply;
-    case ProfileType::Gem_erxCommunicationReply:
+    case ProfileType::GEM_ERP_PR_Communication_Reply:
             return model::Communication::MessageType::Reply;
-    case ProfileType::Gem_erxCommunicationDispReq:
+    case ProfileType::GEM_ERP_PR_Communication_DispReq:
             return model::Communication::MessageType::DispReq;
-    case ProfileType::Gem_erxCommunicationRepresentative:
+    case ProfileType::GEM_ERP_PR_Communication_Representative:
             return model::Communication::MessageType::Representative;
     case ProfileType::ActivateTaskParameters:
     case ProfileType::CreateTaskParameters:
-    case ProfileType::Gem_erxAuditEvent:
-    case ProfileType::Gem_erxBinary:
+    case ProfileType::GEM_ERP_PR_AuditEvent:
+    case ProfileType::GEM_ERP_PR_Binary:
     case ProfileType::fhir:
-    case ProfileType::Gem_erxCompositionElement:
-    case ProfileType::Gem_erxDevice:
-    case ProfileType::Gem_erxDigest:
+    case ProfileType::GEM_ERP_PR_Composition:
+    case ProfileType::GEM_ERP_PR_Device:
+    case ProfileType::GEM_ERP_PR_Digest:
     case ProfileType::GEM_ERP_PR_Medication:
     case ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input:
     case ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input:
@@ -247,12 +247,12 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::GEM_ERP_PR_MedicationDispense:
     case ProfileType::GEM_ERP_PR_MedicationDispense_DiGA:
     case ProfileType::MedicationDispenseBundle:
-    case ProfileType::Gem_erxReceiptBundle:
-    case ProfileType::Gem_erxTask:
-    case ProfileType::Gem_erxChargeItem:
-    case ProfileType::Gem_erxConsent:
+    case ProfileType::GEM_ERP_PR_Bundle:
+    case ProfileType::GEM_ERP_PR_Task:
+    case ProfileType::GEM_ERPCHRG_PR_ChargeItem:
+    case ProfileType::GEM_ERPCHRG_PR_Consent:
     case ProfileType::PatchChargeItemParameters:
-    case ProfileType::DAV_DispenseItem:
+    case ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle:
     case ProfileType::Subscription:
     case ProfileType::OperationOutcome:
     case ProfileType::ProvidePrescriptionErpOp:

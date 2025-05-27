@@ -15,6 +15,7 @@
 #include <functional>
 #include <sstream>
 #include <string_view>
+#include <rapidjson/document.h>
 
 
 namespace {
@@ -89,7 +90,7 @@ public:
     JsonLog& keyValue (std::string_view key, std::string_view value);
     JsonLog& keyValue (std::string_view key, size_t value);
     JsonLog& keyValue (std::string_view key, uint16_t value);
-    JsonLog& keyValue (std::string_view key, double value, uint8_t precision = 0);
+    JsonLog& keyValue (std::string_view key, double value);
 
     JsonLog& location(const FileNameAndLineNumber& loc);
 
@@ -114,11 +115,10 @@ private:
 
     LogReceiver mLogReceiver;
     const bool mShowDetails;
-    std::ostringstream mLog;
+    rapidjson::Document mDocument;
     std::string mDetails;
 
-    void finish (void);
-    static std::string escapeJson (const std::string& text);
+    void finish();
 };
 
 constexpr bool JsonLog::withDetailsDefault()

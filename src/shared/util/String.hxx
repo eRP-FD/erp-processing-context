@@ -206,6 +206,7 @@ public:
     static std::string vaListToString(const char* msg, va_list args);
 
     static std::string toHexString(const std::string_view& input);
+    static bool isHexString(const std::string& input);
 
     /**
      * Copy count bytes from src to dest which has destSize space. This is like memcpy_s (which is

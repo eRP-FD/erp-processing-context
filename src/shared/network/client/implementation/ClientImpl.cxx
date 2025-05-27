@@ -114,6 +114,11 @@ void ClientImpl<StreamClass>::close (void)
     mSessionContainer.teardown();
 }
 
+template<typename StreamClass>
+std::optional<boost::asio::ip::tcp::endpoint> ClientImpl<StreamClass>::currentEndpoint() const
+{
+    return mSessionContainer.currentEndpoint();
+}
 
 template class ClientImpl<TcpStream>;
 template class ClientImpl<SslStream>;

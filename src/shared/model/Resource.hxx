@@ -16,6 +16,7 @@
 
 #include <variant>
 
+class DurationTimer;
 
 namespace fhirtools
 {
@@ -67,6 +68,7 @@ public:
     [[nodiscard]] ProfileType getProfile() const;
     [[nodiscard]] std::optional<std::string_view> getProfileName() const;
     [[nodiscard]] fhirtools::DefinitionKey getDefinitionKeyFromMeta() const;
+    [[nodiscard]] std::optional<fhirtools::FhirVersion> getProfileVersionChecked() const;
 
     std::optional<NumberAsStringParserDocument> getExtensionDocument(const std::string_view& url) const;
 
@@ -79,6 +81,8 @@ public:
 
     std::optional<std::string_view> getId() const;
     void setId(const std::string_view& id);
+
+    DurationTimer timingLogTimer() const;
 
 protected:
     using ResourceBase::ResourceBase;

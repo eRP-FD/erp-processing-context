@@ -125,9 +125,9 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
                                              enforceClientAuthentication, caCertificates);
     };
 
-    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation) {
+    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation, TransactionMode mode) {
         return std::make_unique<MedicationExporterDatabaseFrontend>(
-            std::make_unique<MedicationExporterPostgresBackend>(), keyDerivation, telematikLookup);
+            std::make_unique<MedicationExporterPostgresBackend>(mode), keyDerivation, telematikLookup);
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
@@ -160,7 +160,7 @@ int MedicationExporterMain::runApplication(
 #define log TLOG(INFO) << "Initialization: "
 
     const auto& configuration = Configuration::instance();
-    configuration.check();
+    configuration.check(Configuration::ProcessType::MedicationExporter);
 
     auto ioThreadCount =
         static_cast<size_t>(configuration.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_SERVER_IO_THREAD_COUNT));
@@ -318,7 +318,8 @@ void MedicationExporterMain::RunLoop::serve(const std::shared_ptr<MedicationExpo
 MedicationExporterMain::RunLoop::Reschedule
 MedicationExporterMain::RunLoop::process(const std::shared_ptr<MedicationExporterServiceContext>& serviceCtx)
 {
-    if (EventProcessor{serviceCtx}.process())
+    EpaAccountLookup accountLookup (*serviceCtx);
+    if (EventProcessor{serviceCtx, accountLookup}.process())
     {
         if (checkIsThrottled(serviceCtx))
         {

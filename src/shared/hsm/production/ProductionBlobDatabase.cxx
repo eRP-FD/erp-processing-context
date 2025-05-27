@@ -86,7 +86,7 @@ namespace
             return static_cast<double> ( std::chrono::duration_cast<std::chrono::milliseconds>(timePoint->time_since_epoch()).count() ) / 1000.0;
     }
 
-    std::string getHostIp (void)
+    std::string getHostIp()
     {
         return Configuration::instance().serverHost();
     }
@@ -108,7 +108,7 @@ namespace
         }
     }
 
-    std::string getBuildNumber (void)
+    std::string getBuildNumber()
     {
         return std::string(ErpServerInfo::ReleaseVersion())
                + "/" + std::string(ErpServerInfo::BuildVersion())
@@ -158,7 +158,7 @@ ProductionBlobDatabase::ProductionBlobDatabase (const std::string& connectionStr
 }
 
 
-ProductionBlobDatabase::ProductionBlobDatabase (void)
+ProductionBlobDatabase::ProductionBlobDatabase()
     : ProductionBlobDatabase(PostgresConnection::defaultConnectString())
 {
 }
@@ -218,7 +218,7 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob(BlobType type, const ErpVect
 }
 
 
-std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById (void) const
+std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById() const
 {
     auto transaction = createTransaction();
     const pqxx::result result =
@@ -310,7 +310,7 @@ void ProductionBlobDatabase::deleteBlob (
 }
 
 
-ProductionBlobDatabase::Transaction ProductionBlobDatabase::createTransaction (void) const
+ProductionBlobDatabase::Transaction ProductionBlobDatabase::createTransaction() const
 {
     mConnection.connectIfNeeded();
     return Transaction(mConnection.createTransaction());
@@ -422,19 +422,19 @@ BlobDatabase::Entry ProductionBlobDatabase::convertEntry (const pqxx::row& dbEnt
 }
 
 
-ProductionBlobDatabase::Transaction::Transaction (std::unique_ptr<pqxx::work>&& transaction)
+ProductionBlobDatabase::Transaction::Transaction(std::unique_ptr<pqxx::transaction_base>&& transaction)
     : mWork(std::move(transaction))
 {
 }
 
 
-pqxx::work* ProductionBlobDatabase::Transaction::operator-> (void)
+pqxx::transaction_base* ProductionBlobDatabase::Transaction::operator->()
 {
     return mWork.get();
 }
 
 
-void ProductionBlobDatabase::Transaction::commit (void)
+void ProductionBlobDatabase::Transaction::commit()
 {
     constexpr std::string_view error = "Error committing database transaction";
     try
@@ -466,7 +466,7 @@ void ProductionBlobDatabase::Transaction::commit (void)
 }
 
 
-void ProductionBlobDatabase::processStoreBlobException (void)
+void ProductionBlobDatabase::processStoreBlobException()
 {
     try
     {

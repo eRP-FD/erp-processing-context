@@ -125,6 +125,8 @@ public:
         requires FhirValidatableProfileFunction<ResourceT>;
     ProfileType profileType() const
         requires FhirValidatableProfileConstexpr<ResourceT>;
+    std::optional<fhirtools::FhirVersion> profileVersion() const;
+
 
     ResourceFactory(const ResourceFactory&) = delete;
     ResourceFactory(ResourceFactory&&) noexcept = default;
@@ -198,6 +200,12 @@ ProfileType model::ResourceFactory<ResourceT>::profileType() const
     requires FhirValidatableProfileConstexpr<ResourceT>
 {
     return ResourceT::profileType;
+}
+
+template<typename ResourceT>
+std::optional<fhirtools::FhirVersion> ResourceFactory<ResourceT>::profileVersion() const
+{
+    return mResource.getProfileVersionChecked();
 }
 
 template<typename ResourceT>

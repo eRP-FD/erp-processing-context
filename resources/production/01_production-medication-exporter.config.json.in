@@ -32,7 +32,8 @@
       "messageReceiveMilliseconds": "3000",
       "retryTimeoutMilliseconds": "3000",
       "retriesPerAddress": "3",
-      "resolveTimeoutMilliseconds": "2000"
+      "resolveTimeoutMilliseconds": "2000",
+      "sticky": "true"
     },
     "epa-account-lookup": {
       "connectTimeoutSeconds": "2",
@@ -41,7 +42,7 @@
       "endpoint": "/information/api/v1/ehr/consentdecisions",
       "userAgent": "ERP-FD/@ERP_RELEASE_VERSION@",
       "erpSubmissionFunctionId": "erp-submission",
-      "epaAsFqdn": ["epa-as-1-mock:443"],
+      "epaAsFqdn": [],
       "poolSizePerFqdn": "5"
     },
     "epa-conflict": {

@@ -81,24 +81,16 @@ fhirtools::ValidationResults Resource<TDerivedModel>::genericValidate(
     auto fhirPathElement = std::make_shared<ErpElement>(repoView ? repoView : getValidationView().get(),
                                                         std::weak_ptr<const fhirtools::Element>{}, resourceTypeName,
                                                         &ResourceBase::jsonDocument());
-    std::ostringstream profiles;
-    std::string_view sep;
     std::set<fhirtools::DefinitionKey> profileKeys;
     if (const auto& modelProfile = profile(profileType))
     {
-        profiles << sep << *modelProfile;
-        sep = ", ";
         profileKeys.emplace(*modelProfile);
     }
     for (const auto& prof : fhirPathElement->profiles())
     {
         profileKeys.emplace(prof);
-        profiles << sep << prof;
-        sep = ", ";
     }
-    auto timer = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryFhirValidation, "Generic FHIR Validation",
-        {{"resourceType", resourceTypeName}, {std::string{"profiles"}, profiles.str()}});
+    auto timer = timingLogTimer();
 
     return fhirtools::FhirPathValidator::validateWithProfiles(fhirPathElement, resourceTypeName, profileKeys, options);
 }

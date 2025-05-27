@@ -22,9 +22,9 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
     const std::string bnaContent = FileHelper::readFileAsString(pkiPath / "tsl/BNA_valid.xml");
     auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
         {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-        {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+        {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", String::toHexString(Hash::sha256(tslContent))},
         {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+        {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", String::toHexString(Hash::sha256(bnaContent))}});
 
     const std::string tslSignerCertificateString =
         FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/certificates/tsl_signer_ec/tsl_signer_ec.der");

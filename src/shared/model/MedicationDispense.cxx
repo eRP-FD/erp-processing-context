@@ -6,9 +6,11 @@
  */
 
 #include "shared/model/MedicationDispense.hxx"
+#include "shared/model/Extension.txx"
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/ResourceNames.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/util/Expect.hxx"
 
 #include <rapidjson/pointer.h>
@@ -101,14 +103,16 @@ TelematikId MedicationDispense::telematikId() const
 model::Timestamp MedicationDispense::whenHandedOver() const
 {
     std::string_view value = getStringValue(whenHandedOverPointer);
-    return model::Timestamp::fromFhirDateTime(std::string(value));
+    return model::Timestamp::fromGermanDate(std::string(value));
 }
 
 std::optional<model::Timestamp> MedicationDispense::whenPrepared() const
 {
     std::optional<std::string_view> value = getOptionalStringValue(whenPreparedPointer);
     if (value.has_value())
-        return model::Timestamp::fromFhirDateTime(std::string(value.value()));
+    {
+        return model::Timestamp::fromGermanDate(std::string(value.value()));
+    }
     return {};
 }
 
@@ -158,9 +162,19 @@ void MedicationDispense::setMedicationReference(std::string_view newReference)
     setValue(medicationReferencePointer, newReference);
 }
 
+void MedicationDispense::additionalValidation() const
+{
+    Resource<MedicationDispense>::additionalValidation();
+    A_22073_01.start("check for date format YYYY-MM-DD");
+    static_cast<void>(whenHandedOver());
+    static_cast<void>(whenPrepared());
+}
+
 std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() const
 {
     return whenHandedOver();
 }
+
+template class Extension<GemErpExRedeemCode>;
 
 }// namespace model

@@ -88,6 +88,6 @@ target_link_libraries(tee3send
         boost::boost
 )
 
-add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate resources)
+add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate tee3send resources)
 
 add_subdirectory(fhirinstall)

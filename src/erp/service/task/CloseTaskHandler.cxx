@@ -38,26 +38,9 @@
 namespace
 {
 struct DigestIdentifier {
-    DigestIdentifier(Configuration::PrescriptionDigestRefType refType, const std::string& linkBase,
-                     const model::PrescriptionId& prescriptionId)
-    {
-        switch (refType)
-        {
-            case Configuration::PrescriptionDigestRefType::uuid:
-                id = Uuid{}.toString();
-                ref = "urn:uuid:" + id;
-                fullUrl = ref;
-                break;
-            case Configuration::PrescriptionDigestRefType::relative:
-                id = "PrescriptionDigest-" + prescriptionId.toString();
-                ref = "Binary/" + id;
-                fullUrl = linkBase + '/' + ref;
-                break;
-        }
-    }
-    std::string id;
-    std::string ref;
-    std::string fullUrl;
+    std::string id{Uuid{}.toString()};
+    std::string ref{"urn:uuid:" + id};
+    std::string fullUrl{ref};
 };
 }
 
@@ -130,14 +113,22 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         A_26337.finish();
     }
 
+    if (isDiga(prescriptionId.type()))
+    {
+        A_23090_06.start("header for diga redeem code (1=contained, 0=not contained)");
+        session.addOuterResponseHeaderField(Header::DigaRedeemCode,
+                                            medicationsAndDispenses.containsDigaRedeemCode() ? "1" : "0");
+        A_23090_06.finish();
+    }
+
     A_19233_05.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
     const auto completedTimestamp = model::Timestamp::now();
     ErpExpect(inProgressDate < completedTimestamp, HttpStatus::InternalServerError, "in-progress date later than completed time.");
     const auto linkBase = getLinkBase();
     const auto& configuration = Configuration::instance();
-    const auto authorIdentifier = generateCloseTaskDeviceRef(configuration.closeTaskDeviceRefType(), linkBase);
-    const DigestIdentifier digestIdentifier{configuration.prescriptionDigestRefType(), linkBase, prescriptionId};
+    const auto authorIdentifier = generateCloseTaskDeviceRef();
+    const DigestIdentifier digestIdentifier{};
     const model::Composition compositionResource(telematikIdFromAccessToken.value(), inProgressDate, completedTimestamp,
                                                  authorIdentifier, digestIdentifier.ref);
     const model::Device deviceResource;
@@ -223,14 +214,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         .setPrescriptionId(prescriptionId);
 }
 
-std::string CloseTaskHandler::generateCloseTaskDeviceRef(Configuration::DeviceRefType refType, const std::string& linkBase)
+std::string CloseTaskHandler::generateCloseTaskDeviceRef()
 {
-    switch (refType)
-    {
-        case Configuration::DeviceRefType::url:
-            return model::Device::createReferenceUrl(linkBase);
-        case Configuration::DeviceRefType::uuid:
-            return Uuid{}.toUrn();
-    }
-    Fail2("Invalid value for Configuration::DeviceRefType: " + std::to_string(static_cast<uintmax_t>(refType)), std::logic_error);
+    return Uuid{}.toUrn();
 }

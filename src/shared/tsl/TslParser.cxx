@@ -1115,6 +1115,12 @@ const TslParser::ServiceInformationMap & TslParser::getServiceInformationMap() c
 }
 
 
+const std::string& TslParser::getSha256() const
+{
+    return mSha256Hash;
+}
+
+
 const TslParser::UpdateUrlList& TslParser::getUpdateUrls() const
 {
     return mUpdateUrlList;
@@ -1137,6 +1143,7 @@ void TslParser::performExtractions(const std::string& xml, const XmlValidator& x
 {
     try
     {
+        mSha256Hash = String::toHexString(Hash::sha256(xml));
         XmlDocument xmlDocument = createXmlDocument(xml, mTslMode);
         validateDocumentSchema(xmlDocument, mTslMode, xmlValidator);
 

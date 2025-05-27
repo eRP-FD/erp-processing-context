@@ -26,27 +26,27 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::epa_op_rx_prescription_erp_output_parameters;
         case EPAOpRxDispensationERPOutputParameters:
             return sd::epa_op_rx_dispensation_erp_output_parameters;
-        case Gem_erxAuditEvent:
+        case GEM_ERP_PR_AuditEvent:
             return sd::auditEvent;
-        case Gem_erxBinary:
+        case GEM_ERP_PR_Binary:
             return sd::binary;
-        case Gem_erxCommunicationDispReq:
+        case GEM_ERP_PR_Communication_DispReq:
             return sd::communicationDispReq;
-        case Gem_erxCommunicationInfoReq:
+        case GEM_ERP_PR_Communication_InfoReq:
             return sd::communicationInfoReq;
-        case Gem_erxCommunicationChargChangeReq:
+        case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
             return sd::communicationChargChangeReq;
-        case Gem_erxCommunicationChargChangeReply:
+        case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
             return sd::communicationChargChangeReply;
-        case Gem_erxCommunicationReply:
+        case GEM_ERP_PR_Communication_Reply:
             return sd::communicationReply;
-        case Gem_erxCommunicationRepresentative:
+        case GEM_ERP_PR_Communication_Representative:
             return sd::communicationRepresentative;
-        case Gem_erxCompositionElement:
+        case GEM_ERP_PR_Composition:
             return sd::composition;
-        case Gem_erxDevice:
+        case GEM_ERP_PR_Device:
             return sd::device;
-        case Gem_erxDigest:
+        case GEM_ERP_PR_Digest:
             return sd::digest;
         case GEM_ERP_PR_Medication:
             return sd::medication;
@@ -90,15 +90,15 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::medicationDispenseDiga;
         case MedicationDispenseBundle:
             return sd::medicationDispenseBundle;
-        case Gem_erxReceiptBundle:
+        case GEM_ERP_PR_Bundle:
             return sd::receipt;
-        case Gem_erxTask:
+        case GEM_ERP_PR_Task:
             return sd::task;
-        case Gem_erxChargeItem:
+        case GEM_ERPCHRG_PR_ChargeItem:
             return sd::chargeItem;
-        case Gem_erxConsent:
+        case GEM_ERPCHRG_PR_Consent:
             return sd::consent;
-        case DAV_DispenseItem:
+        case DAV_PKV_PR_ERP_AbgabedatenBundle:
             return sd::dispenseItem;
         case Subscription:
             return sd::subscription;
@@ -117,17 +117,17 @@ std::optional<model::ProfileType> model::findProfileType(std::string_view profil
     using enum ProfileType;
     namespace sd = resource::structure_definition;
     static const std::map<std::string_view, ProfileType> profileUrlToTypeMap{
-        {sd::auditEvent, Gem_erxAuditEvent},
-        {sd::binary, Gem_erxBinary},
-        {sd::communicationDispReq, Gem_erxCommunicationDispReq},
-        {sd::communicationInfoReq, Gem_erxCommunicationInfoReq},
-        {sd::communicationChargChangeReq, Gem_erxCommunicationChargChangeReq},
-        {sd::communicationChargChangeReply, Gem_erxCommunicationChargChangeReply},
-        {sd::communicationReply, Gem_erxCommunicationReply},
-        {sd::communicationRepresentative, Gem_erxCommunicationRepresentative},
-        {sd::composition, Gem_erxCompositionElement},
-        {sd::device, Gem_erxDevice},
-        {sd::digest, Gem_erxDigest},
+        {sd::auditEvent, GEM_ERP_PR_AuditEvent},
+        {sd::binary, GEM_ERP_PR_Binary},
+        {sd::communicationDispReq, GEM_ERP_PR_Communication_DispReq},
+        {sd::communicationInfoReq, GEM_ERP_PR_Communication_InfoReq},
+        {sd::communicationChargChangeReq, GEM_ERPCHRG_PR_Communication_ChargChangeReq},
+        {sd::communicationChargChangeReply, GEM_ERPCHRG_PR_Communication_ChargChangeReply},
+        {sd::communicationReply, GEM_ERP_PR_Communication_Reply},
+        {sd::communicationRepresentative, GEM_ERP_PR_Communication_Representative},
+        {sd::composition, GEM_ERP_PR_Composition},
+        {sd::device, GEM_ERP_PR_Device},
+        {sd::digest, GEM_ERP_PR_Digest},
         {sd::prescriptionItem, KBV_PR_ERP_Bundle},
         {sd::kbv_composition, KBV_PR_ERP_Composition},
         {sd::kbv_medication_compounding, KBV_PR_ERP_Medication_Compounding},
@@ -144,11 +144,11 @@ std::optional<model::ProfileType> model::findProfileType(std::string_view profil
         {sd::medicationDispense, GEM_ERP_PR_MedicationDispense},
         {sd::medicationDispenseDiga, GEM_ERP_PR_MedicationDispense_DiGA},
         {sd::medicationDispenseBundle, MedicationDispenseBundle},
-        {sd::receipt, Gem_erxReceiptBundle},
-        {sd::task, Gem_erxTask},
-        {sd::chargeItem, Gem_erxChargeItem},
-        {sd::consent, Gem_erxConsent},
-        {sd::dispenseItem, DAV_DispenseItem},
+        {sd::receipt, GEM_ERP_PR_Bundle},
+        {sd::task, GEM_ERP_PR_Task},
+        {sd::chargeItem, GEM_ERPCHRG_PR_ChargeItem},
+        {sd::consent, GEM_ERPCHRG_PR_Consent},
+        {sd::dispenseItem, DAV_PKV_PR_ERP_AbgabedatenBundle},
         {sd::subscription, Subscription},
         {sd::operationoutcome, OperationOutcome},
         {sd::organization_directory, OrganizationDirectory},

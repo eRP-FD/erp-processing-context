@@ -52,18 +52,22 @@ std::optional<model::Binary> ChargeItemBodyHandlerBase::getDispenseItemBinary(co
  */
 std::pair<model::AbgabedatenPkvBundle, std::string> ChargeItemBodyHandlerBase::validatedBundleFromSigned(
     const ::model::Binary& containedBinary,
-    ::PcServiceContext& serviceContext,
+    SessionContext& sessionContext,
     ::VauErrorCode onError)
 {
     try
     {
         const CadesBesSignature cadesBesSignature{std::string{containedBinary.data().value()},
-                                                  serviceContext.getTslManager(), true};
+                                                  sessionContext.serviceContext.getTslManager(), true};
         // parse it without validation, at this point a fhir document is fine
         auto pkvBundleFactory = model::ResourceFactory<model::AbgabedatenPkvBundle>::fromXml(cadesBesSignature.payload(),
-                                                                                      serviceContext.getXmlValidator());
+                                                                                      sessionContext.serviceContext.getXmlValidator());
+        if (const auto profileVersion = pkvBundleFactory.profileVersion())
+        {
+            sessionContext.addOuterResponseHeaderField(Header::DavAbgabedaten, to_string(*profileVersion));
+        }
         const auto repoView = pkvBundleFactory.getValidationView();
-        return std::make_pair(std::move(pkvBundleFactory).getValidated(model::ProfileType::DAV_DispenseItem, repoView),
+        return std::make_pair(std::move(pkvBundleFactory).getValidated(model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle, repoView),
                               cadesBesSignature.getBase64());
     }
     catch (const TslError& ex)

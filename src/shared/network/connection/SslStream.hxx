@@ -94,6 +94,8 @@ public:
 
     void expiresAfter(const std::chrono::steady_clock::duration& duration);
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
+
 private:
     SslStream(boost::asio::io_context* ioContext);
 

@@ -176,7 +176,7 @@ static constexpr Requirement A_19149_02 ("E-Rezept-Fachdienst - Task akzeptieren
 static constexpr Requirement A_19167_04 ("E-Rezept-Fachdienst - Task akzeptieren - Prüfung AccessCode");
 static constexpr Requirement A_19168_01 ("E-Rezept-Fachdienst - Rezept bereits in Abgabe oder Bearbeitung");
 static constexpr Requirement A_19169_01 ("E-Rezept-Fachdienst - Task akzeptieren - Generierung Secret, Statuswechsel in Abgabe und Rückgabewert");
-static constexpr Requirement A_22635    ("E-Rezept-Fachdienst - Task akzeptieren - Mehrfachverordnung - Beginn Einlösefrist prüfen");
+static constexpr Requirement A_22635_02 ("E-Rezept-Fachdienst - Task akzeptieren - Mehrfachverordnung - Beginn Einlösefrist prüfen");
 static constexpr Requirement A_23539_01 ("E-Rezept-Fachdienst - Task akzeptieren - Ende Einlösefrist prüfen");
 static constexpr Requirement A_24174    ("E-Rezept-Fachdienst - Task akzeptieren - Telematik-ID der abgebenden LEI speichern");
 // PKV related:
@@ -197,11 +197,12 @@ static constexpr Requirement A_20513    ("E-Rezept-Fachdienst - nicht mehr benö
 static constexpr Requirement A_19233_05 ("E-Rezept-Fachdienst - Task schliessen - Quittung erstellen");
 static constexpr Requirement A_22069_01 ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
 static constexpr Requirement A_22070_03 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
-static constexpr Requirement A_23384_01 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
+static constexpr Requirement A_23384_03 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
 static constexpr Requirement A_24287    ("E-Rezept-Fachdienst - Task schließen - Aufruf ohne MedicationDispense");
 static constexpr Requirement A_26337    ("E-Rezept-Fachdienst - Task schließen - Zeitstempel MedicationDispense");
 static constexpr Requirement A_26002    ("E-Rezept-Fachdienst - Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
 static constexpr Requirement A_26003    ("E-Rezept-Fachdienst - Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
+static constexpr Requirement A_22073_01 ("E-Rezept-Fachdienst - Task schliessen - Datum MedicationDispense whenHandedOver");
 
 // Requirements for endpoint POST /Task/$abort
 static constexpr Requirement A_19145    ("E-Rezept-Fachdienst - Statusprüfung Apotheker löscht Rezept");
@@ -340,7 +341,7 @@ static constexpr Requirement A_22383    ("E-Rezept-Fachdienst – Generierungssc
 
 static constexpr Requirement A_22698    ("E-Rezept-Fachdienst - Erzeugung des Nutzerpseudonyms LEI");
 static constexpr Requirement A_22975    ("Performance - Rohdaten-Performance-Bericht - Konfigurationpseudonymisierte Werte der Telematik-ID");
-static constexpr Requirement A_23090_02 ("Performance - Rohdaten - Spezifika E-Rezept – Message (Rohdatenerfassung v.02)");
+static constexpr Requirement A_23090_06 ("Performance - Rohdaten - Spezifika E-Rezept – Message (Rohdatenerfassung v.02)");
 
 // Requirements for VSDM++
 static constexpr Requirement A_23450    ("E-Rezept-Fachdienst - Rezepte lesen - Apotheke - VSDM - Prüfung Prüfungsnachweis");

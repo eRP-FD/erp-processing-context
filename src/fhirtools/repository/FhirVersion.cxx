@@ -3,8 +3,10 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "FhirVersion.hxx"
+#include "shared/util/Expect.hxx"
 
 #include <ostream>
+#include <regex>
 
 namespace fhirtools
 {
@@ -27,6 +29,13 @@ auto FhirVersion::operator<=>(NotVersioned) const
 bool FhirVersion::operator==(NotVersioned) const
 {
     return mVersion == std::nullopt;
+}
+
+void FhirVersion::verifyStrict() const
+{
+    ModelExpect(mVersion, "Version is not set");
+    ModelExpect(std::regex_match(*mVersion, std::regex(strictPattern)),
+                "Version contains invalid characters: not matching pattern " + std::string{strictPattern});
 }
 
 std::optional<std::string> FhirVersion::version() const

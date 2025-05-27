@@ -8,12 +8,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_EXPORTER_MEDICATIONEXPORTERSERVICECONTEXT_HXX
 #define ERP_PROCESSING_CONTEXT_EXPORTER_MEDICATIONEXPORTERSERVICECONTEXT_HXX
 
+#include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MainDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontendInterface.hxx"
 #include "shared/hsm/BlobCache.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/server/BaseServiceContext.hxx"
+#include "shared/util/HeaderLog.hxx"
 
 #include <unordered_map>
 
@@ -21,6 +23,7 @@ class Configuration;
 class MedicationExporterFactories;
 class Tee3ClientPool;
 class HttpsClientPool;
+enum class TransactionMode : uint8_t;
 
 namespace boost::asio
 {
@@ -44,7 +47,6 @@ public:
     MedicationExporterServiceContext& operator=(const MedicationExporterServiceContext& other) = delete;
     MedicationExporterServiceContext& operator=(MedicationExporterServiceContext&& other) = delete;
 
-    std::unique_ptr<MedicationExporterDatabaseFrontendInterface> medicationExporterDatabaseFactory();
     std::unique_ptr<exporter::MainDatabaseFrontend> erpDatabaseFactory();
 
     /**
@@ -59,13 +61,43 @@ public:
     std::unique_ptr<exporter::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
     std::shared_ptr<const exporter::RuntimeConfiguration> getRuntimeConfiguration() const;
 
+    template<typename FuncT>
+    std::invoke_result_t<FuncT, MedicationExporterDatabaseFrontendInterface&> transaction(TransactionMode mode,
+                                                                                          FuncT&& func);
+
 private:
+    std::unique_ptr<MedicationExporterDatabaseFrontendInterface>
+    medicationExporterDatabaseFactory(TransactionMode mode);
+
     boost::asio::io_context& mIoContext;
     MedicationExporterDatabaseFrontendInterface::Factory mExporterDatabaseFactory;
     exporter::MainDatabaseFrontend::Factory mErpDatabaseFactory;
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
     std::unordered_map<std::string, std::shared_ptr<HttpsClientPool>> mHttpsClientPools;
     gsl::not_null<std::shared_ptr<exporter::RuntimeConfiguration>> mRuntimeConfiguration;
+#ifdef FRIEND_TEST
+    FRIEND_TEST(CommitGuardTest, only_one_transaction_allowed);
+    FRIEND_TEST(CommitGuardTest, create_and_query);
+#endif
 };
+
+template<typename FuncT>
+std::invoke_result_t<FuncT, MedicationExporterDatabaseFrontendInterface&>
+MedicationExporterServiceContext::transaction(TransactionMode mode, FuncT&& func)
+{
+    try
+    {
+        CommitGuard db{medicationExporterDatabaseFactory(mode)};
+        return std::invoke(std::forward<FuncT>(func), db.db());
+    }
+    catch (pqxx::broken_connection&)
+    {
+        // reconnect is handled by PostgresConnection::createTransaction
+        HeaderLog::vlog(1, "connection lost during transaction - retrying");
+        CommitGuard db{medicationExporterDatabaseFactory(mode)};
+        return std::invoke(std::forward<FuncT>(func), db.db());
+    }
+}
+
 
 #endif//ERP_PROCESSING_CONTEXT_EXPORTER_MEDICATIONEXPORTERSERVICECONTEXT_HXX

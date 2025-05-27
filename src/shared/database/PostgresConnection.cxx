@@ -13,6 +13,8 @@
 #include "shared/util/TLog.hxx"
 
 #include <boost/algorithm/string.hpp>
+#include <pqxx/nontransaction>
+#include <pqxx/transaction>
 
 PostgresConnection::PostgresConnection(const std::string_view& connectionString)
     : mConnectionString(connectionString)
@@ -105,7 +107,7 @@ void PostgresConnection::connectIfNeeded()
 {
     if (! mConnection || ! mConnection->is_open())
     {
-        TVLOG(1) << "connecting to database";
+        TLOG(INFO) << "connecting to database";
         mConnectionInfo = {};
         mConnection = std::make_unique<pqxx::connection>(mConnectionString);
         mConnectionInfo = std::make_optional<DatabaseConnectionInfo>(
@@ -132,14 +134,14 @@ void PostgresConnection::close()
 }
 
 
-std::unique_ptr<pqxx::work> PostgresConnection::createTransaction()
+std::unique_ptr<pqxx::transaction_base> PostgresConnection::createTransaction(TransactionMode mode)
 {
-    std::unique_ptr<pqxx::work> transaction;
-    TVLOG(1) << "transaction start";
+    std::unique_ptr<pqxx::transaction_base> transaction;
+    TVLOG(2) << "transaction start";
     try
     {
         Expect3(mConnection, "connection to database not established", std::logic_error);
-        transaction = std::make_unique<pqxx::work>(*mConnection);
+        transaction = createTransactionInternal(mode);
     }
     catch (const pqxx::broken_connection& brokenConnection)
     {
@@ -151,10 +153,22 @@ std::unique_ptr<pqxx::work> PostgresConnection::createTransaction()
         close();
         connectIfNeeded();
         TVLOG(1) << "transaction start 2nd try";
-        transaction = std::make_unique<pqxx::work>(*mConnection);
+        transaction = createTransactionInternal(mode);
     }
-    TVLOG(1) << "transaction started";
+    TVLOG(2) << "transaction started";
     return transaction;
+}
+
+std::unique_ptr<pqxx::transaction_base> PostgresConnection::createTransactionInternal(TransactionMode mode)
+{
+    switch (mode)
+    {
+        case TransactionMode::autocommit:
+            return std::make_unique<pqxx::nontransaction>(*mConnection);
+        case TransactionMode::transaction:
+            return std::make_unique<pqxx::work>(*mConnection);
+    }
+    Fail("unknown value for TransactionMode: " + std::to_string(static_cast<uintmax_t>(mode)));
 }
 
 

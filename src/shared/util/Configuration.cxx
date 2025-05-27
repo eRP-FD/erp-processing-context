@@ -39,18 +39,18 @@
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> ConfigurationBase::ERP::requiredProfiles{
     {model::ProfileType::ActivateTaskParameters, {}},
     {model::ProfileType::CreateTaskParameters, {}},
-    {model::ProfileType::Gem_erxAuditEvent, {}},
-    {model::ProfileType::Gem_erxBinary, {}},
+    {model::ProfileType::GEM_ERP_PR_AuditEvent, {}},
+    {model::ProfileType::GEM_ERP_PR_Binary, {}},
     {model::ProfileType::fhir, {}},// general FHIR schema
-    {model::ProfileType::Gem_erxCommunicationDispReq, {}},
-    {model::ProfileType::Gem_erxCommunicationInfoReq, {}},
-    {model::ProfileType::Gem_erxCommunicationChargChangeReq, {}},
-    {model::ProfileType::Gem_erxCommunicationChargChangeReply, {}},
-    {model::ProfileType::Gem_erxCommunicationReply, {}},
-    {model::ProfileType::Gem_erxCommunicationRepresentative, {}},
-    {model::ProfileType::Gem_erxCompositionElement, {}},
-    {model::ProfileType::Gem_erxDevice, {}},
-    {model::ProfileType::Gem_erxDigest, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_DispReq, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_InfoReq, {}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq, {}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_Reply, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_Representative, {}},
+    {model::ProfileType::GEM_ERP_PR_Composition, {}},
+    {model::ProfileType::GEM_ERP_PR_Device, {}},
+    {model::ProfileType::GEM_ERP_PR_Digest, {}},
     {model::ProfileType::GEM_ERP_PR_Medication, {{"GEM_2025-01-15"}}},
     {model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, {{"GEM_2025-01-15"}}},
     {model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, {{"GEM_2025-01-15"}}},
@@ -72,12 +72,12 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::GEM_ERP_PR_MedicationDispense, {}},
     {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, {{"GEM_2025-01-15"}}},
     {model::ProfileType::MedicationDispenseBundle, {}},
-    {model::ProfileType::Gem_erxReceiptBundle, {}},
-    {model::ProfileType::Gem_erxTask, {}},
-    {model::ProfileType::Gem_erxChargeItem, {}},
-    {model::ProfileType::Gem_erxConsent, {}},
+    {model::ProfileType::GEM_ERP_PR_Bundle, {}},
+    {model::ProfileType::GEM_ERP_PR_Task, {}},
+    {model::ProfileType::GEM_ERPCHRG_PR_ChargeItem, {}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Consent, {}},
     {model::ProfileType::PatchChargeItemParameters, {}},
-    {model::ProfileType::DAV_DispenseItem, {}},
+    {model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle, {}},
     {model::ProfileType::Subscription, {}},
     {model::ProfileType::OperationOutcome, {}},
 };
@@ -352,9 +352,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "/erp/service/task/activate/kbvValidationOnUnknownExtension", Flags::categoryFunctional, "ignore: Do not check for unknown extensions. report: respond with HTTP 202 Accepted instead of 200 OK, when a KBV-Bundle contains unknown extensions. reject: reject with HTTP 400 Bad Request, when a KBV-Bundle contains unknown extensions"}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF, {"ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_NON_LITERAL_AUTHOR_REF", "/erp/service/task/activate/kbvValidationNonLiteralAuthorRef", Flags::categoryFunctional, "Controls the Validation of the field Composition.author."}},
     {ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE       ,{"ERP_SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE"      , "/erp/service/task/activate/anrChecksumValidationMode", Flags::categoryFunctional, "Mode for validating ANR/ZANR. Allowed values: warning, error."}},
-    {ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE     ,{"ERP_SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE"    , "/erp/service/task/activate/mvoIdValidationMode", Flags::categoryFunctional, "Mode for validating MVO-ID. Allowed values: disable, error."}},
-    {ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE             ,{"ERP_SERVICE_TASK_CLOSE_DEVICE_REF_TYPE" , "/erp/service/task/close/deviceRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
-    {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE" , "/erp/service/task/close/prescriptionDigestRefType", Flags::categoryFunctional, "Reference type for Prescription-Digest in Receipt-Bundle. relative: Use relative reference; uuid: use UUID reference"}},
     {ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID,{"ERP_SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID", "/erp/service/task/close/prescriptionDigestMetaVersionId", Flags::categoryFunctional, "Value for Meta.versionId in Prescription-Digest Binary-Resource. If not provided, the field will not be included."}},
     {ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK             , {"ERP_SERVICE_TASK_GET_ENFORCE_HCV_CHECK"             , "/erp/service/task/get/enforceHcvCheck", Flags::categoryFunctional, "Enforce hcv check for pnv2"}},
     {ConfigurationKey::SERVICE_TASK_GET_RATE_LIMIT                    , {"ERP_SERVICE_TASK_GET_RATE_LIMIT"                    , "/erp/service/task/get/rateLimit", Flags::categoryFunctional, "Max. calls for a telematik ID within a day"}},
@@ -381,7 +378,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
-    {ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH                 , {"ERP_TSL_FRAMEWORK_SSL_ROOT_CA_PATH"                 , "/erp/tsl/sslRootCaPath", Flags::categoryEnvironment, "Path to the root CA to be used for the https-TSL-Update URL connection."}},
     {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL                       , {"ERP_TSL_INITIAL_DOWNLOAD_URL"                       , "/erp/tsl/initialDownloadUrl", Flags::categoryEnvironment, "The URL to download initial TSL from."}},
     {ConfigurationKey::TSL_INITIAL_CA_DER_PATH                        , {"ERP_TSL_INITIAL_CA_DER_PATH"                        , "/erp/tsl/initialCaDerPath", Flags::categoryEnvironment, "Path to the TSL-Signer CA."}},
     {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW                    , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW"                    , "/erp/tsl/initialCaDerPathNew", Flags::categoryEnvironment, "Path to the additional TSL-Signer CA. It could be used when TSL-Signer CA is being changed to support both old and new TSL-Signer CA."}},
@@ -431,7 +427,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::DEPRECATED_HSM_PASSWORD                        , {"ERP_HSM_PASWORD"                                    , "/erp/hsm/password", Flags::categoryEnvironment|Flags::credential|Flags::deprecated, "Password used to authenticate against HSM, if neither ERP_HSM_WORK_KEYSPEC nor ERP_HSM_WORK_PASSWORD are set."}},
     {ConfigurationKey::TEE_TOKEN_UPDATE_SECONDS                       , {"ERP_TEE_TOKEN_UPDATE_SECONDS"                       , "/erp/hsm/tee-token/update-seconds", Flags::categoryFunctionalStatic, "Time between regular tee-token updates"}},
     {ConfigurationKey::TEE_TOKEN_RETRY_SECONDS                        , {"ERP_TEE_TOKEN_RETRY_SECONDS"                        , "/erp/hsm/tee-token/retry-seconds", Flags::categoryFunctionalStatic, "Time between tee-token update retries after a failure"}},
-    {ConfigurationKey::TIMING_CATEGORIES                              , {"ERP_TIMING_CATEGORIES"                              , "/erp/timingCategories", Flags::categoryEnvironment|Flags::array, "Array of timing categories that shall be logged to INFO level from the following list: redis, postgres, http-client, fhir-validation, ocsp-request, hsm, enrolment, all"}},
+    {ConfigurationKey::TIMING_CATEGORIES                              , {"ERP_TIMING_CATEGORIES"                              , "/erp/timingCategories", Flags::categoryEnvironment|Flags::array, "Array of timing categories that shall be logged to INFO level from the following list: redis, postgres, httpclient, fhirvalidation, ocsprequest, hsm, enrolment, all"}},
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir", Flags::categoryFunctionalStatic, "Path to the compression dictionary for database compression."}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds", Flags::categoryEnvironment, "Connection timeout for outgoing tcp connections"}},
     {ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS        , {"ERP_HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS"        , "/erp/httpClientResolveTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout of DNS resolve requests in ms"}},
@@ -494,6 +490,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRY_TIMEOUT_MILLISECONDS                      , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRY_TIMEOUT_MILLISECONDS",         "/erp-medication-exporter/vau-https-client/retryTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout in ms between connection retries."}},
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS                             , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RETRIES_PER_ADDRESS",                "/erp-medication-exporter/vau-https-client/retriesPerAddress", Flags::categoryEnvironment, "Maximum connect attempts per address"}},
     {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS                    , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_RESOLVE_TIMEOUT_MILLISECONDS",       "/erp-medication-exporter/vau-https-client/resolveTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout for resolving DNS entries."}},
+    {ConfigurationKey::MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_STICKY                                          , {"MEDICATION_EXPORTER_VAU_HTTPS_CLIENT_STICKY"                            , "/erp-medication-exporter/vau-https-client/sticky", Flags::categoryEnvironment, "Use the same client for all current events for the same KVNR"}},
     {ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD                                            , {"MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD"                              , "/erp-medication-exporter/ocsp/gracePeriodEpa", Flags::categoryFunctionalStatic, "OCSP-Grace period in seconds for OCSP-response of ePA Servier Certificate"}},
     {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_PATH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_PATH"                                     , "/erp-medication-exporter/serno2tid/path", Flags::categoryEnvironment, "Mapping file path to lookup TID by S/N"}},
     {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_HASH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_HASH"                                     , "/erp-medication-exporter/serno2tid/hash", Flags::categoryEnvironment, "Hash value do validate mapping file"}},
@@ -886,7 +883,7 @@ const Configuration& Configuration::instance()
     return theInstance;
 }
 
-void Configuration::check() const
+void Configuration::check(ProcessType processType) const
 {
     (void) kbvValidationOnUnknownExtension();
     (void) kbvValidationNonLiteralAuthorRef();
@@ -899,20 +896,24 @@ void Configuration::check() const
     (void) getOptional<fhirtools::Severity>(
         ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, fhirtools::Severity::error);
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
-
-    (void) prescriptionDigestRefType();
-    (void) closeTaskDeviceRefType();
-    (void) synthesizeCodesystem<ConfigurationBase::ERP>();
-    (void) synthesizeValuesets<ConfigurationBase::ERP>();
-
-    (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
-    (void) synthesizeCodesystem<ConfigurationBase::MedicationExporter>();
-    (void) synthesizeValuesets<ConfigurationBase::MedicationExporter>();
-    for (const auto& epa : this->epaFQDNs())
+    switch (processType)
     {
-        LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
-                  << " connections";
+        case ConfigurationBase::ProcessType::ERP:
+            (void) synthesizeCodesystem<ConfigurationBase::ERP>();
+            (void) synthesizeValuesets<ConfigurationBase::ERP>();
+            return;
+        case ConfigurationBase::ProcessType::MedicationExporter:
+            (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
+            (void) synthesizeCodesystem<ConfigurationBase::MedicationExporter>();
+            (void) synthesizeValuesets<ConfigurationBase::MedicationExporter>();
+            for (const auto& epa : this->epaFQDNs())
+            {
+                LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
+                        << " connections";
+            }
+            return;
     }
+    Fail2("unknown ProcessType: "+ std::to_string(static_cast<uintmax_t>(processType)), std::logic_error);
 }
 
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
@@ -930,21 +931,6 @@ Configuration::NonLiteralAuthorRefMode Configuration::kbvValidationNonLiteralAut
 Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMode() const
 {
     return get<AnrChecksumValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE);
-}
-
-Configuration::PrescriptionDigestRefType Configuration::prescriptionDigestRefType() const
-{
-    return get<PrescriptionDigestRefType>(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_REF_TYPE);
-}
-
-Configuration::DeviceRefType Configuration::closeTaskDeviceRefType() const
-{
-    return get<DeviceRefType>(ConfigurationKey::SERVICE_TASK_CLOSE_DEVICE_REF_TYPE);
-}
-
-Configuration::MvoIdValidationMode Configuration::mvoIdValidationMode() const
-{
-    return get<MvoIdValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_MVOID_VALIDATION_MODE);
 }
 
 template <config::ProcessType ProcessT>

@@ -71,6 +71,9 @@ public:
 
     void expiresAfter(const std::chrono::steady_clock::duration& duration);
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
+
+
 private:
     std::unique_ptr<boost::asio::io_context> mIoContext;
     std::unique_ptr<boost::beast::tcp_stream> mTcpStream;

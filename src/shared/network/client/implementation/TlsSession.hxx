@@ -86,6 +86,8 @@ public:
      */
     void inheritTicketFrom (const TlsSession& session);
 
+    std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
+
 private:
     class TlsSessionTicketImpl;
 

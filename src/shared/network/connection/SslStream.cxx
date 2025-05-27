@@ -111,3 +111,12 @@ void SslStream::expiresAfter(const std::chrono::steady_clock::duration& duration
 {
     mSslStream->next_layer().expires_after(duration);
 }
+
+std::optional<boost::asio::ip::tcp::endpoint> SslStream::currentEndpoint() const
+{
+    if (mSslStream && mSslStream->lowest_layer().is_open())
+    {
+        return mSslStream->lowest_layer().remote_endpoint();
+    }
+    return std::nullopt;
+}

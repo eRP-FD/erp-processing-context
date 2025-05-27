@@ -36,7 +36,7 @@ class Composition : public Resource<Composition>
 {
 public:
     static constexpr auto resourceTypeName = "Composition";
-    static constexpr auto profileType = ProfileType::Gem_erxCompositionElement;
+    static constexpr auto profileType = ProfileType::GEM_ERP_PR_Composition;
 
     Composition(const std::string_view& telematicId, const model::Timestamp& start, const model::Timestamp& end,
                 const std::string_view& author, const std::string_view& prescriptionDigestIdentifier);

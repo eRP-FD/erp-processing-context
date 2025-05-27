@@ -68,7 +68,6 @@ TEST_F(AccessLogTest, logAfterConstruction)//NOLINT(readability-function-cogniti
 
     const auto document = parseJsonLog(os.str());
     EXPECT_TRUE(getStringValue(document, "/timestamp").has_value());
-    EXPECT_TRUE(getIntegerValue(document, "/port").has_value());
 
     EXPECT_TRUE(getDoubleValue(document, "/response_time").has_value());
 

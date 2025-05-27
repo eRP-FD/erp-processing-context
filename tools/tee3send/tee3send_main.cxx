@@ -155,7 +155,7 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
     boost::asio::steady_timer timer{executor, waitTime};
     co_await timer.async_wait(boost::asio::deferred);
     auto teeClient = co_await clientPool->acquire(host);
-    teeClient.reset();
+    Expect(teeClient, "Tee client unavailable");
     //model::Kvnr kvnr{"X1234567890"};
     model::Kvnr kvnr{"Y0114130000"};
     using boost::beast::http::verb;
@@ -167,7 +167,8 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
         req.set(Header::XRequestId, Uuid().toString());
         req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
         req.body() = "{}";
-        auto response = co_await clientPool->sendTeeRequest(host, Uuid{}.toString(), req, empty);
+        auto response = co_await teeClient->sendInner(Uuid{}.toString(), req, empty);
+        Expect(response.has_value(), "Response has error: " + response.error().message());
         LOG(INFO) << "got response after waiting " << waitTime;
     }
     catch (const std::exception& e)
@@ -252,8 +253,8 @@ int main(int argc, const char* argv[])
             }
         });
         LOG(INFO) << "setup pool";
-        auto clientPool =
-            std::make_shared<Tee3ClientPool>(ioContext, serviceContext->getHsmPool(), serviceContext->getTslManager());
+        auto clientPool = Tee3ClientPool::create(ioContext, serviceContext->getHsmPool(),
+                                                 serviceContext->getTslManager(), std::chrono::seconds{10});
         LOG(INFO) << "setup hosts";
         co_spawn(ioContext, setupHosts(clientPool, host, port), boost::asio::use_future).get();
 

@@ -1,15 +1,16 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_PC_CFDSIGERPTESTHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_PC_CFDSIGERPTESTHELPER_HXX
 
+#include "mock/util/MockConfiguration.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/Hash.hxx"
+#include "shared/util/String.hxx"
 #include "test_config.h"
 #include "test/util/ResourceManager.hxx"
-#include "mock/util/MockConfiguration.hxx"
 
-#include <unordered_map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 
 class CFdSigErpTestHelper
@@ -44,9 +45,9 @@ public:
         return std::make_shared<RequestSenderMock>(
             std::unordered_map<std::string, std::string>{
                 {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
-                {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", Hash::sha256(tslContent)},
+                {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", String::toHexString(Hash::sha256(tslContent))},
                 {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
-                {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", Hash::sha256(bnaContent)}});
+                {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", String::toHexString(Hash::sha256(bnaContent))}});
     }
 };
 

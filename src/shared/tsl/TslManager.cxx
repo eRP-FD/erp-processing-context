@@ -92,14 +92,6 @@ std::shared_ptr<TslManager> TslManager::setupTslManager(const std::shared_ptr<Xm
 
     try
     {
-        std::string tslSslRootCa;
-        const std::string tslRootCaFile =
-            Configuration::instance().getStringValue(ConfigurationKey::TSL_FRAMEWORK_SSL_ROOT_CA_PATH);
-        if ( ! tslRootCaFile.empty())
-        {
-            tslSslRootCa = FileHelper::readFileAsString(tslRootCaFile);
-        }
-
         const auto useMockTslManager =
             Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_MOCK_TSL_MANAGER, false);
 
@@ -114,9 +106,9 @@ std::shared_ptr<TslManager> TslManager::setupTslManager(const std::shared_ptr<Xm
                 std::logic_error);
 #endif
         auto requestSender = std::make_shared<UrlRequestSender>(
-            std::move(tslSslRootCa),
-            static_cast<uint16_t>(
-                Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
+            TlsCertificateVerifier::withCustomRootCertificates(""),
+            std::chrono::seconds{
+                Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
             std::chrono::milliseconds{
                 Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
         return std::make_shared<TslManager>(std::move(requestSender), xmlValidator);
@@ -218,14 +210,19 @@ X509Store TslManager::getTslTrustedCertificateStore(
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    const X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
-                                   const OcspCheckDescriptor& ocspCheckDescriptor)
+                                   const OcspCheckDescriptor& ocspCheckDescriptor,
+                                   bool allowTslUpdate)
 {
     // no mutex is necessary because trust store is thread safe
     try
     {
-        GS_A_4898.start("Minimize TSL-Grace-Period, check TSL-validity and try to update if invalid each time a certificate is validated.");
-        internalUpdate(true);
-        GS_A_4898.finish();
+        if (allowTslUpdate)
+        {
+            GS_A_4898.start("Minimize TSL-Grace-Period, check TSL-validity and try to update if invalid each time a "
+                            "certificate is validated.");
+            internalUpdate(true);
+            GS_A_4898.finish();
+        }
 
         TslService::checkCertificate(
             certificate,
@@ -361,6 +358,25 @@ TslService::UpdateResult TslManager::internalUpdate(const bool onlyOutdated)
         onlyOutdated);
     Expect(mTslTrustStore->hasTsl() && !mTslTrustStore->isTslTooOld(),
            "Can not load actual TSL file, unknown unexpected error");
+
+    {
+        // After initializing TSL store, we can setup the request sender
+        // for the BNA download which uses the TSL store for TLS validation.
+        // This assumes the TSL store download does not require TLS in the downloader
+        if (! mBnaTrustStore->hasTsl())
+        {
+            mRequestSender->setTlsCertificateVerifier(
+                TlsCertificateVerifier::withTslVerification(*this, TlsCertificateVerifier::TslValidationParameters{
+                                                                       .tslMode = TslMode::TSL,
+                                                                       .certificateType = std::nullopt,
+                                                                       .ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE,
+                                                                       .ocspGracePeriod = std::chrono::hours{24},
+                                                                       .withSubjectAlternativeAddressValidation = true,
+                                                                       // disallow tsl updates during certificate checks for the TSL-downloads
+                                                                       .allowTslUpdate = false,
+                                                                   }));
+        }
+    }
 
     mBnaTrustStore->setUpdateUrls(mTslTrustStore->getBnaUrls());
     TslService::triggerTslUpdateIfNecessary(
