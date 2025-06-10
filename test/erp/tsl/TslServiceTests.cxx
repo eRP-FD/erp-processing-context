@@ -9,6 +9,7 @@
 
 #include "shared/crypto/Certificate.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/tsl/OcspHelper.hxx"
 #include "shared/tsl/OcspService.hxx"
 #include "shared/tsl/TrustStore.hxx"
 #include "shared/tsl/TslService.hxx"
@@ -177,4 +178,60 @@ TEST_F(TslServiceTest, verifyCertificatePolicyFailing)//NOLINT(readability-funct
         TslService::checkCertificate(certificate, {CertificateType::C_FD_SIG}, requestSender, *mTrustStore, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
         {TslErrorCode::CERT_TYPE_MISMATCH},
         HttpStatus::BadRequest);
+}
+
+
+TEST_F(TslServiceTest, doNotCacheProvidedOcspResponse)
+{
+    UrlRequestSenderMock requestSender({});
+    X509Certificate x509Certificate = X509Certificate::createFromAsnBytes(
+        {reinterpret_cast<const unsigned char*>(userCertificate.data()), userCertificate.size()});
+
+    auto iterator = mTrustStore->mServiceInformationMap.find(
+        {x509Certificate.getIssuer(), x509Certificate.getAuthorityKeyIdentifier()});
+    ASSERT_NE(mTrustStore->mServiceInformationMap.end(), iterator);
+
+    auto cert = Certificate::fromBinaryDer(userCertificate);
+    auto certCa = Certificate::fromBase64Der(iterator->second.certificate.toBase64());
+
+    auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
+    OcspCertidPtr certId(OCSP_cert_to_id(nullptr, cert.toX509(), certCa.toX509()));
+
+    const auto certPairValid = MockOcsp::CertificatePair{.certificate = cert,
+                                                         .issuer = certCa,
+                                                         .testMode = MockOcsp::CertificateOcspTestMode::SUCCESS};
+
+    auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
+    auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+
+    auto response = MockOcsp::create(certId.get(), {certPairValid}, ocspCert, ocspKey).toDer();
+    checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+
+
+    const auto fingerprint = x509Certificate.getSha256FingerprintHex();
+
+    // if we dont make a request, do not cache the ocsp response
+    using enum OcspCheckDescriptor::OcspCheckMode;
+    for (auto mode : {PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED, PROVIDED_OR_CACHE, PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
+                      PROVIDED_ONLY})
+    {
+        checkDescriptor.mode = mode;
+        mTrustStore->cleanCachedOcspData(fingerprint);
+        EXPECT_NO_THROW(TslService::checkCertificate(x509Certificate, {CertificateType::C_HCI_OSIG}, requestSender,
+                                                     *mTrustStore, checkDescriptor));
+        ASSERT_FALSE(mTrustStore->getCachedOcspData(fingerprint).has_value());
+    }
+
+    // if we have to make a request, allow caching of the ocsp response
+    TslTestHelper::setOcspUrlRequestHandler(requestSender, "http://ocsp-testref.tsl.telematik-test/ocsp",
+                                            {{cert, certCa, MockOcsp::CertificateOcspTestMode::SUCCESS}});
+
+    for (auto mode : {FORCE_OCSP_REQUEST_STRICT, FORCE_OCSP_REQUEST_ALLOW_CACHE})
+    {
+        checkDescriptor.mode = mode;
+        mTrustStore->cleanCachedOcspData(fingerprint);
+        EXPECT_NO_THROW(TslService::checkCertificate(x509Certificate, {CertificateType::C_HCI_OSIG}, requestSender,
+                                                     *mTrustStore, checkDescriptor));
+        ASSERT_TRUE(mTrustStore->getCachedOcspData(fingerprint).has_value());
+    }
 }

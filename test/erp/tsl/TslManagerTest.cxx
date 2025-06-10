@@ -1375,8 +1375,7 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {}, {}, {{"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp", {certPairValid}}});
 
-    std::unique_ptr<OCSP_CERTID, decltype(&OCSP_CERTID_free)> certId(
-        OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()), OCSP_CERTID_free);
+    OcspCertidPtr certId(OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()));
 
     auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
     checkDescriptor.mode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED;

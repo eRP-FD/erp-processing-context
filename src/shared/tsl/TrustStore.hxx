@@ -194,6 +194,7 @@ private:
     FRIEND_TEST(TslServiceTest, verifyCertificateValidThenRevokedCASuccess);
     FRIEND_TEST(TslServiceTest, verifyCertificatePolicyNoRestrictionsSuccessful);
     FRIEND_TEST(TslServiceTest, verifyCertificatePolicySuccessful);
+    FRIEND_TEST(TslServiceTest, doNotCacheProvidedOcspResponse);
 
     friend class TslTestHelper;
 

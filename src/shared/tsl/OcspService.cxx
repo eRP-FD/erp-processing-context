@@ -489,7 +489,8 @@ namespace
             TrustStore& trustStore,
             const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
             const bool validateHashExtension,
-            bool validateProducedAt)
+            bool validateProducedAt,
+            bool allowCaching)
     {
         auto response = parseResponse(
                 certificate,
@@ -504,7 +505,7 @@ namespace
         TVLOG(2) << "Returning new OCSP status: " << response.status.to_string();
         response.response = (serializedOcspResponse.has_value() ? *serializedOcspResponse
                                                                 : OcspHelper::ocspResponseToString(*ocspResponse));
-        if (response.status.certificateStatus != CertificateStatus::unknown)
+        if (allowCaching && response.status.certificateStatus != CertificateStatus::unknown)
         {
             // the returned OCSP response is only cached if the status is not unknown
             trustStore.setCacheOcspData(certificate.getSha256FingerprintHex(), response);
@@ -538,7 +539,8 @@ namespace
             trustStore,
             ocspSignerCertificates,
             validateHashExtension,
-            true // validateProducedAt
+            true, // validateProducedAt
+            true  // allowCaching
         );
     }
 
@@ -627,7 +629,9 @@ namespace
                         trustStore,
                         ocspSignerCertificates,
                         validateHashExtension,
-                        validateProducedAt);
+                        validateProducedAt,
+                        false // allowCaching
+                    );
                     // validate the producedAt afterwards to check if we can fall
                     // back to cache
                     auto now = std::chrono::system_clock::now();
@@ -690,7 +694,9 @@ namespace
                     trustStore,
                     ocspSignerCertificates,
                     validateHashExtension,
-                    true);
+                    true,
+                    false // allowCaching
+                );
         }
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckDescriptor.mode)));
     }

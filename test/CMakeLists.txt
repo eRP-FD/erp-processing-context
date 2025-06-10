@@ -73,6 +73,7 @@ add_library(erp-test-util-lib OBJECT ${ERP_TEST_UTIL_SOURCES})
 target_link_libraries(erp-test-util-lib
         PUBLIC
         date::date
+        erp-hsm-tpm-mock
         erp-test-resourcemanager
         glog::glog
         GTest::gtest
@@ -400,8 +401,6 @@ list(
 
 )
 
-
-target_compile_definitions(erp-test PUBLIC WITH_HSM_MOCK=1)
 
 target_link_libraries ( erp-test
     PUBLIC
