@@ -268,6 +268,7 @@ public:
      */
     std::vector<std::string> getRoles () const;
 
+    [[nodiscard]] tm getNotBefore() const;
     [[nodiscard]] tm getNotAfter() const;
 
     bool operator==(const X509Certificate& rhs) const;

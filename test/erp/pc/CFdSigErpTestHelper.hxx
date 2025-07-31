@@ -39,9 +39,9 @@ public:
     template<class RequestSenderMock>
     static std::shared_ptr<RequestSenderMock> createRequestSender()
     {
-        const std::string tslContent =
-            ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-        const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+        auto& resourceManager = ResourceManager::instance();
+        const std::string tslContent = resourceManager.getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+        const std::string bnaContent = resourceManager.getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
         return std::make_shared<RequestSenderMock>(
             std::unordered_map<std::string, std::string>{
                 {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},

@@ -93,11 +93,25 @@ requires requires(const T& lhs) {{*lhs.begin()} -> std::same_as<const char&>;}
     return std::string_view{lhs.begin(), lhs.end()} == std::string_view{rhs};
 }
 
+inline bool operator==(const XmlStringView& lhs, const XmlStringView& rhs)
+{
+    return std::string_view{lhs} == std::string_view{rhs};
+}
+
 namespace xmlHelperLiterals {
 constexpr XmlStringView operator "" _xs (const char* str, size_t size) { return XmlStringView{str, size}; }
 }
 
 inline std::string xmlStringToString(const xmlChar* xmlStr)
 { return std::string(reinterpret_cast<const char*>(xmlStr));}
+
+
+template<>
+struct std::hash<XmlStringView> {
+    std::size_t operator()(const XmlStringView& xstr) const
+    {
+        return hash<std::string_view>()(xstr);
+    }
+};
 
 #endif // FHIR_TOOLS_FHIR_INTERNAL_XMLHELPER_HXX

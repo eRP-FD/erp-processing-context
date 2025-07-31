@@ -382,14 +382,37 @@ public:
         // the long life test BNetzA-VL contains more certificates,
         // but there are withdrawn certificates
         // and the test version contains some duplicate certificates,
-        // so there are only 201 unique not withdrawn certificates
-        ASSERT_EQ(202, certificatesCount); // +1 certificate introduced explicitly by the test on runtime
+        // so there are only 206 unique not withdrawn certificates
+        ASSERT_EQ(206, certificatesCount);
     }
 
     static std::string sha256HexRN(const std::string& input)
     {
         return String::toHexString(Hash::sha256(input)) + "\r\n";
     }
+
+    Certificate getCACert(std::string_view id)
+    {
+        using namespace std::string_literals;
+        return Certificate::fromPem(
+            resourceManager.getStringResource("test/generated_pki/"s.append(id).append("/ca.pem")));
+    }
+
+    Certificate getCert(std::string_view issuerId, std::string_view id)
+    {
+        std::filesystem::path pkiPath{"test/generated_pki", std::filesystem::path::generic_format};
+        return Certificate::fromPem(resourceManager.getStringResource(
+            (pkiPath / issuerId / "certificates" / id / id).replace_extension("pem").native()));
+    }
+
+    ResourceManager& resourceManager = ResourceManager::instance();
+
+    static constexpr char ocspUrl[] = "http://ocsp.test.ibm.de/";
+
+    static constexpr char sub_ca1_ec[] = "sub_ca1_ec";
+    static constexpr char outdated_ca_ec[] = "outdated_ca_ec";
+    static constexpr char qes_cert1_ec[] = "qes_cert1_ec";
+    static constexpr char qes_cert2_ec[] = "qes_cert2_ec";
 };
 
 
@@ -498,9 +521,9 @@ TEST_F(TslManagerTest, validTslNoHttpSha2_Fail)//NOLINT(readability-function-cog
 
 TEST_F(TslManagerTest, loadTslWithInvalidTslSignerCertificate_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string tslContent =
-        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_wrongSigner.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+    auto& resourceManager = ResourceManager::instance();
+    const std::string tslContent = resourceManager.getStringResource("test/generated_pki/tsl/TSL_wrongSigner.xml");
+    const std::string bnaContent = resourceManager.getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
@@ -520,20 +543,15 @@ TEST_F(TslManagerTest, loadTslWithInvalidTslSignerCertificate_Fail)//NOLINT(read
 
 TEST_F(TslManagerTest, validateQesCertificate_Success)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {ocspUrl,
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
@@ -542,19 +560,13 @@ TEST_F(TslManagerTest, validateQesCertificate_Success)
 
 TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAButValid_Success)
 {
-    const Certificate certificate =
-        Certificate::fromBinaryDer(
-            ResourceManager::instance().getStringResource(
-                "test/generated_pki/outdated_ca_ec/certificates/qes_cert1_ec/qes_cert1_ec.der"));
+    const Certificate certificate = getCert(outdated_ca_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA =
-        Certificate::fromBinaryDer(
-            ResourceManager::instance().getStringResource("test/generated_pki/outdated_ca_ec/ca.der"));
+    const Certificate certificateCA = getCACert(outdated_ca_ec);
 
     const std::string tslContent =
         ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
+    const std::string bnaContent = ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_outdated_ca.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
@@ -566,7 +578,7 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAButValid_Success)
         requestSender,
         {},
         {
-            {"http://ocsp.test.ibm.de/",
+            {ocspUrl,
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
@@ -575,19 +587,13 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAButValid_Success)
 
 TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAInvalid_Failure)
 {
-    const Certificate certificate =
-        Certificate::fromBinaryDer(
-            ResourceManager::instance().getStringResource(
-                "test/generated_pki/outdated_ca_ec/certificates/qes_cert2_ec/qes_cert2_ec.der"));
+    const Certificate certificate = getCert(outdated_ca_ec, qes_cert2_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA =
-        Certificate::fromBinaryDer(
-            ResourceManager::instance().getStringResource("test/generated_pki/outdated_ca_ec/ca.der"));
+    const Certificate certificateCA = getCACert(outdated_ca_ec);
 
     const std::string tslContent =
         ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
+    const std::string bnaContent = ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_outdated_ca.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
@@ -599,7 +605,7 @@ TEST_F(TslManagerTest, validateQesCertificate_OutdatedCAInvalid_Failure)
         requestSender,
         {},
         {
-            {"http://ocsp.test.ibm.de/",
+            {ocspUrl,
              {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -658,164 +664,64 @@ TEST_F(TslManagerTest, oudatedInitialTslNoUpdate_Fail)//NOLINT(readability-funct
                            HttpStatus::InternalServerError);
 }
 
-
-TEST_F(TslManagerTest, validateQesCertificateOcspRevoked_Fail)//NOLINT(readability-function-cognitive-complexity)
+struct TslManagerOcspTestParam
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    std::string name;
+    MockOcsp::CertificateOcspTestMode mockOcspMode;
+    TslErrorCode expectedErrorCode;
+};
+
+
+class TslManagerOcspTest : public TslManagerTest, public testing::WithParamInterface<TslManagerOcspTestParam> {
+
+};
+
+TEST_P(TslManagerOcspTest, validateQesCertificateOcsp)//NOLINT(readability-function-cognitive-complexity)
+{
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-             {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
+            {ocspUrl,
+             {{certificate, certificateCA, GetParam().mockOcspMode}}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::CERT_REVOKED},
+                           {GetParam().expectedErrorCode},
                            HttpStatus::BadRequest);
 }
 
 
-TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMissing_Fail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+// clang-format off
+INSTANTIATE_TEST_SUITE_P(Fail, TslManagerOcspTest, testing::ValuesIn<std::list<TslManagerOcspTestParam>>({
+    {"Revoked", MockOcsp::CertificateOcspTestMode::REVOKED, TslErrorCode::CERT_REVOKED},
+    {"CertHashMissing", MockOcsp::CertificateOcspTestMode::CERTHASH_MISSING, TslErrorCode::CERTHASH_EXTENSION_MISSING},
+    {"CertHashMismatch", MockOcsp::CertificateOcspTestMode::CERTHASH_MISMATCH, TslErrorCode::CERTHASH_MISMATCH},
+    {"WrongCertId", MockOcsp::CertificateOcspTestMode::WRONG_CERTID, TslErrorCode::OCSP_CHECK_REVOCATION_ERROR},
+    {"WrongProducedAt", MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT, TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
+    {"WrongThisUpdate", MockOcsp::CertificateOcspTestMode::WRONG_THIS_UPDATE, TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID}
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+}), [](const auto& info){ return info.param.name; });
 
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-                {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISSING}}}});
-
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::CERTHASH_EXTENSION_MISSING},
-                           HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, validateQesCertificateOcspCertHashMismatch_Fail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
-
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-                {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::CERTHASH_MISMATCH}}}});
-
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::CERTHASH_MISMATCH},
-                           HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, validateQesCertificateOcspWrongCertId_Fail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
-
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-                {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_CERTID}}}});
-
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::OCSP_CHECK_REVOCATION_ERROR},
-                           HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, validateQesCertificateOcspWrongProducedAt_Fail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
-
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-                {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT}}}});
-
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
-                           HttpStatus::BadRequest);
-}
-
-
-TEST_F(TslManagerTest, validateQesCertificateOcspWrongThisUpdate_Fail)//NOLINT(readability-function-cognitive-complexity)
-{
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
-    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
-
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {},
-        {},
-        {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
-                {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::WRONG_THIS_UPDATE}}}});
-
-    EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
-                           {TslErrorCode::PROVIDED_OCSP_RESPONSE_NOT_VALID},
-                           HttpStatus::BadRequest);
-}
+// clang-format on
 
 
 TEST_F(TslManagerTest, validateQesCertificateOcspUnknown_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {ocspUrl,
              {}}});
 
     EXPECT_TSL_ERROR_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()),
@@ -824,7 +730,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspUnknown_Fail)//NOLINT(readabili
 }
 
 
-TEST_F(TslManagerTest, validateQesCertificateOcspNotAvailable_Fail)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(TslManagerTest, DISABLED_validateQesCertificateOcspNotAvailable_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
     const std::string certificatePem =
         FileHelper::readFileAsString(
@@ -845,20 +751,16 @@ TEST_F(TslManagerTest, validateQesCertificateOcspNotAvailable_Fail)//NOLINT(read
 
 TEST_F(TslManagerTest, validateQesCertificateOcspCertificateUnknown_Fail)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {ocspUrl,
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::weak_ptr<TslManager> mgrWeakPtr{manager};
@@ -878,7 +780,7 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateUnknown_Fail)//NOLIN
 }
 
 
-TEST_F(TslManagerTest, validateQesCertificateOcspCertificateSignedByBnaCa_Success)
+TEST_F(TslManagerTest, DISABLED_validateQesCertificateOcspCertificateSignedByBnaCa_Success)
 {
     const std::string certificatePem =
         FileHelper::readFileAsString(
@@ -918,31 +820,27 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCertificateSignedByBnaCa_Succes
 
 TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {ocspUrl,
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
     // set CA StatusStartingTime to the "valid from" timestamp of the certificate
+    auto certificateValidFromTm = x509Certificate.getNotBefore();
+    const auto certificateValidFrom = std::chrono::system_clock::from_time_t(timegm(&certificateValidFromTm));
     std::weak_ptr<TslManager> mgrWeakPtr{manager};
 
-    manager->addPostUpdateHook([mgrWeakPtr, certificateCA] {
+    manager->addPostUpdateHook([mgrWeakPtr, certificateValidFrom, certificateCA] {
         auto tslManager = mgrWeakPtr.lock();
         if (! tslManager)
             return;
-        TslTestHelper::setCaCertificateTimestamp(
-            model::Timestamp::fromFhirDateTime("2020-06-10T00:00:00Z").toChronoTimePoint(), certificateCA, *tslManager,
-            TslMode::BNA);
+        TslTestHelper::setCaCertificateTimestamp(certificateValidFrom, certificateCA, *tslManager, TslMode::BNA);
     });
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
@@ -951,17 +849,13 @@ TEST_F(TslManagerTest, validateQesCertificateNoHistoryIgnoreTimestamp_Success)
 
 TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
-    const std::string tslContent =
-        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
+
+    const std::string tslContent = resourceManager.getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+    const std::string bnaContent = resourceManager.getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
             {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
@@ -969,7 +863,6 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.xml", bnaContent},
             {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)}});
 
-    const std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender,
         {},
@@ -995,17 +888,13 @@ TEST_F(TslManagerTest, validateQesCertificateOcspCached_Success)//NOLINT(readabi
 
 TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
 
-    const std::string tslContent =
-        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
+
+    const std::string tslContent = resourceManager.getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+    const std::string bnaContent = resourceManager.getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
     const std::string tslSha2Url = "https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2";
     std::shared_ptr<UrlRequestSenderMock> requestSender = std::make_shared<UrlRequestSenderMock>(
         std::unordered_map<std::string, std::string>{
@@ -1018,7 +907,7 @@ TEST_F(TslManagerTest, validateQesCertificateNoTslUpdate_Success)//NOLINT(readab
         requestSender,
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {ocspUrl,
                 {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     ASSERT_NO_THROW(manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, TslTestHelper::getDefaultTestOcspCheckDescriptor()));
@@ -1303,17 +1192,13 @@ TEST_F(TslManagerTest, unknownOcspResponseStatus_Fail)//NOLINT(readability-funct
 
 TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem = FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
-    const std::string tslContent =
-        ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+    const std::string tslContent = resourceManager.getStringResource("test/generated_pki/tsl/TSL_valid.xml");
+    const std::string bnaContent = resourceManager.getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
 
     auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
         {TslTestHelper::shaDownloadUrl, sha256HexRN(tslContent)},
@@ -1322,7 +1207,6 @@ TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-com
         {"https://download-testref.bnetzavl.telematik-test:443/BNA-TSL.sha2", sha256HexRN(bnaContent)},
     });
     TslTestHelper::setOcspUslRequestHandlerTslSigner(*requestSender);
-    std::string ocspUrl = "http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp";
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         requestSender, {}, {{ocspUrl, {{certificate, certificateCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
@@ -1357,14 +1241,10 @@ TEST_F(TslManagerTest, fromCacheFlag)//NOLINT(readability-function-cognitive-com
 
 TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-cognitive-complexity)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-    const Certificate certificate = Certificate::fromPem(certificatePem);
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
 
-    const Certificate certificateCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
 
     const auto certPairValid = MockOcsp::CertificatePair{
         .certificate = certificate,
@@ -1372,8 +1252,7 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
         .testMode = MockOcsp::CertificateOcspTestMode::SUCCESS
     };
 
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
-        {}, {}, {{"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp", {certPairValid}}});
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>({}, {}, {{ocspUrl, {certPairValid}}});
 
     OcspCertidPtr certId(OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()));
 

@@ -273,7 +273,8 @@ std::shared_ptr<Manager> TslTestHelper::createTslManager(
 {
     const std::string tslContent =
         ResourceManager::instance().getStringResource("test/generated_pki/tsl/TSL_valid.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/BNA_valid.xml");
+    const std::string bnaContent =
+        ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_EC_valid.xml");
     std::shared_ptr<UrlRequestSenderMock> requestSender = customRequestSender;
     if (requestSender == nullptr)
     {

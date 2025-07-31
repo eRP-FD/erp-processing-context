@@ -19,6 +19,7 @@
 #include "test/util/StaticData.hxx"
 
 #include <functional>
+#include <magic_enum/magic_enum.hpp>
 #include <map>
 #include <memory>
 #include <optional>
@@ -39,7 +40,9 @@ catch(const TslError& e) \
     EXPECT_EQ(expectedCodes.size(), e.getErrorData().size()); \
     for (size_t ind = 0; ind < expectedCodes.size(); ind++) \
     { \
-        EXPECT_EQ(expectedCodes[ind], e.getErrorData()[ind].errorCode); \
+        EXPECT_EQ(expectedCodes[ind], e.getErrorData()[ind].errorCode) \
+            << magic_enum::enum_name(expectedCodes[ind]) << " != " \
+            << magic_enum::enum_name(e.getErrorData()[ind].errorCode); \
     } \
 }
 

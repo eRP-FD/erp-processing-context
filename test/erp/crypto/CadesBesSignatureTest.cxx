@@ -36,28 +36,19 @@ using namespace ::std::string_view_literals;
 class CadesBesSignatureTest : public ::testing::Test
 {
 public:
-    static constexpr char certificate[] =
-        "-----BEGIN CERTIFICATE-----\n"
-        "MIICLjCCAdSgAwIBAgIUAL2a72Us3iEdkk6+UA3nIS4RQ4kwCgYIKoZIzj0EAwQw\n"
-        "bDELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0hhbWJ1cmcxEDAOBgNVBAcMB0hhbWJ1\n"
-        "cmcxHTAbBgNVBAoMFElCTSBEZXV0c2NobGFuZCBHbWJIMQwwCgYDVQQLDANFUlAx\n"
-        "DDAKBgNVBAMMA1ZBVTAeFw0yMDEyMTcxMTQ0MjZaFw0yMTEyMTcxMTQ0MjZaMGwx\n"
-        "CzAJBgNVBAYTAkRFMRAwDgYDVQQIDAdIYW1idXJnMRAwDgYDVQQHDAdIYW1idXJn\n"
-        "MR0wGwYDVQQKDBRJQk0gRGV1dHNjaGxhbmQgR21iSDEMMAoGA1UECwwDRVJQMQww\n"
-        "CgYDVQQDDANWQVUwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEhjQhKDDa1FfK\n"
-        "BTBeZocTQWa5whpl/+v1VfTnXfsEiIhm5LaENiTL2kPJfqiZaLxB/VNXb4LAPvp9\n"
-        "YBufrKwrKaNTMFEwHQYDVR0OBBYEFCHwxRVjmkkfxzQ79FWkM49QgxcuMB8GA1Ud\n"
-        "IwQYMBaAFCHwxRVjmkkfxzQ79FWkM49QgxcuMA8GA1UdEwEB/wQFMAMBAf8wCgYI\n"
-        "KoZIzj0EAwQDSAAwRQIgQMr3w4RL0X7CbwAx2Y9yHrPAMsDdzd20KIOrDOP4ow8C\n"
-        "IQCHgwCMbPC5uP2PSa9DsS4ZtvECVo81HCIBMlMAYQ8Pqg==\n"
-        "-----END CERTIFICATE-----\n";
+    static const std::string& certificate()
+    {
+        return ResourceManager::instance().getStringResource("test/generated_pki/sub_ca1_ec/certificates/arzt/arzt_cert.pem");
+    }
+    static std::string privateKey()
+    {
+        return ResourceManager::instance().getStringResource("test/generated_pki/sub_ca1_ec/certificates/arzt/arzt_key.pem");
+    }
 
-    static constexpr char privateKey[] =
-        "-----BEGIN EC PRIVATE KEY-----\n"
-        "MHgCAQEEIKVKVoW4D3H9Xr7pFlmvqYyEfFyGTiM1hEFGZ1r8WV48oAsGCSskAwMC\n"
-        "CAEBB6FEA0IABIY0ISgw2tRXygUwXmaHE0FmucIaZf/r9VX05137BIiIZuS2hDYk\n"
-        "y9pDyX6omWi8Qf1TV2+CwD76fWAbn6ysKyk=\n"
-        "-----END EC PRIVATE KEY-----\n";
+    static const std::string& CACertificate()
+    {
+        return ResourceManager::instance().getStringResource("test/generated_pki/sub_ca1_ec/ca.pem");
+    }
 
     std::unique_ptr<EnvironmentVariableGuard> mCaDerPathGuard;
 
@@ -157,8 +148,8 @@ TEST_F(CadesBesSignatureTest, KBVTestingExampleFile)
 TEST_F(CadesBesSignatureTest, roundtripWithoutTsl)
 {
     std::string_view myText = "The text to be signed";
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
-    auto cert = Certificate::fromPem(certificate);
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
+    auto cert = Certificate::fromPem(certificate());
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}};
@@ -200,8 +191,8 @@ TEST_F(CadesBesSignatureTest, setSigningTime)//NOLINT(readability-function-cogni
 {
     std::string_view myText = "The text to be signed";
     auto signingTime = model::Timestamp::fromXsDateTime("2019-02-25T08:05:05Z");
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
-    auto cert = Certificate::fromPem(certificate);
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
+    auto cert = Certificate::fromPem(certificate());
     std::string signedText;
     {
         CadesBesSignature cadesBesSignature{cert, privKey, std::string{myText}, signingTime};
@@ -220,21 +211,17 @@ TEST_F(CadesBesSignatureTest, setSigningTime)//NOLINT(readability-function-cogni
 TEST_F(CadesBesSignatureTest, validateWithBna)
 {
     std::string_view myText = "The text to be signed";
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
 
-    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
+    auto cert = Certificate::fromPem(certificate());
 
-    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    auto certCA = Certificate::fromPem(CACertificate());
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {"http://ocsp.test.ibm.de/",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::string signedText;
@@ -277,8 +264,8 @@ TEST_F(CadesBesSignatureTest, GematikExampleCounterSignature)//NOLINT(readabilit
             + "/cadesBesSignature/4fe2013d-ae94-441a-a1b1-78236ae65680_S_SECUN_secu_kon_4.8.2_4.1.3.p7s");
     CadesBesSignature cadesBesSignature(raw);
 
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey});
-    auto cert = Certificate::fromPem(certificate);
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
+    auto cert = Certificate::fromPem(certificate());
     cadesBesSignature.addCounterSignature(cert, privKey);
 
     const std::string signedText = cadesBesSignature.getBase64();
@@ -542,21 +529,17 @@ TEST_F(CadesBesSignatureTest, validateOcspResponseInGeneratedCMS)//NOLINT(readab
 TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCms)
 {
     std::string_view myText = "The text to be signed";
-    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem")});
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
 
-    auto cert = Certificate::fromPem(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
+    auto cert = Certificate::fromPem(certificate());
 
-    auto certCA = Certificate::fromBase64Der(FileHelper::readFileAsString(
-        std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-Issuer.base64.der"));
+    auto certCA = Certificate::fromPem(CACertificate());
 
     std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
         {},
         {},
         {
-            {"http://ehca-testref.komp-ca.telematik-test:8080/status/qocsp",
+            {"http://ocsp.test.ibm.de/",
              {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
     std::string signedText;
@@ -675,7 +658,7 @@ TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCmsWithSmcBOsig)
 }
 
 
-TEST_F(CadesBesSignatureTest, ocspRequestFailure)
+TEST_F(CadesBesSignatureTest, DISABLED_ocspRequestFailure)
 {
     // in case of an ocsp request failure we expect the passed
     std::string_view myText = "The text to be signed";

@@ -262,6 +262,8 @@ target_link_libraries(erp-shared
         openssl::openssl
         rapidjson
         redis++::redis++_static
+        xmlsec::xmlsec
+        xmlsec::openssl
         zstd::libzstd_static
         $<$<BOOL:${ERP_WITH_HSM_MOCK}>:erp-hsm-tpm-mock>
         $<$<BOOL:${ERP_WITH_HSM_TPM_PRODUCTION}>:hsmclient::hsmclient>

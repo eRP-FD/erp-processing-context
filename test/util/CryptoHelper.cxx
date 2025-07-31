@@ -44,20 +44,20 @@ std::string CryptoHelper::qesCertificatePem(const std::optional<std::string>& ce
 {
     const auto& pemFilename = cert_pem_filename.value_or(TestConfiguration::instance()
                                   .getOptionalStringValue(TestConfigurationKey::TEST_QES_PEM_FILE_NAME)
-                                  .value_or("test/qes.pem"));
+                                  .value_or("test/generated_pki/sub_ca1_ec/certificates/arzt/arzt.pem"));
     return ResourceManager::instance().getStringResource(pemFilename);
 }
 
 Certificate CryptoHelper::cHpQes()
 {
     return Certificate::fromPem(ResourceManager::instance().getStringResource(
-        "test/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem"));
+        "test/generated_pki/sub_ca1_ec/certificates/apotheker/apotheker_cert.pem"));
 }
 
 shared_EVP_PKEY CryptoHelper::cHpQesPrv()
 {
     auto prcKeyStr = ResourceManager::instance().getStringResource(
-        "test/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.prv.pem");
+        "test/generated_pki/sub_ca1_ec/certificates/apotheker/apotheker_key.pem");
     return EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{std::move(prcKeyStr)});
 }
 

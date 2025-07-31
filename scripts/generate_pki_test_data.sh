@@ -188,7 +188,8 @@ function generate_certificate()
     fi
 
     local keyFile="$outDir/${alias}_key.pem"
-    local certFile="$outDir/${alias}.pem"
+    local certFile="$outDir/${alias}_cert.pem"
+    local pairFile="$outDir/${alias}.pem"
     local certDerFile="$outDir/${alias}.der"
     local csrFile
 
@@ -248,6 +249,7 @@ function generate_certificate()
     fi
 
     "$OPENSSL" x509 -outform der -in "$certFile" -out "$certDerFile"
+    cat "${certFile}" "${keyFile}" > "${pairFile}"
   })
 
   caMap[$alias]="$caName"
@@ -414,7 +416,7 @@ function generate_tsl()
   fi
 
   # sign TSL
-  $XMLSEC1 --sign --privkey-pem:tslkey "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
+  $XMLSEC1 --sign --verbose --privkey-pem:tslkey "$signerKeyFile,$signerCertFile" --output "$tslSigned" "$tslUnsigned"
 }
 
 
@@ -531,6 +533,12 @@ generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:br
     subjectAltName=email:admin@example.com
 generate_certificate bna_signer_ca_ec bna_signer_ec "BNA signer" bna_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec qes_cert1_ec "Example Inc. Test QES Certificate" qes_cert1 ec:brainpoolP256r1 \
+    $normal subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec arzt "Example Arzt Test QES Certificate" arzt ec:brainpoolP256r1 \
+    $normal subjectAltName=email:arzt@example.com
+generate_certificate sub_ca1_ec apotheker "Example Apotheker Test QES Certificate" apotheker ec:brainpoolP256r1 \
+    $normal subjectAltName=email:apotheker@example.com
 generate_certificate outdated_ca_ec qes_cert1_ec "Example Inc. Test QES Certificate" qes_cert1 ec:brainpoolP256r1 \
     $validBeforeOutdated subjectAltName=email:admin@example.com
 generate_certificate outdated_ca_ec qes_cert2_ec "Example Inc. Test QES Certificate Invalid" qes_cert2 ec:brainpoolP256r1 \
@@ -555,10 +563,14 @@ generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_outdated.xml
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_multiple_new_cas.xml" $multipleNewCA
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_broken_new_ca.xml" $brokenNewCA
 generate_tsl tsl_signer_ec sub_ca1_ec "template_TSL_parserTest.xml" "TSL_parserTest.xml" $normal
-generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
+generate_tsl bna_signer_ec sub_ca1_ec "template_BNA_EC_valid.xml" "BNA_EC_valid.xml" $normal
+generate_tsl bna_signer_ec outdated_ca_ec "template_BNA_EC_valid.xml" "BNA_EC_outdated_ca.xml" $normal
+generate_tsl bna_signer_ec sub_ca1_ec "template_BNA_sha1.xml" "BNA_sha1.xml" $normal
+generate_tsl bna_signer_ec sub_ca1_ec "template_BNA_no_root.xml" "BNA_no_root.xml" $normal
 generate_tsl tsl_signer_wrong_key_usage_ec sub_ca1_ec "template_TSL_valid.xml" "TSL_wrongSigner.xml" $normal
 
 generate_tsl tsl_signer_rsa1 sub_ca1_rsa "template_BNA_RSA_valid_sha512.xml" "BNA_RSA_valid_sha512.xml" $normal
 generate_tsl tsl_signer_rsa1 sub_ca1_rsa "template_BNA_RSA_valid_sha256.xml" "BNA_RSA_valid_sha256.xml" $normal
+generate_tsl tsl_signer_rsa1 sub_ca1_rsa "template_BNA_rsa_sha1.xml" "BNA_rsa_sha1.xml" $normal
 
 success=true

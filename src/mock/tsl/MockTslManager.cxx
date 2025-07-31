@@ -19,7 +19,7 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
 {
     const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
     const std::string tslContent = FileHelper::readFileAsString(pkiPath / "tsl/TSL_no_ocsp_mapping.xml");
-    const std::string bnaContent = FileHelper::readFileAsString(pkiPath / "tsl/BNA_valid.xml");
+    const std::string bnaContent = FileHelper::readFileAsString(pkiPath / "tsl/BNA_EC_valid.xml");
     auto requestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
         {"http://download-ref.tsl.telematik-test:80/ECC/ECC-RSA_TSL-ref.xml", tslContent},
         {"https://download-ref.tsl.telematik-test:443/ECC/ECC-RSA_TSL-ref.sha2", String::toHexString(Hash::sha256(tslContent))},
@@ -65,12 +65,15 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
          {autCert, autCertCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
         ocspCertificate, ocspPrivateKey);
 
+    const auto subCA1 = Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/ca.pem"));
 
-    const auto qesCert = Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/qes.pem"));
-    const auto gemHbaQCA6 = Certificate::fromBinaryDer(
-        FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/GEM.HBA-qCA6_TEST-ONLY.der"));
-    requestSender->setOcspUrlRequestHandler("http://ehca.gematik.de/ocsp/",
-                                            {{qesCert, gemHbaQCA6, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+    const auto arztQes = Certificate::fromPem(
+        FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/certificates/arzt/arzt_cert.pem"));
+    const auto apothekerQes = Certificate::fromPem(
+        FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/certificates/apotheker/apotheker.pem"));
+    requestSender->setOcspUrlRequestHandler("http://ocsp.test.ibm.de/",
+                                            {{arztQes, subCA1, MockOcsp::CertificateOcspTestMode::SUCCESS},
+                                             {apothekerQes, subCA1, MockOcsp::CertificateOcspTestMode::SUCCESS}},
                                             ocspCertificate, ocspPrivateKey);
 
     const auto nonQesSmcbCert = Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/nonQesSmcb.pem"));

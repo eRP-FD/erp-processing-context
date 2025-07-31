@@ -70,6 +70,7 @@ class ErpProcessingContext(ConanFile):
         'openssl/3.1.8+erp',
         'rapidjson/cci.20230929',
         'redis-plus-plus/1.3.13',
+        'xmlsec/1.3.7+erp',
         'zlib/1.3.1',
         'zstd/1.5.7'  # database compression
     ]
@@ -87,7 +88,7 @@ class ErpProcessingContext(ConanFile):
         self.requires('libpq/16.8', override=True) # Conflict originates from libpqxx/7.10.1
 
     def build_requirements(self):
-        self.tool_requires('xmlsec/1.3.6', options={"shared": False})
+        self.tool_requires('xmlsec/1.3.7+erp', options={"shared": False})
 
 
     def layout(self):

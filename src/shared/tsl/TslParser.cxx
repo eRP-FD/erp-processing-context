@@ -25,26 +25,26 @@
 #include <libxml/xpathInternals.h>
 #include <algorithm>
 #include <iterator>
+#include <mutex>// for call_once
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
+#include <xmlsec/crypto.h>
+#include <xmlsec/errors.h>
+#include <xmlsec/openssl/evp.h>
+#include <xmlsec/xmldsig.h>
+#include <xmlsec/xmlsec.h>
+#include <xmlsec/xmltree.h>
 
 using namespace xmlHelperLiterals;
 
 namespace
 {
-    constexpr const char* xpathLiteral_c14nAlgorithm = "/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo/ds:CanonicalizationMethod/@Algorithm";
     constexpr const char* xpathLiteral_certificate = "/ns:TrustServiceStatusList/ds:Signature/ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()";
-    constexpr const char* xpathLiteral_digestAlgorithm = "(/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo/ds:Reference/ds:DigestMethod)[1]/@Algorithm";
-    constexpr const char* xpathLiteral_digestTransform = "/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo/ds:Reference/ds:Transforms/ds:Transform";
-    constexpr const char* xpathLiteral_digestValueText = "(/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo/ds:Reference/ds:DigestValue)[1]/text()";
     constexpr const char* xpathLiteral_nextUpdateText = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:NextUpdate/ns:dateTime/text()";
     constexpr const char* xpathLiteral_tspService = "/ns:TrustServiceStatusList/ns:TrustServiceProviderList/ns:TrustServiceProvider/ns:TSPServices/ns:TSPService";
-    constexpr const char* xpathLiteral_signature = "/ns:TrustServiceStatusList/ds:Signature";
-    constexpr const char* xpathLiteral_signatureAlgorithm = "/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo/ds:SignatureMethod/@Algorithm";
     constexpr const char* xpathLiteral_signatureValue = "/ns:TrustServiceStatusList/ds:Signature/ds:SignatureValue/text()";
-    constexpr const char* xpathLiteral_signedInfo = "/ns:TrustServiceStatusList/ds:Signature/ds:SignedInfo";
     constexpr const char* xpathLiteral_sequenceNumberText = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:TSLSequenceNumber/text()";
     constexpr const char* xpathLiteral_tslId = "/ns:TrustServiceStatusList/@Id";
     constexpr const char* xpathLiteral_otherTslPointer = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:PointersToOtherTSL/ns:OtherTSLPointer";
@@ -68,28 +68,6 @@ namespace
     constexpr const char* serviceStatusRecognizedatnationallevel = "http://uri.etsi.org/TrstSvc/TrustedList/Svcstatus/recognisedatnationallevel";
 
     using xmlNodeCPtr = const xmlNode * const;
-
-    std::optional<std::string> getChildAttributeValue (
-        xmlNodeCPtr node,
-        const std::string& attributeName)
-    {
-        Expects(node);
-        for (xmlAttrPtr attribute=node->properties; attribute != nullptr; attribute=attribute->next)
-        {
-            if (attribute->type == XML_ATTRIBUTE_NODE && reinterpret_cast<const char*>(attribute->name) == attributeName)
-            {
-                if (attribute->children != nullptr && attribute->children->content != nullptr)
-                {
-                    return std::string{reinterpret_cast<const char*>(attribute->children->content)};
-                }
-
-                break;
-            }
-        }
-
-        return std::nullopt;
-    }
-
 
     xmlNodePtr getChildTag(const xmlNode& node, const std::string& tagName)
     {
@@ -543,277 +521,82 @@ namespace
 
     namespace signature
     {
-        void throwOpenSslError(const std::string& message)
+        std::once_flag xmlsecInitialized; // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
+
+        void xmlsecErrorCallback(const char* file, int line, const char* func, const char* errorObject,
+                             const char* /*errorSubject*/, int /*reason*/, const char* msg)
         {
-            std::string errors;
-            while (unsigned long error = ERR_get_error())
-            {
-                if (! errors.empty())
-                {
-                    errors += "; ";
-                }
-
-                errors += ERR_error_string(error, nullptr);
-            }
-
-            Fail2(message + errors, std::runtime_error);
+            LOG(WARNING) << "[xmlsec error] " << (msg != nullptr ? msg : "unknown error") << " in "
+                         << (func != nullptr ? func : "unknown") << " at " << (file != nullptr ? file : "file") << ":"
+                         << line << ", object " << errorObject;
         }
 
-
-        // GEMREQ-start A_17205
-        std::string getDigestName(const std::string& algorithm)
+        void verifySignatureXmlSec(XmlDocument& xmlDocument, const X509Certificate& signerCertificate)
         {
-            if ("http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256" == algorithm)
-            {
-                return "SHA256";
-            }
+            std::call_once(xmlsecInitialized, [] {
+                Expect(xmlSecInit() >= 0, "Unable to initialize xmlsec");
+                Expect(xmlSecCheckVersion() == 1, "Unexpected xmlsec version");
+                Expect(xmlSecCryptoAppInit(nullptr) >= 0, "Could not init xmlsec crypto app");
+                Expect(xmlSecCryptoInit() >= 0, "Could not init xmlsec crypto");
+            });
 
-            if ("http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384" == algorithm)
-            {
-                return "SHA384";
-            }
+            static const std::unordered_set<XmlStringView> allowedSignatureMethods{
+                XmlStringView{xmlSecNameEcdsaSha256},   XmlStringView{xmlSecNameEcdsaSha384},
+                XmlStringView{xmlSecNameEcdsaSha512},   XmlStringView{xmlSecNameEcdsaSha3_256},
+                XmlStringView{xmlSecNameEcdsaSha3_384}, XmlStringView{xmlSecNameEcdsaSha3_512},
+                XmlStringView{xmlSecNameRsaSha256},     XmlStringView{xmlSecNameRsaSha384},
+                XmlStringView{xmlSecNameRsaSha512},     XmlStringView{xmlSecNameRsaPssSha256},
+                XmlStringView{xmlSecNameRsaPssSha384},  XmlStringView{xmlSecNameRsaPssSha512}};
+            static const std::unordered_set<XmlStringView> allowedDigests{
+                XmlStringView{xmlSecNameSha256}, XmlStringView{xmlSecNameSha384}, XmlStringView{xmlSecNameSha512}};
 
-            if ("http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512" == algorithm)
-            {
-                return "SHA512";
-            }
+            xmlSecErrorsSetCallback(xmlsecErrorCallback);
+            std::unique_ptr<xmlSecDSigCtx, decltype(&xmlSecDSigCtxDestroy)> dsigCtx(xmlSecDSigCtxCreate(nullptr),
+                                                                                    &xmlSecDSigCtxDestroy);
+            Expect(dsigCtx != nullptr, "Could not create dsig ctx");
+            auto* evpPkey = signerCertificate.getPublicKey();
+            Expect(EVP_PKEY_up_ref(evpPkey) == 1, "EVP_PKEY_up_ref failed");
+            auto pubkey = shared_EVP_PKEY::make(evpPkey);
+            std::unique_ptr<xmlSecKeyData, decltype(&xmlSecKeyDataDestroy)> secKeyData(
+                xmlSecOpenSSLEvpKeyAdopt(pubkey.get()), &xmlSecKeyDataDestroy);
+            Expect(secKeyData != nullptr, "xmlSecOpenSSLEvpKeyAdopt failed");
+            pubkey.release();// ownership got transferred NOLINT(bugprone-unused-return-value)
+            std::unique_ptr<xmlSecKey, decltype(&xmlSecKeyDestroy)> secKey(xmlSecKeyCreate(), &xmlSecKeyDestroy);
+            Expect(secKey != nullptr, "Unable to create xmlSecKey");
+            auto ret = xmlSecKeySetValue(secKey.get(), secKeyData.get());
+            Expect(ret >= 0, "xmlSecKeySetValue failed");
+            secKeyData.release();           // NOLINT(bugprone-unused-return-value)
+            dsigCtx->signKey = secKey.get();// passes ownership to dsigCtx
+            secKey.release();               // NOLINT(bugprone-unused-return-value)
+            // Verify signature
+            xmlNodePtr node =
+                xmlSecFindNode(xmlDocGetRootElement(&xmlDocument.getDocument()), xmlSecNodeSignature, xmlSecDSigNs);
+            Expect(xmlSecDSigCtxVerify(dsigCtx.get(), node) >= 0, "Signature validation could not be performed");
 
-            Fail2("ECSDSA Signature algorithm is not supported: " + algorithm, std::runtime_error);
+            const auto numSignedInfos = xmlSecPtrListGetSize(&(dsigCtx->signedInfoReferences));
+            Expect(numSignedInfos > 0, "At least one reference is expected.");
+            bool foundRootUri = false;
+            for (size_t i = 0; i < numSignedInfos; ++i)
+            {
+                auto* dsigRefCtx =
+                    static_cast<xmlSecDSigReferenceCtxPtr>(xmlSecPtrListGetItem(&(dsigCtx->signedInfoReferences), i));
+                Expect(dsigRefCtx != nullptr && dsigRefCtx->status == xmlSecDSigStatusSucceeded,
+                       "Reference verification failed");
+                const auto digestName = XmlStringView(xmlSecTransformGetName(dsigRefCtx->digestMethod));
+                Expect(allowedDigests.contains(digestName), std::string{"Unsupported digest: "}.append(digestName));
+                const auto uri =
+                    std::string_view{(dsigRefCtx->uri != nullptr ? XmlStringView(dsigRefCtx->uri) : XmlStringView(""))};
+                foundRootUri |= uri.empty();
+            }
+            Expect(foundRootUri == true, "Did not find reference for root document");
+            const auto failureReason = std::string{xmlSecDSigCtxGetFailureReasonString(dsigCtx->failureReason)};
+            Expect(dsigCtx->status == xmlSecDSigStatusSucceeded, "Signature did not succeed: " + failureReason);
+
+            auto signatureMethod = XmlStringView(xmlSecTransformGetName(dsigCtx->signMethod));
+            Expect(allowedSignatureMethods.contains(signatureMethod),
+                   std::string{"Unsupported signature method: "}.append(signatureMethod));
         }
-        // GEMREQ-end A_17205
-
-        std::string getRsaDigestName(const std::string& algorithm)
-        {
-            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" == algorithm ||
-                "http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1" == algorithm)
-            {
-                return "SHA512";
-            }
-            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" == algorithm ||
-                "http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1" == algorithm)
-            {
-                return "SHA384";
-            }
-            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" == algorithm ||
-                "http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1" == algorithm)
-            {
-                return "SHA256";
-            }
-
-            Fail2("Signature algorithm is not using a supported RSA digest", std::runtime_error);
-        }
-
-        int getRsaPadding(const std::string& algorithm)
-        {
-            if ("http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1" == algorithm ||
-                "http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1" == algorithm ||
-                "http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1" == algorithm)
-            {
-                return RSA_PKCS1_PSS_PADDING;
-            }
-            if ("http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" == algorithm ||
-                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" == algorithm ||
-                "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" == algorithm)
-            {
-                return RSA_PKCS1_PADDING;
-            }
-
-            Fail2("Signature algorithm is not using a supported RSA digest", std::runtime_error);
-        }
-
-
-        // @see https://www.w3.org/TR/xmldsig-core/#sec-SignatureValidation
-        bool validateSignature(const std::string& message, const util::Buffer& signature,
-                               const std::string& algorithm, const X509Certificate& signerCertificate)
-        {
-            // GEMREQ-start A_17205
-            bool isDomainParameterBrainpoolP256r1 = false;
-
-            EVP_PKEY* publicKey = signerCertificate.getPublicKey();
-            if (publicKey)
-            {
-                const auto* ecKey = EVP_PKEY_get0_EC_KEY(publicKey);
-                if (ecKey)
-                {
-                    const auto* group = EC_KEY_get0_group(ecKey);
-                    if (group && NID_brainpoolP256r1 == EC_GROUP_get_curve_name(group))
-                    {
-                        isDomainParameterBrainpoolP256r1 = true;
-                    }
-                }
-            }
-
-            if (! isDomainParameterBrainpoolP256r1)
-            {
-                TVLOG(1) << "refusing to validate non-BrainpoolP256r1-based ECC TSL signature";
-                return false;
-            }
-            // GEMREQ-end A_17205
-
-            std::shared_ptr<EVP_MD_CTX> digestContext{EVP_MD_CTX_create(), EVP_MD_CTX_free};
-            if (! digestContext)
-            {
-                throwOpenSslError("can not create digest context");
-            }
-
-            const std::string digestName = getDigestName(algorithm);
-            EVP_PKEY_CTX* publicKeyContext = nullptr;
-            int status =
-                EVP_DigestVerifyInit(digestContext.get(), &publicKeyContext,
-                                     EVP_get_digestbyname(digestName.c_str()), nullptr, publicKey);
-            if (status != 1)
-            {
-                throwOpenSslError("Can't initialize digest verification: ");
-            }
-
-            status = EVP_DigestVerifyUpdate(digestContext.get(), message.data(), message.length());
-            if (status != 1)
-            {
-                throwOpenSslError("Can't update digest verification: ");
-            }
-
-            status = EVP_DigestVerifyFinal(digestContext.get(), signature.data(), signature.size());
-            return status == 1;
-        }
-
-
-        bool verifyDigestTransforms(XmlDocument& xmlDocument)
-        {
-            const auto transforms = xmlDocument.getXpathObjects(xpathLiteral_digestTransform);
-            for (auto index = 0; index < transforms->nodesetval->nodeNr; ++index)
-            {
-                const std::optional<std::string> algorithm =
-                    getChildAttributeValue(transforms->nodesetval->nodeTab[index], "Algorithm");
-                if (! algorithm)
-                {
-                    Fail2("digest transform has no Algorithm attribute", std::runtime_error);
-                }
-
-                if (*algorithm == signatureTransformLiteral_envelopedSignatureAlgorithm)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-
-        void verifyDigest(XmlDocument& xmlDocument)
-        {
-            const std::optional<std::string> canonicalizedData = C14NHelper::canonicalize(
-                xmlDocument.getNode("/"),
-                verifyDigestTransforms(xmlDocument) ? xmlDocument.getNode(xpathLiteral_signature)
-                                                    : nullptr,
-                &xmlDocument.getDocument(), XML_C14N_EXCLUSIVE_1_0, std::vector<std::string>{}, false);
-
-            Expect(canonicalizedData.has_value(),
-                   "the provided signed info can not be canonicalized without signature");
-
-            const std::string expectedDigestValue =
-                xmlDocument.getElementText(xpathLiteral_digestValueText);
-            Expect(! expectedDigestValue.empty(), "no expected digest value is provided");
-            TVLOG(2) << "Digest stored in TSL-File is [" << expectedDigestValue << "]";
-
-            const std::string digestAlgorithm =
-                xmlDocument.getAttributeValue(xpathLiteral_digestAlgorithm);
-            const std::string expectedDigest = Base64::decodeToString(expectedDigestValue, true);
-            std::string calculatedDigest;
-            if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha256")
-            {
-                calculatedDigest = Hash::sha256(*canonicalizedData);
-            }
-            else if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha384")
-            {
-                calculatedDigest = Hash::sha384(*canonicalizedData);
-            }
-            else if (digestAlgorithm == "http://www.w3.org/2001/04/xmlenc#sha512")
-            {
-                calculatedDigest = Hash::sha512(*canonicalizedData);
-            }
-            else
-            {
-                Fail("unsupported digest algorithm: " + digestAlgorithm);
-            }
-
-            Expect(expectedDigest == calculatedDigest, "Digest value mismatch");
-        }
-
-
-        void validateRsaSignature(
-            const std::string& canonicalizedSignedInfo,
-            const util::Buffer& signature,
-            const std::string& algorithm,
-            const X509Certificate& signerCertificate)
-        {
-            EVP_PKEY* pKey = signerCertificate.getPublicKey();
-            Expect(pKey != nullptr, "can not retrieve signer certificate public key");
-
-            std::shared_ptr<EVP_MD_CTX> rsaVerifyCtx(EVP_MD_CTX_create(), EVP_MD_CTX_free);
-            Expect(rsaVerifyCtx != nullptr, "Can not create verification context.");
-            const std::string digestName = getRsaDigestName(algorithm);
-            EVP_PKEY_CTX* keyContext = nullptr;
-            Expect(EVP_DigestVerifyInit(rsaVerifyCtx.get(), &keyContext, EVP_get_digestbyname(digestName.c_str()),
-                                        nullptr, pKey) == 1,
-                   "Can not initialize Digest Verification.");
-
-            Expect(EVP_PKEY_CTX_set_rsa_padding(keyContext, getRsaPadding(algorithm)) == 1,
-                   "Can not set RSA padding.");
-
-            Expect(EVP_DigestVerifyUpdate(rsaVerifyCtx.get(),
-                                          canonicalizedSignedInfo.c_str(),
-                                          canonicalizedSignedInfo.size()) == 1,
-                   "Can not proceed with Digest verification");
-
-            Expect(EVP_DigestVerifyFinal(rsaVerifyCtx.get(), signature.data(), signature.size()) == 1,
-                   "Digest is invalid");
-        }
-
-
-        void verifySignature(XmlDocument& xmlDocument, const X509Certificate& signerCertificate)
-        {
-            const std::string canonicalizationAlgorithm =
-                xmlDocument.getAttributeValue(xpathLiteral_c14nAlgorithm);
-            Expect(canonicalizationAlgorithm == "http://www.w3.org/2001/10/xml-exc-c14n#",
-                   "Unexpected canonicalization algorithm " + canonicalizationAlgorithm);
-
-            const auto canonicalizedSignedInfo = C14NHelper::canonicalize(
-                xmlDocument.getNode(xpathLiteral_signedInfo), nullptr, &xmlDocument.getDocument(),
-                XML_C14N_EXCLUSIVE_1_0, std::vector<std::string>{}, false);
-
-            Expect(canonicalizedSignedInfo.has_value(), "Unable to canonicalize signed info");
-
-            // GEMREQ-start A_17206
-            // GEMREQ-start A_17205
-            const std::string signatureString = xmlDocument.getElementText(xpathLiteral_signatureValue);
-            const std::string signatureAlgorithm = xmlDocument.getAttributeValue(xpathLiteral_signatureAlgorithm);
-            TVLOG(2) << "Signature stored int TSL-File is [" << signatureString << "]";
-
-            const util::Buffer signature = Base64::decode(Base64::cleanupForDecoding(signatureString));
-
-            if (signerCertificate.getSigningAlgorithm() == SigningAlgorithm::ellipticCurve)
-            {
-                if (! validateSignature(*canonicalizedSignedInfo,
-                                        EllipticCurveUtils::convertSignatureFormat(
-                                            signature, EllipticCurveUtils::SignatureFormat::XMLDSIG,
-                                            EllipticCurveUtils::SignatureFormat::ASN1_DER),
-                                        signatureAlgorithm, signerCertificate))
-                {
-                    Fail2("Invalid signature", std::runtime_error);
-                }
-            }
-            // GEMREQ-end A_17205
-            // GEMREQ-end A_17206
-            else if (signerCertificate.getSigningAlgorithm() == SigningAlgorithm::rsaPss)
-            {
-                validateRsaSignature(*canonicalizedSignedInfo, signature, signatureAlgorithm, signerCertificate);
-            }
-            else
-            {
-                Fail2("unexpected TSL signature algorithm ", std::runtime_error);
-            }
-        }
-    }
+    } // namespace signature
 
 
     void validateDocumentSchema(const XmlDocument& xmlDocument, const TslMode mode, const XmlValidator& xmlValidator)
@@ -911,7 +694,8 @@ namespace
     }
 
 
-    X509Certificate extractSignerCertificate(XmlDocument& xmlDocument, const TslMode mode)
+    X509Certificate extractSignerCertificate(XmlDocument& xmlDocument, const TslMode mode,
+                                             std::chrono::system_clock::time_point referenceTimePoint)
     {
         try
         {
@@ -919,7 +703,7 @@ namespace
             X509Certificate certificate =
                 X509Certificate::createFromBase64(Base64::cleanupForDecoding(certificateBase64));
 
-            Expect(certificate.checkValidityPeriod(), "Invalid signer certificate");
+            Expect(certificate.checkValidityPeriod(referenceTimePoint), "Invalid signer certificate");
             return certificate;
         }
         catch(const std::runtime_error& e)
@@ -1052,8 +836,7 @@ namespace
     {
         try
         {
-            signature::verifyDigest(xmlDocument);
-            signature::verifySignature(xmlDocument, signerCertificate);
+            signature::verifySignatureXmlSec(xmlDocument, signerCertificate);
         }
         catch (const std::exception& e)
         {
@@ -1066,7 +849,7 @@ namespace
 }
 
 
-TslParser::TslParser(const std::string& tslXml, const TslMode tslMode, const XmlValidator& xmlValidator)
+TslParser::TslParser(const std::string& tslXml, const TslMode tslMode, const XmlValidator& xmlValidator, std::optional<std::chrono::system_clock::time_point> referenceTimePoint)
     : mTslMode(tslMode)
     , mId{}
     , mSequenceNumber{}
@@ -1074,6 +857,7 @@ TslParser::TslParser(const std::string& tslXml, const TslMode tslMode, const Xml
     , mSignerCertificate{}
     , mOcspCertificateList{}
     , mServiceInformationMap{}
+    , mReferenceTimePoint{referenceTimePoint.value_or(std::chrono::system_clock::now())}
 {
     performExtractions(tslXml, xmlValidator);
 }
@@ -1153,7 +937,7 @@ void TslParser::performExtractions(const std::string& xml, const XmlValidator& x
 
         mNextUpdate = extractNextUpdate(xmlDocument, mTslMode);
 
-        mSignerCertificate = extractSignerCertificate(xmlDocument, mTslMode);
+        mSignerCertificate = extractSignerCertificate(xmlDocument, mTslMode, mReferenceTimePoint);
 
         if (mTslMode != TslMode::BNA)
         {

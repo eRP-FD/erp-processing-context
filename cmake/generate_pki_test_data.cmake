@@ -54,8 +54,6 @@ if(RESULT_GENERATE_PKI_TEST_DATA AND NOT RESULT_GENERATE_PKI_TEST_DATA EQUAL 0)
     message(FATAL_ERROR "Failed to generate PKI test data\n${OUTPUT_GENERATE_PKI_TEST_DATA}\n${ERROR_GENERATE_PKI_TEST_DATA}")
 endif()
 
-file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/BNA_valid.xml
-        DESTINATION ${CMAKE_BINARY_DIR}/resources/test/generated_pki/tsl)
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/QES-noTypeCA.base64.der
         DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/QES-noType.base64.der
@@ -67,10 +65,6 @@ file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/DefaultOcsp.prv
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/IDP-Wansim.pem
         DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/IDP-Wansim-CA.pem
-        DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)
-file(COPY ${CMAKE_SOURCE_DIR}/resources/test/qes.pem
-        DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)
-file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/GEM.HBA-qCA6_TEST-ONLY.der
         DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)
 file(COPY ${CMAKE_SOURCE_DIR}/resources/test/nonQesSmcb.pem
         DESTINATION ${CMAKE_BINARY_DIR}/resources/test/tsl/X509Certificate/)

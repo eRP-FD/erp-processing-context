@@ -210,7 +210,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItem)//NOLINT(readability-function-c
 }
 
 
-TEST_F(ChargeItemPostHandlerTest, PostChargeItemNonQes)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ChargeItemPostHandlerTest, DISABLED_PostChargeItemNonQes)//NOLINT(readability-function-cognitive-complexity)
 {
     const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
 

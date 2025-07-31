@@ -1217,14 +1217,22 @@ void X509Certificate::appendRoles(std::vector<std::string>& outRoleOids, const S
     }
 }
 
+tm X509Certificate::getNotBefore() const
+{
+    Expect(pCert, "pCert is null");
+    const auto* notBefore = X509_get0_notBefore(pCert.get());
+    Expect3(notBefore != nullptr, "Unable to retrieve Not Valid Before time from certificate.", CryptoFormalError);
+    tm notBeforeTm{};
+    OpenSslExpect(ASN1_TIME_to_tm(notBefore, &notBeforeTm), "ASN1_TIME_to_tm failed for notAfter");
+    return notBeforeTm;
+}
+
+
 tm X509Certificate::getNotAfter() const
 {
     Expect(pCert, "pCert is null");
     const auto* notAfter = X509_get0_notAfter(pCert.get());
-    if (!notAfter)
-    {
-        Fail2("Unable to retrieve Not Valid After time from certificate.", CryptoFormalError);
-    }
+    Expect3(notAfter != nullptr, "Unable to retrieve Not Valid After time from certificate.", CryptoFormalError);
     tm notAfterTm{};
     OpenSslExpect(ASN1_TIME_to_tm(notAfter, &notAfterTm), "ASN1_TIME_to_tm failed for notAfter");
     return notAfterTm;

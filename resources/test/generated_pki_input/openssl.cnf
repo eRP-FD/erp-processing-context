@@ -1,3 +1,4 @@
+config_diagnostics = 1
 #
 # OpenSSL configuration file.
 # This is mostly being used for generation of
@@ -22,6 +23,8 @@ oid_section      = new_oids
 # (Alternatively, use a configuration file that has only
 # X.509v3 extensions in its main [= default] section.)
 
+
+
 [ new_oids ]
 
 # We can add new OIDs in here for use by 'ca', 'req' and 'ts'.
@@ -45,6 +48,115 @@ oid_vk_eaa_enc       = 1.3.6.1.4.1.24796.1.10
 tsa_policy1 = 1.2.3.4.1
 tsa_policy2 = 1.2.3.4.5.6
 tsa_policy3 = 1.2.3.4.5.7
+
+oid_arzt                               = 1.2.276.0.76.4.30
+oid_zahnarzt                           = 1.2.276.0.76.4.31
+oid_apotheker                          = 1.2.276.0.76.4.32
+oid_apothekerassistent                 = 1.2.276.0.76.4.33
+oid_pharmazieingenieur                 = 1.2.276.0.76.4.34
+oid_pharm_techn_assistent              = 1.2.276.0.76.4.35
+oid_pharm_kaufm_angestellter           = 1.2.276.0.76.4.36
+oid_apothekenhelfer                    = 1.2.276.0.76.4.37
+oid_apothekenassistent                 = 1.2.276.0.76.4.38
+oid_pharm_assistent                    = 1.2.276.0.76.4.39
+oid_apothekenfacharbeiter              = 1.2.276.0.76.4.40
+oid_pharmaziepraktikant                = 1.2.276.0.76.4.41
+oid_famulant                           = 1.2.276.0.76.4.42
+oid_pta_praktikant                     = 1.2.276.0.76.4.43
+oid_pka_auszubildender                 = 1.2.276.0.76.4.44
+oid_psychotherapeut                    = 1.2.276.0.76.4.45
+oid_ps_psychotherapeut                 = 1.2.276.0.76.4.46
+oid_kuj_psychotherapeut                = 1.2.276.0.76.4.47
+oid_rettungsassistent                  = 1.2.276.0.76.4.48
+oid_versicherter                       = 1.2.276.0.76.4.49
+oid_notfallsanitaeter                  = 1.2.276.0.76.4.178
+oid_pfleger_hpc                        = 1.2.276.0.76.4.232
+oid_altenpfleger_hpc                   = 1.2.276.0.76.4.233
+oid_pflegefachkraft_hpc                = 1.2.276.0.76.4.234
+oid_hebamme_hpc                        = 1.2.276.0.76.4.235
+oid_physiotherapeut_hpc                = 1.2.276.0.76.4.236
+oid_augenoptiker_hpc                   = 1.2.276.0.76.4.237
+oid_hoerakustiker_hpc                  = 1.2.276.0.76.4.238
+oid_orthopaedieschuhmacher_hpc         = 1.2.276.0.76.4.239
+oid_orthopaedietechniker_hpc           = 1.2.276.0.76.4.240
+oid_zahntechniker_hpc                  = 1.2.276.0.76.4.241
+oid_arztekammern                       = 1.3.6.1.4.1.24796.4.11.1
+oid_praxis_arzt                        = 1.2.276.0.76.4.50
+oid_zahnarztpraxis                     = 1.2.276.0.76.4.51
+oid_praxis_psychotherapeut             = 1.2.276.0.76.4.52
+oid_krankenhaus                        = 1.2.276.0.76.4.53
+oid_oeffentliche_apotheke              = 1.2.276.0.76.4.54
+oid_krankenhausapotheke                = 1.2.276.0.76.4.55
+oid_bundeswehrapotheke                 = 1.2.276.0.76.4.56
+oid_mobile_einrichtung_rettungsdienst  = 1.2.276.0.76.4.57
+oid_bs_gematik                         = 1.2.276.0.76.4.58
+oid_kostentraeger                      = 1.2.276.0.76.4.59
+oid_leo_zahnaerzte                     = 1.2.276.0.76.4.187
+oid_adv_ktr                            = 1.2.276.0.76.4.190
+oid_leo_kassenaerztliche_vereinigung   = 1.2.276.0.76.4.210
+oid_bs_gkv_spitzenverband              = 1.2.276.0.76.4.223
+oid_leo_krankenhausverband             = 1.2.276.0.76.4.226
+oid_leo_dktig                          = 1.2.276.0.76.4.227
+oid_leo_dkg                            = 1.2.276.0.76.4.228
+oid_leo_apothekerverband               = 1.2.276.0.76.4.224
+oid_leo_dav                            = 1.2.276.0.76.4.225
+oid_leo_baek                           = 1.2.276.0.76.4.229
+oid_leo_aerztekammer                   = 1.2.276.0.76.4.230
+oid_leo_zahnaerztekammer               = 1.2.276.0.76.4.231
+oid_leo_kbv                            = 1.2.276.0.76.4.242
+oid_leo_bzaek                          = 1.2.276.0.76.4.243
+oid_leo_kzbv                           = 1.2.276.0.76.4.244
+oid_institution_pflege                 = 1.2.276.0.76.4.245
+oid_institution_geburtshilfe           = 1.2.276.0.76.4.246
+oid_praxis_physiotherapeut             = 1.2.276.0.76.4.247
+oid_institution_augenoptiker           = 1.2.276.0.76.4.248
+oid_institution_hoerakustiker          = 1.2.276.0.76.4.249
+oid_institution_orthopaedieschuhmacher = 1.2.276.0.76.4.250
+oid_institution_orthopaedietechniker   = 1.2.276.0.76.4.251
+oid_institution_zahntechniker          = 1.2.276.0.76.4.252
+oid_institution_rettungsleitstellen    = 1.2.276.0.76.4.253
+oid_sanitaetsdienst_bundeswehr         = 1.2.276.0.76.4.254
+oid_institution_oegd                   = 1.2.276.0.76.4.255
+oid_institution_arbeitsmedizin         = 1.2.276.0.76.4.256
+oid_institution_vorsorge_reha          = 1.2.276.0.76.4.257
+oid_ncpeh                              = 1.2.276.0.76.4.292
+oid_vsdd                               = 1.2.276.0.76.4.97
+oid_ocsp                               = 1.2.276.0.76.4.99
+oid_cms                                = 1.2.276.0.76.4.100
+oid_ufs                                = 1.2.276.0.76.4.101
+oid_ak                                 = 1.2.276.0.76.4.103
+oid_nk                                 = 1.2.276.0.76.4.104
+oid_kt                                 = 1.2.276.0.76.4.105
+oid_sak                                = 1.2.276.0.76.4.119
+oid_int_vsdm                           = 1.2.276.0.76.4.159
+oid_konfigdienst                       = 1.2.276.0.76.4.160
+oid_vpnz_ti                            = 1.2.276.0.76.4.161
+oid_vpnz_sis                           = 1.2.276.0.76.4.166
+oid_cmfd                               = 1.2.276.0.76.4.174
+oid_vzd_ti                             = 1.2.276.0.76.4.171
+oid_komle                              = 1.2.276.0.76.4.172
+oid_komle_recipient_emails             = 1.2.276.0.76.4.173
+oid_stamp                              = 1.2.276.0.76.4.184
+oid_tsl_ti                             = 1.2.276.0.76.4.189
+oid_wadg                               = 1.2.276.0.76.4.198
+oid_epa_authn                          = 1.2.276.0.76.4.204
+oid_epa_authz                          = 1.2.276.0.76.4.205
+oid_epa_dvw                            = 1.2.276.0.76.4.206
+oid_epa_mgmt                           = 1.2.276.0.76.4.207
+oid_epa_recovery                       = 1.2.276.0.76.4.208
+oid_epa_vau                            = 1.2.276.0.76.4.209
+oid_vz_tsp                             = 1.2.276.0.76.4.215
+oid_whk1_hsm                           = 1.2.276.0.76.4.216
+oid_whk2_hsm                           = 1.2.276.0.76.4.217
+oid_whk                                = 1.2.276.0.76.4.218
+oid_sgd1_hsm                           = 1.2.276.0.76.4.219
+oid_sgd2_hsm                           = 1.2.276.0.76.4.220
+oid_sgd                                = 1.2.276.0.76.4.221
+oid_erp_vau                            = 1.2.276.0.76.4.258
+oid_erezept                            = 1.2.276.0.76.4.259
+oid_idpd                               = 1.2.276.0.76.4.260
+
+
 
 ####################################################################
 [ ca ]
@@ -566,6 +678,85 @@ extendedKeyUsage       = id_tsl_kp_tslSigning
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
 
 
+####################################################################
+####################################################################
+[arzt]
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+keyUsage               = critical,nonRepudiation
+basicConstraints       = critical,CA:FALSE
+certificatePolicies    = @qes_policy_hba_cp,oid_hba_qes,qcp-natural-qscd
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
+authorityKeyIdentifier = keyid,issuer
+x509ExtAdmission       = ASN1:SEQUENCE:arzt_profession_oids
+qcStatements           = ASN1:SEQUENCE:qes_qcStatement
+
+[arzt_profession_oids]
+admissionAuthority = EXPLICIT:4, SEQUENCE:authority_name_sect
+contentsOfAdmissions = SEQWRAP, SEQUENCE:arzt_admission0_sect
+
+[arzt_admission0_sect]
+professionInfos = SEQUENCE:arzt_professionInfos_sect
+
+[arzt_professionInfos_sect]
+professionInfo.0 = SEQUENCE:arzt_professionInfo0_sect
+
+[arzt_professionInfo0_sect]
+professionItems.0 = SEQUENCE:arzt_professionItems_sect
+professionOIDs=SEQUENCE:arzt_oid_sect
+professionItems.1 = PRINTABLESTRING:"1-Arzt-1"
+
+[arzt_professionItems_sect]
+professionItem.0 = UTF8String:"Ärztin/Arzt"
+
+[arzt_oid_sect]
+one=OID:oid_arzt
+
+####################################################################
+[apotheker]
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+keyUsage               = critical,nonRepudiation
+basicConstraints       = critical,CA:FALSE
+certificatePolicies    = @qes_policy_hba_cp,oid_hba_qes,qcp-natural-qscd
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
+authorityKeyIdentifier = keyid,issuer
+x509ExtAdmission       = ASN1:SEQUENCE:apotheker_profession_oids
+qcStatements           = ASN1:SEQUENCE:qes_qcStatement
+
+[apotheker_profession_oids]
+admissionAuthority = EXPLICIT:4, SEQUENCE:authority_name_sect
+contentsOfAdmissions = SEQWRAP, SEQUENCE:apotheker_admission0_sect
+
+[apotheker_admission0_sect]
+professionInfos = SEQUENCE:apotheker_professionInfos_sect
+
+[apotheker_professionInfos_sect]
+professionInfo.0 = SEQUENCE:apotheker_professionInfo0_sect
+
+[apotheker_professionInfo0_sect]
+professionItems = SEQUENCE:apotheker_professionItems_sect
+professionOIDs=SEQUENCE:apotheker_oid_sect
+professionItems.1 = PRINTABLESTRING:"1-Apotheker-1"
+
+[apotheker_professionItems_sect]
+professionItem.0 = UTF8String:"Apothekerin/Apotheker"
+
+[apotheker_oid_sect]
+one=OID:oid_apotheker
+
+####################################################################
+# used by both arzt and apotheker
+[qes_policy_hba_cp]
+policyIdentifier       = oid_policy_hba_cp
+CPS.0                  = http://www.e-arztausweis.de/policies/EE_policy.html
+[qes_qcStatement]0
+etsiQcsCompliance=SEQUENCE:etsiQcsCompliance
+qes_qcs-QcSSCD=SEQUENCE:qes_qcs-QcSSCD
+[qes_qcs-QcSSCD]
+statementId=OID:0.4.0.1862.1.4
+
+####################################################################
 ####################################################################
 [qes_cert1]
 

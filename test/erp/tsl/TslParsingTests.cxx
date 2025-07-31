@@ -171,3 +171,43 @@ TEST_F(TslParsingTests, BnaXmlRsa256)
     EXPECT_EQ(tslParser.getId(), "ID31028220210914152511Z");
     EXPECT_EQ(tslParser.getSequenceNumber(), "10282");
 }
+
+TEST_F(TslParsingTests, PseudoBnaTsl)
+{
+    TslParser tslParser{
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/Pseudo-BNetzA-VL_v51.xml"),
+        TslMode::BNA,
+        *StaticData::getXmlValidator(),
+        model::Timestamp::fromGermanDate("2025-07-01").toChronoTimePoint()
+    };
+
+    EXPECT_EQ(tslParser.getId(), "ID65120250714132119Z");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "51");
+}
+
+TEST_F(TslParsingTests, BnaSha1Rejected)
+{
+    // expect rejection of unsupported digest
+    EXPECT_TSL_ERROR_THROW(
+        TslParser(ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_sha1.xml"), TslMode::BNA,
+                  *StaticData::getXmlValidator()),
+        {TslErrorCode::XML_SIGNATURE_ERROR}, HttpStatus::InternalServerError);
+}
+
+TEST_F(TslParsingTests, BnaRsaSha1Rejected)
+{
+    // expect rejection of unsupported signing method
+    EXPECT_TSL_ERROR_THROW(
+        TslParser(ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_rsa_sha1.xml"), TslMode::BNA,
+                  *StaticData::getXmlValidator()),
+        {TslErrorCode::XML_SIGNATURE_ERROR}, HttpStatus::InternalServerError);
+}
+
+TEST_F(TslParsingTests, BnaNoRootRejected)
+{
+    // expect rejection of unsigned root document
+    EXPECT_TSL_ERROR_THROW(
+        TslParser(ResourceManager::instance().getStringResource("test/generated_pki/tsl/BNA_no_root.xml"), TslMode::BNA,
+                  *StaticData::getXmlValidator()),
+        {TslErrorCode::XML_SIGNATURE_ERROR}, HttpStatus::InternalServerError);
+}

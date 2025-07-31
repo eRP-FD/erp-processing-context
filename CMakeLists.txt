@@ -90,6 +90,7 @@ find_package(libunwind REQUIRED)
 find_package(libxml2 REQUIRED)
 find_package(magic_enum REQUIRED)
 find_package(redis++ REQUIRED)
+find_package(xmlsec REQUIRED)
 find_package(zstd REQUIRED)
 
 option(WITH_PROFILING "Build binaries with profiling" OFF)

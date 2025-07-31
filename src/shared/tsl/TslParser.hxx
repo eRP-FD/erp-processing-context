@@ -24,7 +24,8 @@ class XmlValidator;
 class TslParser
 {
 public:
-    explicit TslParser(const std::string& tslXml, const TslMode tslMode, const XmlValidator& xmlValidator);
+    explicit TslParser(const std::string& tslXml, TslMode tslMode, const XmlValidator& xmlValidator,
+                       std::optional<std::chrono::system_clock::time_point> referenceTimePoint = std::nullopt);
 
     TslParser(const TslParser&) = delete;
 
@@ -120,6 +121,7 @@ private:
     BnaServiceInformation mBnaServiceInformation;
 
     UpdateUrlList mUpdateUrlList;
+    std::chrono::system_clock::time_point mReferenceTimePoint;
 };
 
 #endif
