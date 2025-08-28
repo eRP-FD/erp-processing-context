@@ -7,11 +7,11 @@
 
 
 #include "erp/model/Communication.hxx"
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/expression/Expression.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "shared/model/KbvBundle.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -39,8 +39,8 @@ public:
         ASSERT_EQ(result[0]->type(), Element::Type::Boolean);
         ASSERT_EQ(result[0]->asBool(), expected) << result;
     }
-    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
-    const FhirStructureRepository& repo = *mRepo;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
+    const FhirStructureRepositoryView& repo = *mRepo;
     model::NumberAsStringParserDocument testResource;
     std::shared_ptr<ErpElement> rootElement;
 };
@@ -81,19 +81,19 @@ TEST_F(FhirPathParserTest, exists)
     {
         auto expressions = FhirPathParser::parse(&repo, "string.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.string.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -103,19 +103,19 @@ TEST_F(FhirPathParserTest, indexer)
     {
         auto expressions = FhirPathParser::parse(&repo, "multiString[0].exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiString[1].exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiString[2].exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -124,7 +124,7 @@ TEST_F(FhirPathParserTest, unionOperator)
 {
     auto expressions = FhirPathParser::parse(&repo, "multiNum | Test.multiDec");
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({rootElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
     ASSERT_EQ(result.size(), 5);
     EXPECT_EQ(result[0]->asInt(), 1);
     EXPECT_EQ(result[1]->asInt(), 5);
@@ -138,19 +138,19 @@ TEST_F(FhirPathParserTest, orOperator)
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() or Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "y.exists() or Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() or Test.string.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
 }
@@ -159,19 +159,19 @@ TEST_F(FhirPathParserTest, xorOperator)
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() xor Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "y.exists() xor Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() xor Test.string.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -180,19 +180,19 @@ TEST_F(FhirPathParserTest, andOperator)
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() and Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "y.exists() and Test.x.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiNum.exists() and Test.string.exists()");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
 }
@@ -202,13 +202,13 @@ TEST_F(FhirPathParserTest, in)
     {
         auto expressions = FhirPathParser::parse(&repo, "3.14 in Test.multiDec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "3 in Test.multiDec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -218,13 +218,13 @@ TEST_F(FhirPathParserTest, contains)
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.multiString contains 'value'");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "multiString contains 'hello'");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -234,25 +234,25 @@ TEST_F(FhirPathParserTest, greaterEquals)
     {
         auto expressions = FhirPathParser::parse(&repo, "2 >= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 >= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 >= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, " dec >= num");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -262,25 +262,25 @@ TEST_F(FhirPathParserTest, greater)
     {
         auto expressions = FhirPathParser::parse(&repo, "2 > dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 > dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 > dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, " dec > num");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -290,25 +290,25 @@ TEST_F(FhirPathParserTest, less)
     {
         auto expressions = FhirPathParser::parse(&repo, "2 < dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 < dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 < dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, " dec < num");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
 }
@@ -318,25 +318,25 @@ TEST_F(FhirPathParserTest, lessEquals)
     {
         auto expressions = FhirPathParser::parse(&repo, "2 <= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 <= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 <= dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, " dec <= num");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
 }
@@ -346,25 +346,25 @@ TEST_F(FhirPathParserTest, eq)
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 = dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 = dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.string = 'value'");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.string = ''");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -374,25 +374,25 @@ TEST_F(FhirPathParserTest, neq)
     {
         auto expressions = FhirPathParser::parse(&repo, "1.2 != dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "1.1 != dec");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.string != 'value'");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "Test.string != ''");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
 }
@@ -402,13 +402,13 @@ TEST_F(FhirPathParserTest, is)
     {
         auto expressions = FhirPathParser::parse(&repo, "dec is `http://hl7.org/fhirpath/System.Decimal`");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, true));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "dec is Patient");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
     }
 }
@@ -418,14 +418,14 @@ TEST_F(FhirPathParserTest, as)
     {
         auto expressions = FhirPathParser::parse(&repo, "dec as `http://hl7.org/fhirpath/System.Decimal`");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result.single()->asDecimal(), DecimalType("1.2"));
     }
     {
         auto expressions = FhirPathParser::parse(&repo, "dec as `http://hl7.org/fhirpath/System.Integer`");
         ASSERT_TRUE(expressions);
-        auto result = expressions->eval({rootElement});
+        auto result = expressions->eval(fhirtools::EvaluationContext{rootElement}).collection;
         ASSERT_EQ(result.size(), 0);
     }
 }
@@ -443,7 +443,7 @@ TEST_F(FhirPathParserTestCommunication, testele_1)
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({communicationElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -454,10 +454,10 @@ TEST_F(FhirPathParserTestCommunication, testext_1)
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    Collection in{communicationElement->subElements("contained")[0]->subElements("extension")};
+    EvaluationContext in{communicationElement->subElements("contained")[0]->subElements("extension"), communicationElement};
     std::ostringstream inStr;
-    in.json(inStr);
-    auto result = expressions->eval(in);
+    in.collection.json(inStr);
+    auto result = expressions->eval(in).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true) << inStr.str() << " -> " << result;
 }
@@ -469,7 +469,7 @@ TEST_F(FhirPathParserTestCommunication, testref_1)
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(communicationElement->subElements("basedOn"));
+    auto result = expressions->eval({communicationElement->subElements("basedOn"), communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -481,7 +481,7 @@ TEST_F(FhirPathParserTestCommunication, testref_1_2)
 
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(communicationElement->subElements("about"));
+    auto result = expressions->eval({communicationElement->subElements("about"), communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -496,7 +496,7 @@ TEST_F(FhirPathParserTestCommunication, test_dom_3)
         "'#').exists()).not()).trace('unmatched', id).empty()";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({communicationElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -506,7 +506,7 @@ TEST_F(FhirPathParserTestCommunication, resolve)
     const char constraint[] = "contained.contains(about.resolve())";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({communicationElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -516,7 +516,7 @@ TEST_F(FhirPathParserTestCommunication, resolveid)
     const char constraint[] = "about.resolve().id = '5fe6e06c-8725-46d5-aecd-e65e041ca3de'";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({communicationElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{communicationElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -526,7 +526,7 @@ TEST_F(FhirPathParserTestBundle, test_erp_compositionPflicht)
     const char constraint[] = "entry.where(resource is Composition).count()=1";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({bundleElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -536,7 +536,7 @@ TEST_F(FhirPathParserTestBundle, test_erp_begrenzungDate)
     const char constraint[] = "authoredOn.toString().length()=10";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(bundleElement->subElements("entry")[1]->subElements("resource"));
+    auto result = expressions->eval({bundleElement->subElements("entry")[1]->subElements("resource"), bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -548,8 +548,8 @@ TEST_F(FhirPathParserTestBundle, test_erp_angabeDosierung)
                               "KBV_EX_ERP_DosageFlag').value.as(Boolean)=false) implies text.empty()";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(
-        bundleElement->subElements("entry")[1]->subElements("resource")[0]->subElements("dosageInstruction"));
+    auto result = expressions->eval({
+        bundleElement->subElements("entry")[1]->subElements("resource")[0]->subElements("dosageInstruction"), bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -559,7 +559,7 @@ TEST_F(FhirPathParserTestBundle, test_org_1)
     const char constraint[] = "(identifier.count() + name.count()) > 0";
     auto expressions = FhirPathParser::parse(&repo, constraint);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval(bundleElement->subElements("entry")[4]->subElements("resource"));
+    auto result = expressions->eval({bundleElement->subElements("entry")[4]->subElements("resource"), bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -574,7 +574,7 @@ TEST_F(FhirPathParserTestBundle, resolve)
         ".resource.as(Patient)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({bundleElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asBool(), true);
 }
@@ -584,7 +584,7 @@ TEST_F(FhirPathParserTestBundle, ofTypePatient)
     const char expression[] = "entry.resource.ofType(Patient)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({bundleElement});
+    auto result = expressions->eval(fhirtools::EvaluationContext{bundleElement}).collection;
     ASSERT_EQ(result.size(), 1);
 }
 
@@ -593,8 +593,8 @@ TEST_F(FhirPathParserTestBundle, ofTypeString)
     const char expression[] = "ofType(string)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
-                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)});
+    auto result = expressions->eval({{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)}, rootElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asString(), "hello");
 }
@@ -604,8 +604,8 @@ TEST_F(FhirPathParserTestBundle, ofTypeInteger)
     const char expression[] = "ofType(positiveInt)";
     auto expressions = FhirPathParser::parse(&repo, expression);
     ASSERT_TRUE(expressions);
-    auto result = expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
-                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)});
+    auto result = expressions->eval({{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "hello"),
+                                     std::make_shared<PrimitiveElement>(mRepo, Element::Type::Integer, 2)}, rootElement}).collection;
     ASSERT_EQ(result.size(), 1);
     ASSERT_EQ(result.single()->asInt(), 2);
 }
@@ -621,7 +621,7 @@ TEST_P(FhirPathParserTestP, unescapeStringLiteralExpression)
     auto expressions = FhirPathParser::parse(&repo, GetParam().first);
     ASSERT_TRUE(expressions);
     const auto col =
-        expressions->eval({std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, GetParam().second)});
+        expressions->eval(fhirtools::EvaluationContext{std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, GetParam().second)}).collection;
     ASSERT_EQ(col.size(), 1);
     EXPECT_EQ(col.single()->asString(), GetParam().second);
 }

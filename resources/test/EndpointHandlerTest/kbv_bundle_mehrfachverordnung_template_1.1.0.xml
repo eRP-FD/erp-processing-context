@@ -219,7 +219,7 @@
                         </coding>
                     </type>
                     <system value="http://fhir.de/sid/gkv/kvid-10" />
-                    <value value="X234567891" />
+                    <value value="##KVNR##" />
                 </identifier>
                 <name>
                     <use value="official" />

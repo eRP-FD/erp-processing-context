@@ -2,8 +2,8 @@
 // (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
-#include "shared/ErpRequirements.hxx"
 #include "exporter/util/RuntimeConfiguration.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 
 namespace exporter
@@ -34,6 +34,21 @@ void RuntimeConfiguration::throttle(const std::chrono::milliseconds& throttle)
     mThrottle = throttle;
 }
 
+void RuntimeConfiguration::setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs)
+{
+    shared::RuntimeConfigurationBase::setMetricsLogThresholdMs(category, thresholdMs);
+}
+
+std::chrono::milliseconds RuntimeConfiguration::getMetricsLogThresholdMs(DurationCategory category) const
+{
+    return shared::RuntimeConfigurationBase::getMetricsLogThresholdMs(category);
+}
+
+std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::getMetricsLogThresholdsMs() const
+{
+    return shared::RuntimeConfigurationBase::getMetricsLogThresholdsMs();
+}
+
 RuntimeConfiguration::Getter::Getter(std::shared_ptr<const RuntimeConfiguration> runtimeConfiguration)
     : mRuntimeConfiguration(std::move(runtimeConfiguration))
     , mSharedLock(mRuntimeConfiguration->mSharedMutex)
@@ -48,6 +63,16 @@ bool RuntimeConfiguration::Getter::isPaused() const
 std::chrono::milliseconds RuntimeConfiguration::Getter::throttleValue() const
 {
     return mRuntimeConfiguration->throttleValue();
+}
+
+std::chrono::milliseconds RuntimeConfiguration::Getter::getMetricsLogThresholdMs(DurationCategory category) const
+{
+    return mRuntimeConfiguration->getMetricsLogThresholdMs(category);
+}
+
+std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::Getter::getMetricsLogThresholdsMs() const
+{
+    return mRuntimeConfiguration->getMetricsLogThresholdsMs();
 }
 
 
@@ -80,6 +105,12 @@ bool RuntimeConfiguration::Setter::isPaused() const
 std::chrono::milliseconds RuntimeConfiguration::Setter::throttleValue() const
 {
     return mRuntimeConfiguration->throttleValue();
+}
+
+void RuntimeConfiguration::Setter::setMetricsLogThresholdMs(DurationCategory category,
+                                                            std::chrono::milliseconds thresholdMs)
+{
+    mRuntimeConfiguration->setMetricsLogThresholdMs(category, thresholdMs);
 }
 
 }

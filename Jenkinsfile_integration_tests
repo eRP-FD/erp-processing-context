@@ -25,6 +25,9 @@ pipeline {
         }
 
         stage('Run integration tests') {
+            options {
+                throttle(['unit-test-category'])
+            }
             agent {
                 docker {
                     label 'dockerstage'
@@ -81,9 +84,10 @@ pipeline {
                             rm -rf erp-processing-context
                             #
                             #
-                            #
                             export TEST_BASE=`pwd`
                             export TEST_RESOURCE_MANAGER_PATH=\${TEST_BASE}"/resources"
+                            # copy generated_pki:
+                            cp -R build/RelWithDebInfo/resources/* \${TEST_RESOURCE_MANAGER_PATH}/
                             cd build/RelWithDebInfo/bin
                             #
                             # The references resources have different base paths due to mixing of different build artifacts. Fixt it:
@@ -93,8 +97,8 @@ pipeline {
                             #
                             # Execute tests
                             #
-                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
-                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
+                            ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS=-83 LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
+                            ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS=-83 LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """
                     }
                 }

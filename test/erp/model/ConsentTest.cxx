@@ -5,13 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/util/ResourceManager.hxx"
-#include "shared/model/Resource.hxx"
 #include "erp/model/Consent.hxx"
 #include "shared/model/ModelException.hxx"
-#include "shared/util/Uuid.hxx"
+#include "shared/model/Resource.hxx"
 #include "shared/util/String.hxx"
-
+#include "shared/util/Uuid.hxx"
+#include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -24,7 +24,7 @@ class ConsentTest : public testing::Test
 TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity)
 {
     const model::Kvnr kvnr{"X987654326"};
-    const auto consentType = model::Consent::Type::CHARGCONS;
+    const auto consentType = model::ConsentType::CHARGCONS;
     const auto consentIdStr = std::string("CHARGCONS-") + kvnr.id();
 
     EXPECT_EQ(model::Consent::createIdString(consentType, kvnr), consentIdStr);
@@ -41,10 +41,10 @@ TEST_F(ConsentTest, ConsentId)//NOLINT(readability-function-cognitive-complexity
 
 TEST_F(ConsentTest, Construct)
 {
-    const auto consentType = model::Consent::Type::CHARGCONS;
+    const auto consentType = model::ConsentType::CHARGCONS;
     const model::Kvnr kvnr{"X123456788"};
     const model::Timestamp dateTime = model::Timestamp::now();
-    model::Consent consent(kvnr, dateTime);
+    model::Consent consent(consentType, kvnr, dateTime);
     EXPECT_TRUE(consent.id().has_value());
     EXPECT_EQ(consent.id(), model::Consent::createIdString(consentType, kvnr));
     EXPECT_EQ(consent.patientKvnr(), kvnr);
@@ -67,9 +67,9 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
     EXPECT_TRUE(consent.isChargingConsent());
-    EXPECT_NO_THROW(consent.fillId());
+    EXPECT_NO_THROW(consent.fillId(model::ConsentType::CHARGCONS, kvnr));
     EXPECT_TRUE(consent.id().has_value());
-    EXPECT_EQ(consent.id().value(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
+    EXPECT_EQ(consent.id().value(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
 
     // Set category/coding to some other values to check that now "isChargingConsent" is false:
     jsonString = String::replaceAll(
@@ -79,7 +79,6 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     std::optional<model::Consent> optConsent2;
     ASSERT_NO_THROW(optConsent2 = model::Consent::fromJsonNoValidation(jsonString));
     EXPECT_FALSE(optConsent2.value().isChargingConsent());
-    EXPECT_THROW(optConsent2.value().fillId(), model::ModelException);
 }
 
 TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
@@ -94,7 +93,7 @@ TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-com
     EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
 
     EXPECT_TRUE(consent.isChargingConsent());
-    EXPECT_NO_THROW(consent.fillId());
+    EXPECT_NO_THROW(consent.fillId(model::ConsentType::CHARGCONS, kvnr));
     EXPECT_TRUE(consent.id().has_value());
-    EXPECT_EQ(consent.id().value(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
+    EXPECT_EQ(consent.id().value(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
 }

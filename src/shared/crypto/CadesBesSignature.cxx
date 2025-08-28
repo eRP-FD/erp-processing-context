@@ -632,6 +632,12 @@ std::string CadesBesSignature::getSignerSerialNumber() const
     return sn;
 }
 
+SigningAlgorithm CadesBesSignature::getSigningAlgorithm() const
+{
+    const auto certificate = getSignerInfoCertificate(*mCmsHandle.removeConst(), getSignerInfo(*mCmsHandle.removeConst()));
+    return certificate.getSigningAlgorithm();
+}
+
 std::string CadesBesSignature::getIssuer() const
 {
     auto certificate = getSignerInfoCertificate(*mCmsHandle.removeConst(), getSignerInfo(*mCmsHandle.removeConst()));

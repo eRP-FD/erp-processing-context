@@ -48,7 +48,8 @@ public:
                       model::Task::Status taskStatus, const model::Timestamp& lastModified,
                       const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
-                      const db_model::EncryptedBlob& doctorIdentity, const model::Timestamp& lastStatusUpdate) const;
+                      const db_model::EncryptedBlob& doctorIdentity, const model::Timestamp& lastStatusUpdate,
+                      bool euRedeemable) const;
 
     void updateTaskReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                            const model::Task::Status& taskStatus, const model::Timestamp& lastModified,
@@ -61,7 +62,7 @@ public:
                                       BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
-                                      const db_model::Blob& medicationDispenseSalt) const;
+                                      const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus = std::nullopt) const;
 
     void updateTaskMedicationDispenseReceipt(
         pqxx::transaction_base& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -78,6 +79,10 @@ public:
     void updateTaskClearPersonalData(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                      model::Task::Status taskStatus, const model::Timestamp& lastModified,
                                      const model::Timestamp& lastStatusUpdate) const;
+
+    void updateTaskEuRedeemableByPatient(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
+                                         bool redeemable,
+                                         const model::Timestamp& lastModified) const;
 
     std::optional<db_model::Task> retrieveTaskForUpdate(pqxx::transaction_base& transaction,
                                                         const model::PrescriptionId& taskId);
@@ -117,6 +122,9 @@ public:
         std::optional<pqxx::row::size_type> healthcareProviderPrescriptionIndex = {};
         std::optional<pqxx::row::size_type> receiptIndex = {};
         std::optional<pqxx::row::size_type> lastMedicationDispenseIndex = {};
+        // Not actual optional:
+        std::optional<pqxx::row::size_type> euRedeemableByPatientIndex;
+        std::optional<pqxx::row::size_type> euRedeemableIndex;
     };
 
     [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow, const TaskQueryIndexes& indexes,
@@ -130,12 +138,14 @@ private:
         QueryDefinition updateTask;
         QueryDefinition updateTask_secret;
         QueryDefinition updateTask_medicationDispense;
+        QueryDefinition updateTask_medicationDispenseAndStatus;
         QueryDefinition updateTask_medicationDispenseReceipt;
         QueryDefinition updateTask_activateTask;
         QueryDefinition updateTask_receipt;
         QueryDefinition updateTask_deleteMedicationDispense;
         QueryDefinition updateTask_deletePersonalData;
         QueryDefinition updateTask_storeChargeInformation;
+        QueryDefinition updateTaskMarkingFlag;
         QueryDefinition retrieveTaskById;
         QueryDefinition retrieveTaskByIdPlusReceipt;
         QueryDefinition retrieveTaskByIdForUpdatePlusPrescription;

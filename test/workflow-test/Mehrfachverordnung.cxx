@@ -508,12 +508,19 @@ class MVO_A_23537 : public Mehrfachverordnung
 TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
 {
     TestStep(A_23537, "ERP-A_23537.01: Task aktivieren - Mehrfachverordnung - Startdatum vor Ausstellungsdatum");
+    const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_2;
     const auto startDate = authoredOn - date::days{3};
     auto endDate = authoredOn + date::days{3};
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = authoredOn,
+                                                  .kbvVersion = kbvVersion,
                                                   .redeemPeriodStart = startDate.toGermanDate(),
                                                   .redeemPeriodEnd = endDate.toGermanDate()});
+    if (!expectFHIRvalid)
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
     ASSERT_NO_FATAL_FAILURE(result =
@@ -521,8 +528,21 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
                                              toCadesBesSignature(mvoPrescription, authoredOn), HttpStatus::BadRequest));
     ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(*result));
     const auto& outcome = std::get<model::OperationOutcome>(*result);
-    ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
-                                                     "Einlösefrist liegt zeitlich vor dem Ausstellungsdatum", {}));
+    if (expectFHIRvalid)
+    {
+        ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
+                                                        "Einlösefrist liegt zeitlich vor dem Ausstellungsdatum", {}));
+    }
+    else
+    {
+        // clang-format off
+        ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
+            "FHIR-Validation error",
+            "Bundle: error: "
+                "-erp-multiplePrescriptionEinloesefristBeginn: Der Beginn der Einlösefrist darf nicht vor dem Ausstellungsdatum liegen. "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); "));
+        // clang-format on
+    }
 }
 
 TEST_F(MVO_A_23537, Step_02_StartDateEqualsAuthoredOn)
@@ -568,13 +588,16 @@ TEST_F(MVO_A_23539Test, Step_01_PastEndDate)
     TestStep(A_23539_01, "ERP-A_23539.01 Apotheker ruft Accept Task für eine MVO mit End-Datum in der Vergangenheit");
     using namespace std::chrono_literals;
     const auto yesterday = authoredOn - 24h;
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(yesterday);
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = yesterday,
+                                                  .kbvVersion = kbvVersion,
                                                   .redeemPeriodStart = yesterday.toGermanDate(),
                                                   .redeemPeriodEnd = yesterday.toGermanDate()});
     std::string yesterdayStr = yesterday.toGermanDateFormat();
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
+    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
     ASSERT_NO_FATAL_FAILURE( result =
             taskActivate(task->prescriptionId(), task->accessCode(), toCadesBesSignature(mvoPrescription, yesterday))
         );
@@ -612,18 +635,35 @@ TEST_F(MVO_A_24901Test, InvalidMvoIdCheckEnabled)
 
     using namespace std::chrono_literals;
     const auto today = authoredOn;
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_2;
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = authoredOn,
+                                                  .kbvVersion = kbvVersion,
                                                   .redeemPeriodStart = today.toGermanDate(),
                                                   .redeemPeriodEnd = today.toGermanDate(),
                                                   .mvoId = "urn::uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0"});
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
+    if (!expectFHIRvalid)
+    {
+        mActivateTaskRequestArgs.expectedMvoNumber = "XXX";
+    }
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
     ASSERT_NO_FATAL_FAILURE(result =
                                 taskActivate(task->prescriptionId(), task->accessCode(),
                                              toCadesBesSignature(mvoPrescription, authoredOn), HttpStatus::BadRequest));
     ASSERT_TRUE(std::holds_alternative<model::OperationOutcome>(*result));
     const auto& outcome = std::get<model::OperationOutcome>(*result);
-    ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
-                                                     "MVO-ID entspricht nicht urn:uuid format", {}));
+    if (expectFHIRvalid)
+    {
+        ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
+                                                        "MVO-ID entspricht nicht urn:uuid format", {}));
+    }
+    else
+    {
+        ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(
+            outcome, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
+            {"-erp-aufbauMehrfachverordnungID: "
+             "Der Aufbau der ID Mehrfachverordnung muss dem System urn:ietf:rfc:3986 entsprechen."}));
+    }
 }

@@ -121,29 +121,31 @@ model::UnspecifiedResource Patient::address() const
     return UnspecifiedResource::fromJson(*entry);
 }
 
-std::optional<std::string_view> Patient::identifierAssignerDisplay() const
+std::optional<std::string_view> Patient::identifierTypeCodingCode() const
 {
-    static const rapidjson::Pointer identifierAssignerDisplayPointer(resource::ElementName::path(
-        resource::elements::identifier, "0", resource::elements::assigner, resource::elements::display));
-    return getOptionalStringValue(identifierAssignerDisplayPointer);
+    static const rapidjson::Pointer identifierTypeCodingCodePointer(
+        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::type,
+                                    resource::elements::coding, "0", resource::elements::code));
+    return getOptionalStringValue(identifierTypeCodingCodePointer);
 }
 
-std::optional<model::Reference> Patient::identifierAssigner() const
+size_t Patient::identifierSize() const
 {
-    static const rapidjson::Pointer identifierAssignerPointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::assigner));
-    const auto* entry = getValue(identifierAssignerPointer);
-    if (entry)
+    static const rapidjson::Pointer identifiersPointer(resource::ElementName::path(resource::elements::identifier));
+    const auto* identifiers = getValue(identifiersPointer);
+    if (identifiers == nullptr)
     {
-        return Reference::fromJson(*entry);
+        return 0;
     }
-    return std::nullopt;
+    ModelExpect(identifiers->IsArray(), "Patient.identifier must be array.");
+    return identifiers->Size();
 }
 
-bool Patient::hasIdentifier() const
+std::optional<std::string_view> model::Patient::identifierSystem(size_t idx) const
 {
-    static const rapidjson::Pointer identifierPointer(resource::ElementName::path(resource::elements::identifier, "0"));
-    return getValue(identifierPointer) != nullptr;
+    const rapidjson::Pointer identifierSystemPointer(
+        resource::ElementName::path(resource::elements::identifier, idx, resource::elements::system));
+    return getOptionalStringValue(identifierSystemPointer);
 }
 
 }

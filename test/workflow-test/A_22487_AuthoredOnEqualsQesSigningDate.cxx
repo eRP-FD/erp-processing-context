@@ -27,8 +27,9 @@ TEST_F(ErpWorkflowTest, AuthoredOnEqualsQesDate)
     auto yesterday = zoned_ms{model::Timestamp::GermanTimezone, yesterdayTime.localDay()};
     auto signedTime = model::Timestamp(yesterday.get_sys_time()) + 23h + 59min + 59s;
     auto authoredOn = model::Timestamp(yesterday.get_sys_time());
-
-    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn});
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
+    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn, .kbvVersion = kbvVersion });
     taskActivateWithOutcomeValidation(prescriptionId.value(), accessCode, toCadesBesSignature(bundle, signedTime), HttpStatus::OK);
 }
 
@@ -45,7 +46,9 @@ TEST_F(ErpWorkflowTest, AuthoredOnNotEqualsQesDate)
     auto yesterday = zoned_ms{model::Timestamp::GermanTimezone, yesterdayTime.localDay()};
 
     auto authoredOn = model::Timestamp(yesterday.get_sys_time());
-    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn});
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
+    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn, .kbvVersion = kbvVersion});
     {
         auto signedTimeFuture = model::Timestamp::now();
         taskActivateWithOutcomeValidation(

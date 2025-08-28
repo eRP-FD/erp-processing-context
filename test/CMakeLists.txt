@@ -96,6 +96,7 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockCommunicationTable.cxx
         mock/MockConsentTable.cxx
         mock/MockDatabaseProxy.cxx
+        mock/MockEuAccessPermissionTable.cxx
         mock/MockOcspServer.cxx
         mock/MockRandom.cxx
         mock/MockChargeItemTable.cxx
@@ -128,6 +129,7 @@ set(ERP_TEST_LIB_SOURCES
         workflow-test/ErpHealthTest.cxx
         workflow-test/ErpWorkflowTest.cxx
         workflow-test/ErpWorkflowDirekteZuweisungTest.cxx
+        workflow-test/ErpWorkflowEuTest.cxx
         workflow-test/ErpWorkflowPkvTest.cxx
         workflow-test/ErpWorkflowTestFixture.cxx
         workflow-test/Error403IfTaskStateDraft.cxx
@@ -200,6 +202,8 @@ list(
         erp/database/DatabaseEncryptionTest.cxx
         erp/database/DatabaseTest.cxx
         erp/database/ErpDatabaseModelTest.cxx
+        erp/database/EuAccessPermissionTableTest.cxx
+        erp/database/EuCountryCodeTableTest.cxx
         erp/database/PostgresBackendTest.cxx
         erp/database/PostgresDatabaseCommunicationTest.cxx
         erp/database/PostgresDatabaseMedicationDispenseTest.cxx
@@ -211,6 +215,12 @@ list(
         erp/database/TransactionTest.cxx
         erp/enrolment/EnrolmentModelTest.cxx
         erp/enrolment/EnrolmentServerTest.cxx
+        erp/fhir/DeAbdaERezeptabgabedatenPkv_1_4_0_Test.cxx
+        erp/fhir/DeGematikERezeptEuR4_1_0_0_Test.cxx
+        erp/fhir/DeGematikERezeptWorkflowR4_1_5_0_Test.cxx
+        erp/fhir/KbvItaErp_1_3_2_Test.cxx
+        erp/fhir/KbvItvEvdga_1_2_1_Test.cxx
+        erp/fhir/ERP-30139-data-absent-uri.cxx
         erp/fhir/FhirConverterTest.cxx
         erp/fhir/FhirElementTest.cxx
         erp/fhir/FhirStructureDefinitionParserTest.cxx
@@ -227,6 +237,11 @@ list(
         erp/hsm/production/ProductionBlobDatabaseTest.cxx
         erp/idp/IdpTest.cxx
         erp/idp/IdpUpdaterTest.cxx
+        erp/model/eu/EuAccessCodeTest.cxx
+        erp/model/eu/EuAccessPermissionTest.cxx
+        erp/model/eu/GemErpEuPrParAccessAuthorizationRequestTest.cxx
+        erp/model/eu/GemErpEuPrParAccessAuthorizationResponseTest.cxx
+        erp/model/eu/GemErpEuPrParCloseOperationInputTest.cxx
         erp/mock/ClientTeeProtocolTest.cxx
         erp/model/AuditDataTest.cxx
         erp/model/AuditEventTest.cxx
@@ -245,6 +260,7 @@ list(
         erp/model/JsonCanonicalizationTestModel.cxx
         erp/model/JsonMaintainNumberPrecisionTest.cxx
         erp/model/JsonMaintainNumberPrecisionTestModel.cxx
+        erp/model/KbvBundleTest.cxx
         erp/model/KvnrTest.cxx
         erp/model/MedicationDispenseOperationParametersTest.cxx
         erp/model/MedicationDispenseTest.cxx
@@ -301,9 +317,16 @@ list(
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.cxx
+        erp/service/EndpointHandlerTest/EuFixture.cxx
+        erp/service/EndpointHandlerTest/EuGrantHandlerTest.cxx
+        erp/service/EndpointHandlerTest/EuCloseTaskTest.cxx
+        erp/service/EndpointHandlerTest/EuPostGetPrescriptionsHandlerTest.cxx
+        erp/service/EndpointHandlerTest/EuReadHandlerTest.cxx
+        erp/service/EndpointHandlerTest/EuRevokeHandlerTest.cxx
         erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
         erp/service/EndpointHandlerTest/MedicationDispenseFixture.cxx
         erp/service/EndpointHandlerTest/MedicationDispenseGetEndpointTest.cxx
+        erp/service/EndpointHandlerTest/PatchTaskHandlerTest.cxx
         erp/service/EndpointHandlerTest/RejectTaskTest.cxx
         erp/service/ErpRequestHandlerTest.cxx
         erp/service/HealthHandlerTest.cxx
@@ -365,6 +388,7 @@ list(
         erp/xml/SaxParserTest.cxx
         erp/xml/XmlDocumentTest.cxx
         erp/xml/XmlStringViewTest.cxx
+        shared/util/MetricsRegistryTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx
         util/LogTestBase.cxx

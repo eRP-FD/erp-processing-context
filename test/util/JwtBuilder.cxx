@@ -13,6 +13,7 @@
 #include "mock/crypto/MockCryptography.hxx"
 #include "ResourceManager.hxx"
 
+#include <boost/algorithm/string.hpp>
 #include <chrono>
 #include <rapidjson/pointer.h>
 #include <rapidjson/stringbuffer.h>
@@ -137,5 +138,39 @@ JWT JwtBuilder::makeJwtKostentraeger(const std::optional<std::string>& telematic
     {
         setIdNummer(claims, telematicId.value());
     }
+    return makeValidJwt(std::move(claims));
+}
+
+JWT JwtBuilder::makeJwtNcpeh()
+{
+    static auto constexpr templateResource = "test/jwt/claims_ncpeh.json";
+    auto& resourceManager = ResourceManager::instance();
+    const auto& claimTemplate = resourceManager.getJsonResource(templateResource);
+    rapidjson::Document claims;
+    claims.CopyFrom(claimTemplate, claims.GetAllocator());
+    return makeValidJwt(std::move(claims));
+}
+
+JWT JwtBuilder::makeJwt(const JwtClaimsOptions& options)
+{
+    static auto constexpr templateResource = "test/jwt/claims_template.json";
+    auto& resourceManager = ResourceManager::instance();
+    auto claimTemplate = resourceManager.getStringResource(templateResource);
+    boost::replace_all(claimTemplate, "##ACR##", options.acr);
+    boost::replace_all(claimTemplate, "##AUD##", options.aud);
+    boost::replace_all(claimTemplate, "##EXP##", options.exp);
+    boost::replace_all(claimTemplate, "##DISPLAYNAME##", options.displayName);
+    boost::replace_all(claimTemplate, "##IAT##", options.iat);
+    boost::replace_all(claimTemplate, "##ID##", options.idNummer);
+    boost::replace_all(claimTemplate, "##ISS##", options.iss);
+    boost::replace_all(claimTemplate, "##JTI##", options.jti);
+    boost::replace_all(claimTemplate, "##NBF##", options.nbf);
+    boost::replace_all(claimTemplate, "##NONCE##", options.nonce);
+    boost::replace_all(claimTemplate, "##ORGANIZATIONNAME##", options.orgName);
+    boost::replace_all(claimTemplate, "##PROFESSIONOID##", options.profession);
+    boost::replace_all(claimTemplate, "##SUB##", options.sub);
+    boost::replace_all(claimTemplate, "##OPTIONAL_FIELDS##", options.optionalFields);
+    rapidjson::Document claims;
+    claims.CopyFrom(resourceManager.toJsonDoc(claimTemplate), claims.GetAllocator());
     return makeValidJwt(std::move(claims));
 }

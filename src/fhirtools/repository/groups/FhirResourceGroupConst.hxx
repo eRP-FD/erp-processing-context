@@ -1,0 +1,36 @@
+// (C) Copyright IBM Deutschland GmbH 2021, 2025
+// (C) Copyright IBM Corp. 2021, 2025
+// non-exclusively licensed to gematik GmbH
+
+#ifndef FHIRTOOLS_RESOURCEGROUPCONST_HXX
+#define FHIRTOOLS_RESOURCEGROUPCONST_HXX
+
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+
+namespace fhirtools
+{
+
+class FhirResourceGroupConst : public FhirResourceGroupResolver
+{
+public:
+    explicit FhirResourceGroupConst(std::string groupName);
+
+    std::shared_ptr<const FhirResourceGroup> group() const;
+
+    std::map<std::string, std::shared_ptr<const FhirResourceGroup>> allGroups() const override;
+
+    std::shared_ptr<const FhirResourceGroup> findGroup(const std::string& url, const FhirVersion& version,
+                                                       const std::filesystem::path& sourceFile) const override;
+
+    std::shared_ptr<const FhirResourceGroup> findGroupById(const std::string& id) const override;
+
+    ~FhirResourceGroupConst() override;
+
+private:
+    std::shared_ptr<FhirResourceGroup> mGroup;
+};
+
+}// namespace fhirtools
+
+
+#endif// FHIRTOOLS_RESOURCEGROUPCONST_HXX

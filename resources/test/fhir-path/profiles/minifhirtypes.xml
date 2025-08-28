@@ -94,23 +94,91 @@
         <kind value="primitive-type"/>
         <abstract value="false"/>
         <type value="url"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/uri"/>
+        <derivation value="specialization"/>
         <snapshot>
           <element id="url">
             <path value="url"/>
             <min value="0"/>
             <max value="*"/>
             <base>
-              <path value="url"/>
+              <path value="uri"/>
               <min value="0"/>
               <max value="*"/>
             </base>
+          </element>
+          <element id="url.extension">
+            <path value="url.extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="uri.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
           </element>
           <element id="url.value">
             <path value="url.value"/>
             <min value="0"/>
             <max value="1"/>
             <base>
-              <path value="url.value"/>
+              <path value="uri.value"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/uri"/>
+    <resource>
+      <StructureDefinition>
+        <id value="url"/>
+        <url value="http://fhir-tools.test/minifhirtypes/uri"/>
+        <version value="4.0.1"/>
+        <name value="uri"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="false"/>
+        <type value="uri"/>
+        <snapshot>
+          <element id="uri">
+            <path value="uri"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="uri"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="uri.extension">
+            <path value="uri.extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="uri.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="uri.value">
+            <path value="url.value"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="uri.value"/>
               <min value="0"/>
               <max value="1"/>
             </base>
@@ -144,6 +212,102 @@
               <min value="0"/>
               <max value="*"/>
             </base>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/Coding"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Coding"/>
+        <url value="http://hl7.org/fhir/StructureDefinition/Coding"/>
+        <version value="4.0.1"/>
+        <name value="Coding"/>
+        <status value="active"/>
+        <abstract value="false"/>
+        <kind value="complex-type"/>
+        <type value="Coding"/>
+        <snapshot>
+          <element id="Coding">
+            <path value="Coding"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Coding"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Coding.system">
+            <path value="Coding.system"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Coding.system"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Coding.code">
+            <path value="Coding.code"/>
+            <short value="Symbol in syntax defined by the system"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Coding.code"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/CodeableConcept"/>
+    <resource>
+      <StructureDefinition>
+        <id value="CodeableConcept"/>
+        <url value="http://fhir-tools.test/minifhirtypes/CodeableConcept"/>
+        <version value="4.0.1"/>
+        <name value="CodeableConcept"/>
+        <status value="active"/>
+        <date value="2019-11-01T09:29:23+11:00"/>
+        <fhirVersion value="4.0.1"/>
+        <kind value="complex-type"/>
+        <abstract value="false"/>
+        <type value="CodeableConcept"/>
+        <snapshot>
+          <element id="CodeableConcept">
+            <path value="CodeableConcept"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="CodeableConcept"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="CodeableConcept.coding">
+            <path value="CodeableConcept.coding"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="CodeableConcept.coding"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Coding"/>
+            </type>
           </element>
         </snapshot>
       </StructureDefinition>
@@ -290,6 +454,26 @@
             </base>
             <type>
               <code value="string"/>
+            </type>
+          </element>
+          <element id="Extension.extension">
+            <path value="Extension.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Extension.extension"/>
+              <min value="1"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
             </type>
           </element>
           <element id="Extension.value[x]">

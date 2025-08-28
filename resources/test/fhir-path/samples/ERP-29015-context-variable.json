@@ -1,0 +1,16 @@
+{
+  "resourceType": "Resource",
+  "id": "ERP-29015-context-variable",
+  "extension": [
+    {
+      "url": "level1",
+      "extension": [
+        {
+          "url": "level2",
+          "valueDecimal": 2.0
+        }
+      ],
+      "valueDecimal": 1.0
+    }
+  ]
+}

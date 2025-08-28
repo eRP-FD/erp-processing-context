@@ -15,7 +15,7 @@
 #include <string_view>
 
 namespace fhirtools {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 }
 class XmlValidator;
 enum class SchemaType;

@@ -15,12 +15,14 @@ class EpaAccountLookupMock : public IEpaAccountLookup
 public:
     EpaAccountLookupMock(const EpaAccount& epaAccount);
 
-    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr) override;
+    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
+                      const std::optional<std::string>& prefix = std::nullopt) override;
     EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
                               const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList) override;
     EpaAccount::Code checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr, const std::string& host, uint16_t port) override;
     IEpaAccountLookupClient& lookupClient() override;
 
+    std::string WellKnownHost;
 
   EpaAccount epaAccountLookupResult;
   EpaAccountLookupClientMock mockLookupClient;

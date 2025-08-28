@@ -5,20 +5,20 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-
+#include "erp/model/OuterResponseErrorData.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/erp-serverinfo.hxx"
-#include "erp/model/OuterResponseErrorData.hxx"
 #include "shared/model/KbvBundle.hxx"
 #include "shared/model/Resource.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
-#include <thread>
 #include <date/tz.h>
+#include <thread>
 
 
 TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
@@ -1036,14 +1036,14 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    const std::string gematikVer{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVer = ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
     auto expectedMetaData = model::MetaData::fromJsonNoValidation(
         ResourceManager::instance().getStringResource("test/EndpointHandlerTest/metadata_" + gematikVer  + ".json"));
     expectedMetaData.setVersion(version);
     expectedMetaData.setDate(now);
     expectedMetaData.setReleaseDate(now);
 
-    ASSERT_EQ(metaData->serializeToJsonString(), expectedMetaData.serializeToJsonString()) << metaData->serializeToJsonString();
+    ASSERT_EQ(metaData->serializeToJsonString(), expectedMetaData.serializeToJsonString()) << metaData->serializeToJsonString() << expectedMetaData.serializeToJsonString();
 }
 
 TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-complexity)
@@ -1134,7 +1134,7 @@ std::string fixBundle(const std::string& bundle, const Uuid& id)
 }
 }
 
-TEST_F(ErpWorkflowTest, EPR_5723_ERP_5750)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(ErpWorkflowTest, ERP_5723_ERP_5750)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
 
@@ -1832,27 +1832,24 @@ TEST_P(ErpWorkflowTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
     generateNewRandomKVNR(kvnr);
     EXPECT_FALSE(kvnr.empty());
 
-    auto bundleWithAuthoredDate = [this] (const std::string& authoredOn, const std::optional<model::PrescriptionId> prescriptionId, const std::string& kvnr) {
-        model::Timestamp signingTime = model::Timestamp::fromGermanDate(authoredOn);
-        model::Timestamp authoredOnTime = signingTime;
-        auto bundleXml = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOnTime, .kvnr = kvnr });
-        const model::KbvBundle& qesBundle = model::KbvBundle::fromXmlNoValidation(bundleXml);//, *StaticData::getXmlValidator());
-        std::string qesBundleSigned = toCadesBesSignature(bundleXml, signingTime);
-        return qesBundleSigned;
-    };
-    auto createTask = [this, &kvnr, &bundleWithAuthoredDate] (const std::string& authoredOn)-> std::optional<model::Task> {
-        std::optional<model::PrescriptionId> prescriptionId;
-        std::string accessCode;
-        checkTaskCreate(prescriptionId, accessCode, GetParam());
-        std::optional<model::Task> task = taskActivateWithOutcomeValidation(*prescriptionId, accessCode, bundleWithAuthoredDate(authoredOn, prescriptionId, kvnr));
-        return task;
-    };
-
     if (GetParam() == model::PrescriptionType::apothekenpflichigeArzneimittel)
     {
         for (const std::string& authoredOnDate : authored_on_dates)
         {
-            createTask(authoredOnDate);
+            std::optional<model::Task> task;
+            ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
+            ASSERT_TRUE(task.has_value());
+            model::Timestamp authoredOn = model::Timestamp::fromGermanDate(authoredOnDate);
+            auto prescriptionId = task->prescriptionId();
+            const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+            auto bundleXml = kbvBundleXml({
+                .prescriptionId = prescriptionId,
+                .authoredOn = authoredOn,
+                .kvnr = kvnr,
+                .kbvVersion = kbvVersion,
+            });
+            mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
+            ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, task->accessCode(), toCadesBesSignature(bundleXml, authoredOn)));
         }
 
         EXPECT_EQ(taskGet(kvnr)->getResourceCount(), 20);

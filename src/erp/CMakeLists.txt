@@ -50,12 +50,23 @@ list(
         model/Communication.cxx
         model/CommunicationPayload.cxx
         model/Consent.cxx
+        model/eu/EuAccessCode.cxx
+        model/eu/EuAccessPermission.cxx
+        model/eu/GemErpEuPrParAccessAuthorizationRequest.cxx
+        model/eu/GemErpEuPrParAccessAuthorizationResponse.cxx
+        model/eu/GemErpEuPrParGetPrescriptionInput.cxx
+        model/eu/GemErpEuPrParCloseOperationInput.cxx
+        model/eu/GemErpEuPrMedication.cxx
+        model/extensions/GemErpExEuIsRedeemableByProperties.cxx
+        model/extensions/GemErpRedeemableByPatient.cxx
         model/extensions/ChargeItemMarkingFlags.cxx
         model/extensions/KBVEXERPAccident.cxx
         model/extensions/KBVEXFORLegalBasis.cxx
         model/EvdgaBundle.cxx
         model/EvdgaHealthAppRequest.cxx
+        model/GemErpChrgPrParPatchChargeItemInput.cxx
         model/ErxReceipt.cxx
+        model/EuMedicationDispenseInfos.cxx
         model/KbvMedicationFreeText.cxx
         model/KbvMedicationIngredient.cxx
         model/KbvPractitioner.cxx
@@ -68,6 +79,7 @@ list(
         model/Subscription.cxx
         model/Task.cxx
         model/WorkflowParameters.cxx
+        model/eu/GemErpEuPrTaskInput.cxx
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx
@@ -105,6 +117,10 @@ list(
         service/consent/ConsentDeleteHandler.cxx
         service/consent/ConsentGetHandler.cxx
         service/consent/ConsentPostHandler.cxx
+        service/eu/PostGetPrescriptionsHandler.cxx
+        service/euAccessPermission/GrantHandler.cxx
+        service/euAccessPermission/ReadHandler.cxx
+        service/euAccessPermission/RevokeHandler.cxx
         service/task/AbortTaskHandler.cxx
         service/task/AcceptTaskHandler.cxx
         service/task/ActivateTaskHandler.cxx
@@ -112,8 +128,10 @@ list(
         service/task/CreateTaskHandler.cxx
         service/task/DispenseTaskHandler.cxx
         service/task/GetTaskHandler.cxx
+        service/task/eu/PatchTaskHandler.cxx
         service/task/RejectTaskHandler.cxx
         service/task/TaskHandler.cxx
+        service/task/eu/EuCloseTaskHandler.cxx
         tee/ErpTeeProtocol.cxx
         tee/InnerTeeRequest.cxx
         tee/InnerTeeResponse.cxx
@@ -160,6 +178,7 @@ target_link_libraries (
         redis++::redis++_static
         hiredis::hiredis_all_unofficial
         openssl::openssl
+        prometheus-cpp::prometheus-cpp
         ZLIB::ZLIB
         zstd::libzstd_static
 )

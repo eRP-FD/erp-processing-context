@@ -123,7 +123,7 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::transaction_base&
 {
     TVLOG(2) << mQueries.storeChargeInformation.query;
 
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "storechargeinformation");
 
     const auto markingFlag = [&chargeItem]() -> ::std::optional<::db_model::postgres_bytea_view> {
@@ -155,7 +155,7 @@ void PostgresBackendChargeItem::updateChargeInformation(::pqxx::transaction_base
 {
     TVLOG(2) << mQueries.updateChargeInformation.query;
 
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "updatechargeinformation");
 
     const auto markingFlags =
@@ -175,7 +175,7 @@ void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::transaction_base
 {
     TVLOG(2) << mQueries.deleteChargeInformation.query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "deletechargeinformation");
 
     transaction.exec_params0(mQueries.deleteChargeInformation.query, static_cast<uint32_t>(id.type()),
@@ -189,7 +189,7 @@ void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::transaction_ba
 {
     TVLOG(2) << mQueries.clearAllChargeInformation.query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "clearallchargeinformation");
 
     transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
@@ -225,7 +225,7 @@ PostgresBackendChargeItem::retrieveAllChargeItemsForInsurant(::pqxx::transaction
     }
     TVLOG(2) << query;
     TVLOG(2) << "hashedId = " << kvnr.toHex();
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "retrieveallchargeitems");
 
     const auto dbResult = transaction.exec_params(query, kvnr.binarystring());
@@ -246,7 +246,7 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::tran
                                                                       const ::std::optional<UrlArguments>& search) const
 {
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "countchargeinformationforinsurant");
+        DurationCategory::postgres, "countchargeinformationforinsurant");
     return ::PostgresBackend::executeCountQuery(transaction, mQueries.countChargeInformationForInsurant.query,
                                                 kvnr, search, "ChargeItem for insurant");
 }
@@ -257,7 +257,7 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::tran
 {
     TVLOG(2) << query;
 
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "retrievechargeinformation");
 
     const auto dbResult =

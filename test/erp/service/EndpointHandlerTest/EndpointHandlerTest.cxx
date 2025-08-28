@@ -5,11 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
-#include "erp/model/Consent.hxx"
 #include "erp/model/ChargeItem.hxx"
-#include "erp/model/MetaData.hxx"
+#include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/MetaData.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/DeviceHandler.hxx"
@@ -24,6 +23,7 @@
 #include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
@@ -38,6 +38,8 @@
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/FileHelper.hxx"
+#include "test_config.h"
+#include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CertificateDirLoader.h"
 #include "test/util/ErpMacros.hxx"
@@ -45,7 +47,6 @@
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
-#include "test_config.h"
 
 #include <gtest/gtest.h>
 #include <variant>
@@ -702,14 +703,14 @@ INSTANTIATE_TEST_SUITE_P(invalid, EndpointHandlerSampleTest,
 
 TEST_F(EndpointHandlerTest, GetAllAuditEvents)
 {
-    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const std::string auditEventFileName = "audit_event_" + gematikVersionStr + ".json";
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446685", auditEventFileName));
 }
 
 TEST_F(EndpointHandlerTest, GetAllAuditEvents_delete_task)
 {
-    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const std::string auditEventFileName = "audit_event_delete_task_" + gematikVersionStr + ".json";
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446697", auditEventFileName));
 }
@@ -739,7 +740,7 @@ TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitiv
     ASSERT_NO_THROW(
         (void) model::AuditEvent::fromXml(auditEvent.serializeToXmlString(), *StaticData::getXmlValidator()));
 
-    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const std::string auditEventFileName = dataPath + "/audit_event_" + gematikVersionStr + ".json";
     auto expectedAuditEvent =
         model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(auditEventFileName));
@@ -931,7 +932,7 @@ TEST_F(EndpointHandlerTest, MetaDataXml)//NOLINT(readability-function-cognitive-
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    const std::string gematikVer{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVer = ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
     auto expectedMetaData =
             model::MetaData::fromXmlNoValidation(FileHelper::readFileAsString(dataPath + "/metadata_" + gematikVer + ".xml"));
     expectedMetaData.setVersion(version);
@@ -968,7 +969,7 @@ TEST_F(EndpointHandlerTest, MetaDataJson)//NOLINT(readability-function-cognitive
     metaData->setDate(now);
     metaData->setReleaseDate(now);
 
-    const std::string gematikVer{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVer = ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
     auto expectedMetaData =
         model::MetaData::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/metadata_" + gematikVer + ".json"));
     expectedMetaData.setVersion(version);
@@ -1072,26 +1073,32 @@ void checkPostConsentHandler(
 
 TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-complexity)
 {
-    const auto& consentTemplateJson = ResourceManager::instance().getStringResource(dataPath + "/consent_template.json");
     const char* const origKvnr1 = "X500000056";
     auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(std::string(origKvnr1));
     const char* const origDateTimeStr = "2021-06-01T07:13:00+05:00";
-    auto consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr1), "##DATETIME##", origDateTimeStr);
+    auto consentJson =
+        ResourceTemplates::consentJson({.consentCategory = model::ConsentType::CHARGCONS,
+                                        .kvnr = origKvnr1,
+                                        .timestamp = origDateTimeStr});
 
     // Consent with same Kvnr already exists in mock database -> conflict
-    A_22162.test("Only single consent for the same Kvnr");
+    A_22162_01.test("Only single consent for the same Kvnr");
     std::optional<model::Consent> resultConsent;
     ASSERT_NO_FATAL_FAILURE(
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant, consentJson, HttpStatus::Conflict));
     EXPECT_FALSE(resultConsent);
 
     const model::Kvnr origKvnr2{"Y123456781"};
-    consentJson = String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr2.id()), "##DATETIME##", origDateTimeStr);
+    consentJson =
+    ResourceTemplates::consentJson({.consentCategory = model::ConsentType::CHARGCONS,
+                                    .kvnr = origKvnr2.id(),
+                                    .timestamp = origDateTimeStr});
+
     jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(origKvnr2);
     ASSERT_NO_FATAL_FAILURE(
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant, consentJson, HttpStatus::Created));
 
-    EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, origKvnr2));
+    EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, origKvnr2));
     EXPECT_EQ(resultConsent->patientKvnr(), origKvnr2);
     EXPECT_TRUE(resultConsent->isChargingConsent());
     EXPECT_EQ(model::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
@@ -1099,10 +1106,12 @@ TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-
     // Check kvnr mismatch
     A_22289.test("Kvnr of access token and Consent patient identifier must be identical");
     resultConsent = {};
-    EXPECT_NO_FATAL_FAILURE(
-        checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant,
-                                String::replaceAll(replaceKvnr(consentTemplateJson, "X999999992"), "##DATETIME##", origDateTimeStr),
-                                HttpStatus::Forbidden));
+    EXPECT_NO_FATAL_FAILURE(checkPostConsentHandler(
+        resultConsent, mServiceContext, jwtInsurant,
+        ResourceTemplates::consentJson({.consentCategory = model::ConsentType::CHARGCONS,
+                                        .kvnr = "X999999992",
+                                        .timestamp = origDateTimeStr}),
+        HttpStatus::Forbidden));
     EXPECT_FALSE(resultConsent);
 
     // Check invalid Consent type
@@ -1115,7 +1124,9 @@ TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-
     // Check invalid datetime field
     EXPECT_NO_FATAL_FAILURE(
         checkPostConsentHandler(resultConsent, mServiceContext, jwtInsurant,
-                                String::replaceAll(replaceKvnr(consentTemplateJson, origKvnr2.id()), "##DATETIME##", "2021-13-30T12:00:11+00:00"),
+                                ResourceTemplates::consentJson({.consentCategory = model::ConsentType::CHARGCONS,
+                                                                .kvnr = origKvnr2.id(),
+                                                                .timestamp = "2021-13-30T12:00:11+00:00"}),
                                 HttpStatus::BadRequest));
     EXPECT_FALSE(resultConsent);
 }
@@ -1205,10 +1216,8 @@ void checkGetConsentHandler(
     if(expectedStatus == HttpStatus::OK)
     {
         std::optional<model::Bundle> consentBundle;
-        const auto& fhirInstance = Fhir::instance();
-        const auto& backend = fhirInstance.backend();
-        auto viewList = fhirInstance.structureRepository(model::Timestamp::now());
-        auto view = viewList.match(&backend, std::string{model::resource::structure_definition::consent},
+        auto viewList = Fhir::instance().structureRepository(model::Timestamp::now());
+        auto view = viewList.match(std::string{model::resource::structure_definition::consent},
                                    ResourceTemplates::Versions::GEM_ERPCHRG_current());
         ASSERT_NO_THROW(consentBundle.emplace(
             model::ResourceFactory<model::Bundle>::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator())
@@ -1805,7 +1814,7 @@ TEST_F(EndpointHandlerTest, GetAllTasks_DefaultSort_Success)
 
 TEST_F(EndpointHandlerTest, GetAllAuditEvents_DefaultSort)
 {
-    const std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
 
     const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
 

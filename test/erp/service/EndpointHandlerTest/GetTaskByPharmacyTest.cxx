@@ -9,6 +9,7 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
@@ -121,16 +122,22 @@ public:
 
         auto hsmPoolSession = mServiceContext.getHsmPool().acquire();
         auto& hsmSession = hsmPoolSession.session();
-        const ErpVector vsdmKeyData = ErpVector::create(keyPackage.serializeToString());
-        ErpBlob vsdmKeyBlob = hsmSession.wrapRawPayload(vsdmKeyData, 0);
-
-        auto& vsdmBlobDb = mServiceContext.getVsdmKeyBlobDatabase();
-        VsdmKeyBlobDatabase::Entry blobEntry;
-        blobEntry.operatorId = keyPackage.operatorId();
-        blobEntry.version = keyPackage.version();
-        blobEntry.createdDateTime = model::Timestamp::now().toChronoTimePoint();
-        blobEntry.blob = vsdmKeyBlob;
-        vsdmBlobDb.storeBlob(std::move(blobEntry));
+        try {
+            keyPackage.setPlainTextKey(Base64::encode(
+                mServiceContext.getVsdmKeyCache().getKey(keyPackage.operatorId(), keyPackage.version())));
+        }
+        catch (const std::exception&)
+        {
+            const ErpVector vsdmKeyData = ErpVector::create(keyPackage.serializeToString());
+            ErpBlob vsdmKeyBlob = hsmSession.wrapRawPayload(vsdmKeyData, 0);
+            auto& vsdmBlobDb = mServiceContext.getVsdmKeyBlobDatabase();
+            VsdmKeyBlobDatabase::Entry blobEntry;
+            blobEntry.operatorId = keyPackage.operatorId();
+            blobEntry.version = keyPackage.version();
+            blobEntry.createdDateTime = model::Timestamp::now().toChronoTimePoint();
+            blobEntry.blob = vsdmKeyBlob;
+            vsdmBlobDb.storeBlob(std::move(blobEntry));
+        }
     }
 
     void callHandler(const std::string& pnw, ServerResponse& serverResponse,
@@ -730,11 +737,10 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
                                 telematikID, accessCode, std::nullopt, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> bundle;
-    const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
-    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now())
-    .match(backend, std::string{model::resource::structure_definition::task},
-           ResourceTemplates::Versions::GEM_ERP_current());
+    const gsl::not_null repoView = Fhir::instance()
+                                       .structureRepository(model::Timestamp::now())
+                                       .match(std::string{model::resource::structure_definition::task},
+                                              ResourceTemplates::Versions::GEM_ERP_current());
     auto factory = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), {});
     auto validationResults = factory.validateGeneric(*repoView, {}, {});
     ASSERT_TRUE(validationResults.highestSeverity() < fhirtools::Severity::error) << serverResponse.getBody();
@@ -889,7 +895,7 @@ TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecret)
     ASSERT_TRUE(profileName.has_value());
     std::string expectedProfileName{model::resource::structure_definition::receipt};
     expectedProfileName += '|';
-    expectedProfileName += to_string(ResourceTemplates::Versions::GEM_ERP_current());
+    expectedProfileName += ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
     EXPECT_EQ(*profileName, expectedProfileName);
 }
 

@@ -13,15 +13,17 @@
 #include "shared/model/Binary.hxx"
 #include "shared/model/Device.hxx"
 #include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvMedicationRequest.hxx"
 #include "shared/model/Signature.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "shared/model/extensions/KBVMultiplePrescription.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/TLog.hxx"
 
-
-#include <cstddef>
+#include <date/tz.h>
 #include <chrono>
+#include <cstddef>
 #include <ctime>
 #include <sstream>
 
@@ -121,3 +123,34 @@ void TaskHandlerBase::checkAccessCodeMatches(const ServerRequest& request, const
     A_20703.finish();
 }
 // GEMREQ-end checkAccessCodeMatches
+
+std::tuple<bool, std::string> TaskHandlerBase::processMvoPeriodStartValid(PcSessionContext& session,
+                                                                          const model::KbvBundle& prescription)
+{
+    const auto now = std::chrono::system_clock::now();
+    const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
+    if (!medicationRequests.empty())
+    {
+        auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
+        session.fillMvoBdeV2(mPExt);
+        if (mPExt && mPExt->isMultiplePrescription())
+        {
+            const auto startDate = mPExt->startDateTime();
+            ErpExpect(startDate.has_value(), HttpStatus::InternalServerError,
+                      "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.start "
+                      "not present");
+            auto validFrom =
+                    date::make_zoned(model::Timestamp::GermanTimezone, startDate->toChronoTimePoint());
+            validFrom = floor<date::days>(validFrom.get_local_time());
+            if (now < validFrom.get_sys_time())
+            {
+                std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
+                std::ostringstream ss;
+                ss << "Teilverordnung zur Mehrfachverordnung " << mPExt->mvoId().value_or("<unknown>") << " ist ab "
+                   << germanFmtTs << " einlösbar.";
+                return std::make_tuple(false, ss.str());
+            }
+        }
+    }
+    return std::make_tuple(true, "");
+}

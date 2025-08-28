@@ -17,6 +17,7 @@
 #include "shared/model/Timestamp.hxx"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 class ErpVector;
@@ -49,6 +50,8 @@ public:
     std::optional<EncryptedBlob> healthcareProviderPrescription;
     std::optional<EncryptedBlob> owner;
     std::optional<model::Timestamp> lastMedicationDispense;
+    bool euRedeemableByPatient{false};
+    bool euRedeemable{false};
 };
 
 class MedicationDispense
@@ -82,23 +85,51 @@ struct ChargeItem {
     toChargeInformation(const std::optional<DatabaseCodecWithKey>& codecAndKey) const;
 
     ::model::PrescriptionId prescriptionId;
-    EncryptedBlob enterer = {};
-    ::model::Timestamp enteredDate = ::model::Timestamp::now();
-    ::model::Timestamp lastModified = ::model::Timestamp::now();
-    ::std::optional<Blob> markingFlags = {};
-    BlobId blobId = {};
-    Blob salt = {};
-    EncryptedBlob accessCode = {};
-    EncryptedBlob kvnr = {};
+    EncryptedBlob enterer;
+    ::model::Timestamp enteredDate{model::Timestamp::now()};
+    ::model::Timestamp lastModified{model::Timestamp::now()};
+    ::std::optional<Blob> markingFlags;
+    BlobId blobId{};
+    Blob salt;
+    EncryptedBlob accessCode;
+    EncryptedBlob kvnr;
     // The following are optional because they are not set when updating a charge item.
     // They will always exist in the database, though.
-    ::std::optional<EncryptedBlob> prescription = {};
-    ::std::optional<EncryptedBlob> prescriptionJson = {};
-    ::std::optional<EncryptedBlob> receiptXml = {};
-    ::std::optional<EncryptedBlob> receiptJson = {};
-    EncryptedBlob billingData = {};
-    EncryptedBlob billingDataJson = {};
+    ::std::optional<EncryptedBlob> prescription;
+    ::std::optional<EncryptedBlob> prescriptionJson;
+    ::std::optional<EncryptedBlob> receiptXml;
+    ::std::optional<EncryptedBlob> receiptJson;
+    EncryptedBlob billingData;
+    EncryptedBlob billingDataJson;
 };
+
+struct EuAccessPermission {
+    EuAccessPermission(std::string countryCode, EncryptedBlob accessCode,
+                       const model::Timestamp& expires, BlobId blobId, Blob salt);
+
+    std::string countryCode;
+    EncryptedBlob accessCode;
+    model::Timestamp expires;
+    BlobId blobId;
+    Blob salt;
+};
+
+enum class ConsentCategory
+{
+    CHARGCONS,
+    EUDISPCONS
+};
+
+struct Consent {
+    Consent(ConsentCategory category, const model::Timestamp& timestamp)
+        : category(category)
+        , timestamp(timestamp)
+    {
+    }
+    ConsentCategory category;
+    model::Timestamp timestamp;
+};
+
 
 }// namespace db_model
 

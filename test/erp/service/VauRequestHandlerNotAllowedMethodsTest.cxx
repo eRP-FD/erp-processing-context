@@ -113,12 +113,13 @@ TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsTask)
     endpoint = "/Task/$create";
     testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
-    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    // due to how the route matcher works, the PATCH handler is chosen, which requires an id.
+    // since /Task/$create does not provide an id, it shall quit with notfound.
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, Configuration::instance().getOptionalBoolValue(ConfigurationKey::FEATURE_EU, false) ? HttpStatus::NotFound : HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     endpoint = "/Task/<id>";
     testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
-    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     endpoint = "/Task/<id>/$abort";

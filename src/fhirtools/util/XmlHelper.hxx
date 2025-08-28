@@ -16,29 +16,36 @@
 #include <string>
 #include <string_view>
 
-class XmlStringView
+// this is a wrapper around c-string representation. We cannot avoid using it.
+//NOLINTBEGIN(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
+
+class XmlStringView;
+namespace xml_string_literal
+{
+constexpr XmlStringView operator""_xs(const char* xmlStr, std::size_t size);
+}
+
+class XmlStringView : public std::string_view
 {
 public:
-    constexpr XmlStringView(const char* ns, size_t size): mCString(ns), mSize(size){}
-    template <size_t size>
-    explicit constexpr XmlStringView(const char(&ns)[size]): mCString(static_cast<const char*>(ns)), mSize(size - 1){}
+    template<size_t strSize>
+    explicit consteval XmlStringView(const char (&str)[strSize]);
 
-    explicit XmlStringView(const xmlChar* xmlStr): mCString(reinterpret_cast<const char*>(xmlStr)), mSize(std::strlen(mCString)){}
-    explicit XmlStringView(const std::string& xmlStr): mCString(xmlStr.data()), mSize(xmlStr.size()){}
+    explicit XmlStringView(const xmlChar* xmlStr);
+    explicit XmlStringView(const std::string& xmlStr)
+        : basic_string_view{xmlStr.data(), xmlStr.size()}
+    {
+    }
 
     bool operator == (const xmlChar* otherStr) const;
 
-    operator std::string_view() const { return std::string_view{mCString, mSize};}
-
-    size_t size() const { return mSize; }
-    const char* begin() const { return mCString; }
-    const char* end() const { return mCString + mSize; }
-
-    const xmlChar* xs_str() const { return reinterpret_cast<const xmlChar*>(mCString);}
+    //NOLINTNEXTLINE(readability-identifier-naming) keep similarity to std::basic_string::c_str()
+    const xmlChar* xs_str() const;
 
 private:
-    const char* mCString;
-    size_t mSize;
+    // this one is private to avoid non-null-terminated construction
+    explicit constexpr XmlStringView(const char* str, std::size_t size)
+        : basic_string_view{str, size} {};
 
     enum class XmlCharType : xmlChar;
     friend bool operator==(const XmlCharType* c, const std::default_sentinel_t&)
@@ -53,9 +60,43 @@ private:
     {
         return XmlCharType{static_cast<xmlChar>(c)};
     }
+
+    friend constexpr XmlStringView xml_string_literal::operator""_xs(const char* xmlStr, std::size_t size);
 };
 
-static constexpr XmlStringView xhtmlNamespaceUri {"http://www.w3.org/1999/xhtml"};
+template<size_t strSize>
+consteval XmlStringView::XmlStringView(const char (&str)[strSize])
+    : basic_string_view{str, strSize - 1}
+{
+    if (strSize == 0 || str[strSize - 1] != 0)
+    {
+        // if str is not null terminated, you get a compiletime error here,
+        // because the constructor is consteval and throw is not allowed there
+        throw std::logic_error("string must be null terminated");
+    }
+}
+
+
+static constexpr XmlStringView xhtmlNamespaceUri{"http://www.w3.org/1999/xhtml"};
+
+namespace xml_string_literal
+{
+constexpr XmlStringView operator""_xs(const char* xmlStr, std::size_t size)
+{
+    return XmlStringView{xmlStr, size};
+}
+}
+
+//NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
+inline XmlStringView::XmlStringView(const xmlChar* xmlStr)
+    : basic_string_view{reinterpret_cast<const char*>(xmlStr)}
+{
+}
+
+inline const xmlChar* XmlStringView::xs_str() const
+{
+    return reinterpret_cast<const xmlChar*>(data());
+}
 
 inline bool XmlStringView::operator==(const xmlChar* otherStr) const
 {
@@ -64,48 +105,6 @@ inline bool XmlStringView::operator==(const xmlChar* otherStr) const
                               std::ranges::equal_to{}, &XmlStringView::toXmlCharType);
 }
 
-inline bool operator == (const xmlChar* lhs, const XmlStringView& rhs)
-{
-    return rhs.operator ==(lhs);
-}
-
-inline bool operator != (const xmlChar* lhs, const XmlStringView& rhs)
-{
-    return not(lhs == rhs);
-}
-
-inline bool operator != (const XmlStringView& lhs, const xmlChar* rhs)
-{
-    return not(lhs == rhs);
-}
-
-template <std::ranges::contiguous_range T>
-inline bool operator == (const XmlStringView& lhs, const T& rhs)
-requires requires(const T& rhs) {{*rhs.begin()} -> std::same_as<const char&>;}
-{
-    return std::string_view{lhs} == std::string_view{rhs.begin(), rhs.end()};
-}
-
-template <std::ranges::contiguous_range T>
-inline bool operator == (const T& lhs, const XmlStringView& rhs)
-requires requires(const T& lhs) {{*lhs.begin()} -> std::same_as<const char&>;}
-{
-    return std::string_view{lhs.begin(), lhs.end()} == std::string_view{rhs};
-}
-
-inline bool operator==(const XmlStringView& lhs, const XmlStringView& rhs)
-{
-    return std::string_view{lhs} == std::string_view{rhs};
-}
-
-namespace xmlHelperLiterals {
-constexpr XmlStringView operator "" _xs (const char* str, size_t size) { return XmlStringView{str, size}; }
-}
-
-inline std::string xmlStringToString(const xmlChar* xmlStr)
-{ return std::string(reinterpret_cast<const char*>(xmlStr));}
-
-
 template<>
 struct std::hash<XmlStringView> {
     std::size_t operator()(const XmlStringView& xstr) const
@@ -113,5 +112,9 @@ struct std::hash<XmlStringView> {
         return hash<std::string_view>()(xstr);
     }
 };
+
+//NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
+
+//NOLINTEND(cppcoreguidelines-avoid-c-arrays, modernize-avoid-c-arrays)
 
 #endif // FHIR_TOOLS_FHIR_INTERNAL_XMLHELPER_HXX

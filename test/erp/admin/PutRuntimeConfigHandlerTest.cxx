@@ -15,6 +15,7 @@
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
+#include <magic_enum/magic_enum_iostream.hpp>
 
 class PutRuntimeConfigHandlerTest : public ::testing::Test
 {
@@ -53,9 +54,9 @@ public:
         header.setMethod(HttpMethod::GET);
         ServerRequest request{Header(header)};
         SessionContext session{serviceContext, request, response, accessLog};
-        GetConfigurationHandler handler{ConfigurationKey::ADMIN_CREDENTIALS,
-                                        std::make_unique<erp::ConfigurationFormatter>(
-                                            serviceContext.getRuntimeConfiguration())};
+        GetConfigurationHandler handler{
+            ConfigurationKey::ADMIN_CREDENTIALS,
+            std::make_unique<erp::ConfigurationFormatter>(serviceContext.getRuntimeConfiguration())};
         EXPECT_NO_THROW(handler.handleRequest(session));
         EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(session.response.getHeader().header(Header::ContentType), MimeType::json);
@@ -103,3 +104,63 @@ TEST_F(PutRuntimeConfigHandlerTest, ActivatePn3)
         checkGetConfigPn3(false, {});
     }
 }
+
+using magic_enum::ostream_operators::operator<<;
+
+class PutRuntimeConfigHandlerTimingThresholdTest : public PutRuntimeConfigHandlerTest,
+                                                   public testing::WithParamInterface<DurationCategory>
+{
+public:
+    void changeThreshold(const std::string& newVal)
+    {
+        auto category = GetParam();
+        auto paramName = std::string{magic_enum::enum_name(category)}.append("MetricLogThresholdMs=");
+        header.setMethod(HttpMethod::PUT);
+        ServerRequest request{Header(header)};
+        std::string body = paramName + newVal;
+        request.setBody(std::move(body));
+        SessionContext session{serviceContext, request, response, accessLog};
+        PutRuntimeConfigHandler handler{ConfigurationKey::ADMIN_RC_CREDENTIALS};
+        EXPECT_NO_THROW(handler.handleRequest(session));
+        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+    }
+    void checkGetConfigThreshold(DurationCategory category, int64_t expectedThreshold)
+    {
+        header.setMethod(HttpMethod::GET);
+        ServerRequest request{Header(header)};
+        SessionContext session{serviceContext, request, response, accessLog};
+        GetConfigurationHandler handler{
+            ConfigurationKey::ADMIN_CREDENTIALS,
+            std::make_unique<erp::ConfigurationFormatter>(serviceContext.getRuntimeConfiguration())};
+        EXPECT_NO_THROW(handler.handleRequest(session));
+        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+        EXPECT_EQ(session.response.getHeader().header(Header::ContentType), MimeType::json);
+
+        rapidjson::Document configDocument;
+        configDocument.Parse(session.response.getBody());
+
+        auto paramName = std::string{magic_enum::enum_name(category)}.append("MetricLogThresholdMs");
+
+        rapidjson::Pointer paramPointer{std::string{"/runtime/"}.append(paramName).append("/value")};
+        EXPECT_EQ(paramPointer.Get(configDocument)->GetInt64(), expectedThreshold);
+
+        EXPECT_EQ(serviceContext.getRuntimeConfigurationGetter()->getMetricsLogThresholdMs(category).count(),
+                  expectedThreshold);
+    }
+};
+
+TEST_P(PutRuntimeConfigHandlerTimingThresholdTest, test)
+{
+    auto category = GetParam();
+    auto defaultValue = shared::RuntimeConfigurationBase::defaultMetricsLogThresholdsMs().at(category).count();
+    checkGetConfigThreshold(GetParam(), defaultValue);
+    changeThreshold("0");
+    checkGetConfigThreshold(GetParam(), 0);
+    changeThreshold("1000");
+    checkGetConfigThreshold(GetParam(), 1000);
+    changeThreshold("");
+    checkGetConfigThreshold(GetParam(), defaultValue);
+}
+
+INSTANTIATE_TEST_SUITE_P(x, PutRuntimeConfigHandlerTimingThresholdTest,
+                         testing::ValuesIn(magic_enum::enum_values<DurationCategory>()));

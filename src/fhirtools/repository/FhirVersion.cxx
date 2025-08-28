@@ -56,13 +56,19 @@ std::ostream& operator<<(std::ostream& out, const FhirVersion& ver)
     return out;
 }
 
-std::string to_string(const FhirVersion& ver)
+const std::string& to_string(const FhirVersion& ver)
 {
     if (! ver.version())
     {
-        return std::string{FhirVersion::NotVersioned::str};
+        static const std::string notVersionedStr{FhirVersion::NotVersioned::str};
+        return notVersionedStr;
     }
-    return *ver.version();
+    return *ver.mVersion;
+}
+
+std::string to_string(FhirVersion&& ver)
+{
+    return to_string(ver);
 }
 
 }// namespace fhirtools

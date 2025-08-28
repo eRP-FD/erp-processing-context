@@ -30,7 +30,7 @@ public:
     {
         const auto now = model::Timestamp::now();
         // Create consent
-        ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+        ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
 
         // Create 2 closed tasks
         const std::size_t numOfTasks = 2;
@@ -104,21 +104,21 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr.id(), startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr.id(), startTime));
     ASSERT_TRUE(consent.has_value());
 
-    EXPECT_EQ(consent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
+    EXPECT_EQ(consent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
     EXPECT_EQ(consent->patientKvnr(), kvnr);
     EXPECT_EQ(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
 
     // Retrieve created consent
-    std::optional<model::Consent> getConsent;
+    std::vector<model::Consent> getConsent;
     ASSERT_NO_FATAL_FAILURE(getConsent = consentGet(kvnr.id()));
-    ASSERT_TRUE(getConsent.has_value());
+    ASSERT_EQ(getConsent.size(), 1);
 
-    EXPECT_EQ(getConsent->id(), consent->id());
+    EXPECT_EQ(getConsent[0].id(), consent->id());
     EXPECT_EQ(consent->patientKvnr(), kvnr);
-    EXPECT_EQ(consent->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr));
+    EXPECT_EQ(consent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
     EXPECT_EQ(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
 
     // Create a closed task:
@@ -143,11 +143,11 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
     EXPECT_EQ(chargeItemsBundle->getResourceCount(), 1);
 
     // Delete created consent
-    ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr.id()));
+    ASSERT_NO_FATAL_FAILURE(consentDelete(model::ConsentType::CHARGCONS, kvnr.id()));
 
     // Assure that consent does no longer exist
     ASSERT_NO_FATAL_FAILURE(getConsent = consentGet(kvnr.id()));
-    ASSERT_FALSE(getConsent.has_value());
+    ASSERT_TRUE(getConsent.empty());
 
     // assure that all charging data for this kvnr are deleted
     ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(
@@ -186,7 +186,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvTaskAcceptWithConsent)//NOLINT(readability-functi
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     const auto now = model::Timestamp::now();
-    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+    ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
 
     std::string secret;
     std::optional<model::Timestamp> lastModifiedDate;
@@ -275,7 +275,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr.id(), startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr.id(), startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create 4 closed tasks
@@ -526,7 +526,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdKvnrCheck)//NOLINT(readability-f
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr1.id(), startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr1.id(), startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create closed task
@@ -572,7 +572,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdTelematikIdCheck)//NOLINT(readab
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create closed task
@@ -631,7 +631,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cog
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr1, startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr1, startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create closed task
@@ -678,7 +678,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDelete)//NOLINT(readability-function-co
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr1, startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr1, startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create 2 closed tasks
@@ -811,7 +811,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create closed task
@@ -888,7 +888,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
 
     const auto now = model::Timestamp::now();
-    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+    ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
 
     std::optional<model::Bundle> acceptResultBundle;
     ASSERT_NO_FATAL_FAILURE(acceptResultBundle = taskAccept(*prescriptionId, accessCode));
@@ -964,6 +964,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     requestArguments.jwt = jwt;
     requestArguments.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
     requestArguments.expectedInnerStatus = HttpStatus::BadRequest;
+    requestArguments.expectedBdeUseCase = bde::PostCommunicationPatient_UC_3_3;
     ClientResponse response{};
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(requestArguments));
     ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
@@ -1000,13 +1001,13 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications)
         kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm));
 
     // Delete consent
-    ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr));
+    ASSERT_NO_FATAL_FAILURE(consentDelete(model::ConsentType::CHARGCONS, kvnr));
 
     // Assure that consent does no longer exist
     A_22158.test("Consent resource for this kvnr is deleted");
-    std::optional<model::Consent> consent{};
+    std::vector<model::Consent> consent{};
     ASSERT_NO_FATAL_FAILURE(consent = consentGet(kvnr));
-    ASSERT_FALSE(consent.has_value());
+    ASSERT_TRUE(consent.empty());
 
     // Assure that all charging data for this kvnr are deleted
     A_22157.test("All ChargeItems for this kvnr are deleted");
@@ -1027,7 +1028,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications_
     const auto kvnr = generateNewRandomKVNR().id();
     const auto now = model::Timestamp::now();
     // Create consent
-    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, now));
+    ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
 
     // Create test data
     std::vector<std::optional<model::Communication>> chargeItemUnrelatedComm;
@@ -1058,7 +1059,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications_
     ASSERT_TRUE(chargeItemUnrelatedComm[0]->id().has_value());
 
     // Delete consent
-    ASSERT_NO_FATAL_FAILURE(consentDelete(kvnr));
+    ASSERT_NO_FATAL_FAILURE(consentDelete(model::ConsentType::CHARGCONS, kvnr));
 
     // Check communication, dispense requests are preeserved
     A_22157.test("All ChargeItem related communication resources for this kvnr are deleted");
@@ -1073,6 +1074,56 @@ TEST_P(ErpWorkflowPkvTestP, PkvDeleteConsentRemovesChargeItemsAndCommunications_
 // GEMREQ-end A_22157
 // GEMREQ-end A_22158
 
+TEST_P(ErpWorkflowPkvTestP, DeleteEUConsent_NotDeleteChargeInfo)
+{
+    if (GetParam() == model::PrescriptionType::direkteZuweisungPkv)
+    {
+        GTEST_SKIP() << "Not supported for direkteZuweisungPkv";
+    }
+    EnvironmentVariableGuard featureToggleGuard("ERP_FEATURE_EU", "true");
+    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
+                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+
+    const auto kvnr = generateNewRandomKVNR().id();
+    const auto now = model::Timestamp::now();
+
+    // Create test data
+    std::vector<std::optional<model::PrescriptionId>> prescriptionIds;// Ids of created Tasks/ChargeItems
+    std::vector<std::optional<model::Communication>> chargeItem1RelatedComm;
+    std::vector<std::optional<model::Communication>> chargeItem2RelatedComm;
+    ASSERT_NO_FATAL_FAILURE(
+        createChargeItemsWithCommunication(kvnr, prescriptionIds, chargeItem1RelatedComm, chargeItem2RelatedComm));
+
+    // Create consent
+    ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::EUDISPCONS, kvnr, now));
+
+    std::optional<model::Bundle> chargeItemsBundle;
+    const auto jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    std::optional<model::Bundle> commBundle;
+    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+    EXPECT_EQ(chargeItemsBundle->getResourceCount(), 2);
+
+    ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant));
+    ASSERT_EQ(commBundle->getResourceCount(), 3);
+
+    // Delete consent
+    ASSERT_NO_FATAL_FAILURE(consentDelete(model::ConsentType::EUDISPCONS, kvnr));
+
+    // Assure that consent does still longer exist
+    std::vector<model::Consent> consent{};
+    ASSERT_NO_FATAL_FAILURE(consent = consentGet(kvnr));
+    ASSERT_EQ(consent.size(), 1);
+    EXPECT_EQ(consent[0].consentCategory(), model::ConsentType::CHARGCONS);
+
+    // Assure that no charging data for this kvnr are deleted
+    ASSERT_NO_FATAL_FAILURE(chargeItemsBundle = chargeItemsGet(jwtInsurant, ContentMimeType::fhirJsonUtf8));
+    EXPECT_EQ(chargeItemsBundle->getResourceCount(), 2);
+
+    ASSERT_NO_FATAL_FAILURE(commBundle = communicationsGet(jwtInsurant));
+    ASSERT_EQ(commBundle->getResourceCount(), 3);
+}
+
+
 TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Timestamp startTime = model::Timestamp::now();
@@ -1080,7 +1131,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readabili
 
     // Create consent
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, startTime));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, startTime));
     ASSERT_TRUE(consent.has_value());
 
     // Create closed task

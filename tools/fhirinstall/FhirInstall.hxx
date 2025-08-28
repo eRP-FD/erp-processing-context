@@ -10,7 +10,9 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "tools/fhirinstall/FhirInstallArgs.hxx"
 #include "tools/fhirinstall/FhirPackage.hxx"
 
 #include <filesystem>
@@ -25,10 +27,7 @@ class FhirInstall
 public:
     static bool run(const std::span<const char*>& args);
 
-    const std::filesystem::path& cacheFolder() const;
-    const std::optional<std::filesystem::path>& configFolder() const;
-    const std::filesystem::path& outputFolder() const;
-    const fhirtools::FhirStructureRepository& view() const;
+    const fhirtools::FhirStructureRepositoryView& view() const;
 
 private:
     explicit FhirInstall(const std::span<const char*>& args);
@@ -37,13 +36,10 @@ private:
 
     void readArgs(const std::span<const char*>& args);
 
-    std::optional<std::filesystem::path> mCacheFolder;
-    std::optional<std::filesystem::path> mOutputFolder;
-    std::optional<std::filesystem::path> mConfigFolder;
-    FhirPackage::PtrSet mPackages;
+    FhirInstallArgs mArgumemts;
     fhirtools::FhirResourceGroupConst mBaseResourceGroup{"base"};
     fhirtools::FhirStructureRepositoryBackend mBackend;
-    std::shared_ptr<const fhirtools::FhirStructureRepository> mView;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mView;
     bool mHadError = false;
 };
 

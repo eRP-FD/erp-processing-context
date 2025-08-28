@@ -2,6 +2,8 @@ add_executable(fhirtools-test
         fhirtools-test.cxx
 
         ClosedSliceExtensionsTest.cxx
+        CodeCachingViewTest.cxx
+        CodeSystemTest.cxx
         CollectionTest.cxx
         DateTimeTest.cxx
         DefaultFhirStructureRepository.cxx
@@ -15,13 +17,18 @@ add_executable(fhirtools-test
         FhirResourceGroupTest.cxx
         FhirResourceViewGroupSetTest.cxx
         FhirResourceViewVerifierTest.cxx
+        FhirStructureDefinitionParserTest.cxx
         FhirStructureRepositoryFixerTest.cxx
         FhirStructureRepositoryTest.cxx
         FhirValueSetTest.cxx
+        KbvSchluesseltabellenConfigurationTest.cxx
         issues/ERP-12159-RefereceTypeCheck.cxx
+        MandatoryMetaProfileTest.cxx
         ReferenceTest.cxx
         SlicingValidationTest.cxx
+        UriValidationTest.cxx
         ValueMatchingTest.cxx
+        VersionMappingViewTest.cxx
         )
 
 target_link_libraries(fhirtools-test fhirtools gtest::gtest erp-processing-context-files erp-test-util-lib

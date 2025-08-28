@@ -7,6 +7,7 @@
 
 #include "erp/service/consent/ConsentGetHandler.hxx"
 #include "erp/model/Consent.hxx"
+#include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/util/TLog.hxx"
@@ -24,22 +25,30 @@ void ConsentGetHandler::handleRequest (PcSessionContext& session)
     A_22160.start("Filter Consent according to kvnr of insurant from access token");
     const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "JWT does not contain Kvnr");
-    const model::Kvnr kvnr{*kvnrClaim, model::Kvnr::Type::pkv};
+    const model::Kvnr kvnr{*kvnrClaim};
 
-    const auto consent = session.database()->retrieveConsent(kvnr);
+    // optional category query parameter
+    UrlArguments urlArguments({{"category", SearchParameter::Type::String}});
+    urlArguments.parse(session.request, session.serviceContext.getKeyDerivation());
+    const auto consents = session.database()->retrieveAllConsents(kvnr, urlArguments);
     A_22160.finish();
 
     model::Bundle bundle(model::BundleType::searchset, model::FhirResourceBase::NoProfile);
-    if(consent.has_value())
+    bundle.setTotalSearchMatches(consents.size());
+    const auto links = urlArguments.createBundleLinks(getLinkBase(), "/Consent", consents.size());
+    for (const auto& link : links)
     {
-        Expect3(consent.value().id().has_value(), "Consent id must be set", std::logic_error);
+        bundle.setLink(link.first, link.second);
+    }
+    for (const auto & consent : consents)
+    {
+        Expect3(consent.id().has_value(), "Consent id must be set", std::logic_error);
         const auto linkBase = getLinkBase() + "/Consent";
         bundle.addResource(
-            linkBase + "/" + std::string(consent.value().id().value()),
+            linkBase + "/" + std::string(consent.id().value()),
             {},
             model::Bundle::SearchMode::match,
-            consent.value().jsonDocument());
-        bundle.setTotalSearchMatches(1);
+            consent.jsonDocument());
     }
 
     makeResponse(session, HttpStatus::OK, &bundle);

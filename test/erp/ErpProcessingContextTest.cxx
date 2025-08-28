@@ -6,6 +6,7 @@
  */
 
 #include "erp/ErpProcessingContext.hxx"
+#include "shared/model/ProfessionOid.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -25,8 +26,6 @@ public:
         : mRequestHandlerManager(),
           mAllProfessionOIDs()
     {
-        ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
-        ErpProcessingContext::addPrimaryEndpoints(mRequestHandlerManager);
         std::string prefix = "1.2.276.0.76.4.";
         for (int i = 0; i != 1000; ++i)
         {
@@ -47,6 +46,8 @@ public:
     void checkAllOids(const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs,
                       std::set<model::PrescriptionType> allowedWorkflows = allWorkflows)
     {
+        ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
+        ErpProcessingContext::addPrimaryEndpoints(mRequestHandlerManager);
         auto matchingHandler = mRequestHandlerManager.findMatchingHandler(method, target);
         ASSERT_TRUE(matchingHandler.handlerContext);
         ASSERT_TRUE(matchingHandler.handlerContext->handler);
@@ -405,3 +406,87 @@ TEST_F(ErpProcessingContextTest, PostSubscription_ProfessionOIDs)
                  });
 }
 // GEMREQ-end A_22362-test1
+
+// GEMREQ-start A_27088
+TEST_F(ErpProcessingContextTest, GrantEuAccess_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27088.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/$grant-eu-access-permission",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_27088
+
+// GEMREQ-start A_27086
+TEST_F(ErpProcessingContextTest, ReadEuAccess_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27086.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/$read-eu-access-permission",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_27086
+
+// GEMREQ-start A_27084
+TEST_F(ErpProcessingContextTest, RevokeEuAccess_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27084.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::DELETE, "/$revoke-eu-access-permission",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_27084
+
+// GEMREQ-start A_27549
+TEST_F(ErpProcessingContextTest, PatchTaskHandler_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27549.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::PATCH, "/Task/{id}",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+    A_27549.finish();
+}
+// GEMREQ-end A_27549
+
+// GEMREQ-start A_27059
+TEST_F(ErpProcessingContextTest, GetEuPrescriptions_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27059.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/$get-eu-prescriptions",
+                 {
+                     "1.2.276.0.76.4.292"// oid_ncpeh
+                 });
+}
+// GEMREQ-end A_27059
+
+// GEMREQ-start A_27068
+TEST_F(ErpProcessingContextTest, PostTaskEuClose_ProfessionOIDs)
+{
+    const EnvironmentVariableGuard euFeatureToggleGuard{ConfigurationKey::FEATURE_EU, "true"};
+    A_27068.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/Task/{id}/$eu-close",
+                 {
+                     "1.2.276.0.76.4.292"// oid_ncpeh
+                 });
+    A_27068.finish();
+}
+// GEMREQ-end A_27068
+
+
+TEST_F(ErpProcessingContextTest, BdeUseCaseExists)
+{
+    ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
+    for (const auto& [name, handler] : mRequestHandlerManager.getRequestHandlers())
+    {
+        EXPECT_TRUE(handler->isErpUseCaseSet()) << name;
+    }
+}

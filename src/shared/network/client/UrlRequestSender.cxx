@@ -52,7 +52,7 @@ ClientResponse UrlRequestSender::send(
     const bool trustCn) const
 {
     const auto urlParts = UrlHelper::parseUrl(url);
-    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, urlParts.mHost);
+    auto timer = mDurationConsumer.getTimer(DurationCategory::httpclient, urlParts.mHost);
 
     try
     {
@@ -77,7 +77,7 @@ ClientResponse UrlRequestSender::send(
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn) const
 {
-    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, url.mHost);
+    auto timer = mDurationConsumer.getTimer(DurationCategory::httpclient, url.mHost);
     timer.keyValue("port", std::to_string(url.mPort));
 
     try
@@ -98,7 +98,7 @@ ClientResponse UrlRequestSender::send(const boost::asio::ip::tcp::endpoint& ep, 
                                       const HttpMethod method, const std::string& body, const std::string& contentType,
                                       const std::optional<std::string>& forcedCiphers, const bool trustCn) const
 {
-    auto timer = mDurationConsumer.getTimer(DurationConsumer::categoryUrlRequestSender, url.mHost);
+    auto timer = mDurationConsumer.getTimer(DurationCategory::httpclient, url.mHost);
     timer.keyValue("ip", ep.address().to_string());
 
     try

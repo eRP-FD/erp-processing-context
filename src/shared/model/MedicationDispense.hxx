@@ -39,6 +39,7 @@ public:
     [[nodiscard]] MedicationDispenseId id() const;
     [[nodiscard]] std::string_view medicationReference() const;
     [[nodiscard]] std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+    [[nodiscard]] std::string_view performerReference() const;
 
     void setId(const MedicationDispenseId& id);
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);
@@ -47,6 +48,7 @@ public:
     void setWhenHandedOver(const model::Timestamp& whenHandedOver);
     void setWhenPrepared(const model::Timestamp& whenPrepared);
     void setMedicationReference(std::string_view newReference);
+    void setPerformerReference(std::string_view newReference);
 
     static constexpr auto resourceTypeName = "MedicationDispense";
 

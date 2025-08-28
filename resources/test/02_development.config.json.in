@@ -11,10 +11,6 @@
         }
       }
     },
-    "feature": {
-      "pkv": "true",
-      "workflow-200": "true"
-    },
     "enrolment": {
       "api": {
         "credentials": "test"

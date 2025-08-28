@@ -134,7 +134,7 @@ TEST_F(SaxParserTest, AttributeList) // NOLINT
 
 TEST_F(SaxParserTest, Attribute) // NOLINT
 {
-    using namespace xmlHelperLiterals;
+    using namespace xml_string_literal;
     bool hadNoNamespace = false;
     bool hadWithNamespace = false;
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -171,8 +171,8 @@ TEST_F(SaxParserTest, Attribute) // NOLINT
             ASSERT_TRUE(attr0ns1);
             EXPECT_EQ(attr0ns1->value(), "value10");
             EXPECT_EQ(attr0ns1->localname(), "attr0");
-            EXPECT_EQ(attr0ns1->prefix().value_or("null"), "ns1");
-            EXPECT_EQ(attr0ns1->uri().value_or("null"), ns1Uri);
+            EXPECT_EQ(attr0ns1->prefix().value_or("null"_xs), "ns1");
+            EXPECT_EQ(attr0ns1->uri().value_or("null"_xs), ns1Uri);
             auto attr0noNs = attributes.findAttribute("attr0");
             ASSERT_TRUE(attr0noNs);
             EXPECT_EQ(attr0noNs->value(), "value0");

@@ -5,9 +5,11 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "MockFhirResourceGroup.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/FhirCodeSystem.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
 #include "test/util/ResourceManager.hxx"
 
 #include <gmock/gmock.h>
@@ -78,10 +80,14 @@ TEST_F(FhirStructureRepositoryTest, run)
     EXPECT_EQ(sdA->resourceGroup(), groupA);
     EXPECT_EQ(sdB->resourceGroup(), groupB);
 
-    EXPECT_EQ(vsA->codesToString(), "[http://erp-test.de/versiontest/CodeSystem]ObsoleteTest, "
-                                    "[http://erp-test.de/versiontest/CodeSystem]Test1, "
-                                    "[http://erp-test.de/versiontest/CodeSystem]Test2");
-    EXPECT_EQ(vsB->codesToString(), "[http://erp-test.de/versiontest/CodeSystem]Test1, "
-                                    "[http://erp-test.de/versiontest/CodeSystem]Test2, "
-                                    "[http://erp-test.de/versiontest/CodeSystem]Test3");
+    auto viewA = fhirtools::FhirResourceViewGroupSet::create("viewA", groupA, &backend);
+    auto codesA = fhirtools::FhirValueSetCodes::create(viewA.get(), vsA);
+    EXPECT_EQ(codesA->codesToString(), "[http://erp-test.de/versiontest/CodeSystem]ObsoleteTest, "
+                                       "[http://erp-test.de/versiontest/CodeSystem]Test1, "
+                                       "[http://erp-test.de/versiontest/CodeSystem]Test2");
+    auto viewB = fhirtools::FhirResourceViewGroupSet::create("viewB", groupB, &backend);
+    auto codesB = fhirtools::FhirValueSetCodes::create(viewB.get(), vsB);
+    EXPECT_EQ(codesB->codesToString(), "[http://erp-test.de/versiontest/CodeSystem]Test1, "
+                                       "[http://erp-test.de/versiontest/CodeSystem]Test2, "
+                                       "[http://erp-test.de/versiontest/CodeSystem]Test3");
 }

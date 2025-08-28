@@ -15,16 +15,16 @@ namespace fhirtools
 {
 class FhirValue;
 class ProfiledElementTypeInfo;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 
 /// @brief implementation of the Element interface for nodes of the structure definition containing
 ///        fixed values or pattern values.
 class ValueElement : public Element
 {
 public:
-    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo,
                  std::shared_ptr<const FhirValue> value, std::weak_ptr<const Element> parent = {});
-    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo,
                  std::weak_ptr<const Element> parent, std::shared_ptr<const FhirValue> value,
                  ProfiledElementTypeInfo defPtr);
 

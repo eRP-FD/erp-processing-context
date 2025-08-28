@@ -9,9 +9,10 @@
 #define ERP_PROCESSING_CONTEXT_CADESBESSIGNATURE_HXX
 
 #include "shared/crypto/OpenSslHelper.hxx"
-#include "shared/model/Timestamp.hxx"
-#include "shared/tsl/error/TslError.hxx"
 #include "shared/model/TelematikId.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/tsl/X509Certificate.hxx"
+#include "shared/tsl/error/TslError.hxx"
 
 #include <functional>
 #include <list>
@@ -75,6 +76,8 @@ public:
     std::optional<model::TelematikId> getTelematikId() const;
     std::string getSignerSerialNumber() const;
     std::string getIssuer() const;
+
+    SigningAlgorithm getSigningAlgorithm() const;
 
 private:
     using CmsVerifyFunction = std::function<int(CMS_ContentInfo&, BIO&)>;

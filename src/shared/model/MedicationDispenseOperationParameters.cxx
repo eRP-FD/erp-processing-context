@@ -1,8 +1,11 @@
-#include "shared/model/MedicationDispenseOperationParameters.hxx"
-#include "shared/model/GemErpPrMedication.hxx"
-#include "shared/model/MedicationDispense.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/GemErpPrMedication.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
+
+#include "GemErpEuPrMedicationDispense.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/Expect.hxx"
 
@@ -56,10 +59,14 @@ model::ProfileType model::MedicationDispenseOperationParameters::profileType() c
     {
         return ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input;
     }
+    else if (myKey.url == model::resource::structure_definition::gem_erpeu_pr_par_closeoperation_input)
+    {
+        return ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input;
+    }
     ModelFail("Invalid profile for MedicationDispenseOperationParameters: "s.append(*profileName));
 }
 
-gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
 MedicationDispenseOperationParameters::getValidationView() const
 {
     // find a view that contains all of Parameter profile, MedicationDispense profile and Medication profile
@@ -69,11 +76,10 @@ MedicationDispenseOperationParameters::getValidationView() const
     std::string profiles{*profileName};
     ModelExpect(myKey.version.has_value(), "missing profile version in meta.profile");
     const auto& fhirInstance = Fhir::instance();
-    const auto& backend = fhirInstance.backend();
     A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
     auto views = fhirInstance.structureRepository(maxWhenHandedOver());
     A_23384_03.finish();
-    views = views.matchAll(backend, myKey.url, *myKey.version);
+    views = views.matchAll(myKey.url, *myKey.version);
     // we cannot use `findParameter` because `rxDispensation` might appear more than once
     const auto* parameterArrayValue = parameterArrayPointer.Get(jsonDocument());
     if (parameterArrayValue)
@@ -86,19 +92,19 @@ MedicationDispenseOperationParameters::getValidationView() const
             metaProfileFor(rxDispensation, resource::parameter::part::medicationDispense);
         fhirtools::DefinitionKey dispenseKey{medicationDispenseProfile};
         ModelExpect(dispenseKey.version.has_value(), "Missing version for medicationDispense profile");
-        views = views.matchAll(backend, dispenseKey.url, *dispenseKey.version);
+        views = views.matchAll(dispenseKey.url, *dispenseKey.version);
         profiles.append(", ").append(medicationDispenseProfile);
         if (nullptr != findPart(rxDispensation, resource::parameter::part::medication))
         {
             const auto medicationProfile = metaProfileFor(rxDispensation, resource::parameter::part::medication);
             fhirtools::DefinitionKey medicationKey{medicationProfile};
             ModelExpect(medicationKey.version.has_value(), "Missing version for medication profile");
-            views = views.matchAll(backend, medicationKey.url, *medicationKey.version);
+            views = views.matchAll(medicationKey.url, *medicationKey.version);
             profiles.append(", ").append(medicationProfile);
         }
     }
     ModelExpect(! views.empty(), "no applicable view to validate resource containing profiles: " + profiles);
-    return views.latest().view(&backend);
+    return views.latest();
 }
 
 Timestamp model::MedicationDispenseOperationParameters::maxWhenHandedOver() const
@@ -143,12 +149,16 @@ model::MedicationDispenseOperationParameters::medicationDispenses() const
     std::list<std::pair<MedicationDispense, GemErpPrMedication>> result;
     for (auto&& [medicationDispense, medication] : collectMedicationDispenses())
     {
-        A_26002.start("Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
-        ErpExpect(medicationDispense.profileType() == ProfileType::GEM_ERP_PR_MedicationDispense,
-                  HttpStatus::BadRequest,
-                  "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für "
-                  "Arzneimittel zulässig.");
-        A_26002.finish();
+        const auto profileType = medicationDispense.profileType();
+        if (profileType != ProfileType::GEM_ERPEU_PR_MedicationDispense)
+        {
+            A_26002.start("Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
+            ErpExpect(profileType == ProfileType::GEM_ERP_PR_MedicationDispense,
+                      HttpStatus::BadRequest,
+                      "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für "
+                      "Arzneimittel zulässig.");
+            A_26002.finish();
+        }
         ModelExpect(medication.has_value(), "missing medication part in Parameters.parameter");
         result.emplace_back(std::move(medicationDispense), std::move(*medication));
     }
@@ -163,13 +173,18 @@ MedicationDispenseOperationParameters::collectMedicationDispenses() const
     {
         return {};
     }
+    const model::ProfileType ptype = profileType();
     ModelExpect(parameterArrayValue->IsArray(), "Parameters.parameter must be array.");
     std::list<std::pair<MedicationDispense, std::optional<GemErpPrMedication>>> result;
     for (auto parameterArray = parameterArrayValue->GetArray(); const auto& parameter : parameterArray)
     {
         const auto* rxDispensation = namePointer.Get(parameter);
-        ModelExpect(NumberAsStringParserDocument::getStringValueFromValue(rxDispensation) ==
-                        resource::parameter::rxDispensation,
+        const auto rxDispensationStr = NumberAsStringParserDocument::getStringValueFromValue(rxDispensation);
+        if (rxDispensationStr != "rxDispensation" && (ptype == ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input))
+        {
+            continue;
+        }
+        ModelExpect(rxDispensationStr == resource::parameter::rxDispensation,
                     "Parameter.parameter.name must be `rxDispensation`.");
         std::optional<MedicationDispense> medicationDispense;
         std::optional<GemErpPrMedication> medication;
@@ -187,7 +202,14 @@ MedicationDispenseOperationParameters::collectMedicationDispenses() const
             else if (partName == resource::parameter::part::medicationDispense)
             {
                 ModelExpect(! medicationDispense.has_value(), "Duplicate medicationDispense in Parameters.parameter");
-                medicationDispense.emplace(MedicationDispense::fromJson(getResourceDoc(part)));
+                if (ptype == ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input)
+                {
+                    medicationDispense.emplace(GemErpEuPrMedicationDispense::fromJson(getResourceDoc(part)));
+                }
+                else
+                {
+                    medicationDispense.emplace(MedicationDispense::fromJson(getResourceDoc(part)));
+                }
             }
             else
             {

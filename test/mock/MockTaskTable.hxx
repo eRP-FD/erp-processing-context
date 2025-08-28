@@ -47,6 +47,8 @@ public:
         std::optional<BlobId> medicationDispenseKeyBlobId = std::nullopt;
         std::optional<db_model::EncryptedBlob> medicationDispenseBundle = std::nullopt;
         std::optional<db_model::Blob> medicationDispenseSalt = std::nullopt;
+        bool euRedeemableByPatient = false;
+        bool isEuRedeemable = false;
     };
 
     explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
@@ -84,7 +86,8 @@ public:
                       const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
-                      const model::Timestamp& lastStatusUpdate);
+                      const model::Timestamp& lastStatusUpdate,
+                      bool euRedeemable);
     void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                            const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
                            const model::Timestamp& lastStatusUpdate);
@@ -96,7 +99,8 @@ public:
                                       const db_model::HashedTelematikId& telematicId,
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
-                                      const db_model::Blob& medicationDispenseSalt);
+                                      const db_model::Blob& medicationDispenseSalt,
+                                      const std::optional<model::Task::Status>& taskStatus = std::nullopt);
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -115,6 +119,12 @@ public:
                                      model::Task::Status taskStatus,
                                      const model::Timestamp& lastModified,
                                      const model::Timestamp& lastStatusUpdate);
+    void updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                         bool redeemable,
+                                         const model::Timestamp& lastModified);
+    void updateTaskEuRedeemable(const model::PrescriptionId& taskId,
+                                bool redeemable,
+                                const model::Timestamp& lastModified);
 
 
     std::optional<db_model::Task> retrieveTaskBasics (const model::PrescriptionId& taskId);
@@ -131,6 +141,9 @@ public:
                                      const std::optional<UrlArguments>& search) const;
     uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) const;
+    std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                                      const std::optional<UrlArguments>& search) const;
+    uint64_t countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) const;
 
     std::vector<TestUrlArguments::SearchMedicationDispense>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
@@ -169,7 +182,9 @@ private:
         performer,
         medication_dispense_key_blob_id,
         medication_dispense_bundle,
-        medication_dispense_salt
+        medication_dispense_salt,
+        redeemable_by_patient,
+        eu_redeemable
     };
 
     std::optional<db_model::Task> select(int64_t databaseId, const std::set<FieldName>& fields) const;

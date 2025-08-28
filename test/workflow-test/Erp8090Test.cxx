@@ -60,6 +60,16 @@ TEST_F(Erp8090Test, validCoverage1)//NOLINT(readability-function-cognitive-compl
 
 TEST_F(Erp8090Test, validCoverage2)//NOLINT(readability-function-cognitive-complexity)
 {
+    static constexpr char medicationRequestExtension[] = R"(
+<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Accident">
+    <extension url="Unfallkennzeichen">
+        <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"/>
+            <code value="4"/>
+        </valueCoding>
+    </extension>
+</extension>
+)";
     const auto authoredOn = model::Timestamp::now();
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
@@ -69,21 +79,29 @@ TEST_F(Erp8090Test, validCoverage2)//NOLINT(readability-function-cognitive-compl
         std::string{model::resource::naming_system::argeIknr} +
         R"(" /><value value="121191241" /></valueIdentifier></extension>)";
 
-    auto bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
-                                .authoredOn = authoredOn,
-                                .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
-                                .coverageInsuranceType = "BG",
-                                .coveragePayorExtension = extensionCoverage});
+    auto bundle = kbvBundleXml({
+        .prescriptionId = task->prescriptionId(),
+        .authoredOn = authoredOn,
+        .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
+        .coverageInsuranceType = "BG",
+        .coveragePayorExtension = extensionCoverage,
+        .medicationRequestExtension = medicationRequestExtension,
+        .statusCoPayment = "1",
+    });
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
                                                        toCadesBesSignature(bundle, authoredOn), HttpStatus::OK));
 
     ASSERT_NO_FATAL_FAILURE(task = taskCreate());
     ASSERT_TRUE(task.has_value());
-    bundle = kbvBundleXml({.prescriptionId = task->prescriptionId(),
-                           .authoredOn = authoredOn,
-                           .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
-                           .coverageInsuranceType = "UK",
-                           .coveragePayorExtension = extensionCoverage});
+    bundle = kbvBundleXml({
+        .prescriptionId = task->prescriptionId(),
+        .authoredOn = authoredOn,
+        .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
+        .coverageInsuranceType = "UK",
+        .coveragePayorExtension = extensionCoverage,
+        .medicationRequestExtension = medicationRequestExtension,
+        .statusCoPayment = "1",
+    });
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(task->prescriptionId(), std::string{task->accessCode()},
                                                               toCadesBesSignature(bundle, authoredOn), HttpStatus::OK));
 }

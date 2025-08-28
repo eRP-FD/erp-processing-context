@@ -13,6 +13,7 @@
 
 #include <iosfwd>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <rapidjson/fwd.h>
 #include <set>
@@ -20,7 +21,7 @@
 
 namespace fhirtools
 {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 }
 
 namespace model
@@ -28,6 +29,7 @@ namespace model
 class NumberAsStringParserDocument;
 }
 class FhirInstall;
+struct FhirInstallArgs;
 
 class FhirPackage
 {
@@ -39,8 +41,7 @@ public:
 
     static Ptr get(const Id& id);
 
-    bool install(const fhirtools::FhirStructureRepository& view, const std::filesystem::path& cacheFolder,
-                 const std::filesystem::path& outputFolder);
+    bool install(const fhirtools::FhirStructureRepositoryView& view, const FhirInstallArgs& arguments);
 
     size_t depth() const;
 
@@ -87,13 +88,24 @@ private:
 
     bool process(const std::filesystem::directory_entry& src, const model::NumberAsStringParserDocument& doc);
 
-    void installDir(const fhirtools::FhirStructureRepository& view, const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder);
+    void installDir(const fhirtools::FhirStructureRepositoryView& view, const std::filesystem::directory_entry& src,
+                    const std::filesystem::path& destFolder, const std::set<std::filesystem::path>& excludedFiles,
+                    const std::map<std::string, FhirPackage::Id>& substitutions);
 
-    void convert(const fhirtools::FhirStructureRepository& view, const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder);
+    void convert(const fhirtools::FhirStructureRepositoryView& view, const std::filesystem::directory_entry& src,
+                 const std::filesystem::path& destFolder);
 
-    void install(const fhirtools::FhirStructureRepository& view, const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder);
+    void install(const fhirtools::FhirStructureRepositoryView& view, const std::filesystem::directory_entry& src,
+                 const std::filesystem::path& destFolder, const std::set<std::filesystem::path>& excludedFiles,
+                 const std::map<std::string, FhirPackage::Id>& substitutions);
 
-    void processPackageInfo(const std::filesystem::directory_entry& src);
+    void processPackageInfo(const std::filesystem::directory_entry& src,
+                            const std::map<std::string, FhirPackage::Id>& substitutions);
+
+    Id applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id);
+
+    std::set<std::filesystem::path> readExcludeFile(const std::filesystem::path& excludeFile,
+                                                    const std::filesystem::path& srcFolder);
 
     Id mId;
     PtrSet mDependencies;
@@ -104,5 +116,6 @@ private:
 
 std::ostream& operator<<(std::ostream&, const FhirPackage::Id&);
 
+std::string to_string(const FhirPackage::Id&);
 
 #endif// ERP_TOOLS_FHIRINSTALL_FHIRPACKAGE_HXX

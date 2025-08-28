@@ -13,7 +13,7 @@
 
 namespace fhirtools {
 class FhirElement;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class FhirStructureDefinition;
 }
 
@@ -32,12 +32,12 @@ class NumberAsStringParserDocument;
 class FhirJsonToXmlConverter final
 {
 public:
-    static UniqueXmlDocumentPtr jsonToXml(const fhirtools::FhirStructureRepository& repo,
+    static UniqueXmlDocumentPtr jsonToXml(const fhirtools::FhirStructureRepositoryView& repo,
                                           const model::NumberAsStringParserDocument& jsonDoc);
 
 
 private:
-    explicit FhirJsonToXmlConverter(const fhirtools::FhirStructureRepository& repo);
+    explicit FhirJsonToXmlConverter(const fhirtools::FhirStructureRepositoryView& repo);
 
     void initRoot(UniqueXmlNodePtr rootNode);
 
@@ -84,7 +84,7 @@ private:
     static rapidjson::SizeType elementCount(const rapidjson::Value* arr1);
     static rapidjson::SizeType maxElements(const rapidjson::Value* arr1, const rapidjson::Value* arr2);
 
-    const fhirtools::FhirStructureRepository& mStructureRepository;
+    const fhirtools::FhirStructureRepositoryView& mStructureRepository;
 
     UniqueXmlDocumentPtr mResultDoc;
     xmlNode* mRootNode = nullptr;

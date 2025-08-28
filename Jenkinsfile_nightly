@@ -34,12 +34,18 @@ pipeline {
 
     stages {
         stage('Checkout') {
+            options {
+                throttle(['unit-test-category'])
+            }
             steps {
                 cleanWs()
                 commonCheckout()
             }
         }
         stage('Static Analysis') {
+            options {
+                throttle(['gcc-build-category'])
+            }
             agent {
                 docker {
                     label 'dockerstage'
@@ -59,7 +65,7 @@ pipeline {
                         loadGithubSSHConfiguration {
                             env.BRANCH_NAME = "${BRANCH_NAME}"
                             def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
-                            def erp_release_version = "1.18.0"
+                            def erp_release_version = "1.19.0"
                             sh "cd /media/erp && scripts/ci-build.sh " +
                                 "--build_type=RelWithDebInfo " +
                                 "--build_version='${erp_build_version}' " +
@@ -93,14 +99,14 @@ pipeline {
             script {
                 def url = env.BUILD_URL.replaceAll("%", "%25")
                 def branchName = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
-                slackSendClient(message: "Build ${env.BUILD_DISPLAY_NAME} failed for branch `${branchName}`:rotating_light: \nFor more details visit <${url}|the build page>",
+                slackSendClient(message: "Nightly build ${env.BUILD_DISPLAY_NAME} failed for branch `${branchName}`:rotating_light: \nFor more details visit <${url}|the build page>",
                                 channel: '#erp-cpp')
             }
         }
         fixed {
             script {
                 def branchName = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
-                slackSendClient(message: "Build is now successful again on branch `${branchName}`:green_heart:",
+                slackSendClient(message: "Nightly build is now successful again on branch `${branchName}`:green_heart:",
                                 channel: '#erp-cpp')
             }
         }

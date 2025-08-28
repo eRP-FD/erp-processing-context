@@ -36,6 +36,14 @@ const rapidjson::Pointer ParameterBase::valueIdentifierSystemPointer{
 const rapidjson::Pointer ParameterBase::valueIdentifierValuePointer{
     ElementName::path(elements::valueIdentifier, elements::value)};
 const rapidjson::Pointer ParameterBase::valueDatePtr{ElementName::path(elements::valueDate)};
+const rapidjson::Pointer ParameterBase::valueCodingSystemPointer{
+    ElementName::path(elements::valueCoding, elements::system)};
+const rapidjson::Pointer ParameterBase::valueCodingCodePointer{
+    ElementName::path(elements::valueCoding, elements::code)};
+const rapidjson::Pointer ParameterBase::valueInstantPointer{
+    ElementName::path(elements::valueInstant)};
+const rapidjson::Pointer ParameterBase::valueStringPointer{
+    ElementName::path(elements::valueString)};
 
 
 const rapidjson::Value* ParameterBase::findPart(const rapidjson::Value& parameter, std::string_view name)

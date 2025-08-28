@@ -7,7 +7,7 @@
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 
 #include <ranges>
@@ -34,7 +34,7 @@ std::string ResourceProfileTransformer::Result::summary() const
     return summary;
 }
 
-ResourceProfileTransformer::ResourceProfileTransformer(const FhirStructureRepository* repository,
+ResourceProfileTransformer::ResourceProfileTransformer(const FhirStructureRepositoryView* repository,
                                                        const FhirStructureDefinition* sourceProfile,
                                                        const FhirStructureDefinition* targetProfile,
                                                        const Options& options)

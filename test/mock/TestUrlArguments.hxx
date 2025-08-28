@@ -38,6 +38,10 @@ public:
     AuditDataContainer apply(AuditDataContainer&& auditEvents) const;
     AuditDataContainer applySearch (AuditDataContainer&& auditEvents) const;
 
+    using Consents = std::vector<db_model::Consent>;
+    Consents apply (Consents&& consents) const;
+    Consents applySearch (Consents&& consents) const;
+
     using ChargeItemContainer = std::vector<db_model::ChargeItem>;
     ChargeItemContainer applyPaging (ChargeItemContainer&& chargeItems) const;
 

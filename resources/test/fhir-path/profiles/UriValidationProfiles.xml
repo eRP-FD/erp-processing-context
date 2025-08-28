@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+    <id value="minifhirtypes"/>
+    <type value="collection"/>
+    <entry>
+        <fullUrl value="http://fhir-tools.test/minifhirtypes/UriValidation"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Resource"/>
+                <url value="http://fhir-tools.test/minifhirtypes/UriValidation"/>
+                <version value="4.0.1"/>
+                <name value="UriValidation"/>
+                <status value="draft"/>
+                <kind value="resource"/>
+                <abstract value="false"/>
+                <type value="UriValidation"/>
+                <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+                <derivation value="specialization"/>
+                <snapshot>
+                    <element id="UriValidation">
+                        <path value="UriValidation"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Resource"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="UriValidation.id">
+                        <path value="UriValidation.id"/>
+                        <representation value="xmlAttr"/>
+                        <min value="1"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Resource.id"/>
+                            <min value="1"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="http://hl7.org/fhirpath/System.String"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.meta">
+                        <path value="UriValidation.meta"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Resource.meta"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="Meta"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.extension">
+                        <path value="UriValidation.extension"/>
+                        <slicing>
+                            <discriminator>
+                                <type value="value"/>
+                                <path value="url"/>
+                            </discriminator>
+                            <rules value="open"/>
+                        </slicing>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Resource.extension"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Extension"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.contained">
+                        <path value="UriValidation.contained"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Resource.contained"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Resource"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.uri">
+                        <path value="UriValidation.uri"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="UriValidation.uri"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="uri"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.url">
+                        <path value="UriValidation.url"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="UriValidation.url"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="uri"/>
+                        </type>
+                    </element>
+                    <element id="UriValidation.string">
+                        <path value="UriValidation.string"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="UriValidation.string"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+</Bundle>

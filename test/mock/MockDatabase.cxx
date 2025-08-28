@@ -141,13 +141,37 @@ uint64_t MockDatabase::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
     return count;
 }
 
-uint64_t MockDatabase::countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                               const std::optional<UrlArguments>& search)
+uint64_t MockDatabase::countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     uint64_t count = 0;
-    for (const auto& table: mTasks)
+    for (const auto& table : mTasks)
     {
         count += table.second.countAll160Tasks(kvnr, search);
+    }
+    return count;
+}
+std::vector<db_model::Task> MockDatabase::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                                                const std::optional<UrlArguments>& search)
+{
+    std::vector<db_model::Task> allTasks;
+    for (const auto& table : mTasks)
+    {
+        auto&& tasks = table.second.retrieveAllTasksForEu(kvnr, search);
+        std::move(tasks.begin(), tasks.end(), std::back_inserter(allTasks));
+    }
+    if (search.has_value())
+    {
+        return TestUrlArguments(search.value()).apply(std::move(allTasks));
+    }
+    return allTasks;
+}
+
+uint64_t MockDatabase::countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search)
+{
+    uint64_t count = 0;
+    for (const auto& table : mTasks)
+    {
+        count += table.second.countAllTasksForEu(kvnr, search);
     }
     return count;
 }
@@ -370,6 +394,17 @@ void MockDatabase::insertTask(const model::Task& task,
     newRow.healthcareProviderPrescription = optionalEncrypt(taskKey, healthCareProviderPrescription);
 
     newRow.receipt = optionalEncrypt(taskKey, receipt);
+
+    if ((task.prescriptionId().type() == PrescriptionType::apothekenpflichigeArzneimittel ||
+         task.prescriptionId().type() == PrescriptionType::apothekenpflichtigeArzneimittelPkv) &&
+        healthCareProviderPrescription.has_value() && task.status() > Task::Status::draft)
+    {
+        newRow.isEuRedeemable = true;
+    }
+    else
+    {
+        newRow.isEuRedeemable = false;
+    }
 }
 
 void MockDatabase::insertAuditEvent(const model::AuditEvent& auditEvent,
@@ -387,7 +422,7 @@ void MockDatabase::insertAuditEvent(const model::AuditEvent& auditEvent,
             key,
             model::AuditMetaData(
                 auditEvent.agentName(),
-                std::get<1>(auditEvent.agentWho())).serializeToJsonString()),
+                std::get<1>(auditEvent.agentWho()),{}).serializeToJsonString()),
         auditEvent.action(),
         hashedKvnr,
         gsl::narrow_cast<int16_t>(deviceId),
@@ -400,6 +435,33 @@ void MockDatabase::insertAuditEvent(const model::AuditEvent& auditEvent,
 std::optional<db_model::Blob> MockDatabase::retrieveMedicationDispenseSalt(const model::PrescriptionId& taskId)
 {
     return mTasks.at(taskId.type()).retrieveMedicationDispenseSalt(taskId);
+}
+
+bool MockDatabase::existsCountryCode(const std::string& countryCode)
+{
+    return mEuAccessPermissions.existsCountryCode(countryCode);
+}
+
+void MockDatabase::deleteEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    mEuAccessPermissions.deleteEuAccessPermission(kvnr);
+}
+
+void MockDatabase::createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
+                                            const db_model::EncryptedBlob& accessCode, BlobId blobId,
+                                            const db_model::Blob& salt, const model::Timestamp& validUntil)
+{
+    mEuAccessPermissions.createEuAccessPermission(kvnr, countryCode, accessCode, blobId, salt, validUntil);
+}
+
+std::optional<db_model::EuAccessPermission> MockDatabase::retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    return mEuAccessPermissions.retrieveEuAccessPermission(kvnr);
+}
+
+void MockDatabase::addCountry(const std::string& country)
+{
+    mEuAccessPermissions.addCountry(country);
 }
 
 namespace {
@@ -420,7 +482,7 @@ void MockDatabase::fillWithStaticData ()
 {
     auto& resourceManager = ResourceManager::instance();
     const auto& kbvBundle = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml());
-    std::string gematikVersionStr{to_string(ResourceTemplates::Versions::GEM_ERP_current())};
+    std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
 
     const char* const kvnr = "X123456788";
@@ -573,10 +635,10 @@ void MockDatabase::fillWithStaticData ()
     const auto consentTemplate = resourceManager.getStringResource(dataPath + "/consent_template.json");
     const char* const dateTimeStr = "2021-06-01T07:13:00+05:00";
     const auto consent = model::Consent::fromJsonNoValidation(String::replaceAll(replaceKvnr(consentTemplate, pkvKvnr1), "##DATETIME##", dateTimeStr));
-    storeConsent(mDerivation.hashKvnr(consent.patientKvnr()), consent.dateTime());
+    storeConsent(mDerivation.hashKvnr(consent.patientKvnr()), consent.dateTime(), db_model::ConsentCategory::CHARGCONS);
     // add static consent entry for pkvKvnr209
     const auto consent209 = model::Consent::fromJsonNoValidation(String::replaceAll(replaceKvnr(consentTemplate, pkvKvnr209), "##DATETIME##", dateTimeStr));
-    storeConsent(mDerivation.hashKvnr(consent209.patientKvnr()), consent209.dateTime());
+    storeConsent(mDerivation.hashKvnr(consent209.patientKvnr()), consent209.dateTime(), db_model::ConsentCategory::CHARGCONS);
 
     // add static chargeItem entry for kvnr1
     const auto chargeItemInput = resourceManager.getStringResource(dataPath + "/charge_item_input_marked.json");
@@ -692,6 +754,7 @@ void MockDatabase::fillWithStaticData ()
         chargeItemForManip.setPrescriptionId(pkvTaskId6);
         chargeItemForManip.deleteContainedBinary();
         chargeItemForManip.setAccessCode(mockAccessCode);
+        chargeItemForManip.setMarkingFlags(model::ChargeItemMarkingFlags{true, std::nullopt, false});
 
         const auto [key, optionalData] = mDerivation.initialChargeItemKey(chargeItemForManip.prescriptionId().value());
 
@@ -753,11 +816,12 @@ void MockDatabase::activateTask(const model::PrescriptionId& taskId,
                                 const model::Timestamp& acceptDate,
                                 const db_model::EncryptedBlob& healthCareProviderPrescription,
                                 const db_model::EncryptedBlob&,
-                                const model::Timestamp& lastStatusUpdate)
+                                const model::Timestamp& lastStatusUpdate,
+                                bool euRedeemable)
 {
     mTasks.at(taskId.type())
         .activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
-                      healthCareProviderPrescription, lastStatusUpdate);
+                      healthCareProviderPrescription, lastStatusUpdate, euRedeemable);
 }
 
 void MockDatabase::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -795,11 +859,12 @@ void MockDatabase::updateTaskMedicationDispense(const model::PrescriptionId& tas
                                                 const db_model::HashedTelematikId& telematikId,
                                                 const model::Timestamp& whenHandedOver,
                                                 const std::optional<model::Timestamp>& whenPrepared,
-                                                const db_model::Blob& medicationDispenseSalt)
+                                                const db_model::Blob& medicationDispenseSalt,
+                                                const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
 {
     mTasks.at(taskId.type())
         .updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense, medicationDispenseBlobId, telematikId,
-                                      whenHandedOver, whenPrepared, medicationDispenseSalt);
+                                      whenHandedOver, whenPrepared, medicationDispenseSalt, taskStatus);
 }
 
 void MockDatabase::updateTaskMedicationDispenseReceipt(
@@ -827,6 +892,13 @@ void MockDatabase::updateTaskClearPersonalData(const model::PrescriptionId& task
                                                const model::Timestamp& lastStatusUpdate)
 {
     mTasks.at(taskId.type()).updateTaskClearPersonalData(taskId, taskStatus, lastModified, lastStatusUpdate);
+}
+
+void MockDatabase::updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                                   bool redeemable,
+                                                   const model::Timestamp& lastModified)
+{
+    mTasks.at(taskId.type()).updateTaskEuRedeemableByPatient(taskId, redeemable, lastModified);
 }
 
 std::string MockDatabase::storeAuditEventData(db_model::AuditData& auditData)
@@ -943,19 +1015,20 @@ std::optional<db_model::Blob> MockDatabase::insertOrReturnAccountSalt(const db_m
     return mAccounts.insertOrReturnAccountSalt(accountId, masterKeyType, blobId, salt);
 }
 
-void MockDatabase::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void MockDatabase::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime, db_model::ConsentCategory category)
 {
-    mConsents.storeConsent(kvnr, creationTime);
+    mConsents.storeConsent(kvnr, creationTime, category);
 }
 
-std::optional<model::Timestamp> MockDatabase::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::vector<db_model::Consent> MockDatabase::retrieveAllConsents(const db_model::HashedKvnr& kvnr,
+                                                                 const UrlArguments& searchArguments)
 {
-    return mConsents.getConsentDateTime(kvnr);
+    return TestUrlArguments(searchArguments).apply(mConsents.all(kvnr));
 }
 
-bool MockDatabase::clearConsent(const db_model::HashedKvnr& kvnr)
+bool MockDatabase::clearConsent(const db_model::HashedKvnr& kvnr, db_model::ConsentCategory category)
 {
-    return mConsents.clearConsent(kvnr);
+    return mConsents.clearConsent(kvnr, category);
 }
 
 void MockDatabase::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)

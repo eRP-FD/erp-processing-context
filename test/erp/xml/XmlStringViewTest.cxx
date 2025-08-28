@@ -4,7 +4,7 @@
 
 TEST(XmlStringViewTest, compare)
 {
-    using namespace xmlHelperLiterals;
+    using namespace xml_string_literal;
     const xmlChar abc[] = "abc";
     const xmlChar abcd[] = "abcd";
     const auto svabc = "abc"_xs;

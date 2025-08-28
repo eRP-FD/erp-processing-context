@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "fhirtools/repository/DefinitionKey.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
 
 #include <gtest/gtest.h>
 
@@ -69,24 +69,51 @@ TEST_F(FhirResourceGroupConstTest, Group_findVersionLocal)
     ASSERT_NE(group, nullptr);
     {
         // no version provided
-        auto version = group->findVersionLocal("http://erp-test.de/some/url1");
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url1", std::nullopt});
         ASSERT_TRUE(version.has_value());
         EXPECT_EQ(to_string(*version), "A");
     }
     {
+        // matching Version requested
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url1", "A"_ver});
+        ASSERT_TRUE(version.has_value());
+        EXPECT_EQ(to_string(*version), "A");
+    }
+    {
+        // requested Version doesn't match'
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url1", "C"_ver});
+        ASSERT_FALSE(version.has_value());
+    }
+    {
+        // requested resource only exists with version
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url1", fhirtools::FhirVersion::notVersioned});
+        ASSERT_FALSE(version.has_value());
+    }
+    {
         // find an unversioned Profile
-        auto version = group->findVersionLocal("http://erp-test.de/some/url_noVer");
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url_noVer", std::nullopt});
+        ASSERT_TRUE(version.has_value());
+        EXPECT_FALSE(version->version().has_value());
+    }
+    {
+        // find an unversioned Profile
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url_noVer", fhirtools::FhirVersion::notVersioned});
         ASSERT_TRUE(version.has_value());
         EXPECT_FALSE(version->version().has_value());
     }
     {
         // '|B' is interpreted as part of the URL not as Version
-        auto version = group->findVersionLocal("http://erp-test.de/some/url2|B");
+        auto version = group->findVersionLocal({"http://erp-test.de/some/url2|B", std::nullopt});
         ASSERT_FALSE(version.has_value());
     }
     {
         // unknown url no version
-        auto notFound = group->findVersionLocal("http://erp-test.de/some/url/unknown");
+        auto notFound = group->findVersionLocal({"http://erp-test.de/some/url/unknown", std::nullopt});
+        EXPECT_FALSE(notFound.has_value());
+    }
+    {
+        // unknown url no version
+        auto notFound = group->findVersionLocal({"http://erp-test.de/some/url/unknown", "A"_ver});
         EXPECT_FALSE(notFound.has_value());
     }
 }
@@ -98,15 +125,43 @@ TEST_F(FhirResourceGroupConstTest, Group_findVersion)
     ASSERT_NE(group, nullptr);
     {
         // no version provided
-        auto versionAndGroup = group->findVersion("http://erp-test.de/some/url1");
+        auto versionAndGroup = group->findVersion({"http://erp-test.de/some/url1", std::nullopt});
         ASSERT_NE(versionAndGroup.second, nullptr);
         EXPECT_EQ(std::string{versionAndGroup.second->id()}, "test");
         ASSERT_TRUE(versionAndGroup.first.has_value());
         EXPECT_EQ(to_string(*versionAndGroup.first), "A");
     }
     {
+        // matching Version requested
+        auto versionAndGroup = group->findVersion({"http://erp-test.de/some/url1", "A"_ver});
+        ASSERT_NE(versionAndGroup.second, nullptr);
+        EXPECT_EQ(std::string{versionAndGroup.second->id()}, "test");
+        ASSERT_TRUE(versionAndGroup.first.has_value());
+        EXPECT_EQ(to_string(*versionAndGroup.first), "A");
+    }
+    {
+        // requested Version doesn't match'
+        auto versionAndGroup = group->findVersion({"http://erp-test.de/some/url1", "C"_ver});
+        ASSERT_EQ(versionAndGroup.second, nullptr);
+        ASSERT_FALSE(versionAndGroup.first.has_value());
+    }
+    {
+        // requested resource only exists with version
+        auto notFound = group->findVersion({"http://erp-test.de/some/url1", fhirtools::FhirVersion::notVersioned});
+        ASSERT_EQ(notFound.second, nullptr);
+        ASSERT_FALSE(notFound.first.has_value());
+    }
+    {
         // not versioned provided
-        auto versionAndGroup = group->findVersion("http://erp-test.de/some/url_noVer");
+        auto versionAndGroup = group->findVersion({"http://erp-test.de/some/url_noVer", std::nullopt});
+        ASSERT_NE(versionAndGroup.second, nullptr);
+        EXPECT_EQ(std::string{versionAndGroup.second->id()}, "test");
+        ASSERT_TRUE(versionAndGroup.first.has_value());
+        EXPECT_FALSE(versionAndGroup.first->version().has_value());
+    }
+    {
+        // find an unversioned Profile
+        auto versionAndGroup = group->findVersion({"http://erp-test.de/some/url_noVer", fhirtools::FhirVersion::notVersioned});
         ASSERT_NE(versionAndGroup.second, nullptr);
         EXPECT_EQ(std::string{versionAndGroup.second->id()}, "test");
         ASSERT_TRUE(versionAndGroup.first.has_value());
@@ -114,13 +169,19 @@ TEST_F(FhirResourceGroupConstTest, Group_findVersion)
     }
     {
         // '|B' is interpreted as part of the URL not as Version
-        auto notFound = group->findVersion("http://erp-test.de/some/url2|B");
+        auto notFound = group->findVersion({"http://erp-test.de/some/url2|B", std::nullopt});
         ASSERT_EQ(notFound.second, nullptr);
         ASSERT_FALSE(notFound.first.has_value());
     }
     {
         // unknown url no version
-        auto notFound = group->findVersion("http://erp-test.de/some/url/unknown");
+        auto notFound = group->findVersion({"http://erp-test.de/some/url/unknown", std::nullopt});
+        EXPECT_EQ(notFound.second, nullptr);
+        EXPECT_FALSE(notFound.first.has_value());
+    }
+    {
+        // unknown url no version
+        auto notFound = group->findVersion({"http://erp-test.de/some/url/unknown", "A"_ver});
         EXPECT_EQ(notFound.second, nullptr);
         EXPECT_FALSE(notFound.first.has_value());
     }

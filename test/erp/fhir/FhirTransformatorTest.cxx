@@ -6,6 +6,7 @@
 
 #include "erp/model/KbvMedicationIngredient.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/transformer/ResourceProfileTransformer.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -21,15 +22,15 @@ public:
     {
     }
 
-    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> mRepo;
+    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> mRepo;
+
 private:
-    static gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> getView()
+    static gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getView()
     {
-        const auto& fhirInstance =Fhir::instance();
-        const auto& backend = fhirInstance.backend();
+        const auto& fhirInstance = Fhir::instance();
         const auto& viewList = fhirInstance.structureRepository(model::Timestamp::now());
         auto kbvVer = ResourceTemplates::Versions::KBV_ERP_current();
-        return viewList.match(&backend, std::string{model::resource::structure_definition::kbv_medication_pzn}, kbvVer);
+        return viewList.match(std::string{model::resource::structure_definition::kbv_medication_pzn}, kbvVer);
     }
 };
 

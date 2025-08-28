@@ -18,7 +18,7 @@ class ExistenceEmpty : public Expression
 public:
     static constexpr auto IDENTIFIER = "empty";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#existscriteria-expression-boolean
@@ -27,7 +27,7 @@ class ExistenceExists : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "exists";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#allcriteria-expression-boolean
@@ -36,7 +36,7 @@ class ExistenceAll : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "all";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#alltrue-boolean
@@ -45,7 +45,7 @@ class ExistenceAllTrue : public Expression
 public:
     static constexpr auto IDENTIFIER = "allTrue";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#anytrue-boolean
@@ -54,7 +54,7 @@ class ExistenceAnyTrue : public Expression
 public:
     static constexpr auto IDENTIFIER = "anyTrue";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#allfalse-boolean
@@ -63,7 +63,7 @@ class ExistenceAllFalse : public Expression
 public:
     static constexpr auto IDENTIFIER = "allFalse";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#anyfalse-boolean
@@ -72,7 +72,7 @@ class ExistenceAnyFalse : public Expression
 public:
     static constexpr auto IDENTIFIER = "anyFalse";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#subsetofother-collection-boolean
@@ -91,7 +91,7 @@ class ExistenceCount : public Expression
 public:
     static constexpr auto IDENTIFIER = "count";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#distinct-collection
@@ -100,7 +100,7 @@ class ExistenceDistinct : public Expression
 public:
     static constexpr auto IDENTIFIER = "distinct";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#isdistinct-boolean
@@ -109,7 +109,7 @@ class ExistenceIsDistinct : public Expression
 public:
     static constexpr auto IDENTIFIER = "isDistinct";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#wherecriteria-expression-collection
@@ -118,7 +118,7 @@ class FilteringWhere : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "where";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#selectprojection-expression-collection
@@ -127,7 +127,7 @@ class FilteringSelect : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "select";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#repeatprojection-expression-collection
@@ -141,7 +141,7 @@ class FilteringOfType : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "ofType";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#index-integer-collection
@@ -149,9 +149,9 @@ class SubsettingIndexer : public BinaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "indexer";
-    SubsettingIndexer(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    SubsettingIndexer(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                       ExpressionPtr lhs, ExpressionPtr rhs);
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#single-collection
@@ -165,7 +165,7 @@ class SubsettingFirst : public Expression
 public:
     static constexpr auto IDENTIFIER = "first";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#last-collection
@@ -174,7 +174,7 @@ class SubsettingLast : public Expression
 public:
     static constexpr auto IDENTIFIER = "last";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#tail-collection
@@ -183,7 +183,7 @@ class SubsettingTail : public Expression
 public:
     static constexpr auto IDENTIFIER = "tail";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#skipnum-integer-collection
@@ -202,8 +202,8 @@ class SubsettingIntersect : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "intersect";
     explicit SubsettingIntersect(
-        const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg);
-    Collection eval(const Collection& collection) const override;
+        std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg);
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#excludeother-collection-collection
@@ -216,9 +216,9 @@ class CombiningUnion : public BinaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "union";
-    CombiningUnion(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    CombiningUnion(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                    ExpressionPtr lhs, ExpressionPtr rhs);
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 using UnionOperator = CombiningUnion;
@@ -229,7 +229,7 @@ class CombiningCombine : public UnaryExpression
 public:
     static constexpr auto IDENTIFIER = "combine";
     using UnaryExpression::UnaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 }

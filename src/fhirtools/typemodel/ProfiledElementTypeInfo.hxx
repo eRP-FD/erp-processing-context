@@ -19,7 +19,7 @@
 namespace fhirtools
 {
 class FhirElement;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class FhirStructureDefinition;
 
 /**
@@ -33,18 +33,17 @@ class FhirStructureDefinition;
 class ProfiledElementTypeInfo
 {
 public:
-    explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile);
-    explicit ProfiledElementTypeInfo(const FhirStructureDefinition* profile,
-                                     std::shared_ptr<const FhirElement> element);
-    explicit ProfiledElementTypeInfo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
+    explicit ProfiledElementTypeInfo(const FhirStructureDefinition& profile);
+    explicit ProfiledElementTypeInfo(std::shared_ptr<const FhirElement> element);
+    explicit ProfiledElementTypeInfo(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo,
                                      std::string_view elementId);
 
     [[nodiscard]] std::optional<ProfiledElementTypeInfo> parentElement() const;
     [[nodiscard]] std::vector<ProfiledElementTypeInfo> subElements() const;
     [[nodiscard]] std::optional<ProfiledElementTypeInfo> subField(const std::string_view& name) const;
-    [[nodiscard]] std::list<ProfiledElementTypeInfo> subDefinitions(const FhirStructureRepository&,
+    [[nodiscard]] std::list<ProfiledElementTypeInfo> subDefinitions(const FhirStructureRepositoryView&,
                                                                     std::string_view name) const;
-    void typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef);
+    void typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef);
 
     [[nodiscard]] const FhirStructureDefinition* profile() const;
     [[nodiscard]] const std::shared_ptr<const FhirElement>& element() const;
@@ -53,23 +52,18 @@ public:
     [[nodiscard]] std::string_view elementPath(bool includeDot = false) const;
 
     [[nodiscard]] std::optional<ProfiledElementTypeInfo>
-    typeInfoInParentStuctureDefinition(const FhirStructureRepository&) const;
+    typeInfoInParentStuctureDefinition(const FhirStructureRepositoryView&) const;
 
     //NOLINTNEXTLINE(hicpp-use-nullptr,modernize-use-nullptr)
     auto operator<=>(const ProfiledElementTypeInfo&) const = default;
 
 private:
-    const FhirStructureDefinition* mProfile = nullptr;
     std::shared_ptr<const FhirElement> mElement;
 };
 
 std::ostream& operator<<(std::ostream&, const ProfiledElementTypeInfo&);
 std::string to_string(const ProfiledElementTypeInfo&);
 
-inline const FhirStructureDefinition* ProfiledElementTypeInfo::profile() const
-{
-    return mProfile;
-}
 inline const std::shared_ptr<const fhirtools::FhirElement>& ProfiledElementTypeInfo::element() const
 {
     return mElement;

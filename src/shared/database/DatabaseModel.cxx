@@ -6,7 +6,6 @@
  */
 
 #include "shared/database/DatabaseModel.hxx"
-
 #include "shared/crypto/Pbkdf2Hmac.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"

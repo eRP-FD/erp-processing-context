@@ -154,6 +154,10 @@ public:
     static const std::string KbvVerordnungsdaten;
     static const std::string DavAbgabedaten;
 
+    static const std::string EUProfileWorkflow;
+
+    static const std::string ErpUseCase;
+
     struct Tee3 {
         static const std::string VauCid;
         static const std::string XUserAgent;

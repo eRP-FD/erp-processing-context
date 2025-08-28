@@ -102,7 +102,7 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv: {
             A_22110.start("Evaluate consent for flowtype 200/209 (PKV prescription) and add to response bundle");
-            const auto consent = databaseHandle->retrieveConsent(kvnr.value());
+            const auto consent = databaseHandle->retrieveConsent(kvnr.value(), model::ConsentType::CHARGCONS);
             if (consent.has_value())
             {
                 TVLOG(1) << "Consent found for Kvnr of task";
@@ -179,15 +179,9 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
     A_19168_01.finish();
 
     A_23539_01.start("Check task expiry date");
-    const auto now = std::chrono::system_clock::now();
-    const auto expiryDate = task.expiryDate();
-    using namespace std::chrono_literals;
-    auto validUntil =
-        date::make_zoned(model::Timestamp::GermanTimezone, expiryDate.toChronoTimePoint() + 24h);
-    validUntil = floor<date::days>(validUntil.get_local_time());
-    if (validUntil.get_sys_time() < now)
+    if (task.expired())
     {
-        ErpFail(HttpStatus::Forbidden, "Verordnung bis " + expiryDate.toGermanDateFormat() + " einlösbar.");
+        ErpFail(HttpStatus::Forbidden, "Verordnung bis " + task.expiryDate().toGermanDateFormat() + " einlösbar.");
     }
     A_23539_01.finish();
 }
@@ -195,29 +189,8 @@ void AcceptTaskHandler::checkTaskPreconditions(const PcSessionContext& session, 
 void AcceptTaskHandler::checkMultiplePrescription(PcSessionContext& session, const model::KbvBundle& prescription)
 {
     A_22635_02.start("check MVO period start");
-    const auto now = std::chrono::system_clock::now();
-    const auto& medicationRequests = prescription.getResourcesByType<model::KbvMedicationRequest>();
-    if (!medicationRequests.empty())
+    if (auto [isValid, error] = processMvoPeriodStartValid(session, prescription); !isValid)
     {
-        auto mPExt = medicationRequests[0].getExtension<model::KBVMultiplePrescription>();
-        session.fillMvoBdeV2(mPExt);
-        if (mPExt && mPExt->isMultiplePrescription())
-        {
-            const auto startDate = mPExt->startDateTime();
-            ErpExpect(startDate.has_value(), HttpStatus::InternalServerError,
-                      "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.start "
-                      "not present");
-            auto validFrom =
-                    date::make_zoned(model::Timestamp::GermanTimezone, startDate->toChronoTimePoint());
-            validFrom = floor<date::days>(validFrom.get_local_time());
-            if (now < validFrom.get_sys_time())
-            {
-                std::string germanFmtTs = model::Timestamp(startDate->toChronoTimePoint()).toGermanDateFormat();
-                std::ostringstream ss;
-                ss << "Teilverordnung zur Mehrfachverordnung " << mPExt->mvoId().value_or("<unknown>") << " ist ab "
-                   << germanFmtTs << " einlösbar.";
-                ErpFail(HttpStatus::Forbidden, ss.str());
-            }
-        }
+        ErpFail(HttpStatus::Forbidden, error);
     }
 }

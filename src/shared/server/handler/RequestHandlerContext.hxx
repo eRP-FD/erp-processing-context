@@ -8,15 +8,22 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVER_HANDLER_REQUESTHANDLERCONTEXT_HXX
 #define ERP_PROCESSING_CONTEXT_SERVER_HANDLER_REQUESTHANDLERCONTEXT_HXX
 
+#include "shared/model/AuditData.hxx"
 #include "shared/network/message/HttpMethod.hxx"
-
+#include "shared/util/BdeUseCases.hxx"
 #include "shared/util/Expect.hxx"
 
-#include <unordered_map>
-#include <string>
-#include <vector>
 #include <regex>
+#include <string>
+#include <unordered_map>
+#include <variant>
+#include <vector>
 
+
+namespace model
+{
+class PrescriptionId;
+}
 
 class RequestHandlerInterface;
 
@@ -54,6 +61,16 @@ public:
     std::tuple<bool,std::vector<std::string>> matches (
         HttpMethod method,
         const std::string& requestPath) const;
+
+    using ErpUseCaseT = std::variant<bde::UseCase, std::map<model::PrescriptionType, bde::UseCase>,
+                                     std::map<profession_oid::InnerRequestRole, bde::UseCase>, bde::NoUseCase>;
+    RequestHandlerContext& setErpUseCase(ErpUseCaseT&& uc);
+    bde::UseCase getErpUseCase(std::optional<model::PrescriptionId> prescriptionId,
+                               std::optional<std::string_view> professionOid) const;
+    bool isErpUseCaseSet() const;
+
+private:
+    ErpUseCaseT mErpUseCase{bde::NoUseCase{}};
 };
 
 

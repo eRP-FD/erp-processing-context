@@ -4,17 +4,32 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "EventKvnr.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "shared/util/JsonLog.hxx"
 #include "shared/util/String.hxx"
 
 namespace model
 {
 
+namespace
+{
+
+template<typename Duration>
+bool isOlderThan(const Timestamp::timepoint_t& timestamp, typename Duration::rep dur)
+{
+    auto now = std::chrono::system_clock::now();
+    auto duration = now - timestamp;
+    auto rep_duration = std::chrono::duration_cast<Duration>(duration);
+    return rep_duration.count() >= dur;
+}
+
+}
+
 EventKvnr::EventKvnr(const std::basic_string<std::byte>& kvnrHashed, std::optional<Timestamp> lastConsentCheck,
                             const std::optional<std::string>& assignedEpa, State state, std::int32_t retryCount)
     : mKvnrHashed(kvnrHashed)
     , mLastConsentCheck(lastConsentCheck)
-    , mASsignedEpa(assignedEpa)
+    , mAssignedEpa(assignedEpa)
     , mState(state)
     , mRetryCount(retryCount)
 {
@@ -34,9 +49,9 @@ std::optional<Timestamp> EventKvnr::getLastConsentCheck() const
     return mLastConsentCheck;
 }
 
-const std::optional<std::string>& EventKvnr::getASsignedEpa() const
+const std::optional<std::string>& EventKvnr::getAssignedEpa() const
 {
-    return mASsignedEpa;
+    return mAssignedEpa;
 }
 
 EventKvnr::State EventKvnr::getState() const
@@ -47,6 +62,14 @@ EventKvnr::State EventKvnr::getState() const
 std::int32_t EventKvnr::getRetryCount() const
 {
     return mRetryCount;
+}
+
+bool EventKvnr::useCachedValues() const
+{
+    A_25940.start("Do not used a cached entry if older than 180 days.");
+    return (getAssignedEpa().has_value() && not getAssignedEpa()->empty() && getLastConsentCheck().has_value() &&
+            not isOlderThan<std::chrono::days>(getLastConsentCheck().value().toChronoTimePoint(), 180));
+    A_25940.finish();
 }
 
 JsonLog& operator<<(JsonLog& jsonLog, const EventKvnr& kvnr)

@@ -1,0 +1,383 @@
+<?xml version="1.0"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="mandatory_meta_profile_variations"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/Meta/mandatory_profile"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Meta"/>
+        <url value="http://fhir-tools.test/Meta/mandatory_profile"/>
+        <version value="4.0.1"/>
+        <name value="Meta"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Meta"/>
+        <abstract value="true"/>
+        <type value="Meta"/>
+        <snapshot>
+          <element id="Meta">
+            <path value="Meta"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Meta"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Meta.source">
+            <path value="Meta.source"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Meta.source"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Meta.profile">
+            <path value="Meta.profile"/>
+            <!-- set to 1 -->
+            <min value="1"/>
+            <max value="*"/>
+            <base>
+              <path value="Meta.profile"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_direct"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Resource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_direct"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <abstract value="true"/>
+        <type value="Resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.meta.source">
+            <path value="Resource.meta.source"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Meta.source"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta.profile">
+            <path value="Resource.meta.profile"/>
+            <!-- set to 1 -->
+            <min value="1"/>
+            <max value="*"/>
+            <base>
+              <path value="Meta.profile"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_via_profile_on_meta"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Resource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_via_profile_on_meta"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <abstract value="true"/>
+        <type value="Resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+              <!-- force Meta profile by providing a profile on Meta-->
+              <profile value="http://fhir-tools.test/Meta/mandatory_profile"/>
+            </type>
+          </element>
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_via_slice_on_meta"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Resource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_via_slice_on_meta"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <abstract value="true"/>
+        <type value="Resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <slicing>
+              <discriminator>
+                <type value="pattern"/>
+                <path value="$this"/>
+              </discriminator>
+              <description value="slice on profile"/>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.meta:mandatory_profile">
+            <path value="Resource.meta"/>
+            <sliceName value="mandatory_profile"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+              <!-- force Meta profile by providing a profile on Meta-->
+              <profile value="http://fhir-tools.test/Meta/mandatory_profile"/>
+            </type>
+            <patternMeta>
+              <source value="Source value to select slice of http://fhir-tools.test/minifhirtypes/Resource/mandatory_profile_via_slice_on_meta"/>
+            </patternMeta>
+          </element>
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

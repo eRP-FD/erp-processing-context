@@ -47,7 +47,8 @@ public:
     MOCK_METHOD(void, deleteAllEventsForKvnr, (const model::EventKvnr& kvnr), (const, override));
     MOCK_METHOD(void, updateProcessingDelay,
                 (std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr), (const, override));
-    MOCK_METHOD(void, finalizeKvnr, (const model::EventKvnr& kvnr), (const, override));
+    MOCK_METHOD(void, finalizeKvnr, (const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix),
+                (const, override));
 };
 
 class MedicationExporterDatabaseFrontendProxy : public MedicationExporterDatabaseFrontendInterface
@@ -74,7 +75,7 @@ public:
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const override;
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                const model::EventKvnr& kvnr) const override;
-    void finalizeKvnr(const model::EventKvnr& kvnr) const override;
+    void finalizeKvnr(const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix) const override;
 
 private:
     gsl::not_null<MedicationExporterDatabaseFrontendInterface*> mDatabase;

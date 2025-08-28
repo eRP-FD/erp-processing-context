@@ -30,6 +30,9 @@ public:
     static constexpr auto url = model::resource::structure_definition::markingFlag;
     static constexpr auto allMarkingFlags = {"insuranceProvider", "subsidy", "taxOffice"};
 
+    ChargeItemMarkingFlags(std::optional<bool> insuranceProvider, std::optional<bool> subsidy,
+                           std::optional<bool> taxOffice);
+
     MarkingContainer getAllMarkings() const;
 
     static bool isMarked(const MarkingContainer& markings);

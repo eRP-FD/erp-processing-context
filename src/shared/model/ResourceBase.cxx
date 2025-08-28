@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/fhir/FhirCanonicalizer.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/fhir/FhirCanonicalizer.hxx"
 #include "shared/model/ResourceBase.hxx"
 #include "shared/model/ResourceNames.hxx"
 

@@ -24,6 +24,8 @@ enum class Operation
     POST_Task_id_close,
     POST_Task_id_abort,
     POST_Task_id_dispense,
+    PATCH_Task_id_mark,
+    POST_Task_id_eu_close,
     GET_MedicationDispense,
     GET_MedicationDispense_id,
     GET_Communication,
@@ -56,7 +58,14 @@ enum class Operation
     POST_Admin_restart,
     GET_Admin_configuration,
     PUT_Admin_pn3_configuration,
-    PUT_Admin_exporter_configuration
+    PUT_Admin_exporter_configuration,
+    GET_Admin_metrics,
+
+    POST_grant_eu_access_permission,
+    GET_read_eu_access_permission,
+    DELETE_revoke_eu_access_permission,
+
+    GET_eu_prescriptions,
 };
 
 const std::string_view& toString (Operation operation);

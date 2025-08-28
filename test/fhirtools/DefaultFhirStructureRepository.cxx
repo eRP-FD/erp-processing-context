@@ -3,13 +3,14 @@
 //
 // non-exclusively licensed to gematik GmbH
 
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
-using fhirtools::FhirStructureRepository;
+using fhirtools::FhirStructureRepositoryView;
 
 std::list<std::filesystem::path> DefaultFhirStructureRepository::defaultProfileFiles()
 {
@@ -25,17 +26,16 @@ std::list<std::filesystem::path> DefaultFhirStructureRepository::defaultProfileF
 }
 
 
-const std::shared_ptr<const fhirtools::FhirStructureRepository>& DefaultFhirStructureRepository::get()
+const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& DefaultFhirStructureRepository::get()
 {
     static const fhirtools::FhirResourceGroupConst resourceGroupResolver{"test"};
     static auto repo = create(defaultProfileFiles(), resourceGroupResolver);
-    static std::shared_ptr<const fhirtools::FhirStructureRepository> view =
-        std::make_shared<const fhirtools::FhirResourceViewGroupSet>("test", resourceGroupResolver.findGroupById("test"),
-                                                                    repo.get());
+    static std::shared_ptr<const fhirtools::FhirStructureRepositoryView> view =
+        fhirtools::FhirResourceViewGroupSet::create("test", resourceGroupResolver.findGroupById("test"), repo.get());
     return view;
 }
 
-const std::shared_ptr<const fhirtools::FhirStructureRepository>& DefaultFhirStructureRepository::getWithTest()
+const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& DefaultFhirStructureRepository::getWithTest()
 {
     static const fhirtools::FhirResourceGroupConst resourceGroupResolver{"test"};
     auto getProfileList = [] {
@@ -44,9 +44,8 @@ const std::shared_ptr<const fhirtools::FhirStructureRepository>& DefaultFhirStru
         return profileList;
     };
     static auto repo = create(getProfileList(), resourceGroupResolver);
-    static std::shared_ptr<const fhirtools::FhirStructureRepository> view =
-        std::make_shared<const fhirtools::FhirResourceViewGroupSet>("test", resourceGroupResolver.findGroupById("test"),
-                                                                    repo.get());
+    static std::shared_ptr<const fhirtools::FhirStructureRepositoryView> view =
+        fhirtools::FhirResourceViewGroupSet::create("test", resourceGroupResolver.findGroupById("test"), repo.get());
     return view;
 }
 

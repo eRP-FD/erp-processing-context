@@ -7,6 +7,7 @@
 
 #include "JsonTestUtils.hxx"
 #include "TestUtils.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
@@ -43,6 +44,27 @@ void jsonToStringInternal(std::string& jsonOut, const rapidjson::Document& jsonD
     ASSERT_TRUE(jsonDoc.Accept(writer)) << "failed to serialize JSON.";
     jsonOut = buffer.GetString();
 }
+
+struct RenderVersion {
+    std::string operator()(const auto& ver) const
+    {
+        return ver.renderVersion();
+    }
+    std::string operator()(const std::monostate&) const
+    {
+        return isChargeItemRelated ? ResourceTemplates::Versions::GEM_ERPCHRG_current().renderVersion()
+        : ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
+    }
+    const bool isChargeItemRelated;
+};
+
+template<typename VariantT, typename DefaultT>
+decltype(auto) valueOr(VariantT&& variant, DefaultT&& defaultValue)
+{
+    return std::holds_alternative<DefaultT>(variant) ? std::get<DefaultT>(std::forward<VariantT>(variant))
+                                                     : std::forward<DefaultT>(defaultValue);
+}
+
 }
 
 std::string jsonToString(const rapidjson::Document& json)
@@ -59,30 +81,32 @@ std::string canonicalJson(const std::string& json)
     return result;
 }
 
-const std::map<ActorRole, std::string_view> ActorRoleToResourceId = {
-    { ActorRole::Insurant,       naming_system::gkvKvid10   },
-    { ActorRole::PkvInsurant,    naming_system::pkvKvid10   },
-    { ActorRole::Representative, naming_system::gkvKvid10   },
-    { ActorRole::Doctor,         naming_system::telematicID },
-    { ActorRole::Pharmacists,    naming_system::telematicID }
-};
 
-const std::string_view& actorRoleToResourceId(ActorRole actorRole)
+const std::string_view& CommunicationJsonStringBuilder::actorRoleToResourceId(ActorRole actorRole) const
 {
-    return ActorRoleToResourceId.find(actorRole)->second;
+    switch (actorRole)
+    {
+        case ActorRole::Insurant:
+        case ActorRole::Representative:
+            return naming_system::gkvKvid10;
+        case ActorRole::PkvInsurant:
+            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >=
+                ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
+            {
+                return naming_system::gkvKvid10;
+            }
+            return naming_system::pkvKvid10;
+        case ActorRole::Doctor:
+        case ActorRole::Pharmacists:
+            return naming_system::telematicID;
+    }
+    Fail2("unknown ActorRole: " + std::to_string(static_cast<uintmax_t>(actorRole)), std::logic_error);
 }
 
-CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(Communication::MessageType messageType,
-                                                               std::optional<fhirtools::FhirVersion> profileVersion)
-    : mMessageType(messageType)
-    , mPrescriptionId()
-    , mAccessCode()
-    , mSender()
-    , mRecipient()
-    , mTimeSent()
-    , mTimeReceived()
-    , mPayload()
-    , mProfileVersion(std::move(profileVersion))
+CommunicationJsonStringBuilder::CommunicationJsonStringBuilder(model::Communication::MessageType messageType,
+                                                               CommunicationVersion profileVersion)
+    : mMessageType{messageType}
+    , mProfileVersion{profileVersion}
 {
 }
 
@@ -235,15 +259,12 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
 
     const bool isChargeItemRelated =
         mMessageType == model::Communication::MessageType::ChargChangeReq || mMessageType == model::Communication::MessageType::ChargChangeReply;
-    const auto defaulVersion =
-        isChargeItemRelated
-            ? static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERPCHRG_current())
-            : static_cast<const fhirtools::FhirVersion&>(ResourceTemplates::Versions::GEM_ERP_current());
+    RenderVersion renderVersion{isChargeItemRelated};
     body += boost::str(boost::format(fmtSpecProfile) % profile(profileType).value() %
-                       mProfileVersion.value_or(defaulVersion));
+                       std::visit(renderVersion, mProfileVersion));
 
     const ResourceTemplates::Versions::GEM_ERP gemVersion{
-        mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current())};
+        valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current())};
 
     if (mMessageType == model::Communication::MessageType::DispReq &&
         gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
@@ -333,7 +354,7 @@ std::string CommunicationJsonStringBuilder::senderIdentifierType() const
         case Communication::MessageType::InfoReq:
         case Communication::MessageType::DispReq:
         case Communication::MessageType::Representative:
-            if (mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current()) >=
+            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current()) >=
                 ResourceTemplates::Versions::GEM_ERP_1_4)
             {
                 return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
@@ -346,7 +367,14 @@ std::string CommunicationJsonStringBuilder::senderIdentifierType() const
         case Communication::MessageType::ChargChangeReply:
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::ChargChangeReq:
-            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
+            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
+            }
+            else
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
+            }
     }
     return "";
 }
@@ -361,7 +389,7 @@ std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::Reply:
         case Communication::MessageType::Representative:
-            if (mProfileVersion.value_or(ResourceTemplates::Versions::GEM_ERP_current()) >=
+            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current()) >=
                 ResourceTemplates::Versions::GEM_ERP_1_4)
             {
                 return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
@@ -371,7 +399,14 @@ std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
                 return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "GKV"}]},)";
             }
         case Communication::MessageType::ChargChangeReply:
-            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
+            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
+            }
+            else
+            {
+                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
+            }
     }
     return "";
 }

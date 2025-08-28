@@ -64,8 +64,7 @@ void SlicingChecker::foundUnsliced(const fhirtools::Element& element, std::strin
         case open:
             return;
         case reportOther:
-            mResult.add(Severity::unslicedWarning, "element doesn't belong to any slice.", std::string{fullElementName},
-                        mBaseProfile);
+            mResult.add(Severity::warning, ExtendedValidation::unslicedExtension, std::string{fullElementName}, mBaseProfile);
             if (mOptions.collectInfo)
             {
                 mResult.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(),

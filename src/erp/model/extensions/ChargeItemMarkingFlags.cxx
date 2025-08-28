@@ -17,6 +17,27 @@ namespace model
 
 using namespace resource;
 
+ChargeItemMarkingFlags::ChargeItemMarkingFlags(std::optional<bool> insuranceProvider, std::optional<bool> subsidy,
+                                               std::optional<bool> taxOffice)
+{
+    using namespace resource::elements;
+    setValue(rapidjson::Pointer{resource::ElementName::path(resource::elements::url)}, url);
+    static const rapidjson::Pointer extensionPtr{ElementName::path(elements::extension)};
+    if (insuranceProvider.has_value())
+    {
+        addToArray(extensionPtr,
+                   copyValue(ChargeItemMarkingFlag{"insuranceProvider", insuranceProvider.value()}.jsonDocument()));
+    }
+    if (subsidy.has_value())
+    {
+        addToArray(extensionPtr, copyValue(ChargeItemMarkingFlag{"subsidy", subsidy.value()}.jsonDocument()));
+    }
+    if (taxOffice.has_value())
+    {
+        addToArray(extensionPtr, copyValue(ChargeItemMarkingFlag{"taxOffice", taxOffice.value()}.jsonDocument()));
+    }
+}
+
 ChargeItemMarkingFlags::MarkingContainer ChargeItemMarkingFlags::getAllMarkings() const
 {
     static const rapidjson::Pointer extensionArrayPointer(ElementName::path(elements::extension));

@@ -128,9 +128,13 @@ void Time::parseSecond(const std::string_view& secondStr, const std::string_view
     }
 }
 
-bool Time::samePrecision(const Time& other) const
+bool Time::canCompare(const Time& other) const
 {
-    return mPrecision == other.mPrecision;
+    // see http://hl7.org/fhirpath/#datetime-equality:
+    // For the purposes of comparison, seconds and milliseconds are considered a single precision...
+    return mPrecision == other.mPrecision ||
+        (mPrecision == Precision::hourMinuteSecond && other.mPrecision == Precision::hourMinuteSecondFraction) ||
+        (mPrecision == Precision::hourMinuteSecondFraction && other.mPrecision == Precision::hourMinuteSecond);
 }
 
 Time::Precision Time::precision() const
@@ -141,7 +145,7 @@ Time::Precision Time::precision() const
 std::optional<std::strong_ordering> Time::compareTo(const Time& other) const
 {
     // see http://hl7.org/fhirpath/#datetime-equality
-    if (! samePrecision(other))
+    if (! canCompare(other))
     {
         return std::nullopt;
     }

@@ -4,19 +4,21 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
+#include "shared/model/Resource.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/repository/views/VersionMappingView.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/Extension.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/Parameters.hxx"
-#include "shared/model/Resource.hxx"
+#include "shared/model/Resource.txx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/String.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/validator/FhirPathValidator.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "shared/model/Resource.txx"
 
 #ifdef _WIN32
 #pragma warning(                                                                                                       \
@@ -97,13 +99,18 @@ void FhirResourceBase::setProfile(ProfileType profileType)
 {
     using namespace std::string_literals;
     const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
     const auto& profileUrl = profile(profileType);
     ModelExpect(profileUrl.has_value(),"Cannot set profile using profileType: "s += magic_enum::enum_name(profileType));
-    auto supported = fhirInstance.structureRepository(model::Timestamp::now())
-                         .supportedVersions(backend, {std::string{*profileUrl}});
-    ModelExpect(!supported.empty(), "Cannot set profile - profileType not supported: "s += magic_enum::enum_name(profileType));
-    setProfile(std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version));
+    try
+    {
+        auto supported =
+            fhirInstance.structureRepository(model::Timestamp::now()).latestRenderVersion(std::string{*profileUrl});
+        setProfile(supported);
+    }
+    catch (const std::runtime_error&)
+    {
+        ModelFail("Cannot set profile - profileType not supported: "s += magic_enum::enum_name(profileType));
+    }
 }
 
 std::optional<UnspecifiedResource> FhirResourceBase::extractUnspecifiedResource(const rapidjson::Pointer& path) const
@@ -142,7 +149,7 @@ DurationTimer FhirResourceBase::timingLogTimer() const
             keyValueMap.emplace("profile_version", to_string(defKey.version.value()));
         }
     }
-    return DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation, metric, keyValueMap);
+    return DurationConsumer::getCurrent().getTimer(DurationCategory::fhirvalidation, metric, keyValueMap);
 }
 
 std::optional<NumberAsStringParserDocument> FhirResourceBase::getExtensionDocument(const std::string_view& url) const
@@ -157,43 +164,6 @@ std::optional<NumberAsStringParserDocument> FhirResourceBase::getExtensionDocume
     std::optional<NumberAsStringParserDocument> extension{std::in_place};
     extension->CopyFrom(*extensionNode, extension->GetAllocator());
     return extension;
-}
-
-std::optional<std::string_view> FhirResourceBase::identifierUse() const
-{
-    static const rapidjson::Pointer identifierUsePointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::use));
-    return getOptionalStringValue(identifierUsePointer);
-}
-
-std::optional<std::string_view> FhirResourceBase::identifierTypeCodingCode() const
-{
-    static const rapidjson::Pointer identifierTypeCodingCodePointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::type,
-                                    resource::elements::coding, "0", resource::elements::code));
-    return getOptionalStringValue(identifierTypeCodingCodePointer);
-}
-
-std::optional<std::string_view> FhirResourceBase::identifierTypeCodingSystem() const
-{
-    static const rapidjson::Pointer identifierTypeCodingSystemPointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::type,
-                                    resource::elements::coding, "0", resource::elements::system));
-    return getOptionalStringValue(identifierTypeCodingSystemPointer);
-}
-
-std::optional<std::string_view> FhirResourceBase::identifierSystem() const
-{
-    static const rapidjson::Pointer identifierSystemPointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::system));
-    return getOptionalStringValue(identifierSystemPointer);
-}
-
-std::optional<std::string_view> FhirResourceBase::identifierValue() const
-{
-    static const rapidjson::Pointer identifierValuePointer(
-        resource::ElementName::path(resource::elements::identifier, "0", resource::elements::value));
-    return getOptionalStringValue(identifierValuePointer);
 }
 
 ProfileType FhirResourceBase::getProfile() const
@@ -245,35 +215,32 @@ std::optional<fhirtools::FhirVersion> FhirResourceBase::getProfileVersionChecked
 }
 
 
-gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
 model::FhirResourceBase::getValidationView(ProfileType profileType) const
 {
-    const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
     A_23384_03.start("Use Reference-Timestamp applicable for resourceType");
     const auto referenceTimestamp = getValidationReferenceTimestamp();
     ModelExpect(referenceTimestamp.has_value(), "missing reference timestamp.");
     const auto viewList = Fhir::instance().structureRepository(*referenceTimestamp);
     ModelExpect(! viewList.empty(), "Invalid reference timestamp: " + referenceTimestamp->toXsDateTime());
     A_23384_03.finish();
-    std::shared_ptr<const fhirtools::FhirStructureRepository> repoView;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> repoView;
     const auto profileName = getProfileName();
     ModelExpect(profileName.has_value() || ! mandatoryMetaProfile(profileType), "missing mandatory meta.profile");
     if (viewList.size() == 1 || ! profileName)
     {
         // effectivly validates against base profiles, which are contained in any view.
-        repoView = viewList.latest().view(backend);
+        repoView = viewList.latest();
     }
     else
     {
         fhirtools::DefinitionKey key{*profileName};
-        repoView = viewList.match(std::addressof(fhirInstance.backend()), key);
+        repoView = viewList.match(key);
         if (! repoView)
         {
             std::ostringstream supportedVersions;
             std::string_view sep{};
-            for (const auto& supported :
-                     viewList.supportedVersions(backend, {std::string{value(profile(profileType))}}))
+            for (const auto& supported : viewList.supportedVersions({std::string{value(profile(profileType))}}))
             {
                 supportedVersions << sep << to_string(supported);
                 sep = ", ";

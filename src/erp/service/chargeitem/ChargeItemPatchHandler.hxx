@@ -18,6 +18,9 @@ public:
     ChargeItemPatchHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
     void handleRequest(PcSessionContext& session) override;
+
+private:
+    static model::ChargeItemMarkingFlags getMarkingExtension(PcSessionContext& session);
 };
 
 #endif

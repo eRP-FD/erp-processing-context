@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_PROFESSIONOID_HXX
 #define ERP_PROCESSING_CONTEXT_PROFESSIONOID_HXX
 
+#include <magic_enum/magic_enum.hpp>
 #include <string_view>
 
 namespace profession_oid
@@ -89,12 +90,20 @@ namespace profession_oid
     constexpr static std::string_view oid_institution_oegd                   = "1.2.276.0.76.4.255";
     constexpr static std::string_view oid_institution_arbeitsmedizin         = "1.2.276.0.76.4.256";
     constexpr static std::string_view oid_institution_vorsorge_reha          = "1.2.276.0.76.4.257";
+    // GEMREQ-start oid_ncpeh
+    constexpr static std::string_view oid_ncpeh                              = "1.2.276.0.76.4.292";
+    // GEMREQ-end oid_ncpeh
     constexpr static std::string_view oid_epa_ktr                            = "1.2.276.0.76.4.XXX";
 
-    constexpr static std::string_view inner_request_role_pharmacy = "pharmacy";
-    constexpr static std::string_view inner_request_role_doctor = "doctor";
-    constexpr static std::string_view inner_request_role_patient = "patient";
-    constexpr static std::string_view inner_request_role_unknown = "";//NOLINT(readability-redundant-string-init)
+    enum class InnerRequestRole
+    {
+        pharmacy,
+        doctor,
+        patient,
+        ncpeh,
+        unknown
+    };
+    std::string to_string(InnerRequestRole innerRequestRole);
 
     // Tabelle 6: Tab_PKI_406 OID-Festlegung technische Rolle in X.509-Zertifikaten
     constexpr static std::string_view oid_vsdd = "1.2.276.0.76.4.97";
@@ -135,29 +144,39 @@ namespace profession_oid
 
 
 /// @brief convert the profession OID into the Inner-Request-Role representaion (pharmacy, doctor, patient)
-    constexpr std::string_view toInnerRequestRole(const std::string_view professionOid)
+    constexpr InnerRequestRole toInnerRequestRole(const std::string_view professionOid)
     {
         if (professionOid == oid_versicherter)
         {
-            return inner_request_role_patient;
+            return InnerRequestRole::patient;
         }
-        else if (professionOid == oid_arzt || professionOid == oid_zahnarzt ||
-                 professionOid == oid_praxis_arzt || professionOid == oid_zahnarztpraxis ||
-                 professionOid == oid_praxis_psychotherapeut || professionOid == oid_krankenhaus)
+        if (professionOid == oid_arzt || professionOid == oid_zahnarzt || professionOid == oid_praxis_arzt ||
+            professionOid == oid_zahnarztpraxis || professionOid == oid_praxis_psychotherapeut ||
+            professionOid == oid_krankenhaus)
         {
-            return inner_request_role_doctor;
+            return InnerRequestRole::doctor;
         }
-        else if (professionOid == oid_oeffentliche_apotheke || professionOid == oid_krankenhausapotheke ||
-                 professionOid == oid_kostentraeger)
+        if (professionOid == oid_oeffentliche_apotheke || professionOid == oid_krankenhausapotheke ||
+            professionOid == oid_kostentraeger)
         {
-            return inner_request_role_pharmacy;
+            return InnerRequestRole::pharmacy;
         }
-        else
+        if (professionOid == oid_ncpeh)
         {
-            return inner_request_role_unknown;
+            return InnerRequestRole::ncpeh;
         }
+        return InnerRequestRole::unknown;
     }
-}
+
+    inline std::string to_string(InnerRequestRole innerRequestRole)
+    {
+        if (innerRequestRole == InnerRequestRole::unknown)
+        {
+            return "";
+        }
+        return std::string{magic_enum::enum_name(innerRequestRole)};
+    }
+    }
 
 
 #endif //ERP_PROCESSING_CONTEXT_PROFESSIONOID_HXX

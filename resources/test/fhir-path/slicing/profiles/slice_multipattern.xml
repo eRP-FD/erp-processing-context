@@ -1,0 +1,383 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="Multipattern"/>
+  <type value="collection"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Multipattern/System"/>
+    <resource>
+      <CodeSystem>
+        <id value="MultipatternSystem"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Multipattern/System"/>
+        <version value="0.8.15"/>
+        <name value="MultipatternSystem"/>
+        <status value="draft"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="code1"/>
+          <display value="MultipatternSystem code first"/>
+        </concept>
+        <concept>
+          <code value="code2"/>
+          <display value="MultipatternSystem code second"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/SliceType"/>
+    <resource>
+      <StructureDefinition>
+        <id value="SliceType"/>
+        <url value="http://fhir-tools.test/minifhirtypes/SliceType"/>
+        <version value="4.0.1"/>
+        <name value="SliceType"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="true"/>
+        <type value="SliceType"/>
+        <derivation value="specialization"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/BackboneElement"/>
+        <snapshot>
+          <element id="SliceType">
+            <path value="SliceType"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="BackboneElement"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceType.codeableConcept">
+            <path value="SliceType.codeableConcept"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.codeableConcept"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Multi/Code1"/>
+    <resource>
+      <StructureDefinition>
+        <id value="MultiCode1"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Multi/Code1"/>
+        <version value="4.0.1"/>
+        <name value="SliceType"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="false"/>
+        <type value="SliceType"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/SliceType"/>
+        <snapshot>
+          <element id="SliceType">
+            <path value="SliceType"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="BackboneElement"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="SliceType.codeableConcept">
+            <path value="SliceType.codeableConcept"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.codeableConcept"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+            <patternCodeableConcept>
+              <coding>
+                <system value="http://fhir-tools.test/minifhirtypes/Multipattern/System"/>
+                <code value="code1"/>
+              </coding>
+            </patternCodeableConcept>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Multipattern"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Multipattern"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Multipattern"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="Multipattern"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <derivation value="specialization"/>
+        <snapshot>
+          <element id="Multipattern">
+            <path value="Multipattern"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Multipattern.id">
+            <path value="Multipattern.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Multipattern.meta">
+            <path value="Multipattern.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Multipattern.extension">
+            <path value="Multipattern.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Multipattern.contained">
+            <path value="Multipattern.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+          <element id="Multipattern.multi">
+            <path value="Multipattern.multi"/>
+            <slicing>
+              <discriminator>
+                <type value="pattern"/>
+                <path value="codeableConcept"/>
+              </discriminator>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Multipattern.multi"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Multipattern/Test"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Multipattern"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Multipattern/Test"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="Multipattern"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Multipattern"/>
+        <derivation value="constraint"/>
+        <snapshot>
+          <element id="Multipattern">
+            <path value="Multipattern"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Multipattern.id">
+            <path value="Multipattern.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Multipattern.meta">
+            <path value="Multipattern.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Multipattern.extension">
+            <path value="Multipattern.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Multipattern.contained">
+            <path value="Multipattern.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+          <element id="Multipattern.multi">
+            <path value="Multipattern.multi"/>
+            <slicing>
+              <discriminator>
+                <type value="pattern"/>
+                <path value="codeableConcept"/>
+              </discriminator>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Multipattern.multi"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+            </type>
+          </element>
+          <element id="Multipattern.multi.codeableConcept">
+            <path value="Multipattern.multi.codeableConcept"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.codeableConcept"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+          </element>
+          <element id="Multipattern.multi:codes">
+            <path value="Multipattern.multi"/>
+            <sliceName value="codes"/>
+            <min value="1"/>
+            <max value="*"/>
+            <base>
+              <path value="Multipattern.multi"/>
+              <min value="1"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SliceType"/>
+              <!-- this requires one of the codes to be `code1` -->
+              <profile value="http://fhir-tools.test/minifhirtypes/Multi/Code1"/>
+            </type>
+          </element>
+          <element id="Multipattern.multi:codes.codeableConcept">
+            <path value="Multipattern.multi.codeableConcept"/>
+            <sliceName value="codes"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SliceType.codeableConcept"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+            <!-- this requires one of the codes to be `code2` -->
+            <patternCodeableConcept>
+              <coding>
+                <system value="http://fhir-tools.test/minifhirtypes/Multipattern/System"/>
+                <code value="code2"/>
+              </coding>
+            </patternCodeableConcept>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

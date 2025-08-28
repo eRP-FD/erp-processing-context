@@ -23,7 +23,7 @@ class ErpElement;
 
 namespace fhirtools
 {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 }
 
 namespace model
@@ -45,15 +45,16 @@ class ResourceFactoryBase
 {
 public:
     void validate(ProfileType profileType,
-                  const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView = nullptr) const;
+                  const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView = nullptr) const;
 
     [[nodiscard]] fhirtools::ValidationResults
-    validateGeneric(const fhirtools::FhirStructureRepository&, const fhirtools::ValidatorOptions& opts,
+    validateGeneric(const fhirtools::FhirStructureRepositoryView&, const fhirtools::ValidatorOptions& options,
                     const std::set<fhirtools::DefinitionKey>& profiles) const;
     std::optional<std::string_view> getProfileName() const;
+    ProfileType getProfile() const;
     std::string_view getResourceType() const;
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const;
-    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> getValidationView() const;
+    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getValidationView() const;
 
     struct Options {
         std::optional<GenericValidationMode> genericValidationMode = std::nullopt;
@@ -73,11 +74,11 @@ public:
 protected:
     /// @brief runs generic validation depending on the configuration parameters
     void conditionalValidateGeneric(const std::set<fhirtools::DefinitionKey>& profiles,
-                                    const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView,
+                                    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView,
                                     const fhirtools::ValidatorOptions& validatorOptions,
                                     const std::optional<ErpException>& validationErpException) const;
     void validateNoAdditional(ProfileType profileType,
-                              const std::shared_ptr<const fhirtools::FhirStructureRepository>& view) const;
+                              const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& view) const;
 
     using XmlDocCache = std::variant<std::monostate, std::string, std::string_view>;
     static NumberAsStringParserDocument fromXml(std::string_view xmlStr, const XmlValidator&);
@@ -118,7 +119,7 @@ public:
     static ResourceFactory fromJson(NumberAsStringParserDocument&& jsonValue, Options options = {});
 
     ResourceType getValidated(ProfileType profileType,
-                              const std::shared_ptr<const fhirtools::FhirStructureRepository>& view = nullptr) &&;
+                              const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& view = nullptr) &&;
     ResourceType getNoValidation() &&;
 
     ProfileType profileType() const
@@ -216,9 +217,8 @@ const ResourceT& ResourceFactory<ResourceT>::resource() const
 
 
 template<typename ResourceT>
-ResourceT
-ResourceFactory<ResourceT>::getValidated(ProfileType profileType,
-                                         const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) &&
+ResourceT ResourceFactory<ResourceT>::getValidated(
+    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) &&
 {
     mResource.prepare();
     validate(profileType, repoView);

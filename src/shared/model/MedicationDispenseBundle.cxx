@@ -4,11 +4,11 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
-
+#include "MedicationDispenseBundle.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/MedicationDispense.hxx"
-#include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
@@ -53,14 +53,15 @@ void MedicationDispenseBundle::prepare()
         ModelExpect(profileName.has_value(), "missing meta.profile");
         fhirtools::DefinitionKey key{*profileName};
         ModelExpect(key.version.has_value(), "missing version on meta.profile: " + to_string(key));
-
+        ModelExpect(key.version < model::version::GEM_ERP_1_4,
+                    "MedicationDispense in versions 1.4 or later must be provided as Parameters");
         const auto referenceTimestamp = getValidationReferenceTimestamp();
         ModelExpect(referenceTimestamp.has_value(), "missing reference timestamp.");
         const auto& fhirInstance = Fhir::instance();
         const auto viewList = fhirInstance.structureRepository(*referenceTimestamp);
         ModelExpect(! viewList.empty(), "Invalid reference timestamp: " + referenceTimestamp->toXsDateTime());
-        std::shared_ptr<const fhirtools::FhirStructureRepository> repoView;
-        repoView = viewList.match(std::addressof(fhirInstance.backend()), key.url, *key.version);
+        std::shared_ptr<const fhirtools::FhirStructureRepositoryView> repoView;
+        repoView = viewList.match(key.url, *key.version);
         ErpExpect(repoView != nullptr, HttpStatus::BadRequest, "Invalid meta.profile: " + std::string(*profileName));
 
         setProfile(value(model::profileWithVersion(ProfileType::MedicationDispenseBundle, *repoView)));
@@ -81,6 +82,13 @@ std::optional<model::Timestamp> MedicationDispenseBundle::getValidationReference
     auto result = maxWhenHandedOver();
     A_23384_03.finish();
     return result;
+}
+
+MedicationDispenseBundle& MedicationDispenseBundle::addEuResource(const std::string& id, const rapidjson::Value& res)
+{
+    const std::string urn = Uuid{id}.toUrn();
+    addResource(urn, {}, model::BundleSearchMode::include, res);
+    return *this;
 }
 
 }// namespace model

@@ -87,8 +87,8 @@
         <identifier>
           <type>
             <coding>
-              <system value="###PATIENT_IDENTIFIER_SYSTEM###" />
-              <code value="###PATIENT_IDENTIFIER_CODE###" />
+              <system value="###PATIENT_IDENTIFIER_TYPE_SYSTEM###" />
+              <code value="###PATIENT_IDENTIFIER_TYPE_CODE###" />
             </coding>
           </type>
           <system value="###KVID10###" />
@@ -189,14 +189,7 @@
           <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Organization|1.1.0" />
         </meta>
         <identifier>
-          <type>
-            <coding>
-              <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
-              <code value="BSNR" />
-            </coding>
-          </type>
-          <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_BSNR" />
-          <value value="031234567" />
+          ###IDENTIFIER_ORGANIZATION_NUMBER###
         </identifier>
         <identifier>
           <type>
@@ -306,9 +299,10 @@
         <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_StatusCoPayment">
           <valueCoding>
             <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment" />
-            <code value="0" />
+            <code value="###STATUS_CO_PAYMENT###" />
           </valueCoding>
         </extension>
+        ###MEDICATION_REQUEST_EXTENSION###
         <status value="active" />
         <intent value="order" />
         <medicationReference>

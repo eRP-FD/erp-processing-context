@@ -81,7 +81,7 @@ std::string CommonPostgresBackend::retrieveSchemaVersion()
     checkCommonPreconditions();
     TVLOG(2) << retrieveSchemaVersionQuery.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "retrieveschemaversion");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "retrieveschemaversion");
 
     const auto results = mTransaction->exec(retrieveSchemaVersionQuery.query);
     TVLOG(2) << "got " << results.size() << " results";
@@ -114,7 +114,7 @@ std::optional<db_model::Blob> CommonPostgresBackend::insertOrReturnAccountSalt(c
 {
     checkCommonPreconditions();
     TVLOG(2) << ::insertOrReturnAccountSalt.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "insertorreturnaccountsalt");
 
     auto result =
@@ -136,7 +136,7 @@ std::optional<db_model::Blob> CommonPostgresBackend::retrieveSaltForAccount(cons
 {
     checkCommonPreconditions();
     TVLOG(2) << ::retrieveSaltForAccount.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievesaltforaccount");
 
     auto result = mTransaction->exec_params(::retrieveSaltForAccount.query, accountId.binarystring(),
@@ -155,7 +155,7 @@ std::string CommonPostgresBackend::storeAuditEventData(db_model::AuditData& audi
     checkCommonPreconditions();
     TVLOG(2) << insertAuditEventData.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "storeauditeventdata");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "storeauditeventdata");
 
     const std::string actionString(1, static_cast<char>(auditData.action));
     const auto recorded = model::Timestamp::now();

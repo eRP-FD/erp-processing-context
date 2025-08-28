@@ -89,7 +89,8 @@ void MedicationExporterDatabaseFrontendProxy::updateProcessingDelay(std::int32_t
     return mDatabase->updateProcessingDelay(newRetry, delay, kvnr);
 }
 
-void MedicationExporterDatabaseFrontendProxy::finalizeKvnr(const model::EventKvnr& kvnr) const
+void MedicationExporterDatabaseFrontendProxy::finalizeKvnr(const model::EventKvnr& kvnr,
+                                                           const std::string& assignedEpaPrefix) const
 {
-    mDatabase->finalizeKvnr(kvnr);
+    mDatabase->finalizeKvnr(kvnr, assignedEpaPrefix);
 }

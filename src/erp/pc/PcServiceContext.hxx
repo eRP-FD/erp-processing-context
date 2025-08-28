@@ -19,7 +19,6 @@
 #include "shared/crypto/Certificate.hxx"
 #include "shared/idp/Idp.hxx"
 #include "shared/server/BaseServiceContext.hxx"
-#include "shared/tsl/TslRefreshJob.hxx"
 
 #include <functional>
 #include <memory>
@@ -73,7 +72,7 @@ class PcServiceContext : public BaseServiceContext
 {
 public:
     PcServiceContext(const Configuration& configuration, const Factories& factories);
-    ~PcServiceContext(void) override;
+    ~PcServiceContext() override;
 
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);
 
@@ -106,7 +105,7 @@ public:
     PcServiceContext& operator=(const PcServiceContext& other) = delete;
     PcServiceContext& operator=(PcServiceContext&& other) = delete;
 
-protected:
+private:
     /**
      * As database connections to "real" databases are a precious commodity, we are not supposed to hold
      * one for a longer time. Therefore Database objects, which represent (the connection to) an external database
@@ -121,7 +120,6 @@ protected:
     std::unique_ptr<CFdSigErpManager> mCFdSigErpManager;
     AuditEventTextTemplates mAuditEventTextTemplates;
 
-    std::unique_ptr<TslRefreshJob> mTslRefreshJob;
     std::unique_ptr<PseudonameKeyRefreshJob> mReportPseudonameKeyRefreshJob;
     std::unique_ptr<SeedTimer> mPrngSeeder;
     std::shared_ptr<RegistrationInterface> mRegistrationInterface;

@@ -89,6 +89,7 @@ public:
     constexpr static std::string_view nonceClaim = "nonce";
     constexpr static std::string_view acrClaim = "acr";
     constexpr static std::string_view audClaim = "aud";
+    constexpr static std::string_view telematikAuthConsentClaim = "urn:telematik:auth:consent";
     // GEMREQ-start A_19390
     constexpr static std::string_view professionOIDClaim = "professionOID";
     // GEMREQ-end A_19390
@@ -100,6 +101,8 @@ public:
     constexpr static std::string_view jtiClaim = "jti";
     constexpr static std::string_view clientIdClaim = "client_id";
     constexpr static std::string_view acrContent = "gematik-ehealth-loa-high";
+    constexpr static std::string_view acrContentSubst = "gematik-ehealth-loa-substantial";
+    constexpr static std::string_view authConsent = "loa-substantial";
     constexpr static std::chrono::seconds A20373_iatClaimToleranceSeconds = std::chrono::seconds(2);
 
 private:

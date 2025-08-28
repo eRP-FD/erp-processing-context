@@ -117,7 +117,7 @@ TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
                       *params->getPractitioner());
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
              &params->jsonDocument());
 }
 
@@ -236,11 +236,11 @@ TEST_P(Epa4AllTransformerGematikTestdataMedicationDispense, Test)
     }
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-dispensation-erp-input-parameters|1.0.3"},
+                                      "epa-op-provide-dispensation-erp-input-parameters|1.0"},
              &params->jsonDocument());
     checkExpression("parameter[0].part[3].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
                     &params->jsonDocument());
 }
 

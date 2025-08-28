@@ -1,6 +1,8 @@
 #include "ResourceNames.hxx"
+#include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "shared/util/Expect.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
 
 #include <map>
 
@@ -108,11 +110,35 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::organization_directory;
         case EPAMedicationPZNIngredient:
             return sd::epa_medication_pzn_ingredient;
+        case GEM_ERPEU_PR_Consent:
+            return sd::gem_erpeu_pr_consent;
+        case GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+            return sd::gem_erpeu_pr_par_access_authorization_request;
+        case GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+            return sd::gem_erpeu_pr_par_access_authorization_response;
+        case GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+            return sd::gem_erpeu_pr_par_patch_task_input;
+        case GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+            return sd::gem_erpeu_pr_par_get_prescription_input;
+        case GEM_ERPEU_PR_PAR_CloseOperation_Input:
+            return sd::gem_erpeu_pr_par_closeoperation_input;
+        case GEM_ERPEU_PR_MedicationDispense:
+            return sd::gem_erpeu_pr_par_medication_dispense;
+        case GEM_ERPEU_PR_PAR_Medication:
+            return sd::gem_erpeu_pr_par_medication;
+        case GEM_ERPEU_PR_Practitioner:
+            return sd::gem_erpeu_pr_practitioner;
+        case GEM_ERPEU_PR_PractitionerRole:
+            return sd::gem_erpeu_pr_practitionerrole;
+        case GEM_ERPEU_PR_Organization:
+            return sd::gem_erpeu_pr_organization;
+        case GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
+            return sd::gem_erpeu_pr_par_patch_charge_item_input;
     }
     Fail2("invalid value for ProfileType: " + std::to_string(static_cast<uintmax_t>(profileType)), std::logic_error);
 }
 
-std::optional<model::ProfileType> model::findProfileType(std::string_view profileUrl)
+std::optional<model::ProfileType> model::ProfileInfo::findType()
 {
     using enum ProfileType;
     namespace sd = resource::structure_definition;
@@ -154,17 +180,28 @@ std::optional<model::ProfileType> model::findProfileType(std::string_view profil
         {sd::organization_directory, OrganizationDirectory},
         {sd::epa_medication_pzn_ingredient, EPAMedicationPZNIngredient},
         {sd::kbv_pr_evdga_bundle, KBV_PR_EVDGA_Bundle},
+        {sd::gem_erpeu_pr_consent, GEM_ERPEU_PR_Consent},
+        {sd::gem_erpeu_pr_par_closeoperation_input, GEM_ERPEU_PR_PAR_CloseOperation_Input},
+        {sd::gem_erpeu_pr_par_medication, GEM_ERPEU_PR_PAR_Medication},
+        {sd::gem_erpeu_pr_par_medication_dispense, GEM_ERPEU_PR_MedicationDispense},
+        {sd::gem_erpeu_pr_practitioner, GEM_ERPEU_PR_Practitioner},
+        {sd::gem_erpeu_pr_practitionerrole, GEM_ERPEU_PR_PractitionerRole},
+        {sd::gem_erpeu_pr_organization, GEM_ERPEU_PR_Organization},
     };
-    const fhirtools::DefinitionKey key{profileUrl};
-    if (auto profiType = profileUrlToTypeMap.find(key.url); profiType != profileUrlToTypeMap.end())
+    if (auto profiType = profileUrlToTypeMap.find(url); profiType != profileUrlToTypeMap.end())
     {
         return profiType->second;
     }
     return std::nullopt;
 }
 
-std::optional<fhirtools::DefinitionKey> model::profileWithVersion(ProfileType profileType,
-                                                                  const fhirtools::FhirStructureRepository& repoView)
+std::optional<model::ProfileType> model::findProfileType(std::string_view profileUrl)
+{
+    return ProfileInfo{profileUrl}.findType();
+}
+
+std::optional<fhirtools::DefinitionKey>
+model::profileWithVersion(ProfileType profileType, const fhirtools::FhirStructureRepositoryView& repoView)
 {
     std::optional profileStr = profile(profileType);
     if (! profileStr.has_value())
@@ -179,7 +216,7 @@ std::optional<fhirtools::DefinitionKey> model::profileWithVersion(ProfileType pr
 }
 
 
-std::string model::profileList(const fhirtools::FhirStructureRepository& repoView,
+std::string model::profileList(const fhirtools::FhirStructureRepositoryView& repoView,
                                std::initializer_list<ProfileType> types)
 {
     std::ostringstream result;

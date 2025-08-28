@@ -11,7 +11,8 @@
 #include "shared/util/TLog.hxx"
 #include "shared/util/UrlHelper.hxx"
 
-namespace exporter {
+namespace exporter
+{
 
 PutRuntimeConfigHandler::PutRuntimeConfigHandler(ConfigurationKey adminRcCredentialsKey)
     : AdminRequestHandlerBase(adminRcCredentialsKey)
@@ -68,6 +69,14 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
                             .str());
             }
         }
+        else if (RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.contains(param.first))
+        {
+            const auto category = RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.at(param.first);
+            const auto defaults = RuntimeConfiguration::defaultMetricsLogThresholdsMs();
+            const auto value =
+                ! param.second.empty() ? std::chrono::milliseconds{std::stol(param.second)} : defaults.at(category);
+            runtimeConfig->setMetricsLogThresholdMs(category, value);
+        }
         else
         {
             ErpFail(HttpStatus::BadRequest, "unknown parameter in request body: " + param.first + "=" + param.second);
@@ -75,4 +84,4 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
     }
 }
 
-} // namespace exporter
+}// namespace exporter

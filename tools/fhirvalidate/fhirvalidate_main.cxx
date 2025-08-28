@@ -1,13 +1,13 @@
 
-#include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/ResourceFactory.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/FileHelper.hxx"
-#include "shared/model/ResourceFactory.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <filesystem>
@@ -41,8 +41,9 @@ void usage(std::string_view command, std::ostream& out)
 }
 
 
-template <config::ProcessType processType>
-std::shared_ptr<const fhirtools::FhirStructureRepository> getView(const Configuration& config, std::string_view viewId)
+template<config::ProcessType processType>
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView> getView(const Configuration& config,
+                                                                      std::string_view viewId)
 {
     const auto viewList = config.fhirResourceViewConfiguration<processType>().allViews();
     auto viewCfg = std::ranges::find(viewList, viewId, &fhirtools::FhirResourceViewConfiguration::ViewConfig::mId);
@@ -54,7 +55,7 @@ std::shared_ptr<const fhirtools::FhirStructureRepository> getView(const Configur
     return nullptr;
 }
 
-std::shared_ptr<const fhirtools::FhirStructureRepository> getView(std::string_view viewId)
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView> getView(std::string_view viewId)
 {
     const auto& config = Configuration::instance();
     auto result = getView<Configuration::ERP>(config, viewId);

@@ -197,7 +197,6 @@ template class Parameters<CreateTaskParameters>;
 template class Parameters<ActivateTaskParameters>;
 template class Parameters<PatchChargeItemParameters>;
 
-
 std::optional<model::Timestamp> CreateTaskParameters::getValidationReferenceTimestamp() const
 {
     return Timestamp::now();
@@ -212,4 +211,5 @@ std::optional<model::Timestamp> PatchChargeItemParameters::getValidationReferenc
 {
     return Timestamp::now();
 }
+
 } // namespace model

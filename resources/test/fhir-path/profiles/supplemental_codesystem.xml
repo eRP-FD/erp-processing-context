@@ -1,0 +1,113 @@
+<?xml version="1.0"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="supplemental_codesystems"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/supplemental_codesystems/Supplemented"/>
+    <resource>
+      <CodeSystem>
+        <url value="http://fhir-tools.test/supplemental_codesystems/Supplemented"/>
+        <version value="1"/>
+        <name value="Supplemented"/>
+        <status value="draft"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="Test1"/>
+          <display value="Test1 concept"/>
+          <concept>
+            <code value="NestedConcept"/>
+            <display value="Nested Concept"/>
+          </concept>
+        </concept>
+        <concept>
+          <code value="Test2"/>
+          <display value="Test2 concept"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <resource>
+      <CodeSystem>
+        <url value="http://fhir-tools.test/supplemental_codesystems/Supplemented"/>
+        <version value="2"/>
+        <name value="Supplemented"/>
+        <status value="draft"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="Test1"/>
+          <display value="Test1 concept"/>
+        </concept>
+        <concept>
+          <code value="Test2"/>
+          <display value="Test2 concept"/>
+          <!-- changed parent Test1 -> Test2 -->
+          <concept>
+            <code value="NestedConcept"/>
+            <display value="Nested concept"/>
+          </concept>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/supplemental_codesystems/Supplementer"/>
+    <resource>
+      <CodeSystem>
+        <url value="http://fhir-tools.test/supplemental_codesystems/Supplementer"/>
+        <version value="A"/>
+        <name value="Supplemented"/>
+        <status value="draft"/>
+        <content value="supplement"/>
+        <count value="2"/>
+        <supplements value="http://fhir-tools.test/supplemental_codesystems/Supplemented"/>
+        <concept>
+          <code value="Test1"/>
+          <display value="Test1 concept"/>
+          <!-- added property to Test1 -->
+          <property>
+            <code value="deprecated"/>
+            <valueBoolean value="true"/>
+          </property>
+        </concept>
+        <concept>
+          <code value="NewConcept"/>
+          <display value="New concept"/>
+        </concept>
+        <concept>
+          <code value="NestedConcept"/>
+          <display value="Nested concept"/>
+          <!-- added property to NestedConcept -->
+          <property>
+            <code value="deprecated"/>
+            <valueBoolean value="false"/>
+          </property>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/supplemental_codesystems/Supplementer"/>
+    <resource>
+      <CodeSystem>
+        <url value="http://fhir-tools.test/supplemental_codesystems/Supplementer"/>
+        <version value="B"/>
+        <name value="Supplemented"/>
+        <status value="draft"/>
+        <content value="supplement"/>
+        <count value="2"/>
+        <supplements value="http://fhir-tools.test/supplemental_codesystems/Supplemented"/>
+        <concept>
+          <code value="Test2"/>
+          <display value="Test2 concept"/>
+          <!-- added property to Test2 -->
+          <property>
+            <code value="deprecated"/>
+            <valueBoolean value="true"/>
+          </property>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+</Bundle>

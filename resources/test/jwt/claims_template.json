@@ -1,0 +1,15 @@
+{
+    "acr": "##ACR##",
+    "aud": "##AUD##",
+    "exp": ##EXP##,
+    "display_name": "##DISPLAYNAME##",
+    "iat": ##IAT##,
+    "idNummer": "##ID##",
+    "iss": "##ISS#",
+    "jti": "##JTI##",
+    "nbf": ##NBF##,
+    "nonce": "##NONCE##",
+    "organizationName": "##ORGANIZATIONNAME##",
+    "professionOID": "##PROFESSIONOID##",
+    "sub": "##SUB##"##OPTIONAL_FIELDS##
+}

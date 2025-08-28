@@ -10,9 +10,9 @@
 
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/repository/FhirCodeSystem.hxx"
-#include "fhirtools/repository/FhirResourceGroup.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/util/SaxHandler.hxx"
 
@@ -44,15 +44,17 @@ public:
     ~FhirStructureDefinitionParser() override;
 
     using ParseResult =
-        std::tuple<std::list<FhirStructureDefinition>, std::list<FhirCodeSystem>, std::list<FhirValueSet>>;
+        std::tuple<std::list<std::unique_ptr<FhirStructureDefinition>>, std::list<FhirCodeSystem>, std::list<FhirValueSet>>;
 
-    static ParseResult parse(const std::filesystem::path& fileName, const FhirResourceGroupResolver& inGroupResolver);
+    static ParseResult parse(const std::filesystem::path& fileName, gsl::not_null<const FhirStructureRepositoryBackend*> backend,
+                             const FhirResourceGroupResolver& inGroupResolver);
 
 private:
     enum class ElementType : uint8_t;
     class ElementInfo;
 
-    FhirStructureDefinitionParser(const FhirResourceGroupResolver& inGroupResolver);
+    FhirStructureDefinitionParser(gsl::not_null<const FhirStructureRepositoryBackend*> backend,
+                                  const FhirResourceGroupResolver& inGroupResolver);
 
     // SaxParser callbacks:
     void startDocument() override;
@@ -70,6 +72,7 @@ private:
 
     void handleStructureDefinitionSubTree(const xmlChar* localname, const xmlChar* uri,
                                           const AttributeList& attributes);
+    void enterStructureDefinition(const xmlChar* localname);
     void leaveStructureDefinition();
 
     void enterSnapshotSubTree();
@@ -93,6 +96,8 @@ private:
     void copyValueAttributes(const AttributeList&);
     void leaveValue();
     void handleCodeSystemSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
+    void handlePropertySubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
+    void handlePropertyValueCodingSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
     void handleConceptSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
     void leaveConcept();
     void leaveCodeSystem();
@@ -113,12 +118,14 @@ private:
     void leaveValueSet();
     void handleBindingSubtree(const xmlChar* localname, const xmlChar* uri, const AttributeList& attributes);
 
+    void jsonLogError(std::string_view message, const std::exception& ex);
+
     // helper functions:
     std::string getPath();
     std::string valueAttributeFrom(const AttributeList& attributes);
     void ensureFhirNamespace(const xmlChar* uri);
 
-    std::list<FhirStructureDefinition> mStructures;
+    std::list<std::unique_ptr<FhirStructureDefinition>> mStructures;
     std::list<FhirCodeSystem> mCodeSystems;
     std::list<FhirValueSet> mValueSets;
     FhirStructureDefinition::Builder mStructureBuilder;
@@ -134,8 +141,11 @@ private:
     std::list<std::string> mElementTypes;
     bool mExperimental = false;
     std::deque<ElementInfo> mStack;
-    std::filesystem::path currentFile;
-    gsl::not_null<const FhirResourceGroupResolver*> groupResolver;
+    std::filesystem::path mCurrentFile;
+    gsl::not_null<const FhirResourceGroupResolver*> mGroupResolver;
+    bool mIgnoreDefinition = false;
+    bool mHadError = false;
+    gsl::not_null<const FhirStructureRepositoryBackend*> mBackend;
 };
 }
 #endif// FHIR_PATH_FHIRSTRUCTUREDEFINITIONPARSER_HXX

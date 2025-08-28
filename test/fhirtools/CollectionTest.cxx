@@ -7,7 +7,7 @@
 
 #include "fhirtools/model/Collection.hxx"
 #include "fhirtools/model/Element.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -21,8 +21,8 @@ using namespace fhirtools;
 class CollectionTest : public testing::Test
 {
 public:
-    const std::shared_ptr<const FhirStructureRepository> repo{DefaultFhirStructureRepository::get()};
-    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
+    const std::shared_ptr<const FhirStructureRepositoryView> repo{DefaultFhirStructureRepository::get()};
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
 };
 
 TEST_F(CollectionTest, singleOrEmpty)

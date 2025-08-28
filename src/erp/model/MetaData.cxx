@@ -6,14 +6,15 @@
  */
 
 #include "erp/model/MetaData.hxx"
-#include "shared/erp-serverinfo.hxx"
-#include "shared/fhir/Fhir.hxx"
-#include "shared/model/Resource.hxx"
 #include "erp/model/Communication.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "shared/erp-serverinfo.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
+#include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/Expect.hxx"
-#include "shared/model/RapidjsonDocument.hxx"
 
 #include <mutex>// for call_once
 
@@ -264,27 +265,23 @@ const rapidjson::Pointer releaseDatePointer("/software/releaseDate");
 const rapidjson::Pointer restResourceArrayPointer("/rest/0/resource");
 
 
-fhirtools::DefinitionKey latestProfileKey(const fhirtools::FhirStructureRepositoryBackend& backend,
-                          const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
-                          model::ProfileType profileType)
+fhirtools::DefinitionKey latestProfileKey(const fhirtools::FhirResourceViewList& viewList,
+                                          model::ProfileType profileType)
 {
   std::string profileUrl{value(profile(profileType))};
-  auto supported = viewList.supportedVersions(&backend, {profileUrl});
+  auto supported = viewList.supportedVersions({profileUrl});
   Expect3(!supported.empty(), "profile not supported: " + profileUrl, std::logic_error);
   return std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version);
 }
-std::string latestProfile(const fhirtools::FhirStructureRepositoryBackend& backend,
-                                          const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
-                                          model::ProfileType profileType)
+std::string latestProfile(const fhirtools::FhirResourceViewList& viewList, model::ProfileType profileType)
 {
-  return to_string(latestProfileKey(backend, viewList, profileType));
+    return to_string(latestProfileKey(viewList, profileType));
 }
 
 std::string baseType(const fhirtools::FhirStructureRepositoryBackend& backend,
-                     const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
-                     model::ProfileType profileType)
+                     const fhirtools::FhirResourceViewList& viewList, model::ProfileType profileType)
 {
-    auto key = latestProfileKey(backend, viewList, profileType);
+    auto key = latestProfileKey(viewList, profileType);
     Expect3(key.version.has_value(), "latestProfileKey must return a version for: " + key.url, std::logic_error);
     const auto* profile = backend.findDefinition(key.url, *key.version);
     Expect3(profile != nullptr, "Profile not found in backend: " + to_string(key), std::logic_error);
@@ -340,7 +337,7 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
                 std::logic_error);
         if (typeProfiles.size() == 1)
         {
-            setKeyValue(resource, rapidjson::Pointer{"/profile"}, latestProfile(backend, viewList, typeProfiles.front()));
+            setKeyValue(resource, rapidjson::Pointer{"/profile"}, latestProfile(viewList, typeProfiles.front()));
         }
         else
         {
@@ -349,9 +346,9 @@ MetaData::MetaData(const model::Timestamp& referenceTimestamp)
             rapidjson::Value supportedProfileArray(rapidjson::kArrayType);
             for (const auto& profileType : typeProfiles)
             {
-                if (! viewList.supportedVersions(&backend, {std::string{value(profile(profileType))}}).empty())
+                if (! viewList.supportedVersions({std::string{value(profile(profileType))}}).empty())
                 {
-                    addStringToArray(supportedProfileArray, latestProfile(backend, viewList, profileType));
+                    addStringToArray(supportedProfileArray, latestProfile(viewList, profileType));
                 }
             }
             setKeyValue(resource, rapidjson::Pointer{"/supportedProfile"}, supportedProfileArray);

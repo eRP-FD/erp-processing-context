@@ -6,11 +6,13 @@
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Element.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/internal/ReferenceFinder.hxx"
 #include "fhirtools/validator/internal/SlicingChecker.hxx"
 #include "fhirtools/validator/internal/ValidationData.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/Uuid.hxx"
 
 #include <ranges>
 #include <type_traits>
@@ -65,7 +67,7 @@ bool ProfileSetValidator::isArray() const
     return mElementInParent && mElementInParent->isArray();
 }
 
-void ProfileSetValidator::typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef)
+void ProfileSetValidator::typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef)
 {
     mRootValidator.typecast(repo, structDef);
     for (auto&& profVal : mProfileValidators)
@@ -79,20 +81,20 @@ void ProfileSetValidator::typecast(const FhirStructureRepository& repo, const Fh
     }
 }
 
-void ProfileSetValidator::addProfile(const FhirStructureRepository& repo, const FhirStructureDefinition* profile)
+void ProfileSetValidator::addProfile(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* profile)
 {
     Expect3(rootPointer().element()->isRoot(), "cannot add profiles to non-root: " + to_string(rootPointer()),
             std::logic_error);
     Expect3(profile != nullptr, "profiles set must not contain null", std::logic_error);
     if (profile->isDerivedFrom(repo, *rootPointer().profile()))
     {
-        ProfiledElementTypeInfo defPtr{profile};
+        ProfiledElementTypeInfo defPtr{*profile};
         mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
         mIncludeInResult.emplace(std::move(defPtr));
     }
 }
 
-void ProfileSetValidator::addProfiles(const FhirStructureRepository& repo,
+void ProfileSetValidator::addProfiles(const FhirStructureRepositoryView& repo,
                                       const std::set<const FhirStructureDefinition*>& profiles)
 {
     for (const auto* prof : profiles)
@@ -101,7 +103,7 @@ void ProfileSetValidator::addProfiles(const FhirStructureRepository& repo,
     }
 }
 
-void fhirtools::ProfileSetValidator::requireOne(const fhirtools::FhirStructureRepository& repo,
+void fhirtools::ProfileSetValidator::requireOne(const fhirtools::FhirStructureRepositoryView& repo,
                                                 const std::set<const FhirStructureDefinition*>& profiles,
                                                 std::string_view elementFullPath,
                                                 const std::function<std::string()>& contextMessageGetter)
@@ -154,14 +156,14 @@ void ProfileSetValidator::addTargetProfiles(const ReferenceContext::ReferenceInf
 }
 
 ProfileSetValidator::SolverDataValue
-ProfileSetValidator::createSolverDataValue(const FhirStructureRepository& repo, const FhirStructureDefinition* profile,
-                                           std::string_view elementFullPath,
+ProfileSetValidator::createSolverDataValue(const FhirStructureRepositoryView& repo,
+                                           const FhirStructureDefinition* profile, std::string_view elementFullPath,
                                            const std::function<std::string()>& contextMessageGetter)
 {
     Expect3(profile != nullptr, "profiles set must not contain null", std::logic_error);
     if (profile->baseType(repo) == rootPointer().profile())
     {
-        ProfiledElementTypeInfo defPtr{profile};
+        ProfiledElementTypeInfo defPtr{*profile};
         const auto& [validator, inserted] = mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
         return {std::move(defPtr), validator->second.validationData()};
     }
@@ -176,14 +178,14 @@ ProfileSetValidator::createSolverDataValue(const FhirStructureRepository& repo, 
     {
         errorMessage << " (" << contextMessageGetter() << ')';
     }
-    return createErrorSolverData(profile, std::move(errorMessage).str(), elementFullPath);
+    return createErrorSolverData(*profile, std::move(errorMessage).str(), elementFullPath);
 }
 
-ProfileSetValidator::SolverDataValue ProfileSetValidator::createErrorSolverData(const FhirStructureDefinition* profile,
+ProfileSetValidator::SolverDataValue ProfileSetValidator::createErrorSolverData(const FhirStructureDefinition& profile,
                                                                                 std::string message,
                                                                                 std::string_view elementFullPath)
 {
-    mExtraFailedProfiles.insert(profile);
+    mExtraFailedProfiles.insert(&profile);
     ProfiledElementTypeInfo pet{profile};
     auto validData = std::make_shared<ValidationData>(std::make_unique<ProfiledElementTypeInfo>(pet));
     validData->add(Severity::error, std::move(message), std::string{elementFullPath}, nullptr);
@@ -191,7 +193,7 @@ ProfileSetValidator::SolverDataValue ProfileSetValidator::createErrorSolverData(
 }
 
 
-std::shared_ptr<ProfileSetValidator> ProfileSetValidator::subField(const FhirStructureRepository& repo,
+std::shared_ptr<ProfileSetValidator> ProfileSetValidator::subField(const FhirStructureRepositoryView& repo,
                                                                    const std::string& name)
 {
     auto rootList = rootPointer().subDefinitions(repo, name);
@@ -222,6 +224,7 @@ void ProfileSetValidator::process(const Element& element, std::string_view eleme
     {
         TVLOG(4) << prof.first << (prof.second.failed() ? " (failed)" : " (good)");
     }
+    checkURI(element, elementFullPath);
     mRootValidator.process(element, elementFullPath);
     if (element.hasValue())
     {
@@ -257,11 +260,12 @@ void fhirtools::ProfileSetValidator::createCounters(const ProfileValidator::Map&
                 continue;
             }
             const auto& counterKey = profVal.second.counterKey();
+            auto& counter = mParent->mChildCounters[counterKey];
             for (const auto& pk : profVal.second.parentKey())
             {
-                mParent->mChildCounters[counterKey].elementMap.emplace(pk, defPtr);
+                counter.elementMap.emplace(pk, defPtr);
             }
-            mParent->mChildCounters[counterKey].max = defPtr.element()->cardinality().max;
+            counter.max = defPtr.element()->cardinality().max;
         }
     }
 }
@@ -332,7 +336,7 @@ void fhirtools::ProfileSetValidator::createSliceCounters(const ProfileValidator&
     {
         TVLOG(4) << "    with slice:" << slice.name();
         static_assert(std::is_reference_v<decltype(slice.profile())>);
-        ProfiledElementTypeInfo slicePtr{&slice.profile()};
+        ProfiledElementTypeInfo slicePtr{slice.profile()};
         for (auto pk : profVal.parentKey())
         {
             if (slicePtr.element()->cardinality().isConstraint(isArray))
@@ -425,6 +429,22 @@ void fhirtools::ProfileSetValidator::finalizeChildCounters(std::string_view elem
     {
         counter.second.check(mProfileValidators, counter.first, elementFullPath, element);
     }
+    A_27698.start("Check that we have exactly one meta.profile");
+    if (rootPointer() == mValidator.get().metaRootDefPtr() && isMandatory("profile"))
+    {
+        if (size_t profileCount = mChildCounters.at({"profile", {}}).count; profileCount != 1)
+        {
+            mResults.add(options().levels.missingOrExtraMetaProfile,
+                            std::string{(profileCount == 0) ? "missing profile" : "extra profile(s)"} +
+                                " in meta.profile",
+                            std::string{elementFullPath}, nullptr);
+        }
+        else
+        {
+            mResults.add(Severity::debug, "mandatory profile found", std::string{elementFullPath}, nullptr);
+        }
+    }
+    A_27698.finish();
 }
 
 
@@ -463,7 +483,7 @@ std::set<ProfileValidator::MapKey> fhirtools::ProfileSetValidator::initialFailed
     }
     for (const auto* extraFailed : mExtraFailedProfiles)
     {
-        failed.insert(ProfiledElementTypeInfo{extraFailed});
+        failed.insert(ProfiledElementTypeInfo{*extraFailed});
     }
     return failed;
 }
@@ -603,4 +623,35 @@ std::optional<FhirSlicing::SlicingRules> ProfileSetValidator::getRuleOverride(co
         return FhirSlicing::SlicingRules::reportOther;
     }
     return std::nullopt;
+}
+
+bool fhirtools::ProfileSetValidator::isMandatory(std::string_view fieldName) const
+{
+    return std::ranges::any_of(
+        mChildCounters, [fieldName](const std::pair<ProfileValidatorCounterKey, CounterData>& counter) {
+            return counter.first.name == fieldName &&
+                   std::ranges::any_of(counter.second.elementMap,
+                                       [](const std::pair<ProfiledElementTypeInfo, ProfiledElementTypeInfo>& element) {
+                                           return element.second.element()->cardinality().min > 0;
+                                       });
+        });
+}
+
+
+void ProfileSetValidator::checkURI(const Element& element, std::string_view elementFullPath)
+{
+
+    if (! options().levels.invalidUrnUuidInUri.has_value() || element.type() != Element::Type::String ||
+        ! element.hasValue())
+    {
+        return;
+    }
+    auto value = element.asString();
+    std::shared_ptr fhirElement = element.definitionPointer().element();
+    Expect3(fhirElement != nullptr, "Invalid Element", std::logic_error);
+    if (value.starts_with("urn:uuid:") && ! Uuid::isValidUrnUuid(value, false) && fhirElement->isA("uri"))
+    {
+        mResults.add(*options().levels.invalidUrnUuidInUri, ExtendedValidation::invalidUrnUuidInUri,
+                     std::string{elementFullPath}, nullptr);
+    }
 }

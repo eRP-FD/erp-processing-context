@@ -94,10 +94,12 @@
     ],
     "fhir": {
       "validation": {
+        "urnUuidCheckFrom": "2025-10-01",
         "levels": {
           "unreferenced-bundled-resource": "error",
           "unreferenced-contained-resource": "error",
-          "mandatory-resolvable-reference-failure": "error"
+          "mandatory-resolvable-reference-failure": "error",
+          "missing-or-extra-meta-profile": "error"
         }
       },
       "reference-time-offset-days": "0",
@@ -109,23 +111,46 @@
         "@ERP_FHIR_RESOURCE_DIR@hl7.org/v3-codesystems.xml",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.3.1",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.4.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenbasis-1.5.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.2.0",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.3.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.abda.erezeptabgabedatenpkv-1.4.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.3.2/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.5.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.5.2/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.basisprofil.r4-1.5.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa-1.1.5/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.6-2/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.1.5/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept.eu-1.0.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.1.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.3.1/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.4.3/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.5.2/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.fhir.directory-0.11.12/package",
-        "@ERP_FHIR_RESOURCE_DIR@profiles/de.ihe-d.terminology-3.0.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.fhir.directory-0.11.25/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.fhir.directory-0.13.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.terminology-1.0.5-4/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.terminology-1.0.6/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.ti-1.0.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.ti-1.1.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/de.ihe-d.terminology-3.0.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/dvmd.kdl.r4-2025.0.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/KBV.Basis-1.3.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.basis-1.7.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.1.2",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.erp-1.3.2/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.1.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.ita.for-1.2.0/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.itv.evdga-1.1.1/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/kbv.itv.evdga-1.2.1/package",
         "@ERP_FHIR_RESOURCE_DIR@profiles/fhir.kbv.de",
-        "@ERP_FHIR_RESOURCE_DIR@profiles/terminology.hl7.org-6.0.2/package"
+        "@ERP_FHIR_RESOURCE_DIR@profiles/hl7.fhir.uv.extensions.r4-5.2.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/hl7.terminology.r4-6.3.0/package",
+        "@ERP_FHIR_RESOURCE_DIR@profiles/hl7.terminology.r4-6.3.0/package-legacy-validation"
       ],
       "synthesize-codesystems": [
         {"url": "http://loinc.org"                                    , "version": null},
@@ -136,6 +161,8 @@
         {"url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11"              , "version": null},
         {"url": "urn:oid:1.2.276.0.76.5.492"                          , "version": null},
         {"url": "urn:iso:std:iso:3166"                                , "version": null},
+        {"url": "urn:oid:1.3.6.1.4.1.12559.11.10.1.3.2.2.2"           , "version": null},
+        {"url": "urn:oid:2.16.840.1.113883.2.9.6.2.7"                 , "version": null},
         {"url": "https://fhir.kbv.de/CodeSystem/Role_Care_Team"       , "version": "1.3.0"},
         {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_Role_Care", "version": "1.3.0"}
       ],
@@ -151,9 +178,6 @@
             {"url": "urn:ietf:bcp:47"                       , "version": null},
             {"url": "http://unitsofmeasure.org"             , "version": null},
             {"url": "http://standardterms.edqm.eu"          , "version": null},
-            {"url": "urn:oid:1.2.276.0.76.5.514"            , "version": null},
-            {"url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11", "version": null},
-            {"url": "urn:oid:1.2.276.0.76.5.492"            , "version": null},
             {"url": "urn:iso:std:iso:3166"                  , "version": null}
           ]
         },
@@ -170,51 +194,80 @@
             {"url": "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_Role_Care", "version": "1.3.0"}
           ]
         },
+
         {
-          "id": "hl7_fhir_r4_core_4_0_1",
-          "include": ["missing-codesystems", "missing-valuesets"],
+          "id": "hl7.fhir.r4.core-4.0.1-structures",
           "match": [
-            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/terminology\\.hl7\\.org-6\\.0\\.2/package/.*\\.xml"},
-            { "file": ".*/hl7.org/.*"}
+            { "file": "@ERP_FHIR_RESOURCE_DIR@hl7\\.org/extension-definitions\\.xml" },
+            { "file": "@ERP_FHIR_RESOURCE_DIR@hl7\\.org/profiles-resources\\.xml" },
+            { "file": "@ERP_FHIR_RESOURCE_DIR@hl7\\.org/profiles-types\\.xml" }
           ]
         },
         {
-          "id": "KBV_schluesseltabellen_sliced",
+          "id": "hl7.fhir.r4.core-4.0.1-terminology",
+          "include": ["missing-codesystems", "missing-valuesets"],
           "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_ARZTNRFACHGRUPPE" , "version": "1.03" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_BAR2_ARZTNRFACHGRUPPE"   , "version": "1.03" }
+            { "file": "@ERP_FHIR_RESOURCE_DIR@hl7\\.org/valuesets\\.xml" },
+            { "file": "@ERP_FHIR_RESOURCE_DIR@hl7\\.org/v3-codesystems\\.xml" }
+          ]
+        },
+        {
+          "id": "hl7.fhir.uv.extensions.r4-5.2.0-structures",
+          "extend": [ "hl7.fhir.r4.core-4.0.1-structures" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/hl7\\.fhir\\.uv\\.extensions\\.r4-5\\.2\\.0/package/StructureDefinition-.*\\.xml" }
+          ]
+        },
+        {
+          "id": "hl7.fhir.uv.extensions.r4-5.2.0-terminology",
+          "extend": [ "hl7.fhir.r4.core-4.0.1-terminology" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/hl7\\.fhir\\.uv\\.extensions\\.r4-5\\.2\\.0/package/ValueSet-.*\\.xml" },
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/hl7\\.fhir\\.uv\\.extensions\\.r4-5\\.2\\.0/package/CodeSystem-.*\\.xml" }
+          ]
+        },
+        {
+          "id": "hl7.terminology.r4-6.3.0-legacy-validation",
+          "extend": [ "hl7.fhir.uv.extensions.r4-5.2.0-terminology" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/hl7\\.terminology\\.r4-6\\.3\\.0/package-legacy-validation/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "hl7.terminology.r4-6.3.0",
+          "extend": [ "hl7.terminology.r4-6.3.0-legacy-validation", "hl7.fhir.uv.extensions.r4-5.2.0-structures" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/hl7\\.terminology\\.r4-6\\.3\\.0/package/.*\\.xml" }
           ]
         },
         {
           "id": "KBV_schluesseltabellen_common",
-          "include": ["KBV_schluesseltabellen_sliced"],
           "match": [
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_ARZTNRFACHGRUPPE" , "version": "1.03" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BAR2_WBO"              , "version": "1.16" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT"     , "version": "1.01" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT", "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION", "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"               , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"               , "version": "1.06" },
+            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"      , "version": "1.02" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"       , "version": "1.00" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"    , "version": "1.02" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"        , "version": "1.01" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN" , "version": "1.01" },
             { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS", "version": "1.02" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_BAR2_ARZTNRFACHGRUPPE"   , "version": "1.03" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_BMP_DOSIEREINHEIT"       , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT"  , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_SEITENLOKALISATION"  , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP"                 , "version": "1.00" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP"                 , "version": "1.06" },
+            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART"        , "version": "1.02" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE"         , "version": "1.00" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PERSONENGRUPPE"      , "version": "1.02" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PKV_TARIFF"          , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN"   , "version": "1.01" },
             { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS"  , "version": "1.02" }
-          ]
-        },
-        {
-          "id": "DARREICHUNGSFORM_1_14",
-          "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM", "version": "1.14" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM"  , "version": "1.14" }
           ]
         },
         {
@@ -225,61 +278,29 @@
           ]
         },
         {
-          "id": "DMP_1_06",
-          "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP", "version": "1.06" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP"  , "version": "1.06" }
-          ]
-        },
-        {
-          "id": "FORMULAR_ART_1_02",
-          "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART", "version": "1.02" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART"  , "version": "1.02" }
-          ]
-        },
-        {
-          "id": "KBV-Schluesseltabellen-Q1/25",
-          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_14", "DMP_1_06", "FORMULAR_ART_1_02"],
-          "match": []
-        },
-        {
           "id": "KBV-Schluesseltabellen-Q2/25",
-          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_15", "DMP_1_06", "FORMULAR_ART_1_02"],
+          "include": ["KBV_schluesseltabellen_common", "DARREICHUNGSFORM_1_15" ],
           "match": []
-        },
-        {
-          "id": "KBV_FOR_CS_VS-1.1.0",
-          "match": [
-            { "url": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_.*", "version": "1.1.0" },
-            { "url": "https://fhir.kbv.de/ValueSet/KBV_VS_FOR_.*", "version": "1.1.0" }
-          ]
-        },
-        {
-          "id": "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0",
-          "match": [
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCode", "version": "2019-05-17T13:46:31"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeDE", "version": "2018-12-14T17:07:12"}
-          ]
         },
         {
           "id": "de.basisprofil.r4-1.3.2",
-          "include": ["hl7_fhir_r4_core_4_0_1", "KBV_FOR_CS_VS-1.1.0", "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0"],
+          "include": [
+            "hl7.terminology.r4-6.3.0-legacy-validation",
+            "hl7.fhir.r4.core-4.0.1-structures"
+          ],
           "match": [
             { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.3\\.2/package/.*" }
           ]
         },
         {
           "id": "kbv.ita.for-1.1.0",
-          "include": [
-            "KBV_schluesseltabellen_sliced",
-            "de.basisprofil.r4-1.3.2",
-            "error-codesystems"
-          ],
+          "include": [ "de.basisprofil.r4-1.3.2", "error-codesystems" ],
           "match": [
-            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_.*", "version": "1.1.0"},
-            { "url": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*", "version": "1.1.0"},
-            { "file": ".*/KBV.Basis-1.3.0/package/.*" }
+            { "url": "urn:oid:1.2.276.0.76.5.514"                           , "version": null},
+            { "url": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11"               , "version": null},
+            { "url": "urn:oid:1.2.276.0.76.5.492"                           , "version": null},
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.ita\\.for-1\\.1\\.0/package/.*\\.xml" },
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/KBV\\.Basis-1\\.3\\.0/package/.*\\.xml" }
           ]
         },
         {
@@ -290,51 +311,180 @@
           ]
         },
         {
-          "id": "de.ihe-d.terminology-3.0.0",
-          "include": ["hl7_fhir_r4_core_4_0_1", "de.basisprofil.r4-1.3.2&de.ihe-d.terminology-3.0.0"],
+          "id": "de.ihe-d.terminology-3.0.1",
           "match": [
-            { "url": "http://ihe-d.de/CodeSystems/AerztlicheFachrichtungen", "version": "2019-04-05T08:35:59" },
-            { "url": "http://ihe-d.de/CodeSystems/BetroffeneneinschaetzungVertraulichkeitsstufe", "version": "2021-07-06T21:17:27" },
-            { "url": "http://ihe-d.de/CodeSystems/DeutscheDokumentenformate", "version": "2018-12-14T17:07:12" },
-            { "url": "http://ihe-d.de/CodeSystems/DokumentenWarnhinweise", "version": "2021-07-06T21:19:41" },
-            { "url": "http://ihe-d.de/CodeSystems/FacharzttitelDerAerztekammern", "version": "2021-10-15T12:13:26" },
-            { "url": "http://ihe-d.de/CodeSystems/FallkontextBeiDokumentenerstellung", "version": "2021-07-06T21:19:41" },
-            { "url": "http://ihe-d.de/CodeSystems/GrundDerUebermittlung", "version": "2021-07-06T21:18:31" },
-            { "url": "http://ihe-d.de/CodeSystems/IHEXDSclassCode", "version": "2021-06-25T13:44:47" },
-            { "url": "http://ihe-d.de/CodeSystems/IHEXDStypeCode", "version": "2020-02-07T07:55:58" },
-            { "url": "http://ihe-d.de/CodeSystems/NichtPatientBezogeneGesundheitsversorgung", "version": "2018-07-13T16:21:25" },
-            { "url": "http://ihe-d.de/CodeSystems/NichtaerztlicheFachrichtungen", "version": "2021-11-14T15:59:46" },
-            { "url": "http://ihe-d.de/CodeSystems/PatientBezogenenGesundheitsversorgung", "version": "2018-07-13T16:21:42" },
-            { "url": "http://ihe-d.de/CodeSystems/PatientenbeziehungsrollenFuerAutoren", "version": "2021-06-25T13:21:07" },
-            { "url": "http://ihe-d.de/CodeSystems/ProzessrollenFuerAutoren", "version": "2021-06-25T13:21:07" },
-            { "url": "http://ihe-d.de/CodeSystems/QualifikationenNichtAerztlicherAutoren", "version": "2021-10-15T12:13:26" },
-            { "url": "http://ihe-d.de/CodeSystems/QualifikatorenZahnaerztlicherAutoren", "version": "2021-10-15T12:13:26" },
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorRole", "version": "2021-06-25T13:21:07"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSauthorSpeciality", "version": "2021-10-15T12:13:26"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSclassCode", "version": "2021-06-25T13:44:47"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDScodeList", "version": "2021-06-25T13:42:01"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSconfidentialityCode", "version": "2021-07-06T21:17:27"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDScontentTypeCode", "version": "2021-07-06T21:18:31"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSeventCodeList", "version": "2021-07-06T21:19:41"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSformatCodeINTL", "version": "2021-07-06T21:26:36"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCode", "version": "2021-07-06T21:23:52"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCodeOutsidePatientRelatedHealthcare", "version": "2018-07-13T16:21:25"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDShealthcareFacilityTypeCodePatientRelatedHealthcare", "version": "2018-07-13T16:21:42"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCodeDoctoral", "version": "2019-04-05T08:35:59"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDSpracticeSettingCodeNonDoctoral", "version": "2021-11-14T15:59:46"},
-            { "url": "http://ihe-d.de/ValueSets/IHEXDStypeCode", "version": "2020-02-07T07:55:58"}
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.ihe-d\\.terminology-3\\.0\\.1/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.basisprofil.r4-1.5.x",
+          "include": [ "hl7.terminology.r4-6.3.0" ],
+          "match": [
+            {"url":"http://fhir\\.de/CodeSystem/abdata/wg14","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/ask","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/bfarm/alpha-id","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/bfarm/atc","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/bfarm/icd-10-gm","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/bfarm/ops","version":null},
+            {"url":"http://fhir\\.de/CodeSystem/deuev/anlage-6-vorsatzworte","version":"2.30"},
+            {"url":"http://fhir\\.de/CodeSystem/deuev/anlage-7-namenszusaetze","version":"2.25"},
+            {"url":"http://fhir\\.de/CodeSystem/deuev/anlage-8-laenderkennzeichen","version":"8.00"},
+            {"url":"http://fhir\\.de/CodeSystem/ifa/pzn","version":null}
           ]
         },
         {
           "id": "de.basisprofil.r4-1.5.0",
-          "include": [ "hl7_fhir_r4_core_4_0_1", "KBV_FOR_CS_VS-1.1.0" ],
+          "include": [ "de.basisprofil.r4-1.5.x" ],
           "match": [
-            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.5\\.0/package/.*\\.xml" }
+            {"url":"http://fhir\\.de/CodeSystem/KontaktDiagnoseProzedur"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/Kontaktebene"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/WirkstofftypCS"                                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/administrative-gender-supplement"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/arge-ik/klassifikation"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/common-meta-tag-de"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dgkev/Aufnahmeanlass"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/diagnosis-role-supplement"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/Abrechnungsart"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/AufnahmegrundDritteStelle"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/AufnahmegrundErsteUndZweiteStelle"          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/AufnahmegrundVierteStelle"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/EntlassungsgrundDritteStelle"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/EntlassungsgrundErsteUndZweiteStelle"       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/Fachabteilungsschluessel"                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/dkgev/Fachabteilungsschluessel-erweitert"         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/gender-amtlich-de"                                ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/icd-10-gm-mehrfachcodierungs-kennzeichen"         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/identifier-type-de-basis"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/identifier-type-v2-supplement"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/kontaktart-de"                                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/marital-status-supplement"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/merkzeichen-de"                                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/observation-category-supplement"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/supplement-iso-3166"                              ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/versicherungsart-de-basis"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/CodeSystem/wahlleistungen-de"                                ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/AbrechnendeIK"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/Aufnahmegrund"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingASK"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingATC"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingAlphaID"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingAlphaIDSE"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingCAS"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingICD10GM"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingOPS"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/CodingPZN"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/Entlassungsgrund"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/ExtensionAbrechnungsDiagnoseProzedur"    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/ExtensionAbrechnungsart"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/GradDerBehinderung"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/ProzedurDokumentationsdatum"             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/Wahlleistung"                            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/WirkstofftypEX"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/address-de-basis"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/chargeitem-de-ebm"                       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/coverage-de-basis"                       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/coverage-de-gkv"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/coverage-de-sel"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/destatis/ags"                            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/dkgev/fachabteilungsschluessel301"       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gender-amtlich-de"                       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/besondere-personengruppe"            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/dmp-kennzeichen"                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/einlesedatum-karte"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/generation-egk"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/kostenerstattung"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/onlinepruefung-egk"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/ruhender-leistungsanspruch"          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/versichertenart"                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/version-vsdm"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/wop"                                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/gkv/zuzahlungsstatus"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/humanname-de-basis"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/humanname-namenszusatz"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/icd-10-gm-diagnosesicherheit"            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/icd-10-gm-mehrfachcodierungs-kennzeichen","version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-abrechnungsnummer"            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-aufnahmenummer"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-bsnr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-efn"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-iknr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-kvid-10"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-kzva"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-lanr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-lbnr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-pid"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-pkv"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-pseudo-kvid"                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-reisepassnummer"              ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-standortnummer"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-telematik-id"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-vknr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/identifier-zanr"                         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/informationrecipient"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/lebensphase"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/namingsystem-de-basis"                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/normgroesse"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/observation-de-ekg"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/observation-de-pflegegrad"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/observation-de-score-gcs"                ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/StructureDefinition/seitenlokalisation"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/AbrechnungsDiagnoseProzedur"                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/DiagnoseTyp"                                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/Diagnosesubtyp"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/EkgLeads"                                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/EncounterClassDE"                                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/EncounterStatusDe"                                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/UcumVitalsCommonDE"                                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/ValueSet-OPS-SNOMED-Source-Codes"                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Atemfrequenz-SNOMED-CT"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Herzfrequenz-SNOMED-CT"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Koerpergewicht-SNOMED-CT"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Koerpergroesse-SNOMED-CT"               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Koerpertemperatur-SNOMED-CT"            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE-Kopfumfang-SNOMED-CT"                   ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE_Body_Height_Loinc"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE_Body_Length_UCUM"                       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE_Body_Weight_Loinc"                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/VitalSignDE_Body_Weigth_UCUM"                       ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/WirkstofftypVS"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/abdata/wg14"                                        ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/arge-ik/klassifikation"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/ask"                                                ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/bfarm/alpha-id"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/bfarm/atc"                                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/bfarm/icd-10-gm"                                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/bfarm/ops"                                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/common-meta-tag-de"                                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dgkev/Aufnahmeanlass"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/Abrechnungsart"                               ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/AufnahmegrundDritteStelle"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/AufnahmegrundErsteUndZweiteStelle"            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/AufnahmegrundVierteStelle"                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/EntlassungsgrundDritteStelle"                 ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/EntlassungsgrundErsteUndZweiteStelle"         ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/Fachabteilungsschluessel"                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/dkgev/Fachabteilungsschluessel-erweitert"           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/gender-other-de"                                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/glasgow-coma-score-eye"                             ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/glasgow-coma-score-motor"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/glasgow-coma-score-verbal"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/icd-10-gm-mehrfachcodierungs-kennzeichen"           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/identifier-type-de-basis"                           ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/ifa/pzn"                                            ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/iso/bundeslaender"                                  ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/kontaktart-de"                                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/kontaktebene-de"                                    ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/lebensphase-de"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/merkzeichen-de"                                     ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/pflegegrad-de"                                      ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/versicherungsart-de-basis"                          ,"version":"1.5.0"},
+            {"url":"http://fhir\\.de/ValueSet/wahlleistungen-de"                                  ,"version":"1.5.0"},
+            {"url":"urn:iso:std:iso:3166-2:de"                                                    ,"version":"1.5.0"}
           ]
         },
         {
           "id": "de.gematik.fhir.directory-0.11.12",
-          "include": [ "de.basisprofil.r4-1.5.0", "de.ihe-d.terminology-3.0.0" ],
+          "include": [ "de.basisprofil.r4-1.5.0", "de.ihe-d.terminology-3.0.1" ],
           "match": [
             { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.fhir\\.directory-0\\.11\\.12/package/.*\\.xml" }
           ]
@@ -516,86 +666,452 @@
           "match": [
             { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.itv\\.evdga-1\\.1\\.1/package/.*\\.xml" }
           ]
+        },
+        {
+          "id": "de.basisprofil.r4-1.5.3",
+          "include": [ "de.basisprofil.r4-1.5.x" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.5\\.3/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "dvmd.kdl.r4-2025.0.0",
+          "include": [ "hl7.terminology.r4-6.3.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/dvmd\\.kdl\\.r4-2025\\.0\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.terminology-1.0.6",
+          "include": [ "dvmd.kdl.r4-2025.0.0", "hl7.terminology.r4-6.3.0" ],
+          "match": [
+            {"url": "urn:oid:1.3.6.1.4.1.12559.11.10.1.3.2.2.2"           , "version": null},
+            {"url": "urn:oid:2.16.840.1.113883.2.9.6.2.7"                 , "version": null},
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.terminology-1\\.0\\.6/package/.*\\.xml"}
+          ]
+        },
+        {
+          "id": "de.gematik.fhir.directory-0.11.25+0.13.1",
+          "match": [
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.492"                      ,"version":"2021-10-15T12:13:26"},
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.514"                      ,"version":"2021-10-15T12:13:26"},
+            {"url":"urn:oid:1\\.3\\.6\\.1\\.4\\.1\\.19376\\.3\\.276\\.1\\.5\\.11","version":"2021-10-15T12:13:26"},
+            {"url":"urn:oid:1\\.3\\.6\\.1\\.4\\.1\\.19376\\.3\\.276\\.1\\.5\\.4" ,"version":"2019-04-05T08:35:59"},
+            {"url":"urn:oid:1\\.3\\.6\\.1\\.4\\.1\\.19376\\.3\\.276\\.1\\.5\\.5" ,"version":"2021-11-14T15:59:46"}
+          ]
+        },
+        {
+          "id": "de.gematik.fhir.directory-0.13.1",
+          "include": [
+              "de.gematik.fhir.directory-0.11.25+0.13.1",
+              "de.basisprofil.r4-1.5.3",
+              "de.gematik.terminology-1.0.6",
+              "de.ihe-d.terminology-3.0.1"
+          ],
+          "match": [
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointDirectoryConnectionType"            ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointDirectoryPayloadType"               ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointVisibilityCS"                       ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/HealthcareServiceSpecialtyCS"               ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/HolderCS"                                   ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OpeningTimeQualifierCS"                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OrganizationProviderType"                   ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OrganizationVisibilityCS"                   ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/Origin"                                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyHealthcareSpecialtyCS"              ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyTypeCS"                             ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyTypeLDAPCS"                         ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PractitionerProfessionOID"                  ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/Region"                                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/VZDHealthCareServiceCharacteristicsCS"      ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/physicalFeatures"                           ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/CodingWithCodeAndSystem"           ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/EndpointDirectory"                 ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/EndpointVisibility"                ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/HealthcareServiceDirectory"        ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/HealthcareServiceDirectoryStrict"  ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/LocationDirectory"                 ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/LocationDirectoryStrict"           ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationDirectory"             ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationDirectoryStrict"       ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationVisibility"            ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OwnerTelematikIdEx"                ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PhysicalFeaturesAdditionalNoteEX"  ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerDirectory"             ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerDirectoryStrict"       ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerRoleDirectory"         ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerRoleDirectoryStrict"   ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ServiceCoverageArea"               ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ServiceCoveragePostalCode"         ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/SpecialOpeningTimesEX"             ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/endpoint-directory-Strict"         ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/holder-id-ex"                      ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ncpeh-country-ex"                  ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/results-filtered-ex"               ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/AddressStateVS"                               ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointConnectionTypeVS"                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointPayloadTypeVS"                        ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointVisibilityVS"                         ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/HealthcareServiceTypeVS"                      ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/HealthcareSpecialtyTypeVS"                    ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OpeningTimeQualifierVS"                       ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OrganizationVisibilityVS"                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OriginVS"                                     ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/PhysicalFeaturesHealthCareServiceVS"          ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/healthcare-service-category-codes"            ,"version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/healthcareservice-technical-characteristic-vs","version":"0.13.1"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/ncpeh-healthcare-service-speciality-cs"       ,"version":"0.13.1"},
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.493"                                                    ,"version":"0.13.1"},
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.494"                                                    ,"version":"0.13.1"}
+          ]
+        },
+        {
+          "id": "de.gematik.ti-1.1.0",
+          "include": [
+            "de.basisprofil.r4-1.5.3",
+            "de.gematik.terminology-1.0.6"
+          ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.ti-1\\.1\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.epa-1.1.5",
+          "include": [ "de.gematik.ti-1.1.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa-1\\.1\\.5/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.epa.medication-1.1.5",
+          "include":  [
+            "de.gematik.fhir.directory-0.13.1",
+            "de.gematik.ti-1.1.0",
+            "de.gematik.epa-1.1.5"
+          ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa\\.medication-1\\.1\\.5/package/.*\\.xml"}
+          ]
+        },
+        {
+          "id": "de.gematik.erezept.eu-1.0.0",
+          "include": [ "de.gematik.epa.medication-1.1.5" ],
+          "match": [
+            {"file": ".*profiles/de.gematik.erezept.eu-1.0.0.*" }
+          ]
+
+        },
+        {
+          "id": "de.basisprofil.r4-1.5.2",
+          "include": [ "de.basisprofil.r4-1.5.x"],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.basisprofil\\.r4-1\\.5\\.2/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.fhir.directory-0.11.25",
+          "include": [
+            "de.gematik.fhir.directory-0.11.25+0.13.1",
+            "de.basisprofil.r4-1.5.2",
+            "de.ihe-d.terminology-3.0.1"
+          ],
+          "match": [
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointDirectoryConnectionType"             ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointDirectoryPayloadType"                ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/EndpointVisibilityCS"                        ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/HealthcareServiceSpecialtyCS"                ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/HolderCS"                                    ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OpeningTimeQualifierCS"                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OrganizationProfessionOID"                   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OrganizationProviderType"                    ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/OrganizationVisibilityCS"                    ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/Origin"                                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyHealthcareSpecialtyCS"               ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyTypeCS"                              ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PharmacyTypeLDAPCS"                          ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/PractitionerProfessionOID"                   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/Region"                                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/VZDHealthCareServiceCharacteristicsCS"       ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/CodeSystem/physicalFeatures"                            ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/CodingWithCodeAndSystem"            ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/EndpointDirectory"                  ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/EndpointVisibility"                 ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/HealthcareServiceDirectory"         ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/HealthcareServiceDirectoryStrict"   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/LocationDirectory"                  ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/LocationDirectoryStrict"            ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationDirectory"              ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationDirectoryStrict"        ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/OrganizationVisibility"             ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PhysicalFeaturesAdditionalNoteEX"   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerDirectory"              ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerDirectoryStrict"        ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerRoleDirectory"          ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/PractitionerRoleDirectoryStrict"    ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ServiceCoverageArea"                ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ServiceCoveragePostalCode"          ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/SpecialOpeningTimesEX"              ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/endpoint-directory-Strict"          ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/ncpeh-country-ex"                   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/StructureDefinition/results-filtered-ex"                ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/AddressStateVS"                                ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointConnectionTypeVS"                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointPayloadTypeVS"                         ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/EndpointVisibilityVS"                          ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/HealthcareServiceTypeVS"                       ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/HealthcareSpecialtyTypeVS"                     ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OpeningTimeQualifierVS"                        ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OrganizationProfessionOIDTypeVS"               ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OrganizationTypeVS"                            ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OrganizationVisibilityVS"                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/OriginVS"                                      ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/PhysicalFeaturesHealthCareServiceVS"           ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/PractitionerQualificationVS"                   ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/healthcare-service-category-codes"             ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/healthcareservice-technical-characteristic-vs" ,"version":"0.11.25"},
+            {"url":"https://gematik\\.de/fhir/directory/ValueSet/ncpeh-healthcare-service-speciality-cs"        ,"version":"0.11.25"},
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.114"                                                     ,"version":"1.18"   },
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.493"                                                     ,"version":"0.11.25"},
+            {"url":"urn:oid:1\\.2\\.276\\.0\\.76\\.5\\.494"                                                     ,"version":"0.11.25"}
+          ]
+        },
+        {
+          "id": "de.gematik.terminology-1.0.5-4",
+          "include": [ "hl7.terminology.r4-6.3.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.terminology-1\\.0\\.5-4/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.ti-1.0.1",
+          "include": [ "hl7.terminology.r4-6.3.0" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.ti-1\\.0\\.1/package/.*\\.xml"}
+          ]
+        },
+        {
+          "id": "de.gematik.epa-1.0.6-2",
+          "include": [
+            "de.gematik.terminology-1.0.5-4",
+            "de.basisprofil.r4-1.5.2"
+          ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa-1\\.0\\.6-2/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.epa.medication-1.0.6-2",
+          "include": [
+            "de.gematik.fhir.directory-0.11.25",
+            "de.gematik.ti-1.0.1",
+            "de.gematik.epa-1.0.6-2"
+          ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.epa\\.medication-1\\.0\\.6-2/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.erezept-workflow.r4-1.5",
+          "include": [ "de.gematik.epa.medication-1.0.6-2" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.erezept-workflow\\.r4-1\\.5\\.2/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.gematik.erezept-patientenrechnung.r4-1.1",
+          "include": [ "de.basisprofil.r4-1.5.2" ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.gematik\\.erezept-patientenrechnung\\.r4-1\\.1\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "kbv.basis-1.7",
+          "include": [ "de.basisprofil.r4-1.5.2", "de.ihe-d.terminology-3.0.1" ],
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.basis-1\\.7\\.0/package/.*\\.xml"}
+          ]
+        },
+        {
+          "id": "kbv.ita.for-1.2",
+          "include": [ "kbv.basis-1.7" ],
+          "map-versions": true,
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.ita\\.for-1\\.2\\.0/package/.*\\.xml"}
+          ]
+        },
+        {
+          "id": "kbv.ita.erp-1.3",
+          "include": [ "kbv.ita.for-1.2" ],
+          "map-versions": true,
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.ita\\.erp-1\\.3\\.2/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "kbv.itv.evdga-1.2",
+          "include": [ "kbv.ita.for-1.2" ],
+          "map-versions": true,
+          "match": [
+            { "file": "@ERP_FHIR_RESOURCE_DIR@profiles/kbv\\.itv\\.evdga-1\\.2\\.1/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenbasis-1.5",
+          "include": [ "de.basisprofil.r4-1.5.2" ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.abda\\.erezeptabgabedatenbasis-1\\.5\\.0/package/.*\\.xml" }
+          ]
+        },
+        {
+          "id": "de.abda.erezeptabgabedatenpkv-1.4",
+          "include": [ "de.abda.erezeptabgabedatenbasis-1.5" ],
+          "match": [
+            {"file": "@ERP_FHIR_RESOURCE_DIR@profiles/de\\.abda\\.erezeptabgabedatenpkv-1\\.4\\.0/package/.*\\.xml" }
+          ]
+        }
+      ],
+      "version-mapping": [
+        {
+          "urlRegex": "https://gematik\\.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_.*",
+          "versionRegex": "1\\.0",
+          "realVersion": "1.0.0",
+          "renderVersion": "1.0"
+        },
+        {
+          "urlRegex": "https://gematik\\.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*",
+          "versionRegex": "1\\.5",
+          "realVersion": "1.5.2",
+          "renderVersion": "1.5"
+        },
+        {
+          "urlRegex": "https://gematik\\.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_.*",
+          "versionRegex": "1\\.1",
+          "realVersion": "1.1.0",
+          "renderVersion": "1.1"
+        },
+        {
+          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*",
+          "versionRegex": "1\\.2",
+          "realVersion": "1.2.0",
+          "renderVersion": "1.2"
+        },
+        {
+          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_.*",
+          "versionRegex": "1\\.3",
+          "realVersion": "1.3.2",
+          "renderVersion": "1.3"
+        },
+        {
+          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_.*",
+          "versionRegex": "1\\.2",
+          "realVersion": "1.2.0",
+          "renderVersion": "1.2"
+        },
+        {
+          "urlRegex": "http://fhir\\.abda\\.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-.*",
+          "versionRegex": "1\\.4",
+          "realVersion": "1.4.0",
+          "renderVersion": "1.4"
+        }
+      ],
+      "schluesseltabellen": [
+        {
+          "id": "2025-Q2",
+          "groups": [
+            "KBV-Schluesseltabellen-Q2/25"
+          ]
         }
       ],
       "resource-views": [
         {
           "id": "2024-10-01",
-          "env-name": "ERP_2024_10_01",
           "valid-until": "2025-04-15",
           "groups": [
             "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q2/25",
             "de.gematik.erezept-workflow.r4-1.2",
             "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
         {
           "id": "2024-11-01",
-          "env-name": "ERP_2024_11_01",
           "valid-from": "2024-11-01",
           "valid-until": "2025-04-15",
           "groups": [
             "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q2/25",
             "de.gematik.erezept-workflow.r4-1.3",
             "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
         {
-          "id": "KBV_2023-07-01_2025-Q1",
-          "env-name": "ERP_KBV_2023_07_01_2025_Q1",
+          "id": "KBV_2023-07-01",
           "valid-from": "2025-01-01",
-          "valid-until": "2025-03-31",
           "groups": [
-            "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q1/25"
-          ]
-        },
-        {
-          "id": "KBV_2023-07-01_2025-Q2",
-          "env-name": "ERP_KBV_2023_07_01_2025_Q2",
-          "valid-from": "2025-04-01",
-          "groups": [
-            "kbv.ita.erp-1.1.0",
-            "KBV-Schluesseltabellen-Q2/25"
+            "kbv.ita.erp-1.1.0"
           ]
         },
         {
           "id": "GEM_2025-01-15",
-          "env-name": "ERP_GEM_2025_01_15",
           "valid-from": "2025-01-15",
           "groups": [
-            "de.gematik.erezept-workflow.r4-1.4",
-            "KBV-Schluesseltabellen-Q2/25"
+            "de.gematik.erezept-workflow.r4-1.4"
           ]
         },
         {
           "id": "DAV_2023_07_01",
-          "env-name": "ERP_DAV_2023_07_01",
           "valid-until": "2025-04-15",
           "groups": [
-            "de.abda.erezeptabgabedatenpkv-1.2",
-            "KBV-Schluesseltabellen-Q2/25"
+            "de.abda.erezeptabgabedatenpkv-1.2"
           ]
         },
         {
           "id": "DAV_2025_01_15",
-          "env-name": "ERP_DAV_2025_01_15",
           "valid-from": "2025-01-15",
           "groups": [
             "de.abda.erezeptabgabedatenpkv-1.3",
-            "KBV-Schluesseltabellen-Q2/25",
             "de.gematik.erezept-patientenrechnung.r4-1.0"
           ]
         },
         {
           "id": "EVDGA_2025_01_15",
-          "env-name": "ERP_EVDGA_2025_01_15",
           "valid-from": "2025-01-15",
           "groups": [
-            "kbv.itv.evdga-1.1.1",
-            "KBV-Schluesseltabellen-Q2/25"
+            "kbv.itv.evdga-1.1.1"
+          ]
+        },
+        {
+          "id": "EU_2025_10_01",
+          "valid-from": "2025-10-01",
+          "groups": [
+            "de.gematik.erezept.eu-1.0.0"
+          ]
+        },
+        {
+          "id": "GEM_WF_1_5_0",
+          "valid-from": "2025-10-01",
+          "groups": [
+            "de.gematik.erezept-patientenrechnung.r4-1.1",
+            "de.gematik.erezept-workflow.r4-1.5"
+          ]
+        },
+        {
+          "id": "KBV_1_3",
+          "valid-from": "2025-10-01",
+          "groups": [
+            "kbv.ita.erp-1.3"
+          ]
+        },
+        {
+          "id": "EVDGA_1_2",
+          "valid-from": "2025-10-01",
+          "groups": [
+            "kbv.itv.evdga-1.2"
+          ]
+        },
+        {
+          "id": "DAV_1_4",
+          "valid-from": "2025-10-01",
+          "groups": [
+            "de.abda.erezeptabgabedatenpkv-1.4"
           ]
         }
       ]
@@ -657,6 +1173,10 @@
     },
     "httpClientConnectTimeoutSeconds": "60",
     "httpClientResolveTimeoutMilliseconds": "2000",
+    "feature": {
+      "eu": "false",
+      "enableCheckAusschlussKostentraeger": "true"
+    },
     "report": {
       "leips": {
         "enable": "false",

@@ -118,7 +118,8 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
 
     A_22215.start("Check consent");
     ErpExpect(newChargeItem.subjectKvnr(), ::HttpStatus::BadRequest, "KVNR is missing");
-    const auto consent = databaseHandle->retrieveConsent(newChargeItem.subjectKvnr().value());
+    const auto consent =
+        databaseHandle->retrieveConsent(newChargeItem.subjectKvnr().value(), model::ConsentType::CHARGCONS);
     ErpExpect(
         consent.has_value(),
         HttpStatus::Forbidden,

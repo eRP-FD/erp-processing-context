@@ -34,9 +34,9 @@ public:
     [[nodiscard]] std::optional<UnspecifiedResource> address_line(size_t idx) const;
     [[nodiscard]] model::UnspecifiedResource address() const;
 
-    [[nodiscard]] std::optional<std::string_view> identifierAssignerDisplay() const;
-    [[nodiscard]] std::optional<model::Reference> identifierAssigner() const;
-    [[nodiscard]] bool hasIdentifier() const;
+    [[nodiscard]] std::optional<std::string_view> identifierTypeCodingCode() const;
+    [[nodiscard]] size_t identifierSize() const;
+    [[nodiscard]] std::optional<std::string_view> identifierSystem(size_t idx) const;
 
 private:
     friend Resource<Patient>;

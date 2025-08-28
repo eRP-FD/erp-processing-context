@@ -8,16 +8,18 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/model/ErxReceipt.hxx"
-#include "shared/model/Binary.hxx"
-#include "shared/model/MedicationDispense.hxx"
-#include "shared/model/MedicationDispenseBundle.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/eu/EuAccessCode.hxx"
+#include "erp/model/eu/EuAccessPermission.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/database/DatabaseModel.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
 #include "shared/model/AuditData.hxx"
+#include "shared/model/Binary.hxx"
+#include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -141,6 +143,8 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
             doctor_identity,
             pharmacy_identity,
             last_status_updated,
+            eu_redeemable_patient,
+            eu_redeemable,
             COUNT
         };
     };
@@ -354,6 +358,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
 TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cognitive-complexity)
 {
     static constexpr std::string_view agentName{"Max Mustermann"};
+    const model::CountryCode countryCode{"FR"};
 
     if (!usePostgres())
     {
@@ -377,7 +382,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
     };
     const model::Kvnr kvnr{std::string{InsurantA}};
     model::AuditData auditData{model::AuditEventId::GET_Task,
-                               model::AuditMetaData{agentName, InsurantA},
+                               model::AuditMetaData{agentName, InsurantA, countryCode.toString()},
                                model::AuditEvent::Action::read,
                                model::AuditEvent::AgentType::human,
                                kvnr,
@@ -417,7 +422,56 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
                         model::AuditMetaData::fromJsonNoValidation(getDBCodec().decode(encryptedMetaData, key)));
     EXPECT_EQ(decryptedMetaData->agentWho(), InsurantA);
     EXPECT_EQ(decryptedMetaData->agentName(), agentName);
+    EXPECT_EQ(decryptedMetaData->countryCode(), countryCode.toString());
     //  8: blob_id integer NOT NULL
     //     not encrypted
     A_19688.finish();
+}
+
+TEST_F(DatabaseEncryptionTest, TableEuAccessPermission)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    struct col {// no enum class to allow implicit cast to int
+        enum index
+        {
+            kvnr_hashed,
+            country_code,
+            access_code,
+            blob_id,
+            salt,
+            expires
+        };
+    };
+
+    model::Kvnr kvnr{InsurantA};
+    auto kvnrHashed = getKeyDerivation().hashKvnr(kvnr);
+    model::EuAccessPermission euAccessPermission{model::EuAccessCode{SafeString{"abcdef"}}, model::CountryCode{"FR"}};
+
+    auto& db = database();
+    db.createEuAccessPermission(kvnr, euAccessPermission);
+    db.commitTransaction();
+
+    auto txn = createTransaction();
+    // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
+    auto row = txn.exec("SELECT * FROM erp.eu_access_permission WHERE kvnr_hashed = $1", {kvnrHashed.binarystring()}).one_row();
+    txn.commit();
+    auto expectedCols = magic_enum::enum_count<col::index>();
+    ASSERT_EQ(row.size(), expectedCols) << "Expected table `erp.auditevent` to have " << expectedCols << " columns.";
+    auto blobId = gsl::narrow<BlobId>(row[col::blob_id].as<int32_t>());
+    db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
+    const auto& key = getKeyDerivation().medicationDispenseKey(kvnrHashed, blobId, salt);
+
+    // 1. kvnr_hashed
+    EXPECT_EQ(db_model::EncryptedBlob{row[col::kvnr_hashed].as<db_model::postgres_bytea>()}, kvnrHashed);
+    // 2. country_code not encrypted
+    // 3. access_code
+    db_model::EncryptedBlob encryptedAccessCode{row[col::access_code].as<db_model::postgres_bytea>()};
+    auto accessCode = getDBCodec().decode(encryptedAccessCode, key);
+    EXPECT_STREQ(accessCode.c_str(), euAccessPermission.getAccessCode().toString().c_str());
+    // 4. blob_id
+    // 5. salt
+    // 6. expires not encrypted
 }

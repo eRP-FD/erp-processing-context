@@ -168,6 +168,11 @@ public:
             overrideExpectedDavVersion = value;
             return std::move(*this);
         }
+        RequestArguments&& withExpectedBdeUseCase(bde::UseCase useCase)
+        {
+            expectedBdeUseCase = useCase;
+            return std::move(*this);
+        }
 
         std::string serializeTarget() const
         {
@@ -209,9 +214,12 @@ public:
         std::string overrideExpectedPrescriptionId;
         std::string expectedActivationCode162 = "XXX";
         std::string overrideExpectedWorkflowVersion;
+        std::string overrideExpectedEuWorkflowVersion;
         std::string overrideExpectedPatientenrechnungVersion;
         std::string overrideExpectedKbvVersion;
         std::string overrideExpectedDavVersion;
+
+        std::optional<bde::UseCase> expectedBdeUseCase;
 
         RequestArguments(const RequestArguments&) = default;
         RequestArguments(RequestArguments&&) = default;
@@ -224,6 +232,7 @@ public:
     RequestArguments mDispenseTaskRequestArgs;
     RequestArguments mCloseTaskRequestArgs;
     RequestArguments mChargeItemRequestArgs;
+    RequestArguments mConsentItemRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
@@ -350,17 +359,20 @@ public:
     std::optional<model::Device> deviceGet(const ContentMimeType& acceptContentType);
 
     std::optional<model::Consent> consentPost(
+        model::ConsentType consentCategory,
         const std::string& kvnr,
         const model::Timestamp& dateTime,
         const HttpStatus expectedStatus = HttpStatus::Created,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
-    std::optional<model::Consent> consentGet(
+    std::vector<model::Consent> consentGet(
         const std::string& kvnr,
+        const std::optional<model::ConsentType>& categoryFilter = std::nullopt,
         const HttpStatus expectedStatus = HttpStatus::OK,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
 
     void consentDelete(
+        model::ConsentType consentCategory,
         const std::string& kvnr,
         const HttpStatus expectedStatus = HttpStatus::NoContent,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {});
@@ -521,6 +533,9 @@ public:
     std::string kbvBundleXml(ResourceTemplates::KbvBundleOptions opts);
     std::string kbvBundleMvoXml(ResourceTemplates::KbvBundleMvoOptions opts);
 
+    // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
+    bool runsInCloudEnv() const;
+    bool runsInErpTest() const;
 
 protected:
     virtual std::string dispenseOrCloseTaskBody(model::ProfileType profileType, const std::string& kvnr,
@@ -539,9 +554,6 @@ protected:
 
     static std::string patchVersionsInBundle(const std::string& bundle);
 
-    // some tests must know if they run with proxy in between, because the proxy modifies the Http Response.
-    bool runsInCloudEnv() const;
-    bool runsInErpTest() const;
     ResourceTemplates::Versions::GEM_ERP serverGematikProfileVersion() const;
 
 private:
@@ -646,14 +658,16 @@ private:
 
     void consentPostInternal(
         std::optional<model::Consent>& consent,
+        model::ConsentType consentCategory,
         const std::string& kvnr,
         const model::Timestamp& dateTime,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
     void consentGetInternal(
-        std::optional<model::Consent>& consent,
+        std::vector<model::Consent>& consent,
         const std::string& kvnr,
+        const std::optional<model::ConsentType>& categoryFilter,
         const HttpStatus expectedStatus,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode);
 
@@ -723,8 +737,8 @@ private:
     std::string toExpectedClientId(const ErpWorkflowTestBase::RequestArguments& args) const;
     std::string toExpectedLeips(const RequestArguments& args) const;
 
-    /// @ret val: {workflow, patientenrechnung, kbv, dav}
-    std::tuple<std::string, std::string, std::string, std::string>
+    /// @ret val: {workflow, patientenrechnung, kbv, dav, euWorkflow}
+    std::tuple<std::string, std::string, std::string, std::string, std::string>
     toExpectedProfileVersions(const RequestArguments& args) const;
 
 public:

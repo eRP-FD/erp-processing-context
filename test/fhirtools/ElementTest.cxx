@@ -8,9 +8,10 @@
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -24,62 +25,62 @@ using namespace std::string_literals;
 class ElementTest : public testing::Test
 {
 public:
-    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
-    const FhirStructureRepository& repo = *mRepo;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
+    const FhirStructureRepositoryView& repo = *mRepo;
 };
 
 class ElementTaskTest : public testing::Test
 {
 public:
-    std::shared_ptr<const fhirtools::FhirStructureRepository> mRepo = DefaultFhirStructureRepository::getWithTest();
-    const FhirStructureRepository& repo = *mRepo;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
+    const FhirStructureRepositoryView& repo = *mRepo;
 };
 
 TEST_F(ElementTest, TypeDetection)
 {
     const auto* const testStructure = repo.findTypeById("Test");
     ASSERT_TRUE(testStructure);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test"), Element::Type::Structured);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.string"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.multiString"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.num"), Element::Type::Integer);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.multiNum"), Element::Type::Integer);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.dec"), Element::Type::Decimal);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.multiDec"), Element::Type::Decimal);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.boolean"), Element::Type::Boolean);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.multibool"), Element::Type::Boolean);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.intAsString"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.decimalAsString"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.boolAsString"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.date"), Element::Type::Date);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.dateTime"), Element::Type::DateTime);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.time"), Element::Type::Time);
-    EXPECT_EQ(Element::GetElementType(&repo, testStructure, "Test.quantity"), Element::Type::Quantity);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.string"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.num"), Element::Type::Integer);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiNum"), Element::Type::Integer);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.dec"), Element::Type::Decimal);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiDec"), Element::Type::Decimal);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.boolean"), Element::Type::Boolean);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multibool"), Element::Type::Boolean);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.intAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.decimalAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.boolAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.date"), Element::Type::Date);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.dateTime"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.time"), Element::Type::Time);
+    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.quantity"), Element::Type::Quantity);
 }
 
 TEST_F(ElementTaskTest, TypeDetectionTask)
 {
     const auto* const hl7task = repo.findTypeById("Task");
     ASSERT_TRUE(hl7task);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task"), Element::Type::Structured);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.id"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.meta"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.id"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.meta"), Element::Type::Structured);
     //    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.meta.id"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.language"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.text"), Element::Type::Structured);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.contained"), Element::Type::Structured);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.extension"), Element::Type::Structured);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.language"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.text"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.contained"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.extension"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
 
     const auto* hl7Meta = repo.findTypeById("Meta");
     ASSERT_TRUE(hl7Meta);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7Meta, "Meta.id"), Element::Type::String);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7Meta, "Meta.lastUpdated"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(&repo, hl7Meta, "Meta.id"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(&repo, hl7Meta, "Meta.lastUpdated"), Element::Type::DateTime);
 
     const auto* hl7instant = repo.findTypeById("instant");
     ASSERT_TRUE(hl7instant);
-    EXPECT_EQ(Element::GetElementType(&repo, hl7instant, "instant.value"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(&repo, hl7instant, "instant.value"), Element::Type::DateTime);
 }
 
 
@@ -915,7 +916,7 @@ protected:
                 ResourceManager::getAbsoluteFilename("test/fhir-path/profiles/mini_parameters.xml"),
             },
             resolver);
-        view = std::make_shared<fhirtools::FhirResourceViewGroupSet>(
+        view = fhirtools::FhirResourceViewGroupSet::create(
             miniFhirAndParameters, resolver.findGroupById(miniFhirAndParameters), &backend);
     }
 
@@ -930,7 +931,7 @@ protected:
         [&] {
             auto expr = fhirtools::FhirPathParser::parse(view.get(), fhirPath);
             ASSERT_NE(expr, nullptr) << "compile failure: " << fhirPath;
-            const auto collection = expr->eval({element});
+            const auto collection = expr->eval(EvaluationContext{element}).collection;
             ASSERT_EQ(collection.size(), 1) << fhirPath << " in " << elementAsJson();
             result = collection.single();
         }();
@@ -939,7 +940,7 @@ protected:
 
     ResourceManager& resourceManager = ResourceManager::instance();
     FhirStructureRepositoryBackend backend;
-    std::shared_ptr<const fhirtools::FhirStructureRepository> view;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> view;
 
     friend void PrintTo(const Element& element, std::ostream* out)
     {

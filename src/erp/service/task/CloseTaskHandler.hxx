@@ -12,13 +12,6 @@
 #include "shared/util/Configuration.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
 
-namespace fhirtools
-{
-class Collection;
-}
-
-class ErpElement;
-
 class CloseTaskHandler
     : public MedicationDispenseHandlerBase
 {

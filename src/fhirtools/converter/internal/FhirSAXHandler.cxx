@@ -6,17 +6,17 @@
  */
 
 #include "FhirSAXHandler.hxx"
-
-#include "shared/util/Expect.hxx"
-#include "fhirtools/util/Gsl.hxx"
-#include "shared/util/TLog.hxx"
-#include "fhirtools/util/XmlMemory.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Constants.hxx"
+#include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/XmlMemory.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <boost/algorithm/string.hpp>
-#include <iostream>
 #include <libxml/xmlstring.h>
+#include <iostream>
 #include <utility>
 
 
@@ -25,7 +25,7 @@ using namespace std::string_view_literals;
 
 using fhirtools::FhirElement;
 using fhirtools::FhirStructureDefinition;
-using fhirtools::FhirStructureRepository;
+using fhirtools::FhirStructureRepositoryView;
 
 namespace
 {
@@ -72,9 +72,8 @@ public:
 
     }
 
-    void setResourceType(const FhirStructureRepository& repo,
-                         FhirSaxHandler& parent,
-                        const std::string_view& resourceTypeName);
+    void setResourceType(const FhirStructureRepositoryView& repo, FhirSaxHandler& parent,
+                         const std::string_view& resourceTypeName);
 
     const FhirStructureDefinition& type() const { return *mType; }
     std::shared_ptr<const FhirElement> element() const { return mElement; }
@@ -97,9 +96,8 @@ private:
 
 /// resources are polymorphic. This function is called, when the actual type is known
 /// and changes mType and mElement apropriately. It also adds the `resourceType` json field.
-void FhirSaxHandler::Context::setResourceType(const FhirStructureRepository& repo,
-                                     FhirSaxHandler& parent,
-                                     const std::string_view& resourceTypeName)
+void FhirSaxHandler::Context::setResourceType(const FhirStructureRepositoryView& repo, FhirSaxHandler& parent,
+                                              const std::string_view& resourceTypeName)
 {
     Expect3(value.IsObject(), "top item must be Object.", std::logic_error);
     const auto* resourceType = repo.findTypeById(std::string{resourceTypeName});
@@ -113,16 +111,16 @@ void FhirSaxHandler::Context::setResourceType(const FhirStructureRepository& rep
 }
 
 
-FhirSaxHandler::FhirSaxHandler(const FhirStructureRepository& repo)
+FhirSaxHandler::FhirSaxHandler(const FhirStructureRepositoryView& repo)
     : mStructureRepo(repo)
 {
 }
 
 FhirSaxHandler::~FhirSaxHandler() = default;
 
-model::NumberAsStringParserDocument FhirSaxHandler::parseXMLintoJSON(const FhirStructureRepository& repo,
-                                                     const std::string_view& xmlDocument,
-                                                     XmlValidatorContext* schemaValidationContext)
+model::NumberAsStringParserDocument FhirSaxHandler::parseXMLintoJSON(const FhirStructureRepositoryView& repo,
+                                                                     const std::string_view& xmlDocument,
+                                                                     XmlValidatorContext* schemaValidationContext)
 {
     return FhirSaxHandler{repo}.parseXMLintoJSONInternal(xmlDocument, schemaValidationContext);
 }
@@ -166,7 +164,7 @@ void FhirSaxHandler::startElement(const xmlChar* localname, const xmlChar* prefi
 
 void FhirSaxHandler::startFHIRElement(const XmlStringView& localname, const AttributeList& attributes)
 {
-    using namespace xmlHelperLiterals;
+    using namespace xml_string_literal;
     TVLOG(3) << "startElement: " << std::string_view{localname};
     if (mStack.empty())
     {
@@ -305,7 +303,7 @@ void FhirSaxHandler::pushObject(const std::string_view& name, const AttributeLis
                       "Field on " + getPath() + " may not be represented as attribute: "s.append(attribute.localname()));
             ErpExpect(fieldType.kind() == FhirStructureDefinition::Kind::primitiveType || fieldType.isSystemType(), HttpStatus::BadRequest,
                       "Non-primitive type for attibute " + getPath().append(attribute.localname()) + ": "s.append(fieldElement->typeId()));
-            auto systemType = systemTypeFor(fieldType);
+            const auto& systemType = systemTypeFor(fieldType);
             switch (systemType.kind())
             {
                 using K = FhirStructureDefinition::Kind;
@@ -655,8 +653,7 @@ void FhirSaxHandler::startXHTMLElement(const XmlStringView localname,
         xmlNsPtr xmlNs = nullptr;
         if (auto prefix = attr.prefix())
         {
-            xmlNs = xmlSearchNs(mCurrentXHTMLDoc.get(), mCurrentXHTMLNode,
-                                XmlStringView{prefix->data(), prefix->size()}.xs_str());
+            xmlNs = xmlSearchNs(mCurrentXHTMLDoc.get(), mCurrentXHTMLNode, prefix->xs_str());
         }
         if (xmlNs)
         {

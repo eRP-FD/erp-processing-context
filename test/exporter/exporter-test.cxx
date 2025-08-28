@@ -7,6 +7,7 @@
 
 #include "shared/fhir/Fhir.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/CrashHandler.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/GLogConfiguration.hxx"
 
@@ -15,6 +16,7 @@
 
 int main(int argc, char** argv)
 {
+    CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE});
     if (!Environment::get("ERP_VLOG_MAX_VALUE"))
     {
         Environment::set("ERP_VLOG_MAX_VALUE", "1");

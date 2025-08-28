@@ -6,7 +6,7 @@
 #include "fhirtools/validator/internal/ReferenceFinder.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Element.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 
@@ -147,7 +147,7 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
     resourcePets.merge(profilesFromResource(element, elementFullPath.view()));
     if (resourcePets.empty())
     {
-        resourcePets.emplace(resourceDef);
+        resourcePets.emplace(*resourceDef);
     }
     auto resourceHandling = getResourceHandling(elementType);
     const bool isBundle = resourceType == "Bundle";
@@ -180,19 +180,19 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
 }
 
 
-std::set<ProfiledElementTypeInfo> ReferenceFinder::subProfiledElementTypes(const FhirStructureRepository& repo,
+std::set<ProfiledElementTypeInfo> ReferenceFinder::subProfiledElementTypes(const FhirStructureRepositoryView& repoView,
                                                                            std::string_view subFieldName,
                                                                            std::string_view subFullPathBase)
 {
     std::set<ProfiledElementTypeInfo> result;
     for (const auto& pet : mProfiledElementTypes)
     {
-        const auto& petSubDefs = pet.subDefinitions(repo, subFieldName);
+        const auto& petSubDefs = pet.subDefinitions(repoView, subFieldName);
         result.insert(petSubDefs.begin(), petSubDefs.end());
         const auto& petSubField = pet.subField(subFieldName);
         if (petSubField)
         {
-            addProfiles(repo, petSubField->element()->profiles(), std::string{subFullPathBase}, pet.profile());
+            addProfiles(repoView, petSubField->element()->profiles(), std::string{subFullPathBase}, pet.profile());
         }
     }
     return result;
@@ -205,7 +205,7 @@ fhirtools::ReferenceFinder::sliceProfiledElementTypes(const fhirtools::Element& 
     std::set<ProfiledElementTypeInfo> result;
     const auto& fhirElement = profiledElementTypeInfo.element();
     const auto& slicing = fhirElement->slicing();
-    if (! slicing.has_value())
+    if (slicing == nullptr)
     {
         return {};
     }
@@ -217,7 +217,7 @@ fhirtools::ReferenceFinder::sliceProfiledElementTypes(const fhirtools::Element& 
         {
             static_assert(std::is_reference_v<decltype(slice.profile())>,
                           "slice.profile() must return reference to allow taking the address");
-            result.emplace(&slice.profile());
+            result.emplace(slice.profile());
         }
     }
     return result;
@@ -241,7 +241,7 @@ std::set<ProfiledElementTypeInfo> fhirtools::ReferenceFinder::profilesFromResour
         }
         mResult.validationResults.add(Severity::debug, "added profile: "s.append(profileUrl),
                                       std::string{elementFullPath}, nullptr);
-        result.emplace(profile);
+        result.emplace(*profile);
     }
     return result;
 }
@@ -329,7 +329,7 @@ ReferenceFinder::ResourceHandling ReferenceFinder::getResourceHandling(ElementTy
     return elementType == ElementType::containedResource ? contained : other;
 }
 
-ReferenceFinder::ElementType ReferenceFinder::getElementType(const FhirStructureRepository& repo,
+ReferenceFinder::ElementType ReferenceFinder::getElementType(const FhirStructureRepositoryView& repo,
                                                              const ProfiledElementTypeInfo& elementInfo)
 {
     using namespace std::string_view_literals;
@@ -381,7 +381,7 @@ ReferenceContext::AnchorType ReferenceFinder::referenceRequirement(ReferenceFind
     Fail2("invalid value for elementType: " + std::to_string(intmax_t(elementType)), std::logic_error);
 }
 
-const FhirStructureDefinition* ReferenceFinder::getTypeFromReferenceElement(const FhirStructureRepository& repo,
+const FhirStructureDefinition* ReferenceFinder::getTypeFromReferenceElement(const FhirStructureRepositoryView& repo,
                                                                             const Element& referenceElement,
                                                                             const std::string_view elementFullPath)
 {
@@ -428,7 +428,7 @@ void fhirtools::ReferenceFinder::addSliceProfiles(const Element& element, std::s
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo,
+void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepositoryView& repo,
                                              const std::set<ProfiledElementTypeInfo>& newProfiles,
                                              std::string_view elementFullPath)
 {
@@ -443,7 +443,7 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo,
+void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepositoryView& repo,
                                              const std::list<std::string>& newProfileUrls,
                                              std::string_view elementFullPath,
                                              const FhirStructureDefinition* sourceProfile)
@@ -458,7 +458,7 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepository& repo
                                           std::string{elementFullPath}, sourceProfile);
             continue;
         }
-        newProfiles.emplace(prof);
+        newProfiles.emplace(*prof);
     }
     addProfiles(repo, newProfiles, elementFullPath);
 }

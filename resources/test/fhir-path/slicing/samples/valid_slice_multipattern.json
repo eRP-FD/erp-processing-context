@@ -1,0 +1,25 @@
+{
+  "resourceType": "Multipattern",
+  "meta": {
+    "profile": [
+      "http://fhir-tools.test/minifhirtypes/Multipattern/Test"
+    ]
+  },
+  "id": "validSliceMultipattern",
+  "multi": [
+    {
+      "codeableConcept": {
+        "coding": [
+          {
+            "system": "http://fhir-tools.test/minifhirtypes/Multipattern/System",
+            "code": "code1"
+          },
+          {
+            "system": "http://fhir-tools.test/minifhirtypes/Multipattern/System",
+            "code": "code2"
+          }
+        ]
+      }
+    }
+  ]
+}

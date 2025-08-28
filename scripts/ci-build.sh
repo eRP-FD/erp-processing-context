@@ -68,7 +68,7 @@ if "${with_ccache}" ; then
         df -h ${CCACHE_DIR}
         ccache --version
         ccache -o cache_dir=${CCACHE_DIR}
-        ccache -M 40000M
+        ccache -M 50G #in sync with epa
         ccache -p
         ccache -s
     else

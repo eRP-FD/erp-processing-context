@@ -1,0 +1,15 @@
+{
+  "resourceType": "PractitionerRole",
+  "id": "Example-EU-PractitionerRole",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PractitionerRole|1.0"
+    ]
+  },
+  "practitioner": {
+    "reference": "Practitioner/Example-EU-Practitioner"
+  },
+  "organization": {
+    "reference": "Organization/Example-EU-Organization"
+  }
+}

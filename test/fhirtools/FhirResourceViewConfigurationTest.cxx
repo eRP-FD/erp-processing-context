@@ -5,12 +5,16 @@
  */
 
 
-#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "MockFhirResourceGroup.hxx"
+#include "fhirtools/repository/FhirCodeSystem.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/repository/views/KbvSchluesseltabellenConfiguration.hxx"
 
+#include <date/tz.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
@@ -23,7 +27,7 @@
 namespace
 {
 struct View {
-    std::string envName;
+    std::string id;
     std::string validFrom;
     std::string validUntil;
     std::initializer_list<std::string> groups;
@@ -60,10 +64,8 @@ gsl::not_null<const rapidjson::Value*> FhirResourceViewConfigurationTest::viewCo
     for (const auto& view : views)
     {
         const std::string base{"/fhir-resource-views/" + std::to_string(idx) + "/"};
-        rapidjson::Pointer ptEnv{base + "env-name"};
-        ptEnv.Set(mDocument, view.envName);
         rapidjson::Pointer ptId{base + "id"};
-        ptId.Set(mDocument, view.envName);
+        ptId.Set(mDocument, view.id);
         if (! view.validFrom.empty())
         {
             rapidjson::Pointer ptValidFrom{base + "valid-from"};
@@ -97,6 +99,8 @@ TEST_F(FhirResourceViewConfigurationTest, ViewsSelection)
         .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
     EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_14")))
         .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("schluesseltabellen")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
 
     const auto viewCfgValue =
         viewConfig({{"ERP_DARREICHUNGSFORM_1_12", "", "2024-06-30", {"darreichungsform_1_12"}},
@@ -106,8 +110,12 @@ TEST_F(FhirResourceViewConfigurationTest, ViewsSelection)
                     {"ERP_DARREICHUNGSFORM_1_14", "2024-10-01", "", {"darreichungsform_1_14"}},
                     {"END_OVERLAPP", "2024-11-15", "", {"darreichungsform_1_14"}}});
 
+    fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration;
+    kbvSchluesseltabellenConfiguration.addEntry(
+        {.id = "QX", .start = std::nullopt, .end = std::nullopt, .mGroups = {"schluesseltabellen"}});
+
     std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
-    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, date::days{}));
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, kbvSchluesseltabellenConfiguration, date::days{}));
     EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"1969-01-01"})),
               (strings{"BEGIN_OVERLAPP", "ERP_DARREICHUNGSFORM_1_12"}));
     EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-06-30"})),
@@ -132,11 +140,74 @@ TEST_F(FhirResourceViewConfigurationTest, ViewsSelection)
               (strings{"END_OVERLAPP", "ERP_DARREICHUNGSFORM_1_14"}));
 }
 
+TEST_F(FhirResourceViewConfigurationTest, ViewsSelection_2SchluesselTabellen)
+{
+    using strings = std::list<std::string>;
+    MockResourceGroupResolver res;
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_12")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_13")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_14")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("schluesseltabellen")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+
+    const auto viewCfgValue =
+        viewConfig({{"ERP_DARREICHUNGSFORM_1_12", "", "2024-06-30", {"darreichungsform_1_12"}},
+                    {"BEGIN_OVERLAPP", "", "2024-05-31", {"darreichungsform_1_13"}},
+                    {"ERP_DARREICHUNGSFORM_1_13", "2024-07-01", "2024-09-30", {"darreichungsform_1_13"}},
+                    {"MID_OVERLAPP", "2024-09-15", "2024-10-31", {"darreichungsform_1_13"}},
+                    {"ERP_DARREICHUNGSFORM_1_14", "2024-10-01", "", {"darreichungsform_1_14"}},
+                    {"END_OVERLAPP", "2024-11-15", "", {"darreichungsform_1_14"}}});
+
+    using namespace date::literals;
+    fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration;
+    kbvSchluesseltabellenConfiguration.addEntry(
+        {.id = "2024_Q3",
+         .start = std::nullopt,
+         .end = date::floor<date::days>(
+             date::make_zoned("Europe/Berlin", date::sys_days{date::year_month_day{2024_y / 9 / 30}}).get_local_time()),
+         .mGroups = {"schluesseltabellen"}});
+    kbvSchluesseltabellenConfiguration.addEntry(
+        {.id = "2024_Q4",
+         .start = date::floor<date::days>(
+             date::make_zoned("Europe/Berlin", date::sys_days{date::year_month_day{2024_y / 10 / 1}}).get_local_time()),
+         .end = std::nullopt,
+         .mGroups = {"schluesseltabellen"}});
+
+    ASSERT_NO_THROW(kbvSchluesseltabellenConfiguration.check());
+
+    std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, kbvSchluesseltabellenConfiguration, date::days{}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"1969-01-01"})),
+              (strings{"BEGIN_OVERLAPP", "ERP_DARREICHUNGSFORM_1_12"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-06-30"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_12"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-07-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-09-15"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-09-30"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_13", "MID_OVERLAPP"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-10-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14", "MID_OVERLAPP_2024_Q4"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-10-31"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14", "MID_OVERLAPP_2024_Q4"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-01"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-14"})),
+              (strings{"ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"2024-11-15"})),
+              (strings{"END_OVERLAPP", "ERP_DARREICHUNGSFORM_1_14"}));
+    EXPECT_EQ(ids(viewsConfiguration->getViewInfo(fhirtools::Date{"9999-12-31"})),
+              (strings{"END_OVERLAPP", "ERP_DARREICHUNGSFORM_1_14"}));
+}
+
 TEST_F(FhirResourceViewConfigurationTest, ViewList)
 {
     using namespace fhirtools::version_literal;
-    using ViewList = fhirtools::FhirResourceViewConfiguration::ViewList;
-    using ViewConfig = fhirtools::FhirResourceViewConfiguration::ViewConfig;
+    using ViewList = fhirtools::FhirResourceViewList;
     using Date = fhirtools::Date;
     using K = fhirtools::DefinitionKey;
 
@@ -157,10 +228,12 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
         auto groupBase = groupResBase.findGroupById("groupBase");
         auto groupA = groupResA.findGroupById("groupA");
         auto groupB = groupResB.findGroupById("groupB");
-        std::map<std::string, std::shared_ptr<const fhirtools::FhirResourceGroup>> allGroups {
+        auto groupS = std::make_shared<MockResourceGroup>();
+        const std::map<std::string, std::shared_ptr<const fhirtools::FhirResourceGroup>> allGroups {
             {"groupBase", groupBase},
             {"groupA", groupA},
             {"groupB", groupB},
+            {"schluesseltabellen", groupS}
         };
         using ::testing::Return;
         using ::testing::_;
@@ -176,132 +249,196 @@ TEST_F(FhirResourceViewConfigurationTest, ViewList)
         ON_CALL(res, findGroupById("groupBase")).WillByDefault(Return(groupBase));
         ON_CALL(res, findGroupById("groupA")).WillByDefault(Return(groupA));
         ON_CALL(res, findGroupById("groupB")).WillByDefault(Return(groupB));
+        ON_CALL(res, findGroupById("schluesseltabellen")).WillByDefault(Return(groupS));
 
         ON_CALL(res, allGroups).WillByDefault(Return(allGroups));
+
     }
     fhirtools::FhirStructureRepositoryBackend backend;
     backend.load({ResourceManager::getAbsoluteFilename("test/fhir-path/samples/version_samples.xml")}, res);
+
+    fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration;
+    kbvSchluesseltabellenConfiguration.addEntry(
+        {.id = "QS", .start = std::nullopt, .end = std::nullopt, .mGroups = {"schluesseltabellen"}});
 
     const auto viewCfgValue = viewConfig({
         {"viewA", "2024-05-01", "2024-08-01", {"groupA", "groupBase"}},
         {"viewB", "2024-07-01", "2024-10-01", {"groupB", "groupBase"}},
     });
     std::optional<fhirtools::FhirResourceViewConfiguration> viewsConfiguration;
-    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, date::days{}));
+    ASSERT_NO_THROW(viewsConfiguration.emplace(res, viewCfgValue, kbvSchluesseltabellenConfiguration, date::days{}));
     std::optional<ViewList> viewListViewA;
-    ASSERT_NO_THROW(viewListViewA.emplace(viewsConfiguration->getViewInfo(Date{"2024-06-01"})));
+    ASSERT_NO_THROW(viewListViewA.emplace(backend, viewsConfiguration->getViewInfo(Date{"2024-06-01"})));
     EXPECT_EQ(viewListViewA->size(), 1);
     {
-        auto versions = viewListViewA->supportedVersions(&backend, {structUrl});
+        auto versions = viewListViewA->supportedVersions({structUrl});
         EXPECT_EQ(versions, (std::set{K{structUrl, "alpha"_ver}}));
     }
     {
-        const auto match = viewListViewA->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        const auto match = viewListViewA->match("http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         ASSERT_NE(codeSystem, nullptr);
         EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
     }
     {
-        const auto match = viewListViewA->match(&backend, structUrl, "alpha"_ver);
+        const auto match = viewListViewA->match(structUrl, "alpha"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         ASSERT_NE(codeSystem, nullptr);
         EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
     }
     {
-        const auto match = viewListViewA->match(&backend, structUrl, "beta"_ver);
+        const auto match = viewListViewA->match(structUrl, "beta"_ver);
         EXPECT_EQ(match, nullptr);
     }
     {
-        const ViewConfig* latest = nullptr;
-        ASSERT_NO_THROW(latest = std::addressof(viewListViewA->latest()));
+        const auto latest = viewListViewA->latest();
         ASSERT_NE(latest, nullptr);
-        EXPECT_EQ(latest->mId, "viewA");
-        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
-        ASSERT_NO_THROW(repoView = latest->view(&backend));
-        ASSERT_NE(repoView, nullptr);
-        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(latest->id(), "viewA");
+        const auto* codeSystem = latest->findCodeSystem({codeSystemUrl, std::nullopt});
         ASSERT_NE(codeSystem, nullptr);
         EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
     }
 
     std::optional<ViewList> viewListViewB;
-    ASSERT_NO_THROW(viewListViewB.emplace(viewsConfiguration->getViewInfo(Date{"2024-09-01"})));
+    ASSERT_NO_THROW(viewListViewB.emplace(backend, viewsConfiguration->getViewInfo(Date{"2024-09-01"})));
     EXPECT_EQ(viewListViewB->size(), 1);
     {
-        auto versions = viewListViewB->supportedVersions(&backend, {structUrl});
+        auto versions = viewListViewB->supportedVersions({structUrl});
         EXPECT_EQ(versions, (std::set{K{structUrl, "beta"_ver}}));
     }
     {
-        const auto match = viewListViewB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        const auto match = viewListViewB->match("http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
     {
-        const auto match = viewListViewB->match(&backend, structUrl, "alpha"_ver);
+        const auto match = viewListViewB->match(structUrl, "alpha"_ver);
         ASSERT_EQ(match, nullptr);
     }
     {
-        const auto match = viewListViewB->match(&backend, structUrl, "beta"_ver);
+        const auto match = viewListViewB->match(structUrl, "beta"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
     {
-        const ViewConfig* latest = nullptr;
-        ASSERT_NO_THROW(latest = std::addressof(viewListViewB->latest()));
+        const auto latest = viewListViewB->latest();
         ASSERT_NE(latest, nullptr);
-        EXPECT_EQ(latest->mId, "viewB");
-        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
-        ASSERT_NO_THROW(repoView = latest->view(&backend));
-        ASSERT_NE(repoView, nullptr);
-        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(latest->id(), "viewB");
+        const auto* codeSystem = latest->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
 
     std::optional<ViewList> viewListViewAandB;
-    ASSERT_NO_THROW(viewListViewAandB.emplace(viewsConfiguration->getViewInfo(Date{"2024-07-15"})));
+    ASSERT_NO_THROW(viewListViewAandB.emplace(backend, viewsConfiguration->getViewInfo(Date{"2024-07-15"})));
     EXPECT_EQ(viewListViewAandB->size(), 2);
     {
-        auto versions = viewListViewAandB->supportedVersions(&backend, {structUrl});
+        auto versions = viewListViewAandB->supportedVersions({structUrl});
         EXPECT_EQ(versions, (std::set{K{structUrl, "alpha"_ver}, K{structUrl, "beta"_ver}}));
     }
     {
-        const auto match = viewListViewAandB->match(&backend, "http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
+        const auto match = viewListViewAandB->match("http://hl7.org/fhir/StructureDefinition/string", "0.1"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         // Base is in both views so we expect to get the latest which is viewB
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
     {
-        const auto match = viewListViewAandB->match(&backend, structUrl, "alpha"_ver);
+        const auto match = viewListViewAandB->match(structUrl, "alpha"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "A"_ver);
     }
     {
-        const auto match = viewListViewAandB->match(&backend, structUrl, "beta"_ver);
+        const auto match = viewListViewAandB->match(structUrl, "beta"_ver);
         ASSERT_NE(match, nullptr);
         const auto* codeSystem = match->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
     {
-        const ViewConfig* latest = nullptr;
-        ASSERT_NO_THROW(latest = std::addressof(viewListViewAandB->latest()));
+        const auto latest = viewListViewAandB->latest();
         ASSERT_NE(latest, nullptr);
-        EXPECT_EQ(latest->mId, "viewB");
-        std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
-        ASSERT_NO_THROW(repoView = latest->view(&backend));
-        ASSERT_NE(repoView, nullptr);
-        const auto* codeSystem = repoView->findCodeSystem({codeSystemUrl, std::nullopt});
+        EXPECT_EQ(latest->id(), "viewB");
+        const auto* codeSystem = latest->findCodeSystem({codeSystemUrl, std::nullopt});
         EXPECT_EQ(codeSystem->getVersion(), "B"_ver);
     }
 
     std::optional<ViewList> viewListEmpty;
-    ASSERT_NO_THROW(viewListEmpty.emplace(viewsConfiguration->getViewInfo(Date{"2024-12-01"})));
+    ASSERT_NO_THROW(viewListEmpty.emplace(backend, viewsConfiguration->getViewInfo(Date{"2024-12-01"})));
     EXPECT_TRUE(viewListEmpty->empty());
+}
+
+TEST_F(FhirResourceViewConfigurationTest, mergePeriod)
+{
+    using namespace fhirtools;
+    auto today = date::floor<date::days>(
+              date::make_zoned("Europe/Berlin", std::chrono::system_clock::now()).get_local_time());
+    auto tomorrow = today + date::days{1};
+    auto nextWeek = today + date::days{7};
+    auto lastWeek = today - date::days{7};
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt,std::nullopt,std::nullopt,std::nullopt);
+        EXPECT_EQ(s, std::nullopt);
+        EXPECT_EQ(e, std::nullopt);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt,std::nullopt,std::nullopt,today);
+        EXPECT_EQ(s, std::nullopt);
+        EXPECT_EQ(e, today);
+    }
+
+    {
+        auto [s, e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt, std::nullopt, today, std::nullopt);
+        EXPECT_EQ(s, today);
+        EXPECT_EQ(e, std::nullopt);
+    }
+
+    {
+        auto [s, e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt, std::nullopt, today, tomorrow);
+        EXPECT_EQ(s, today);
+        EXPECT_EQ(e, tomorrow);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(today,std::nullopt,std::nullopt,std::nullopt);
+        EXPECT_EQ(s, today);
+        EXPECT_EQ(e, std::nullopt);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt, today,std::nullopt,std::nullopt);
+        EXPECT_EQ(s, std::nullopt);
+        EXPECT_EQ(e, today);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(lastWeek, nextWeek,today,std::nullopt);
+        EXPECT_EQ(s, today);
+        EXPECT_EQ(e, nextWeek);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(lastWeek, nextWeek,std::nullopt, today);
+        EXPECT_EQ(s, lastWeek);
+        EXPECT_EQ(e, today);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(lastWeek, nextWeek,today, tomorrow);
+        EXPECT_EQ(s, today);
+        EXPECT_EQ(e, tomorrow);
+    }
+
+    {
+        auto [s,e] = FhirResourceViewConfiguration::mergePeriod(std::nullopt, lastWeek,std::nullopt, nextWeek);
+        EXPECT_EQ(s, std::nullopt);
+        EXPECT_EQ(e, lastWeek);
+    }
 }
 
 
@@ -319,6 +456,12 @@ TEST_P(FhirResourceViewConfigurationTestInconsistent, ViewInconsistent)
     MockResourceGroupResolver res;
     EXPECT_CALL(res, findGroupById(::testing::StrEq("darreichungsform_1_12")))
         .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+    EXPECT_CALL(res, findGroupById(::testing::StrEq("schluesseltabellen")))
+        .WillRepeatedly(::testing::Return(std::make_shared<MockResourceGroup>()));
+
+    fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration;
+    kbvSchluesseltabellenConfiguration.addEntry(
+        {.id = "QS", .start = std::nullopt, .end = std::nullopt, .mGroups = {"schluesseltabellen"}});
 
     const auto viewCfgValue = viewConfig(
         {{"ERP_DARREICHUNGSFORM_1_12", GetParam().validFrom, GetParam().validUntil, {"darreichungsform_1_12"}}});
@@ -326,15 +469,17 @@ TEST_P(FhirResourceViewConfigurationTestInconsistent, ViewInconsistent)
     std::optional<fhirtools::FhirResourceViewConfiguration> viewCfg;
     try
     {
-        viewCfg.emplace(res, viewCfgValue, date::days{});
+        viewCfg.emplace(res, viewCfgValue, kbvSchluesseltabellenConfiguration, date::days{});
         FAIL() << "Expected exception on view inconsistency.";
     }
     catch (const std::runtime_error& re)
     {
         EXPECT_EQ(std::string{re.what()},
                   (std::ostringstream{} << "inconsistent view: "
-                                        << "ERP_DARREICHUNGSFORM_1_12 Start: " << GetParam().validFrom
-                                        << " End: " << GetParam().validUntil)
+                                        << "ERP_DARREICHUNGSFORM_1_12 (" << GetParam().validFrom
+                                        << " - " << GetParam().validUntil << ") Info: ERP_DARREICHUNGSFORM_1_12 ("
+                                        << GetParam().validFrom << " - " << GetParam().validUntil
+                                        << ") merged with QS (none - none)")
                       .str());
     }
     std::cout << fhirtools::Date{};

@@ -41,12 +41,16 @@ class ErpProcessingContext(ConanFile):
         'libxml2/*:iconv': False,  # To prevent zlib conflicts between libraries
         'libxml2/*:zlib': False,
         'openssl/*:shared': True,
+        "prometheus-cpp/*:shared": False,
+        "prometheus-cpp/*:with_compression":False,
+        "prometheus-cpp/*:with_pull":False,
+        "prometheus-cpp/*:with_push":False,
         'redis-plus-plus/*:fPIC': True,
         'redis-plus-plus/*:shared': False,
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.18.0-DEVELOP",
+        'release_version': "1.19.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -65,9 +69,10 @@ class ErpProcessingContext(ConanFile):
         'gtest/1.16.0',
         'hiredis/1.2.0',
         'libpqxx/7.10.1',
-        'libxml2/2.13.6',
+        'libxml2/2.13.8',
         'magic_enum/0.9.7',
         'openssl/3.1.8+erp',
+        'prometheus-cpp/1.3.0',
         'rapidjson/cci.20230929',
         'redis-plus-plus/1.3.13',
         'xmlsec/1.3.7+erp',
@@ -102,11 +107,15 @@ class ErpProcessingContext(ConanFile):
             self.options['with_hsm_mock'] = True
 
     def _generate_sbom(self):
-        sbom_cyclonedx_1_4 = cyclonedx_1_4(self)  # .subgraph) -> See ERP-26151 for further details:
+        sbom_cyclonedx_1_4 = cyclonedx_1_4(self)
+        # remove duplicate entries in dependencies[].dependsOn
+        for dep in sbom_cyclonedx_1_4.get("dependencies", []):
+            dependsOn = dep.get("dependsOn", None)
+            if isinstance(dependsOn, list):
+                dep["dependsOn"] = list(set(dependsOn))
         generators_folder = self.generators_folder
         file_name = "sbom.cdx.json"
         os.makedirs(os.path.join(generators_folder, "sbom"), exist_ok=True)
-
         with open(os.path.join(generators_folder, "sbom", file_name), 'w') as f:
             json.dump(sbom_cyclonedx_1_4, f, indent=4)
 

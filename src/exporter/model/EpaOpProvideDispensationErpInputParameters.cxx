@@ -58,11 +58,6 @@ void EPAOpProvideDispensationERPInputParameters::setOrganization(const rapidjson
     setResource(part, organization);
 }
 
-std::optional<Timestamp> EPAOpProvideDispensationERPInputParameters::getValidationReferenceTimestamp() const
-{
-    return FhirResourceBase::getValidationReferenceTimestamp();
-}
-
 std::vector<const rapidjson::Value*> EPAOpProvideDispensationERPInputParameters::getMedicationDispenses() const
 {
     const auto* parameter = findParameter(resource::parameter::rxDispensation);

@@ -8,9 +8,11 @@
 #include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/model/ValueElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/FhirCodeSystem.hxx"
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
@@ -86,7 +88,7 @@ ProfileValidator::ProfileValidator(ProfiledElementTypeInfo defPtr, const Profile
 {
 }
 
-ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::FhirStructureRepository& repo,
+ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::FhirStructureRepositoryView& repo,
                                                            std::string_view name)
 {
     using namespace std::string_literals;
@@ -113,7 +115,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
                            .cardinalityMin(0)
                            .cardinalityMax(0)
                            .getAndReset();
-        ProfiledElementTypeInfo zeroCardinalityPtr{basePtr.profile(), element};
+        ProfiledElementTypeInfo zeroCardinalityPtr{element};
         MapKey key{mDefPtr};
         ProfileValidator validator{key, {mData}, zeroCardinalityPtr, mSliceName, mSetValidator};
         result.emplace(std::move(key), std::move(validator));
@@ -131,7 +133,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         {
             const auto* prof = repo.findStructure(DefinitionKey{url});
             Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
-            ProfiledElementTypeInfo defPtr{prof};
+            ProfiledElementTypeInfo defPtr{*prof};
             MapKey key{defPtr};
             ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
             profilesKeys.emplace(key, validator.mData);
@@ -150,7 +152,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
     return result;
 }
 
-void fhirtools::ProfileValidator::typecast(const fhirtools::FhirStructureRepository& repo,
+void fhirtools::ProfileValidator::typecast(const fhirtools::FhirStructureRepositoryView& repo,
                                            const fhirtools::FhirStructureDefinition* structDef)
 {
     mDefPtr.typecast(repo, structDef);
@@ -180,7 +182,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                 const auto& profile = slice.profile();
                 static_assert(std::is_reference_v<decltype(slice.profile())>);
                 result.sliceProfiles.emplace_back(&profile);
-                ProfiledElementTypeInfo ptr{&profile, profile.rootElement()};
+                ProfiledElementTypeInfo ptr{profile};
                 MapKey profKey{ptr};
                 ProfileValidator profVal{profKey, mParentData, ptr, slice.name(), mSetValidator};
                 auto subSlices = profVal.process(element, elementFullPath);
@@ -195,7 +197,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                     {
                         const auto* prof = element.getFhirStructureRepository()->findStructure(DefinitionKey{url});
                         Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
-                        ProfiledElementTypeInfo defPtr{prof};
+                        ProfiledElementTypeInfo defPtr{*prof};
                         MapKey key{defPtr};
                         ProfileValidator validator{key, {}, defPtr, {}, mSetValidator};
                         profilesKeys.emplace(key, validator.mData);
@@ -219,9 +221,7 @@ void fhirtools::ProfileValidator::checkConstraints(const fhirtools::Element& ele
         const auto& expression = constraint.parsedExpression(*element.getFhirStructureRepository());
         try
         {
-            auto contextElementTag = std::make_shared<Element::IsContextElementTag>();
-            element.setIsContextElement(contextElementTag);
-            const auto evalResult = expression->eval({element.shared_from_this()});
+            const auto evalResult = expression->eval(fhirtools::EvaluationContext{element.shared_from_this()}).collection;
 
             // the evaluation of the result of the expression is not so well-defined,
             // therefore follow the way the HAPI validator is doing it:
@@ -369,13 +369,13 @@ void ProfileValidator::checkCoding(const Element& element, std::string_view elem
         const auto codeSubElement = element.subElements("code");
         if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
         {
-            const auto* codeSystem =
-                element.getFhirStructureRepository()->findCodeSystem(DefinitionKey{systemSubElement[0]->asString()});
-            if (codeSystem)
+            const auto& codes = element.getFhirStructureRepository()->findCodeSystemCodes(
+                DefinitionKey{systemSubElement[0]->asString()});
+            if (codes)
             {
-                if (! codeSystem->isEmpty() && ! codeSystem->isSynthesized())
+                if (! codes->empty() && ! codes->synthesized())
                 {
-                    if (! codeSystem->containsCode(codeSubElement[0]->asString()))
+                    if (! codes->containsCode(codeSubElement[0]->asString()))
                     {
                         mData->add(Severity::error,
                                    "Code " + codeSubElement[0]->asString() + " is not part of CodeSystem " +
@@ -411,22 +411,21 @@ void ProfileValidator::checkBinding(const Element& element, std::string_view ele
         {
             return;
         }
-        if (const auto* bindingValueSet = element.getFhirStructureRepository()->findValueSet(binding.key))
+        if (const auto& codes = element.getFhirStructureRepository()->findValueSetCodes(binding.key))
         {
-            const auto& warning = bindingValueSet->getWarnings();
+            const auto& warning = codes->getWarnings();
             if (! warning.empty())
             {
-                mData->add(Severity::warning, warning, std::string{elementFullPath}, mDefPtr.profile());
+                mData->add(Severity::warning, warning + ": " + to_string(codes->valueSet().key()),
+                           std::string{elementFullPath}, mDefPtr.profile());
             }
-            if (bindingValueSet->canValidate())
+            if (codes->canValidate())
             {
-                validateBinding(element, binding, bindingValueSet, elementFullPath);
+                validateBinding(element, binding, *codes, elementFullPath);
+                return;
             }
-            else
-            {
-                mData->add(Severity::warning, "Cannot validate ValueSet binding", std::string{elementFullPath},
-                           mDefPtr.profile());
-            }
+            mData->add(Severity::warning, "Cannot validate ValueSet binding: " + to_string(codes->valueSet().key()),
+                       std::string{elementFullPath}, mDefPtr.profile());
         }
         else
         {
@@ -438,7 +437,7 @@ void ProfileValidator::checkBinding(const Element& element, std::string_view ele
 
 void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& element,
                                                   const FhirElement::Binding& binding,
-                                                  const FhirValueSet* bindingValueSet, std::string_view elementFullPath)
+                                                  const FhirValueSetCodes& boundCodes, std::string_view elementFullPath)
 {
     auto severity = binding.strength == FhirElement::BindingStrength::required ? Severity::error : Severity::debug;
     switch (element.type())
@@ -450,48 +449,48 @@ void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& elem
         case Element::Type::Date:
         case Element::Type::DateTime:
         case Element::Type::Time:
-        case Element::Type::Quantity:
-            if (! bindingValueSet->containsCode(element.asString()))
+        case Element::Type::Quantity:{
+            if (! boundCodes.containsCode(element.asString()))
             {
                 mData->add(severity,
-                           "Value " + element.asString() + " not allowed for ValueSet " + bindingValueSet->getUrl() +
-                               '|' + to_string(bindingValueSet->getVersion()) + ", allowed are " +
-                               bindingValueSet->codesToString(),
+                           "Value " + element.asString() + " not allowed for ValueSet " +
+                               to_string(boundCodes.valueSet().key()) + ", allowed are " + boundCodes.codesToString(),
                            std::string{elementFullPath}, mDefPtr.profile());
             }
             break;
+        }
         case Element::Type::Structured: {
             if (mDefPtr.element()->typeId() == "CodeableConcept")
             {
                 auto codingSubElements = element.subElements("coding");
                 for (const auto& codingSubElement : codingSubElements)
                 {
-                    checkCodingBinding(*codingSubElement, bindingValueSet, elementFullPath, severity);
+                    checkCodingBinding(*codingSubElement, boundCodes, elementFullPath, severity);
                 }
                 break;
             }
             else if (mDefPtr.element()->typeId() == "Coding")
             {
-                checkCodingBinding(element, bindingValueSet, elementFullPath, severity);
+                checkCodingBinding(element, boundCodes, elementFullPath, severity);
             }
         }
     }
 }
 
 
-void fhirtools::ProfileValidator::checkCodingBinding(const Element& codingElement, const FhirValueSet* fhirValueSet,
+void fhirtools::ProfileValidator::checkCodingBinding(const Element& codingElement, const FhirValueSetCodes& boundCodes,
                                                      std::string_view elementFullPath, Severity errorSeverity)
 {
     auto systemSubElement = codingElement.subElements("system");
     auto codeSubElement = codingElement.subElements("code");
     if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
     {
-        if (! fhirValueSet->containsCode(codeSubElement[0]->asString(), systemSubElement[0]->asString()))
+        if (! boundCodes.containsCode(codeSubElement[0]->asString(), systemSubElement[0]->asString()))
         {
             mData->add(errorSeverity,
                        "Code " + codeSubElement[0]->asString() + " with system " + systemSubElement[0]->asString() +
-                           " not allowed for ValueSet " + fhirValueSet->getUrl() + '|' +
-                           to_string(fhirValueSet->getVersion()) + ", allowed are " + fhirValueSet->codesToString(),
+                           " not allowed for ValueSet " + to_string(boundCodes.valueSet().key()) + ", allowed are " +
+                           boundCodes.codesToString(),
                        std::string{elementFullPath}, mDefPtr.profile());
         }
     }

@@ -43,6 +43,29 @@ public:
     JWT makeJwtKostentraeger(const std::optional<std::string>& telematicId = std::nullopt);
 
     [[nodiscard]]
+    JWT makeJwtNcpeh();
+
+
+    struct JwtClaimsOptions {
+        std::string acr = "gematik-ehealth-loa-high";
+        std::string aud = "https://gematik.erppre.de/";
+        std::string exp = "2524608000";
+        std::string displayName = "Vorname Nachname";
+        std::string iat = "1585336956";
+        std::string idNummer = "X234567891";
+        std::string iss = "https://idp1.telematik.de/jwt";
+        std::string jti = "<IDP_01234567890123456789";
+        std::string nbf = "1585336956";
+        std::string nonce = "fuu bar baz";
+        std::string orgName = "Institutions- oder Organisations-Bezeichnung";
+        std::string profession = "1.2.276.0.76.4.49";
+        std::string sub = "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk";
+        std::string optionalFields = {};
+    };
+    [[nodiscard]]
+    JWT makeJwt(const JwtClaimsOptions& options);
+
+    [[nodiscard]]
     JWT getJWT(const rapidjson::Document& claims);
 
     [[nodiscard]]
@@ -50,6 +73,7 @@ public:
 
     [[nodiscard]]
     JWT makeValidJwt(rapidjson::Document&& claims);
+
 private:
     const shared_EVP_PKEY mKey;
     JoseHeader mJoseHeader;

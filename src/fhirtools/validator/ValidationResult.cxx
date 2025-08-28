@@ -19,23 +19,36 @@ using fhirtools::ValidationResults;
 std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& err)
 {
     struct Printer {
-        std::string operator()(const FhirConstraint& constraint)
+        void operator()(const FhirConstraint& constraint)
         {
-
-            return std::string{magic_enum::enum_name(constraint.getSeverity())} + ": " + constraint.getKey() + ": " +
-                   constraint.getHuman();
+            out << magic_enum::enum_name(constraint.getSeverity()) << ": " << constraint.getKey() << ": "
+                << constraint.getHuman();
         };
-        std::string operator()(const std::tuple<Severity, std::string>& message)
+        void operator()(const std::tuple<Severity, std::string>& message)
         {
-            return std::string{magic_enum::enum_name(std::get<Severity>(message))} + ": " +
-                   std::get<std::string>(message);
+            out << magic_enum::enum_name(std::get<Severity>(message)) << ": " << std::get<std::string>(message);
         };
+        void operator()(const ValidationError::ExtendedValidationFailure& failure)
+        {
+            out << magic_enum::enum_name(std::get<Severity>(failure)) << ": ";
+            switch (std::get<ExtendedValidation>(failure))
+            {
+                case ExtendedValidation::unslicedExtension:
+                    out << "element doesn't belong to any slice.";
+                    return;
+                case ExtendedValidation::invalidUrnUuidInUri:
+                    out << "value is not a valid lower-case urn:uuid.";
+                    return;
+            }
+            out << "unknown ExtendedValidation failure: " << static_cast<uintmax_t>(std::get<ExtendedValidation>(failure));
+        };
+        std::ostream &out;
     };
     if (! err.fieldName.empty())
     {
         out << err.fieldName << ": ";
     }
-    out << std::visit(Printer{}, err.reason);
+    std::visit(Printer{out}, err.reason);
     return out;
 }
 
@@ -59,6 +72,14 @@ ValidationError::ValidationError(MessageReason inReason, std::string inFieldName
     : fieldName{std::move(inFieldName)}
     , reason{std::move(inReason)}
     , profile{inProfile}
+{
+}
+
+fhirtools::ValidationError::ValidationError(ExtendedValidationFailure inFailure, std::string inFieldName,
+                                            const FhirStructureDefinition* inProfile)
+    : fieldName(std::move(inFieldName))
+    , reason(std::move(inFailure))
+    , profile(inProfile)
 {
 }
 
@@ -104,6 +125,20 @@ void fhirtools::ValidationResults::add(FhirConstraint constraint, std::string el
     mResults.emplace(std::move(constraint), std::move(elementFullPath), profile);
 }
 
+void fhirtools::ValidationResults::add(Severity severity, ExtendedValidation extendedValidation,
+                                       std::string elementFullPath, const FhirStructureDefinition* profile)
+{
+#ifdef NDEBUG
+    // do not store severites in release builds
+    // as merging the results can significantly slow down validation
+    if (severity < fhirtools::Severity::warning)
+    {
+        return;
+    }
+#endif
+    mResults.emplace(std::make_tuple(severity, extendedValidation), std::move(elementFullPath), profile);
+}
+
 void fhirtools::ValidationResults::merge(fhirtools::ValidationResults inResults)
 {
     mInfo.merge(inResults.mInfo);
@@ -131,7 +166,6 @@ void fhirtools::ValidationResults::dumpToLog() const
                 TVLOG(1) << item;
                 tLevel = 1;
                 break;
-            case unslicedWarning:
             case warning:
                 TLOG(INFO) << item;
                 tLevel = 0;
@@ -156,7 +190,11 @@ fhirtools::Severity ValidationError::severity() const
         }
         Severity operator()(const MessageReason& r)
         {
-            return std::get<0>(r);
+            return std::get<Severity>(r);
+        }
+        Severity operator()(const ExtendedValidationFailure& f)
+        {
+            return std::get<Severity>(f);
         }
     };
     return std::visit(Visitor{}, reason);

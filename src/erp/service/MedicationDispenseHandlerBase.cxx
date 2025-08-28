@@ -7,6 +7,7 @@
 
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
+#include "erp/model/eu/GemErpEuPrMedication.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "shared/ErpRequirements.hxx"
@@ -107,6 +108,8 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
             return model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input;
         case Operation::POST_Task_id_close:
             return model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input;
+        case Operation::POST_Task_id_eu_close:
+            return model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input;
         case Operation::UNKNOWN:
         case Operation::GET_Task:
         case Operation::GET_Task_id:
@@ -115,6 +118,7 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
         case Operation::POST_Task_id_accept:
         case Operation::POST_Task_id_reject:
         case Operation::POST_Task_id_abort:
+        case Operation::PATCH_Task_id_mark:
         case Operation::GET_MedicationDispense:
         case Operation::GET_MedicationDispense_id:
         case Operation::GET_Communication:
@@ -143,6 +147,11 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
         case Operation::GET_Admin_configuration:
         case Operation::PUT_Admin_pn3_configuration:
         case Operation::PUT_Admin_exporter_configuration:
+        case Operation::GET_Admin_metrics:
+        case Operation::POST_grant_eu_access_permission:
+        case Operation::DELETE_revoke_eu_access_permission:
+        case Operation::GET_read_eu_access_permission:
+        case Operation::GET_eu_prescriptions:
             Fail2("MedicationDispenseHandlerBase: invalid operation:" + std::string{magic_enum::enum_name(operation)},
                   std::logic_error);
     }
@@ -182,7 +191,6 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::medicationDispense
     return result;
 }
 
-
 void MedicationDispenseHandlerBase::checkMedicationDispenses(
     std::vector<model::MedicationDispense>& medicationDispenses, const model::PrescriptionId& prescriptionId,
     const model::Kvnr& kvnr, const std::string& telematikIdFromAccessToken)
@@ -208,8 +216,11 @@ void MedicationDispenseHandlerBase::checkMedicationDispenses(
             ErpExpect(medicationDispense.kvnr() == kvnr, HttpStatus::BadRequest,
                     "KVNR in MedicationDispense does not match the one in the task");
 
-            ErpExpect(medicationDispense.telematikId() == telematikIdFromAccessToken, HttpStatus::BadRequest,
-                    "Telematik-ID in MedicationDispense does not match the one in the access token.");
+            if (medicationDispense.profileType() != model::ProfileType::GEM_ERPEU_PR_MedicationDispense)
+            {
+                ErpExpect(medicationDispense.telematikId() == telematikIdFromAccessToken, HttpStatus::BadRequest,
+                        "Telematik-ID in MedicationDispense does not match the one in the access token.");
+            }
         }
         catch (const model::ModelException& exc)
         {

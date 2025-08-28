@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+    <entry>
+        <resource>
+            <CodeSystem xmlns="http://hl7.org/fhir">
+                <id value="TestCodeSystem"/>
+                <url value="http://erp.test/TestCodeSystem"/>
+                <version value="0.1"/>
+                <name value="TestCodeSystem"/>
+                <status value="draft"/>
+                <content value="complete"/>
+                <count value="2"/>
+                <concept>
+                    <code value="Test1"/>
+                    <display value="Test1 concept"/>
+                </concept>
+                <concept>
+                    <code value="Test2"/>
+                    <display value="Test2 concept"/>
+                </concept>
+            </CodeSystem>
+        </resource>
+    </entry>
+    <entry>
+        <resource>
+            <CodeSystem xmlns="http://hl7.org/fhir">
+                <id value="TestCodeSystem2"/>
+                <url value="http://erp.test/TestCodeSystem2"/>
+                <version value="3"/>
+                <name value="TestCodeSystem2"/>
+                <status value="draft"/>
+                <content value="complete"/>
+                <count value="2"/>
+                <concept>
+                    <code value="Test1"/>
+                    <display value="Test1 concept"/>
+                </concept>
+                <concept>
+                    <code value="Test2"/>
+                    <display value="Test2 concept"/>
+                    <property>
+                        <code value="deprecated"/>
+                        <valueCode value="2.9"/>
+                    </property>
+                </concept>
+            </CodeSystem>
+        </resource>
+    </entry>
+</Bundle>

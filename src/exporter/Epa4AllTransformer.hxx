@@ -12,6 +12,7 @@
 
 namespace model
 {
+class EPAMedicationTypeExtension;
 class Bundle;
 class Task;
 class ResourceBase;
@@ -78,7 +79,10 @@ private:
     static void addMetaTagOriginLdap(model::NumberAsStringParserDocument& document);
     static void addTypeProfessionOid(model::NumberAsStringParserDocument& document,
                                      const std::string& organizationProfessionOid);
-    static std::shared_ptr<fhirtools::FhirStructureRepository> getRepo(const fhirtools::DefinitionKey& profileKey);
+    static void addMedicationTypeExtension(model::NumberAsStringParserDocument& document,
+                                           model::EPAMedicationTypeExtension&& typeExtension);
+    static std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
+    getRepo(const fhirtools::DefinitionKey& profileKey);
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_FHIR_EPA4ALLTRANSFORMER_HXX

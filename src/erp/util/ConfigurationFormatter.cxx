@@ -46,6 +46,14 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
             (std::ostringstream{} << hhmmss.hours() << " " << hhmmss.minutes() << " " << hhmmss.seconds()).str(),
             document.GetAllocator()),
         document.GetAllocator());
+
+    for (const auto& [parameterMetricsLogThresholdMs, category] :
+         RuntimeConfiguration::parameter_metrics_category_log_threshold_ms)
+    {
+        const rapidjson::Pointer metricsLogThresholdMsPointer("/runtime/" + parameterMetricsLogThresholdMs + "/value");
+        metricsLogThresholdMsPointer.Set(document,
+                                         rapidjson::Value(rcGetter.getMetricsLogThresholdMs(category).count()));
+    }
 }
 
 }

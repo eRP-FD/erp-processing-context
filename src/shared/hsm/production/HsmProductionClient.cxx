@@ -111,7 +111,7 @@ namespace
         const std::string& keyName,
         hsmclient::DeriveKeyOutput (*deriveKey) (hsmclient::HSMSession, hsmclient::DeriveKeyInput))
     {
-        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, keyName);
+        auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, keyName);
 
         hsmclient::DeriveKeyInput input;
         setInput<TpmObjectNameLength>(input.AKName, arguments.akName);
@@ -152,7 +152,7 @@ namespace
 
 ::Nonce HsmProductionClient::getNonce(const ::HsmRawSession& session, uint32_t input)
 {
-    auto timer = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_generatenonce");
+    auto timer = ::DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_generatenonce");
 
     const auto nonceOutput = ::hsmclient::ERP_GenerateNONCE(session.rawSession, ::hsmclient::UIntInput{input});
 
@@ -166,7 +166,7 @@ namespace
 
 ErpBlob HsmProductionClient::generatePseudonameKey(const ::HsmRawSession& session, uint32_t input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_generatepseudonamekey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_generatepseudonamekey");
     const auto result = ::hsmclient::ERP_GeneratePseudonameKey(session.rawSession, ::hsmclient::UIntInput{input});
     HsmExpectSuccess(result, "ERP_GeneratePseudonameKey failed", timer);
     return ::ErpBlob{::std::vector<uint8_t>{result.BlobOut.BlobData, result.BlobOut.BlobData + result.BlobOut.BlobLength},
@@ -175,7 +175,7 @@ ErpBlob HsmProductionClient::generatePseudonameKey(const ::HsmRawSession& sessio
 
 ErpArray<Aes256Length> HsmProductionClient::unwrapPseudonameKey(const HsmRawSession& session, UnwrapHashKeyInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_unwrappseudonamekey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_unwrappseudonamekey");
     hsmclient::TwoBlobGetKeyInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.Key, input.key);
@@ -189,7 +189,7 @@ ErpBlob HsmProductionClient::getTeeToken(
     const HsmRawSession& session,
     TeeTokenRequestInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_getteetoken");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_getteetoken");
 
     hsmclient::TEETokenRequestInput requestInput;
     setInput<TpmObjectNameLength>(requestInput.AKName, input.akName);
@@ -260,7 +260,7 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     const HsmRawSession& session,
     DoVAUECIESInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_dovauecies128");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_dovauecies128");
 
     hsmclient::DoVAUECIESInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
@@ -279,7 +279,7 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
 
 shared_EVP_PKEY HsmProductionClient::getEcPublicKey(const HsmRawSession& session, ErpBlob&& ecKeyPair)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_getecpublickey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_getecpublickey");
     hsmclient::SingleBlobInput requestInput;
     setInput(requestInput.BlobIn, ecKeyPair);
     auto response = hsmclient::ERP_GetECPublicKey(
@@ -295,7 +295,7 @@ SafeString HsmProductionClient::getVauSigPrivateKey (
     const HsmRawSession& session,
     GetVauSigPrivateKeyInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_getvausigprivatekey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_getvausigprivatekey");
 
     hsmclient::TwoBlobGetKeyInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
@@ -316,7 +316,7 @@ ErpVector HsmProductionClient::getRndBytes(
     const HsmRawSession& session,
     size_t input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_getrndbytes");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_getrndbytes");
 
     const auto response = hsmclient::ERP_GetRNDBytes(
         session.rawSession,
@@ -333,7 +333,7 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
     const HsmRawSession& session,
     UnwrapHashKeyInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_unwraphashkey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_unwraphashkey");
 
     hsmclient::TwoBlobGetKeyInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
@@ -351,7 +351,7 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
 
 ErpBlob HsmProductionClient::wrapRawPayload(const HsmRawSession& session, WrapRawPayloadInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_wraprawpayloadwithtoken");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_wraprawpayloadwithtoken");
     hsmclient::RawPayloadWithTokenInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
     requestInput.payloadLen = input.rawPayload.size();
@@ -366,7 +366,7 @@ ErpBlob HsmProductionClient::wrapRawPayload(const HsmRawSession& session, WrapRa
 
 ErpVector HsmProductionClient::unwrapRawPayload(const HsmRawSession& session, UnwrapRawPayloadInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_unwraprawpayload");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_unwraprawpayload");
     hsmclient::WrappedPayloadInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.wrappedRawPayload, input.wrappedRawPayload);
@@ -378,7 +378,7 @@ ErpVector HsmProductionClient::unwrapRawPayload(const HsmRawSession& session, Un
 
 ErpVector HsmProductionClient::signWithVauAutKey(const HsmRawSession& session, SignVauAutInput&& input)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "signwithvauautkey");
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "signwithvauautkey");
     hsmclient::AutSignatureInput requestInput;
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.AutKeyPair, input.vauAutKeyBlob);
@@ -394,7 +394,7 @@ ErpVector HsmProductionClient::signWithVauAutKey(const HsmRawSession& session, S
 {
     Expect(quote.size() == TPM_QUOTE_LENGTH, "Quote data size is not as expected.");
 
-    auto timer = ::DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_parsetpmquote");
+    auto timer = ::DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_parsetpmquote");
 
     ::hsmclient::TPMQuoteInput input;
     std::ranges::copy(quote, ::std::begin(input.QuoteData));
@@ -459,7 +459,7 @@ HsmRawSession HsmProductionClient::logon(const hsmclient::HSMSession& connectedS
     if (identity.keyspec.has_value() && identity.keyspec.value().size()>0)
     {
         TVLOG(1) << "hsm keyspec is present, logging in as " << identity.displayName();
-        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_logonkeyspec");
+        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_logonkeyspec");
 
         const auto loggedInSession = ERP_LogonKeySpec(connectedSession, identity.username.c_str(), identity.keyspec.value(), identity.password);
         Expect(loggedInSession.status == hsmclient::HSMSessionStatus::HSMLoggedIn, "login of hsm user " + identity.displayName() + " failed");
@@ -470,7 +470,7 @@ HsmRawSession HsmProductionClient::logon(const hsmclient::HSMSession& connectedS
     else if (identity.password.size()>0)
     {
         TVLOG(1) << "password is present, logging in as " << identity.displayName();
-        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_logonpassword");
+        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_logonpassword");
 
         const auto loggedInSession = ERP_LogonPassword(connectedSession, identity.username.c_str(), identity.password);
         Expect(loggedInSession.status == hsmclient::HSMSessionStatus::HSMLoggedIn, "login of hsm user " + identity.displayName() + " failed");
@@ -490,7 +490,7 @@ void HsmProductionClient::disconnect (HsmRawSession& session)
     if (session.rawSession.status == hsmclient::HSMSessionStatus::HSMLoggedIn)
     {
         TVLOG(1) << "disconnecting from HSM cluster";
-        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryHsm, "erp_disconnect");
+        auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_disconnect");
         session.rawSession = ERP_Disconnect(session.rawSession);
     }
 }

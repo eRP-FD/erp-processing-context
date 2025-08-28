@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_AUDITEVENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_AUDITEVENT_HXX
 
+#include "shared/model/CountryCode.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Timestamp.hxx"

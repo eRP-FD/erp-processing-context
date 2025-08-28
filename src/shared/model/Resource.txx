@@ -4,6 +4,7 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
@@ -55,7 +56,6 @@ TDerivedModel Resource<TDerivedModel>::fromXml(std::string_view xml, const XmlVa
     using ResourceFactory = model::ResourceFactory<TDerivedModel>;
     auto resourceFactory = ResourceFactory::fromXml(xml, validator, {});
     ProfileType profileType = resourceFactory.profileType();
-    resourceFactory.validatorOptions(Configuration::instance().defaultValidatorOptions(profileType));
     return std::move(resourceFactory).getValidated(profileType);
 }
 
@@ -67,7 +67,7 @@ void Resource<TDerivedModel>::additionalValidation() const
 template<class TDerivedModel>
 fhirtools::ValidationResults Resource<TDerivedModel>::genericValidate(
     ProfileType profileType, const fhirtools::ValidatorOptions& options,
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) const
+    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) const
 {
     std::string resourceTypeName;
     if constexpr (std::is_same_v<TDerivedModel, UnspecifiedResource>)
@@ -108,7 +108,6 @@ TDerivedModel Resource<TDerivedModel>::fromJson(std::string_view json, const Jso
     using ResourceFactory = model::ResourceFactory<TDerivedModel>;
     auto resourceFactory = ResourceFactory::fromJson(json, jsonValidator, {});
     ProfileType profileType = resourceFactory.profileType();
-    resourceFactory.validatorOptions(Configuration::instance().defaultValidatorOptions(profileType));
     return std::move(resourceFactory).getValidated(profileType);
 }
 
@@ -127,7 +126,7 @@ TDerivedModel Resource<TDerivedModel>::fromJson(model::NumberAsStringParserDocum
 }
 
 template<typename TDerivedModel>
-gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
 model::Resource<TDerivedModel>::getValidationView() const
 {
     if constexpr (FhirValidatableProfileConstexpr<TDerivedModel>)

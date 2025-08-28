@@ -5,6 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Resource.hxx"
@@ -28,6 +29,11 @@ CommunicationTest::CommunicationTest() :
 
 TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
+    const auto& gemErpVersion = ResourceTemplates::Versions::GEM_ERP_current();
+    if (gemErpVersion >= ResourceTemplates::Versions::GEM_ERP_1_5_2)
+    {
+        GTEST_SKIP() << "GEM_ERP_PR_Communication_InfoReq has been removed";
+    }
     std::string bodyRequest =
         CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
             .setPrescriptionId("160.123.456.789.123.58")
@@ -36,11 +42,10 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
             .setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.")
             .createJsonString();
     std::optional<Communication> communication1;
-    const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
-    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now())
-        .match(backend, std::string{structure_definition::communicationInfoReq},
-               ResourceTemplates::Versions::GEM_ERP_current());
+    const gsl::not_null repoView = Fhir::instance()
+                                       .structureRepository(model::Timestamp::now())
+                                       .match(std::string{structure_definition::communicationInfoReq},
+                                              gemErpVersion);
     ASSERT_NO_THROW(communication1 = model::ResourceFactory<Communication>::fromJson(
                                          bodyRequest, *StaticData::getJsonValidator(), {})
                                          .getValidated(ProfileType::GEM_ERP_PR_Communication_InfoReq, repoView));
@@ -59,8 +64,7 @@ TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-co
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
-              std::string{model::resource::structure_definition::communicationInfoReq} + '|' +
-                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
+              std::string{model::resource::structure_definition::communicationInfoReq} + '|' + to_string(gemErpVersion));
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
               naming_system::telematicID);
@@ -113,7 +117,7 @@ TEST_F(CommunicationTest, CreateReplyFromJson)//NOLINT(readability-function-cogn
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationReply} + '|' +
-                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
+                  ResourceTemplates::Versions::GEM_ERP_current().renderVersion());
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
               naming_system::gkvKvid10);
@@ -165,7 +169,7 @@ TEST_F(CommunicationTest, CreateDispReqFromJson)//NOLINT(readability-function-co
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationDispReq} + '|' +
-                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
+                  ResourceTemplates::Versions::GEM_ERP_current().renderVersion());
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
@@ -219,7 +223,7 @@ TEST_F(CommunicationTest, CreateRepresentativeFromJson)//NOLINT(readability-func
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::resourceTypePointer), "Communication");
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationRepresentative} + '|' +
-                  to_string(ResourceTemplates::Versions::GEM_ERP_current()));
+                  ResourceTemplates::Versions::GEM_ERP_current().renderVersion());
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::basedOn0ReferencePointer), "Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
 
     EXPECT_EQ(communication.jsonDocument().getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer),
@@ -976,11 +980,12 @@ TEST_F(CommunicationTest, CreateChargChangeReqFromJson)
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), "PharmacyX");
     EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationChargChangeReq} + '|' +
-                  to_string(ResourceTemplates::Versions::GEM_ERPCHRG_current()));
+                  ResourceTemplates::Versions::GEM_ERPCHRG_current().renderVersion());
 }
 
 TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
 {
+    const auto chrgVersion = ResourceTemplates::Versions::GEM_ERPCHRG_current();
     std::string body = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReply)
     .setPrescriptionId("160.123.456.789.123.58")
     .setSender(ActorRole::Pharmacists, "PharmacyX")
@@ -1015,11 +1020,14 @@ TEST_F(CommunicationTest, CreateChargChangeReplyFromJson)
     EXPECT_EQ(json.getStringValueFromPointer(Communication::basedOn0ReferencePointer), "ChargeItem/160.123.456.789.123.58");
     EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierSystemPointer), naming_system::telematicID);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::senderIdentifierValuePointer), "PharmacyX");
-    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), naming_system::pkvKvid10);
+    const std::string expectedNamingSystem{chrgVersion >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1
+                                               ? naming_system::gkvKvid10
+                                               : naming_system::pkvKvid10};
+    EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierSystemPointer), expectedNamingSystem);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::recipient0IdentifierValuePointer), InsurantA);
     EXPECT_EQ(json.getStringValueFromPointer(Communication::metaProfile0Pointer),
               std::string{model::resource::structure_definition::communicationChargChangeReply} + '|' +
-    to_string(ResourceTemplates::Versions::GEM_ERPCHRG_current()));
+                  ResourceTemplates::Versions::GEM_ERPCHRG_current().renderVersion());
 }
 
 namespace

@@ -11,10 +11,13 @@ EpaAccountLookupMock::EpaAccountLookupMock(const EpaAccount& epaAccount)
     : epaAccountLookupResult(epaAccount)
 {
 }
-EpaAccount EpaAccountLookupMock::lookup(const std::string& xRequestId, const model::Kvnr& kvnr)
+
+EpaAccount EpaAccountLookupMock::lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                        const std::optional<std::string>& prefix /* = std::nullopt */)
 {
     this->xRequestId = xRequestId;
     epaAccountLookupResult.kvnr = kvnr;
+    epaAccountLookupResult.host = prefix.value_or(WellKnownHost);
     return epaAccountLookupResult;
 }
 

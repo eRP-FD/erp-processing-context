@@ -1,0 +1,15 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+# These CodeSystems have same URL and version:
+package/CodeSystem-ICD-9CM-diagnosiscodes.json
+package/CodeSystem-ICD-9CM-procedurecodes.json
+
+
+# is identical to the one in hl7.fhir.r4.core
+# using the different version is fixed by version-mapper
+package/CodeSystem-data-absent-reason.json

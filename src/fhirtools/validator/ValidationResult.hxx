@@ -8,6 +8,7 @@
 
 #include "fhirtools/repository/FhirConstraint.hxx"
 #include "fhirtools/validator/Severity.hxx"
+#include "fhirtools/validator/ExtendedValidation.hxx"
 
 #include <optional>
 #include <set>
@@ -27,10 +28,12 @@ class ValidationError
 {
 public:
     using MessageReason = std::tuple<Severity, std::string>;
+    using ExtendedValidationFailure = std::tuple<Severity, ExtendedValidation>;
     ValidationError(FhirConstraint, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     ValidationError(MessageReason, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
+    ValidationError(ExtendedValidationFailure, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     std::string fieldName;
-    std::variant<FhirConstraint, MessageReason> reason;
+    std::variant<FhirConstraint, MessageReason, ExtendedValidationFailure> reason;
     const FhirStructureDefinition* profile = nullptr;
 
     bool operator==(const ValidationError&) const = default;
@@ -64,6 +67,8 @@ public:
     std::set<ValidationError> results() &&;
     void add(Severity, std::string message, std::string elementFullPath, const FhirStructureDefinition* profile);
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
+    void add(Severity severity, ExtendedValidation extendedValidation, std::string elementFullPath,
+             const FhirStructureDefinition* profile);
     void merge(ValidationResults);
     void merge(std::set<ValidationError>);
     Severity highestSeverity() const;

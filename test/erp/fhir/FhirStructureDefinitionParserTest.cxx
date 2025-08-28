@@ -5,11 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "fhirtools/model/ValueElement.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Resource.hxx"
-#include "fhirtools/model/ValueElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
 #include "test_config.h"
 #include "test/util/ResourceManager.hxx"
 
@@ -23,10 +25,10 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
     using Kind = FhirStructureDefinition::Kind;
     using Derivation = FhirStructureDefinition::Derivation;
     using Representation = FhirElement::Representation;
-
+    const FhirStructureRepositoryBackend repo;
     const auto& fhirResourcesXml = ResourceManager::getAbsoluteFilename("test/fhir/TestPrimitives.xml");
     auto [types, codeSystems, valueSets] =
-        FhirStructureDefinitionParser::parse(fhirResourcesXml, FhirResourceGroupConst{"test"});
+        FhirStructureDefinitionParser::parse(fhirResourcesXml, &repo, FhirResourceGroupConst{"test"});
     ASSERT_EQ(types.size(), 2);
     ASSERT_TRUE(codeSystems.empty());
     ASSERT_TRUE(valueSets.empty());
@@ -34,13 +36,13 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
     const FhirStructureDefinition* integerDef = nullptr;
     for (const auto& type: types)
     {
-        if (type.typeId() == "string")
+        if (type->typeId() == "string")
         {
-            stringDef = &type;
+            stringDef = type.get();
         }
-        else if (type.typeId() == "integer")
+        else if (type->typeId() == "integer")
         {
-            integerDef = &type;
+            integerDef = type.get();
         }
     }
     ASSERT_TRUE(stringDef != nullptr);
@@ -91,27 +93,29 @@ TEST(FhirStructureDefinitionParserTest, TestPrimitives) //NOLINT
 TEST(FhirStructureDefinitionParserTest, InvalidXml) //NOLINT
 {
     const auto& fhirResourcesXml = ResourceManager::getAbsoluteFilename("test/fhir/InvalidStructureDefinition.xml");
-    ASSERT_ANY_THROW(FhirStructureDefinitionParser::parse(fhirResourcesXml, FhirResourceGroupConst{"test"}));
+    const FhirStructureRepositoryBackend repo;
+    ASSERT_ANY_THROW(FhirStructureDefinitionParser::parse(fhirResourcesXml, &repo, FhirResourceGroupConst{"test"}));
 }
 
 TEST(FhirStructureDefinitionParserTest, SlicedByFixed) //NOLINT
 {
+    const FhirStructureRepositoryBackend repo;
     const auto& fhirResourcesXml =
         ResourceManager::getAbsoluteFilename("test/fhir-path/slicing/profiles/slice_by_fixed.xml");
-    std::list<FhirStructureDefinition> defs;
+    std::list<std::unique_ptr<FhirStructureDefinition>> defs;
     std::list<FhirCodeSystem> syss;
     std::list<FhirValueSet> vSets;
     ASSERT_NO_THROW(std::tie(defs, syss, vSets) =
-                        FhirStructureDefinitionParser::parse(fhirResourcesXml, FhirResourceGroupConst{"test"}));
+                        FhirStructureDefinitionParser::parse(fhirResourcesXml, &repo, FhirResourceGroupConst{"test"}));
     ASSERT_EQ(defs.size(), 1);
     const auto& slicedByFixed = defs.front();
     std::shared_ptr<const FhirElement> sliced;
-    ASSERT_NO_THROW(sliced = slicedByFixed.findElement(".sliced"));
+    ASSERT_NO_THROW(sliced = slicedByFixed->findElement(".sliced"));
     ASSERT_NE(sliced, nullptr);
     ASSERT_TRUE(sliced->hasSlices());
     EXPECT_EQ(sliced->typeId(), "Sliced");
     const auto& slicing = sliced->slicing();
-    ASSERT_TRUE(slicing.has_value());
+    ASSERT_NE(slicing, nullptr);
     const auto& discriminators = slicing->discriminators();
     ASSERT_EQ(discriminators.size(), 1);
     ASSERT_EQ(discriminators.front().path(), "smallstructure.string");
@@ -151,22 +155,23 @@ TEST(FhirStructureDefinitionParserTest, SlicedByFixed) //NOLINT
 
 TEST(FhirStructureDefinitionParserTest, SlicedByPattern) //NOLINT
 {
+    const FhirStructureRepositoryBackend repo;
     const auto& fhirResourcesXml =
         ResourceManager::getAbsoluteFilename("test/fhir-path/slicing/profiles/slice_by_pattern.xml");
-    std::list<FhirStructureDefinition> defs;
+    std::list<std::unique_ptr<FhirStructureDefinition>> defs;
     std::list<FhirCodeSystem> syss;
     std::list<FhirValueSet> vSets;
     ASSERT_NO_THROW(std::tie(defs, syss, vSets) =
-                        FhirStructureDefinitionParser::parse(fhirResourcesXml, FhirResourceGroupConst{"test"}));
+                        FhirStructureDefinitionParser::parse(fhirResourcesXml, &repo, FhirResourceGroupConst{"test"}));
     ASSERT_EQ(defs.size(), 1);
     const auto& slicedByFixed = defs.front();
     std::shared_ptr<const FhirElement> sliced;
-    ASSERT_NO_THROW(sliced = slicedByFixed.findElement(".sliced"));
+    ASSERT_NO_THROW(sliced = slicedByFixed->findElement(".sliced"));
     ASSERT_NE(sliced, nullptr);
     ASSERT_TRUE(sliced->hasSlices());
     EXPECT_EQ(sliced->typeId(), "Sliced");
     const auto& slicing = sliced->slicing();
-    ASSERT_TRUE(slicing.has_value());
+    ASSERT_NE(slicing, nullptr);
     const auto& discriminators = slicing->discriminators();
     ASSERT_EQ(discriminators.size(), 1);
     ASSERT_EQ(discriminators.front().path(), "smallstructure.coding");
@@ -214,41 +219,44 @@ static bool containsCode(const std::vector<FhirCodeSystem::Code>& codes, const s
 
 TEST(FhirStructureDefinitionParserTest, CodeSystems)
 {
+    const FhirStructureRepositoryBackend repo;
+    const auto view = repo.defaultView();
     const auto& fhirCodeSystemsXml = ResourceManager::getAbsoluteFilename("test/fhir/TestCodeSystem.xml");
-    std::list<FhirStructureDefinition> defs;
+    std::list<std::unique_ptr<FhirStructureDefinition>> defs;
     std::list<FhirCodeSystem> codeSystems;
     std::list<FhirValueSet> vSets;
     ASSERT_NO_THROW(std::tie(defs, codeSystems, vSets) =
-                        FhirStructureDefinitionParser::parse(fhirCodeSystemsXml, FhirResourceGroupConst{"test"}));
+                        FhirStructureDefinitionParser::parse(fhirCodeSystemsXml, &repo, FhirResourceGroupConst{"test"}));
     ASSERT_TRUE(defs.empty());
     ASSERT_TRUE(vSets.empty());
     ASSERT_EQ(codeSystems.size(), 3);
     EXPECT_EQ(codeSystems.front().getUrl(), "https://test/CodeSystem1");
     EXPECT_EQ(codeSystems.front().getName(), "TEST_CODESYSTEM1");
     EXPECT_TRUE(codeSystems.front().isCaseSensitive());
-    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(), "00"));
-    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(), "01"));
-    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(), "02"));
-    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(), "03"));
+    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(*view), "00"));
+    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(*view), "01"));
+    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(*view), "02"));
+    EXPECT_TRUE(containsCode(codeSystems.front().getCodes(*view), "03"));
 
     EXPECT_EQ(codeSystems.back().getUrl(), "https://test/Codesystem3");
     EXPECT_EQ(codeSystems.back().getName(), "TEST_CODESYSTEM3");
     EXPECT_FALSE(codeSystems.back().isCaseSensitive());
-    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(), "_ActCredentialedCareCode"));
-    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(), "SUB_1"));
-    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(), "SUB_2"));
+    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(*view), "_ActCredentialedCareCode"));
+    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(*view), "SUB_1"));
+    EXPECT_TRUE(containsCode(codeSystems.back().getCodes(*view), "SUB_2"));
 }
 
 TEST(FhirStructureDefinitionParserTest, ValueSets)
 {
+    const FhirStructureRepositoryBackend repo;
     const auto& fhirCodeSystemsXml = ResourceManager::getAbsoluteFilename("test/fhir/TestCodeSystem.xml");
     const auto& fhirValueSetsXml = ResourceManager::getAbsoluteFilename("test/fhir/TestValueSet.xml");
     std::list<FhirCodeSystem> codeSystems;
     std::list<FhirValueSet> vSets;
     ASSERT_NO_THROW(std::tie(std::ignore, codeSystems, std::ignore) =
-                        FhirStructureDefinitionParser::parse(fhirCodeSystemsXml, FhirResourceGroupConst{"test"}));
+                        FhirStructureDefinitionParser::parse(fhirCodeSystemsXml, &repo, FhirResourceGroupConst{"test"}));
     ASSERT_NO_THROW(std::tie(std::ignore, std::ignore, vSets) =
-                        FhirStructureDefinitionParser::parse(fhirValueSetsXml, FhirResourceGroupConst{"test"}));
+                        FhirStructureDefinitionParser::parse(fhirValueSetsXml, &repo, FhirResourceGroupConst{"test"}));
     ASSERT_EQ(vSets.size(), 4);
     ASSERT_EQ(codeSystems.size(), 3);
     std::vector<FhirValueSet> valueSets(vSets.begin(), vSets.end());
@@ -297,15 +305,13 @@ TEST(FhirStructureDefinitionParserTest, ValueSets)
 
 TEST(FhirStructureDefinitionParserTest, contentReference)
 {
-    const auto& fhirInstance = Fhir::instance();
-    const auto repo =
-        fhirInstance.structureRepository(model::Timestamp::now()).latest().view(std::addressof(fhirInstance.backend()));
+    const auto repo = Fhir::instance().defaultView();
     const auto* bundleStructDef = repo->findTypeById("Bundle");
     ASSERT_NE(bundleStructDef, nullptr);
     const auto& entryLinkElementDef = bundleStructDef->findElement("Bundle.entry.link");
     ASSERT_NE(entryLinkElementDef, nullptr);
     ASSERT_TRUE(entryLinkElementDef->typeId().empty());
-    std::optional<fhirtools::FhirStructureRepository::ContentReferenceResolution> resolution;
+    std::optional<fhirtools::FhirStructureRepositoryView::ContentReferenceResolution> resolution;
     ASSERT_NO_THROW(
         resolution.emplace(repo->resolveContentReference(*bundleStructDef->resourceGroup(), *entryLinkElementDef)));
     ASSERT_NE(resolution->element, nullptr);

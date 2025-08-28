@@ -67,7 +67,7 @@ protected:
         mRequestHandler = &requestManager.addRequestHandler(
             HttpMethod::POST,
             "/error/{status}",
-            std::make_unique<ErrorHandler>());
+            std::make_unique<ErrorHandler>()).setErpUseCase(bde::AcceptTask_UC_4_1);
     }
 
     void testStatusCode (uint32_t statusCode, uint32_t expectedResponseStatus, bool expectResponseBody);

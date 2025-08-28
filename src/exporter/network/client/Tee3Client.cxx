@@ -195,7 +195,6 @@ boost::system::result<epa::Tee3Protocol::VauCid> getVauCidChecked(const Tee3Clie
 
 } // namespace
 
-//NOLINTNEXTLINE(performance-unnecessary-value-param) owner is a pointer only - const reference to pointer is useless
 Tee3Client::Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3ClientsForHost*> owner)
     : mOwingClientsForHost{owner}
     , mHttpsClient{ioContext,

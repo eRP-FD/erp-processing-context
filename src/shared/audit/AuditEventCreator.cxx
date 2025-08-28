@@ -59,11 +59,18 @@ std::tuple<std::string, std::string, std::string> evalAgentData(const model::Aud
 std::string replaceTextTemplateVariables(
     const std::string& text,
     const std::string& agentName,
-    const std::string& prescriptionId)
+    const std::string& prescriptionId,
+    const std::string& countryCode,
+    const std::map<std::string, std::string>& variables)
 {
     std::string result = String::replaceAll(text, std::string(AuditEventTextTemplates::selfVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::agentNameVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::prescriptionIdVariableName), prescriptionId);
+    result = String::replaceAll(result, std::string(AuditEventTextTemplates::countryCodeVariableName), countryCode);
+    for (const auto& [key, value] : variables)
+    {
+        result = String::replaceAll(result, std::string{"{"}.append(key).append("}"), value);
+    }
 
     return result;
 }
@@ -102,6 +109,14 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
         auditEvent.setEntityWhatIdentifier(model::resource::naming_system::prescriptionID, resourceIdStr);
         auditEvent.setEntityDescription(resourceIdStr);
     }
+    else if (auditData.countryCode().has_value() &&
+             (auditData.eventId() == model::AuditEventId::POST_GRANT_EU_ACCESS_PERMISSION ||
+              auditData.eventId() == model::AuditEventId::DELETE_REVOKE_EU_ACCESS_PERMISSION))
+    {
+        auditEvent.setEntityWhatIdentifier(std::nullopt, "eu-access-permission-" + auditData.insurantKvnr().id() + "-" +
+                                                             auditData.countryCode()->toString());
+        auditEvent.setEntityDescription(auditData.countryCode()->toString());
+    }
     else
     {
         // entity.description is mandatory according to the profile. If we don't have a unique prescriptionID
@@ -113,6 +128,10 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
         if(model::AuditEventId::POST_Consent == eventId || model::AuditEventId::DELETE_Consent == eventId)
         {
             auditEvent.setEntityDescription("CHARGCONS");
+        }
+        else if (model::AuditEventId::POST_EU_Consent == eventId || model::AuditEventId::DELETE_EU_Consent == eventId)
+        {
+            auditEvent.setEntityDescription("EUDISPCONS");
         }
         else
         {
@@ -129,11 +148,15 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
     auditEvent.setEntityName(auditData.insurantKvnr().id());
     auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
 
+    const std::string countryCodeStr = auditData.countryCode() ? auditData.countryCode()->toString() : "";
+
+    const auto variables = auditData.variables();
+
     // text/div
     const auto [text, usedLanguage] =  textResources.retrieveTextTemplate(auditData.eventId(), language);
-    auditEvent.setTextDiv(R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" +
-                          replaceTextTemplateVariables(text, agentName, resourceIdStr) +
-                          "</div>");
+    auditEvent.setTextDiv(
+        R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" +
+        replaceTextTemplateVariables(text, agentName, resourceIdStr, countryCodeStr, variables) + "</div>");
     auditEvent.setLanguage(usedLanguage);
 
     return auditEvent;

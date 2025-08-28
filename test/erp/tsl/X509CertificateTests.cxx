@@ -206,7 +206,7 @@ TEST_F(X509CertificateTests, CertificateIsCaCertificate)
 TEST_F(X509CertificateTests, IssuerHasExpectedValue)
 {
     const std::string issuer{
-        "/C=DE/O=gematik GmbH/OU=Zentrale Root-CA der Telematikinfrastruktur/CN=GEM.RCA1"};
+        "C=DE, O=gematik GmbH, OU=Zentrale Root-CA der Telematikinfrastruktur, CN=GEM.RCA1"};
     EXPECT_EQ(certificate.getIssuer(), issuer);
 }
 
@@ -214,7 +214,7 @@ TEST_F(X509CertificateTests, IssuerHasExpectedValue)
 TEST_F(X509CertificateTests, SubjectHasExpectedValue)
 {
     const std::string subject{
-        "/C=DE/O=gematik GmbH/OU=TSL-Signer-CA der Telematikinfrastruktur/CN=GEM.TSL-CA1"};
+        "C=DE, O=gematik GmbH, OU=TSL-Signer-CA der Telematikinfrastruktur, CN=GEM.TSL-CA1"};
     EXPECT_EQ(certificate.getSubject(), subject);
 }
 
@@ -409,8 +409,8 @@ TEST_F(X509CertificateTests, CertificateFromVauTeeHandshakeCanBeParsed)
     const auto vauCertificate{X509Certificate::createFromBase64(VAU_TEE_HANDSHAKE_CERTIFICATE)};
 
     EXPECT_TRUE(vauCertificate.hasX509Ptr());
-    EXPECT_EQ(vauCertificate.getSubject(), "/C=DE/O=mock-certificate-authority/CN=localhost");
-    EXPECT_EQ(vauCertificate.getIssuer(), "/C=DE/O=mock-certificate-authority/CN=localhost");
+    EXPECT_EQ(vauCertificate.getSubject(), "C=DE, O=mock-certificate-authority, CN=localhost");
+    EXPECT_EQ(vauCertificate.getIssuer(), "C=DE, O=mock-certificate-authority, CN=localhost");
     EXPECT_EQ(vauCertificate.getSigningAlgorithm(), SigningAlgorithm::ellipticCurve);
 }
 

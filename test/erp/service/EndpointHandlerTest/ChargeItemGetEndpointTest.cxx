@@ -47,7 +47,7 @@ TEST_F(ChargeItemGetEndpointTest, GetByIdNonPkvFails)
 TEST_F(ChargeItemGetEndpointTest, SignatureWho)
 {
     using namespace std::string_literals;
-    gsl::not_null defaultView = Fhir::instance().backend().defaultView();
+    gsl::not_null defaultView = Fhir::instance().defaultView();
     const auto parse = [&defaultView](std::string_view expr) {
         return fhirtools::FhirPathParser::parse(defaultView.get().get(), expr);
     };
@@ -71,26 +71,26 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
     ASSERT_NO_THROW(testutils::bestEffortValidate(unspec.value())) << serverResponse.getBody();
     const auto bundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument());
 
-    fhirtools::Collection bundleCollection = {std::make_shared<ErpElement>(
+    fhirtools::EvaluationContext bundleContext{std::make_shared<ErpElement>(
         defaultView, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle.jsonDocument()))};
     const auto supportingInformationExpr = parse("Bundle.entry.resource.ofType(ChargeItem).supportingInformation");
-    const auto supportingInformation = supportingInformationExpr->eval(bundleCollection);
-    ASSERT_EQ(supportingInformation.size(), 3);
+    const auto supportingInformation = supportingInformationExpr->eval(bundleContext);
+    ASSERT_EQ(supportingInformation.collection.size(), 3);
     const auto dispenseItemExpr =
         parse("where(display = '"s.append(model::resource::structure_definition::dispenseItem).append("').resolve()"));
     const auto dispenseItem = dispenseItemExpr->eval(supportingInformation);
-    ASSERT_EQ(dispenseItem.size(), 1);
+    ASSERT_EQ(dispenseItem.collection.size(), 1);
     const auto receiptExpr =
         parse("where(display = '"s.append(model::resource::structure_definition::receipt).append("').resolve()"));
     const auto receipt = receiptExpr->eval(supportingInformation);
-    ASSERT_EQ(receipt.size(), 1);
+    ASSERT_EQ(receipt.collection.size(), 1);
 
     const auto signatureWhoExpr = parse("signature.who.reference");
-    const auto dispenseItemSigner = signatureWhoExpr->eval(dispenseItem);
+    const auto dispenseItemSigner = signatureWhoExpr->eval(dispenseItem).collection;
     ASSERT_EQ(dispenseItemSigner.size(), 1);
     EXPECT_EQ(dispenseItemSigner.front()->asString(), expectFullUrl);
 
-    const auto receiptSigner = signatureWhoExpr->eval(receipt);
+    const auto receiptSigner = signatureWhoExpr->eval(receipt).collection;
     ASSERT_EQ(receiptSigner.size(), 1);
     EXPECT_EQ(receiptSigner.front()->asString(), expectFullUrl);
 }

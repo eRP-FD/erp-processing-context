@@ -15,6 +15,20 @@ namespace fhirtools
 // http://hl7.org/fhirpath/N1/#addition
 class MathPlusOperator : public BinaryExpression
 {
+    // implemented in StringManipulation/PlusOperator
+};
+
+// https://hl7.org/fhirpath/N1/#subtraction
+class MathMinusOperator : public BinaryExpression
+{
+public:
+    static constexpr auto IDENTIFIER = "-";
+    using BinaryExpression::BinaryExpression;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
+
+private:
+    static EvaluationContext minus(const EvaluationContext& context, const Element& lhs, const Element& rhs,
+                                   Element::Type type);
 };
 
 // http://hl7.org/fhirpath/N1/#mod
@@ -23,10 +37,11 @@ class MathModOperator : public BinaryExpression
 public:
     static constexpr auto IDENTIFIER = "mod";
     using BinaryExpression::BinaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
 private:
-    Collection mod(const Element& lhs, const Element& rhs, Element::Type type) const;
+    static EvaluationContext mod(const EvaluationContext& context, const Element& lhs, const Element& rhs,
+                                 Element::Type type);
 };
 
 // http://hl7.org/fhirpath/N1/#abs-integer-decimal-quantity

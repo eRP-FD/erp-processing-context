@@ -1,3 +1,10 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
+
 #include "MedicationsAndDispenses.hxx"
 
 #include "shared/model/MedicationDispense.hxx"
@@ -21,9 +28,15 @@ void model::MedicationsAndDispenses::addFromBundle(const MedicationDispenseBundl
         {
             medicationDispenses.emplace_back(model::MedicationDispense::fromJson(*resource));
         }
-        else if(resourceType == model::GemErpPrMedication::resourceTypeName)
+        else if (resourceType == model::GemErpPrMedication::resourceTypeName)
         {
             medications.emplace_back(model::GemErpPrMedication::fromJson(*resource));
+        }
+        else if (resourceType == model::GemErpEuPrPractitioner::resourceTypeName ||
+                 resourceType == model::GemErpEuPrPractitionerRole::resourceTypeName ||
+                 resourceType == model::GemErpEuPrOrganization::resourceTypeName)
+        {
+            // Ignore certain and known resources for later validation and usage.
         }
         else
         {

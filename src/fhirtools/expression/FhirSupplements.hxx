@@ -19,7 +19,7 @@ class PercentResource : public Expression
 {
 public:
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // external constant '%rootResource'
@@ -27,7 +27,7 @@ class PercentRootResource : public Expression
 {
 public:
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -35,9 +35,9 @@ class ExtensionFunction : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "extension";
-    explicit ExtensionFunction(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                               ExpressionPtr arg);
-    Collection eval(const Collection& collection) const override;
+    explicit ExtensionFunction(
+        std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg);
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -46,7 +46,7 @@ class HasValue : public Expression
 public:
     static constexpr auto IDENTIFIER = "hasValue";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -55,7 +55,7 @@ class GetValue : public Expression
 public:
     static constexpr auto IDENTIFIER = "getValue";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -64,7 +64,7 @@ class Resolve : public Expression
 public:
     static constexpr auto IDENTIFIER = "resolve";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -87,9 +87,9 @@ class ConformsTo : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "conformsTo";
-    explicit ConformsTo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    explicit ConformsTo(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                         ExpressionPtr arg);
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // https://hl7.org/fhir/fhirpath.html#functions
@@ -113,7 +113,7 @@ class HtmlChecks : public Expression
 public:
     static constexpr auto IDENTIFIER = "htmlChecks";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 }
 

@@ -34,7 +34,7 @@ class IEpaAccountLookup // NOLINT(cppcoreguidelines-special-member-functions)
 {
 public:
     virtual ~IEpaAccountLookup() =  default;
-    virtual EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr) = 0;
+    virtual EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::optional<std::string>& prefix = std::nullopt) = 0;
     virtual EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList) = 0;
     virtual EpaAccount::Code checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr, const std::string& host, uint16_t port) = 0;
     virtual IEpaAccountLookupClient& lookupClient() = 0;
@@ -46,7 +46,7 @@ public:
     explicit EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient);
     explicit EpaAccountLookup(MedicationExporterServiceContext& serviceContext);
 
-    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr) override;
+    EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::optional<std::string>& prefix = std::nullopt) override;
     EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList) override;
     EpaAccount::Code checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr, const std::string& host, uint16_t port) override;
     IEpaAccountLookupClient& lookupClient() override

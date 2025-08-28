@@ -8,18 +8,19 @@
 #ifndef ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 #define ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX
 
+#include "fhirtools/repository/VersionMapper.hxx"
+#include "fhirtools/validator/Severity.hxx"
 #include "shared/ErpConstants.hxx"
 #include "shared/model/ProfileType.hxx"
-#include "shared/validation/SchemaType.hxx"
-#include "fhirtools/validator/Severity.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
 #include "shared/util/SafeString.hxx"
+#include "shared/validation/SchemaType.hxx"
 
+#include <magic_enum/magic_enum.hpp>
 #include <rapidjson/document.h>
 #include <filesystem>
 #include <list>
-#include <magic_enum/magic_enum.hpp>
 #include <map>
 #include <optional>
 #include <set>
@@ -105,6 +106,8 @@ enum class ConfigurationKey
     FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
     FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
     FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
+    FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE,
+    FHIR_VALIDATION_URN_UUID_CHECK_FROM,
     FHIR_REFERENCE_TIME_OFFSET_DAYS,
     HSM_CACHE_REFRESH_SECONDS,
     HSM_DEVICE,
@@ -148,6 +151,9 @@ enum class ConfigurationKey
     REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS,
     REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS,
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
+
+    FEATURE_EU,
+    ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -201,6 +207,10 @@ enum class ConfigurationKey
     MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS,
 
     MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS,
+    MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
+    MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
+    MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
+    MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE,
 
     MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE,
     MEDICATION_EXPORTER_ADMIN_SERVER_PORT,
@@ -269,17 +279,37 @@ public:
     struct ERP {
         constexpr static std::string_view fhirResourceGroups = "/erp/fhir/resource-groups";
         constexpr static std::string_view fhirResourceViews = "/erp/fhir/resource-views";
+        constexpr static std::string_view kbvSchluesseltabellen = "/erp/fhir/schluesseltabellen";
         constexpr static std::string_view synthesizeCodesystemPath = "/erp/fhir/synthesize-codesystems";
         constexpr static std::string_view synthesizeValuesetPath = "/erp/fhir/synthesize-valuesets";
+        constexpr static std::string_view versionMappingPath = "/erp/fhir/version-mapping";
         constexpr static ConfigurationKey FHIR_STRUCTURE_DEFINITIONS = ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
+            ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
+            ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE =
+            ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE =
+            ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE;
         static const std::map<model::ProfileType, ProfileTypeRequirement> requiredProfiles;
     };
     struct MedicationExporter {
         constexpr static std::string_view fhirResourceGroups = "/erp-medication-exporter/fhir/resource-groups";
         constexpr static std::string_view fhirResourceViews = "/erp-medication-exporter/fhir/resource-views";
+        constexpr static std::string_view kbvSchluesseltabellen = "/erp-medication-exporter/fhir/schluesseltabellen";
         constexpr static std::string_view synthesizeCodesystemPath = "/erp-medication-exporter/fhir/synthesize-codesystems";
         constexpr static std::string_view synthesizeValuesetPath = "/erp-medication-exporter/fhir/synthesize-valuesets";
+        constexpr static std::string_view versionMappingPath = "/erp-medication-exporter/fhir/version-mapping";
         constexpr static ConfigurationKey FHIR_STRUCTURE_DEFINITIONS = ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
+            ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
+            ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE =
+            ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE;
+        constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE =
+            ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE;
         static const std::map<model::ProfileType, ProfileTypeRequirement> requiredProfiles;
     };
     const std::string& serverHost() const;
@@ -578,7 +608,6 @@ public:
     [[nodiscard]] OnUnknownExtension kbvValidationOnUnknownExtension() const;
     [[nodiscard]] NonLiteralAuthorRefMode kbvValidationNonLiteralAuthorRef() const;
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
-    fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType) const;
     AnrChecksumValidationMode anrChecksumValidationMode() const;
 
     template <config::ProcessType ProcessT>
@@ -589,6 +618,8 @@ public:
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeCodesystem() const;
     template <config::ProcessType ProcessT>
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeValuesets() const;
+    template<config::ProcessType ProcessT>
+    [[nodiscard]] fhirtools::VersionMapper::Config fhirVersionMapping() const;
 
     struct EpaFQDN {
         std::string hostName;
@@ -618,11 +649,13 @@ extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirRes
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
 extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::ERP>() const;
 extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::ERP>() const;
+extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
 
 extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
 extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::MedicationExporter>() const;
 extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::MedicationExporter>() const;
+extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;
 
 
 #endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX

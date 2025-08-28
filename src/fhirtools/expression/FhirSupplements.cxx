@@ -9,58 +9,50 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
 #include "fhirtools/expression/LiteralExpression.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 
 namespace fhirtools
 {
-Collection PercentResource::eval(const Collection& collection) const
+EvaluationContext PercentResource::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto context = PercentContext(mFhirStructureRepository).eval(collection);
-    auto element = context.singleOrEmpty();
-    while (element)
+    auto element = context.context->resourceRoot();
+    if (element)
     {
-        if (element->isResource())
-        {
-            return {element};
-        }
-        element = element->parent();
+        return context(element);
     }
-    return {};
+    return context();
 }
 
-Collection PercentRootResource::eval(const Collection& collection) const
+EvaluationContext PercentRootResource::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto element = PercentResource(mFhirStructureRepository).eval(collection).singleOrEmpty();
-    while (element)
+    if (auto element = context.context->containerResource())
     {
-        if (element->isContainerResource())
-        {
-            return {element};
-        }
-        element = element->parent();
+        return context(element);
     }
-    return {};
+    return context();
 }
+
 ExtensionFunction::ExtensionFunction(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg)
-    : UnaryExpression(fhirStructureRepository, std::move(arg))
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
+    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
-Collection ExtensionFunction::eval(const Collection& collection) const
+
+EvaluationContext ExtensionFunction::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto urlC = mArg->eval(collection);
-    if (urlC.empty())
+    const auto urlC = mArg->eval(context);
+    if (urlC.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto& url = urlC.single()->asString();
-    Collection ret;
-    for (const auto& item : collection)
+    const auto& url = urlC.collection.single()->asString();
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
         if (! item->definitionPointer().subField("extension"))
         {
@@ -76,78 +68,79 @@ Collection ExtensionFunction::eval(const Collection& collection) const
             const Collection urls = extension->subElements("url");
             if (urls.single()->asString() == url)
             {
-                ret.push_back(extension);
+                ret.collection.push_back(extension);
             }
         }
     }
     return ret;
 }
 
-Collection HasValue::eval(const Collection& collection) const
+EvaluationContext HasValue::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.size() == 1)
+    if (context.collection.size() == 1)
     {
-        const auto& element = collection.single();
+        const auto& element = context.collection.single();
         if (element->hasValue())
         {
-            return {makeBoolElement(true)};
+            return context.makeBoolElement(true);
         }
     }
-    return {makeBoolElement(false)};
+    return context.makeBoolElement(false);
 }
 
-Collection GetValue::eval(const Collection& collection) const
+EvaluationContext GetValue::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (HasValue(mFhirStructureRepository).eval(collection).boolean())
+    if (HasValue(fhirStructureRepository()).eval(context).collection.boolean())
     {
-        return collection;
+        // return context unchanged
+        return context;
     }
-    return {};
+    return context();
 }
 
-Collection Resolve::eval(const Collection& collection) const
+EvaluationContext Resolve::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     static constexpr std::string_view elementPathIsNotUsed{"n/a"};
-    Collection result;
-    for (const auto& item : collection)
+    auto result = context();
+    for (const auto& item : context.collection)
     {
         const auto& [element, _] = item->resolveReference(elementPathIsNotUsed);
         if (element)
         {
-            result.emplace_back(element);
+            result.collection.emplace_back(element);
         }
     }
     return result;
 }
 
-ConformsTo::ConformsTo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+ConformsTo::ConformsTo(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                        ExpressionPtr arg)
-    : UnaryExpression(fhirStructureRepository, std::move(arg))
+    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
-Collection ConformsTo::eval(const Collection& collection) const
+EvaluationContext ConformsTo::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto element = collection.single();
-    const auto profile = mArg->eval(collection).single()->asString();
+    const auto element = context.collection.single();
+    const auto profile = mArg->eval(context).collection.single()->asString();
     const auto result =
         FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(),
                                                 {DefinitionKey{profile}}, {.validateMetaProfiles = false});
-    return {makeBoolElement(result.highestSeverity() < Severity::error)};
+    return context.makeBoolElement(result.highestSeverity() < Severity::error);
 }
 
-Collection HtmlChecks::eval(const Collection& collection) const
+EvaluationContext HtmlChecks::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    // Currently covered by xds
-    return {makeBoolElement(true)};
+    // Currently covered by XSDs
+    return context.makeBoolElement(true);
 }
 }

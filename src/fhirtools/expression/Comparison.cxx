@@ -8,104 +8,81 @@
 #include "fhirtools/expression/Comparison.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 
 namespace fhirtools
 {
 
 ComparisonOperator::ComparisonOperator(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
     ExpressionPtr rhs)
-    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
 
-Collection ComparisonOperator::comparison(const Element& lhs, const Element& rhs,
-                                          const std::vector<std::strong_ordering>& expected) const
+template <bool (*cmp)(std::partial_ordering)>
+EvaluationContext ComparisonOperator::comparison(const EvaluationContext& lhs, const EvaluationContext& rhs) const
 {
-    const auto result = lhs.compareTo(rhs);
+    const auto& context = lhs; // use arbitrary context as return context
+    if (lhs.collection.empty() || rhs.collection.empty())
+    {
+        return context();
+    }
+    const auto result = lhs.collection.single()->compareTo(*rhs.collection.single());
     if (! result.has_value())
     {
-        return {};
+        return context();
     }
-    return {Expression::makeBoolElement(std::ranges::find(expected, *result) != expected.end())};
+    return context.makeBoolElement(cmp(*result));
 }
 
-Collection EqualityEqualsOperator::eval(const Collection& collection) const
+EvaluationContext EqualityEqualsOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
+    const auto& lhs = mLhs->eval(context);
+    const auto& rhs = mRhs->eval(context);
+    if (lhs.collection.empty() || rhs.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto result = lhs.equals(rhs);
-    return result.has_value() ? Collection{makeBoolElement(*result)} : Collection{};
+    const auto result = lhs.collection.equals(rhs.collection);
+    return result.has_value() ? context.makeBoolElement(*result) : context();
 }
 
-Collection EqualityNotEqualsOperator::eval(const Collection& collection) const
+EvaluationContext EqualityNotEqualsOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
+    const auto& lhs = mLhs->eval(context);
+    const auto& rhs = mRhs->eval(context);
+    if (lhs.collection.empty() || rhs.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto result = lhs.equals(rhs);
-    return result.has_value() ? Collection{makeBoolElement(! *result)} : Collection{};
+    const auto result = lhs.collection.equals(rhs.collection);
+    return result.has_value() ? context.makeBoolElement(! *result) : context();
 }
 
-Collection ComparisonOperatorGreaterThan::eval(const Collection& collection) const
+EvaluationContext ComparisonOperatorGreaterThan::eval(const EvaluationContext& context) const
 {
-    EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
-    {
-        return {};
-    }
-    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::greater});
+    return comparison<std::is_gt>(mLhs->eval(context), mRhs->eval(context));
 }
 
-Collection ComparisonOperatorLessThan::eval(const Collection& collection) const
+EvaluationContext ComparisonOperatorLessThan::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
-    {
-        return {};
-    }
-    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::less});
-    FPFail("invalid operands for operator<");
+    return comparison<std::is_lt>(mLhs->eval(context), mRhs->eval(context));
 }
 
-Collection ComparisonOperatorGreaterOrEqual::eval(const Collection& collection) const
+EvaluationContext ComparisonOperatorGreaterOrEqual::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
-    {
-        return {};
-    }
-    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::greater, std::strong_ordering::equal});
-    FPFail("invalid operands for operator>=");
+    return comparison<std::is_gteq>(mLhs->eval(context), mRhs->eval(context));
 }
 
-Collection ComparisonOperatorLessOrEqual::eval(const Collection& collection) const
+EvaluationContext ComparisonOperatorLessOrEqual::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mLhs->eval(collection);
-    const auto& rhs = mRhs->eval(collection);
-    if (lhs.empty() || rhs.empty())
-    {
-        return {};
-    }
-    return comparison(*lhs.single(), *rhs.single(), {std::strong_ordering::less, std::strong_ordering::equal});
-    FPFail("invalid operands for operator<=");
+    return comparison<std::is_lteq>(mLhs->eval(context), mRhs->eval(context));
 }
 }

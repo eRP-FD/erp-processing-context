@@ -1,8 +1,8 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/fhirtools/SampleValidation.hxx"
@@ -46,8 +46,8 @@ public:
         "test/fhir-path/slicing/profiles/slice_by_profile_resolve.xml",
         "test/fhir-path/slicing/profiles/slice_by_profile_resolve_field.xml",
         "test/fhir-path/slicing/profiles/slice_by_primitve_binding.xml",
-        "test/fhir-path/slicing/profiles/test_value_set.xml",
-        "test/fhir-path/slicing/profiles/test_code_system.xml",
+        "test/fhir-path/profiles/test_value_set.xml",
+        "test/fhir-path/profiles/test_code_system.xml",
         "test/fhir-path/slicing/profiles/slice_by_coding_binding.xml",
         "test/fhir-path/slicing/profiles/slice_by_codeable_concept_binding.xml",
             // clang-format on
@@ -250,6 +250,60 @@ INSTANTIATE_TEST_SUITE_P(Samples, SliceOnContentReferenceTest,
                                      {
                                          std::make_tuple(fhirtools::Severity::error, "At most 1 elements expected, but got 2"),
                                          "SliceOnContentReference.contentReferenced[0].sliced[*]:slice1",
+                                     },
+                                 },
+                             },
+                         }));
+
+
+class SliceMultipatternTest : public fhirtools::test::SampleValidationTest<SliceMultipatternTest>
+{
+public:
+    static std::list<std::filesystem::path> fileList()
+    {
+        return {
+            "test/fhir-path/profiles/minifhirtypes.xml",
+            "test/fhir-path/slicing/profiles/slice_multipattern.xml",
+        };
+    };
+};
+
+TEST_P(SliceMultipatternTest, run)
+{
+    ASSERT_NO_FATAL_FAILURE(run());
+}
+
+INSTANTIATE_TEST_SUITE_P(Samples, SliceMultipatternTest,
+                         ::testing::ValuesIn<std::initializer_list<Sample>>({
+                             {
+                                 "Multipattern",
+                                 "test/fhir-path/slicing/samples/valid_slice_multipattern.json",
+                             },
+                             {
+                                 "Multipattern",
+                                 "test/fhir-path/slicing/samples/invalid_slice_multipattern-missing-code1.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                                                            "Multipattern.multi",
+                                     },
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                                                            "Multipattern.multi[*]:codes",
+                                     },
+                                 },
+                             },
+                             {
+                                 "Multipattern",
+                                 "test/fhir-path/slicing/samples/invalid_slice_multipattern-missing-code2.json",
+                                 {
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                                                            "Multipattern.multi",
+                                     },
+                                     {
+                                         std::make_tuple(fhirtools::Severity::error, "missing mandatory element"),
+                                                                            "Multipattern.multi[*]:codes",
                                      },
                                  },
                              },

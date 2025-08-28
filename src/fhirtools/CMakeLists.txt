@@ -46,6 +46,7 @@ target_sources(fhirtools
         expression/BooleanLogic.cxx
         expression/Comparison.cxx
         expression/Conversion.cxx
+        expression/EvaluationContext.cxx
         expression/Expression.cxx
         expression/Functions.cxx
         expression/FhirSupplements.cxx
@@ -67,19 +68,28 @@ target_sources(fhirtools
         repository/FhirCodeSystem.cxx
         repository/FhirConstraint.cxx
         repository/FhirElement.cxx
-        repository/FhirResourceGroup.cxx
-        repository/FhirResourceGroupConfiguration.cxx
-        repository/FhirResourceGroupConst.cxx
-        repository/FhirResourceViewConfiguration.cxx
-        repository/FhirResourceViewGroupSet.cxx
-        repository/FhirResourceViewVerifier.cxx
         repository/FhirSlicing.cxx
         repository/FhirStructureDefinition.cxx
         repository/FhirStructureRepository.cxx
         repository/FhirValueSet.cxx
         repository/FhirVersion.cxx
+        repository/groups/FhirResourceGroup.cxx
+        repository/groups/FhirResourceGroupConfiguration.cxx
+        repository/groups/FhirResourceGroupConst.cxx
         repository/internal/FhirStructureDefinitionParser.cxx
         repository/internal/FhirStructureRepositoryFixer.cxx
+        repository/VersionMapper.cxx
+        repository/views/CodeCachingView.cxx
+        repository/views/ConfigurationHelper.cxx
+        repository/views/DefaultFhirStructureRepositoryView.cxx
+        repository/views/FhirResourceViewConfiguration.cxx
+        repository/views/FhirResourceViewGroupSet.cxx
+        repository/views/FhirResourceViewList.cxx
+        repository/views/FhirResourceViewVerifier.cxx
+        repository/views/FhirStructureRepositoryView.cxx
+        repository/views/FhirStructureRepositoryViewWrapper.cxx
+        repository/views/KbvSchluesseltabellenConfiguration.cxx
+        repository/views/VersionMappingView.cxx
         transformer/ResourceProfileTransformer.cxx
         util/SaxHandler.cxx
         util/Utf8Helper.cxx

@@ -158,6 +158,7 @@ protected:
         }
         deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.exec("DELETE FROM erp.auditevent");
+        deleteTxn.exec("DELETE FROM erp.eu_access_permission");
         deleteTxn.commit();
     }
 

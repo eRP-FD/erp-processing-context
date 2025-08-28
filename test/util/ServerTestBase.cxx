@@ -10,6 +10,7 @@
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -308,9 +309,7 @@ ClientResponse ServerTestBase::verifyOuterResponse (const ClientResponse& outerR
 
 void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) const
 {
-    const auto& fhirInstance = Fhir::instance();
-    const auto& backend = std::addressof(fhirInstance.backend());
-    const gsl::not_null repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+    const gsl::not_null repoView = Fhir::instance().structureRepository(model::Timestamp::now()).latest();
     std::optional<model::UnspecifiedResource> resourceForValidation;
     if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
     {

@@ -7,6 +7,7 @@
 
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
+#include "erp/model/EuMedicationDispenseInfos.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/model/KbvBundle.hxx"
@@ -376,8 +377,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllNoFilter)
     const auto medicationsAndDispenses =
         database().retrieveAllMedicationDispenses(kvnrPatient, std::optional<UrlArguments>{});
     database().commitTransaction();
-    EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-    checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+    EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+    checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
 }
 
 TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOLINT(readability-function-cognitive-complexity)
@@ -420,8 +421,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -432,7 +433,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), 0);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 0);
     }
 
     {
@@ -443,8 +444,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -455,7 +456,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), 0);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 0);
     }
 
     {
@@ -466,8 +467,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -478,7 +479,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), 0);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 0);
     }
 
     {
@@ -489,8 +490,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -501,7 +502,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), 0);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 0);
     }
 
     {
@@ -510,8 +511,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -520,7 +521,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), 0);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 0);
     }
 
     {
@@ -536,8 +537,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -548,8 +549,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, OneTaskGetAllSeveralFilters)//NOL
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 }
 
@@ -597,8 +598,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllNoFilter)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(model::Kvnr{kvnrPatient}, std::optional<UrlArguments>{});
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), prescriptionIds.size() * GetParam().numMedications);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), prescriptionIds.size() * GetParam().numMedications);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 }
 
@@ -649,8 +650,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -663,7 +664,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     {
@@ -676,8 +677,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -690,7 +691,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     {
@@ -702,8 +703,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -715,7 +716,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     {
@@ -727,8 +728,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -747,8 +748,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
-        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
+        checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
     }
 
     {
@@ -767,7 +768,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
         const auto medicationsAndDispenses =
             database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     {
@@ -781,8 +782,8 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetAllSeveralFilters)
             const auto medicationsAndDispenses =
                 database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
             database().commitTransaction();
-            EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications);
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
+            EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications);
+            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
         }
     }
 }
@@ -887,18 +888,18 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
                 database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
             database().commitTransaction();
             // ASSERT to avoid endless loop if less than expected count is returned.
-            ASSERT_FALSE(medicationsAndDispenses.medicationDispenses.empty());
-            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, medicationsAndDispenses.medicationDispenses);
-            if (! medicationsAndDispenses.medicationDispenses.empty())
+            ASSERT_FALSE(std::get<0>(medicationsAndDispenses).medicationDispenses.empty());
+            checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings, std::get<0>(medicationsAndDispenses).medicationDispenses);
+            if (! std::get<0>(medicationsAndDispenses).medicationDispenses.empty())
             {
-                for (size_t idx = 0; idx < medicationsAndDispenses.medicationDispenses.size() - 1; ++idx)
+                for (size_t idx = 0; idx < std::get<0>(medicationsAndDispenses).medicationDispenses.size() - 1; ++idx)
                 {
-                    const auto& medicationDispenseThis = medicationsAndDispenses.medicationDispenses[idx];
-                    const auto& medicationDispenseNext = medicationsAndDispenses.medicationDispenses[idx + 1];
+                    const auto& medicationDispenseThis = std::get<0>(medicationsAndDispenses).medicationDispenses[idx];
+                    const auto& medicationDispenseNext = std::get<0>(medicationsAndDispenses).medicationDispenses[idx + 1];
                     ASSERT_GE(medicationDispenseThis.whenHandedOver(), medicationDispenseNext.whenHandedOver());
                 }
             }
-            receivedCount += medicationsAndDispenses.medicationDispenses.size();
+            receivedCount += std::get<0>(medicationsAndDispenses).medicationDispenses.size();
         }
         ASSERT_EQ(receivedCount, expectedCountAll);
     }
@@ -920,7 +921,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto medicationsAndDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        ASSERT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        ASSERT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     for (const std::string& kvnrPatientId : patients)
@@ -940,7 +941,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto medicationsAndDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        ASSERT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        ASSERT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     for (const std::string& kvnrPatientId : patients)
@@ -959,7 +960,7 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
         UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
         const auto medicationsAndDispenses = database().retrieveAllMedicationDispenses(kvnrPatient, searchArgs);
         database().commitTransaction();
-        ASSERT_EQ(medicationsAndDispenses.medicationDispenses.size(), expectedCount);
+        ASSERT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), expectedCount);
     }
 
     {
@@ -972,12 +973,12 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, ManyTasksGetAllSeveralFilters)//N
             const auto medicationsAndDispenses =
                 database().retrieveAllMedicationDispenses(model::Kvnr{InsurantA}, searchArgs);
             database().commitTransaction();
-            EXPECT_EQ(medicationsAndDispenses.medicationDispenses.size(), GetParam().numMedications)
-                << model::MedicationDispenseBundle{"", medicationsAndDispenses.medicationDispenses,
-                                                   medicationsAndDispenses.medications}
+            EXPECT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), GetParam().numMedications)
+                << model::MedicationDispenseBundle{"", std::get<0>(medicationsAndDispenses).medicationDispenses,
+                                                   std::get<0>(medicationsAndDispenses).medications}
                        .serializeToJsonString();
             EXPECT_NO_FATAL_FAILURE(checkMedicationDispensesXmlStrings(medicationDispensesInputXmlStrings,
-                                                                       medicationsAndDispenses.medicationDispenses));
+                                                                       std::get<0>(medicationsAndDispenses).medicationDispenses));
         }
     }
 }

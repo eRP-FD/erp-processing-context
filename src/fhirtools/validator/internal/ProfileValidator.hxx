@@ -21,13 +21,14 @@ namespace fhirtools
 {
 
 class Element;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class ProfileSetValidator;
 class ProfileValidator;
 class ProfileValidatorCounterData;
 class ProfileValidatorCounterKey;
 class FhirStructureDefinition;
 class FhirValueSet;
+class FhirValueSetCodes;
 class ValidationData;
 
 /**
@@ -85,8 +86,8 @@ public:
         using map::map;
         void merge(Map);
     };
-    Map subFieldValidators(const FhirStructureRepository&, std::string_view name);
-    void typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef);
+    Map subFieldValidators(const FhirStructureRepositoryView&, std::string_view name);
+    void typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef);
     struct ProcessingResult
     {
         std::list<const FhirStructureDefinition*> sliceProfiles;
@@ -110,8 +111,8 @@ protected:
                      ProfiledElementTypeInfo defPtr, std::string sliceName, const ProfileSetValidator&);
     void checkBinding(const Element& element, std::string_view elementFullPath);
     void validateBinding(const fhirtools::Element& element, const FhirElement::Binding& binding,
-                         const FhirValueSet* bindingValueSet, std::string_view elementFullPath);
-    void checkCodingBinding(const Element& codingElement, const FhirValueSet* fhirValueSet,
+                         const FhirValueSetCodes& boundCodes, std::string_view elementFullPath);
+    void checkCodingBinding(const Element& codingElement, const FhirValueSetCodes& boundCodes,
                             std::string_view elementFullPath, Severity errorSeverity);
     void checkConstraints(const Element& element, std::string_view elementFullPath);
     void checkValue(const Element& element, std::string_view elementFullPath);

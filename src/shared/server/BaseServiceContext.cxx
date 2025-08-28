@@ -6,8 +6,10 @@
  */
 
 #include "shared/server/BaseServiceContext.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
 #include "shared/hsm/VsdmKeyCache.hxx"
+#include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
 
 
@@ -20,13 +22,21 @@ BaseServiceContext::BaseServiceContext(const BaseFactories& factories)
     , mVsdmKeyCache(std::make_unique<VsdmKeyCache>(factories.vsdmKeyBlobDatabaseFactory(), *mHsmPool))
     , mKeyDerivation(*mHsmPool)
     , mXmlValidator(factories.xmlValidatorFactory())
-    , mTslManager(factories.tslManagerFactory(mXmlValidator))
     , mTpmFactory(factories.tpmFactory)
+    , mTslManager(factories.tslManagerFactory(mXmlValidator))
     // GEMREQ-end A_20974-01
 {
     Expect3(mTslManager != nullptr, "mTslManager could not be initialized", std::logic_error);
     Expect3(mTpmFactory != nullptr, "mTpmFactory has been passed as nullptr to ServiceContext constructor",
             std::logic_error);
+}
+
+BaseServiceContext::~BaseServiceContext()
+{
+    if (mTslRefreshJob != nullptr)
+    {
+        mTslRefreshJob->shutdown();
+    }
 }
 
 std::shared_ptr<Timer> BaseServiceContext::getTimerManager()
@@ -92,4 +102,12 @@ KeyDerivation& BaseServiceContext::getKeyDerivation()
 ApplicationHealth& BaseServiceContext::applicationHealth()
 {
     return mApplicationHealth;
+}
+
+void BaseServiceContext::setupTslRefreshJob(std::chrono::seconds tslRefreshInterval)
+{
+    GS_A_4899.start("Create asynchronous TSL-Update job.");
+    mTslRefreshJob = std::make_unique<TslRefreshJob>(*mTslManager, tslRefreshInterval);
+    mTslRefreshJob->start();
+    GS_A_4899.finish();
 }

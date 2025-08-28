@@ -6,6 +6,8 @@
  */
 
 #include "erp/model/Task.hxx"
+#include "erp/model/extensions/GemErpExEuIsRedeemableByProperties.hxx"
+#include "erp/model/extensions/GemErpRedeemableByPatient.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/ErpConstants.hxx"
@@ -15,11 +17,13 @@
 #include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/WorkDay.hxx"
 
 #include <date/tz.h>
 #include <rapidjson/pointer.h>
+#include <iostream>
 #include <mutex>// for call_once
 
 using  model::Timestamp;
@@ -109,6 +113,13 @@ constexpr const auto* extension_instant_template = R"--(
 }
 )--";
 
+constexpr const auto* extension_boolean_template = R"--(
+{
+  "url": "",
+  "valueBoolean": false
+}
+)--";
+
 const std::unordered_map<Task::Status, std::string_view> Task::StatusNames = {
     {Task::Status::draft, "draft"},
     {Task::Status::ready, "ready"},
@@ -145,6 +156,8 @@ struct ExtensionDateTemplateMark;
 RapidjsonNumberAsStringParserDocument<ExtensionDateTemplateMark> ExtensionDateTemplate;
 struct ExtensionInstantTemplateMark;
 RapidjsonNumberAsStringParserDocument<ExtensionInstantTemplateMark> ExtensionInstantTemplate;
+struct ExtensionBooleanTemplateMark;
+RapidjsonNumberAsStringParserDocument<ExtensionBooleanTemplateMark> ExtensionBooleanTemplate;
 
 void initTemplates()
 {
@@ -162,6 +175,9 @@ void initTemplates()
 
     rapidjson::StringStream s5(extension_instant_template);
     ExtensionInstantTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s5);
+
+    rapidjson::StringStream s6(extension_boolean_template);
+    ExtensionBooleanTemplate->ParseStream<rapidjson::kParseNumbersAsStringsFlag, rapidjson::CustomUtf8>(s6);
 }
 
 // definition of JSON pointers:
@@ -333,6 +349,33 @@ const Timestamp& Task::lastStatusChangeDate() const
     return mLastStatusChange;
 }
 
+bool Task::isEuRedeemableByProperties() const
+{
+    std::optional ext = getExtension<model::GemErpExEuIsRedeemableByProperties>();
+    ModelExpect(ext || ! Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_EU),
+                "Mandatory extension not found " + std::string{model::GemErpExEuIsRedeemableByProperties::url});
+    if (ext)
+    {
+        ModelExpect(ext->valueBoolean(), "Boolean value not found in extension.");
+        return ext->valueBoolean().value();
+    }
+    // Should not land here:
+    return false;
+}
+
+bool Task::isEuRedeemableByPatientAuthorization() const
+{
+    std::optional ext = getExtension<model::GemErpRedeemableByPatient>();
+    ModelExpect(ext || ! Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_EU),
+                "Mandatory extension not found " + std::string{model::GemErpRedeemableByPatient::url});
+    if (ext)
+    {
+        ModelExpect(ext->valueBoolean(), "Boolean value not found in extension.");
+        return ext->valueBoolean().value();
+    }
+    // Should not land here:
+    return false;
+}
 std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& array,
                                                     std::string_view code) const
 {
@@ -342,6 +385,16 @@ std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& ar
 Timestamp Task::expiryDate() const
 {
     return dateFromExtensionArray(resource::structure_definition::expiryDate);
+}
+
+bool Task::expired() const
+{
+    const auto now = std::chrono::system_clock::now();
+    using namespace std::chrono_literals;
+    auto validUntil =
+        date::make_zoned(model::Timestamp::GermanTimezone, expiryDate().toChronoTimePoint() + 24h);
+    validUntil = floor<date::days>(validUntil.get_local_time());
+    return validUntil.get_sys_time() < now;
 }
 
 Timestamp Task::acceptDate() const
@@ -508,6 +561,31 @@ void Task::updateLastMedicationDispense(const std::optional<model::Timestamp>& l
     instantToExtensionArray(resource::structure_definition::lastMedicationDispense, lastMedicationDispense);
 }
 
+void Task::setEuRedeemableByPatient(bool euRedeemableByPatient)
+{
+    booleanToExtensionArray(resource::structure_definition::gem_erp_ex_eu_is_redeemable_by_patient_authorization, euRedeemableByPatient);
+}
+
+void Task::setEuRedeemableByProperties(bool euRedeemable)
+{
+    booleanToExtensionArray(resource::structure_definition::gem_erp_ex_eu_is_redeemable_by_properties, euRedeemable);
+}
+
+void Task::booleanToExtensionArray(std::string_view url, bool value)
+{
+    const rapidjson::Pointer urlPointer("/url");
+    const rapidjson::Pointer valueBooleanPointer("/valueBoolean");
+    const auto found = findMemberInArray(extensionArrayPointer, urlPointer, url, valueBooleanPointer);
+    if (found)
+    {
+        removeFromArray(extensionArrayPointer, std::get<size_t>(found.value()));
+    }
+    auto newValue = copyValue(*ExtensionBooleanTemplate);
+    setKeyValue(newValue, urlPointer, url);
+    setKeyValue(newValue, valueBooleanPointer, rapidjson::Value(value));
+    addToArray(extensionArrayPointer, std::move(newValue));
+}
+
 void Task::dateToExtensionArray(std::string_view url, const Timestamp& date)
 {
     const rapidjson::Pointer urlPointer("/url");
@@ -604,11 +682,25 @@ void Task::deleteLastMedicationDispense()
     const rapidjson::Pointer urlPointer("/url");
     const rapidjson::Pointer valueInstantPointer("/valueInstant");
 
-    const auto lastMDAndPos = findMemberInArray(extensionArrayPointer, urlPointer,
-                            resource::structure_definition::lastMedicationDispense, valueInstantPointer, true);
-    if(lastMDAndPos)
+    const auto lastMDAndPos =
+        findMemberInArray(extensionArrayPointer, urlPointer, resource::structure_definition::lastMedicationDispense,
+                          valueInstantPointer, true);
+    if (lastMDAndPos)
     {
         removeFromArray(extensionArrayPointer, std::get<1>(lastMDAndPos.value()));
+    }
+}
+
+void Task::deleteEuRedeemableByProperties()
+{
+    const rapidjson::Pointer urlPointer("/url");
+    const rapidjson::Pointer valueBooleanPointer("/valueBoolean");
+    const auto arrayEntryAndIndex = findMemberInArray(
+        extensionArrayPointer, urlPointer, resource::structure_definition::gem_erp_ex_eu_is_redeemable_by_properties,
+        valueBooleanPointer, true);
+    if (arrayEntryAndIndex)
+    {
+        removeFromArray(extensionArrayPointer, std::get<size_t>(*arrayEntryAndIndex));
     }
 }
 

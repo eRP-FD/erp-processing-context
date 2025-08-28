@@ -45,6 +45,7 @@ static void waitFor(T predicate, const std::chrono::milliseconds& timeout = std:
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
 
+void bestEffortValidateJson(const std::string& json);
 void bestEffortValidate(const model::UnspecifiedResource& res);
 
 template<typename BundleT = model::ErxReceipt>

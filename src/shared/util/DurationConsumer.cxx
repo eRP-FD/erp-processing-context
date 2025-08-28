@@ -5,23 +5,24 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <utility>
-
 #include "shared/util/DurationConsumer.hxx"
-
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/util/Configuration.hxx"
-#include "shared/util/Expect.hxx"
 #include "shared/util/ExceptionHelper.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/MetricsRegistry.hxx"
+
+#include <utility>
 
 
 DurationTimer::DurationTimer (
     Receiver& receiver,
-    std::string category,
+    DurationCategory category,
     std::string metric,
     std::string sessionIdentifier,
     const std::unordered_map<std::string, std::string>& keyValueMap)
     : mReceiver(receiver),
-      mCategory(std::move(category)),
+      mCategory(category),
       mMetric(std::move(metric)),
       mSessionIdentifier(std::move(sessionIdentifier)),
       mKeyValueMap(keyValueMap),
@@ -69,10 +70,10 @@ void DurationTimer::keyValue(const std::string& key, const std::string& value)
 }
 
 
-DurationTimer DurationConsumer::getTimer(const std::string& category, const std::string& metric,
+DurationTimer DurationConsumer::getTimer(DurationCategory category, const std::string& metric,
                                          const std::unordered_map<std::string, std::string>& keyValueMap)
 {
-    DurationTimer::Receiver receiver = DurationConsumer::defaultReceiver;
+    DurationTimer::Receiver receiver = std::bind_front(&DurationConsumer::defaultReceiver, mLoggingThresholds);
     return DurationTimer(receiver, category, metric, mSessionIdentifier.value_or("unknown"), keyValueMap);
 }
 
@@ -83,16 +84,16 @@ DurationConsumer& DurationConsumer::getCurrent ()
 }
 
 
-void DurationConsumer::initialize (
-    const std::string& sessionIdentifier,
-    DurationTimer::Receiver&& receiver)
+void DurationConsumer::initialize(const std::string& sessionIdentifier, DurationTimer::Receiver&& receiver,
+                                  std::map<DurationCategory, std::chrono::milliseconds> loggingThresholds)
 
 {
-    Expect( ! mIsInitialized, "already initialized");
+    Expect(! mIsInitialized, "already initialized");
 
     mIsInitialized = true;
     mSessionIdentifier = sessionIdentifier;
     mReceiver = std::move(receiver);
+    mLoggingThresholds = std::move(loggingThresholds);
 }
 
 
@@ -115,12 +116,16 @@ std::optional<std::string> DurationConsumer::getSessionIdentifier () const
     return mSessionIdentifier;
 }
 
-void DurationConsumer::defaultReceiver(std::chrono::steady_clock::duration duration, const std::string& category,
+void DurationConsumer::defaultReceiver(const std::map<DurationCategory, std::chrono::milliseconds>& loggingThresholds,
+                                       std::chrono::steady_clock::duration duration, DurationCategory category,
                                        const std::string& metric, const std::string& sessionIdentifier,
                                        const std::unordered_map<std::string, std::string>& keyValueMap,
                                        const std::optional<JsonLog::LogReceiver>& logReceiverOverride)
 {
-    const auto timingLoggingEnabled = Configuration::instance().timingLoggingEnabled(category);
+    using namespace std::chrono_literals;
+    const auto threshold = loggingThresholds.contains(category) ? loggingThresholds.at(category) : 0ms;
+    const auto timingLoggingEnabled = duration >= threshold && Configuration::instance().timingLoggingEnabled(
+                                                                   std::string{magic_enum::enum_name(category)});
     auto getLogReceiver = [logReceiverOverride, timingLoggingEnabled] {
         if (logReceiverOverride)
         {
@@ -132,7 +137,7 @@ void DurationConsumer::defaultReceiver(std::chrono::steady_clock::duration durat
     JsonLog log(LogId::INFO, getLogReceiver());
     log.keyValue("log_type", "timing")
         .keyValue("x_request_id", sessionIdentifier)
-        .keyValue("category", category)
+        .keyValue("category", magic_enum::enum_name(category))
         .keyValue("metric", metric);
     for (const auto& item : keyValueMap)
     {
@@ -145,16 +150,18 @@ void DurationConsumer::defaultReceiver(std::chrono::steady_clock::duration durat
     {
         receiver(duration, category, metric, sessionIdentifier, keyValueMap, logReceiverOverride);
     }
+
+    MetricsRegistry::instance().count(duration, category, metric);
 }
 
-DurationConsumerGuard::DurationConsumerGuard (
+DurationConsumerGuard::DurationConsumerGuard(
     const std::string& sessionIdentifier,
-    DurationTimer::Receiver&& receiver)
+    std::map<DurationCategory, std::chrono::milliseconds>&& loggingThresholds, DurationTimer::Receiver&& receiver)
 {
-    DurationConsumer::getCurrent().initialize(sessionIdentifier, std::move(receiver));
+    DurationConsumer::getCurrent().initialize(sessionIdentifier, std::move(receiver), std::move(loggingThresholds));
 }
 
-DurationConsumerGuard::~DurationConsumerGuard (void)
+DurationConsumerGuard::~DurationConsumerGuard ()
 {
     DurationConsumer::getCurrent().reset();
 }

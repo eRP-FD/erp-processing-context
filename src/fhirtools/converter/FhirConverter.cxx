@@ -18,13 +18,13 @@
 
 model::NumberAsStringParserDocument FhirConverter::xmlStringToJson(const std::string_view& xmlDocument) const
 {
-    const auto repo = Fhir::instance().backend().defaultView();
+    const auto repo = Fhir::instance().defaultView();
     return FhirSaxHandler::parseXMLintoJSON(*repo, xmlDocument, nullptr);
 }
 
 UniqueXmlDocumentPtr FhirConverter::jsonToXml(const model::NumberAsStringParserDocument& jsonDOM) const
 {
-    const auto repo = Fhir::instance().backend().defaultView();
+    const auto repo = Fhir::instance().defaultView();
     return FhirJsonToXmlConverter::jsonToXml(*repo, jsonDOM);
 }
 

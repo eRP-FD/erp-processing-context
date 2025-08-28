@@ -79,7 +79,7 @@
               <max value="1"/>
             </base>
             <type>
-              <code value="http://hl7.org/fhirpath/System.String"/>
+              <code value="string"/>
             </type>
           </element>
         </snapshot>
@@ -133,8 +133,38 @@
               <max value="1"/>
             </base>
             <type>
-              <code value="http://hl7.org/fhirpath/System.String"/>
+              <code value="string"/>
             </type>
+          </element>
+          <!-- we only try to fix when there is at least one slice -->
+          <element id="BackboneNotSliced.sliced:slice">
+            <path value="BackboneNotSliced.sliced"/>
+            <sliceName value="slice"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="SlicedBase.sliced"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="SimpleBackbone"/>
+            </type>
+          </element>
+          <element id="BackboneNotSliced.sliced:slice.discriminator">
+            <path value="BackboneNotSliced.sliced.discriminator"/>
+            <sliceName value="slice"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="SlicedBase.sliced.discriminator"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedString value="slice"/>
           </element>
         </snapshot>
       </StructureDefinition>

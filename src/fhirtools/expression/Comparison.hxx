@@ -16,12 +16,12 @@ namespace fhirtools
 class ComparisonOperator : public BinaryExpression
 {
 public:
-    ComparisonOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    ComparisonOperator(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                        ExpressionPtr lhs, ExpressionPtr rhs);
 
 protected:
-    Collection comparison(const Element& lhs, const Element& rhs,
-                          const std::vector<std::strong_ordering>& expected) const;
+    template <bool (*cmp)(std::partial_ordering)>
+    EvaluationContext comparison(const EvaluationContext& lhs, const EvaluationContext& rhs) const;
 };
 
 // http://hl7.org/fhirpath/N1/#equals
@@ -30,7 +30,7 @@ class EqualityEqualsOperator : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = "=";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#equivalent
@@ -46,7 +46,7 @@ class EqualityNotEqualsOperator : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = "!=";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#not-equivalent
@@ -62,7 +62,7 @@ class ComparisonOperatorGreaterThan : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = ">";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#greater-or-equal
@@ -71,7 +71,7 @@ class ComparisonOperatorGreaterOrEqual : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = ">=";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#less-than
@@ -80,7 +80,7 @@ class ComparisonOperatorLessThan : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = "<";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#less-or-equal
@@ -89,7 +89,7 @@ class ComparisonOperatorLessOrEqual : public ComparisonOperator
 public:
     static constexpr auto IDENTIFIER = "<=";
     using ComparisonOperator::ComparisonOperator;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 }// fhirtools

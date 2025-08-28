@@ -30,6 +30,8 @@ class Task;
 namespace model
 {
 enum class PrescriptionType : uint8_t;
+class Consent;
+enum class ConsentType;
 }
 
 /// @brief Handles encryption and separates the fields for the DatabaseBackend implementation
@@ -67,6 +69,7 @@ public:
                                              const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) override;
     void updateTaskDeleteMedicationDispense(const model::Task& task) override;
     void updateTaskClearPersonalData(const model::Task& task) override;
+    void setTaskEuRedeemableByPatient(const model::Task& task, const model::GemErpEuPrTaskInput& model) override;
 
     [[nodiscard]] std::string storeAuditEventData(model::AuditData& auditData) override;
     [[nodiscard]] std::vector<model::AuditData>
@@ -92,10 +95,16 @@ public:
     retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
     countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t
-    countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t countAll160Tasks(const model::Kvnr& kvnr,
+                                            const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] std::vector<std::tuple<model::Task, model::Binary>>
+    retrieveAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t countAllTasksForEu(const model::Kvnr& kvnr,
+                                              const std::optional<UrlArguments>& search) override;
 
-    [[nodiscard]] model::MedicationsAndDispenses
+
+
+    [[nodiscard]] std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] model::MedicationsAndDispenses
@@ -120,8 +129,10 @@ public:
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId) override;
 
     void storeConsent(const model::Consent& consent) override;
-    std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr) override;
-    [[nodiscard]] bool clearConsent(const model::Kvnr& kvnr) override;
+    std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr, model::ConsentType category) override;
+    std::vector<model::Consent> retrieveAllConsents(const model::Kvnr& kvnr,
+                                                    const UrlArguments& searchArguments) override;
+    [[nodiscard]] bool clearConsent(const model::Kvnr& kvnr, model::ConsentType category) override;
 
     void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) override;
     void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) override;
@@ -141,6 +152,12 @@ public:
 
     [[nodiscard]] uint64_t countChargeInformationForInsurant(const model::Kvnr& kvnr,
                                                              const std::optional<UrlArguments>& search) override;
+
+    [[nodiscard]] bool existsCountryCode(const model::CountryCode& countryCode) override;
+    void deleteEuAccessPermission(const model::Kvnr& kvnr) override;
+    void createEuAccessPermission(const model::Kvnr& kvnr,
+                                  const model::EuAccessPermission& accessPermission) override;
+    [[nodiscard]] std::optional<model::EuAccessPermission> retrieveEuAccessPermission(const model::Kvnr& kvnr) override;
 
     [[nodiscard]] ErpDatabaseBackend& getBackend() override;
 
@@ -179,7 +196,7 @@ private:
     [[nodiscard]] std::tuple<SafeString, BlobId> auditEventKey(const db_model::HashedKvnr& hashedKvnr);
 
     std::unique_ptr<ErpDatabaseBackend> mBackend;
-	std::unique_ptr<CommonDatabaseFrontend> mCommonDatabaseFrontend;
+    std::unique_ptr<CommonDatabaseFrontend> mCommonDatabaseFrontend;
     HsmPool& mHsmPool;
     KeyDerivation& mDerivation;
     DataBaseCodec mCodec;

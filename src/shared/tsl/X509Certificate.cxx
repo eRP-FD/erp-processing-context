@@ -462,41 +462,30 @@ X509Certificate X509Certificate::createFromX509Pointer(X509* x509)
 
 // Useful X509Certificate information:
 // We can add methods to parse the subject and issuer , e.g. by common name.
-std::string X509Certificate::getSubject (void) const
+std::string X509Certificate::getSubject() const
 {
     if (!pCert)
     {
         return {};
     }
-
-    X509_name_st* subjectName = X509_get_subject_name(pCert.get());
+    X509_NAME* subjectName = X509_get_subject_name(pCert.get());
     Expect(subjectName != nullptr, "can not get subject name");
 
-    char* subject = X509_NAME_oneline(subjectName, nullptr, 0);
-    Expect(subject != nullptr, "can not get subject name string");
-
-    std::string retVal(subject);
-    OPENSSL_free(subject);
-    return retVal;
+    return x509NametoString(subjectName);
 }
 
 
-std::string X509Certificate::getIssuer (void) const
+std::string X509Certificate::getIssuer() const
 {
     if (!pCert)
     {
         return {};
     }
+    auto mem = shared_BIO::make();
+    X509_NAME* issuerName = X509_get_issuer_name(pCert.get());
+    Expect(issuerName != nullptr, "can not get subject name");
 
-    X509_name_st* issuerName = X509_get_issuer_name(pCert.get());
-    Expect(issuerName != nullptr, "can not get issuer name");
-
-    char* issuer = X509_NAME_oneline(issuerName, nullptr, 0);
-    Expect(issuer != nullptr, "can not get issuer name string");
-
-    std::string retVal(issuer);
-    OPENSSL_free(issuer);
-    return retVal;
+    return x509NametoString(issuerName);
 }
 
 
@@ -1307,4 +1296,18 @@ std::vector<std::string> X509Certificate::getSubjectAlternativeNameDnsNames() co
     }
 
     return result;
+}
+
+
+std::string_view to_string(SigningAlgorithm signingAlgorithm)
+{
+    switch (signingAlgorithm)
+    {
+    case SigningAlgorithm::rsaPss:
+        return "RSA";
+
+    case SigningAlgorithm::ellipticCurve:
+        return "EC";
+    }
+    Fail("Unknown SigningAlgorithm");
 }

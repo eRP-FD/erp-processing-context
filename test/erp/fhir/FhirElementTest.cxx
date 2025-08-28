@@ -8,6 +8,9 @@
 #include <gtest/gtest.h>
 
 #include "fhirtools/repository/FhirElement.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
 
 using namespace fhirtools;
 
@@ -35,6 +38,14 @@ TEST(FhirElementTest, representationEnum)//NOLINT(readability-function-cognitive
 TEST(FhirElementTest, Builder)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_view_literals;
+    FhirStructureRepositoryBackend repo;
+    FhirResourceGroupConst resolver{"Test"};
+    auto def = FhirStructureDefinition::Builder{}
+                   .url("http://fhir-tools.test/Structure")
+                   .typeId("Test")
+                   .repositoryBackend(&repo)
+                   .initGroup(resolver)
+                   .getAndReset();
     using Representation = FhirElement::Representation;
     auto testElement1 = FhirElement::Builder{}
         .name("name")
@@ -42,6 +53,7 @@ TEST(FhirElementTest, Builder)//NOLINT(readability-function-cognitive-complexity
         .isArray(true)
         .representation(Representation::xhtml)
         .contentReference("contentReference")
+        .structureDefinition(def.get())
         .getAndReset();
     ASSERT_TRUE(testElement1);
     EXPECT_EQ(testElement1->name(), "name"sv);
@@ -63,12 +75,21 @@ TEST(FhirElementTest, Builder)//NOLINT(readability-function-cognitive-complexity
 TEST(FhirElementTest, RootElement)
 {
     using namespace std::string_view_literals;
+    FhirStructureRepositoryBackend repo;
+    FhirResourceGroupConst resolver{"Test"};
+    auto def = FhirStructureDefinition::Builder{}
+                   .url("http://fhir-tools.test/Structure")
+                   .typeId("Test")
+                   .repositoryBackend(&repo)
+                   .initGroup(resolver)
+                   .getAndReset();
     using Representation = FhirElement::Representation;
     auto testElement1 = FhirElement::Builder{}
         .name("Meta")
         .isArray(true)
         .isRoot(true)
         .representation(Representation::xhtml)
+        .structureDefinition(def.get())
         .getAndReset();
     ASSERT_TRUE(testElement1);
     EXPECT_EQ(testElement1->name(), "Meta"sv);

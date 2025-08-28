@@ -12,11 +12,10 @@
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "shared/server/request/ServerRequest.hxx"
-#include "shared/server/response/ResponseBuilder.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
+#include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/AesGcm.hxx"
 #include "shared/crypto/CMAC.hxx"
@@ -26,6 +25,8 @@
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/ProfessionOid.hxx"
+#include "shared/server/request/ServerRequest.hxx"
+#include "shared/server/response/ResponseBuilder.hxx"
 #include "shared/tsl/error/TslError.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"
@@ -282,14 +283,14 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
     const auto sessionIdentifier = session.request.header().header(Header::XRequestId).value_or("unknown X-Request-Id");
 
     // Set up the duration consumer that will log spend time and call back
-    DurationConsumerGuard durationConsumerGuard(
-        sessionIdentifier,
-        [&session](const std::chrono::steady_clock::duration duration, const std::string& category,
-                           const std::string& /*description*/, const std::string& /*sessionIdentifier*/,
+    const DurationConsumerGuard durationConsumerGuard(
+        sessionIdentifier, session.serviceContext.getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs(),
+        [&session](const std::chrono::steady_clock::duration duration, DurationCategory category,
+                           const std::string&, const std::string& /*sessionIdentifier*/,
                            const std::unordered_map<std::string, std::string>& /*keyValueMap*/,
                            const std::optional<JsonLog::LogReceiver>& /*logReceiverOverride*/) {
             const auto durationMusecs = std::chrono::duration_cast<std::chrono::microseconds>(duration);
-            if (category == DurationConsumer::categoryOcspRequest)
+            if (category == DurationCategory::ocsprequest)
             {
                 session.backendDuration += durationMusecs;
             }
@@ -423,10 +424,15 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         auto sub = innerServerRequest->getAccessToken().stringForClaim(JWT::subClaim);
         Expect(sub.has_value(), "Missing Sub field in JWT claim");
 
-        if (!Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
+        A_19992_01.start("Exclude NCPeH-FD requests");
+        const auto professionOid = innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim);
+        const auto isNCPeHFDRequest = (professionOid.has_value() && professionOid == profession_oid::oid_ncpeh);
+        const auto disableDos = Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false);
+        if (not isNCPeHFDRequest && not disableDos)
         {
             handleDosCheck(outerSession, sub, innerServerRequest->getAccessToken().intForClaim(JWT::expClaim).value());
         }
+        A_19992_01.finish();
 
         auto&& PnPVerifier = outerSession.serviceContext.getPreUserPseudonymManager();
         CmacSignature preUserPseudonym{getPreUserPseudonym(PnPVerifier, upParam, *sub, outerSession)};
@@ -449,50 +455,9 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         if (checkProfessionOID(innerServerRequest,
                                matchingHandler.handlerContext->handler.get(), innerSession.response, outerSession.accessLog))
         {
-            matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
-
-            std::exception_ptr currExc;
-            bool shouldCreateAuditEvent = false;
-            try
-            {
-                // Run the secondary handler
-                A_20163.start("5 - process inner request");
-                matchingHandler.handlerContext->handler->handleRequest(innerSession);
-                A_20163.finish();
-                // GEMREQ-end role-check
-                transferResponseHeadersFromInnerSession(innerSession, outerSession,
-                                                        innerSession.accessLog.getPrescriptionId());
-                shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
-            }
-            catch(const ErpException& exc)
-            {
-                transferResponseHeadersFromInnerSession(innerSession, outerSession,
-                                                        innerSession.accessLog.getPrescriptionId());
-                // check if to write an audit event for error case:
-                shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnError(exc.status());
-                if(!shouldCreateAuditEvent)
-                    throw;
-                currExc = std::current_exception();
-            }
-
-            if (shouldCreateAuditEvent)
-            {
-                storeAuditData(innerSession, innerServerRequest->getAccessToken());
-            }
-
-            A_18936.start("commit transaction");
-            auto transaction = innerSession.releaseDatabase();
-            if (transaction)
-            {
-                transaction->commitTransaction();
-                transaction.reset();
-            }
-            A_18936.finish();
-
-            // rethrow for error case to assure that error response is sent;
-            if (currExc)
-                std::rethrow_exception(currExc);
+            handleInnerRequest(matchingHandler, innerSession, outerSession);
         }
+        // GEMREQ-end role-check
     }
     // GEMREQ-start A_19439#catchError
     catch(...)
@@ -501,6 +466,58 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
     }
     // GEMREQ-end A_19439#catchError
     makeResponse(innerServerResponse, innerOperation, innerServerRequest.get(), *innerTeeRequest, outerSession);
+}
+
+void VauRequestHandler::handleInnerRequest(const RequestHandlerManager::MatchingHandler& matchingHandler,
+                                           PcSessionContext& innerSession, PcSessionContext& outerSession)
+{
+    matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
+
+    std::exception_ptr currExc;
+    bool shouldCreateAuditEvent = false;
+    try
+    {
+        // Run the secondary handler
+        A_20163.start("5 - process inner request");
+        matchingHandler.handlerContext->handler->handleRequest(innerSession);
+        A_20163.finish();
+        transferResponseHeadersFromInnerSession(innerSession, outerSession, innerSession.accessLog.getPrescriptionId());
+        setBdeUseCaseHeader(*matchingHandler.handlerContext, innerSession, outerSession);
+        shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
+    }
+    catch (const ErpException& exc)
+    {
+        transferResponseHeadersFromInnerSession(innerSession, outerSession, innerSession.accessLog.getPrescriptionId());
+        setBdeUseCaseHeader(*matchingHandler.handlerContext, innerSession, outerSession);
+
+        // check if to write an audit event for error case:
+        shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnError(exc.status());
+        if (! shouldCreateAuditEvent)
+        {
+            throw;
+        }
+        currExc = std::current_exception();
+    }
+
+    if (shouldCreateAuditEvent)
+    {
+        storeAuditData(innerSession, innerSession.request.getAccessToken());
+    }
+
+    A_18936.start("commit transaction");
+    auto transaction = innerSession.releaseDatabase();
+    if (transaction)
+    {
+        transaction->commitTransaction();
+        transaction.reset();
+    }
+    A_18936.finish();
+
+    // rethrow for error case to assure that error response is sent;
+    if (currExc)
+    {
+        std::rethrow_exception(currExc);
+    }
 }
 
 
@@ -540,7 +557,7 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
             const auto professionOIDClaim =
                 innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim).value_or("");
             outerSession.response.setHeader(Header::InnerRequestRole,
-                                       std::string(profession_oid::toInnerRequestRole(professionOIDClaim)));
+                                       to_string(profession_oid::toInnerRequestRole(professionOIDClaim)));
 
             A_22698.start("#4,#5 Create LEI.Telematik-ID pseudonym for and set value in the outer header field.");
             A_22975.start("Use feature only if enabled in configuration");
@@ -613,6 +630,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19446_02.start("Check if professionOID claim is allowed for this endpoint");
     A_22362_01.start("Check if professionOID claim is allowed for this endpoint");
     A_24279.start("Check if professionOID claim is allowed for this endpoint");
+    A_27549.start("Check if professionOID claim is allowed for this endpoint");
     if (! handler->allowedForProfessionOID(professionOIDClaim, optionalPathIdParameter))
     {
         TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
@@ -632,6 +650,7 @@ bool VauRequestHandler::checkProfessionOID(
         A_19446_02.finish();
         A_22362_01.finish();
         A_24279.finish();
+        A_27549.finish();
         log.location(fileAndLine);
         log.error("endpoint is forbidden for professionOID");
         return false;
@@ -847,5 +866,28 @@ void VauRequestHandler::transferResponseHeadersFromInnerSession(
         A_23090_06.finish();
         outerSession.response.setHeader(Header::InnerRequestFlowtype,
                                         std::to_string(magic_enum::enum_integer(prescriptionId->type())));
+    }
+}
+
+void VauRequestHandler::setBdeUseCaseHeader(const RequestHandlerContext& handlerContext, PcSessionContext& innerSession,
+                                            PcSessionContext& outerSession)
+{
+    try
+    {
+        if (auto fromSessionContext = innerSession.getBdeUseCase())
+        {
+            outerSession.response.setHeader(Header::ErpUseCase, to_string(*fromSessionContext));
+        }
+        else
+        {
+            const auto professionOid = innerSession.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
+            outerSession.response.setHeader(
+                Header::ErpUseCase,
+                to_string(handlerContext.getErpUseCase(innerSession.accessLog.getPrescriptionId(), professionOid)));
+        }
+    }
+    catch (const std::exception& e)
+    {
+        TVLOG(1) << "could not set ERP-Use-Case header: " << e.what();
     }
 }

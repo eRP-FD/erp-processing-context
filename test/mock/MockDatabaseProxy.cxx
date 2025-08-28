@@ -31,11 +31,12 @@ void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId, const 
                                      const model::Timestamp& acceptDate,
                                      const db_model::EncryptedBlob& healthCareProviderPrescription,
                                      const db_model::EncryptedBlob& doctorIdentity,
-                                     const model::Timestamp& lastStatusUpdate)
+                                     const model::Timestamp& lastStatusUpdate,
+                                     bool euRedeemable)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     mDatabase.activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
-                           healthCareProviderPrescription, doctorIdentity, lastStatusUpdate);
+                           healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable);
 }
 
 void MockDatabaseProxy::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -155,6 +156,20 @@ uint64_t MockDatabaseProxy::countAll160Tasks(const db_model::HashedKvnr& kvnr,
     return mDatabase.countAll160Tasks(kvnr, search);
 }
 
+std::vector<db_model::Task> MockDatabaseProxy::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                                                     const std::optional<UrlArguments>& search)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.retrieveAllTasksForEu(kvnr, search);
+}
+
+uint64_t MockDatabaseProxy::countAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                               const std::optional<UrlArguments>& search)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase.countAllTasksForEu(kvnr, search);
+}
+
 std::vector<db_model::AuditData>
 MockDatabaseProxy::retrieveAuditEventData(const db_model::HashedKvnr& kvnr, const std::optional<Uuid>& id,
                                           const std::optional<model::PrescriptionId>& prescriptionId,
@@ -258,17 +273,25 @@ void MockDatabaseProxy::updateTaskClearPersonalData(const model::PrescriptionId&
     mDatabase.updateTaskClearPersonalData(taskId, taskStatus, lastModified, lastStatusUpdate);
 }
 
+void MockDatabaseProxy::updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                                        bool redeemable,
+                                                        const model::Timestamp& lastModified)
+{
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    mDatabase.updateTaskEuRedeemableByPatient(taskId, redeemable, lastModified);
+}
+
 void MockDatabaseProxy::updateTaskMedicationDispense(
     const model::PrescriptionId& taskId, const model::Timestamp& lastModified,
     const model::Timestamp& lastMedicationDispense, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematicId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::Blob& medicationDispenseSalt)
+    const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     mDatabase.updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense,
                                            medicationDispenseBlobId, telematicId, whenHandedOver, whenPrepared,
-                                           medicationDispenseSalt);
+                                           medicationDispenseSalt, taskStatus);
 }
 
 void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(
@@ -325,22 +348,24 @@ std::optional<db_model::Blob> MockDatabaseProxy::retrieveSaltForAccount(const db
     return mDatabase.retrieveSaltForAccount(accountId, masterKeyType, blobId);
 }
 
-void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime,
+                                     db_model::ConsentCategory category)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.storeConsent(kvnr, creationTime);
+    mDatabase.storeConsent(kvnr, creationTime, category);
 }
 
-std::optional<model::Timestamp> MockDatabaseProxy::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::vector<db_model::Consent> MockDatabaseProxy::retrieveAllConsents(const db_model::HashedKvnr& kvnr,
+                                                                      const UrlArguments& searchArguments)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveConsentDateTime(kvnr);
+    return mDatabase.retrieveAllConsents(kvnr, searchArguments);
 }
 
-bool MockDatabaseProxy::clearConsent(const db_model::HashedKvnr& kvnr)
+bool MockDatabaseProxy::clearConsent(const db_model::HashedKvnr& kvnr, db_model::ConsentCategory category)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.clearConsent(kvnr);
+    return mDatabase.clearConsent(kvnr, category);
 }
 
 void MockDatabaseProxy::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
@@ -427,6 +452,34 @@ void MockDatabaseProxy::deleteAuditEvent(const Uuid& eventId)
 std::optional<db_model::Blob> MockDatabaseProxy::retrieveMedicationDispenseSalt(const model::PrescriptionId& taskId)
 {
     return mDatabase.retrieveMedicationDispenseSalt(taskId);
+}
+
+bool MockDatabaseProxy::existsCountryCode(const std::string& countryCode)
+{
+    return mDatabase.existsCountryCode(countryCode);
+}
+
+void MockDatabaseProxy::addCountryCode(const std::string& countryCode)
+{
+    mDatabase.addCountry(countryCode);
+}
+
+void MockDatabaseProxy::deleteEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    mDatabase.deleteEuAccessPermission(kvnr);
+}
+
+void MockDatabaseProxy::createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
+                                                 const db_model::EncryptedBlob& accessCode, BlobId blobId,
+                                                 const db_model::Blob& salt, const model::Timestamp& validUntil)
+{
+    mDatabase.createEuAccessPermission(kvnr, countryCode, accessCode, blobId, salt, validUntil);
+}
+
+std::optional<db_model::EuAccessPermission>
+MockDatabaseProxy::retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    return mDatabase.retrieveEuAccessPermission(kvnr);
 }
 
 MockDatabaseProxy::TransactionMonitor::TransactionMonitor()

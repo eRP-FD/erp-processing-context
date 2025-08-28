@@ -5,8 +5,9 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/fhir/Fhir.hxx"
 #include "erp/model/Communication.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/String.hxx"
@@ -262,6 +263,18 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
     case ProfileType::ProvideDispensationErpOp:
     case ProfileType::OrganizationDirectory:
     case ProfileType::EPAMedicationPZNIngredient:
+    case ProfileType::GEM_ERPEU_PR_Consent:
+    case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+    case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+    case ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+    case ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+    case ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input:
+    case ProfileType::GEM_ERPEU_PR_MedicationDispense:
+    case ProfileType::GEM_ERPEU_PR_PAR_Medication:
+    case ProfileType::GEM_ERPEU_PR_Practitioner:
+    case ProfileType::GEM_ERPEU_PR_PractitionerRole:
+    case ProfileType::GEM_ERPEU_PR_Organization:
+    case ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
         ModelFail("Not a Communication Profile");
     }
     Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +
@@ -332,8 +345,22 @@ void Communication::setSender(const Identity& sender)
 
 void model::Communication::setSender(const Kvnr& kvnr)
 {
-    ModelExpect(messageType() != MessageType::ChargChangeReply, "ChargChangeReply cannot be sent by insurant");
-    setSender(kvnr.id(), kvnr.namingSystem());
+    using namespace fhirtools::version_literal;
+    auto profileName = getProfileName();
+    // should already be checked in profileType()
+    ModelExpect(profileName, "Missing meta.profile in Communication");
+    ProfileInfo pi{*profileName};
+    auto profileType = pi.findType();
+    ModelExpect(profileType != ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply,
+                "ChargChangeReply cannot be sent by insurant");
+    if (profileType == ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq && pi.version >= "1.1"_ver)
+    {
+        setSender(kvnr.id(), model::resource::naming_system::gkvKvid10);
+    }
+    else
+    {
+        setSender(kvnr.id(), kvnr.namingSystem());
+    }
 }
 
 void model::Communication::setSender(const TelematikId& telematikId)
@@ -495,7 +522,6 @@ ProfileType model::Communication::profileType() const
     if (! profileType.has_value() || ! acceptedCommunicationSet.contains(*profileType))
     {
         const auto& fhirInstance = Fhir::instance();
-        const auto& backend = std::addressof(fhirInstance.backend());
         const auto& viewList = fhirInstance.structureRepository(model::Timestamp::now());
         std::list<std::string> profileUrls;
         std::ranges::transform(acceptedCommunications, back_inserter(profileUrls), [](ProfileType pt) {
@@ -503,7 +529,7 @@ ProfileType model::Communication::profileType() const
         });
         std::string_view sep;
         std::ostringstream supportlist;
-        for (const auto& key : viewList.supportedVersions(backend, profileUrls))
+        for (const auto& key : viewList.supportedVersions(profileUrls))
         {
             supportlist << sep << key;
             sep = ", ";

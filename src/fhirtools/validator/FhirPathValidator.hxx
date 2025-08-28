@@ -22,7 +22,7 @@
 
 namespace fhirtools
 {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class ProfileSetValidator;
 class ProfiledElementTypeInfo;
 class ReferenceContext;
@@ -43,11 +43,13 @@ public:
     // internal use
     const ValidatorOptions& options() const;
     const ProfiledElementTypeInfo& extensionRootDefPtr() const;
+    const ProfiledElementTypeInfo& metaRootDefPtr() const;
 
 private:
     FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                      const std::shared_ptr<const FhirStructureRepository>& repo);
-    static FhirPathValidator create(const ValidatorOptions&, const std::shared_ptr<const FhirStructureRepository>&);
+                      std::unique_ptr<ProfiledElementTypeInfo> initMetaRootDefPtr,
+                      const std::shared_ptr<const FhirStructureRepositoryView>& repo);
+    static FhirPathValidator create(const ValidatorOptions&, const std::shared_ptr<const FhirStructureRepositoryView>&);
     void validateInternal(const std::shared_ptr<const Element>& element,
                           std::set<ProfiledElementTypeInfo> extraProfiles, const std::string& elementFullPath);
 
@@ -67,7 +69,8 @@ private:
     ValidationResults result;
     const ValidatorOptions& mOptions;
     const std::unique_ptr<const ProfiledElementTypeInfo> mExtensionRootDefPtr;
-    const std::shared_ptr<const FhirStructureRepository> mRepo;
+    const std::unique_ptr<const ProfiledElementTypeInfo> mMetaRootDefPtr;
+    const std::shared_ptr<const FhirStructureRepositoryView> mRepo;
 };
 
 

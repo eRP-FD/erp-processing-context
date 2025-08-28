@@ -25,6 +25,8 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
+#include "test/util/ResourceTemplates.hxx"
+
 
 using namespace std::chrono_literals;
 
@@ -670,3 +672,70 @@ TEST_F(JwtTest, base64DecodingErrorInvalidCharacter)
     ASSERT_THROW(JWT{mHeader + "." + payload + "." + mSignature}, JwtInvalidFormatException);
 }
 
+TEST_F(JwtTest, acr_success)
+{
+    JwtBuilder builder{mIdpPrivateKey};
+
+    // Default jwt, success
+    EXPECT_NO_THROW(builder.makeJwt({
+    }).checkRequiredClaims());
+
+    // Default acr shall work regardless of profession
+    EXPECT_NO_THROW(builder.makeJwt({
+        .profession = std::string{profession_oid::oid_apotheker}
+    }).checkRequiredClaims());
+
+    A_19439_04.test("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
+    // acr = acrContentSubst and profession != oid_versicherter shall fail
+    EXPECT_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_apotheker}
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    // acr = acrContentSubst and profession = oid_versicherter and missing telematikAuthConsent shall fail
+    EXPECT_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_versicherter}
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    EXPECT_NO_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_versicherter},
+        .optionalFields = R"--(, "urn:telematik:auth:consent": "loa-substantial")--"
+    }).checkRequiredClaims());
+    A_19439_04.finish();
+}
+
+TEST_F(JwtTest, acr_fail)
+{
+    JwtBuilder builder{mIdpPrivateKey};
+
+    // Wrong acr shall fail
+    EXPECT_THROW(builder.makeJwt({
+        .acr = "xyz"
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    //
+    EXPECT_THROW(builder.makeJwt({
+        .acr = "xyz"
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    A_19439_04.test("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
+    EXPECT_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_apotheker},
+        .optionalFields = R"--(, "urn:telematik:auth:consent": "loa-substantial")--"
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    EXPECT_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_versicherter},
+        .optionalFields = R"--(, "urn:telematik:auth:consent": "xyz")--"
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+
+    EXPECT_THROW(builder.makeJwt({
+        .acr = std::string{JWT::acrContentSubst},
+        .profession = std::string{profession_oid::oid_versicherter}
+    }).checkRequiredClaims(), JwtInvalidFormatException);
+    A_19439_04.finish();
+}

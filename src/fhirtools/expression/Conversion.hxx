@@ -17,9 +17,9 @@ class ConversionIif : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "iif";
-    ConversionIif(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    ConversionIif(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                   ExpressionPtr criterion, ExpressionPtr trueResult, ExpressionPtr falseResult);
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
 private:
     ExpressionPtr mCriterion;
@@ -43,7 +43,7 @@ class ConversionToInteger : public Expression
 public:
     static constexpr auto IDENTIFIER = "toInteger";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#convertstointeger-boolean
@@ -97,7 +97,7 @@ class ConversionToString : public Expression
 public:
     static constexpr auto IDENTIFIER = "toString";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#convertstostring-string

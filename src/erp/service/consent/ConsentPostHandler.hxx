@@ -17,6 +17,9 @@ public:
     ConsentPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs);
 
     void handleRequest(PcSessionContext& session) override;
+
+private:
+    static model::ConsentType checkConsentType(const model::Consent& consent);
 };
 
 

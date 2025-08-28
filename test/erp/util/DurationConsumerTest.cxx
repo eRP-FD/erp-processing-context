@@ -44,7 +44,7 @@ TEST_F(DurationConsumerTest, DurationConsumerGuard_failForSecondSetSessionIdenti
 
     EXPECT_TRUE(DurationConsumer::getCurrent().isInitialized());
 
-    EXPECT_ANY_THROW(DurationConsumer::getCurrent().initialize("test", {}));
+    EXPECT_ANY_THROW(DurationConsumer::getCurrent().initialize("test", {}, {}));
 }
 
 
@@ -95,14 +95,15 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
 {
     std::atomic_size_t callCount = 0;
     std::chrono::system_clock::duration duration;
-    std::string category;
+    DurationCategory category{DurationCategory::fhirvalidation};
     std::string description;
     std::string sessionIdentifier;
     std::unordered_map<std::string, std::string> keyValueMap;
-    DurationConsumerGuard guard("test", [&](const auto duration_, const std::string& category_,
-                                            const auto& description_, const auto& sessionIdentifier_,
-                                            const std::unordered_map<std::string, std::string>& keyValueMap_,
-                                            const std::optional<JsonLog::LogReceiver>&) {
+    DurationConsumerGuard guard("test", {},
+                                [&](const auto duration_, DurationCategory category_, const auto& description_,
+                                    const auto& sessionIdentifier_,
+                                    const std::unordered_map<std::string, std::string>& keyValueMap_,
+                                    const std::optional<JsonLog::LogReceiver>&) {
         ++callCount;
         duration = duration_;
         category = category_;
@@ -112,7 +113,7 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
     });
 
     {
-        auto keepAlive = DurationConsumer::getCurrent().getTimer("category", "test", {{"key", "value"}});
+        auto keepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "test", {{"key", "value"}});
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
@@ -120,7 +121,7 @@ TEST_F(DurationConsumerTest, DurationConsumer)//NOLINT(readability-function-cogn
 
     ASSERT_EQ(callCount, 1u);
     ASSERT_GT(duration.count(), 0);
-    ASSERT_EQ(category, "category");
+    ASSERT_EQ(category, DurationCategory::postgres);
     ASSERT_FALSE(description.empty());
     ASSERT_FALSE(sessionIdentifier.empty());
     ASSERT_EQ(description.find("failed"), std::string::npos);
@@ -134,14 +135,15 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
 {
     std::atomic_size_t callCount = 0;
     std::chrono::system_clock::duration duration;
-    std::string category;
+    DurationCategory category{DurationCategory::postgres};
     std::string description;
     std::string sessionIdentifier;
     std::unordered_map<std::string, std::string> keyValueMap;
-    DurationConsumerGuard guard("test", [&](const auto duration_, const std::string& category_,
-                                            const auto& description_, const auto& sessionIdentifier_,
-                                            const std::unordered_map<std::string, std::string>& keyValueMap_,
-                                            const std::optional<JsonLog::LogReceiver>&) {
+    DurationConsumerGuard guard("test", {},
+                                [&](const auto duration_, DurationCategory category_, const auto& description_,
+                                    const auto& sessionIdentifier_,
+                                    const std::unordered_map<std::string, std::string>& keyValueMap_,
+                                    const std::optional<JsonLog::LogReceiver>&) {
         ++callCount;
         duration = duration_;
         category = category_;
@@ -152,7 +154,7 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
 
     try
     {
-        auto keepAlive = DurationConsumer::getCurrent().getTimer("category", "test", {{"key", "value"}});
+        auto keepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment, "test", {{"key", "value"}});
         // Expect this exception to be picked up by the DurationTimer and turned into some kind of failure message.
         throw std::runtime_error("exception details");
     }
@@ -164,7 +166,7 @@ TEST_F(DurationConsumerTest, DurationConsumer_uncaughtException)
 
     ASSERT_EQ(callCount, 1u);
     ASSERT_GT(duration.count(), 0);
-    ASSERT_EQ(category, "category");
+    ASSERT_EQ(category, DurationCategory::enrolment);
     ASSERT_FALSE(sessionIdentifier.empty());
     EXPECT_EQ(description, "test");
     ASSERT_EQ(keyValueMap.size(), 2);
@@ -188,7 +190,7 @@ TEST_F(DurationConsumerTest, TimerJob)
         void onStart() override {}
         void executeJob() override
         {
-            ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:executeJob");
+            ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "TEST:executeJob");
         }
         void onFinish() override {}
     };
@@ -212,7 +214,7 @@ TEST_F(DurationConsumerTest, PeriodicTimer)
         using FixedIntervalHandler::FixedIntervalHandler;
         void timerHandler() override
         {
-            ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:timerHandler");
+            ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "TEST:timerHandler");
         }
     };
     using TestTimer = PeriodicTimer<TestTimerHandler>;
@@ -236,14 +238,14 @@ TEST_F(DurationConsumerTest, Blockduration)
     {
         int session = 0;
         DurationConsumerGuard durationConsumerGuard(
-            "Block duration",
-            [&session](const std::chrono::steady_clock::duration /*duration*/, const std::string& /*category*/,
+            "Block duration", {},
+            [&session](const std::chrono::steady_clock::duration /*duration*/, DurationCategory /*category*/,
                             const std::string& /*description*/, const std::string& /*sessionIdentifier*/,
                             const std::unordered_map<std::string, std::string>& /*keyValueMap*/,
                             const std::optional<JsonLog::LogReceiver>& /*logReceiverOverride*/) {
                 session += 1;
             });
-        ::DurationConsumer::getCurrent().getTimer("DurationConsumerTest", "TEST:Blockduration");
+        ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "TEST:Blockduration");
         ASSERT_EQ(session, 1);
     }
 
@@ -260,13 +262,13 @@ TEST_F(DurationConsumerTest, DurationTimerExpectedFormat)
         R"({"log_type":"timing","x_request_id":"d85f6714-35f7-400e-9d17-52bd086b72b7","category":"fhirvalidation","metric":"GEM_ERP_PR_PAR_CloseOperation_Input","profile_version":"1.4","duration_us":)";
 
     {
-        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7",
-                                    [&](const auto, const std::string&, const auto&, const auto&,
+        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7", {},
+                                    [&](const auto, DurationCategory, const auto&, const auto&,
                                         const std::unordered_map<std::string, std::string>&,
                                         const std::optional<JsonLog::LogReceiver>&) {
                                     });
         testing::internal::CaptureStderr();
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation, "GEM_ERP_PR_PAR_CloseOperation_Input", {{"profile_version", "1.4"}});
+        DurationConsumer::getCurrent().getTimer(DurationCategory::fhirvalidation, "GEM_ERP_PR_PAR_CloseOperation_Input", {{"profile_version", "1.4"}});
     }
     std::string output = testing::internal::GetCapturedStderr();
     TLOG(INFO) << output;
@@ -278,15 +280,15 @@ TEST_F(DurationConsumerTest, DurationTimerFailedExpectedFormat)
         R"({"log_type":"timing","x_request_id":"d85f6714-35f7-400e-9d17-52bd086b72b7","category":"fhirvalidation","metric":"GEM_ERP_PR_PAR_CloseOperation_Input","error":"uncaught exception","profile_version":"1.4","duration_us":)";
 
     {
-        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7",
-                                    [&](const auto, const std::string&, const auto&, const auto&,
+        DurationConsumerGuard guard("d85f6714-35f7-400e-9d17-52bd086b72b7", {},
+                                    [&](const auto, DurationCategory, const auto&, const auto&,
                                         const std::unordered_map<std::string, std::string>&,
                                         const std::optional<JsonLog::LogReceiver>&) {
                                     });
         testing::internal::CaptureStderr();
         try
         {
-            auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryFhirValidation,
+            auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::fhirvalidation,
                                                                  "GEM_ERP_PR_PAR_CloseOperation_Input",
                                                                  {{"profile_version", "1.4"}});
             throw std::runtime_error("fhir validation failed");

@@ -86,7 +86,7 @@
             std::vector<std::string> fullDiagnosticsMessages = String::split(diag, "; ");          \
             std::set<std::string> diagnosticsMessagesSet(diagnosticsMessages.begin(), diagnosticsMessages.end()); \
             std::set<std::string> fullDiagnosticsMessagesSet(fullDiagnosticsMessages.begin(), fullDiagnosticsMessages.end()); \
-            EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet);                         \
+            EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet) << std::endl << ex.diagnostics().value(); \
         }                                                                                          \
         catch (...)                                                                                \
         {                                                                                          \

@@ -34,28 +34,70 @@ std::list<MedicationDispenseFixture::ProfileValidityTestParams> MedicationDispen
         { success , "2025-04-15", single, V::GEM_ERP_1_2 },
         { success , "2025-04-15", single, V::GEM_ERP_1_3 },
         { failure , "2025-04-15", single, V::GEM_ERP_1_4 },
+        { failure , "2025-04-15", single, V::GEM_ERP_1_5_2 },
         { success , "2025-04-15", bundle, V::GEM_ERP_1_2 },
         { success , "2025-04-15", bundle, V::GEM_ERP_1_3 },
         { failure , "2025-04-15", bundle, V::GEM_ERP_1_4 },
+        { failure , "2025-04-15", bundle, V::GEM_ERP_1_5_2 },
         { success , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_2 },
         { success , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_3 },
         { failure , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_4 },
+        { failure , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_5_2 },
         { failure , "2025-04-15", parameters, V::GEM_ERP_1_2 },
         { failure , "2025-04-15", parameters, V::GEM_ERP_1_3 },
         { success , "2025-04-15", parameters, V::GEM_ERP_1_4 },
+        { failure , "2025-04-15", parameters, V::GEM_ERP_1_5_2 },
 
         { failure , "2025-04-16", single, V::GEM_ERP_1_2 },
         { failure , "2025-04-16", single, V::GEM_ERP_1_3 },
         { failure , "2025-04-16", single, V::GEM_ERP_1_4 },
+        { failure , "2025-04-16", single, V::GEM_ERP_1_5_2 },
         { failure , "2025-04-16", bundle, V::GEM_ERP_1_2 },
         { failure , "2025-04-16", bundle, V::GEM_ERP_1_3 },
         { failure , "2025-04-16", bundle, V::GEM_ERP_1_4 },
+        { failure , "2025-04-16", bundle, V::GEM_ERP_1_5_2 },
         { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_2 },
         { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_3 },
         { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_4 },
+        { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_5_2 },
         { failure , "2025-04-16", parameters, V::GEM_ERP_1_2 },
         { failure , "2025-04-16", parameters, V::GEM_ERP_1_3 },
         { success , "2025-04-16", parameters, V::GEM_ERP_1_4 },
+        { failure , "2025-04-16", parameters, V::GEM_ERP_1_5_2 },
+
+        { failure , "2025-09-30", single, V::GEM_ERP_1_2 },
+        { failure , "2025-09-30", single, V::GEM_ERP_1_3 },
+        { failure , "2025-09-30", single, V::GEM_ERP_1_4 },
+        { failure , "2025-09-30", single, V::GEM_ERP_1_5_2 },
+        { failure , "2025-09-30", bundle, V::GEM_ERP_1_2 },
+        { failure , "2025-09-30", bundle, V::GEM_ERP_1_3 },
+        { failure , "2025-09-30", bundle, V::GEM_ERP_1_4 },
+        { failure , "2025-09-30", bundle, V::GEM_ERP_1_5_2 },
+        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_2 },
+        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_3 },
+        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_4 },
+        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_5_2 },
+        { failure , "2025-09-30", parameters, V::GEM_ERP_1_2 },
+        { failure , "2025-09-30", parameters, V::GEM_ERP_1_3 },
+        { success , "2025-09-30", parameters, V::GEM_ERP_1_4 },
+        { failure , "2025-09-30", parameters, V::GEM_ERP_1_5_2 },
+
+        { failure , "2025-10-01", single, V::GEM_ERP_1_2 },
+        { failure , "2025-10-01", single, V::GEM_ERP_1_3 },
+        { failure , "2025-10-01", single, V::GEM_ERP_1_4 },
+        { failure , "2025-10-01", single, V::GEM_ERP_1_5_2 },
+        { failure , "2025-10-01", bundle, V::GEM_ERP_1_2 },
+        { failure , "2025-10-01", bundle, V::GEM_ERP_1_3 },
+        { failure , "2025-10-01", bundle, V::GEM_ERP_1_4 },
+        { failure , "2025-10-01", bundle, V::GEM_ERP_1_5_2 },
+        { failure , "2025-10-01", bundleNoProfile, V::GEM_ERP_1_2 },
+        { failure , "2025-10-01", bundleNoProfile, V::GEM_ERP_1_3 },
+        { failure , "2025-10-01", bundleNoProfile, V::GEM_ERP_1_4 },
+        { failure , "2025-10-01", bundleNoProfile, V::GEM_ERP_1_5_2 },
+        { failure , "2025-10-01", parameters, V::GEM_ERP_1_2 },
+        { failure , "2025-10-01", parameters, V::GEM_ERP_1_3 },
+        { success , "2025-10-01", parameters, V::GEM_ERP_1_4 },
+        { success , "2025-10-01", parameters, V::GEM_ERP_1_5_2 },
     };
 }
 
@@ -70,16 +112,25 @@ std::list<MedicationDispenseFixture::MaxWhenHandedOverTestParams> MedicationDisp
         { failure , {"2025-04-16", "2025-03-15", "2025-04-15"}, bundle, V::GEM_ERP_1_3 },
         { failure , {"2025-02-15", "2025-04-16", "2025-04-15"}, bundle, V::GEM_ERP_1_3 },
         { failure , {"2025-02-15", "2025-03-15", "2025-04-16"}, bundle, V::GEM_ERP_1_3 },
+        { failure , {"2025-10-01", "2025-03-15", "2025-04-16"}, bundle, V::GEM_ERP_1_3 },
 
         { success , {"2025-02-15", "2025-03-15", "2025-04-15"}, bundleNoProfile, V::GEM_ERP_1_3 },
         { failure , {"2025-04-16", "2025-03-15", "2025-04-15"}, bundleNoProfile, V::GEM_ERP_1_3 },
         { failure , {"2025-02-15", "2025-04-16", "2025-04-15"}, bundleNoProfile, V::GEM_ERP_1_3 },
         { failure , {"2025-02-15", "2025-03-15", "2025-04-16"}, bundleNoProfile, V::GEM_ERP_1_3 },
+        { failure , {"2025-10-01", "2025-03-15", "2025-04-16"}, bundleNoProfile, V::GEM_ERP_1_3 },
 
         { failure , {"2025-01-12", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_4 },
         { success , {"2025-01-15", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_4 },
         { success , {"2025-01-12", "2025-01-15", "2025-01-14"}, parameters, V::GEM_ERP_1_4 },
         { success , {"2025-01-12", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_4 },
+        { success , {"2025-10-01", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_4 },
+
+        { failure , {"2025-01-12", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
+        { failure , {"2025-01-15", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
+        { failure , {"2025-01-12", "2025-01-15", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
+        { failure , {"2025-01-12", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
+        { success , {"2025-10-01", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
     };
 }
 
@@ -97,9 +148,9 @@ std::string MedicationDispenseFixture::medicationDispenseBody(const BodyOptions&
             switch (opt.endpointType)
             {
                 case EndpointType::close:
-                    return closeOperationInputParamers(opt);
+                    return operationInputParamers(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, opt);
                 case EndpointType::dispense:
-                    return dispenseOperationInputParamers(opt);
+                    return operationInputParamers(model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, opt);
             }
             Fail("Unknown value for BodyType: " + std::to_string(static_cast<uintmax_t>(opt.bodyType)));
     }
@@ -127,6 +178,25 @@ std::string MedicationDispenseFixture::medicationDispenseXml(BodyOptions opt) co
     return ResourceTemplates::medicationDispenseXml(options);
 }
 
+namespace {
+struct GemVer {
+    ResourceTemplates::Versions::GEM_ERP operator()(const model::Timestamp& ts)
+    {
+        return ResourceTemplates::Versions::GEM_ERP_current(ts);
+    }
+    ResourceTemplates::Versions::GEM_ERP operator()(const std::string& ts)
+    {
+        try {
+            return ResourceTemplates::Versions::GEM_ERP_current(model::Timestamp::fromGermanDate(ts));
+        }
+        catch (const model::ModelException& ex)
+        {
+            return ResourceTemplates::Versions::GEM_ERP_current();
+        }
+    }
+};
+}
+
 std::list<ResourceTemplates::MedicationDispenseOptions>
 MedicationDispenseFixture::getMultiMedicationDispenseOptions(const BodyOptions& opt) const
 {
@@ -141,10 +211,6 @@ MedicationDispenseFixture::getMultiMedicationDispenseOptions(const BodyOptions& 
             .id{model::MedicationDispenseId{prescriptionId, 1}},
             .telematikId = telematikId,
         });
-        if (opt.overrideVersion)
-        {
-            single.gematikVersion = *opt.overrideVersion;
-        }
         if (overrideWhenHandedOver != opt.overrideWhenHandedOver.end())
         {
             single.whenHandedOver = *overrideWhenHandedOver;
@@ -153,6 +219,19 @@ MedicationDispenseFixture::getMultiMedicationDispenseOptions(const BodyOptions& 
         else
         {
             single.whenHandedOver = overrideWhenHandedOverExtra;
+        }
+        if (opt.overrideVersion)
+        {
+            single.gematikVersion = *opt.overrideVersion;
+        }
+        else
+        {
+            single.gematikVersion = std::visit(GemVer{}, single.whenHandedOver);
+        }
+        if (single.gematikVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+        {
+            auto& medicationOptions = single.medication.emplace<ResourceTemplates::MedicationOptions>();
+            medicationOptions.version = single.gematikVersion;
         }
     }
     return result;
@@ -173,34 +252,21 @@ std::string MedicationDispenseFixture::medicationDispenseBundleXmlNoProfile(cons
     return result;
 }
 
-std::string MedicationDispenseFixture::closeOperationInputParamers(const BodyOptions& opt) const
+std::string MedicationDispenseFixture::operationInputParamers(model::ProfileType profileType, const BodyOptions& opt) const
 {
     if (!opt.overrideVersion && ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
     {
         return notSupported;
     }
     auto multiOptions = getMultiMedicationDispenseOptions(opt);
+    const auto versionFromWhenHandedOver =
+        std::views::transform([](const ResourceTemplates::MedicationDispenseOptions& md) {
+            return std::visit(GemVer{}, md.whenHandedOver);
+        });
+    auto gemVer = std::ranges::max(multiOptions | versionFromWhenHandedOver);
     return ResourceTemplates::medicationDispenseOperationParametersXml({
-        .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
-        .version = opt.overrideVersion ? *opt.overrideVersion
-                                       : std::max(ResourceTemplates::Versions::GEM_ERP_current(),
-                                                  ResourceTemplates::Versions::GEM_ERP_1_4),
-        .medicationDispenses = std::move(multiOptions),
-    });
-}
-
-std::string MedicationDispenseFixture::dispenseOperationInputParamers(const BodyOptions& opt) const
-{
-    if (!opt.overrideVersion && ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
-    {
-        return notSupported;
-    }
-    auto multiOptions = getMultiMedicationDispenseOptions(opt);
-    return ResourceTemplates::medicationDispenseOperationParametersXml({
-        .profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
-        .version = opt.overrideVersion ? *opt.overrideVersion
-                                       : std::max(ResourceTemplates::Versions::GEM_ERP_current(),
-                                                  ResourceTemplates::Versions::GEM_ERP_1_4),
+        .profileType = profileType,
+        .version = opt.overrideVersion.value_or(std::max(gemVer, ResourceTemplates::Versions::GEM_ERP_1_4)),
         .medicationDispenses = std::move(multiOptions),
     });
 }

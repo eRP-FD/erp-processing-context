@@ -30,6 +30,10 @@ public:
 
     // authoredOn from MedicationRequest entry
     [[nodiscard]] model::Timestamp authoredOn() const;
+private:
+    void checkPatients() const;
+    void checkMedications() const;
+    void checkCoverage() const;
 };
 
 extern template class BundleBase<KbvBundle>;

@@ -27,12 +27,13 @@ TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
                          model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
 
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, model::Timestamp::now()));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, model::Timestamp::now()));
     ASSERT_TRUE(consent.has_value());
 
     const auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> chargeItem;
     mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
+    mChargeItemRequestArgs.overrideExpectedPatientenrechnungVersion = "1.0";
     ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
                                 *prescriptionId,
                                 kvnr,
@@ -40,6 +41,6 @@ TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
                                 secret,
                                 HttpStatus::BadRequest,
                                 model::OperationOutcome::Issue::Type::invalid,
-                                "test/EndpointHandlerTest/charge_item_ERP10941_template.xml"));
+                                "charge_item_ERP10941_template.xml"));
     ASSERT_FALSE(chargeItem);
 }

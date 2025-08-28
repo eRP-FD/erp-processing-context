@@ -33,7 +33,7 @@ void MainPostgresBackend::healthCheck()
     checkCommonPreconditions();
     TVLOG(2) << healthCheckQuery.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "healthcheck");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "healthcheck");
     const auto result = transaction()->exec(healthCheckQuery.query);
     TVLOG(2) << "got " << result.size() << " results";
 }

@@ -172,3 +172,13 @@ MedicationDispense::MedicationDispense(model::PrescriptionId initPrescriptionId,
         ModelFail("Unable to reconstruct charge item from database:"s + exception.what());
     }
 }
+
+EuAccessPermission::EuAccessPermission(std::string countryCode, EncryptedBlob accessCode,
+                                       const model::Timestamp& expires, BlobId blobId, Blob salt)
+    : countryCode(std::move(countryCode))
+    , accessCode(std::move(accessCode))
+    , expires(expires)
+    , blobId(blobId)
+    , salt(std::move(salt))
+{
+}

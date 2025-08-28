@@ -6,6 +6,8 @@
  */
 
 #include "test/util/ResourceTemplates.hxx"
+#include "erp/model/WorkflowParameters.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/MedicationDispense.hxx"
@@ -20,41 +22,146 @@
 
 #include <boost/algorithm/string.hpp>
 
+
+
+
+
+static constexpr char bsnrIdentifier[] = R"(
+          <type>
+            <coding>
+              <system value="http://terminology.hl7.org/CodeSystem/v2-0203" />
+              <code value="BSNR" />
+            </coding>
+          </type>
+          <system value="https://fhir.kbv.de/NamingSystem/KBV_NS_Base_BSNR" />
+          <value value="###LANR###" />)";
+
+static constexpr char kzvaIdentifier[] = R"(
+          <type>
+            <coding>
+              <system value="http://fhir.de/CodeSystem/identifier-type-de-basis"/>
+              <code value="KZVA"/>
+            </coding>
+          </type>
+          <system value="http://fhir.de/sid/kzbv/kzvabrechnungsnummer"/>
+          <value value="###LANR###"/>)";
+
+static constexpr char practitionerRole[] = R"(
+        <entry>
+        <fullUrl value="http://pvs.praxis.local/fhir/PractitionerRole/34329d70-ccb5-43ae-b551-e5368022b226"/>
+        <resource>
+            <PractitionerRole xmlns="http://hl7.org/fhir">
+                <id value="34329d70-ccb5-43ae-b551-e5368022b226"/>
+                <meta>
+                    <profile value="https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_PractitionerRole|1.2"/>
+                </meta>
+                <practitioner>
+                    <reference value="Practitioner/667ffd79-42a3-4002-b7ca-6b9098f20ccb"/>
+                </practitioner>
+                <organization>
+                    <identifier>
+                        <system value="http://fhir.de/NamingSystem/asv/teamnummer"/>
+                        <value value="003456788"/>
+                    </identifier>
+                </organization>
+            </PractitionerRole>
+        </resource>
+    </entry>
+)";
+
+static constexpr char practitionerRoleSection[] = R"(
+                <section>
+                    <code>
+                        <coding>
+                            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Section_Type"/>
+                            <code value="FOR_PractitionerRole"/>
+                        </coding>
+                    </code>
+                    <entry>
+                        <!-- Referenz auf ASV-Kennzeichen(PractitionerRole)  -->
+                        <reference value="PractitionerRole/34329d70-ccb5-43ae-b551-e5368022b226"/>
+                    </entry>
+                </section>
+)";
+
+namespace {
+std::string renderVersion(const std::string_view url, const fhirtools::FhirVersion& version)
+{
+    std::string urlString{url};
+    auto viewList = Fhir::instance().allViews().matchAll(urlString, version);
+    if (viewList.empty())
+    {
+        return to_string(version);
+    }
+    auto renderVersion = viewList.latestRenderVersion(urlString);
+    Expect3(renderVersion.version.has_value(),
+            "could not find render version for: " + urlString + '|' + to_string(version), std::logic_error);
+    return to_string(*renderVersion.version);
+}
+}
+
+
 namespace ResourceTemplates
 {
+
+Versions::KBV_ERP::KBV_ERP(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
+}
+
+Versions::GEM_ERP::GEM_ERP(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
+}
+
+Versions::GEM_ERPCHRG::GEM_ERPCHRG(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
+}
+
+Versions::KBV_EVDGA::KBV_EVDGA(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
+}
 
 std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
     Versions::GEM_ERP_1_2,
     Versions::GEM_ERP_1_3,
     Versions::GEM_ERP_1_4,
+    Versions::GEM_ERP_1_5_2,
 };
+
 std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
     Versions::KBV_ERP_1_1_0,
+    Versions::KBV_ERP_1_3_2,
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
     Versions::KBV_EVDGA_1_1,
+    Versions::KBV_EVDGA_1_2_0,
 };
 
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
     Versions::GEM_ERPCHRG_1_0,
+    Versions::GEM_ERPCHRG_1_1,
 };
 
 std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
     Versions::DAV_PKV_1_2,
+    Versions::DAV_PKV_1_3,
+    Versions::DAV_PKV_1_4_0,
 };
 
-Versions::GEM_ERP::GEM_ERP(fhirtools::FhirVersion ver)
-    : FhirVersion{std::move(ver)}
-{
-}
+std::initializer_list<Versions::GEM_ERPEU> Versions::GEM_ERPEU_all{
+    Versions::GEM_ERPEU_1_0,
+};
+
 
 fhirtools::DefinitionKey Versions::latest(std::string_view profileUrl, const model::Timestamp& reference)
 {
     const auto& fhirInstance = Fhir::instance();
-    const auto& backend = fhirInstance.backend();
     auto view = fhirInstance.structureRepository(reference);
-    auto supported = view.supportedVersions(&backend, {std::string{profileUrl}});
+    auto supported = view.supportedVersions({std::string{profileUrl}});
     if (supported.empty())
     {
         return {std::string{profileUrl}, std::nullopt};
@@ -62,19 +169,22 @@ fhirtools::DefinitionKey Versions::latest(std::string_view profileUrl, const mod
     return std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version);
 }
 
-Versions::GEM_ERPCHRG Versions::GEM_ERPCHRG_current(const model::Timestamp& reference [[maybe_unused]])
+Versions::GEM_ERPCHRG Versions::GEM_ERPCHRG_current(const model::Timestamp& reference)
 {
-    return GEM_ERPCHRG_1_0;
+    auto chrgKey = latest(model::resource::structure_definition::chargeItem, reference);
+    return chrgKey.version ? GEM_ERPCHRG{std::move(*chrgKey.version)} : GEM_ERPCHRG_1_0;
 }
 
-Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference [[maybe_unused]])
+Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference)
 {
-    return KBV_ERP_1_1_0;
+    auto prescriptionKey = latest(model::resource::structure_definition::prescriptionItem, reference);
+    return KBV_ERP{prescriptionKey.version.value_or(KBV_ERP_1_1_0)};
 }
 
-Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference [[maybe_unused]])
+Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference)
 {
-    return KBV_EVDGA_1_1;
+    auto evdgaBundleKey = latest(model::resource::structure_definition::kbv_pr_evdga_bundle, reference);
+    return KBV_EVDGA{evdgaBundleKey.version.value_or(KBV_EVDGA_1_1)};
 }
 
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
@@ -88,10 +198,45 @@ Versions::DAV_PKV::DAV_PKV(FhirVersion ver)
 {
 }
 
-Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Timestamp& reference [[maybe_unused]])
+Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Timestamp& reference)
 {
     auto dispenseItemKey = latest(model::resource::structure_definition::dispenseItem, reference);
     return dispenseItemKey.version ? DAV_PKV{std::move(*dispenseItemKey.version)} : DAV_PKV_1_3;
+}
+
+Versions::GEM_ERPEU Versions::GEM_ERPEU_current(const model::Timestamp& reference [[maybe_unused]])
+{
+    return GEM_ERPEU_1_0;
+}
+
+std::string Versions::KBV_ERP::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::prescriptionItem, *this);
+}
+
+std::string Versions::GEM_ERP::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::task, *this);
+}
+
+std::string Versions::GEM_ERPCHRG::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::communicationChargChangeReq, *this);
+}
+
+std::string Versions::DAV_PKV::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::dispenseItem, *this);
+}
+
+std::string Versions::GEM_ERPEU::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::gem_erpeu_pr_par_get_prescription_input, *this);
+}
+
+std::string Versions::KBV_EVDGA::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::kbv_pr_evdga_bundle, *this);
 }
 
 std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
@@ -101,7 +246,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     auto& resourceManager = ResourceManager::instance();
     std::string kvid10Ns{model::resource::naming_system::gkvKvid10};
     std::string templateFileName =
-        "test/EndpointHandlerTest/kbv_bundle_template_" + to_string(bundleOptions.kbvVersion) + ".xml";
+        "test/EndpointHandlerTest/kbv_bundle_template_" + bundleOptions.kbvVersion.renderVersion() + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     const auto& prescriptionId = bundleOptions.prescriptionId;
 
@@ -122,13 +267,18 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
             kvid10Ns = std::string{model::resource::naming_system::pkvKvid10};
             break;
     }
-    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_SYSTEM###", bundleOptions.patientIdentifierSystem);
-    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_CODE###", bundleOptions.forceInsuranceType.value_or(insuranceType));
+    const std::string coverageInsuranceType{bundleOptions.coverageInsuranceType.value_or(insuranceType)};
+    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_3_2)
+    {
+        insuranceType = "KVZ10";
+        kvid10Ns = model::resource::naming_system::gkvKvid10;
+    }
+    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_TYPE_SYSTEM###", bundleOptions.patientIdentifierTypeSystem);
+    boost::replace_all(bundle, "###PATIENT_IDENTIFIER_TYPE_CODE###", bundleOptions.forceInsuranceType.value_or(insuranceType));
     boost::replace_all(bundle, "###KVID10###", bundleOptions.forceKvid10Ns.value_or(kvid10Ns));
     boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     boost::replace_all(bundle, "###INSURANT_KVNR###", bundleOptions.kvnr);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", prescriptionId.toString());
-    const auto coverageInsuranceType = bundleOptions.coverageInsuranceType.value_or(insuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_TYPE###", coverageInsuranceType);
     boost::replace_all(bundle, "###COVERAGE_INSURANCE_SYSTEM###", bundleOptions.coverageInsuranceSystem);
     if (bundleOptions.iknr.id().empty())
@@ -146,7 +296,19 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
         boost::replace_all(bundle, "###COVERAGE_PAYOR_EXTENSION###", bundleOptions.coveragePayorExtension);
         boost::replace_all(bundle, "###IKNR###", bundleOptions.iknr.id());
     }
+    boost::replace_all(bundle, "###STATUS_CO_PAYMENT###", bundleOptions.statusCoPayment);
+    boost::replace_all(bundle, "###MEDICATION_REQUEST_EXTENSION###", bundleOptions.medicationRequestExtension);
     boost::replace_all(bundle, "###META_EXTENSION###", bundleOptions.metaExtension);
+    switch (bundleOptions.lanr.getType())
+    {
+        case model::Lanr::Type::lanr:
+        case model::Lanr::Type::unspecified:
+            boost::replace_all(bundle, "###IDENTIFIER_ORGANIZATION_NUMBER###", bsnrIdentifier);
+            break;
+        case model::Lanr::Type::zanr:
+            boost::replace_all(bundle, "###IDENTIFIER_ORGANIZATION_NUMBER###", kzvaIdentifier);
+            break;
+    }
     boost::replace_all(bundle, "###LANR###", bundleOptions.lanr.id());
     std::string anrType;
     std::string anrCodeSystem;
@@ -174,11 +336,30 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
     return bundle;
 }
 
+std::string ResourceTemplates::KbvBundleMvoOptions::getRedeemPeriodEnd(model::Timestamp authoredOn,
+                                                                       std::optional<std::string> redeemPeriodStart)
+{
+    auto timestamp = authoredOn;
+    if (redeemPeriodStart)
+    {
+        try
+        {
+           timestamp = model::Timestamp::fromFhirDateTime(*redeemPeriodStart, model::Timestamp::GermanTimezone);
+        }
+        catch (const model::ModelException&)
+        {
+            // if conversion fails we stick to authoredOn
+        }
+    }
+    return (timestamp + std::chrono::days{30}).toGermanDate();
+}
+
 std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
 {
+    using namespace std::string_view_literals;
     auto& resourceManager = ResourceManager::instance();
-    const std::string kbvVersionStr{to_string(
-        bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)))};
+    const std::string kbvVersionStr{
+        bundleOptions.kbvVersion.value_or(ResourceTemplates::Versions::KBV_ERP_current(bundleOptions.authoredOn)).renderVersion()};
     std::string templateFileName =
         "test/EndpointHandlerTest/kbv_bundle_mehrfachverordnung_template_" + kbvVersionStr + ".xml";
 
@@ -186,7 +367,11 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     boost::replace_all(bundle, "###TIMESTAMP###", bundleOptions.authoredOn.toXsDateTime());
     boost::replace_all(bundle, "###AUTHORED_ON###", bundleOptions.authoredOn.toGermanDate());
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", bundleOptions.prescriptionId.toString());
+    boost::replace_all(bundle, "##KVNR##", bundleOptions.kvnr);
     boost::replace_all(bundle, "###LEGAL_BASIS_CODE###", bundleOptions.legalBasisCode);
+    const bool withPractitionerRole =  std::set{"01"sv, "11"sv}.contains(bundleOptions.legalBasisCode);
+    boost::replace_all(bundle, "###PRACTITIONER_ROLE_SECTION###", withPractitionerRole?practitionerRoleSection:std::string_view{});
+    boost::replace_all(bundle, "###PRACTITIONER_ROLE###", withPractitionerRole?practitionerRole:std::string_view{});
     boost::replace_all(bundle, "###NUMERATOR###", std::to_string(bundleOptions.numerator));
     boost::replace_all(bundle, "###DENOMINATOR###", std::to_string(bundleOptions.denominator));
     std::string redeemPeriodStart;
@@ -209,7 +394,7 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
 std::string kbvBundlePkvXml(const KbvBundlePkvOptions& bundleOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    const std::string kbvVersionStr{to_string(bundleOptions.kbvVersion)};
+    const std::string kbvVersionStr{bundleOptions.kbvVersion.renderVersion()};
     std::string templateFileName = "test/EndpointHandlerTest/kbv_pkv_bundle_template_" + kbvVersionStr + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     boost::replace_all(bundle, "###PRESCRIPTION_ID###", bundleOptions.prescriptionId.toString());
@@ -310,9 +495,10 @@ internal_type::medicationDispenseBundle(const MedicationDispenseBundleOptions& b
 
 std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDispenseOptions)
 {
+    auto renderVersionString = medicationDispenseOptions.gematikVersion.renderVersion();
     auto& resourceManager = ResourceManager::instance();
     const std::string gematikVersion{to_string(medicationDispenseOptions.gematikVersion)};
-    std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_template_" + gematikVersion + ".xml";
+    std::string templateFileName = "test/EndpointHandlerTest/medication_dispense_template_" + renderVersionString + ".xml";
     auto bundle = resourceManager.getStringResource(templateFileName);
     auto medicationOptions = medicationDispenseOptions.medication;
     struct ToString {
@@ -389,11 +575,11 @@ std::string medicationXml(const MedicationOptions& medicationOptions)
     struct GetTemplate {
         std::string operator()(const Versions::KBV_ERP& version)
         {
-            return (std::ostringstream{} << medicationOptions.templatePrefix << version << ".xml").str();
+            return (std::ostringstream{} << medicationOptions.templatePrefix << version.renderVersion() << ".xml").str();
         }
         std::string operator()(const Versions::GEM_ERP& version)
         {
-            return (std::ostringstream{} << medicationOptions.templatePrefix << "gem_" << version << ".xml").str();
+            return (std::ostringstream{} << medicationOptions.templatePrefix << "gem_" << version.renderVersion() << ".xml").str();
         }
         std::string operator()(const std::monostate&)
         {
@@ -423,7 +609,7 @@ std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& optio
 {
     auto& resourceManager = ResourceManager::instance();
     std::string const templateFileName =
-        "test/EndpointHandlerTest/GEM_ERP_PR_MedicationDispense_DiGA_" + to_string(options.version) + ".xml";
+        "test/EndpointHandlerTest/GEM_ERP_PR_MedicationDispense_DiGA_template_" + options.version.renderVersion() + ".xml";
     auto medicationDispense = resourceManager.getStringResource(templateFileName);
     boost::replace_all(medicationDispense, "##PRESCRIPTION_ID##", options.prescriptionId);
     boost::replace_all(medicationDispense, "##KVNR##", options.kvnr);
@@ -445,21 +631,21 @@ std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& optio
 std::string taskJson(const TaskOptions& taskOptions)
 {
     auto& resourceManager = ResourceManager::instance();
-    const std::string gematikVersion{to_string(taskOptions.gematikVersion)};
+    auto renderVersion = taskOptions.gematikVersion.renderVersion();
     std::string templateFileName;
     switch (taskOptions.taskType)
     {
         case TaskType::Draft:
-            templateFileName = "test/EndpointHandlerTest/task_draft_template_" + gematikVersion + ".json";
+            templateFileName = "test/EndpointHandlerTest/task_draft_template_" + renderVersion + ".json";
             break;
         case TaskType::Ready:
-            templateFileName = "test/EndpointHandlerTest/task_ready_template_" + gematikVersion + ".json";
+            templateFileName = "test/EndpointHandlerTest/task_ready_template_" + renderVersion + ".json";
             break;
         case TaskType::InProgress:
-            templateFileName = "test/EndpointHandlerTest/task_inprogress_template_" + gematikVersion + ".json";
+            templateFileName = "test/EndpointHandlerTest/task_inprogress_template_" + renderVersion + ".json";
             break;
         case TaskType::Completed:
-            templateFileName = "test/EndpointHandlerTest/task_completed_template_" + gematikVersion + ".json";
+            templateFileName = "test/EndpointHandlerTest/task_completed_template_" + renderVersion + ".json";
             break;
     }
 
@@ -483,22 +669,19 @@ std::string taskJson(const TaskOptions& taskOptions)
 std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions, std::string path /* = "" */)
 {
     auto& resourceManager = ResourceManager::instance();
-    std::string templateFileName;
-    switch (chargeItemOptions.operation)
+    std::string renderVersion = chargeItemOptions.version.renderVersion();
+    std::string templateFileName = "test/EndpointHandlerTest/" + path;
+    if (path.empty())
     {
-        case ChargeItemOptions::OperationType::Post:
-            templateFileName = "test/EndpointHandlerTest/charge_item_POST_template.xml";
-            break;
-        case ChargeItemOptions::OperationType::Put:
-            if (path.empty())
-            {
-                templateFileName = "test/EndpointHandlerTest/charge_item_PUT_template.xml";
-            }
-            else
-            {
-                templateFileName = "test/EndpointHandlerTest/" + path;
-            }
-            break;
+        switch (chargeItemOptions.operation)
+        {
+            case ChargeItemOptions::OperationType::Post:
+                templateFileName = "test/EndpointHandlerTest/charge_item_POST_" + renderVersion + "_template.xml";
+                break;
+            case ChargeItemOptions::OperationType::Put:
+                templateFileName = "test/EndpointHandlerTest/charge_item_PUT_" + renderVersion + "_template.xml";
+                break;
+        }
     }
     const auto& prescriptionId = chargeItemOptions.prescriptionId;
     auto chargeItem = resourceManager.getStringResource(templateFileName);
@@ -512,13 +695,140 @@ std::string chargeItemXml(const ChargeItemOptions& chargeItemOptions, std::strin
 
     return chargeItem;
 }
+
+namespace
+{
+constexpr std::string_view markingFlagElementTemplate = R"^(
+    {
+        "name": "operation",
+        "part": [
+          {
+            "name": "type",
+            "valueCode": "add"
+          },
+          {
+            "name": "path",
+            "valueString": "ChargeItem.extension('https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_EX_MarkingFlag').extension('##EXTENSION_NAME##')"
+          },
+          {
+            "name": "name",
+            "valueString": "valueBoolean"
+          },
+          {
+            "name": "value",
+            "valueBoolean": ##VALUE_BOOLEAN##
+          }
+        ]
+    }
+    )^";
+
+std::string constructMarkingFlagElement(const std::string& extensionName, bool value)
+{
+    auto result = String::replaceAll(std::string{markingFlagElementTemplate}, "##EXTENSION_NAME##", extensionName);
+    result = String::replaceAll(result, "##VALUE_BOOLEAN##", value ? "true" : "false");
+
+    return result;
+}
+
+std::string constructLegacyPatchChargeItemBody(const PatchChargeItemOptions& patchChargeItemOptions)
+{
+    std::string result{R"^(
+        {
+            "resourceType": "Parameters",
+            "parameter": [
+        )^"};
+
+    if (patchChargeItemOptions.insuranceProviderMarking.has_value())
+    {
+        result += constructMarkingFlagElement("insuranceProvider", *patchChargeItemOptions.insuranceProviderMarking);
+        result += ",";
+    }
+
+    if (patchChargeItemOptions.subsidyMarking.has_value())
+    {
+        result += constructMarkingFlagElement("subsidy", *patchChargeItemOptions.subsidyMarking);
+        result += ",";
+    }
+
+    if (patchChargeItemOptions.taxOfficeMarking.has_value())
+    {
+        result += constructMarkingFlagElement("taxOffice", *patchChargeItemOptions.taxOfficeMarking);
+        result += ",";
+    }
+
+    if (result.back() == ',')
+    {
+        result.pop_back();
+    }
+
+    result += "]}";
+
+    return result;
+}
+}
+
+std::string patchChargeItemJson(const PatchChargeItemOptions& patchChargeItemOptions)
+{
+    if (patchChargeItemOptions.version < Versions::GEM_ERPCHRG_1_1)
+    {
+        return constructLegacyPatchChargeItemBody(patchChargeItemOptions);
+    }
+
+    const std::string partTemplate = R"({
+"name": "##NAME##",
+"valueBoolean": ##VALUE_BOOLEAN##
+})";
+    std::string sep;
+
+    auto& resourceManager = ResourceManager::instance();
+    std::string patchParameters =
+        resourceManager.getStringResource("test/EndpointHandlerTest/patch_charge_item_parameters_template_" +
+                                          patchChargeItemOptions.version.renderVersion() + ".json");
+    if (patchChargeItemOptions.insuranceProviderMarking.has_value())
+    {
+        auto part = boost::replace_all_copy(partTemplate, "##NAME##", "insuranceProvider");
+        boost::replace_all(part, "##VALUE_BOOLEAN##",
+                           patchChargeItemOptions.insuranceProviderMarking.value() ? "true" : "false");
+        boost::replace_all(patchParameters, "##INSURANCE_PROVIDER##", sep + part);
+        sep = ",";
+    }
+    else
+    {
+        boost::replace_all(patchParameters, "##INSURANCE_PROVIDER##", "");
+    }
+    if (patchChargeItemOptions.subsidyMarking.has_value())
+    {
+        auto part = boost::replace_all_copy(partTemplate, "##NAME##", "subsidy");
+        boost::replace_all(part, "##VALUE_BOOLEAN##", patchChargeItemOptions.subsidyMarking.value() ? "true" : "false");
+        boost::replace_all(patchParameters, "##SUBSIDY##", sep + part);
+        sep = ",";
+    }
+    else
+    {
+        boost::replace_all(patchParameters, "##SUBSIDY##", "");
+    }
+    if (patchChargeItemOptions.taxOfficeMarking.has_value())
+    {
+        auto part = boost::replace_all_copy(partTemplate, "##NAME##", "taxOffice");
+        boost::replace_all(part, "##VALUE_BOOLEAN##",
+                           patchChargeItemOptions.taxOfficeMarking.value() ? "true" : "false");
+        boost::replace_all(patchParameters, "##TAX_OFFICE##", sep + part);
+        sep = ",";
+    }
+    else
+    {
+        boost::replace_all(patchParameters, "##TAX_OFFICE##", "");
+    }
+    return patchParameters;
+}
+
 std::string davDispenseItemXml(const DavDispenseItemOptions& dispenseItemOptions)
 {
     auto& resourceManager = ResourceManager::instance();
     Expect3(dispenseItemOptions.davPkvVersion != fhirtools::FhirVersion::notVersioned,
             "dispense item must have a version", std::logic_error);
     std::string dispenseItem = resourceManager.getStringResource("test/EndpointHandlerTest/DAV_DispenseItem_template_" +
-                                                                 to_string(dispenseItemOptions.davPkvVersion) + ".xml");
+                                                                 dispenseItemOptions.davPkvVersion.renderVersion() + ".xml");
 
     boost::replace_all(dispenseItem, "##PRESCRIPTION_ID##", dispenseItemOptions.prescriptionId.toString());
     boost::replace_all(dispenseItem, "###WHEN_HANDED_OVER###", dispenseItemOptions.whenHandenOver.toGermanDate());
@@ -537,7 +847,7 @@ std::string medicationDispenseOperationParametersXml(const MedicationDispenseOpe
         return result;
     };
     std::string profile =
-        std::string{model::profile(options.profileType).value()}.append(1, '|').append(to_string(options.version));
+        std::string{model::profile(options.profileType).value()}.append(1, '|').append(options.version.renderVersion());
     std::string result = "<Parameters xmlns=\"http://hl7.org/fhir\">\n  <id value=\"" + options.id + "\"/>\n" +
                          "  <meta>\n"
                          "    <profile value=\"" + profile + "\" />\n"
@@ -586,9 +896,22 @@ std::string dispenseOrCloseTaskBodyXml(const MedicationDispenseOperationParamete
 
 std::string evdgaBundleXml(const EvdgaBundleOptions& options)
 {
+    using namespace std::string_literals;
+    static constexpr char deviceRequestExtension[] = R"(
+<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Accident">
+    <extension url="Unfallkennzeichen">
+        <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"/>
+            <code value="4"/>
+        </valueCoding>
+    </extension>
+</extension>
+)";
+
+
     auto& resourceManager = ResourceManager::instance();
     std::string templateFileName =
-        "test/EndpointHandlerTest/EVDGA_Bundle_template_" + to_string(options.version) + ".xml";
+        "test/EndpointHandlerTest/EVDGA_Bundle_template_" + options.version.renderVersion() + ".xml";
     auto evdgaBundle = resourceManager.getStringResource(templateFileName);
 
     boost::replace_all(evdgaBundle, "##PRESCRIPTION_ID##", options.prescriptionId);
@@ -597,8 +920,114 @@ std::string evdgaBundleXml(const EvdgaBundleOptions& options)
     boost::replace_all(evdgaBundle, "##COVERAGE_SYSTEM##", options.coverageSystem);
     boost::replace_all(evdgaBundle, "##COVERAGE_CODE##", options.coverageCode);
     boost::replace_all(evdgaBundle, "##AUTHORED_ON##", options.authoredOn);
+    boost::replace_all(evdgaBundle, "##DEVICE_REQUEST_EXTENSION##",
+                       std::set{"BG"s, "UK"s}.contains(options.coverageCode) ? deviceRequestExtension : "");
 
     return evdgaBundle;
 }
-}// namespace ResourceTemplates
 
+std::string consentJson(const ConsentOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto consent = resourceManager.getStringResource("test/EndpointHandlerTest/consent_template.json");
+    model::Timestamp timestamp{static_cast<int64_t>(0)};
+    try
+    {
+        timestamp = model::Timestamp::fromFhirDateTime(options.timestamp);
+    }
+    catch (...)
+    {
+        timestamp = model::Timestamp::now();
+    }
+    boost::replace_all(consent, "##KVNR##", options.kvnr);
+    boost::replace_all(consent, "##DATETIME##", options.timestamp);
+    boost::replace_all(consent, "##CATEGORY##", magic_enum::enum_name(options.consentCategory));
+    std::string profile;
+    switch (options.consentCategory)
+    {
+        case model::ConsentType::CHARGCONS: {
+            auto version = Versions::GEM_ERPCHRG_current(timestamp).renderVersion();
+            boost::replace_all(consent, "##CATEGORY_SYSTEM##", "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType");
+            boost::replace_all(consent, "##PROFILE##",
+                               "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|" + version);
+            boost::replace_all(consent, "##KVNR-NS##", "http://fhir.de/sid/gkv/kvid-10");
+            break;
+        }
+        case model::ConsentType::EUDISPCONS: {
+            auto version = Versions::GEM_ERPEU_current(timestamp).renderVersion();
+            boost::replace_all(consent, "##CATEGORY_SYSTEM##", "https://gematik.de/fhir/erp-eu/CodeSystem/GEM_ERPEU_CS_ConsentType");
+            boost::replace_all(consent, "##PROFILE##",
+                               "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent|" + version);
+            boost::replace_all(consent, "##KVNR-NS##", "http://fhir.de/sid/gkv/kvid-10");
+            break;
+        }
+    }
+    return consent;
+}
+
+std::string euAccessPermissionRequestJson(const EuAccessPermissionOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto resource = resourceManager.getStringResource(
+        "test/EndpointHandlerTest/GEM_ERPEU_PR_PAR_Access_Authorization_Request_template.json");
+    boost::replace_all(resource, "###COUNTRY_CODE###", options.twoLetterCountryCode);
+    boost::replace_all(resource, "###ACCESS_CODE###", options.accessCode);
+    return resource;
+}
+
+std::string euPostGetPrescriptionsXml(const EuPostGetPrescriptionsOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto resource =
+        resourceManager.getStringResource("test/EndpointHandlerTest/GEM_ERPEU_PR_PAR_Post_Get_Prescriptions_template_" +
+                                          options.version.renderVersion() + ".xml");
+    boost::replace_all(resource, "##REQUEST_TYPE##",
+                       model::GemErpEuPrParGetPrescriptionInput::requestTypeToString(options.requestType));
+    boost::replace_all(resource, "##KVNR##", options.kvnr);
+    boost::replace_all(resource, "##ACCESS_CODE##", options.accessCode);
+    boost::replace_all(resource, "##COUNTRY_CODE##", options.countryCode);
+    const std::string prescriptionIdTemplate = R"(
+<part>
+    <name value="prescription-id" />
+    <valueIdentifier>
+        <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
+        <value value="##PRESCRIPTION_ID##" />
+    </valueIdentifier>
+</part>
+)";
+    std::string prescriptionIds;
+    for (const auto& prescriptionId : options.prescriptionIds)
+    {
+        std::string prescriptionIdXml = prescriptionIdTemplate;
+        boost::replace_all(prescriptionIdXml, "##PRESCRIPTION_ID##", prescriptionId);
+        prescriptionIds += prescriptionIdXml;
+    }
+    boost::replace_all(resource, "##PRESCRIPTION_IDS##", prescriptionIds);
+    return resource;
+}
+
+std::string euPatchTaskJson(const EuPatchTaskOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto resource = resourceManager.getStringResource("test/EndpointHandlerTest/gem_erpeu_pr_par_patch_task_input_" +
+                                                      options.version.renderVersion() + "_template.json");
+    boost::replace_all(resource, "##FLAG##", options.EuRedeemableFlag ? "true" : "false");
+    return resource;
+}
+
+std::string euCloseTaskXml(const EuCloseTaskOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto resource = resourceManager.getStringResource("test/EndpointHandlerTest/gem_erpeu_pr_par_closeoperation_input_" +
+                                                      options.version.renderVersion() + "_template.xml");
+    boost::replace_all(resource, "##KVNR##", options.kvnr);
+    boost::replace_all(resource, "##PRESCRIPTIONID##", options.prescriptionId);
+    boost::replace_all(resource, "##WHENHANDEDOVER##", options.whenHandedOver);
+    boost::replace_all(resource, "##ACCESSCODE##", options.accessCode);
+    boost::replace_all(resource, "##COUNTRYCODE##", options.countryCode);
+    boost::replace_all(resource, "##MEDICATIONDISPENSEID##", options.medicationDispenseId);
+
+    return resource;
+}
+
+}// namespace ResourceTemplates

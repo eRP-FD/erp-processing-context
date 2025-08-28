@@ -7,8 +7,9 @@
 #ifndef FHIRTOOLS_MOCKFHIRRESOURCEGROUP_HXX
 #define FHIRTOOLS_MOCKFHIRRESOURCEGROUP_HXX
 
-#include "fhirtools/repository/FhirResourceGroup.hxx"
-
+#include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+#undef Expect
 #include <gmock/gmock.h>
 
 
@@ -16,9 +17,9 @@ class MockResourceGroup : public fhirtools::FhirResourceGroup
 {
 public:
     MOCK_METHOD(std::string_view, id, (), (const, override));
-    MOCK_METHOD(std::optional<fhirtools::FhirVersion>, findVersionLocal, (const std::string& url), (const override));
+    MOCK_METHOD(std::optional<fhirtools::FhirVersion>, findVersionLocal, (const fhirtools::DefinitionKey& url), (const override));
     MOCK_METHOD((std::pair<std::optional<fhirtools::FhirVersion>, std::shared_ptr<const FhirResourceGroup>>),
-                findVersion, (const std::string& url), (const, override));
+                findVersion, (const fhirtools::DefinitionKey& url), (const, override));
 };
 
 class MockResourceGroupResolver : public fhirtools::FhirResourceGroupResolver

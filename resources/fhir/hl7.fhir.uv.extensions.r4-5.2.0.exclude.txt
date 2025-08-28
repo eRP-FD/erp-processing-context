@@ -1,0 +1,110 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+#############################################################################
+# These StructureDefinitions refrence ValueSets that are not available in R4
+
+# http://hl7.org/fhir/ValueSet/all-resource-types
+package/StructureDefinition-cqf-resourceType.json
+
+# http://hl7.org/fhir/ValueSet/knowledge-representation-level
+package/StructureDefinition-cqf-knowledgeRepresentationLevel.json
+
+# http://hl7.org/fhir/ValueSet/artifactassessment-disposition
+package/StructureDefinition-artifactassessment-disposition.json
+
+# http://hl7.org/fhir/ValueSet/artifactassessment-workflow-status
+package/StructureDefinition-artifactassessment-workflowStatus.json
+#############################################################################
+
+#############################################################################
+# These StructureDefinitions refrence types that are not defined in R4:
+# "Availability", "CodeableReference", "ExtendedContactDetail", "RatioRange", "integer64"
+package/StructureDefinition-valueset-select-by-map.json
+package/StructureDefinition-individual-recordedSexOrGender.json
+package/StructureDefinition-goal-relationship.json
+package/StructureDefinition-cqf-certainty.json
+package/StructureDefinition-valueset-otherName.json
+package/StructureDefinition-codesystem-otherName.json
+package/StructureDefinition-organization-brand.json
+package/StructureDefinition-questionnaire-optionRestriction.json
+package/StructureDefinition-researchStudy-siteRecruitment.json
+package/StructureDefinition-relative-date.json
+package/StructureDefinition-observation-geneticsAncestry.json
+package/StructureDefinition-individual-genderIdentity.json
+package/StructureDefinition-individual-pronouns.json
+package/StructureDefinition-codesystem-history.json
+package/StructureDefinition-valueset-expand-group.json
+package/StructureDefinition-patient-sexParameterForClinicalUse.json
+package/StructureDefinition-extended-contact-availability.json
+package/StructureDefinition-observation-geneticsPhaseSet.json
+package/StructureDefinition-cqf-relativeDateTime.json
+package/StructureDefinition-cqf-definitionTerm.json
+package/StructureDefinition-specimen-additive.json
+package/StructureDefinition-geolocation.json
+package/StructureDefinition-questionnaire-constraint.json
+package/StructureDefinition-version-specific-use.json
+package/StructureDefinition-DiagnosticReport-geneticsReferences.json
+package/StructureDefinition-cqf-targetInvariant.json
+package/StructureDefinition-family-member-history-genetics-parent.json
+package/StructureDefinition-cqf-logicDefinition.json
+package/StructureDefinition-cqf-valueFilter.json
+package/StructureDefinition-hla-genotyping-results-glstring.json
+package/StructureDefinition-businessEvent.json
+package/StructureDefinition-patient-nationality.json
+package/StructureDefinition-artifactassessment-content.json
+package/StructureDefinition-biologicallyderivedproduct-processing.json
+package/StructureDefinition-obligation.json
+package/StructureDefinition-cqf-artifactComment.json
+package/StructureDefinition-devicerequest-patientInstruction.json
+package/StructureDefinition-hla-genotyping-results-haploid.json
+package/StructureDefinition-goal-acceptance.json
+package/StructureDefinition-codesystem-usage.json
+package/StructureDefinition-workflow-reason.json
+package/StructureDefinition-oauth-uris.json
+package/StructureDefinition-targetConstraint.json
+package/StructureDefinition-codesystem-alternate.json
+package/StructureDefinition-workflow-protectiveFactor.json
+package/StructureDefinition-implementationguide-sourceFile.json
+package/StructureDefinition-version-specific-value.json
+package/StructureDefinition-package-source.json
+package/StructureDefinition-allergyintolerance-substanceExposureRisk.json
+package/StructureDefinition-cqf-measureInfo.json
+package/StructureDefinition-timing-daysOfCycle.json
+package/StructureDefinition-capabilitystatement-search-parameter-combination.json
+package/StructureDefinition-observation-geneticsVariant.json
+package/StructureDefinition-device-maintenanceresponsibility.json
+package/StructureDefinition-immunization-procedure.json
+package/StructureDefinition-valueset-usage.json
+package/StructureDefinition-terminology-resource-identifier-metadata.json
+package/StructureDefinition-workflow-barrier.json
+package/StructureDefinition-observation-geneticsAllele.json
+package/StructureDefinition-derivation-reference.json
+package/StructureDefinition-family-member-history-genetics-sibling.json
+package/StructureDefinition-statistic-model-include-if.json
+package/StructureDefinition-translation.json
+package/StructureDefinition-observation-geneticsAminoAcidChange.json
+package/StructureDefinition-dosage-minimumGapBetweenDose.json
+package/StructureDefinition-observation-v2-subid.json
+package/StructureDefinition-patient-preferredPharmacy.json
+package/StructureDefinition-organization-portal.json
+package/StructureDefinition-satisfies-requirement.json
+package/StructureDefinition-diagnosticReport-workflowStatus.json
+package/StructureDefinition-servicerequest-geneticsItem.json
+package/StructureDefinition-valueset-otherTitle.json
+package/StructureDefinition-patient-animal.json
+package/StructureDefinition-medication-manufacturingBatch.json
+package/StructureDefinition-patient-citizenship.json
+package/StructureDefinition-researchStudy-studyRegistration.json
+package/StructureDefinition-biologicallyderivedproduct-manipulation.json
+package/StructureDefinition-patient-proficiency.json
+package/StructureDefinition-obligations-profile.json
+package/StructureDefinition-DiagnosticReport-geneticsAnalysis.json
+package/StructureDefinition-dosage-conditions.json
+package/StructureDefinition-capabilitystatement-search-parameter-use.json
+package/StructureDefinition-questionnaireresponse-attester.json
+#############################################################################

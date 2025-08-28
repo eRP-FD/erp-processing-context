@@ -23,6 +23,13 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
     RuntimeConfigurationGetter rcGetter(mRuntimeConfig);
     pausePointer.Set(document, rcGetter.isPaused());
     throttlePointer.Set(document, rcGetter.throttleValue().count());
+    for (const auto& [parameterMetricsLogThresholdMs, category] :
+         RuntimeConfiguration::parameter_metrics_category_log_threshold_ms)
+    {
+        const rapidjson::Pointer metricsLogThresholdMsPointer("/runtime/" + parameterMetricsLogThresholdMs + "/value");
+        metricsLogThresholdMsPointer.Set(document,
+                                         rapidjson::Value(rcGetter.getMetricsLogThresholdMs(category).count()));
+    }
 }
 
 }

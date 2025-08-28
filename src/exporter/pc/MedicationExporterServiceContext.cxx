@@ -14,7 +14,9 @@
 #include "exporter/util/ConfigurationFormatter.hxx"
 #include "exporter/util/RuntimeConfiguration.hxx"
 #include "shared/admin/AdminRequestHandler.hxx"
+#include "shared/admin/GetMetricsHandler.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
 
 #include <date/date.h>
@@ -39,9 +41,10 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
     , mIoContext{ioContext}
     , mExporterDatabaseFactory(factories.exporterDatabaseFactory)
     , mErpDatabaseFactory(factories.erpDatabaseFactory)
-    , mTeeClientPool{Tee3ClientPool::create(ioContext, *mHsmPool, *mTslManager, refreshInterval())}
+    , mTeeClientPool{Tee3ClientPool::create(ioContext, *mHsmPool, getTslManager(), refreshInterval())}
     , mRuntimeConfiguration(std::make_unique<exporter::RuntimeConfiguration>())
 {
+    setupTslRefreshJob(std::chrono::seconds{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)});
     Expect3(mExporterDatabaseFactory != nullptr,
             "exporter database factory has been passed as nullptr to ServiceContext constructor", std::logic_error);
     Expect3(mErpDatabaseFactory != nullptr,
@@ -62,6 +65,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
                               std::make_unique<exporter::ConfigurationFormatter>(getRuntimeConfiguration())));
     adminHandlers.onPutDo("/admin/configuration", std::make_unique<exporter::PutRuntimeConfigHandler>(
                                                       ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS));
+    adminHandlers.onGetDo("/metrics", std::make_unique<GetMetricsHandler>());
     mAdminServer = factories.adminServerFactory(
         configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE),
         gsl::narrow<uint16_t>(configuration.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_PORT)),

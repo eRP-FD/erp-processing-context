@@ -37,14 +37,13 @@
 #include <xmlsec/xmlsec.h>
 #include <xmlsec/xmltree.h>
 
-using namespace xmlHelperLiterals;
+using namespace xml_string_literal;
 
 namespace
 {
     constexpr const char* xpathLiteral_certificate = "/ns:TrustServiceStatusList/ds:Signature/ds:KeyInfo/ds:X509Data/ds:X509Certificate/text()";
     constexpr const char* xpathLiteral_nextUpdateText = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:NextUpdate/ns:dateTime/text()";
     constexpr const char* xpathLiteral_tspService = "/ns:TrustServiceStatusList/ns:TrustServiceProviderList/ns:TrustServiceProvider/ns:TSPServices/ns:TSPService";
-    constexpr const char* xpathLiteral_signatureValue = "/ns:TrustServiceStatusList/ds:Signature/ds:SignatureValue/text()";
     constexpr const char* xpathLiteral_sequenceNumberText = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:TSLSequenceNumber/text()";
     constexpr const char* xpathLiteral_tslId = "/ns:TrustServiceStatusList/@Id";
     constexpr const char* xpathLiteral_otherTslPointer = "/ns:TrustServiceStatusList/ns:SchemeInformation/ns:PointersToOtherTSL/ns:OtherTSLPointer";
@@ -52,7 +51,6 @@ namespace
     constexpr const char* oid_tsl_primary_location = "1.2.276.0.76.4.120";
     constexpr const char* oid_tsl_backup_location = "1.2.276.0.76.4.121";
 
-    constexpr const char* signatureTransformLiteral_envelopedSignatureAlgorithm = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
     constexpr const char* serviceTypeIdentifierLiteral_OCSP = "http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP";
     constexpr const char* serviceTypeIdentifierLiteral_OCSP_QC = "http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP/QC";
     constexpr const char* serviceTypeIdentifierLiteral_BNA = "http://uri.telematik/TrstSvc/Svctype/TrustedList/schemerules/DE";

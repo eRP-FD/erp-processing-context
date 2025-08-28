@@ -1,0 +1,17 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "ignored-model",
+  "version": "0.8.15",
+  "url": "http://fhir-tools.test/logical-models-are-ignored",
+  "status": "draft",
+  "kind": "logical",
+  "name": "ignored-model",
+  "type": "Extension",
+  "snapshot": {
+    "element": [
+      {
+        "id": " who/cares"
+      }
+    ]
+  }
+}

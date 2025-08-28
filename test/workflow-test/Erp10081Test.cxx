@@ -27,7 +27,7 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
         createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
 
     std::optional<model::Consent> consent;
-    ASSERT_NO_FATAL_FAILURE(consent = consentPost(kvnr, model::Timestamp::now()));
+    ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, model::Timestamp::now()));
     ASSERT_TRUE(consent.has_value());
 
     const auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();

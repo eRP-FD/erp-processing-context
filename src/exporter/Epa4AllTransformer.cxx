@@ -5,6 +5,18 @@
  */
 
 #include "exporter/Epa4AllTransformer.hxx"
+#include "exporter/ExporterRequirements.hxx"
+#include "exporter/model/DataAbsentReason.hxx"
+#include "exporter/model/OrganizationDirectory.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/transformer/ResourceProfileTransformer.hxx"
+#include "model/EpaMedicationPznIngredient.hxx"
+#include "model/EpaMedicationTypeExtension.hxx"
+#include "shared/fhir/Fhir.hxx"
+#include "shared/model/Bundle.hxx"
+#include "shared/model/Coding.hxx"
 #include "shared/model/KbvComposition.hxx"
 #include "shared/model/KbvMedicationBase.hxx"
 #include "shared/model/KbvMedicationCompounding.hxx"
@@ -13,16 +25,6 @@
 #include "shared/model/KbvOrganization.hxx"
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/Patient.hxx"
-#include "exporter/ExporterRequirements.hxx"
-#include "exporter/model/DataAbsentReason.hxx"
-#include "exporter/model/OrganizationDirectory.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/transformer/ResourceProfileTransformer.hxx"
-#include "model/EpaMedicationPznIngredient.hxx"
-#include "shared/fhir/Fhir.hxx"
-#include "shared/model/Bundle.hxx"
-#include "shared/model/Coding.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/model/ResourceNames.hxx"
 
@@ -31,18 +33,18 @@
 namespace
 {
 const fhirtools::DefinitionKey EpaMedicationRequestProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0.3"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0"};
 const fhirtools::DefinitionKey EpaMedicationProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"};
 const fhirtools::DefinitionKey EpaMedicationIngredientProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-pzn-ingredient|1.0.3"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-pzn-ingredient|1.0"};
 const fhirtools::DefinitionKey EpaOrganizationProfile{
-    "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11.12"};
+    "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11"};
 const fhirtools::DefinitionKey EpaPractitionerProfile{
-    "https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11.12"};
+    "https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11"};
 const fhirtools::DefinitionKey BundleProfile{"http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1"};
 const fhirtools::DefinitionKey EpaMedicationDispenseProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-dispense|1.0.3"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-dispense|1.0"};
 }
 
 
@@ -80,7 +82,12 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     A_25946.start("KBV_PR_ERP_Prescription: Setzen des Pattern \"filler-order\" für .intent");
     F_010.start("Das Befüllen des MedicationRequest.subject");
     F_002.start("rewrite /medicationReference/reference");
+    F_021.start("Add code and system defaults");
     std::vector<FixedValue> medicationRequestFixedValues{
+        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/code"},
+         .value = "{Package}"},
+        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/system"},
+         .value = "http://unitsofmeasure.org"},
         {.ptr = rapidjson::Pointer{"/intent"}, .value = "filler-order"},
         {.ptr = rapidjson::Pointer{"/id"}, .value = medicationRequestId.toString()},
         {.ptr = rapidjson::Pointer{"/subject/identifier/system"},
@@ -88,6 +95,7 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
         {.ptr = rapidjson::Pointer{"/subject/identifier/value"}, .value = patient.kvnr().id()},
         {.ptr = rapidjson::Pointer{"/medicationReference/reference"},
          .value = "Medication/" + std::string{*kbvMedication.getId()}}};
+    F_021.finish();
     F_002.finish();
     F_010.finish();
     A_25946.finish();
@@ -107,8 +115,6 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
 
     // medication
     parameters.setMedication(transformKbvMedication(kbvMedication));
-    F_009.finish();
-    F_008.finish();
 
     // organization
     std::vector<fhirtools::ValueMapping> organizationValueMappings = {};
@@ -142,7 +148,7 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     const auto* bundleProfile = repoView->findStructure(BundleProfile);
     Expect(bundleProfile, "profile not found: " + to_string(BundleProfile));
     auto erpElement = std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{},
-                                                   fhirtools::ProfiledElementTypeInfo{bundleProfile},
+                                                   fhirtools::ProfiledElementTypeInfo{*bundleProfile},
                                                    &kbvBundle.jsonDocument(), nullptr);
     F_016.start(
         "resolve the Composition author reference, as there might be 1..2 practitioners (unordered) in the bundle.");
@@ -150,7 +156,7 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
         "Bundle.entry.resource.ofType(Composition).author.where(type='Practitioner').resolve()";
     auto resolveReferenceExpression = fhirtools::FhirPathParser::parse(repoView.get(), expression);
     Expect3(resolveReferenceExpression, "could not parse resolveReferenceExpression", std::logic_error);
-    auto resolvedReferenceCollection = resolveReferenceExpression->eval(fhirtools::Collection{erpElement});
+    auto resolvedReferenceCollection = resolveReferenceExpression->eval(fhirtools::EvaluationContext{erpElement}).collection;
     Expect(resolvedReferenceCollection.size() == 1, expression + " could not be resolved");
     auto resolvedRef = resolvedReferenceCollection.single();
     Expect(resolvedRef != nullptr, expression + " could not be resolved");
@@ -333,7 +339,6 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
 model::NumberAsStringParserDocument
 Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kbvMedication)
 {
-    F_009.start("extension mapping medication-ingredient-amount-extension");
     F_005.start("Medication.ingredient.strength.extension:amountText");
     F_005.start("Medication.extension:packaging");
     std::vector<fhirtools::ValueMapping> medicationValueMappings = {
@@ -378,33 +383,52 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
         F_005.finish();
     }
 
-    // requirements are implicitly implemented by generic tranformer:
-    F_008.start(
-        "Wenn in der KBV Medication bei Medication.ingredient.strength bei numerator und denominator system und code "
-        "fehlen, muss stattdessen die data-absent-reason Extension in der EPA Medication gesetzt werden");
-    F_009.start("Um die Pflichtfeld Constraints im EPA Medication Profil zu erfüllen müssen außerdem "
-                "für numerator und denomitator die data-absent-reason Extension gesetzt werden");
     auto transformedMedication = transformResource(EpaMedicationProfile, kbvMedication, medicationValueMappings, {});
     F_015.start("Medication.code.coding allowlist");
     removeMedicationCodeCodingsByAllowlist(transformedMedication);
     F_015.finish();
-    if (kbvMedication.getProfile() == model::ProfileType::KBV_PR_ERP_Medication_Compounding)
+    switch (kbvMedication.getProfile())
     {
-        F_017.start("convert Medication.ingredient to Medication.contained");
-        const auto kbvMedicationCompounding = model::KbvMedicationCompounding::fromJson(kbvMedication.jsonDocument());
-        convertPZNIngredients(transformedMedication, kbvMedicationCompounding);
-        F_017.finish();
-    }
-    if (kbvMedication.getProfile() == model::ProfileType::KBV_PR_ERP_Medication_PZN)
-    {
-        F_018_01.start("for Medication.form.code = KPG add data-absent to Medication.ingredient.itemReference");
-        const auto kbvMedicationPzn = model::KbvMedicationPzn::fromJson(kbvMedication.jsonDocument());
-        if (kbvMedicationPzn.isKPG())
-        {
-            checkSetAbsentReason(transformedMedication, "/ingredient/0/itemReference");
+        case model::ProfileType::KBV_PR_ERP_Medication_Compounding: {
+            F_017.start("convert Medication.ingredient to Medication.contained");
+            const auto kbvMedicationCompounding = model::KbvMedicationCompounding::fromJson(kbvMedication.jsonDocument());
+            convertPZNIngredients(transformedMedication, kbvMedicationCompounding);
+            F_017.finish();
+            F_020.start("5.: Rezeptur ohne PZNs in Rezepturbestandteilen");
+            F_020.start("6.: Rezeptur mit PZNs in Rezepturbestandteilen");
+            addMedicationTypeExtension(
+                transformedMedication,
+                model::EPAMedicationTypeExtension{model::EPAMedicationTypeExtension::Type::ExtemporaneousPreparation});
+            break;
         }
-        F_018_01.finish();
+        case model::ProfileType::KBV_PR_ERP_Medication_FreeText:
+            F_020.start("4.: Freitextverordnung (Extension nicht setzen)");
+            break;
+        case model::ProfileType::KBV_PR_ERP_Medication_Ingredient:
+            F_020.start("3.: Wirkstoffverordnung");
+            addMedicationTypeExtension(
+                transformedMedication,
+                model::EPAMedicationTypeExtension{model::EPAMedicationTypeExtension::Type::MedicinalProductPackage});
+            break;
+        case model::ProfileType::KBV_PR_ERP_Medication_PZN: {
+            const auto kbvMedicationPzn = model::KbvMedicationPzn::fromJson(kbvMedication.jsonDocument());
+            if (kbvMedicationPzn.isKPG())
+            {
+                F_020.start("2.: PZN Verordnung einer Kombipackung (Extension nicht setzen)");
+            }
+            else
+            {
+                F_020.start("1.: PZN Verordnung");
+                addMedicationTypeExtension(transformedMedication,
+                                           model::EPAMedicationTypeExtension{
+                                               model::EPAMedicationTypeExtension::Type::MedicinalProductPackage});
+            }
+            break;
+        }
+        default:
+            break;
     }
+    F_020.finish();
     return transformedMedication;
 }
 
@@ -620,11 +644,17 @@ void Epa4AllTransformer::addTypeProfessionOid(model::NumberAsStringParserDocumen
                        rapidjson::Pointer{"/coding/0/code"}, organizationProfessionOid, false);
 }
 
-std::shared_ptr<fhirtools::FhirStructureRepository>
+void Epa4AllTransformer::addMedicationTypeExtension(model::NumberAsStringParserDocument& document,
+                                                    model::EPAMedicationTypeExtension&& typeExtension)
+{
+    document.copyToArray(rapidjson::Pointer{"/extension"}, std::move(typeExtension).jsonDocument());
+}
+
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
 Epa4AllTransformer::getRepo(const fhirtools::DefinitionKey& profileKey)
 {
     auto viewList = Fhir::instance().structureRepository(model::Timestamp::now());
-    auto repoView = viewList.match(std::addressof(Fhir::instance().backend()), profileKey.url, *profileKey.version);
+    auto repoView = viewList.match(profileKey.url, *profileKey.version);
     Expect(repoView, "No repository view for " + to_string(profileKey));
     return repoView;
 }

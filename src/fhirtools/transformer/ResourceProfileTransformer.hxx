@@ -40,7 +40,7 @@ public:
         std::set<std::string> keepExtensions;
     };
 
-    explicit ResourceProfileTransformer(const FhirStructureRepository* repository,
+    explicit ResourceProfileTransformer(const FhirStructureRepositoryView* repository,
                                         const FhirStructureDefinition* sourceProfile,
                                         const FhirStructureDefinition* targetProfile, const Options& options);
     ResourceProfileTransformer& map(const std::vector<ValueMapping>& valueMappings);
@@ -58,7 +58,7 @@ private:
                                 const ValidationAdditionalInfo& validationAdditionalInfo) const;
     void removeElement(const MutableElement& element) const;
 
-    gsl::not_null<const FhirStructureRepository*> mRepository;
+    gsl::not_null<const FhirStructureRepositoryView*> mRepository;
     const FhirStructureDefinition* mSourceProfile;
     gsl::not_null<const FhirStructureDefinition*> mTargetProfile;
     std::vector<ValueMapping> mValueMappings;

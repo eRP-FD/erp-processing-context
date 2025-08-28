@@ -18,6 +18,7 @@ class ValidatorOptions;
 }
 namespace model
 {
+class EvdgaBundle;
 enum class KbvStatusKennzeichen;
 class MedicationRequest;
 class KbvMedicationRequest;
@@ -62,7 +63,7 @@ private:
     template<typename KbvOrEvdgaBundle>
     static HttpStatus checkExtensions(const model::ResourceFactory<KbvOrEvdgaBundle>& factory,
                                       Configuration::OnUnknownExtension onUnknownExtension,
-                                      const fhirtools::FhirStructureRepository& fhirStructureRepo,
+                                      const fhirtools::FhirStructureRepositoryView& fhirStructureRepo,
                                       const fhirtools::ValidatorOptions& valOpts);
     static void setMvoExpiryAcceptDates(model::Task& task, const std::optional<date::year_month_day>& mvoEndDate,
                                         const date::year_month_day& signingDay);
@@ -75,6 +76,9 @@ private:
     allowedProfessionOidsForQesSignature(model::PrescriptionType prescriptionType);
     template<typename KbvOrEvdgaBundle>
     static void setProfileVersionHeader(const KbvOrEvdgaBundle& bundle, SessionContext& session);
+
+    static bool isPrescriptionEuRedeemable(const model::Task& task, const model::KbvBundle& bundle);
+    static bool isPrescriptionEuRedeemable(const model::Task& task, const model::EvdgaBundle& bundle);
 };
 
 

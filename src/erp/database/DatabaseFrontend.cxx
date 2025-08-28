@@ -11,9 +11,12 @@
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "erp/model/EuMedicationDispenseInfos.hxx"
 #include "erp/model/Identity.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/eu/EuAccessPermission.hxx"
+#include "erp/model/eu/GemErpEuPrTaskInput.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/ZStd.hxx"
@@ -28,6 +31,7 @@
 #include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/PrescriptionId.hxx"
+#include "shared/model/TelematikId.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 
@@ -72,7 +76,7 @@ std::optional<DatabaseConnectionInfo> DatabaseFrontend::getConnectionInfo() cons
     return mBackend->getConnectionInfo();
 }
 
-model::MedicationsAndDispenses
+std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
 DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
@@ -80,6 +84,7 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
     const auto encryptedResult = mBackend->retrieveAllMedicationDispenses(hashedKvnr, {}, search);
 
     model::MedicationsAndDispenses resultSet;
+    std::optional<model::EuMedicationDispenseInfos> euInfo{std::nullopt};
 
     std::map<BlobId, SafeString> keys;
 
@@ -102,14 +107,18 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
         }
         else if (unspecified.getResourceType() == model::Bundle::resourceTypeName)
         {
+            const auto& bundle = model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument());
+            // Ignores expected eu resources.
             resultSet.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
+            // Handle ignored eu resources here:
+            euInfo = EuMedicationDispenseInfos::create(bundle);
         }
         else
         {
             Fail2("unable to detect resource type of stored medication dispense", std::logic_error);
         }
     }
-    return resultSet;
+    return {std::move(resultSet), std::move(euInfo)};
 }
 
 model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
@@ -238,7 +247,7 @@ void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& k
 
     mBackend->activateTask(task.prescriptionId(), encrypedKvnr, hashedKvnr, task.status(), task.lastModifiedDate(),
                            task.expiryDate(), task.acceptDate(), encryptedPrescription, encryptedDoctorIdentity,
-                           task.lastStatusChangeDate());
+                           task.lastStatusChangeDate(), task.isEuRedeemableByProperties());
 }
 
 void DatabaseFrontend::updateTaskMedicationDispense(const model::Task& task,
@@ -248,23 +257,38 @@ void DatabaseFrontend::updateTaskMedicationDispense(const model::Task& task,
     ErpExpect(! medicationDispenses.empty(), HttpStatus::InternalServerError,
               "medication dispense bundle cannot be empty at this place");
     const auto& medicationDispense = medicationDispenses[0];
-    const auto telematikId = medicationDispense.telematikId();
     const auto whenHandedOver = medicationDispense.whenHandedOver();
     const auto whenPrepared = medicationDispense.whenPrepared();
     const auto kvnr = task.kvnr();
     ErpExpect(kvnr.has_value(), HttpStatus::InternalServerError,
               "Cannot update medication dispense for task without kvnr.");
     const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
-    const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
 
     /// MedicationDispense uses same derivation master key as task:
     ErpExpect(task.lastMedicationDispense(), HttpStatus::InternalServerError,
               "Cannot update medication dispense for task without a lastMedicationDispense timestamp.");
     auto [keyForMedicationDispense, blobId, mediDispSalt] = medicationDispenseKey(hashedKvnr);
     auto encryptedMedicationDispense = encryptMedicationDispense(medicationDispenseBundle, keyForMedicationDispense);
-    mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
+    bool isEuProfile = false;
+    try {
+        isEuProfile = (medicationDispense.profileType() == ProfileType::GEM_ERPEU_PR_MedicationDispense);
+    } catch (const ModelException& exc) {
+        // Unknown profile type, keep it until ErxMedicationDispense is clarified.
+    }
+    if (isEuProfile)
+    {
+        const auto hashedTelematikId = mDerivation.hashTelematikId(TelematikId{""});
+        mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
+                                               value(task.lastMedicationDispense()), encryptedMedicationDispense, blobId,
+                                               hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt, task.status());
+    }
+    else
+    {
+        const auto hashedTelematikId = mDerivation.hashTelematikId(medicationDispense.telematikId());
+        mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
                                            value(task.lastMedicationDispense()), encryptedMedicationDispense, blobId,
                                            hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt);
+    }
 }
 
 void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
@@ -351,6 +375,11 @@ void DatabaseFrontend::updateTaskClearPersonalData(const model::Task& task)
 }
 // GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
+void DatabaseFrontend::setTaskEuRedeemableByPatient(const model::Task& task, const model::GemErpEuPrTaskInput& model)
+{
+    mBackend->updateTaskEuRedeemableByPatient(task.prescriptionId(), model.isEuRedeemableByPatientAuthorization(), task.lastModifiedDate());
+}
+
 std::string DatabaseFrontend::storeAuditEventData(model::AuditData& auditData)
 {
     return mCommonDatabaseFrontend->storeAuditEventData(*mBackend, auditData);
@@ -368,10 +397,11 @@ DatabaseFrontend::retrieveAuditEventData(const model::Kvnr& kvnr, const std::opt
     std::map<BlobId, SafeString> keys;
     for (const auto& item : dbAuditDataVec)
     {
-        std::optional<std::string> consentId =
-            item.eventId == model::AuditEventId::POST_Consent || item.eventId == model::AuditEventId::DELETE_Consent
-                ? std::make_optional<std::string>(Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr))
+        const std::optional<std::string> consentId =
+            isConsentEvent(item.eventId)
+                ? std::make_optional<std::string>(model::Consent::createIdString(item.eventId, kvnr))
                 : std::nullopt;
+
         if (item.metaData.has_value())
         {
             Expect(item.blobId, "Blob id must be set in database if meta data exist.");
@@ -390,7 +420,7 @@ DatabaseFrontend::retrieveAuditEventData(const model::Kvnr& kvnr, const std::opt
         }
         else
         {
-            ret.emplace_back(item.eventId, AuditMetaData({}, {}), item.action, item.agentType, model::Kvnr{kvnr},
+            ret.emplace_back(item.eventId, AuditMetaData({}, {}, {}), item.action, item.agentType, model::Kvnr{kvnr},
                              item.deviceId, item.prescriptionId, consentId);
         }
         ret.back().setId(item.id);
@@ -534,6 +564,28 @@ uint64_t DatabaseFrontend::countAll160Tasks(const model::Kvnr& kvnr, const std::
     return mBackend->countAll160Tasks(mDerivation.hashKvnr(kvnr), search);
 }
 
+std::vector<std::tuple<model::Task, model::Binary>>
+DatabaseFrontend::retrieveAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+{
+    auto dbModelTasks = mBackend->retrieveAllTasksForEu(mDerivation.hashKvnr(kvnr), search);
+    std::vector<std::tuple<model::Task, model::Binary>> tasks;
+    tasks.reserve(dbModelTasks.size());
+    for (const auto& dbModelTask : dbModelTasks)
+    {
+        auto keyForTask = taskKey(dbModelTask);
+        Expect(keyForTask, "Key for task must be set in database.");
+        auto decryptedPrescription = getHealthcareProviderPrescription(dbModelTask, *keyForTask);
+        Expect(decryptedPrescription, "Failed to decrypt Prescription");
+        tasks.emplace_back(getModelTask(dbModelTask, keyForTask), std::move(*decryptedPrescription));
+    }
+    return tasks;
+}
+
+uint64_t DatabaseFrontend::countAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+{
+    return mBackend->countAllTasksForEu(mDerivation.hashKvnr(kvnr), search);
+}
+
 std::optional<Uuid> DatabaseFrontend::insertCommunication(Communication& communication)
 {
     const auto sender = communication.sender();
@@ -642,28 +694,70 @@ void DatabaseFrontend::deleteCommunicationsForTask(const model::PrescriptionId& 
 }
 // GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
 
+namespace
+{
+db_model::ConsentCategory mapConsentCategory(const ConsentType& category)
+{
+    switch (category)
+    {
+        case ConsentType::CHARGCONS:
+            return db_model::ConsentCategory::CHARGCONS;
+        case ConsentType::EUDISPCONS:
+            return db_model::ConsentCategory::EUDISPCONS;
+    }
+    Fail("invalid consent category value: " + std::to_string(static_cast<uintmax_t>(category)));
+}
+ConsentType mapConsentCategoryR(const db_model::ConsentCategory& category)
+{
+    switch (category)
+    {
+        case db_model::ConsentCategory::CHARGCONS:
+            return ConsentType::CHARGCONS;
+        case db_model::ConsentCategory::EUDISPCONS:
+            return ConsentType::EUDISPCONS;
+    }
+    Fail("invalid consent category value: " + std::to_string(static_cast<uintmax_t>(category)));
+}
+}
+
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(consent.patientKvnr());
-    mBackend->storeConsent(hashedKvnr, Timestamp::now());
+    mBackend->storeConsent(hashedKvnr, Timestamp::now(), (mapConsentCategory(consent.consentCategory())));
 }
 
-std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr)
+std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr,
+                                                                model::ConsentType category)
 {
-    const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
-    auto dateTime = mBackend->retrieveConsentDateTime(hashedKvnr);
-    if (dateTime.has_value())
+    for (auto&& consent : retrieveAllConsents(kvnr, UrlArguments{{}}))
     {
-        return std::make_optional<model::Consent>(kvnr, *dateTime);
+        if (consent.consentCategory() == category)
+        {
+            return std::make_optional(std::move(consent));
+        }
     }
     return std::nullopt;
 }
 
+std::vector<model::Consent> DatabaseFrontend::retrieveAllConsents(const model::Kvnr& kvnr,
+                                                                  const UrlArguments& searchArguments)
+{
+    std::vector<model::Consent> ret;
+    const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
+    const auto consents = mBackend->retrieveAllConsents(hashedKvnr, searchArguments);
+    ret.reserve(consents.size());
+    for (const auto& consent : consents)
+    {
+        ret.emplace_back(mapConsentCategoryR(consent.category), kvnr, consent.timestamp);
+    }
+    return ret;
+}
+
 // GEMREQ-start A_22158#query-call
-bool DatabaseFrontend::clearConsent(const model::Kvnr& kvnr)
+bool DatabaseFrontend::clearConsent(const model::Kvnr& kvnr, model::ConsentType category)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(kvnr);
-    return mBackend->clearConsent(hashedKvnr);
+    return mBackend->clearConsent(hashedKvnr, mapConsentCategory(category));
 }
 // GEMREQ-end A_22158#query-call
 
@@ -790,6 +884,39 @@ uint64_t DatabaseFrontend::countChargeInformationForInsurant(const model::Kvnr& 
     return mBackend->countChargeInformationForInsurant(mDerivation.hashKvnr(kvnr), search);
 }
 
+bool DatabaseFrontend::existsCountryCode(const model::CountryCode& countryCode)
+{
+    return mBackend->existsCountryCode(countryCode.toString());
+}
+
+void DatabaseFrontend::deleteEuAccessPermission(const model::Kvnr& kvnr)
+{
+    mBackend->deleteEuAccessPermission(mDerivation.hashKvnr(kvnr));
+}
+
+void DatabaseFrontend::createEuAccessPermission(const model::Kvnr& kvnr,
+                                                const model::EuAccessPermission& accessPermission)
+{
+    auto hashedKvnr = mDerivation.hashKvnr(kvnr);
+    auto [key, blobid, salt] = medicationDispenseKey(hashedKvnr);
+    mBackend->createEuAccessPermission(
+        hashedKvnr, accessPermission.getCountryCode().toString(),
+        mCodec.encode(accessPermission.getAccessCode().toString(), key, Compression::DictionaryUse::Default_json),
+        blobid, salt, accessPermission.getValidUntil());
+}
+
+std::optional<EuAccessPermission> DatabaseFrontend::retrieveEuAccessPermission(const model::Kvnr& kvnr)
+{
+    auto hashedKvnr = mDerivation.hashKvnr(kvnr);
+    if (auto dbModel = mBackend->retrieveEuAccessPermission(hashedKvnr))
+    {
+        EuAccessCode accessCode{mCodec.decode(
+            dbModel->accessCode, mDerivation.medicationDispenseKey(hashedKvnr, dbModel->blobId, dbModel->salt))};
+        return EuAccessPermission{accessCode, CountryCode{dbModel->countryCode}, dbModel->expires};
+    }
+    return std::nullopt;
+}
+
 ErpDatabaseBackend& DatabaseFrontend::getBackend()
 {
     return *mBackend;
@@ -835,6 +962,11 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
     if (dbTask.lastMedicationDispense)
     {
         modelTask.updateLastMedicationDispense(dbTask.lastMedicationDispense);
+    }
+    if (Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_EU))
+    {
+        modelTask.setEuRedeemableByPatient(dbTask.euRedeemableByPatient);
+        modelTask.setEuRedeemableByProperties(dbTask.euRedeemable);
     }
     return modelTask;
 }

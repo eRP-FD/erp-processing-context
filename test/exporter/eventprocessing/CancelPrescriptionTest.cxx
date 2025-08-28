@@ -90,7 +90,7 @@ TEST_F(CancelPrescriptionTest, OperationSuccess)
 })");
 
     std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0.3"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
+        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
         model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
     client.setExpectedInput(expectedInput);
 
@@ -158,7 +158,7 @@ TEST_F(CancelPrescriptionTest, OperationPrescriptionStatus)
 })");
 
     std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0.3"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
+        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
         model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
     client.setExpectedInput(expectedInput);
 
@@ -226,7 +226,7 @@ TEST_F(CancelPrescriptionTest, OperationPrescriptionNoExist)
 })");
 
     std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0.3"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
+        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
         model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
     client.setExpectedInput(expectedInput);
 
@@ -243,7 +243,7 @@ TEST_F(CancelPrescriptionTest, Failed)
 "resourceType": "OperationOutcome",
 "meta": {
   "profile": [
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-ms-operation-outcome|1.0.2"
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-ms-operation-outcome|1.0"
   ]
 },
 "issue": [

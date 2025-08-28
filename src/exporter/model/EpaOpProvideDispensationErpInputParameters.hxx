@@ -29,7 +29,6 @@ public:
     void addMedication(const rapidjson::Value& medication);
     void setOrganization(const rapidjson::Value& organization);
 
-    std::optional<Timestamp> getValidationReferenceTimestamp() const override;
     std::vector<const rapidjson::Value*> getMedicationDispenses() const;
     std::vector<const rapidjson::Value*> getMedications() const;
     const rapidjson::Value* getOrganization() const;

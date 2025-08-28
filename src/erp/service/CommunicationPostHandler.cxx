@@ -88,7 +88,8 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
     try
     {
-        auto communication = parseAndValidateRequestBody<model::Communication>(session);
+        auto communication =
+            parseAndValidateRequestBody<model::Communication>(session, {model::Communication::acceptedCommunications});
         // GEMREQ-end A_19450-01#deserialize
         auto messageType = communication.messageType();
         PrescriptionId prescriptionId = communication.prescriptionId();
@@ -283,7 +284,7 @@ model::Identity CommunicationPostHandler::validateSender(
     if (messageType == Communication::MessageType::Reply ||
         messageType == Communication::MessageType::ChargChangeReply)
     {
-        ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::inner_request_role_pharmacy,
+        ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::InnerRequestRole::pharmacy,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication reply message");
         ErpExpect(model::TelematikId::isTelematikId(sender), HttpStatus::BadRequest,
             "A valid Telematic ID must contain at least one \"-\"");
@@ -291,7 +292,7 @@ model::Identity CommunicationPostHandler::validateSender(
     }
     else
     {
-        ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::inner_request_role_patient,
+        ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::InnerRequestRole::patient,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication message");
         ErpExpect(Kvnr::isKvnr(sender), HttpStatus::BadRequest, "Invalid Kvnr");
         auto kvnrType = messageType == Communication::MessageType::ChargChangeReq ? model::Kvnr::Type::pkv

@@ -11,6 +11,7 @@
 #include <rapidjson/pointer.h>
 
 #include <utility>
+#include <map>
 
 
 namespace model
@@ -18,16 +19,60 @@ namespace model
 
 bool isEventCausedByPatient(AuditEventId eventId)
 {
-    return eventId == AuditEventId::GET_Task ||
-           eventId == AuditEventId::GET_Task_id_insurant ||
-           eventId == AuditEventId::POST_Task_abort_insurant ||
-           eventId == AuditEventId::GET_MedicationDispense ||
-           eventId == AuditEventId::GET_MedicationDispense_id ||
-           eventId == AuditEventId::DELETE_ChargeItem_id_insurant ||
-           eventId == AuditEventId::PATCH_ChargeItem_id ||
-           eventId == AuditEventId::GET_ChargeItem_id_insurant ||
-           eventId == AuditEventId::POST_Consent ||
-           eventId == AuditEventId::DELETE_Consent;
+    switch (eventId)
+    {
+        case AuditEventId::GET_Task:
+        case AuditEventId::GET_Task_id_insurant:
+        case AuditEventId::POST_Task_abort_insurant:
+        case AuditEventId::GET_MedicationDispense:
+        case AuditEventId::GET_MedicationDispense_id:
+        case AuditEventId::DELETE_ChargeItem_id_insurant:
+        case AuditEventId::PATCH_ChargeItem_id:
+        case AuditEventId::GET_ChargeItem_id_insurant:
+        case AuditEventId::POST_Consent:
+        case AuditEventId::DELETE_Consent:
+        case AuditEventId::POST_GRANT_EU_ACCESS_PERMISSION:
+        case AuditEventId::DELETE_REVOKE_EU_ACCESS_PERMISSION:
+        case AuditEventId::PATCH_TASK_ID_MARK:
+        case AuditEventId::POST_EU_Consent:
+        case AuditEventId::DELETE_EU_Consent:
+            return true;
+        case AuditEventId::GET_Task_id_representative:
+        case AuditEventId::GET_Task_id_pharmacy:
+        case AuditEventId::POST_Task_activate:
+        case AuditEventId::POST_Task_accept:
+        case AuditEventId::POST_Task_reject:
+        case AuditEventId::POST_Task_close:
+        case AuditEventId::POST_Task_abort_doctor:
+        case AuditEventId::POST_Task_abort_representative:
+        case AuditEventId::POST_Task_abort_pharmacy:
+        case AuditEventId::Task_delete_expired_id:
+        case AuditEventId::DELETE_ChargeItem_id_pharmacy:
+        case AuditEventId::POST_ChargeItem:
+        case AuditEventId::PUT_ChargeItem_id:
+        case AuditEventId::ChargeItem_delete_expired_id:
+        case AuditEventId::GET_ChargeItem_id_pharmacy:
+        case AuditEventId::GET_Tasks_by_pharmacy_with_pz:
+        case AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed:
+        case AuditEventId::Communication_delete_expired_id:
+        case AuditEventId::GET_Tasks_by_pharmacy_with_pn3:
+        case AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed:
+        case AuditEventId::POST_Task_dispense:
+        case AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP:
+        case AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed:
+        case AuditEventId::POST_PROVIDE_DISPENSATION_ERP:
+        case AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed:
+        case AuditEventId::POST_CANCEL_PRESCRIPTION_ERP:
+        case AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed:
+        case AuditEventId::POST_CANCEL_DISPENSATION_REP:
+        case AuditEventId::POST_CANCEL_DISPENSATION_REP_failed:
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_DEMOGRAPHICS:
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_LIST:
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL:
+        case AuditEventId::POST_TASK_EU_CLOSE:
+            break;
+    }
+    return false;
 }
 
 bool isEventCausedByRepresentative(AuditEventId eventId)
@@ -45,7 +90,7 @@ bool isEventCausedByMaintenanceScript(AuditEventId eventId)
 
 std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId)
 {
-    switch(eventId)
+    switch (eventId)
     {
         case model::AuditEventId::GET_Task:
         case model::AuditEventId::GET_Tasks_by_pharmacy_with_pz:
@@ -70,6 +115,8 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP:
         case model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed:
         case model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP:
+        case model::AuditEventId::PATCH_TASK_ID_MARK:
+        case model::AuditEventId::POST_TASK_EU_CLOSE:
             return "Task/" + resourceId;
         case model::AuditEventId::GET_MedicationDispense:
             return "MedicationDispense";
@@ -90,12 +137,27 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
             return "ChargeItem/" + resourceId;
         case model::AuditEventId::POST_Consent:
         case model::AuditEventId::DELETE_Consent:
+        case model::AuditEventId::POST_EU_Consent:
+        case model::AuditEventId::DELETE_EU_Consent:
             return "Consent/" + resourceId;
         case model::AuditEventId::Communication_delete_expired_id:
             return "Communication";
-
+        case AuditEventId::POST_GRANT_EU_ACCESS_PERMISSION:
+            return "$grant-eu-access-permission";
+        case AuditEventId::DELETE_REVOKE_EU_ACCESS_PERMISSION:
+            return "$revoke-eu-access-permission";
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_DEMOGRAPHICS:
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_LIST:
+        case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL:
+            return "$get-eu-prescriptions";
     }
     Fail2("Invalid event id", std::logic_error);
+}
+
+bool isConsentEvent(AuditEventId eventId)
+{
+    return eventId == AuditEventId::POST_Consent || eventId == AuditEventId::DELETE_Consent ||
+           eventId == AuditEventId::POST_EU_Consent || eventId == AuditEventId::DELETE_EU_Consent;
 }
 
 namespace
@@ -103,12 +165,15 @@ namespace
 
 const rapidjson::Pointer agentNamePointer("/an");
 const rapidjson::Pointer agentWhoPointer("/aw");
+const rapidjson::Pointer countryCodePointer("/cc");
 
 }
 
 
 AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
-                             const std::optional<std::string_view>& agentWho)
+                             const std::optional<std::string_view>& agentWho,
+                             const std::optional<std::string_view>& countryCode,
+                             const std::map<std::string, std::string>& variables)
 : Resource<AuditMetaData>(Resource::NoProfile)
 {
     if (agentName.has_value())
@@ -119,6 +184,15 @@ AuditMetaData::AuditMetaData(const std::optional<std::string_view>& agentName,
     if (agentWho.has_value())
     {
         setValue(agentWhoPointer, agentWho.value());
+    }
+
+    if (countryCode.has_value())
+    {
+        setValue(countryCodePointer, countryCode.value());
+    }
+    for (const auto& [key, value] : variables)
+    {
+        setValue(rapidjson::Pointer("/" + key), value);
     }
 }
 
@@ -132,9 +206,27 @@ std::optional<std::string_view> AuditMetaData::agentWho() const
     return getOptionalStringValue(agentWhoPointer);
 }
 
+std::optional<std::string_view> AuditMetaData::countryCode() const
+{
+    return getOptionalStringValue(countryCodePointer);
+}
+
+std::map<std::string, std::string> AuditMetaData::variables() const
+{
+    std::map<std::string, std::string> result;
+    for (auto it = jsonDocument().MemberBegin(); it != jsonDocument().MemberEnd(); ++it)
+    {
+        if (it->value.IsString() && it->name != "an" && it->name != "aw" && it->name != "cc")
+        {
+            result.emplace(it->name.GetString(), getStringValue(it->value, rapidjson::Pointer{""}));
+        }
+    }
+    return result;
+}
+
 bool AuditMetaData::isEmpty() const
 {
-    return !agentName().has_value() && !agentWho().has_value();
+    return !agentName().has_value() && !agentWho().has_value() && !countryCode().has_value();
 }
 
 AuditMetaData::AuditMetaData(NumberAsStringParserDocument&& jsonTree)
@@ -214,6 +306,20 @@ const std::string& AuditData::id() const
 const model::Timestamp& AuditData::recorded() const
 {
     return mRecorded;
+}
+
+std::optional<CountryCode> AuditData::countryCode() const
+{
+    if (const auto cc = metaData().countryCode(); cc.has_value() && ! cc->empty())
+    {
+        return CountryCode{std::string{*cc}};
+    }
+    return std::nullopt;
+}
+
+std::map<std::string, std::string> AuditData::variables() const
+{
+    return metaData().variables();
 }
 
 bool AuditData::isValidEventId() const

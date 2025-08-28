@@ -9,9 +9,11 @@
 #include "erp/model/Task.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
 #include "exporter/ExporterRequirements.hxx"
+#include "exporter/model/EpaMedicationTypeExtension.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/KbvMedicationBase.hxx"
@@ -23,6 +25,8 @@
 
 #include <gtest/gtest.h>
 #include <unordered_set>
+
+#include "test/util/TestUtils.hxx"
 
 
 namespace EpaMedicationRequest
@@ -194,6 +198,21 @@ std::vector<std::string> propertyValuesNotInTarget {
 "Medication.meta.versionId", 
 "Medication.status", 
 "Medication.text",
+    // Former F_008,F_009 data absent reasons:
+    // Testing ingredient.0 and .1 hits some cases in the gematik testdata.
+"Medication.ingredient.0.strength.numerator._system.extension",
+"Medication.ingredient.0.strength.numerator._code.extension",
+"Medication.ingredient.0.strength.denominator._system.extension",
+"Medication.ingredient.0.strength.denominator._code.extension",
+"Medication.ingredient.1.strength.numerator._system.extension",
+"Medication.ingredient.1.strength.numerator._code.extension",
+"Medication.ingredient.1.strength.denominator._system.extension",
+"Medication.ingredient.1.strength.denominator._code.extension",
+    // Former F_009 data absent reasons:
+"Medication.ingredient.0.strength.numerator._value.extension",
+"Medication.ingredient.0.strength.denominator._value.extension",
+"Medication.ingredient.1.strength.numerator._value.extension",
+"Medication.ingredient.1.strength.denominator._value.extension",
 };
 
 // mapped in all Medications
@@ -248,8 +267,12 @@ std::vector<std::string>{}},
 {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Packaging", "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-formulation-packaging-extension",
 std::vector<MappedValue>{},
 std::vector<std::string>{},
-std::vector<std::string>{}}
+std::vector<std::string>{}},
 // F_005.finish();
+{"", "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-type-extension",
+std::vector<MappedValue>{},
+std::vector<std::string>{},
+std::vector<std::string>{}},
 };
 }
 namespace KbvIngredient {
@@ -258,8 +281,12 @@ std::vector<ExtensionMapping> mappedExtensions{
 {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize", "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-packaging-size-extension",
 std::vector<MappedValue>{},
 std::vector<std::string>{},
-std::vector<std::string>{}}
+std::vector<std::string>{}},
 // F_005.finish();
+{"", "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-type-extension",
+std::vector<MappedValue>{},
+std::vector<std::string>{},
+std::vector<std::string>{}},
 };
 }
 
@@ -269,7 +296,7 @@ std::vector<ExtensionMapping> mappedExtensions{
 {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize", "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-packaging-size-extension",
 std::vector<MappedValue>{},
 std::vector<std::string>{},
-std::vector<std::string>{}},
+std::vector<std::string>{}}
 // F_005.finish();
 };
 std::vector<MappedValue> mappedValues{
@@ -379,7 +406,7 @@ void Epa4AllTransformerTest::checkMedicationRequest(const rapidjson::Value& sour
 
     validate(
         fhirtools::DefinitionKey{
-            "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0.3"},
+            "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0"},
         &target);
 }
 
@@ -394,12 +421,23 @@ void Epa4AllTransformerTest::checkMedicationCompounding(const rapidjson::Value& 
     checkMedicationCodingArray(source, target);
     checkMedicationContainedArray(source, target);
 
+    F_020.test("5.: Rezeptur ohne PZNs in Rezepturbestandteilen");
+    F_020.test("6.: Rezeptur mit PZNs in Rezepturbestandteilen");
+    expectEpaMedicationTypeExtension(target, model::EPAMedicationTypeExtension::ExtemporaneousPreparationCode);
+    if (rapidjson::Pointer{"/ingredient/0/itemCodeableConcept/coding/0/code"}.Get(source) != nullptr)
+    {
+        checkContainedMedicationTypeExtensions(target, model::EPAMedicationTypeExtension::MedicinalProductPackageCode);
+    }
+    else
+    {
+        EXPECT_EQ(rapidjson::Pointer{"/contained"}.Get(target), nullptr);
+    }
+
     A_25946.test("KBV_PR_ERP_Medication_Compounding: Keine Übernahme von \"extension:Kategorie\"-Elementen");
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
-        &target);
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkMedicationFreeText(const rapidjson::Value& source, const rapidjson::Value& target)
@@ -411,9 +449,11 @@ void Epa4AllTransformerTest::checkMedicationFreeText(const rapidjson::Value& sou
     checkMedicationIngredientArray(source, target, false);
     checkMedicationCodingArray(source, target);
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
-        &target);
+    F_020.test("4.: Freitextverordnung");
+    expectEpaMedicationTypeExtension(target, "");
+
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkMedicationIngredient(const rapidjson::Value& source, const rapidjson::Value& target)
@@ -426,17 +466,27 @@ void Epa4AllTransformerTest::checkMedicationIngredient(const rapidjson::Value& s
     checkMedicationIngredientArray(source, target, false);
     checkMedicationCodingArray(source, target);
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
-        &target);
+    F_020.test("3.: Wirkstoffverordnung");
+    expectEpaMedicationTypeExtension(target, model::EPAMedicationTypeExtension::MedicinalProductPackageCode);
+
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, const rapidjson::Value& target)
 {
+    static const rapidjson::Pointer formCoding0CodePtr{"/form/coding/0/code"};
+    auto formCode = model::NumberAsStringParserDocument::getStringValueFromValue(formCoding0CodePtr.Get(source));
     checkRetainedProperties(source, target, EpaMedication::propertyValuesWillBeRetained);
     checkPropertiesNotInTarget(target, EpaMedication::propertyValuesNotInTarget);
     auto mappedExtensions = EpaMedication::KbvPzn::mappedExtensions;
     std::ranges::copy(EpaMedication::mappedExtensions, std::back_inserter(mappedExtensions));
+    if (formCode != "KPG")
+    {
+        mappedExtensions.emplace_back(
+            "", "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-type-extension",
+            std::vector<MappedValue>{}, std::vector<std::string>{}, std::vector<std::string>{});
+    }
     checkExtensions(source, target, mappedExtensions);
 
     A_25946.test("KBV_PR_ERP_Medication_PZN: Keine Übernahme von \"extension:Kategorie\"-Elementen");
@@ -444,32 +494,24 @@ void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, 
 
     checkMappedValues(target, EpaMedication::KbvPzn::mappedValues);
 
-    F_018_01.test("for Medication.form.code = KPG add data-absent to Medication.ingredient.itemReference");
-    static const rapidjson::Pointer ingredientArrayPtr{"/ingredient"};
-    static const rapidjson::Pointer formCoding0CodePtr{"/form/coding/0/code"};
-    const auto* sourceIngredientArray = ingredientArrayPtr.Get(source);
-    const auto* targetIngredientArray = ingredientArrayPtr.Get(target);
-    ASSERT_EQ(sourceIngredientArray, nullptr);
-    auto formCode = model::NumberAsStringParserDocument::getStringValueFromValue(formCoding0CodePtr.Get(source));
     if (formCode == "KPG")
     {
-        ASSERT_NE(targetIngredientArray, nullptr);
-        static const rapidjson::Pointer dataAbsentPtr{"/ingredient/0/itemReference/extension/0/url"};
-        std::string_view urlValue;
-        ASSERT_NO_FATAL_FAILURE(
-            urlValue = model::NumberAsStringParserDocument::getStringValueFromValue(dataAbsentPtr.Get(target)));
-        EXPECT_EQ(urlValue, "http://hl7.org/fhir/StructureDefinition/data-absent-reason");
+        F_020.test("2.: PZN Verordnung einer Kombipackung");
+        expectEpaMedicationTypeExtension(target, "");
+        // TODO: F_020.2 EPAMedicationPharmaceuticalProduct
+        //checkContainedMedicationTypeExtensions(target, model::EPAMedicationTypeExtension::PharmaceuticalBiologicProductCode);
     }
     else
     {
-        ASSERT_EQ(targetIngredientArray, nullptr);
+        F_020.test("1.: PZN Verordnung");
+        expectEpaMedicationTypeExtension(target, model::EPAMedicationTypeExtension::MedicinalProductPackageCode);
     }
+
 
     checkMedicationCodingArray(source, target);
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
-        &target);
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkOrganization(const rapidjson::Value& source, const rapidjson::Value& target)
@@ -485,7 +527,7 @@ void Epa4AllTransformerTest::checkOrganization(const rapidjson::Value& source, c
 
 
     validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11.12"},
+        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11"},
         &target);
 }
 
@@ -498,7 +540,7 @@ void Epa4AllTransformerTest::checkPractitioner(const rapidjson::Value& source, c
     checkIdentifier(target, model::resource::naming_system::telematicID, telematikIdFromQes.id());
 
     validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11.12"},
+        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11"},
         &target);
 }
 
@@ -568,7 +610,7 @@ void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, con
                 if (mapping.targetUrl == str(*url))
                 {
                     foundMapping = true;
-                    if (!mapping.sourceUrl.empty())
+                    if (! mapping.sourceUrl.empty())
                     {
                         const auto* sourceExtension = findExtension(source, mapping.sourceUrl);
                         ASSERT_NE(sourceExtension, nullptr)
@@ -684,7 +726,7 @@ void Epa4AllTransformerTest::checkMedicationIngredientArray(const rapidjson::Val
                                 (std::stringstream{} << "ingredient[" << i << "].itemReference.reference.resolve()")
                                     .str(),
                                 fhirtools::DefinitionKey{
-                                    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0.3"},
+                                    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
                                 &target);
                         }
                     }
@@ -777,6 +819,56 @@ void Epa4AllTransformerTest::checkMedicationCodingArray(const rapidjson::Value& 
         }
     }
 }
+
+void Epa4AllTransformerTest::checkContainedMedicationTypeExtensions(const rapidjson::Value& epaMedication,
+                                                                    const std::string& expectedValue)
+{
+    static const rapidjson::Pointer containedArrayPtr{"/contained"};
+    const auto* containedArray = containedArrayPtr.Get(epaMedication);
+    ASSERT_TRUE(containedArray);
+    for (const auto& contained : containedArray->GetArray())
+    {
+        expectEpaMedicationTypeExtension(contained, expectedValue);
+    }
+}
+
+void Epa4AllTransformerTest::expectEpaMedicationTypeExtension(const rapidjson::Value& epaMedication,
+                                                              const std::string& expectedValue)
+{
+    static const rapidjson::Pointer extensionArrayPtr{"/extension"};
+    bool found = false;
+    std::string foundOther;
+    bool const expectNoTypeExtension = expectedValue.empty();
+
+    const auto* extensionArray = extensionArrayPtr.Get(epaMedication);
+    ASSERT_TRUE(extensionArray);
+    for (const auto& extension : extensionArray->GetArray())
+    {
+        static const rapidjson::Pointer urlPointer{"/url"};
+        const auto* url = urlPointer.Get(extension);
+        ASSERT_TRUE(url);
+        if (str(*url) == "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-type-extension")
+        {
+            static const rapidjson::Pointer valuePointer{"/valueCoding/code"};
+            const auto* value = valuePointer.Get(extension);
+            ASSERT_TRUE(value);
+            if (str(*value) == expectedValue)
+            {
+                found = true;
+            }
+            else
+            {
+                foundOther = str(*value);
+            }
+        }
+    }
+
+    EXPECT_TRUE(found || expectNoTypeExtension)
+        << "did not find expected epa-medication-type-extension: " << expectedValue << ": " << serialize(epaMedication);
+    EXPECT_TRUE(foundOther.empty()) << "found epa-medication-type-extension of wrong type: " << foundOther << ": "
+                                    << serialize(epaMedication);
+}
+
 rapidjson::Pointer Epa4AllTransformerTest::makePointer(std::string_view property)
 {
     std::string p{property};
@@ -824,7 +916,7 @@ void Epa4AllTransformerTest::checkExpression(const std::string& expression, fhir
     auto repoView = getRepo(targetProfileKey, model::Timestamp::now());
     auto parsedExpression = fhirtools::FhirPathParser::parse(repoView.get(), expression);
     Expect3(parsedExpression, "could not parse " + expression, std::logic_error);
-    auto resultCollection = parsedExpression->eval(fhirtools::Collection{erpElement});
+    auto resultCollection = parsedExpression->eval(fhirtools::EvaluationContext{erpElement}).collection;
     ASSERT_EQ(resultCollection.size(), 1) << expression << " did not evaluate";
     EXPECT_TRUE(resultCollection.boolean()->asBool());
 }
@@ -837,15 +929,14 @@ std::shared_ptr<ErpElement> Epa4AllTransformerTest::createErpElement(fhirtools::
     Expect(targetProfile, "profile not found in repo view " + to_string(targetProfileKey));
     auto erpElement =
         std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{},
-                                     fhirtools::ProfiledElementTypeInfo{targetProfile}, resource, nullptr);
+                                     fhirtools::ProfiledElementTypeInfo{*targetProfile}, resource, nullptr);
     return erpElement;
 }
-std::shared_ptr<fhirtools::FhirStructureRepository>
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
 Epa4AllTransformerTest::getRepo(fhirtools::DefinitionKey targetProfileKey, const model::Timestamp& timestamp)
 {
     auto viewList = Fhir::instance().structureRepository(timestamp);
-    auto repoView =
-        viewList.match(std::addressof(Fhir::instance().backend()), targetProfileKey.url, *targetProfileKey.version);
+    auto repoView = viewList.match(targetProfileKey.url, *targetProfileKey.version);
     Expect(repoView, "No repository view found for " + to_string(targetProfileKey));
     return repoView;
 }
@@ -874,6 +965,27 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationRequestTest)
 TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvoTest)
 {
     auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml();
+    auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
+    auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
+
+    std::optional<model::EPAOpProvidePrescriptionERPInputParameters> params;
+    ASSERT_NO_THROW(params = Epa4AllTransformer::transformPrescription(
+                        kbvBundle, telematikIdFromQes, telematikIdFromAccessToken, organizationNameFromJwt,
+                        std::string{profession_oid::oid_oeffentliche_apotheke}));
+    ASSERT_TRUE(params);
+
+    const auto* medication = params->getMedication();
+    ASSERT_TRUE(medication);
+    checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
+}
+
+TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvo_KBV_V_1_3)
+{
+    F_021.test("Test for presence of all expected properties");
+    // test that the transformer adds code and system, since these are missing in v 1.3.
+    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({
+        .kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"}
+    });
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
 
@@ -982,12 +1094,12 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationIngredientTest)
     ASSERT_TRUE(medication);
     checkMedicationIngredient(kbvMedication.jsonDocument(), *medication);
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
              &params->jsonDocument());
 
     checkExpression("parameter[0].part[2].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
                     &params->jsonDocument());
 }
 
@@ -1032,7 +1144,7 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionPractitionerTest)
 
     checkPractitioner(kbvPractitioner.jsonDocument(), *practitioner);
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
              &params->jsonDocument());
     checkMappedValues(*practitioner, {MappedValue{.property = "Practitioner.name.0.text",
                                                   .targetValue = "AC Dr. med. Hans Topp-Glücklich"}});
@@ -1079,10 +1191,10 @@ TEST_F(Epa4AllTransformerTest, transformMedicationDispense14)
     EXPECT_EQ(params->getMedicationDispenses().size(), options.medicationDispenses.size());
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-dispensation-erp-input-parameters|1.0.3"},
+                                      "epa-op-provide-dispensation-erp-input-parameters|1.0"},
              &params->jsonDocument(), model::Timestamp::fromGermanDate("2025-01-16"));
     checkExpression("parameter[0].part[3].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0.3"},
+                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
                     &params->jsonDocument());
 }

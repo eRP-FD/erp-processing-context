@@ -24,6 +24,7 @@ class BaseServiceContext;
 class RequestHandlerManager;
 class VsdmKeyBlobDatabase;
 class XmlValidator;
+class TslRefreshJob;
 
 
 /**
@@ -52,7 +53,7 @@ class BaseServiceContext
 {
 public:
     BaseServiceContext(const BaseFactories& factories);
-    virtual ~BaseServiceContext() = default;
+    virtual ~BaseServiceContext();
 
     std::shared_ptr<Timer> getTimerManager();
 
@@ -84,6 +85,8 @@ public:
 
     ApplicationHealth& applicationHealth();
 
+    void setupTslRefreshJob(std::chrono::seconds tslRefreshInterval);
+
 protected:
     std::shared_ptr<Timer> mTimerManager;
     std::shared_ptr<BlobCache> mBlobCache;
@@ -91,16 +94,19 @@ protected:
     std::unique_ptr<VsdmKeyCache> mVsdmKeyCache;
     KeyDerivation mKeyDerivation;
     const std::shared_ptr<XmlValidator> mXmlValidator;
-    /**
-     * The manager can be used to get actual TSL-/BNetzA-VL related information.
-     * The refresh-job takes care to hold the manager actual.
-     */
-    std::shared_ptr<TslManager> mTslManager;
     Tpm::Factory mTpmFactory;
     std::unique_ptr<BaseHttpsServer> mEnrolmentServer;
     std::unique_ptr<BaseHttpsServer> mAdminServer;
     EnrolmentData mEnrolmentData;
     ApplicationHealth mApplicationHealth;
+
+private:
+    /**
+     * The manager can be used to get actual TSL-/BNetzA-VL related information.
+     * The refresh-job takes care to hold the manager actual.
+     */
+    std::shared_ptr<TslManager> mTslManager;
+    std::unique_ptr<TslRefreshJob> mTslRefreshJob;
 };
 
 

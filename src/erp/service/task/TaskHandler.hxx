@@ -44,6 +44,7 @@ protected:
                                                       const Uuid& uuid, PcServiceContext& serviceContext);
     static std::optional<std::string> getAccessCode(const ServerRequest& request);
     static void checkAccessCodeMatches(const ServerRequest& request, const model::Task& task);
+    static std::tuple<bool, std::string> processMvoPeriodStartValid(PcSessionContext& session, const model::KbvBundle& prescription);
 };
 
 

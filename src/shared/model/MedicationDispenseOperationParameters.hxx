@@ -19,7 +19,7 @@ public:
 
     [[nodiscard]] model::ProfileType profileType() const;
 
-    [[nodiscard]] gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+    [[nodiscard]] gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
     getValidationView() const override;
 
     [[nodiscard]] std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;

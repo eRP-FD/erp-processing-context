@@ -5,12 +5,13 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/ErpRequirements.hxx"
-#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/service/task/AcceptTaskHandler.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/model/OperationOutcome.hxx"
+#include "shared/network/message/ContentType.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"

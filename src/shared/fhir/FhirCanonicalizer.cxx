@@ -6,8 +6,9 @@
  */
 
 #include "shared/fhir/FhirCanonicalizer.hxx"
-#include "shared/fhir/Fhir.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Expect.hxx"

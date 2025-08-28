@@ -231,14 +231,36 @@ void ChargeItem::setPrescriptionId(const PrescriptionId& prescriptionId)
 
 void ChargeItem::setSubjectKvnr(std::string_view kvnr)
 {
-    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::pkvKvid10);
+    setSubjectSystem(Kvnr::Type::unspecified);
     setValue(subjectKvnrValuePointer, kvnr);
 }
 
 void ChargeItem::setSubjectKvnr(const Kvnr& kvnr)
 {
-    setValue(subjectKvnrSystemPointer, ::model::resource::naming_system::pkvKvid10);
+    setSubjectSystem(kvnr.getType());
     setValue(subjectKvnrValuePointer, kvnr.id());
+}
+
+void model::ChargeItem::setSubjectSystem(model::Kvnr::Type kvnrType)
+{
+    using namespace fhirtools::version_literal;
+    std::string_view namingSystem = ::model::resource::naming_system::pkvKvid10;
+    switch (kvnrType)
+    {
+        case Kvnr::Type::unspecified:
+            if (getProfileVersionChecked() >= "1.1"_ver)
+            {
+                namingSystem = ::model::resource::naming_system::gkvKvid10;
+            }
+            break;
+        case Kvnr::Type::gkv:
+            namingSystem = ::model::resource::naming_system::gkvKvid10;
+            break;
+        case Kvnr::Type::pkv:
+            namingSystem = ::model::resource::naming_system::pkvKvid10;
+            break;
+    }
+    setValue(subjectKvnrSystemPointer, namingSystem);
 }
 
 void ChargeItem::setEntererTelematikId(std::string_view telematicId)

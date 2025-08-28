@@ -5,12 +5,6 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#if defined (__GNUC__) && __GNUC__ == 12
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#include <pqxx/pqxx>
-#pragma GCC diagnostic pop
-#endif
 
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
@@ -52,6 +46,7 @@
 #include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/util/StaticData.hxx"
 
+#include <pqxx/pqxx>
 #include <rapidjson/writer.h>
 #include <gtest/gtest.h>
 

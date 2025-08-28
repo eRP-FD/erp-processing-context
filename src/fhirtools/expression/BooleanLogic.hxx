@@ -18,7 +18,7 @@ class BooleanAndOperator : public BinaryExpression
 public:
     static constexpr auto IDENTIFIER = "and";
     using BinaryExpression::BinaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#or
@@ -27,7 +27,7 @@ class BooleanOrOperator : public BinaryExpression
 public:
     static constexpr auto IDENTIFIER = "or";
     using BinaryExpression::BinaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#not-boolean
@@ -36,7 +36,7 @@ class BooleanNotOperator : public Expression
 public:
     static constexpr auto IDENTIFIER = "not";
     using Expression::Expression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#xor
@@ -45,7 +45,7 @@ class BooleanXorOperator : public BinaryExpression
 public:
     static constexpr auto IDENTIFIER = "xor";
     using BinaryExpression::BinaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
 // http://hl7.org/fhirpath/N1/#implies
@@ -54,7 +54,7 @@ class BooleanImpliesOperator : public BinaryExpression
 public:
     static constexpr auto IDENTIFIER = "implies";
     using BinaryExpression::BinaryExpression;
-    Collection eval(const Collection& collection) const override;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 }
 

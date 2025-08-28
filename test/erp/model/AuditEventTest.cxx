@@ -88,7 +88,7 @@ TEST(AuditEventTest, ConstructFromJson)//NOLINT(readability-function-cognitive-c
     const std::string_view entityName = "X122446685";
     const auto entityDescription = whatIdentifierValue;
 
-    const std::string gematikVersionStr{to_string(gematikVersion)};
+    const std::string gematikVersionStr{gematikVersion.renderVersion()};
     const std::string auditEventFileName =
         std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/audit_event_" + gematikVersionStr + ".json";
     const auto json = FileHelper::readFileAsString(auditEventFileName);

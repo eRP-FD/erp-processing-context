@@ -29,6 +29,7 @@
 #include <test/util/EnvironmentVariableGuard.hxx>
 
 #include "test_config.h"
+#include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -43,6 +44,7 @@ public:
     static constexpr int timespan_ms = 4000;
     EnvironmentVariableGuard calls{"ERP_TOKEN_ULIMIT_CALLS", "5"};
     EnvironmentVariableGuard timespan{"ERP_TOKEN_ULIMIT_TIMESPAN_MS", std::to_string(timespan_ms)};
+    EnvironmentVariableGuard featureToggleGuard{"ERP_FEATURE_EU", "true"};
 };
 
 class VauRequestHandlerTestForceMockDB : public VauRequestHandlerTest
@@ -937,4 +939,18 @@ TEST_F(VauRequestHandlerTest, CheckClientId)//NOLINT(readability-function-cognit
     // Now check that the header field is present in the outer response with the expected value.
     ASSERT_TRUE(response2.getHeader().hasHeader(Header::InnerRequestClientId));
     ASSERT_EQ(response2.getHeader().header(Header::InnerRequestClientId).value(), JwtBuilder::defaultClientId());
+}
+
+
+TEST_F(VauRequestHandlerTest, NoRateLimit_oid_ncpeh)//NOLINT(readability-function-cognitive-complexity)
+{
+    auto client = createClient();
+    const auto xmlStr = ResourceTemplates::euCloseTaskXml({});
+    const model::PrescriptionId taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714);
+    const auto jwt = std::make_unique<JWT>( jwtWithProfessionOID(profession_oid::oid_ncpeh) );
+    const auto key = std::string{mContext->getDosHandler().redisKeyPrefix()} + ":" + jwt->stringForClaim(JWT::subClaim).value();
+    auto encryptedRequest = makeEncryptedRequest(HttpMethod::POST, "/Task/" + taskId.toString() + "/$eu-close/", *jwt,
+        {}, std::make_pair<std::string_view, std::string_view>(xmlStr, "application/fhir+xml;charset=utf-8"), {{Header::ContentType, ContentMimeType::fhirXmlUtf8}});
+    client.send(encryptedRequest);
+    EXPECT_FALSE(mContext->getRedisClient()->exists(key));
 }

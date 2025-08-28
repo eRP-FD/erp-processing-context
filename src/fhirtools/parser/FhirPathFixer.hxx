@@ -12,7 +12,7 @@
 
 namespace fhirtools
 {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 
 class FhirPathFixer
 {

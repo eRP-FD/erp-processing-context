@@ -24,7 +24,7 @@ class ProfiledElementTypeInfo;
 class FhirPathValidator;
 class FhirSlice;
 class FhirStructureDefinition;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class ProfileValidator;
 class ProfileValidatorCounterData;
 class ProfileValidatorCounterKey;
@@ -66,12 +66,12 @@ public:
 
     ProfiledElementTypeInfo rootPointer() const;
 
-    void typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef);
+    void typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef);
 
-    void addProfile(const FhirStructureRepository& repo, const FhirStructureDefinition* profile);
-    void addProfiles(const FhirStructureRepository& repo, const std::set<const FhirStructureDefinition*>& profiles);
+    void addProfile(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* profile);
+    void addProfiles(const FhirStructureRepositoryView& repo, const std::set<const FhirStructureDefinition*>& profiles);
 
-    void requireOne(const fhirtools::FhirStructureRepository& repo,
+    void requireOne(const fhirtools::FhirStructureRepositoryView& repo,
                     const std::set<const FhirStructureDefinition*>& profiles, std::string_view elementFullPath,
                     const std::function<std::string()>& contextMessageGetter);
 
@@ -80,7 +80,7 @@ public:
                            std::string_view elementFullPath);
 
 
-    std::shared_ptr<ProfileSetValidator> subField(const FhirStructureRepository&, const std::string& name);
+    std::shared_ptr<ProfileSetValidator> subField(const FhirStructureRepositoryView&, const std::string& name);
 
     void process(const Element& element, std::string_view elementFullPath);
 
@@ -103,10 +103,10 @@ private:
     void incrementCounters(const Element& element);
     void createSliceCheckersAndCounters();
     void createSliceCounters(const ProfileValidator& profVal, const FhirSlicing& slicing);
-    SolverDataValue createSolverDataValue(const fhirtools::FhirStructureRepository& repo,
+    SolverDataValue createSolverDataValue(const fhirtools::FhirStructureRepositoryView& repo,
                                           const FhirStructureDefinition* profile, std::string_view elementFullPath,
                                           const std::function<std::string()>& contextMessageGetter);
-    SolverDataValue createErrorSolverData(const FhirStructureDefinition* profile, std::string message,
+    SolverDataValue createErrorSolverData(const FhirStructureDefinition& profile, std::string message,
                                           std::string_view elementFullPath);
     ProfileValidator::Map process(ProfileValidator::Map::value_type& profVal, const Element& element,
                                   std::string_view elementFullPath);
@@ -116,6 +116,8 @@ private:
     void propagateFailures();
     bool hasMostSlices(const ProfiledElementTypeInfo&) const;
     std::optional<FhirSlicing::SlicingRules> getRuleOverride(const ProfiledElementTypeInfo&) const;
+    bool isMandatory(std::string_view fieldName) const;
+    void checkURI(const Element& element, std::string_view elementFullPath);
 
     using CounterKey = ProfileValidatorCounterKey;
     using CounterData = ProfileValidatorCounterData;

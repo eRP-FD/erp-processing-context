@@ -12,8 +12,7 @@ namespace fhirtools
 {
 enum class Severity
 {
-    error = 4,
-    unslicedWarning = 3,
+    error = 3,
     warning = 2,
     info = 1,
     debug = 0,

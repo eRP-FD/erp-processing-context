@@ -102,9 +102,27 @@ AuditDataCollector& AuditDataCollector::setConsentId(const std::string_view& con
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setCountryCode(const model::CountryCode& countryCode)
+{
+    mCountryCode = countryCode;
+    return *this;
+}
+
+AuditDataCollector& AuditDataCollector::setVariable(const std::string& key, const std::string& value)
+{
+    mVariables[key] = value;
+    return *this;
+}
+
 model::AuditData AuditDataCollector::createData() const
 {
     Expect3(mEventId.has_value(), "Event ID should not be missing", std::logic_error);
+
+    const std::string countryCodeStr =
+        mCountryCode.has_value() ? mCountryCode->toString() : "";
+    const std::string_view countryCodeView = countryCodeStr;
+    const std::optional<std::string_view> countryCodeViewOpt =
+        countryCodeStr.empty() ? std::nullopt : std::make_optional(countryCodeView);
 
     const bool isEventCausedByPatient = model::isEventCausedByPatient(*mEventId);
     return model::AuditData(
@@ -112,7 +130,8 @@ model::AuditData AuditDataCollector::createData() const
         model::AuditMetaData(isEventCausedByPatient                            ? std::optional<std::string>()
                              : model::isEventCausedByRepresentative(*mEventId) ? assertHasValue(mAgentName)
                                                                                : mAgentName,
-                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho)),
+                             isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho),
+                             countryCodeViewOpt, mVariables),
         assertHasValue(mAction), mAgentType.value_or(model::AuditEvent::AgentType::human),
         assertHasValue(mInsurantKvnr), assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
 }

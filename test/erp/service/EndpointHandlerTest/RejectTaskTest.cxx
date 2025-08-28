@@ -10,6 +10,7 @@
 #include "erp/service/task/DispenseTaskHandler.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/service/task/RejectTaskHandler.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/model/OperationOutcome.hxx"
@@ -74,9 +75,8 @@ protected:
             ASSERT_NO_THROW(handler.handleRequest(sessionContext));
             auto view = Fhir::instance()
                             .structureRepository(model::Timestamp::now())
-                            .match(&Fhir::instance().backend(),
-                                   ResourceTemplates::Versions::latest(
-                                       "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"));
+                            .match(ResourceTemplates::Versions::latest(
+                                "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task"));
             std::optional<model::Bundle> bundle;
             ASSERT_NO_THROW(bundle = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(),
                                                                                     *StaticData::getXmlValidator())

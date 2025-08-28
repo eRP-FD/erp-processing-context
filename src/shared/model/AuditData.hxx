@@ -9,11 +9,14 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_AUDITDATA_HXX
 
 #include "shared/model/AuditEvent.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Timestamp.hxx"
-#include "shared/model/Kvnr.hxx"
+#include "shared/model/CountryCode.hxx"
 #include "shared/network/message/HttpStatus.hxx"
+
+#include <map>
 
 
 namespace model {
@@ -63,13 +66,23 @@ enum class AuditEventId : std::int16_t
     POST_CANCEL_PRESCRIPTION_ERP_failed = 38,
     POST_CANCEL_DISPENSATION_REP = 39,
     POST_CANCEL_DISPENSATION_REP_failed = 40,
-    MAX = POST_CANCEL_DISPENSATION_REP_failed
+    POST_GRANT_EU_ACCESS_PERMISSION = 41,
+    DELETE_REVOKE_EU_ACCESS_PERMISSION = 42,
+    PATCH_TASK_ID_MARK = 43,
+    POST_GET_EU_PRESCRIPTIONS_DEMOGRAPHICS = 44,
+    POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_LIST = 45,
+    POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL = 46,
+    POST_EU_Consent = 47,
+    DELETE_EU_Consent = 48,
+    POST_TASK_EU_CLOSE = 49,
+    MAX = POST_TASK_EU_CLOSE
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);
 bool isEventCausedByRepresentative(AuditEventId eventId);
 bool isEventCausedByMaintenanceScript(AuditEventId eventId);
 std::string createEventResourceReference(AuditEventId eventId, const std::string& resourceId);
+bool isConsentEvent(AuditEventId eventId);
 
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -80,10 +93,14 @@ public:
 
     AuditMetaData(
         const std::optional<std::string_view>& agentName,
-        const std::optional<std::string_view>& agentWho);
+        const std::optional<std::string_view>& agentWho,
+        const std::optional<std::string_view>& countryCode,
+        const std::map<std::string, std::string>& variables = {});
 
     std::optional<std::string_view> agentName() const;
     std::optional<std::string_view> agentWho() const;
+    std::optional<std::string_view> countryCode() const;
+    std::map<std::string, std::string> variables() const;
 
     bool isEmpty() const;
 
@@ -119,6 +136,8 @@ public:
     const std::optional<std::string>& consentId() const;
     const std::string& id() const;
     const model::Timestamp& recorded() const;
+    std::optional<CountryCode> countryCode() const;
+    std::map<std::string, std::string> variables() const;
 
     bool isValidEventId() const;
 

@@ -40,6 +40,8 @@ const std::string Header::GematikWorkflowProfil = "Gematik-Workflow-Profil";
 const std::string Header::GematikPatientenrechnung = "Gematik-Patientenrechnung";
 const std::string Header::KbvVerordnungsdaten = "KBV-Verordnungsdaten";
 const std::string Header::DavAbgabedaten = "DAV-Abgabedaten";
+const std::string Header::EUProfileWorkflow = "Gematik-EU-Workflow-Profil";
+const std::string Header::ErpUseCase = "ERP-Use-Case";
 
 const std::string Header::Tee3::VauCid = "VAU-CID";
 const std::string Header::Tee3::XUserAgent = "x-useragent";
@@ -428,11 +430,24 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
         case model::ProfileType::EPAMedicationPZNIngredient:
         case model::ProfileType::KBV_PR_EVDGA_HealthAppRequest:
             return {};
+        case model::ProfileType::GEM_ERPEU_PR_Consent:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input:
+        case model::ProfileType::GEM_ERPEU_PR_MedicationDispense:
+        case model::ProfileType::GEM_ERPEU_PR_PAR_Medication:
+        case model::ProfileType::GEM_ERPEU_PR_Practitioner:
+        case model::ProfileType::GEM_ERPEU_PR_PractitionerRole:
+        case model::ProfileType::GEM_ERPEU_PR_Organization:
+            return EUProfileWorkflow;
         case model::ProfileType::GEM_ERPCHRG_PR_ChargeItem:
         case model::ProfileType::GEM_ERPCHRG_PR_Consent:
         case model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
         case model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
         case model::ProfileType::PatchChargeItemParameters:
+        case model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
             return GematikPatientenrechnung;
         case model::ProfileType::KBV_PR_EVDGA_Bundle:
         case model::ProfileType::KBV_PR_ERP_Bundle:

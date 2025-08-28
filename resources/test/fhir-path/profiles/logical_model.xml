@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <id value="ignored-model"/>
+  <url value="http://fhir-tools.test/logical-models-are-ignored"/>
+  <version value="0.8.15"/>
+  <name value="ignored-model"/>
+  <status value="draft"/>
+  <kind value="logical"/>
+  <type value="Extension"/>
+  <snapshot>
+    <element id=" who/cares"/>
+  </snapshot>
+</StructureDefinition>

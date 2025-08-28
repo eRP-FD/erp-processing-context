@@ -2,12 +2,14 @@
 // (C) Copyright IBM Corp. 2021, 2025
 // non-exclusively licensed to gematik GmbH
 
-#include "shared/ErpRequirements.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 
 namespace erp
 {
+
 void RuntimeConfiguration::enableAcceptPN3(const model::Timestamp& expiry)
 {
     ErpExpect(expiry <= model::Timestamp::now() + accept_pn3_max_active, HttpStatus::BadRequest,
@@ -31,6 +33,21 @@ model::Timestamp RuntimeConfiguration::getAcceptPN3Expiry() const
 {
     ModelExpect(isAcceptPN3Enabled(), "AcceptPN3 is false");
     return std::get<AcceptPN3Enabled>(mAcceptPN3).acceptPN3Expiry;
+}
+
+void RuntimeConfiguration::setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs)
+{
+    shared::RuntimeConfigurationBase::setMetricsLogThresholdMs(category, thresholdMs);
+}
+
+std::chrono::milliseconds RuntimeConfiguration::getMetricsLogThresholdMs(DurationCategory category) const
+{
+    return shared::RuntimeConfigurationBase::getMetricsLogThresholdMs(category);
+}
+
+std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::getMetricsLogThresholdsMs() const
+{
+    return shared::RuntimeConfigurationBase::getMetricsLogThresholdsMs();
 }
 
 RuntimeConfiguration::AcceptPN3Enabled::AcceptPN3Enabled(const model::Timestamp& expiry)
@@ -57,6 +74,15 @@ model::Timestamp RuntimeConfiguration::Getter::getAcceptPN3Expiry() const
     return mRuntimeConfiguration->getAcceptPN3Expiry();
 }
 
+std::chrono::milliseconds RuntimeConfiguration::Getter::getMetricsLogThresholdMs(DurationCategory category) const
+{
+    return mRuntimeConfiguration->getMetricsLogThresholdMs(category);
+}
+
+std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::Getter::getMetricsLogThresholdsMs() const
+{
+    return mRuntimeConfiguration->getMetricsLogThresholdsMs();
+}
 
 RuntimeConfiguration::Setter::Setter(std::shared_ptr<RuntimeConfiguration> runtimeConfiguration)
     : mRuntimeConfiguration(std::move(runtimeConfiguration))
@@ -83,4 +109,11 @@ model::Timestamp RuntimeConfiguration::Setter::getAcceptPN3Expiry() const
 {
     return mRuntimeConfiguration->getAcceptPN3Expiry();
 }
+
+void RuntimeConfiguration::Setter::setMetricsLogThresholdMs(DurationCategory category,
+                                                            std::chrono::milliseconds thresholdMs)
+{
+    mRuntimeConfiguration->setMetricsLogThresholdMs(category, thresholdMs);
+}
+
 }

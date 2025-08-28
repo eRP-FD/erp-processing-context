@@ -8,7 +8,8 @@
 #include "erp/model/Communication.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "shared/model/Bundle.hxx"
 #include "test/fhirtools/SampleValidation.hxx"
@@ -32,6 +33,9 @@ public:
             "fhir/hl7.org/extension-definitions.xml",
             "fhir/hl7.org/valuesets.xml",
             "fhir/hl7.org/v3-codesystems.xml",
+            "fhir/profiles/hl7.terminology.r4-6.3.0/package/CodeSystem-v2-0066.xml",
+            "fhir/profiles/hl7.terminology.r4-6.3.0/package-legacy-validation/CodeSystem-v2-0203.xml",
+            "fhir/profiles/hl7.fhir.uv.extensions.r4-5.2.0/package/ValueSet-practitionerrole-employmentStatus.xml",
             "fhir/profiles/KBV.Basis-1.3.0/package/KBV_CM_Base_Terminology_Complete_German.xml",
             "fhir/profiles/KBV.Basis-1.3.0/package/KBV_CS_Base_AdministrativeGender_German.xml",
             "fhir/profiles/KBV.Basis-1.3.0/package/KBV_CS_Base_AllergyIntoleranceCategory_German.xml",
@@ -404,6 +408,9 @@ public:
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/ValueSet-GEM-ERP-VS-FlowType.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/ValueSet-GEM-ERP-VS-OrganizationType.xml",
             "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0/package/ValueSet-GEM-ERP-VS-PerformerType.xml",
+            "fhir/profiles/de.gematik.terminology-1.0.6/package/CodeSystem-facharzttitelderaerztekammern-oid-url.xml",
+            "fhir/profiles/de.gematik.terminology-1.0.6/package/CodeSystem-qualifikationen-nicht-aerztlicher-autoren-oid-url.xml",
+            "fhir/profiles/de.gematik.terminology-1.0.6/package/CodeSystem-qualifikatoren-zahnaerztlicher-autoren-oid-url.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_BAR2_ARZTNRFACHGRUPPE_V1.03.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_BAR2_WBO_V1.16.xml",
             "fhir/profiles/fhir.kbv.de/KBV_CS_SFHIR_BMP_DOSIEREINHEIT_V1.01.xml",
@@ -548,17 +555,13 @@ using Severity = fhirtools::Severity;
 // clang-format off
 INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
     Sample{"Bundle", "test/EndpointHandlerTest/kbv_bundle_unexpected_extension.xml", {
-        // the following two are caused by missing values sets - ERP-10539
-        {std::make_tuple(Severity::warning, "ValueSet contains no codes after expansion"), "Bundle.entry[0].resource{Composition}.type"},
-        {std::make_tuple(Severity::warning, "Cannot validate ValueSet binding"), "Bundle.entry[0].resource{Composition}.type"},
-        {std::make_tuple(Severity::unslicedWarning, "element doesn't belong to any slice."), "Bundle.entry[0].resource{Composition}.extension[1]"},
+        // the following is caused by missing values set - ERP-10539
+        {std::make_tuple(Severity::warning, "Cannot validate ValueSet binding: http://hl7.org/fhir/ValueSet/doc-typecodes|4.0.1"), "Bundle.entry[0].resource{Composition}.type"},
+        {std::make_tuple(Severity::warning, "ValueSet contains no codes after expansion: http://hl7.org/fhir/ValueSet/doc-typecodes|4.0.1"), "Bundle.entry[0].resource{Composition}.type"},
+        {std::make_tuple(Severity::warning, ExtendedValidation::unslicedExtension), "Bundle.entry[0].resource{Composition}.extension[1]"},
         {std::make_tuple(Severity::error, R"-(reference is not literal or invalid but must be resolvable: {"type": "Device", "identifier": {"system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer", "value": "X/000/1111/22/333"}})-"), "Bundle.entry[0].resource{Composition}.author[1]"},
-        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[2].resource{Practitioner}.identifier[0].type.coding[0]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.code.coding[0]"},
-        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://terminology.hl7.org/CodeSystem/v2-0203, it is empty or synthesized."), "Bundle.entry[3].resource{Organization}.identifier[0].type.coding[0]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://snomed.info/sct, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.extension[3].valueCodeableConcept.coding[0]"},
-        {std::make_tuple(Severity::warning, "Unresolved CodeSystem urn:oid:1.2.276.0.76.5.514; Unresolved CodeSystem urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11; Unresolved CodeSystem urn:oid:1.2.276.0.76.5.492"), "Bundle.entry[2].resource{Practitioner}.qualification[0].code"},
-        {std::make_tuple(Severity::warning, "Unresolved CodeSystem urn:oid:1.2.276.0.76.5.514; Unresolved CodeSystem urn:oid:1.3.6.1.4.1.19376.3.276.1.5.11; Unresolved CodeSystem urn:oid:1.2.276.0.76.5.492"), "Bundle.entry[2].resource{Practitioner}.qualification[1].code"},
       },{
         {"dom-6", "Bundle.entry[0].resource{Composition}"},
         {"dom-6", "Bundle.entry[1].resource{Patient}"},
@@ -635,346 +638,428 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Accident_Type", "1.1.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
-        EXPECT_TRUE(valueSet->containsCode("2", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
-        EXPECT_FALSE(valueSet->containsCode("3", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
-        EXPECT_TRUE(valueSet->containsCode("4", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
+        EXPECT_TRUE(codes->containsCode("2", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
+        EXPECT_FALSE(codes->containsCode("3", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
+        EXPECT_TRUE(codes->containsCode("4", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Medication_Category", "1.1.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
-        EXPECT_TRUE(valueSet->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
+        EXPECT_TRUE(codes->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_StatusCoPayment", "1.1.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("0", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
-        EXPECT_TRUE(valueSet->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
-        EXPECT_TRUE(valueSet->containsCode("2", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("0", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
+        EXPECT_TRUE(codes->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
+        EXPECT_TRUE(codes->containsCode("2", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment"));
     }
     {
         const auto* valueSet = repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_FOR_Payor_type", "1.1.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("GKV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_TRUE(valueSet->containsCode("PKV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_TRUE(valueSet->containsCode("BG", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_TRUE(valueSet->containsCode("SEL", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_FALSE(valueSet->containsCode("SOZ", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_FALSE(valueSet->containsCode("GPV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_FALSE(valueSet->containsCode("PPV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
-        EXPECT_FALSE(valueSet->containsCode("BEI", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("GKV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_TRUE(codes->containsCode("PKV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_TRUE(codes->containsCode("BG", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_TRUE(codes->containsCode("SEL", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_FALSE(codes->containsCode("SOZ", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_FALSE(codes->containsCode("GPV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_FALSE(codes->containsCode("PPV", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
+        EXPECT_FALSE(codes->containsCode("BEI", "http://fhir.de/CodeSystem/versicherungsart-de-basis"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_FOR_Qualification_Type", "1.1.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
-        EXPECT_TRUE(valueSet->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
-        EXPECT_TRUE(valueSet->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
-        EXPECT_TRUE(valueSet->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
+        EXPECT_TRUE(codes->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
+        EXPECT_TRUE(codes->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
+        EXPECT_TRUE(codes->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Qualification_Type"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Apgar_Score_Identifier_LOINC", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("9274-2", "http://loinc.org"));
-        EXPECT_TRUE(valueSet->containsCode("9271-8", "http://loinc.org"));
-        EXPECT_FALSE(valueSet->containsCode("0", "http://loinc.org"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("9274-2", "http://loinc.org"));
+        EXPECT_TRUE(codes->containsCode("9271-8", "http://loinc.org"));
+        EXPECT_FALSE(codes->containsCode("0", "http://loinc.org"));
     }
     {
         const auto* valueSet = repo().findValueSet(
             {"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Apgar_Score_Identifier_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("169922007", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("169909004", "http://snomed.info/sct"));
-        EXPECT_FALSE(valueSet->containsCode("0", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("169922007", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("169909004", "http://snomed.info/sct"));
+        EXPECT_FALSE(codes->containsCode("0", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Apgar_Score_Value", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("77714001", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("43610007", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("39910003", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("26635001", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("38107004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("24388001", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("10318004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("12431004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("64198003", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("64198003", "http://snomed.info/sct"));
-        EXPECT_FALSE(valueSet->containsCode("169909004", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("77714001", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("43610007", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("39910003", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("26635001", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("38107004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("24388001", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("10318004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("12431004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("64198003", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("64198003", "http://snomed.info/sct"));
+        EXPECT_FALSE(codes->containsCode("169909004", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"http://fhir.de/ValueSet/VitalSignDE_Body_Height_Loinc", "1.3.2"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("8302-2", "http://loinc.org"));
-        EXPECT_TRUE(valueSet->containsCode("89269-5", "http://loinc.org"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("8302-2", "http://loinc.org"));
+        EXPECT_TRUE(codes->containsCode("89269-5", "http://loinc.org"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Body_Temperature_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("386725007", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("300076005", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("276885007", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("708499008", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("698832009", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("698831002", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("431598003", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("415974002", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("415945006", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("364246006", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("307047009", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("860958002", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("415922000", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("386725007", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("300076005", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("276885007", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("708499008", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("698832009", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("698831002", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("431598003", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("415974002", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("415945006", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("364246006", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("307047009", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("860958002", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("415922000", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"http://fhir.de/ValueSet/VitalSignDE_Body_Weight_Loinc", "1.3.2"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("29463-7", "http://loinc.org"));
-        EXPECT_TRUE(valueSet->containsCode("8339-4", "http://loinc.org"));
-        EXPECT_FALSE(valueSet->containsCode("8339-5", "http://loinc.org"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("29463-7", "http://loinc.org"));
+        EXPECT_TRUE(codes->containsCode("8339-4", "http://loinc.org"));
+        EXPECT_FALSE(codes->containsCode("8339-5", "http://loinc.org"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Body_Weight_Method_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("363808001", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("786458005", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("363808001", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("786458005", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Body_Weight_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("784399000", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("735395000", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("445541000", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("443245006", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("425024002", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("424927000", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("400967004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("364589006", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("248351003", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("27113001", "http://snomed.info/sct"));
-        EXPECT_FALSE(valueSet->containsCode("301334000", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("784399000", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("735395000", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("445541000", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("443245006", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("425024002", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("424927000", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("400967004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("364589006", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("248351003", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("27113001", "http://snomed.info/sct"));
+        EXPECT_FALSE(codes->containsCode("301334000", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"http://fhir.de/ValueSet/VitalSignDE_Body_Weigth_UCUM", "1.3.2"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("g", "http://unitsofmeasure.org"));
-        EXPECT_TRUE(valueSet->containsCode("kg", "http://unitsofmeasure.org"));
-        EXPECT_FALSE(valueSet->containsCode("t", "http://unitsofmeasure.org"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("g", "http://unitsofmeasure.org"));
+        EXPECT_TRUE(codes->containsCode("kg", "http://unitsofmeasure.org"));
+        EXPECT_FALSE(codes->containsCode("t", "http://unitsofmeasure.org"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Deuev_Anlage_8", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("D", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
-        EXPECT_TRUE(valueSet->containsCode("AFG", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("D", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
+        EXPECT_TRUE(codes->containsCode("AFG", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
         // ...
-        EXPECT_TRUE(valueSet->containsCode("CY", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
-        EXPECT_FALSE(valueSet->containsCode("DE", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
+        EXPECT_TRUE(codes->containsCode("CY", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
+        EXPECT_FALSE(codes->containsCode("DE", "http://fhir.de/CodeSystem/deuev/anlage-8-laenderkennzeichen"));
     }
     {
         const auto* valueSet = repo().findValueSet(
             {"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Head_Circumference_BodySite_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("302548004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("362865009", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("302548004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("362865009", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Head_Circumference_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("363812007", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("169876006", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("363812007", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("169876006", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Heart_Rate_SNOMED_CT", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("364075005", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("78564009", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("249043002", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("364075005", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("78564009", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("249043002", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_Base_Stage_Life", "1.3.0"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("41847000", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("263659003", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("255398004", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("713153009", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("3658006", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("255407002", "http://snomed.info/sct"));
-        EXPECT_TRUE(valueSet->containsCode("271872005", "http://snomed.info/sct"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("41847000", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("263659003", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("255398004", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("713153009", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("3658006", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("255407002", "http://snomed.info/sct"));
+        EXPECT_TRUE(codes->containsCode("271872005", "http://snomed.info/sct"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_STATUSKENNZEICHEN", "1.01"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("10", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("11", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("14", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
-        EXPECT_TRUE(valueSet->containsCode("17", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("10", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("11", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("14", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
+        EXPECT_TRUE(codes->containsCode("17", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_STATUSKENNZEICHEN"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PKV_TARIFF", "1.01"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
-        EXPECT_TRUE(valueSet->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
-        EXPECT_TRUE(valueSet->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
-        EXPECT_TRUE(valueSet->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
+        EXPECT_TRUE(codes->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
+        EXPECT_TRUE(codes->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
+        EXPECT_TRUE(codes->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PKV_TARIFF"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_PERSONENGRUPPE", "1.02"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
-        EXPECT_TRUE(valueSet->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
-        EXPECT_TRUE(valueSet->containsCode("06", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
-        EXPECT_TRUE(valueSet->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
-        EXPECT_TRUE(valueSet->containsCode("08", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
-        EXPECT_TRUE(valueSet->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        EXPECT_TRUE(codes->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        EXPECT_TRUE(codes->containsCode("06", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        EXPECT_TRUE(codes->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        EXPECT_TRUE(codes->containsCode("08", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
+        EXPECT_TRUE(codes->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_PERSONENGRUPPE"));
     }
     {
         const auto* valueSet = repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DMP", "1.06"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("05", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("06", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("08", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("10", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("11", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("02", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("03", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("04", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("05", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("06", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("07", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("08", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("09", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("10", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("11", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
         // New in 1.106
-        EXPECT_TRUE(valueSet->containsCode("12", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("30", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("12", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("30", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
         // ...
-        EXPECT_TRUE(valueSet->containsCode("57", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
-        EXPECT_TRUE(valueSet->containsCode("58", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("57", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
+        EXPECT_TRUE(codes->containsCode("58", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DMP"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_VERSICHERTENSTATUS", "1.02"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
-        EXPECT_TRUE(valueSet->containsCode("3", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
-        EXPECT_TRUE(valueSet->containsCode("5", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("1", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
+        EXPECT_TRUE(codes->containsCode("3", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
+        EXPECT_TRUE(codes->containsCode("5", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_VERSICHERTENSTATUS"));
     }
     {
         const auto* valueSet = repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ITA_WOP", "1.00"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
-        EXPECT_TRUE(valueSet->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("00", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
+        EXPECT_TRUE(codes->containsCode("01", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
         // ...
-        EXPECT_TRUE(valueSet->containsCode("98", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
+        EXPECT_TRUE(codes->containsCode("98", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ITA_WOP"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_DIAGNOSESICHERHEIT", "1.00"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("A", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
-        EXPECT_TRUE(valueSet->containsCode("G", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
-        EXPECT_TRUE(valueSet->containsCode("V", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
-        EXPECT_TRUE(valueSet->containsCode("Z", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("A", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
+        EXPECT_TRUE(codes->containsCode("G", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
+        EXPECT_TRUE(codes->containsCode("V", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
+        EXPECT_TRUE(codes->containsCode("Z", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_DIAGNOSESICHERHEIT"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE", "1.00"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("KA", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("KTP", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("N1", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("N2", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("N3", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("NB", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
-        EXPECT_TRUE(valueSet->containsCode("Sonstiges", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("KA", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("KTP", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("N1", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("N2", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("N3", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("NB", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
+        EXPECT_TRUE(codes->containsCode("Sonstiges", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_ICD_SEITENLOKALISATION", "1.00"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("B", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
-        EXPECT_TRUE(valueSet->containsCode("L", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
-        EXPECT_TRUE(valueSet->containsCode("R", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("B", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
+        EXPECT_TRUE(codes->containsCode("L", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
+        EXPECT_TRUE(codes->containsCode("R", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_ICD_SEITENLOKALISATION"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", "1.15"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("AEO", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
-        EXPECT_TRUE(valueSet->containsCode("AMP", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("AEO", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("AMP", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
         // ...
-        EXPECT_TRUE(valueSet->containsCode("PFT", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
-        EXPECT_TRUE(valueSet->containsCode("ZPA", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("PFT", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("ZPA", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
         // New in 1.14:
-        EXPECT_TRUE(valueSet->containsCode("IID", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
-        EXPECT_TRUE(valueSet->containsCode("LIV", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("IID", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("LIV", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
         // New in 1.15:
-        EXPECT_TRUE(valueSet->containsCode("LYE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
-        EXPECT_TRUE(valueSet->containsCode("PUE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("LYE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+        EXPECT_TRUE(codes->containsCode("PUE", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
     }
     {
         const auto* valueSet =
             repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_FORMULAR_ART", "1.02"_ver});
         ASSERT_TRUE(valueSet);
-        EXPECT_TRUE(valueSet->canValidate());
-        EXPECT_TRUE(valueSet->containsCode("e010", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
-        EXPECT_TRUE(valueSet->containsCode("e011", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
-        EXPECT_TRUE(valueSet->containsCode("e012", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
-        EXPECT_TRUE(valueSet->containsCode("e013", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
-        EXPECT_TRUE(valueSet->containsCode("e16A", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
-        EXPECT_TRUE(valueSet->containsCode("e16D", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("e010", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(codes->containsCode("e011", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(codes->containsCode("e012", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(codes->containsCode("e013", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(codes->containsCode("e16A", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+        EXPECT_TRUE(codes->containsCode("e16D", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_FORMULAR_ART"));
+    }
+    {
+        // only Valueset that uses compose.exclude.filter with property
+        const auto* valueSet = repo().findValueSet({"http://hl7.org/fhir/ValueSet/practitionerrole-employmentStatus", "5.2.0"_ver});
+        ASSERT_TRUE(valueSet);
+        auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
+        ASSERT_TRUE(codes);
+        EXPECT_TRUE(codes->canValidate());
+        EXPECT_TRUE(codes->containsCode("1", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_FALSE(codes->containsCode("F", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_FALSE(codes->containsCode("...", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("2", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_FALSE(codes->containsCode("P", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("4", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_FALSE(codes->containsCode("D", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("C", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("L", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("T", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("3", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("5", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("6", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("O", "http://terminology.hl7.org/CodeSystem/v2-0066"));
+        EXPECT_TRUE(codes->containsCode("9", "http://terminology.hl7.org/CodeSystem/v2-0066"));
     }
 }
 

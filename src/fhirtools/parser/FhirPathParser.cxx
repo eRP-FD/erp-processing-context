@@ -22,7 +22,7 @@
 #include "fhirtools/model/Element.hxx"
 #include "fhirtools/parser/ErrorListener.hxx"
 #include "fhirtools/parser/FhirPathFixer.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
 
 #include <antlr4-runtime/antlr4-runtime.h>
@@ -43,7 +43,7 @@ namespace fhirtools
 class FhirPathParser::Impl : public fhirtools::fhirpathVisitor
 {
 public:
-    explicit Impl(const FhirStructureRepository* repository);
+    explicit Impl(const FhirStructureRepositoryView* repository);
 
     std::any visitIndexerExpression(fhirtools::fhirpathParser::IndexerExpressionContext* context) override;
     std::any visitPolarityExpression(fhirtools::fhirpathParser::PolarityExpressionContext* context) override;
@@ -99,9 +99,9 @@ private:
     template<class TOperator, typename TContext>
     std::any binaryOperator(TContext* context);
 
-    const std::shared_ptr<const FhirStructureRepository> mRepository;
+    const std::shared_ptr<const FhirStructureRepositoryView> mRepository;
 };
-FhirPathParser::Impl::Impl(const FhirStructureRepository* repository)
+FhirPathParser::Impl::Impl(const FhirStructureRepositoryView* repository)
     : mRepository(repository->shared_from_this())
 {
 }
@@ -170,13 +170,17 @@ std::any FhirPathParser::Impl::visitAdditiveExpression(fhirtools::fhirpathParser
     TRACE;
     FPExpect(context->children.size() == 3, "invalid parse tree");
     const auto op = context->children[1]->getText();
-    if (op == "+")
+    if (op == PlusOperator::IDENTIFIER)
     {
         return binaryOperator<PlusOperator>(context);
     }
-    else if (op == "&")
+    if (op == AmpersandOperator::IDENTIFIER)
     {
         return binaryOperator<AmpersandOperator>(context);
+    }
+    if (op == MathMinusOperator::IDENTIFIER)
+    {
+        return binaryOperator<MathMinusOperator>(context);
     }
     FPFail("mathematics not implemented");
 }
@@ -704,7 +708,7 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
 
 #undef TRACE
 
-fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepository* repository, std::string_view fhirPath)
+fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepositoryView* repository, std::string_view fhirPath)
 {
     using namespace std::string_literals;
     fhirPath = FhirPathFixer::fixFhirPath(fhirPath);

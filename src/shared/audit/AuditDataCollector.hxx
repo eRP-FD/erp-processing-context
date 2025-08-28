@@ -9,13 +9,17 @@
 #define ERP_PROCESSING_CONTEXT_SERVICE_AUDITEVENTDATACOLLECTOR_HXX
 
 #include "shared/model/AuditData.hxx"
-#include "shared/service/Operation.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/network/message/HttpStatus.hxx"
-#include "shared/model/Kvnr.hxx"
+#include "shared/service/Operation.hxx"
 
 #include <stdexcept>
 
+namespace model
+{
+class CountryCode;
+}
 class JWT;
 
 
@@ -41,6 +45,8 @@ public:
     AuditDataCollector& setDeviceId(const std::int16_t deviceId);
     AuditDataCollector& setPrescriptionId(const model::PrescriptionId& prescriptionId);
     AuditDataCollector& setConsentId(const std::string_view& consentId);
+    AuditDataCollector& setCountryCode(const model::CountryCode& countryCode);
+    AuditDataCollector& setVariable(const std::string& key, const std::string& value);
 
     // throws MissingAuditDataException if mandatory data is missing:
     model::AuditData createData() const;
@@ -61,6 +67,8 @@ private:
     std::optional<std::int16_t> mDeviceId;
     std::optional<model::PrescriptionId> mPrescriptionId;
     std::optional<std::string> mConsentId;
+    std::optional<model::CountryCode> mCountryCode;
+    std::map<std::string, std::string> mVariables;
 };
 
 

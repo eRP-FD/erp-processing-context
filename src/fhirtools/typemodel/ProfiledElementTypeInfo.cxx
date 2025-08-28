@@ -11,7 +11,7 @@
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
@@ -19,36 +19,34 @@
 
 using fhirtools::ProfiledElementTypeInfo;
 
-ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition* profile)
-    : ProfiledElementTypeInfo{profile, profile ? profile->rootElement() : nullptr}
+ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition& profile)
+    : ProfiledElementTypeInfo{profile.rootElement()}
 {
 }
 
-ProfiledElementTypeInfo::ProfiledElementTypeInfo(const FhirStructureDefinition* profile,
-                                                 std::shared_ptr<const FhirElement> element)
-    : mProfile(profile)
-    , mElement(std::move(element))
+ProfiledElementTypeInfo::ProfiledElementTypeInfo(std::shared_ptr<const FhirElement> element)
+    : mElement(std::move(element))
 {
-    if (mProfile == nullptr)
-    {
-        FPFail2("profile is nullptr.", std::logic_error);
-    }
     if (mElement == nullptr)
     {
         FPFail2("element is nullptr.", std::logic_error);
     }
+    if (profile() == nullptr)
+    {
+        FPFail2("element->structureDefinition() is nullptr.", std::logic_error);
+    }
 }
 
-ProfiledElementTypeInfo::ProfiledElementTypeInfo(const std::shared_ptr<const fhirtools::FhirStructureRepository>& repo,
-                                                 std::string_view elementId)
+ProfiledElementTypeInfo::ProfiledElementTypeInfo(
+    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo, std::string_view elementId)
     : ProfiledElementTypeInfo{get<ProfiledElementTypeInfo>(repo->resolveBaseContentReference(elementId))}
 {
 }
 
 bool ProfiledElementTypeInfo::isResource() const
 {
-    FPExpect(mProfile->kind() != FhirStructureDefinition::Kind::slice, "Cannot determine isResource for kind slice");
-    return mElement && mElement->isRoot() && mProfile->kind() == FhirStructureDefinition::Kind::resource;
+    FPExpect(profile()->kind() != FhirStructureDefinition::Kind::slice, "Cannot determine isResource for kind slice");
+    return mElement && mElement->isRoot() && profile()->kind() == FhirStructureDefinition::Kind::resource;
 }
 
 std::vector<ProfiledElementTypeInfo> fhirtools::ProfiledElementTypeInfo::subElements() const
@@ -63,7 +61,7 @@ std::vector<ProfiledElementTypeInfo> fhirtools::ProfiledElementTypeInfo::subElem
             size_t dot = name.find('.', prefix.size());
             if (dot == std::string::npos)
             {
-                result.emplace_back(mProfile, element);
+                result.emplace_back(element);
             }
         }
     }
@@ -78,12 +76,12 @@ std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::parentElement() 
     {
         return std::nullopt;
     }
-    auto parElement = mProfile->findElement(name.substr(0, dot));
+    auto parElement = profile()->findElement(name.substr(0, dot));
     if (! parElement)
     {
         return std::nullopt;
     }
-    return ProfiledElementTypeInfo{mProfile, std::move(parElement)};
+    return ProfiledElementTypeInfo{std::move(parElement)};
 }
 
 
@@ -92,12 +90,12 @@ std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subField(const s
     std::string subElementId;
     subElementId.reserve(mElement->name().size() + name.size() + 1);
     subElementId.append(mElement->name()).append(1, '.').append(name);
-    auto subElementDef = mProfile->findElement(subElementId);
-    return subElementDef ? std::make_optional<ProfiledElementTypeInfo>(mProfile, std::move(subElementDef))
+    auto subElementDef = profile()->findElement(subElementId);
+    return subElementDef ? std::make_optional<ProfiledElementTypeInfo>(std::move(subElementDef))
                          : std::nullopt;
 }
 
-std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const FhirStructureRepository& repo,
+std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const FhirStructureRepositoryView& repo,
                                                                            std::string_view name) const
 {
     auto subElementDef = subField(name);
@@ -114,15 +112,15 @@ std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const
         const FhirStructureDefinition* subType = nullptr;
         if (typeId.empty())
         {
-            auto resolv = repo.resolveContentReference(*mProfile->resourceGroup(), *subElementDef->element());
+            auto resolv = repo.resolveContentReference(*profile()->resourceGroup(), *subElementDef->element());
             static_assert(std::is_reference_v<decltype(resolv.baseType)>);
-            result.emplace_back(&resolv.baseType, resolv.element);
+            result.emplace_back(resolv.element);
         }
         else
         {
             subType = repo.findTypeById(subElementDef->element()->typeId());
             FPExpect(subType != nullptr, "failed to resolve type: " + subElementDef->element()->typeId());
-            result.emplace_back(subType);
+            result.emplace_back(*subType);
         }
     }
     return result;
@@ -141,7 +139,7 @@ std::list<std::string> fhirtools::ProfiledElementTypeInfo::expandedNames(std::st
     std::string subOrigName;
     subOrigName.reserve(originalName.size() + 1 + name.size() + typePlaceholder.size());
     subOrigName.append(originalName).append(1, '.').append(name).append(typePlaceholder);
-    for (const auto& element : mProfile->elements())
+    for (const auto& element : profile()->elements())
     {
         if (element->originalName() == subOrigName)
         {
@@ -153,7 +151,7 @@ std::list<std::string> fhirtools::ProfiledElementTypeInfo::expandedNames(std::st
 
 std::string_view ProfiledElementTypeInfo::elementPath(bool includeDot) const
 {
-    const auto& typeIdLength = mProfile->typeId().size();
+    const auto& typeIdLength = profile()->typeId().size();
     static_assert(std::is_reference_v<decltype(mElement->name())>,
                   "name() must return a reference or we cannot return a string_view");
     const auto& elementName = mElement->name();
@@ -162,34 +160,40 @@ std::string_view ProfiledElementTypeInfo::elementPath(bool includeDot) const
         return {};
     }
     FPExpect3(elementName.size() > typeIdLength,
-              "Element name '" + elementName + "' doesn't start with it's typeId: " + mProfile->typeId(),
+              "Element name '" + elementName + "' doesn't start with it's typeId: " + profile()->typeId(),
               std::logic_error);
     return {elementName.begin() + gsl::narrow<std::string::difference_type>(typeIdLength) + (includeDot ? 0 : 1),
             elementName.end()};
 }
 
 std::optional<ProfiledElementTypeInfo>
-fhirtools::ProfiledElementTypeInfo::typeInfoInParentStuctureDefinition(const FhirStructureRepository& repo) const
+fhirtools::ProfiledElementTypeInfo::typeInfoInParentStuctureDefinition(const FhirStructureRepositoryView& repo) const
 {
     using namespace std::string_literals;
-    if (mProfile->derivation() == FhirStructureDefinition::Derivation::basetype)
+    if (profile()->derivation() == FhirStructureDefinition::Derivation::basetype)
     {
         return std::nullopt;
     }
-    const auto* parentType = mProfile->parentType(repo);
+    const auto* parentType = profile()->parentType(repo);
     if (parentType)
     {
         auto path = elementPath(true);
         const auto& parentTypeElement = path.empty() ? parentType->rootElement() : parentType->findElement(path);
         if (parentTypeElement)
         {
-            return ProfiledElementTypeInfo{parentType, parentTypeElement};
+            return ProfiledElementTypeInfo{parentTypeElement};
         }
     }
     return std::nullopt;
 }
 
-void ProfiledElementTypeInfo::typecast(const FhirStructureRepository& repo, const FhirStructureDefinition* structDef)
+const fhirtools::FhirStructureDefinition* fhirtools::ProfiledElementTypeInfo::profile() const
+{
+    return std::addressof(mElement->structureDefinition());
+}
+
+void ProfiledElementTypeInfo::typecast(const FhirStructureRepositoryView& repo,
+                                       const FhirStructureDefinition* structDef)
 {
     Expect3(structDef != nullptr, "defPtr must not be null", std::logic_error);
     Expect3(structDef->isDerivedFrom(repo, *profile()),
@@ -204,7 +208,6 @@ void ProfiledElementTypeInfo::typecast(const FhirStructureRepository& repo, cons
                    .cardinalityMin(mElement->cardinality().min)
                    .cardinalityMax(mElement->cardinality().max)
                    .getAndReset();
-    mProfile = structDef;
 }
 
 

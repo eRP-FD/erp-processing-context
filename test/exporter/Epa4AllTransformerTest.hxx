@@ -63,6 +63,8 @@ public:
                                         bool checkTransformedPzn);
     void checkMedicationContainedArray(const rapidjson::Value& source, const rapidjson::Value& target);
     void checkMedicationCodingArray(const rapidjson::Value& source, const rapidjson::Value& target);
+    void checkContainedMedicationTypeExtensions(const rapidjson::Value& epaMedication, const std::string& expectedValue);
+    void expectEpaMedicationTypeExtension(const rapidjson::Value& epaMedication, const std::string& expectedValue);
 
 
     rapidjson::Pointer makePointer(std::string_view property);
@@ -79,8 +81,8 @@ public:
                          const rapidjson::Value* resource);
     std::shared_ptr<ErpElement> createErpElement(fhirtools::DefinitionKey targetProfileKey,
                                                  const rapidjson::Value* resource, const model::Timestamp& timestamp);
-    std::shared_ptr<fhirtools::FhirStructureRepository> getRepo(fhirtools::DefinitionKey targetProfileKey,
-                                                                const model::Timestamp& timestamp);
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> getRepo(fhirtools::DefinitionKey targetProfileKey,
+                                                                          const model::Timestamp& timestamp);
 
     const model::TelematikId telematikIdFromQes{"not-set"};
     const model::TelematikId telematikIdFromAccessToken{"not-set-2"};

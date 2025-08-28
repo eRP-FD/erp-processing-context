@@ -6,12 +6,14 @@
  */
 
 #include "erp/model/WorkflowParameters.hxx"
+#include "erp/model/eu/GemErpEuPrTaskInput.hxx"
 #include "shared/model/Binary.hxx"
+#include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 
-TEST(ParameterTest, CanGetData)
-{
+TEST(ParameterTest, CanGetData) {
     const std::string xml = R"(
     <Parameters xmlns="http://hl7.org/fhir">
       <parameter>
@@ -99,4 +101,26 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
     ASSERT_TRUE(markings.count("taxOffice"));
     ASSERT_FALSE(markings["insuranceProvider"]);
     ASSERT_TRUE(markings["taxOffice"]);
+}
+
+TEST(ParameterTest, isEuRedeemableByPatientAuthorization_Validate_true)
+{
+    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
+                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+    const std::string xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Parameters xmlns="http://hl7.org/fhir">
+  <meta>
+    <profile value="https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.0"/>
+  </meta>
+
+  <!-- Parameter für EU-Einlösung durch Patient -->
+  <parameter>
+    <name value="eu-isRedeemableByPatientAuthorization"/>
+    <valueBoolean value="true"/>
+  </parameter>
+
+</Parameters>)";
+    const auto validatedDoc = model::GemErpEuPrTaskInput::fromXml(xml, *StaticData::getXmlValidator());
+    ASSERT_EQ(validatedDoc.count(), 1);
+    EXPECT_TRUE(validatedDoc.isEuRedeemableByPatientAuthorization());
 }

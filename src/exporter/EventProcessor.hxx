@@ -45,7 +45,7 @@ public:
     virtual void processEpaConflict(const model::EventKvnr& kvnr);
     virtual void processEpaUnknown(const model::EventKvnr& kvnr);
 
-    virtual EpaAccount ePaAccountLookup(const model::TaskEvent& taskEvent);
+    virtual EpaAccount ePaAccountLookup(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent);
 
     virtual void scheduleRetryQueue(const model::EventKvnr& kvnr);
     virtual void scheduleHealthRecordRelocation(const model::EventKvnr& kvnr);
@@ -56,6 +56,7 @@ public:
 private:
     template<typename FuncT>
     decltype(auto) autocommit(FuncT&& function);
+    void removeEuMedicationDispenseEvents(const model::EventKvnr &kvnr, std::vector<std::unique_ptr<model::TaskEvent>>& events);
 
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
     std::function<JsonLog()> jsonLog;

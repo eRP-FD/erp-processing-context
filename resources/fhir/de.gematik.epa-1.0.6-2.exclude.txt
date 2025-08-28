@@ -1,0 +1,12 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+# exclude openapi specification
+package/openapi/epa-audit-event-client.openapi.json
+package/openapi/epa-audit-event-server.openapi.json
+package/openapi/epa-basic-client.openapi.json
+package/openapi/epa-basic-server.openapi.json

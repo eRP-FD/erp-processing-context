@@ -112,7 +112,7 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     A_22136_01.finish();
 
     A_22133.start("Check consent");
-    const auto consent = databaseHandle->retrieveConsent(kvnr.value());
+    const auto consent = databaseHandle->retrieveConsent(kvnr.value(), model::ConsentType::CHARGCONS);
     ErpExpect(
         consent.has_value(),
         HttpStatus::Forbidden,

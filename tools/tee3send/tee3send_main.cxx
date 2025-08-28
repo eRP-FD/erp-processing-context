@@ -111,9 +111,9 @@ MedicationExporterFactories createProductionFactories()
 
     std::stringstream ss;
     static TelematikLookup telematikLookup(ss);
-    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation) {
+    factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation, TransactionMode mode) {
         return std::make_unique<MedicationExporterDatabaseFrontend>(
-            std::make_unique<MedicationExporterPostgresBackend>(), keyDerivation, telematikLookup);
+            std::make_unique<MedicationExporterPostgresBackend>(mode), keyDerivation, telematikLookup);
     };
 
     factories.erpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {

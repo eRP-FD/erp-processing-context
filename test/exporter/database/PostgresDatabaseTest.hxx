@@ -187,15 +187,16 @@ public:
 
     bool eventExists(model::TaskEvent::id_t id);
 
-    void insertTaskKvnr(const model::Kvnr& kvnr, std::int32_t retry = 0)
+    void insertTaskKvnr(const model::Kvnr& kvnr, std::int32_t retry = 0, const std::string& assignedEpa = "",
+                        const model::Timestamp& lastConsent = model::Timestamp::now())
     {
         auto kvnr_hashed = kvnrHashed(kvnr);
         auto&& txn = createTransaction();
-        txn.exec_params("INSERT INTO erp_event.kvnr"
-                        "(kvnr_hashed, state, retry_count)"
-                        " VALUES "
-                        "($1, $2, $3)",
-                        kvnr_hashed, "processing", retry);
+        txn.exec("INSERT INTO erp_event.kvnr"
+                 "(kvnr_hashed, state, retry_count, assigned_epa, last_consent_check)"
+                 " VALUES "
+                 "($1, $2, $3, $4, $5)",
+                 pqxx::params{kvnr_hashed, "processing", retry, assignedEpa.c_str(), lastConsent.toXsDateTime()});
         txn.commit();
     }
 

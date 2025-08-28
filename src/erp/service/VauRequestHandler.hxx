@@ -51,6 +51,8 @@ private:
     static std::unique_ptr<InnerTeeRequest> decryptRequest(PcSessionContext& session);
     void handleInnerRequest(PcSessionContext& outerSession, const std::string& upParam,
                             std::unique_ptr<InnerTeeRequest> innerTeeRequest);
+    static void handleInnerRequest(const RequestHandlerManager::MatchingHandler& matchingHandler,
+                                   PcSessionContext& innerSession, PcSessionContext& outerSession);
     static void makeResponse(ServerResponse& innerServerResponse, const Operation& innerOperation,
                       const ServerRequest* innerServerRequest, const InnerTeeRequest& innerTeeRequest,
                       PcSessionContext& outerSession);
@@ -79,6 +81,8 @@ private:
     static void transferResponseHeadersFromInnerSession(const PcSessionContext& innerSession,
                                                         PcSessionContext& outerSession,
                                                         const std::optional<model::PrescriptionId>& prescriptionId);
+    static void setBdeUseCaseHeader(const RequestHandlerContext& handlerContext, PcSessionContext& innerSession,
+                                    PcSessionContext& outerSession);
 };
 
 

@@ -56,7 +56,8 @@ public:
                       const model::Timestamp& lastModified, const model::Timestamp& expiryDate,
                       const model::Timestamp& acceptDate, const db_model::EncryptedBlob& healthCareProviderPrescription,
                       const db_model::EncryptedBlob& doctorIdentity,
-                      const model::Timestamp& lastStatusUpdate) override;
+                      const model::Timestamp& lastStatusUpdate,
+                      bool euRedeemable) override;
     void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                            const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
                            const db_model::EncryptedBlob& pharmacyIdentity,
@@ -69,7 +70,8 @@ public:
                                       const db_model::HashedTelematikId& telematicId,
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
-                                      const db_model::Blob& medicationDispenseSalt) override;
+                                      const db_model::Blob& medicationDispenseSalt,
+                                      const std::optional<model::Task::Status>& taskStatus = std::nullopt) override;
     void updateTaskMedicationDispenseReceipt(
         const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
@@ -84,6 +86,9 @@ public:
                                      model::Task::Status taskStatus,
                                      const model::Timestamp& lastModified,
                                      const model::Timestamp& lastStatusUpdate) override;
+    void updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                         bool redeemable,
+                                         const model::Timestamp& lastModified) override;
 
     std::string storeAuditEventData(db_model::AuditData& auditData) override;
     std::vector<db_model::AuditData> retrieveAuditEventData(const db_model::HashedKvnr& kvnr,
@@ -104,8 +109,10 @@ public:
                                                 const std::optional<UrlArguments>& search) override;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) override;
-    uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                     const std::optional<UrlArguments>& search) override;
+    uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                                      const std::optional<UrlArguments>& search) override;
+    uint64_t countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     std::vector<db_model::MedicationDispense>
     retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr,
@@ -147,9 +154,12 @@ public:
                                                          db_model::MasterKeyType masterKeyType,
                                                          BlobId blobId) override;
 
-    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) override;
-    std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) override;
-    [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr) override;
+    void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime,
+                      db_model::ConsentCategory category) override;
+    std::vector<db_model::Consent> retrieveAllConsents(const db_model::HashedKvnr& kvnr,
+                                                       const UrlArguments& searchArguments) override;
+    [[nodiscard]] bool clearConsent(const db_model::HashedKvnr& kvnr,
+                                    db_model::ConsentCategory category) override;
 
     void storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr) override;
     void updateChargeInformation(const ::db_model::ChargeItem& chargeItem) override;
@@ -175,6 +185,14 @@ public:
     void deleteAuditEvent(const Uuid& eventId);
 
     std::optional<db_model::Blob> retrieveMedicationDispenseSalt(const model::PrescriptionId& taskId);
+
+    bool existsCountryCode(const std::string& countryCode) override;
+    void addCountryCode(const std::string& countryCode);
+    void deleteEuAccessPermission(const db_model::HashedKvnr& kvnr) override;
+    void createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
+                                  const db_model::EncryptedBlob& accessCode, BlobId blobId, const db_model::Blob& salt,
+                                  const model::Timestamp& validUntil) override;
+    std::optional<db_model::EuAccessPermission> retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr) override;
 
 private:
     MockDatabase& mDatabase;

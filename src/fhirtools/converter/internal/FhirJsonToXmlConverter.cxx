@@ -6,28 +6,37 @@
  */
 
 #include "FhirJsonToXmlConverter.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/util/Constants.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
+#include "shared/model/Resource.hxx"
+#include "shared/model/ResourceNames.hxx"
+#include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <rapidjson/document.h>
 
-#include "shared/model/Resource.hxx"
-#include "shared/model/ResourceNames.hxx"
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "shared/util/Expect.hxx"
-#include "shared/util/TLog.hxx"
-#include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/util/Constants.hxx"
-#include "fhirtools/util/XmlHelper.hxx"
-
 using namespace std::string_literals;
-using namespace xmlHelperLiterals;
+using namespace xml_string_literal;
 
 using fhirtools::FhirElement;
 using fhirtools::FhirStructureDefinition;
-using fhirtools::FhirStructureRepository;
+using fhirtools::FhirStructureRepositoryView;
 
-UniqueXmlDocumentPtr FhirJsonToXmlConverter::jsonToXml(const FhirStructureRepository& repo,
+namespace
+{
+const xmlChar* asXmlChar(const char* str)
+{
+    //NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return reinterpret_cast<const xmlChar*>(str);
+}
+};
+
+
+UniqueXmlDocumentPtr FhirJsonToXmlConverter::jsonToXml(const FhirStructureRepositoryView& repo,
                                                        const model::NumberAsStringParserDocument& jsonDoc)
 {
     FhirJsonToXmlConverter converter{repo};
@@ -36,8 +45,9 @@ UniqueXmlDocumentPtr FhirJsonToXmlConverter::jsonToXml(const FhirStructureReposi
 }
 
 
-FhirJsonToXmlConverter::FhirJsonToXmlConverter(const FhirStructureRepository& repo)
-    : mStructureRepository(repo), mResultDoc(xmlNewDoc(reinterpret_cast<const xmlChar*>("1.0")))
+FhirJsonToXmlConverter::FhirJsonToXmlConverter(const FhirStructureRepositoryView& repo)
+    : mStructureRepository(repo)
+    , mResultDoc(xmlNewDoc(asXmlChar("1.0")))
 {
 }
 
@@ -53,8 +63,7 @@ void FhirJsonToXmlConverter::convertResource(xmlNode* parent, const rapidjson::V
     TVLOG(3) << "Create Resource: " << resourceTypeId;
     const auto* resourceType = mStructureRepository.findTypeById(std::string{resourceTypeId});
     ModelExpect(resourceType != nullptr, "Unknown resource type: "s.append(resourceTypeId));
-    UniqueXmlNodePtr resourceNode{
-        xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(resourceTypeId.data()))};
+    UniqueXmlNodePtr resourceNode{xmlNewNode(mFhirNamespace, asXmlChar(resourceTypeId.data()))};
     if (parent)
     {
         (void)convertStructure(*xmlAddChild(parent, resourceNode.release()), *resourceType, 0, resource);
@@ -164,8 +173,7 @@ size_t FhirJsonToXmlConverter::convertMemberWithType(xmlNode& targetNode, const 
     xmlNode* fieldNode = &targetNode;
     if (fhirElementType.kind() == FhirStructureDefinition::Kind::resource)
     {
-        fieldNode = xmlAddChild(&targetNode,
-                                    xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(memberName.data())));
+        fieldNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, asXmlChar(memberName.data())));
         Expect3(fieldNode != nullptr, "Failed add child: " + fhirElementName, std::logic_error);
     }
     if (fhirElementInfo->isArray())
@@ -221,7 +229,7 @@ size_t FhirJsonToXmlConverter::convertSingleMember(xmlNode& targetNode, const st
         {
             Expect3(jsonObject != nullptr, "Object cannot be null.", std::logic_error);
             ModelExpect(jsonObject->IsObject(), "Expected json object: " + fhirElementName);
-            auto* subNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(memberName.c_str())));
+            auto* subNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, asXmlChar(memberName.c_str())));
 
             if (fhirElementInfo->isBackbone())
             {
@@ -269,16 +277,16 @@ size_t FhirJsonToXmlConverter::convertPrimitive(xmlNode& targetNode, const std::
     TVLOG(3) << fhirElementType.typeId() << fhirElementName;
     if (fhirElementInfo->representation() == FhirElement::Representation::xmlAttr && jsonObject)
     {
-        xmlNewProp(&targetNode, reinterpret_cast<const xmlChar*>(memberName.c_str()),
-                    reinterpret_cast<const xmlChar*>(valueString(fhirElementName, *jsonObject).c_str()));
+        xmlNewProp(&targetNode, asXmlChar(memberName.c_str()),
+                   asXmlChar(valueString(fhirElementName, *jsonObject).c_str()));
     }
     else
     {
-        auto* primitiveNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, reinterpret_cast<const xmlChar*>(memberName.c_str())));
+        auto* primitiveNode = xmlAddChild(&targetNode, xmlNewNode(mFhirNamespace, asXmlChar(memberName.c_str())));
         if (jsonObject && !jsonObject->IsNull())
         {
             const auto value = valueString(fhirElementName, *jsonObject);
-            xmlNewProp(primitiveNode, "value"_xs.xs_str(), reinterpret_cast<const xmlChar*>(value.c_str()));
+            xmlNewProp(primitiveNode, "value"_xs.xs_str(), asXmlChar(value.c_str()));
         }
         if (!subObjectOfPrimary.IsNull())
         {

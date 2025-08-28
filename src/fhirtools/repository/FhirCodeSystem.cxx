@@ -5,13 +5,16 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "fhirtools/repository/FhirCodeSystem.hxx"
-#include "shared/util/Version.hxx"
 #include "fhirtools/FPExpect.hxx"
-#include "fhirtools/repository/FhirResourceGroup.hxx"
+#include "fhirtools/repository/DefinitionKey.hxx"
+#include "fhirtools/repository/FhirCodeSystem.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "shared/util/Version.hxx"
 
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <ranges>
 
 namespace fhirtools
 {
@@ -29,6 +32,16 @@ const FhirVersion& FhirCodeSystem::getVersion() const
     return mVersion;
 }
 
+DefinitionKey FhirCodeSystem::key() const
+{
+    return {mUrl, mVersion};
+}
+
+const std::filesystem::path& fhirtools::FhirCodeSystem::sourceFile() const
+{
+    return mSourceFile;
+}
+
 std::shared_ptr<const FhirResourceGroup> fhirtools::FhirCodeSystem::resourceGroup() const
 {
     return mGroup;
@@ -38,10 +51,36 @@ bool FhirCodeSystem::isCaseSensitive() const
 {
     return mCaseSensitive;
 }
-const std::vector<FhirCodeSystem::Code>& FhirCodeSystem::getCodes() const
+
+// NOLINTNEXTLINE(misc-no-recursion)
+FhirCodeSystemCodes fhirtools::FhirCodeSystem::getCodes(const FhirStructureRepositoryView& view) const
 {
-    return mCodes;
+    const auto& supplementers = view.findSupplementers(mUrl, mVersion);
+    std::map<std::string, Code> codes;
+    std::ranges::transform(mCodes, inserter(codes, codes.begin()),
+                           [](const Code& code) -> std::pair<std::string, Code> {
+                               return {code.code, code};
+                           });
+    for (const FhirCodeSystem* supplementer: supplementers)
+    {
+        for (const auto& supplemantalCode: supplementer->getCodes(view))
+        {
+            const auto [code, inserted] = codes.try_emplace(supplemantalCode.code, supplemantalCode);
+            if (!inserted)
+            {
+                std::ranges::copy(supplemantalCode.isA, back_inserter(code->second.isA));
+                std::ranges::copy(supplemantalCode.properties, back_inserter(code->second.properties));
+                Expect(supplemantalCode.parent.empty() || supplemantalCode.parent == code->second.parent,
+                       supplementer->sourceFile().native() + ": supplemantal code has different code hierarchy: [" +
+                           to_string(supplementer->key()) + "]" + supplemantalCode.code);
+            }
+        }
+    }
+    std::vector<FhirCodeSystem::Code> resultCodes;
+    std::ranges::move(codes | std::views::values, std::back_inserter(resultCodes));
+    return {{mUrl, mVersion}, std::move(resultCodes), mCaseSensitive, mSynthesized};
 }
+
 bool FhirCodeSystem::isEmpty() const
 {
     return mCodes.empty();
@@ -50,11 +89,11 @@ FhirCodeSystem::ContentType FhirCodeSystem::getContentType() const
 {
     return mContentType;
 }
-const std::string& FhirCodeSystem::getSupplements() const
+const std::optional<DefinitionKey>& FhirCodeSystem::getSupplements() const
 {
     return mSupplements;
 }
-std::vector<std::string> FhirCodeSystem::resolveIsA(const std::string& value, const std::string& property) const
+FhirCodeSystemCodes FhirCodeSystemCodes::resolveIsA(const std::string& value, const std::string& property) const
 {
     if (property == "concept")
     {
@@ -66,63 +105,63 @@ std::vector<std::string> FhirCodeSystem::resolveIsA(const std::string& value, co
     }
     else
     {
-        FPFail("Unsupported property for is-a: " + property);
+        FPFail("Unsupported property for is-a: " + property + " codeSystem: " + to_string(mKey));
     }
 }
 
-std::vector<std::string> FhirCodeSystem::resolveIsAParent(const std::string& value) const
+FhirCodeSystemCodes FhirCodeSystemCodes::resolveIsAParent(const std::string& value) const
 {
-    std::vector<std::string> ret;
-    for (const auto& item : mCodes)
+    FhirCodeSystemCodes ret{mKey, {}, mCaseSensitive, mSynthesized};
+    for (const auto& item : (*this))
     {
         if (! item.parent.empty())
         {
             if (isA(getCode(item.parent), value))
             {
-                ret.push_back(item.parent);
+                ret.push_back(item);
             }
         }
     }
     return ret;
 }
 
-std::vector<std::string> FhirCodeSystem::resolveIsAConcept(const std::string& value) const
+FhirCodeSystemCodes FhirCodeSystemCodes::resolveIsAConcept(const std::string& value) const
 {
-    std::vector<std::string> ret;
-    for (const auto& item : mCodes)
+    FhirCodeSystemCodes ret{mKey, {}, mCaseSensitive, mSynthesized};
+    for (const auto& item : *this)
     {
         bool equals =
             mCaseSensitive ? item.code == value : boost::to_lower_copy(value) == boost::to_lower_copy(item.code);
         if (equals || isA(item, value))
         {
-            ret.push_back(item.code);
+            ret.push_back(item);
         }
     }
     return ret;
 }
 
-std::vector<std::string> FhirCodeSystem::resolveIsNotA(const std::string& value, const std::string& property) const
+FhirCodeSystemCodes FhirCodeSystemCodes::resolveIsNotA(const std::string& value, const std::string& property) const
 {
-    std::vector<std::string> ret;
+    FhirCodeSystemCodes ret{mKey, {}, mCaseSensitive, mSynthesized};
     if (property == "concept")
     {
-        for (const auto& item : mCodes)
+        for (const auto& item : *this)
         {
             if (! isA(item, value))
             {
-                ret.push_back(item.code);
+                ret.push_back(item);
             }
         }
     }
     else if (property == "parent")
     {
-        for (const auto& item : mCodes)
+        for (const auto& item : *this)
         {
             if (! item.parent.empty())
             {
                 if (! isA(getCode(item.parent), value))
                 {
-                    ret.push_back(item.code);
+                    ret.push_back(item);
                 }
             }
         }
@@ -133,32 +172,40 @@ std::vector<std::string> FhirCodeSystem::resolveIsNotA(const std::string& value,
     }
     return ret;
 }
-bool FhirCodeSystem::isA(const FhirCodeSystem::Code& code, const std::string& value) const
+
+bool FhirCodeSystemCodes::isA(const FhirCodeSystem::Code& code, const std::string& value)
 {
     return std::ranges::find(code.isA, value) != code.isA.end();
 }
-const FhirCodeSystem::Code& FhirCodeSystem::getCode(const std::string& code) const
+
+const FhirCodeSystem::Code& FhirCodeSystemCodes::getCode(const std::string& code) const
 {
-    for (const auto& item : mCodes)
-    {
-        if (item.code == code)
-        {
-            return item;
-        }
-    }
-    FPFail("Could not find code " + code);
+    auto result = std::ranges::find(*this, code, &FhirCodeSystem::Code::code);
+    FPExpect(result != end(), "Could not find code " + code);
+    return *result;
 }
-std::vector<std::string> FhirCodeSystem::resolveEquals(const std::string& value, const std::string& property) const
+
+FhirCodeSystemCodes FhirCodeSystemCodes::resolveEquals(const std::string& value, const std::string& property) const
 {
-    FPExpect(property == "parent", "CodeSystem: " + mUrl + ": Unsupported property for =: " + property);
-    std::vector<std::string> ret;
-    for (const auto& item : mCodes)
+    const auto isParentProperty = property == "parent";
+    FhirCodeSystemCodes ret{mKey, {}, mCaseSensitive, mSynthesized};
+    for (const auto& code : *this)
     {
-        if (! item.parent.empty())
+        if (isParentProperty && ! code.parent.empty())
         {
-            if (getCode(item.parent).code == value)
+            if (getCode(code.parent).code == value)
             {
-                ret.push_back(item.code);
+                ret.push_back(code);
+            }
+        }
+        if (! isParentProperty)
+        {
+            for (const auto& codeProperty : code.properties)
+            {
+                if (property == codeProperty.code && value == codeProperty.value)
+                {
+                    ret.emplace_back(code);
+                }
             }
         }
     }
@@ -168,17 +215,42 @@ bool FhirCodeSystem::isSynthesized() const
 {
     return mSynthesized;
 }
-bool FhirCodeSystem::containsCode(const std::string_view& code) const
+
+FhirCodeSystemCodes::FhirCodeSystemCodes(DefinitionKey key, std::vector<FhirCodeSystem::Code> codes, bool caseSensitive,
+                                         bool synthesized)
+    : vector{std::move(codes)}
+    , mKey{std::move(key)}
+    , mCaseSensitive{caseSensitive}
+    , mSynthesized{synthesized}
 {
-    if (isCaseSensitive())
+}
+
+const DefinitionKey& FhirCodeSystemCodes::key() const
+{
+    return mKey;
+}
+
+bool FhirCodeSystemCodes::caseSensitive() const
+{
+    return mCaseSensitive;
+}
+
+bool FhirCodeSystemCodes::synthesized() const
+{
+    return mSynthesized;
+}
+
+bool FhirCodeSystemCodes::containsCode(std::string_view code) const
+{
+    if (mCaseSensitive)
     {
-        return mCodes.end() != std::ranges::find_if(mCodes, [&code](const auto& c) {
+        return end() != std::ranges::find_if(*this, [&code](const auto& c) {
                    return c.code == code;
                });
     }
     else
     {
-        return mCodes.end() != std::ranges::find_if(mCodes, [&code](const auto& c) {
+        return end() != std::ranges::find_if(*this, [&code](const auto& c) {
                    return boost::algorithm::iequals(code, c.code);
                });
     }
@@ -210,10 +282,15 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::version(FhirVersion version)
     return *this;
 }
 
-FhirCodeSystem::Builder& FhirCodeSystem::Builder::initGroup(const FhirResourceGroupResolver& resolver,
-                                                            const std::filesystem::path& source)
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::sourceFile(std::filesystem::path path)
 {
-    mCodeSystem->mGroup = resolver.findGroup(mCodeSystem->getUrl(), mCodeSystem->getVersion(), source);
+    mCodeSystem->mSourceFile = std::move(path);
+    return *this;
+}
+
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::initGroup(const FhirResourceGroupResolver& resolver)
+{
+    mCodeSystem->mGroup = resolver.findGroup(*mCodeSystem);
     return *this;
 }
 
@@ -237,7 +314,8 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::code(const std::string& code)
 {
     mCodeSystem->mCodes.push_back(FhirCodeSystem::Code{.code = code,
                                                        .isA = mConceptStack,
-                                                       .parent = mConceptStack.empty() ? "" : mConceptStack.back()});
+                                                       .parent = mConceptStack.empty() ? "" : mConceptStack.back(),
+                                                       .properties = {}});
     mConceptStack.push_back(code);
     return *this;
 }
@@ -255,12 +333,12 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::contentType(const std::string&
     }
     return *this;
 }
-FhirCodeSystem::Builder& FhirCodeSystem::Builder::supplements(const std::string& canonical)
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::supplements(const DefinitionKey& key)
 {
     FPExpect(mCodeSystem->mContentType == ContentType::supplement,
              "CodeSystem.supplement only expected for CodeSystem.content=supplement, but is " +
                  std::string{magic_enum::enum_name(mCodeSystem->mContentType)});
-    mCodeSystem->mSupplements = canonical;
+    mCodeSystem->mSupplements = key;
     return *this;
 }
 FhirCodeSystem::Builder& FhirCodeSystem::Builder::synthesized()
@@ -268,11 +346,30 @@ FhirCodeSystem::Builder& FhirCodeSystem::Builder::synthesized()
     mCodeSystem->mSynthesized = true;
     return *this;
 }
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::addProperty()
+{
+    mCodeSystem->mCodes.back().properties.emplace_back();
+    return *this;
+}
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::propertyCode(const std::string& code)
+{
+    mCodeSystem->mCodes.back().properties.back().code = code;
+    return *this;
+}
+FhirCodeSystem::Builder& FhirCodeSystem::Builder::propertyValue(const std::string& value)
+{
+    mCodeSystem->mCodes.back().properties.back().value = value;
+    return *this;
+}
+void fhirtools::FhirCodeSystem::Builder::reset()
+{
+    mCodeSystem = std::make_unique<FhirCodeSystem>();
+    mConceptStack.clear();
+}
 FhirCodeSystem FhirCodeSystem::Builder::getAndReset()
 {
     FhirCodeSystem prev{std::move(*mCodeSystem)};
-    mCodeSystem = std::make_unique<FhirCodeSystem>();
-    mConceptStack.clear();
+    reset();
     FPExpect3(prev.mGroup, "Missing group in CodeSystem: " + prev.getUrl() + '|' + to_string(prev.getVersion()),
               std::logic_error);
     return prev;

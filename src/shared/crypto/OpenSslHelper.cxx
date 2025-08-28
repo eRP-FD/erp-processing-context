@@ -79,8 +79,8 @@ std::string bioToString (BIO* bio)
 std::string x509NametoString(const X509_NAME* name)
 {
     auto mem = shared_BIO::make();
-    const int status = X509_NAME_print(mem.get(), name, 0);
-    if (status != 1)
+    const int status = X509_NAME_print_ex(mem.get(), name, 0, XN_FLAG_ONELINE & ~XN_FLAG_SPC_EQ);
+    if (status == -1)
     {
         showAllOpenSslErrors();
         std::string location = std::string(__FILE__) + ":" + std::to_string(__LINE__);

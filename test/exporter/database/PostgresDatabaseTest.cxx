@@ -66,6 +66,26 @@ std::string printBasicString(const std::basic_string<std::byte>& byteString)
     return os.str();
 }
 
+TEST_F(PostgresDatabaseTest, assignedEpaPrefix)
+{
+    model::Kvnr kvnr{"X000000012"};
+    insertTaskKvnr(kvnr, 0, "epa-as-1.epa4all.de:443", model::Timestamp::now());
+    insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
+                    std::nullopt);
+
+    database().finalizeKvnr({kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0},
+                            "epa-as-1.epa4all.de:443");
+
+    database().commitTransaction();
+
+    auto transaction = pqxx::work{getConnection()};
+    auto results = transaction.exec("SELECT assigned_epa FROM erp_event.kvnr WHERE kvnr_hashed = $1", kvnrHashed(kvnr));
+    transaction.commit();
+    ASSERT_EQ(results.size(), 1);
+    EXPECT_STREQ(results.at(0, 0).c_str(), "epa-as-1");
+}
+
 TEST_F(PostgresDatabaseTest, getAllEventsForKvnr)//NOLINT(readability-function-cognitive-complexity)
 {
     model::Kvnr kvnr{"X000000012"};

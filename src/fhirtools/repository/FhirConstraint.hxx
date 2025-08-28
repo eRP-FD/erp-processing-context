@@ -16,7 +16,7 @@
 
 namespace fhirtools {
 class Expression;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 
 /**
  * @brief Represents a single Constraint as provided by ElementDefinition.constraint
@@ -33,8 +33,8 @@ public:
     [[nodiscard]] Severity getSeverity() const;
     [[nodiscard]] const std::string& getHuman() const;
     [[nodiscard]] const std::string& getExpression() const;
-    [[nodiscard]] std::shared_ptr<const Expression> parsedExpression(const FhirStructureRepository& repo,
-                                                              ExpressionCache* cache = nullptr) const;
+    [[nodiscard]] std::shared_ptr<const Expression> parsedExpression(const FhirStructureRepositoryView& repo,
+                                                                     ExpressionCache* cache = nullptr) const;
 
 
     std::strong_ordering operator <=> (const FhirConstraint&) const;

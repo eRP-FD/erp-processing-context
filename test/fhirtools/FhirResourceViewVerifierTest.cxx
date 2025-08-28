@@ -1,9 +1,15 @@
-#include "fhirtools/repository/FhirResourceViewVerifier.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
-#include "test/util/ResourceManager.hxx"
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
 
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirResourceViewVerifier.hxx"
+#include "test/util/ResourceManager.hxx"
 
 #include <gtest/gtest.h>
 
@@ -19,7 +25,7 @@ TEST(FhirResourceViewVerifierTest, missingValueSetVersion)
 
         },
         resolver););
-    fhirtools::FhirResourceViewGroupSet view{"test", resolver.findGroupById("test"), &repo};
-    fhirtools::FhirResourceViewVerifier verifier{repo, &view};
+    auto view = fhirtools::FhirResourceViewGroupSet::create("test", resolver.findGroupById("test"), &repo);
+    fhirtools::FhirResourceViewVerifier verifier{repo, view.get()};
     EXPECT_ANY_THROW(verifier.verify());
 }

@@ -7,6 +7,8 @@
 
 #include "FhirElement.hxx"
 #include "fhirtools/FPExpect.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 
@@ -70,7 +72,19 @@ std::string_view fhirtools::FhirElement::originalFieldName() const
     return std::string_view{mOriginalName.data() + dot + 1, mOriginalName.data() + colon};
 }
 
-const std::optional<fhirtools::FhirSlicing>& FhirElement::slicing() const
+bool fhirtools::FhirElement::isA(const std::string& typeId) const
+{
+    if (mTypeId == typeId)
+    {
+        return true;
+    }
+    const auto& repo = mStructureDefinition->repositoryBackend();
+    const auto* typeDef = repo.findTypeById(typeId);
+    Expect3(typeDef != nullptr, "Type `" + typeId + "` is not defined.", std::logic_error);
+    return mStructureDefinition->isDerivedFrom(*repo.defaultView(), *typeDef);
+}
+
+const std::shared_ptr<const fhirtools::FhirSlicing>& FhirElement::slicing() const
 {
     return mSlicing;
 }
@@ -113,20 +127,48 @@ const std::set<std::string>& fhirtools::FhirElement::referenceTargetProfiles() c
     return mReferenceTargetProfiles;
 }
 
+const fhirtools::FhirStructureDefinition& FhirElement::structureDefinition() const
+{
+    return *mStructureDefinition;
+}
+
+class FhirElement::Builder::ConstructFhirElement : public FhirElement
+{
+public:
+    ConstructFhirElement() = default;
+    template <typename... Ts>
+    ConstructFhirElement(Ts&&... args) : FhirElement{std::forward<Ts...>(args...)}{}
+    ~ConstructFhirElement() override = default;
+};
+
 FhirElement::Builder::Builder()
-    : mFhirElement(std::make_unique<FhirElement>())
+    : mFhirElement(std::make_unique<ConstructFhirElement>())
 {
 }
 
-FhirElement::Builder::Builder(FhirElement elementTemplate)
-    : mFhirElement(std::make_unique<FhirElement>(std::move(elementTemplate)))
+//NOLINTNEXTLINE(hicpp-noexcept-move, performance-noexcept-move-constructor) - construction of FhirElement might throw
+fhirtools::FhirElement::Builder::Builder(Builder&& other)
+    : Builder{}
 {
+    swap(mFhirElement, other.mFhirElement);
+}
+
+
+FhirElement::Builder::Builder(const FhirElement& elementTemplate)
+    : mFhirElement(std::make_shared<ConstructFhirElement>(elementTemplate))
+{
+    if (mFhirElement->mSlicing != nullptr)
+    {
+        // mSlicing points back to the Element, therefore we will need a new instance
+        slicing(FhirSlicing::Builder{*mFhirElement->mSlicing});
+    }
 }
 
 std::shared_ptr<const FhirElement> FhirElement::Builder::getAndReset()
 {
+    Expect3(mFhirElement->mStructureDefinition != nullptr, "mStructureDefinition not set", std::logic_error);
     auto prev{std::move(mFhirElement)};
-    mFhirElement = std::make_shared<FhirElement>();
+    mFhirElement = std::make_shared<ConstructFhirElement>();
     return prev;
 }
 
@@ -258,9 +300,10 @@ FhirElement::Builder& FhirElement::Builder::addConstraint(FhirConstraint key)
     return *this;
 }
 
-FhirElement::Builder& FhirElement::Builder::slicing(FhirSlicing&& slicing)
+FhirElement::Builder& FhirElement::Builder::slicing(FhirSlicing::Builder slicing)
 {
-    mFhirElement->mSlicing.emplace(std::move(slicing));
+    slicing.baseElement(mFhirElement);
+    mFhirElement->mSlicing = slicing.getAndReset();
     return *this;
 }
 
@@ -351,6 +394,12 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::addTargetProfile(std::str
 {
     TVLOG(4) << "target profile: " << targetProfile;
     mFhirElement->mReferenceTargetProfiles.emplace(std::move(targetProfile));
+    return *this;
+}
+
+FhirElement::Builder& FhirElement::Builder::structureDefinition(const FhirStructureDefinition* def)
+{
+    mFhirElement->mStructureDefinition = def;
     return *this;
 }
 

@@ -30,7 +30,7 @@ class ValidationResults;
 /// @brief stores information of an Element in the StructureDefinition
 ///
 /// XPath: StructureDefinition/snapshot/element
-class FhirElement
+class FhirElement : public std::enable_shared_from_this<FhirElement>
 {
 public:
     class Builder;
@@ -70,7 +70,6 @@ public:
         DefinitionKey key{"unset-binding", std::nullopt};
     };
 
-    FhirElement();
     virtual ~FhirElement();
 
 
@@ -86,9 +85,10 @@ public:
     bool isArray() const { return mIsArray; }
     [[nodiscard]] bool isBackbone() const { return mIsBackbone; }
     bool isRoot() const { return mIsRoot; }
+    bool isA(const std::string& typeId) const;
 
-    const std::optional<FhirSlicing>& slicing() const;
-    bool hasSlices() const { return mSlicing.has_value() && !mSlicing->slices().empty();}
+    const std::shared_ptr<const FhirSlicing>& slicing() const;
+    bool hasSlices() const { return mSlicing != nullptr && !mSlicing->slices().empty();}
     const std::shared_ptr<const FhirValue>& pattern() const { return mPattern; }
     const std::shared_ptr<const FhirValue>& fixed() const { return mFixed; }
 
@@ -107,13 +107,18 @@ public:
 
     const std::set<std::string>& referenceTargetProfiles() const;
 
+    const FhirStructureDefinition& structureDefinition() const;
+
     // immutable:
-    FhirElement(FhirElement&&) = default;
-    FhirElement(const FhirElement&) = default;
+    FhirElement(FhirElement&&) = delete;
     FhirElement& operator=(FhirElement&&) = delete;
     FhirElement& operator=(const FhirElement&) = delete;
 
 private:
+    // should always be called via Builder
+    FhirElement();
+    FhirElement(const FhirElement&) = default;
+
     bool mIsRoot = false;
     std::string mName;
     std::string mOriginalName;
@@ -124,7 +129,7 @@ private:
     std::vector<FhirConstraint> mConstraints;
     bool mIsArray = false;
     bool mIsBackbone = false;
-    std::optional<FhirSlicing> mSlicing;
+    std::shared_ptr<const FhirSlicing> mSlicing;
     std::shared_ptr<const FhirValue> mPattern;
     std::shared_ptr<const FhirValue> mFixed;
     Cardinality mCardinality;
@@ -134,6 +139,7 @@ private:
     std::optional<MinMaxValueType> mMinValue;
     std::optional<MinMaxValueType> mMaxValue;
     std::set<std::string> mReferenceTargetProfiles;
+    const FhirStructureDefinition* mStructureDefinition = nullptr;
 };
 
 std::ostream& operator << (std::ostream&, const FhirElement::Cardinality&);
@@ -144,7 +150,11 @@ class FhirElement::Builder
 public:
     Builder();
 
-    explicit Builder(FhirElement elementTemplate);
+    /// clears @p other ready to build a new Element
+    //NOLINTNEXTLINE(hicpp-noexcept-move, performance-noexcept-move-constructor) - construction of FhirElement might throw
+    Builder(Builder&& other);
+
+    explicit Builder(const FhirElement& elementTemplate);
 
     Builder& isRoot(bool newIsRoot);
 
@@ -168,7 +178,7 @@ public:
 
     Builder& addConstraint(FhirConstraint key);
 
-    Builder& slicing(FhirSlicing&&);
+    Builder& slicing(FhirSlicing::Builder slicing);
 
     Builder& pattern(std::shared_ptr<const FhirValue> value);
 
@@ -194,13 +204,15 @@ public:
 
     Builder& addTargetProfile(std::string&& targetProfile);
 
+    Builder& structureDefinition(const FhirStructureDefinition* def);
+
     std::shared_ptr<const FhirElement> getAndReset();
 
     Builder(const Builder&) = delete;
     Builder& operator=(const Builder&) = delete;
-    Builder(Builder&&) = default;
-    Builder& operator=(Builder&&) = default;
+    Builder& operator=(Builder&&) = delete;
 private:
+    class ConstructFhirElement;
     std::shared_ptr<FhirElement> mFhirElement;
 };
 

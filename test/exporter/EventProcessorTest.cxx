@@ -102,6 +102,57 @@ public:
     }
 };
 
+TEST_F(EventProcessorTest, expiredCachedHost)
+{
+    epaAccountLookupMock.WellKnownHost = "mockServer.example.net";
+    model::Kvnr kvnr{"X000000012"};
+
+    // last consent is older than 180 days.
+    insertTaskKvnr(kvnr, 0, "oldHost.example.net", model::Timestamp::fromGermanDate("1970-01-01"));
+
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, "", model::EventKvnr::State::processing, 0);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    auto events = database().getAllEventsForKvnr(eventKvnr);
+    database().commitTransaction();
+    const auto& firstEvent = *events.front();
+    auto epaAccount = eventProcessor.ePaAccountLookup(eventKvnr, firstEvent);
+    EXPECT_STREQ(epaAccount.host.c_str(), epaAccountLookupMock.WellKnownHost.c_str());
+}
+
+TEST_F(EventProcessorTest, recentCachedHost)
+{
+    // mock lookup supports only passthrough of one well known host:
+    epaAccountLookupMock.WellKnownHost = "mockServer.example.net";
+    model::Kvnr kvnr{"X000000012"};
+
+    insertTaskKvnr(kvnr, 0, epaAccountLookupMock.WellKnownHost, model::Timestamp::now());
+
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    // last consent is older than 180 days.
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, "", model::EventKvnr::State::processing, 0);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    auto events = database().getAllEventsForKvnr(eventKvnr);
+    database().commitTransaction();
+    const auto& firstEvent = *events.front();
+    auto epaAccount = eventProcessor.ePaAccountLookup(eventKvnr, firstEvent);
+    EXPECT_STREQ(epaAccount.host.c_str(), epaAccountLookupMock.WellKnownHost.c_str());
+}
+
 TEST_F(EventProcessorTest, process)
 {
     model::Kvnr kvnr{"X000000012"};
@@ -367,6 +418,28 @@ TEST_F(EventProcessorTest, processOne_jsonlog_failure_provideDispensation)
     eventProcessor.processOne(eventKvnr);
     std::string output = testing::internal::GetCapturedStderr();
     EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
+}
+
+TEST_F(EventProcessorTest, processOne_success_provideDispensationEu)
+{
+    // MedicationDispense bundle wih GEM_ERPEU_PR_MedicationDispense + GEM_ERPEU_PR_Medication
+	const auto& medicationDispenseBundleEu = R"--({"id":"25dd9935-f771-4125-abf3-345f466f67b9","type":"searchset","timestamp":"2025-07-25T07:49:55.378+00:00","resourceType":"Bundle","total":0,"entry":[{"fullUrl":"https://gematik.erppre.de:443/MedicationDispense/160.000.000.004.715.74","resource":{"resourceType":"MedicationDispense","id":"160.000.000.004.715.74","meta":{"profile":["https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense|1.0"]},"identifier":[{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.004.715.74"}],"status":"completed","medicationReference":{"reference":"urn:uuid:01390a96-f403-4ed8-b1a8-ae725875d1dc"},"subject":{"identifier":{"system":"http://fhir.de/sid/gkv/kvid-10","value":"X234567891"}},"performer":[{"actor":{"reference":"PractitionerRole/Example-EU-PractitionerRole"}}],"whenHandedOver":"2025-10-01"},"search":{"mode":"match"}},{"fullUrl":"urn:uuid:01390a96-f403-4ed8-b1a8-ae725875d1dc","resource":{"resourceType":"Medication","id":"01390a96-f403-4ed8-b1a8-ae725875d1dc","meta":{"profile":["https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication|1.0"]},"extension":[{"url":"https://gematik.de/fhir/epa-medication/StructureDefinition/drug-category-extension","valueCoding":{"system":"https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs","code":"00"}},{"url":"https://gematik.de/fhir/epa-medication/StructureDefinition/medication-id-vaccine-extension","valueBoolean":false},{"url":"http://fhir.de/StructureDefinition/normgroesse","valueCode":"N1"}],"code":{"coding":[{"system":"http://fhir.de/CodeSystem/ifa/pzn","code":"06313728"}],"text":"Sumatriptan-1a Pharma 100 mg Tabletten"},"form":{"coding":[{"system":"https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM","code":"TAB"}]},"amount":{"numerator":{"extension":[{"url":"https://gematik.de/fhir/epa-medication/StructureDefinition/medication-total-quantity-formulation-extension","valueString":"20"}],"value":20,"unit":"St"},"denominator":{"value":1}},"batch":{"lotNumber":"1234567890"}},"search":{"mode":"include"}}]})--";
+    model::Kvnr kvnr{"X011300021"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundleEu,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    eventProcessor.processOne(eventKvnr);
+
+    const auto events = database().getAllEventsForKvnr(eventKvnr);
+    EXPECT_EQ(events.size(), 1); // One event was prematurely removed due to eu medication dispense, one event was properly processed.
+    database().commitTransaction();
 }
 
 TEST_F(EventProcessorTest, calculateExponentialBackoffDelay)
@@ -997,7 +1070,7 @@ TEST_F(EventProcessorTest, ePaAccountLookup_kvnrIsLogged)
                                  "jwtDoctorProfessionOid", model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
                                  model::Timestamp::fromGermanDate("2024-12-24"));
 
-    const auto result =  eventProcessor.ePaAccountLookup(taskEvent);
+    const auto result =  eventProcessor.ePaAccountLookup(eventKvnr, taskEvent);
     EXPECT_EQ(result.lookupResult, EpaAccount::Code::allowed);
     auto loggedKvnr = std::any_cast<std::optional<model::HashedKvnr>>(
         epaAccountLookupMock.mockLookupClient.getLogAttributes().at(BDEMessage::hashedKvnrKey));

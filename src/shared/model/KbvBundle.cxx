@@ -17,6 +17,12 @@
 void model::KbvBundle::additionalValidation() const
 {
     Resource::additionalValidation();
+    checkMedications();
+    checkPatients();
+    checkCoverage();
+}
+void model::KbvBundle::checkMedications() const
+{
     const auto& medications = getResourcesByType<model::KbvMedicationGeneric>();
     for (const auto& medication : medications)
     {
@@ -50,20 +56,41 @@ void model::KbvBundle::additionalValidation() const
             A_24034.finish();
         }
     }
+}
 
-    A_23936.start("Check for valid values of Patient.identifier.type.coding.code");
+
+void model::KbvBundle::checkPatients() const
+{
     const auto& patients = getResourcesByType<model::Patient>();
     for (const auto& patient : patients)
     {
-        if (patient.hasIdentifier())
+        using namespace fhirtools::version_literal;
+        auto version = patient.getProfileVersionChecked();
+        if (version < "1.2"_ver)
         {
-            const auto& identifierTypeCodingCode = patient.identifierTypeCodingCode();
-            ErpExpect(identifierTypeCodingCode == "GKV" || identifierTypeCodingCode == "PKV", HttpStatus::BadRequest,
-                      "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.");
+            A_23936.start("Check for valid values of Patient.identifier.type.coding.code");
+            if (patient.identifierSize() > 0)
+            {
+                const auto& identifierTypeCodingCode = patient.identifierTypeCodingCode();
+                ErpExpect(identifierTypeCodingCode == "GKV" || identifierTypeCodingCode == "PKV", HttpStatus::BadRequest,
+                          "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.");
+            }
+            A_23936.finish();
+        }
+        else
+        {
+            A_23936.start("A_23936 / ANFERP-3322 Anpassung Regel für kbv 1.3.0 Profile");
+            using namespace std::string_literals;
+            using model::resource::naming_system::gkvKvid10;
+            ErpExpect(patient.identifierSystem(0) == gkvKvid10, HttpStatus::BadRequest,
+                      "Patient.identifier.system must be "s.append(gkvKvid10));
+            A_23936.finish();
         }
     }
-    A_23936.finish();
+}
 
+void model::KbvBundle::checkCoverage() const
+{
     const auto kbvCoverages = getResourcesByType<model::KbvCoverage>();
     for (const auto& kbvCoverage : kbvCoverages)
     {

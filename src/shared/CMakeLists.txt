@@ -11,6 +11,7 @@ add_compile_definitions(BOOST_ASIO_NO_DEPRECATED)
 
 add_library(erp-shared STATIC
     admin/AdminRequestHandler.cxx
+    admin/GetMetricsHandler.cxx
     audit/AuditDataCollector.cxx
     audit/AuditEventCreator.cxx
     audit/AuditEventTextTemplates.cxx
@@ -85,11 +86,16 @@ add_library(erp-shared STATIC
     model/Bundle.cxx
     model/Coding.cxx
     model/Composition.cxx
+    model/CountryCode.cxx
     model/Device.cxx
     model/extensions/KBVMedicationCategory.cxx
     model/extensions/KBVMultiplePrescription.cxx
     model/Extension.cxx
+    model/GemErpEuPrMedicationDispense.cxx
     model/GemErpPrMedication.cxx
+    model/GemErpEuPrPractitioner.cxx
+    model/GemErpEuPrPractitionerRole.cxx
+    model/GemErpEuPrOrganization.cxx
     model/Health.cxx
     model/Iknr.cxx
     model/Kvnr.cxx
@@ -187,6 +193,7 @@ add_library(erp-shared STATIC
     tsl/X509Certificate.cxx
     tsl/X509Store.cxx
     util/Base64.cxx
+    util/BdeUseCases.cxx
     util/Buffer.cxx
     util/ByteHelper.cxx
     util/Condition.cxx
@@ -209,8 +216,10 @@ add_library(erp-shared STATIC
     util/Holidays.cxx
     util/InvalidConfigurationException.cxx
     util/JsonLog.cxx
+    util/MetricsRegistry.cxx
     util/PeriodicTimer.cxx
     util/Random.cxx
+    util/RuntimeConfigurationBase.cxx
     util/SafeString.cxx
     util/String.cxx
     util/ThreadNames.cxx
@@ -260,6 +269,7 @@ target_link_libraries(erp-shared
         libpqxx::pqxx
         magic_enum::magic_enum
         openssl::openssl
+        prometheus-cpp::prometheus-cpp
         rapidjson
         redis++::redis++_static
         xmlsec::xmlsec

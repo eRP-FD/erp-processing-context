@@ -6,6 +6,10 @@
  */
 
 #include "shared/util/Configuration.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/views/KbvSchluesseltabellenConfiguration.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/ErpConstants.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Environment.hxx"
@@ -15,9 +19,6 @@
 #include "shared/util/InvalidConfigurationException.hxx"
 #include "shared/util/String.hxx"
 #include "shared/validation/XmlValidator.hxx"
-#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <charconv>
 #include <regex>
@@ -80,6 +81,18 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle, {}},
     {model::ProfileType::Subscription, {}},
     {model::ProfileType::OperationOutcome, {}},
+    {model::ProfileType::GEM_ERPEU_PR_Consent, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_MedicationDispense, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Medication, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_Practitioner, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_PractitionerRole, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPEU_PR_Organization, {{"EU_2025_10_01"}}},
+    {model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input, {{"GEM_WF_1_5_0"}}},
 };
 
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement>
@@ -289,13 +302,17 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
 
     lookupKey("", std::string{ERP::fhirResourceGroups});
     lookupKey("", std::string{ERP::fhirResourceViews});
+    lookupKey("", std::string{ERP::kbvSchluesseltabellen});
     lookupKey("", std::string{ERP::synthesizeCodesystemPath});
     lookupKey("", std::string{ERP::synthesizeValuesetPath});
+    lookupKey("", std::string{ERP::versionMappingPath});
 
     lookupKey("", std::string{MedicationExporter::fhirResourceGroups});
     lookupKey("", std::string{MedicationExporter::fhirResourceViews});
+    lookupKey("", std::string{MedicationExporter::kbvSchluesseltabellen});
     lookupKey("", std::string{MedicationExporter::synthesizeCodesystemPath});
     lookupKey("", std::string{MedicationExporter::synthesizeValuesetPath});
+    lookupKey("", std::string{MedicationExporter::versionMappingPath});
 }
 
 const std::string& ConfigurationBase::serverHost() const
@@ -404,11 +421,15 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS      , {"ERP_REPORT_LEIPS_KEY_REFRESH_INTERVAL_SECONDS"      , "/erp/report/leips/refreshIntervalSeconds", Flags::categoryFunctionalStatic, "Maximum age of the pseudoname_key in seconds from the time of its creation until it is considered as expired."}},
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
+    {ConfigurationKey::FEATURE_EU                                     , {"ERP_FEATURE_EU"                                     , "/erp/feature/eu", Flags::categoryFunctional, "Feature-toggle for the EU-Prescription feature"}},
+    {ConfigurationKey::ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER          , {"ERP_ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER"          , "/erp/feature/enableCheckAusschlussKostentraeger", Flags::categoryFunctional, "Feature-toggle for enabling of Kostentraeger check"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE, {"ERP_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE", "/erp/fhir/validation/levels/missing-or-extra-meta-profile", Flags::categoryFunctionalStatic, "Expect exactly one meta.profile. Set severity level for missing or extra entry in meta.profile. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::FHIR_VALIDATION_URN_UUID_CHECK_FROM            , {"ERP_FHIR_VALIDATION_URN_UUID_CHECK_FROM"            , "/erp/fhir/validation/urnUuidCheckFrom", Flags::categoryFunctionalStatic, "date to start checking for invalid/non-lower-case UUID in field of type `uri` (or derived)"}},
     {ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS,                 {"ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS"                , "/erp/fhir/reference-time-offset-days", Flags::categoryEnvironment, "Offset valid-from and valid-until for all fhir views"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds", Flags::categoryEnvironment, "Blob and VSDM++ Key Cache refresh time. Blobs and VSDM Keys are re-read from database in the given interval."}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device", Flags::categoryEnvironment, "Comma separated list of the HSM devices. Format: \"<port>@<IP address>,<port>@<IP address>,...\""}},
@@ -473,8 +494,11 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER               , {"MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER"                   , "/erp-medication-exporter/retries/maximumRetriesBeforeDeadletter", Flags::categoryEnvironment, "Maximum retry attempts before moving task events to Deadlettter queue"}},
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS                , {"MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS"                    , "/erp-medication-exporter/retries/rescheduleDelaySeconds", Flags::categoryEnvironment, "Seconds to delay next processing of KVNR after moving events to Deadletter queue"}},
 
-    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS                      , {"ERP_MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS"                      , "/erp-medication-exporter/fhir/structure-files", Flags::categoryEnvironment|Flags::array, "Array of EPA FQDN adresses"}},
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS                      , {"ERP_MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS"                      , "/erp-medication-exporter/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation and transformation in medication-exporter"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp-medication-exporter/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp-medication-exporter/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp-medication-exporter/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE", "/erp-medication-exporter/fhir/validation/levels/missing-or-extra-meta-profile", Flags::categoryFunctionalStatic, "Expect exactly one meta.profile. Set severity level for missing or extra entry in meta.profile. Allowed values: debug, info, warning, error"}},
 
     {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE                          , {"ERP_MEDICATION_EXPORTER_ADMIN_SERVER_INTERFACE"                          , "/erp-medication-exporter/admin/server/interface", Flags::categoryEnvironment, "The network interface for the admin server binds to"}},
     {ConfigurationKey::MEDICATION_EXPORTER_ADMIN_SERVER_PORT                               , {"ERP_MEDICATION_EXPORTER_ADMIN_SERVER_PORT"                               , "/erp-medication-exporter/admin/server/port", Flags::categoryEnvironment, "The port for the admin server."}},
@@ -843,40 +867,6 @@ std::optional<uint16_t> getEnrolementServerPort (
     return activeForPcPort == pcPort ? std::optional<uint16_t>(enrolmentPort) : std::nullopt;
 }
 
-fhirtools::ValidatorOptions Configuration::defaultValidatorOptions(model::ProfileType profileType) const
-{
-    using enum ConfigurationKey;
-    using Severity = fhirtools::Severity;
-    const auto& config = Configuration::instance();
-    fhirtools::ValidatorOptions options;
-    options.levels.mandatoryResolvableReferenceFailure =
-        config.get<Severity>(FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
-    options.levels.unreferencedBundledResource =
-        config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
-    options.levels.unreferencedContainedResource =
-        config.get<Severity>(FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
-    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle || profileType == model::ProfileType::KBV_PR_EVDGA_Bundle)
-    {
-        options.allowNonLiteralAuthorReference = kbvValidationNonLiteralAuthorRef() == NonLiteralAuthorRefMode::allow;
-        switch (config.kbvValidationOnUnknownExtension())
-        {
-            using enum Configuration::OnUnknownExtension;
-            using ReportUnknownExtensionsMode = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode;
-            case ignore:
-                options.reportUnknownExtensions = ReportUnknownExtensionsMode::disable;
-                break;
-            case report:
-            case reject:
-                // unknown extensions in closed slicing will be reported as error
-                // open slices will be unslicedWarning
-                options.reportUnknownExtensions = ReportUnknownExtensionsMode::onlyOpenSlicing;
-                break;
-        }
-        return options;
-    }
-    return options;
-}
-
 const Configuration& Configuration::instance()
 {
     static const Configuration theInstance;
@@ -888,24 +878,27 @@ void Configuration::check(ProcessType processType) const
     (void) kbvValidationOnUnknownExtension();
     (void) kbvValidationNonLiteralAuthorRef();
     (void) anrChecksumValidationMode();
-    (void) defaultValidatorOptions(model::ProfileType::fhir);
-    (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
-                                            fhirtools::Severity::error);
-    (void) getOptional<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
-                                            fhirtools::Severity::error);
-    (void) getOptional<fhirtools::Severity>(
-        ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, fhirtools::Severity::error);
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
     switch (processType)
     {
         case ConfigurationBase::ProcessType::ERP:
+            (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
             (void) synthesizeCodesystem<ConfigurationBase::ERP>();
             (void) synthesizeValuesets<ConfigurationBase::ERP>();
+            (void) fhirVersionMapping<ConfigurationBase::ERP>();
             return;
         case ConfigurationBase::ProcessType::MedicationExporter:
+            (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+            (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
             (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
             (void) synthesizeCodesystem<ConfigurationBase::MedicationExporter>();
             (void) synthesizeValuesets<ConfigurationBase::MedicationExporter>();
+            (void) fhirVersionMapping<ConfigurationBase::MedicationExporter>();
             for (const auto& epa : this->epaFQDNs())
             {
                 LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
@@ -938,17 +931,23 @@ fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfig
 {
     static const auto* groups =
     getJsonValue(KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceGroups, .flags = 0, .description = ""});
-    return fhirtools::FhirResourceGroupConfiguration(groups);
+    const auto mapper = std::make_shared<fhirtools::VersionMapper>(fhirVersionMapping<ProcessT>());
+    return fhirtools::FhirResourceGroupConfiguration(groups, mapper);
 }
 
-template <config::ProcessType ProcessT>
+template<config::ProcessType ProcessT>
 fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration() const
 {
-    static const auto* views =
-    getJsonValue(KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceViews, .flags = 0, .description = ""});
-    auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
+    auto groupResolver = fhirResourceGroupConfiguration<ProcessT>();
 
-    return fhirtools::FhirResourceViewConfiguration{fhirResourceGroupConfiguration<ProcessT>(), views,
+    static const auto* kbvsc = getJsonValue(
+        KeyData{.environmentVariable = "", .jsonPath = ProcessT::kbvSchluesseltabellen, .flags = 0, .description = ""});
+    fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration{groupResolver, kbvsc};
+
+    static const auto* views = getJsonValue(
+        KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceViews, .flags = 0, .description = ""});
+    auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
+    return fhirtools::FhirResourceViewConfiguration{groupResolver, views, kbvSchluesseltabellenConfiguration,
                                                     date::days{globalOffset}};
 }
 
@@ -962,6 +961,23 @@ template <config::ProcessType ProcessT>
 std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets() const
 {
     return resourceList(std::string{ProcessT::synthesizeValuesetPath});
+}
+
+template<config::ProcessType ProcessT>
+fhirtools::VersionMapper::Config Configuration::fhirVersionMapping() const
+{
+    using namespace std::string_literals;
+    static const KeyData configKey{
+        .environmentVariable = "",
+        .jsonPath = ProcessT::versionMappingPath,
+        .flags = 0,
+        .description = "",
+    };
+    if (const auto* jsonValue = getJsonValue(configKey))
+    {
+        return fhirtools::VersionMapper::Config::fromJson(*jsonValue);
+    }
+    Fail2("missing "s.append(ProcessT::versionMappingPath).append(" in config"), std::logic_error);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const
@@ -1035,8 +1051,10 @@ template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGr
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
 template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::ERP>() const;
 template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::ERP>() const;
+template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
 
 template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
 template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::MedicationExporter>() const;
 template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::MedicationExporter>() const;
+template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;

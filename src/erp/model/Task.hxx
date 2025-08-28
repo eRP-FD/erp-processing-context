@@ -61,6 +61,7 @@ public:
     [[nodiscard]] model::Timestamp lastModifiedDate() const;
     [[nodiscard]] std::string_view accessCode() const;
     [[nodiscard]] model::Timestamp expiryDate() const;
+    [[nodiscard]] bool expired() const;
     [[nodiscard]] model::Timestamp acceptDate() const;
     [[nodiscard]] std::optional<model::Timestamp> lastMedicationDispense() const;
     [[nodiscard]] std::optional<std::string_view> secret() const;
@@ -69,6 +70,8 @@ public:
     [[nodiscard]] std::optional<std::string_view> receiptUuid() const;
     [[nodiscard]] std::optional<std::string_view> owner() const;
     [[nodiscard]] const Timestamp& lastStatusChangeDate() const;
+    [[nodiscard]] bool isEuRedeemableByProperties() const;
+    [[nodiscard]] bool isEuRedeemableByPatientAuthorization() const;
 
     void setPrescriptionId (const model::PrescriptionId& prescriptionId);
     void setStatus(Status newStatus);
@@ -83,6 +86,8 @@ public:
                        int entlassRezeptValidityWorkingDays);
     void updateLastMedicationDispense(
         const std::optional<model::Timestamp>& lastMedicationDispense = std::make_optional(model::Timestamp::now()));
+    void setEuRedeemableByPatient(bool euRedeemableByPatient);
+    void setEuRedeemableByProperties(bool euRedeemable);
     void removeLastMedicationDispenseConditional();
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
@@ -92,10 +97,12 @@ public:
     void deleteSecret();
     void deleteOwner();
     void deleteLastMedicationDispense();
+    void deleteEuRedeemableByProperties();
 
     void updateLastUpdate(const model::Timestamp& timestamp = model::Timestamp::now());
 
     std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+
 
 private:
     friend Resource<Task>;
@@ -103,6 +110,7 @@ private:
 
     [[nodiscard]] std::optional<std::string_view> uuidFromArray(const rapidjson::Pointer& array, std::string_view code) const;
     void addUuidToArray(const rapidjson::Pointer& array, std::string_view code, std::string_view uuid);
+    void booleanToExtensionArray(std::string_view url, bool value);
     void dateToExtensionArray(std::string_view url, const model::Timestamp& expiryDate);
     void instantToExtensionArray(std::string_view url, const std::optional<model::Timestamp>& expiryDate);
     [[nodiscard]] model::Timestamp dateFromExtensionArray(std::string_view url) const;

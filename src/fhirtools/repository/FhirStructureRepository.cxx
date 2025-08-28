@@ -6,19 +6,19 @@
  */
 
 #include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "shared/fhir/Fhir.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewVerifier.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
 #include "fhirtools/repository/internal/FhirStructureRepositoryFixer.hxx"
+#include "fhirtools/repository/views/FhirResourceViewVerifier.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
+#include "shared/fhir/Fhir.hxx"
 
-#include <algorithm>
 #include <boost/algorithm/string.hpp>
 #include <boost/fusion/view/transform_view.hpp>
+#include <algorithm>
 #include <ranges>
 #include <set>
 #include <utility>
@@ -62,77 +62,8 @@ fhirtools::DefinitionKey::DefinitionKey(std::string_view urlWithVersion)
 namespace fhirtools
 {
 
-DefaultFhirStructureRepositoryView::DefaultFhirStructureRepositoryView(
-    std::string initId, gsl::not_null<const FhirStructureRepositoryBackend*> backend)
-    : mId{std::move(initId)}
-    , mBackend(std::move(backend))
-{
-}
 
-std::string_view fhirtools::DefaultFhirStructureRepositoryView::id() const
-{
-    return mId;
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::findStructure(const DefinitionKey& key) const
-{
-    FPExpect(key.version.has_value(), "Unknown StructureDefinition: " + key.url);
-    return mBackend->findDefinition(key.url, *key.version);
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::findTypeById(const std::string& typeName) const
-{
-    return mBackend->findTypeById(typeName);
-}
-
-const FhirValueSet* DefaultFhirStructureRepositoryView::findValueSet(const DefinitionKey& key) const
-{
-    FPExpect(key.version.has_value(), "Unknown ValueSet: " + key.url);
-    return mBackend->findValueSet(key.url, *key.version);
-}
-
-const FhirCodeSystem* DefaultFhirStructureRepositoryView::findCodeSystem(const DefinitionKey& key) const
-{
-    FPExpect(key.version.has_value(), "Unknown CodeSystem: " + key.url);
-    return mBackend->findCodeSystem(key.url, *key.version);
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeBoolean() const
-{
-    return mBackend->systemTypeBoolean();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeString() const
-{
-    return mBackend->systemTypeString();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeDate() const
-{
-    return mBackend->systemTypeDate();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeTime() const
-{
-    return mBackend->systemTypeTime();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeDateTime() const
-{
-    return mBackend->systemTypeDateTime();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeDecimal() const
-{
-    return mBackend->systemTypeDecimal();
-}
-
-const FhirStructureDefinition* DefaultFhirStructureRepositoryView::systemTypeInteger() const
-{
-    return mBackend->systemTypeInteger();
-}
-
-FhirStructureRepository::ContentReferenceResolution
+FhirStructureRepositoryView::ContentReferenceResolution
 DefaultFhirStructureRepositoryView::resolveContentReference(const FhirResourceGroup& group,
                                                             const FhirElement& element) const
 {
@@ -149,8 +80,7 @@ DefaultFhirStructureRepositoryView::resolveBaseContentReference(std::string_view
 
 
 FhirStructureRepositoryBackend::FhirStructureRepositoryBackend()
-    : m_defaultFhirStructureRepositoryView(
-          std::make_shared<const fhirtools::DefaultFhirStructureRepositoryView>("default", this))
+    : mDefaultFhirStructureRepositoryView(fhirtools::DefaultFhirStructureRepositoryView::create("default", this))
     , mSystemGroupResolver{std::make_shared<FhirResourceGroupConst>("system")}
 {
     addSystemTypes();
@@ -164,12 +94,11 @@ void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>
     bool success = true;
     TVLOG(1) << "Loading FHIR structure definitions.";
     mergeGroups(groupResolver.allGroups());
-    std::list<std::pair<FhirCodeSystem, std::filesystem::path>> supplements;
     for (const auto& file : filesAndDirectories)
     {
         if (is_regular_file(file))
         {
-            if (!loadFile(supplements, file, groupResolver))
+            if (!loadFile(file, groupResolver))
             {
                 success = false;
             }
@@ -178,8 +107,9 @@ void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>
         {
             for (const auto& dirEntry : std::filesystem::directory_iterator{file})
             {
-                FPExpect(dirEntry.is_regular_file(), "only regular files supported in profile directories.");
-                if (!loadFile(supplements, dirEntry.path(), groupResolver))
+                FPExpect(dirEntry.is_regular_file(),
+                         "only regular files supported in profile directories: " + dirEntry.path().native());
+                if (!loadFile(dirEntry.path(), groupResolver))
                 {
                     success = false;
                 }
@@ -190,9 +120,7 @@ void FhirStructureRepositoryBackend::load(const std::list<std::filesystem::path>
             FPFail("unsupported path: " + file.string());
         }
     }
-    processCodeSystemSupplements(supplements, groupResolver);
     TVLOG(2) << "done loading";
-    finalizeValueSets();
     FhirStructureRepositoryFixer repoFixer{*this};
     repoFixer.fix();
     FhirResourceViewVerifier verifier(*this);
@@ -208,7 +136,7 @@ void fhirtools::FhirStructureRepositoryBackend::synthesizeCodeSystem(const std::
 {
     mergeGroups(groupResolver.allGroups());
     FhirCodeSystem::Builder builder{};
-    builder.synthesized().url(url).version(version).initGroup(groupResolver, {});
+    builder.synthesized().url(url).version(version).initGroup(groupResolver);
     addCodeSystem(std::make_unique<FhirCodeSystem>(builder.getAndReset()));
 }
 
@@ -217,46 +145,25 @@ void fhirtools::FhirStructureRepositoryBackend::synthesizeValueSet(const std::st
 {
     mergeGroups(groupResolver.allGroups());
     FhirValueSet::Builder builder{};
-    builder.url(url).version(version).initGroup(groupResolver, {});
+    builder.url(url).version(version).initGroup(groupResolver);
     addValueSet(std::make_unique<FhirValueSet>(builder.getAndReset()));
-    finalizeValueSets();
 }
 
-void FhirStructureRepositoryBackend::finalizeValueSets()
-{
-    for (const auto& valueSetKeyValue : mValueSetsByKey)
-    {
-        const auto& valueSet = valueSetKeyValue.second;
-        if (! valueSet->finalized())
-        {
-            valueSet->finalize(this);
-        }
-    }
-}
-
-bool FhirStructureRepositoryBackend::loadFile(std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
-                                              const std::filesystem::path& file,
+bool FhirStructureRepositoryBackend::loadFile(const std::filesystem::path& file,
                                               const FhirResourceGroupResolver& groupResolver)
 {
     bool success = true;
     try
     {
         TVLOG(2) << "loading: " << file;
-        auto [definitions, codeSystems, valueSets] = FhirStructureDefinitionParser::parse(file, groupResolver);
+        auto [definitions, codeSystems, valueSets] = FhirStructureDefinitionParser::parse(file, this, groupResolver);
         for (auto&& def : definitions)
         {
-            addDefinition(std::make_unique<FhirStructureDefinition>(std::move(def)));
+            addDefinition(std::move(def));
         }
         for (auto&& codeSystem : codeSystems)
         {
-            if (codeSystem.getContentType() == FhirCodeSystem::ContentType::supplement)
-            {
-                supplements.emplace_back(std::move(codeSystem), file);
-            }
-            else
-            {
-                addCodeSystem(std::make_unique<FhirCodeSystem>(std::move(codeSystem)));
-            }
+            addCodeSystem(std::make_unique<FhirCodeSystem>(std::move(codeSystem)));
         }
         for (auto&& valueSet : valueSets)
         {
@@ -336,7 +243,25 @@ fhirtools::FhirStructureRepositoryBackend::findCodeSystem(const std::string_view
     return nullptr;
 }
 
-fhirtools::FhirStructureRepository::ContentReferenceResolution
+std::set<const fhirtools::FhirCodeSystem*>
+fhirtools::FhirStructureRepositoryBackend::findSupplementers(const std::string& url,
+                                                             const FhirVersion& version) const
+{
+    using std::ranges::copy_if;
+    using std::views::values;
+
+    std::set<const FhirCodeSystem*> result;
+    auto supplementersPair = mSupplementsByUrl.equal_range(url);
+    std::ranges::subrange supplementers{supplementersPair.first, supplementersPair.second};
+    copy_if(supplementers | values, inserter(result, result.begin()), [&version](const FhirCodeSystem* cs) {
+        auto supp = value(cs->getSupplements());
+        return !supp.version.has_value() || *supp.version == version;
+    });
+    return result;
+}
+
+
+fhirtools::FhirStructureRepositoryView::ContentReferenceResolution
 FhirStructureRepositoryBackend::resolveContentReference(const FhirResourceGroup& group,
                                                         const FhirElement& element) const
 {
@@ -423,7 +348,7 @@ FhirStructureRepositoryBackend::resolveBaseContentReference(std::string_view ele
     Expect(! typeId.empty(), "Cannot determine typeId from: "s.append(elementId));
     const auto* profile = findTypeById(std::string{typeId});
     Expect(profile != nullptr, "Profile not found for: "s.append(elementId));
-    return resolveBaseContentReference(ProfiledElementTypeInfo{profile}, 0, dot, elementId);
+    return resolveBaseContentReference(ProfiledElementTypeInfo{*profile}, 0, dot, elementId);
 }
 
 std::tuple<fhirtools::ProfiledElementTypeInfo, size_t>
@@ -444,7 +369,7 @@ FhirStructureRepositoryBackend::resolveBaseContentReference(ProfiledElementTypeI
         std::shared_ptr<const FhirElement> element;
         std::tie(element, index) = pet.profile()->findElementAndIndex(elementName);
         FPExpect(element != nullptr, ("failed to resolve element `"s += elementName += "` while resolving: "sv) += originalRef);
-        return resolveBaseContentReference(ProfiledElementTypeInfo{pet.profile(), element}, index, nextDot, originalRef);
+        return resolveBaseContentReference(ProfiledElementTypeInfo{element}, index, nextDot, originalRef);
     }
     else
     {
@@ -455,7 +380,7 @@ FhirStructureRepositoryBackend::resolveBaseContentReference(ProfiledElementTypeI
                     "failed to resolve Definition for "s.append(originalRef) +
                         " no such type: " + pet.element()->typeId(),
                     std::logic_error);
-            return resolveBaseContentReference(ProfiledElementTypeInfo{profile, profile->rootElement()},0, dot, originalRef);
+            return resolveBaseContentReference(ProfiledElementTypeInfo{*profile},0, dot, originalRef);
         }
         else
         {
@@ -465,9 +390,9 @@ FhirStructureRepositoryBackend::resolveBaseContentReference(ProfiledElementTypeI
     }
 }
 
-std::shared_ptr<const fhirtools::DefaultFhirStructureRepositoryView> FhirStructureRepositoryBackend::defaultView() const
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView> FhirStructureRepositoryBackend::defaultView() const
 {
-    return m_defaultFhirStructureRepositoryView;
+    return mDefaultFhirStructureRepositoryView;
 }
 
 const std::map<std::string, std::shared_ptr<const fhirtools::FhirResourceGroup>>&
@@ -515,11 +440,12 @@ const FhirStructureDefinition* FhirStructureRepositoryBackend::addSystemType(Fhi
     using namespace std::string_literals;
     FhirStructureDefinition::Builder builder;
     builder.kind(kind)
+        .repositoryBackend(this)
         .typeId(urlString)
         .url(urlString)
-        .addElement(FhirElement::Builder{}.name(urlString).isArray(true).isRoot(true).getAndReset(), {})
-        .initGroup(*mSystemGroupResolver, {});
-    return addDefinition(std::make_unique<FhirStructureDefinition>(builder.getAndReset()));
+        .addElement(std::move(FhirElement::Builder{}.name(urlString).isArray(true).isRoot(true)), {})
+        .initGroup(*mSystemGroupResolver);
+    return addDefinition(builder.getAndReset());
 }
 
 const FhirStructureDefinition*
@@ -545,6 +471,10 @@ void fhirtools::FhirStructureRepositoryBackend::addCodeSystem(std::unique_ptr<Fh
                                                         std::move(codeSystem));
     FPExpect(inserted,
              "Duplicate CodeSystem: " + to_string(DefinitionKey{codeSystem->getUrl(), codeSystem->getVersion()}));
+    if (auto supplements = it->second->getSupplements())
+    {
+        mSupplementsByUrl.emplace(supplements->url, std::to_address(it->second));
+    }
 }
 
 void fhirtools::FhirStructureRepositoryBackend::addValueSet(std::unique_ptr<FhirValueSet>&& valueSet)
@@ -553,47 +483,4 @@ void fhirtools::FhirStructureRepositoryBackend::addValueSet(std::unique_ptr<Fhir
         mValueSetsByKey.try_emplace(DefinitionKey(valueSet->getUrl(), valueSet->getVersion()), std::move(valueSet));
     FPExpect(inserted, "Duplicate ValueSet: " + valueSet->getUrl() + '|' + to_string(valueSet->getVersion()));
     TVLOG(3) << "ValueSet inserted: " << it->first;
-}
-
-void fhirtools::FhirStructureRepositoryBackend::processCodeSystemSupplements(
-    const std::list<std::pair<FhirCodeSystem, std::filesystem::path>>& supplements,
-    const FhirResourceGroupResolver& groupResolver)
-{
-    using namespace std::string_literals;
-    for (auto&& supplement : supplements)
-    {
-        FPExpect(! supplement.first.getSupplements().empty(),
-                 "CodeSystem.content=supplement, but CodeSystem.supplements is not defined.");
-        auto [key, group] = supplement.first.resourceGroup()->find(DefinitionKey{supplement.first.getSupplements()});
-        FhirCodeSystem* cs{};
-        if (key.version)
-        {
-            auto codeSystem = mCodeSystemsByKey.find(key);
-            if (codeSystem != mCodeSystemsByKey.end())
-            {
-                cs = codeSystem->second.get();
-            }
-        }
-        auto builder = cs ? FhirCodeSystem::Builder(*cs) : FhirCodeSystem::Builder();
-        if (cs == nullptr)
-        {
-            TVLOG(1) << "CodeSystem.supplements not found, synthesizing: " << key;
-            builder.synthesized();
-            builder.url(key.url);
-            builder.version(FhirVersion::notVersioned);
-            builder.initGroup(groupResolver, {});
-        }
-        for (const auto& code : supplement.first.getCodes())
-        {
-            builder.code(code.code);
-        }
-        if (cs)
-        {
-            *cs = builder.getAndReset();
-        }
-        else
-        {
-            addCodeSystem(std::make_unique<FhirCodeSystem>(builder.getAndReset()));
-        }
-    }
 }

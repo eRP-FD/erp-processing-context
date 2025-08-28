@@ -8,6 +8,7 @@
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
+#include "erp/model/EuMedicationDispenseInfos.hxx"
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
 #include "erp/service/MedicationDispenseHandlerBase.hxx"
@@ -74,7 +75,18 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     A_19518.finish();
 
     // GEMREQ-start A_19406-01#getAll-4
-    auto bundle = MedicationDispenseHandlerBase::createBundle(medicationDispenses);
+    auto bundle = MedicationDispenseHandlerBase::createBundle(std::get<0>(medicationDispenses));
+
+    const auto& euInfos = std::get<1>(medicationDispenses);
+    if (euInfos.has_value())
+    {
+        bundle.addEuResource(std::string{value(euInfos->practitioner().getId())},
+                             euInfos->practitioner().jsonDocument());
+        bundle.addEuResource(std::string{value(euInfos->practitionerRole().getId())},
+                             euInfos->practitionerRole().jsonDocument());
+        bundle.addEuResource(std::string{value(euInfos->organization().getId())},
+                             euInfos->organization().jsonDocument());
+    }
 
     makeResponse(session, HttpStatus::OK, &bundle);
     // GEMREQ-end A_19406-01#getAll-4

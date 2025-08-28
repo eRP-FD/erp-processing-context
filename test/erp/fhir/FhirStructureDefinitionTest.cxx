@@ -5,9 +5,10 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/model/Resource.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "shared/model/Resource.hxx"
 
 #include <gtest/gtest.h>
 
@@ -74,21 +75,18 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
     const std::string url = "http://erp.test.definitions/TestType";
     const std::string baseUrl = "http://erp.test.definitions/TestBase";
 
+    fhirtools::FhirStructureRepositoryBackend repo;
     fhirtools::FhirResourceGroupConst resolver{"test"};
 
 
-    auto rootElement = FhirElement::Builder{}
-        .name(typeId)
-        .isArray(true)
-        .isRoot(true)
-        .getAndReset();
+    FhirElement::Builder rootElement;
+    rootElement.name(typeId).isArray(true).isRoot(true);
 
-    auto valueElement = FhirElement::Builder{}
-        .name(typeId + ".element")
+    FhirElement::Builder valueElement;
+    valueElement.name(typeId + ".element")
         .typeId("Coding")
         .isArray(true)
-        .representation(FhirElement::Representation::element)
-        .getAndReset();
+        .representation(FhirElement::Representation::element);
 
     auto testDefinition = FhirStructureDefinition::Builder{}
                               .typeId("TestType")
@@ -98,22 +96,23 @@ TEST(FhirStructureDefinitionTest, Builder)//NOLINT(readability-function-cognitiv
                               .derivation(Derivation::specialization)
                               .addElement(std::move(rootElement), {})
                               .addElement(std::move(valueElement), {})
-                              .initGroup(resolver, "")
+                              .initGroup(resolver)
+                              .repositoryBackend(&repo)
                               .getAndReset();
 
-    EXPECT_EQ(testDefinition.url(), url);
-    EXPECT_EQ(testDefinition.kind(), Kind::resource);
-    EXPECT_EQ(testDefinition.baseDefinition(), baseUrl);
-    EXPECT_EQ(testDefinition.derivation(), Derivation::specialization);
+    EXPECT_EQ(testDefinition->url(), url);
+    EXPECT_EQ(testDefinition->kind(), Kind::resource);
+    EXPECT_EQ(testDefinition->baseDefinition(), baseUrl);
+    EXPECT_EQ(testDefinition->derivation(), Derivation::specialization);
 
-    const auto testBaseElement = testDefinition.findElement(typeId);
+    const auto testBaseElement = testDefinition->findElement(typeId);
     ASSERT_TRUE(testBaseElement);
     EXPECT_EQ(testBaseElement->typeId(), typeId);
     EXPECT_EQ(testBaseElement->name(), typeId);
     EXPECT_TRUE(testBaseElement->isRoot());
     EXPECT_TRUE(testBaseElement->isArray());
 
-    const auto testElement = testDefinition.findElement(typeId + ".element");
+    const auto testElement = testDefinition->findElement(typeId + ".element");
     ASSERT_TRUE(testElement);
     EXPECT_EQ(testElement->typeId(), "Coding"sv);
     EXPECT_EQ(testElement->name(), typeId + ".element");

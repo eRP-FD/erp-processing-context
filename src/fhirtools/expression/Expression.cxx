@@ -8,92 +8,59 @@
 #include "fhirtools/expression/Expression.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 
-#include <algorithm>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <date/tz.h>
+#include <algorithm>
 #include <source_location>
 #include <utility>
 
 using namespace fhirtools;
 
-Expression::Expression(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository)
-    : mFhirStructureRepository(fhirStructureRepository)
+Expression::Expression(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView)
+    : mFhirStructureRepository(std::move(fhirStructureRepositoryView))
 {
 }
 
-std::shared_ptr<PrimitiveElement> Expression::makeBoolElement(bool value) const
+const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>&
+fhirtools::Expression::fhirStructureRepository() const
 {
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Boolean, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeIntegerElement(int32_t value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Integer, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeIntegerElement(size_t value) const
-{
-    FPExpect(value < std::numeric_limits<int32_t>::max(), "value too large for int32");
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Integer,
-                                              static_cast<int32_t>(value));
-}
-std::shared_ptr<PrimitiveElement> Expression::makeDecimalElement(DecimalType value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Decimal, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeStringElement(const std::string_view& value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string(value));
-}
-std::shared_ptr<PrimitiveElement> Expression::makeDateElement(const fhirtools::Date& value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Date, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeDateTimeElement(const fhirtools::DateTime& value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::DateTime, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeTimeElement(const fhirtools::Time& value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Time, value);
-}
-std::shared_ptr<PrimitiveElement> Expression::makeQuantityElement(const Element::QuantityType& value) const
-{
-    return std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::Quantity, value);
+    return mFhirStructureRepository;
 }
 
-Collection InvocationExpression::eval(const Collection& collection) const
+EvaluationContext InvocationExpression::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return mRhs->eval(mLhs->eval(collection));
+    return mRhs->eval(mLhs->eval(context));
 }
 
-PathSelection::PathSelection(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+PathSelection::PathSelection(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                              const std::string& subElement)
-    : Expression(fhirStructureRepository)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mSubElement(subElement)
 {
 }
 
-Collection PathSelection::eval(const Collection& collection) const
+EvaluationContext PathSelection::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    Collection retCollection;
-    for (const auto& item : collection)
+    auto ret  = context();
+    for (const auto& item : context.collection)
     {
         if (item->isResource() && item->resourceType() == mSubElement)
         {
-            retCollection.emplace_back(item);
+            ret.collection.emplace_back(item);
         }
         else
         {
             for (const auto& expanded : item->definitionPointer().expandedNames(mSubElement))
             {
-                retCollection.append(item->subElements(expanded));
+                ret.collection.append(item->subElements(expanded));
             }
         }
     }
-    return retCollection;
+    return ret;
 }
 
 std::string PathSelection::debugInfo() const
@@ -101,60 +68,51 @@ std::string PathSelection::debugInfo() const
     return "path=" + mSubElement;
 }
 
-Collection DollarThis::eval(const Collection& collection) const
+EvaluationContext DollarThis::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return collection;
+    return context;
 }
 
-Collection PercentContext::eval(const Collection& collection) const
+EvaluationContext PercentContext::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto element = collection.singleOrEmpty();
-    while (element)
-    {
-        if (element->isContextElement() || ! element->parent())
-        {
-            return {element};
-        }
-        element = element->parent();
-    }
-    return {};
+    return context(context.context);
 }
 
 BinaryExpression::BinaryExpression(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
     ExpressionPtr rhs)
-    : Expression(fhirStructureRepository)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mLhs(std::move(lhs))
     , mRhs(std::move(rhs))
 {
 }
 
-Collection TreeNavigationChildren::eval(const Collection& collection) const
+EvaluationContext TreeNavigationChildren::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    Collection ret;
-    for (const auto& item : collection)
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
         for (const auto& name : item->subElementNames())
         {
-            ret.append(item->subElements(name));
+            ret.collection.append(item->subElements(name));
         }
     }
     return ret;
 }
 
-Collection TreeNavigationDescendants::eval(const Collection& collection) const
+EvaluationContext TreeNavigationDescendants::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    Collection ret;
-    iterate(collection, ret);
+    auto ret = context();
+    iterate(context.collection, ret);
     return ret;
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
-void TreeNavigationDescendants::iterate(const Collection& collection, Collection& output) const
+void TreeNavigationDescendants::iterate(const Collection& collection, EvaluationContext& output) const
 {
     Collection ret;
     for (const auto& item : collection)
@@ -167,139 +125,140 @@ void TreeNavigationDescendants::iterate(const Collection& collection, Collection
     if (! ret.empty())
     {
         iterate(ret, output);
-        output.append(std::move(ret));
+        output.collection.append(std::move(ret));
     }
 }
 
-Collection UtilityTrace::eval(const Collection& collection) const
+EvaluationContext UtilityTrace::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const std::string name = mLhs ? mLhs->eval(collection).single()->asString() : "";
+    const std::string name = mLhs ? mLhs->eval(context).collection.single()->asString() : "";
     std::ostringstream oss;
     oss << name << ": ";
     if (mRhs)
     {
-        auto projectionResult = mRhs->eval(collection);
-        oss << projectionResult;
+        auto projectionResult = mRhs->eval(context);
+        oss << projectionResult.collection;
     }
     else
     {
-        oss << collection;
+        oss << context.collection;
     }
     TVLOG(3) << oss.str();
-    return collection;
+    return context;
 }
 
-Collection fhirtools::UtilityToday::eval(const Collection& collection [[maybe_unused]]) const
+EvaluationContext fhirtools::UtilityToday::eval(const EvaluationContext& context) const
 {
+    EVAL_TRACE;
     auto germanTimestamp = date::make_zoned("Europe/Berlin", std::chrono::system_clock::now());
     auto germanDay = date::floor<date::days>(germanTimestamp.get_local_time());
     Date germanDate{date::year_month_day{germanDay}, Date::Precision::day};
-    return Collection{makeDateElement(germanDate)};
+    return context.makeDateElement(germanDate);
 }
 
 
 TypesIsOperator::TypesIsOperator(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr expression,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr expression,
     const std::string& type)
-    : Expression(fhirStructureRepository)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mExpression(std::move(expression))
     , mType(type)
 {
 }
 
 TypesIsOperator::TypesIsOperator(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
     ExpressionPtr typeExpression)
-    : Expression(fhirStructureRepository)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mTypeExpression(std::move(typeExpression))
 {
 }
 
-Collection TypesIsOperator::eval(const Collection& collection) const
+EvaluationContext TypesIsOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mExpression ? mExpression->eval(collection) : collection;
-    auto type = mTypeExpression ? mTypeExpression->eval(collection).single()->asString() : mType;
+    const auto& lhs = mExpression ? mExpression->eval(context) : context;
+    auto type = mTypeExpression ? mTypeExpression->eval(context).collection.single()->asString() : mType;
 
-    if (const auto* def = mFhirStructureRepository->findTypeById(type))
+    if (const auto* def = fhirStructureRepository()->findTypeById(type))
     {
         type = def->url();
     }
 
-
-    const auto& element = lhs.singleOrEmpty();
-    return {
-        makeBoolElement(element && element->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, type))};
+    const auto& element = lhs.collection.singleOrEmpty();
+    return context.
+        makeBoolElement(element && element->getStructureDefinition()->isDerivedFrom(*fhirStructureRepository(), type));
 }
 
-TypeAsOperator::TypeAsOperator(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                               ExpressionPtr expression, const std::string& type)
-    : Expression(fhirStructureRepository)
+TypeAsOperator::TypeAsOperator(
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr expression,
+    std::string type)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mExpression(std::move(expression))
-    , mType(type)
+    , mType(std::move(type))
 {
-    if (const auto* def = mFhirStructureRepository->findTypeById(mType))
+    if (const auto* def = fhirStructureRepository()->findTypeById(mType))
     {
         mType = def->url();
     }
 }
 
-Collection TypeAsOperator::eval(const Collection& collection) const
+EvaluationContext TypeAsOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto& lhs = mExpression ? mExpression->eval(collection) : collection;
-    const auto& element = lhs.singleOrEmpty();
-    if (element && element->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, mType))
+    const auto& lhs = mExpression ? mExpression->eval(context) : context;
+    const auto& element = lhs.collection.singleOrEmpty();
+    if (element && element->getStructureDefinition()->isDerivedFrom(*fhirStructureRepository(), mType))
     {
         return lhs;
     }
-    return {};
+    return context();
 }
 
-Collection TypeAsFunction::eval(const Collection& collection) const
+EvaluationContext TypeAsFunction::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     // the implemented behaviour is not specified, but is used in existing expressions and therefor needed.
-    const auto& lhs = mExpression ? mExpression->eval(collection) : collection;
-    Collection ret;
-    for (const auto& element : lhs)
+    const auto& lhs = mExpression ? mExpression->eval(context) : context;
+    auto ret = context();
+    for (const auto& element : lhs.collection)
     {
-        if (element && element->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, mType))
+        if (element && element->getStructureDefinition()->isDerivedFrom(*fhirStructureRepository(), mType))
         {
-            ret.push_back(element);
+            ret.collection.push_back(element);
         }
     }
     return ret;
 }
 
-Collection CollectionsInOperator::eval(const Collection& collection) const
+EvaluationContext CollectionsInOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     if (! mLhs)
     {
-        return {};
+        return context();
     }
     if (! mRhs)
     {
-        return {makeBoolElement(false)};
+        return context.makeBoolElement(false);
     }
-    const auto lhs = mLhs->eval(collection);
-    const auto rhs = mRhs->eval(collection);
-    if (lhs.empty())
+    const auto lhs = mLhs->eval(context);
+    const auto rhs = mRhs->eval(context);
+    if (lhs.collection.empty())
     {
-        return {};
+        return context();
     }
-    if (rhs.empty())
+    if (rhs.collection.empty())
     {
-        return {makeBoolElement(false)};
+        return context.makeBoolElement(false);
     }
-    return {makeBoolElement(rhs.contains(lhs.single()))};
+    return context.makeBoolElement(rhs.collection.contains(lhs.collection.single()));
 }
 
 CollectionsContainsOperator::CollectionsContainsOperator(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
     ExpressionPtr rhs)
-    : CollectionsInOperator(fhirStructureRepository, std::move(rhs), std::move(lhs))
+    : CollectionsInOperator(std::move(fhirStructureRepositoryView), std::move(rhs), std::move(lhs))
 {
 }

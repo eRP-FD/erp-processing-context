@@ -68,7 +68,6 @@ std::shared_ptr<HttpsClientPool> HttpsClientPool::create(gsl::not_null<boost::as
     return newInstance;
 }
 
-// NOLINTNEXTLINE(performance-unnecessary-value-param)
 HttpsClientPool::HttpsClientPool(gsl::not_null<boost::asio::io_context*> ioContext, ConnectionParameters params,
                                  std::size_t maxConnections, const duration& dnsRefreshInterval)
     : mIoContext{*ioContext}

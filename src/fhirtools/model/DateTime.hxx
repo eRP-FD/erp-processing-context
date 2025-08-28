@@ -48,7 +48,7 @@ public:
     Time& operator=(Time&&) = default;
 
     [[nodiscard]] std::optional<std::strong_ordering> compareTo(const Time& other) const;
-    [[nodiscard]] bool samePrecision(const Time& other) const;
+    [[nodiscard]] bool canCompare(const Time& other) const;
     Precision precision() const;
 
 private:

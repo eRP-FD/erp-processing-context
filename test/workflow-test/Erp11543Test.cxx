@@ -35,7 +35,7 @@ public:
         mCloseReceipt->removeSignature();
 
         std::optional<model::Consent> consent{};
-        ASSERT_NO_FATAL_FAILURE(consent = consentPost(mKvnr, model::Timestamp::now()));
+        ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, mKvnr, model::Timestamp::now()));
         ASSERT_TRUE(consent.has_value());
     }
 

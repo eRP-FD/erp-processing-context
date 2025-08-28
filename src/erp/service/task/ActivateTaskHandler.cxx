@@ -89,6 +89,12 @@ void ActivateTaskHandler::handleRequest(PcSessionContext& session)
     A_19020.finish();
 
 
+    const auto signingAlgorithm = cadesBesSignature.getSigningAlgorithm();
+    JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
+        .keyValue("issuer", cadesBesSignature.getIssuer())
+        .keyValue("alg", to_string(signingAlgorithm));
+
+
     switch (task.type())
     {
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
@@ -221,16 +227,20 @@ void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::Tas
     }
     A_19999.finish();
 
-    // GEMREQ-start A_19127-01
-    A_19127_01.start("store KVNR from prescription bundle in task");
+    // GEMREQ-start A_19127
+    A_19127_02.start("store KVNR from prescription bundle in task");
     const auto kvnr = getKvnrFromPatientResource(kbvOrEvdgaBundle);
     task.setKvnr(kvnr);
-    A_19127_01.finish();
-    // GEMREQ-end A_19127-01
+    A_19127_02.finish();
+    // GEMREQ-end A_19127
 
     A_19128.start("status transition draft -> ready");
     task.setStatus(model::Task::Status::ready);
     A_19128.finish();
+
+    A_27768.start("Bestimmung der Einlösbarkeit im EU-Ausland");
+    task.setEuRedeemableByProperties(isPrescriptionEuRedeemable(task, kbvOrEvdgaBundle));
+    A_27768.finish();
 
     task.updateLastUpdate();
 
@@ -240,6 +250,11 @@ void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::Tas
     databaseHandle->activateTask(taskAndKey.task, *taskAndKey.key, healthCareProviderPrescriptionBinary,
                                  session.request.getAccessToken());
     A_19025_03.finish();
+
+    if (!Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_EU))
+    {
+        task.deleteEuRedeemableByProperties();
+    }
 
     makeResponse(session, responseStatus, &task);
 
@@ -355,7 +370,8 @@ ActivateTaskHandler::prescriptionBundleFromXml(SessionContext& sessionContext, s
         {
             factory.genericValidationMode(model::GenericValidationMode::require_success);
         }
-        const auto valOpts = config.defaultValidatorOptions(factory.profileType());
+        const auto valOpts = Fhir::instance().defaultValidatorOptions(factory.profileType(),
+                                                                      value(factory.getValidationReferenceTimestamp()));
         factory.validatorOptions(valOpts);
         A_23384_03.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
         const gsl::not_null view = factory.getValidationView();
@@ -498,7 +514,7 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
 template<typename KbvOrEvdgaBundle>
 HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<KbvOrEvdgaBundle>& factory,
                                                 Configuration::OnUnknownExtension onUnknownExtension,
-                                                const fhirtools::FhirStructureRepository& fhirStructureRepo,
+                                                const fhirtools::FhirStructureRepositoryView& fhirStructureRepo,
                                                 const fhirtools::ValidatorOptions& valOpts)
 {
     using OnUnknownExtension = Configuration::OnUnknownExtension;
@@ -512,19 +528,26 @@ HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<Kbv
 #endif
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
     }
-    bool haveUnslicedWarn = std::ranges::any_of(validationResult.results(), [](const fhirtools::ValidationError& err) {
-        return err.severity() == fhirtools::Severity::unslicedWarning;
+    bool haveUnslicedFailure = std::ranges::any_of(validationResult.results(), [](const fhirtools::ValidationError& err) {
+        const auto* extFailure = std::get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+        return extFailure && get<fhirtools::ExtendedValidation>(*extFailure) == fhirtools::ExtendedValidation::unslicedExtension;
     });
-    if (haveUnslicedWarn)
+    if (haveUnslicedFailure)
     {
-        if (onUnknownExtension == OnUnknownExtension::reject)
+        switch (onUnknownExtension)
         {
-            ErpFailWithDiagnostics(
-                HttpStatus::BadRequest,
-                "unintendierte Verwendung von Extensions an unspezifizierter Stelle im Verordnungsdatensatz",
-                validationResult.summary(fhirtools::Severity::unslicedWarning));
+            case OnUnknownExtension::ignore:
+                return HttpStatus::OK;
+            case OnUnknownExtension::report:
+                return HttpStatus::Accepted;
+            case OnUnknownExtension::reject:
+                ErpFailWithDiagnostics(
+                    HttpStatus::BadRequest,
+                    "unintendierte Verwendung von Extensions an unspezifizierter Stelle im Verordnungsdatensatz",
+                    validationResult.summary(fhirtools::Severity::warning));
         }
-        return HttpStatus::Accepted;
+        Fail2("Invalid value for OnUnknownExtension: " + std::to_string(static_cast<uintmax_t>(onUnknownExtension)),
+              std::logic_error);
     }
     A_22927.finish();
     return HttpStatus::OK;
@@ -534,18 +557,21 @@ template<typename KbvOrEvdgaBundle>
 void ActivateTaskHandler::checkValidCoverage(const KbvOrEvdgaBundle& bundle,
                                              const model::PrescriptionType prescriptionType)
 {
+    bool pkvCovered = false;
     A_22222.start("Check for allowed coverage type");
     const std::vector<model::KbvCoverage> coverage = bundle.template getResourcesByType<model::KbvCoverage>("Coverage");
     ErpExpect(coverage.size() <= 1, HttpStatus::BadRequest,
               "Unexpected number of Coverage Resources in KBV/EVDGA Bundle");
-    bool pkvCovered = false;
     for (const auto& currentCoverage : coverage)
     {
         const auto coverageType = currentCoverage.typeCodingCode();
         pkvCovered = (coverageType == "PKV");
-        ErpExpect((coverageType == "GKV") || (coverageType == "SEL") || (coverageType == "BG") ||
-                      (coverageType == "UK") || pkvCovered,
-                  HttpStatus::BadRequest, "Kostenträger nicht zulässig");
+        if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER, true))
+        {
+            ErpExpect((coverageType == "GKV") || (coverageType == "SEL") || (coverageType == "BG") ||
+                          (coverageType == "UK") || pkvCovered,
+                      HttpStatus::BadRequest, "Kostenträger nicht zulässig");
+        }
     }
     A_22222.finish();
 
@@ -600,7 +626,7 @@ bool ActivateTaskHandler::checkPractitioner(const KbvOrEvdgaBundle& bundle, PcSe
     return true;
 }
 
-// GEMREQ-start A_19127-01#getKvnrFromPatientResource
+// GEMREQ-start A_19127#getKvnrFromPatientResource
 template<typename KbvOrEvdgaBundle>
 model::Kvnr ActivateTaskHandler::getKvnrFromPatientResource(const KbvOrEvdgaBundle& bundle)
 {
@@ -623,7 +649,7 @@ model::Kvnr ActivateTaskHandler::getKvnrFromPatientResource(const KbvOrEvdgaBund
     }
     ErpFail(HttpStatus::BadRequest, "Failed to get KVNR from Bundle.entry:Patient");
 }
-// GEMREQ-end A_19127-01#getKvnrFromPatientResource
+// GEMREQ-end A_19127#getKvnrFromPatientResource
 
 template<typename KbvOrEvdgaBundle>
 void ActivateTaskHandler::checkBundlePrescriptionId(const model::Task& task, const KbvOrEvdgaBundle& bundle)
@@ -681,3 +707,24 @@ ActivateTaskHandler::allowedProfessionOidsForQesSignature(model::PrescriptionTyp
     return {};
 }
 // GEMREQ-end A_20159-03#allowedProfessionOidsForQesSignature
+
+bool ActivateTaskHandler::isPrescriptionEuRedeemable(const model::Task& task, const model::KbvBundle& bundle)
+{
+    switch (task.type())
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            break;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            return false;
+    }
+    const auto& medication = bundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
+    return medication.getProfile() == model::ProfileType::KBV_PR_ERP_Medication_PZN;
+}
+
+bool ActivateTaskHandler::isPrescriptionEuRedeemable(const model::Task&, const model::EvdgaBundle&)
+{
+    return false;
+}

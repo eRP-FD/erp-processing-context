@@ -25,9 +25,11 @@ TEST(AuditDataTest, ConstructFromData)//NOLINT(readability-function-cognitive-co
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
     const std::string auditDataId = "audit_data_id";
     const model::Timestamp recorded = model::Timestamp::now();
+    const model::CountryCode countryCode{"FR"};
+    const std::map<std::string, std::string> variables{{"v1", "variable1"}, {"v2", "variable2"}};
 
-    model::AuditData auditData(eventId, model::AuditMetaData(agentName, kvnr), action, agentType, insurantKvnr,
-                               deviceId, prescriptionId, consentId);
+    model::AuditData auditData(eventId, model::AuditMetaData(agentName, kvnr, countryCode.toString(), variables),
+                               action, agentType, insurantKvnr, deviceId, prescriptionId, consentId);
     auditData.setId(auditDataId);
     auditData.setRecorded(recorded);
 
@@ -45,6 +47,7 @@ TEST(AuditDataTest, ConstructFromData)//NOLINT(readability-function-cognitive-co
     EXPECT_TRUE(auditData.metaData().agentName().has_value());
     EXPECT_EQ(agentName, auditData.metaData().agentName().value());
     EXPECT_EQ(agentType, auditData.agentType());
+    EXPECT_EQ(variables, auditData.metaData().variables());
 }
 
 
@@ -59,11 +62,19 @@ TEST(AuditDataTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     const model::PrescriptionId prescriptionId =
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4242);
 
+    const std::map<std::string, std::string> variables{
+        {"hftpoc", "Apotheke sowieso"},
+        {"pz", "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY="},
+        {"v2", "variable2"}};
+
     const std::string metaDataJson = R"--(
         {
           "an": "Praxis Dr. Schlunz",
           "aw": "987654321",
-          "pz": "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY="
+          "pz": "ODAyNzY4ODEwMjU1NDg0MzEzMDEwMDAwMDAwMDA2Mzg2ODc4MjAyMjA4MzEwODA3MzY=",
+          "cc": "FR",
+          "hftpoc": "Apotheke sowieso",
+          "v2": "variable2"
         })--";
 
     const model::AuditEvent::AgentType agentType = model::AuditEvent::AgentType::human;
@@ -89,4 +100,6 @@ TEST(AuditDataTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     EXPECT_TRUE(auditData.metaData().agentName().has_value());
     EXPECT_EQ("Praxis Dr. Schlunz", auditData.metaData().agentName().value());
     EXPECT_EQ(agentType, auditData.agentType());
+    EXPECT_EQ(model::CountryCode{"FR"}, auditData.countryCode());
+    EXPECT_EQ(variables, auditData.variables());
 }

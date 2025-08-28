@@ -12,6 +12,7 @@
 #include "erp/model/Communication.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/service/CommunicationPostHandler.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
@@ -104,12 +105,10 @@ TEST_F(CommunicationPostEndpointTest, ERP_12846_SubscriptionKeyRefresh)
 
 TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfile)
 {
-    const auto& fhirInstance = Fhir::instance();
-    const auto& backend = fhirInstance.backend();
-    const auto supported =
-        fhirInstance.structureRepository(model::Timestamp::now())
-            .supportedVersions(&backend,
-                               {
+
+    const auto supported = Fhir::instance()
+                               .structureRepository(model::Timestamp::now())
+                               .supportedVersions({
                                    // std::string{model::resource::structure_definition::communicationInfoReq},
                                    std::string{model::resource::structure_definition::communicationReply},
                                    std::string{model::resource::structure_definition::communicationDispReq},
@@ -118,7 +117,7 @@ TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfil
                                    std::string{model::resource::structure_definition::communicationChargChangeReply},
                                });
     const auto& newProfs = String::join(supported, ", ");
-    char message[] = "Invalid request body";
+    char message[] = "parsing / validation error";
     std::string diagnostics =
         "invalid profile https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_ChargChangeReply|1.0 "
         "must be one of: " +
@@ -138,15 +137,28 @@ struct CommunicationPostEndpointTestParams {
     Result result;
     std::string date;
     model::Communication::MessageType messageType;
-    fhirtools::FhirVersion profileVersion;
+    CommunicationJsonStringBuilder::CommunicationVersion profileVersion;
 };
+
+namespace {
+struct ToString {
+    std::string operator()(const auto& ver) {
+        return to_string(ver);
+    };
+    std::string operator()(const std::monostate&)
+    {
+        return "unset";
+    }
+};
+}
 
 std::ostream& operator << (std::ostream& out, const CommunicationPostEndpointTestParams& params)
 {
+    ToString toString;
     out << R"({ "result": ")" << magic_enum::enum_name(params.result) << R"(", )";
     out << R"("date": ")" << params.date << R"(", )";
     out << R"("messageType": ")" << magic_enum::enum_name(params.messageType) << R"(", )";
-    out << R"("profileVersion": ")" << to_string(params.profileVersion) << R"(" })";
+    out << R"("profileVersion": ")" << std::visit(toString, params.profileVersion) << R"(" })";
     return out;
 }
 

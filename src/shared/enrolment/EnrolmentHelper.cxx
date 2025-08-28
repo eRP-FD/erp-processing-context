@@ -252,7 +252,7 @@ ErpBlob EnrolmentHelper::getTeeToken(HsmSession& hsmSession, BlobCache& blobCach
 
 ErpBlob EnrolmentHelper::trustTpmMfr (const uint32_t generation)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_trusttpmmfr");
 
     hsmclient::TrustTPMMfrInput input;
@@ -277,7 +277,7 @@ ErpBlob EnrolmentHelper::trustTpmMfr (const uint32_t generation)
 
 ErpBlob EnrolmentHelper::enrollEk (const uint32_t generation, const ErpBlob& trustedRoot, const std::vector<uint8_t>& ekCertificate)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_enrolltpmek");
 
     hsmclient::EnrollTPMEKInput input;
@@ -303,7 +303,7 @@ EnrolmentHelper::getAkChallenge (
     const std::string& akPublicKey,
     const ErpArray<TpmObjectNameLength>& akName)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_getakchallenge");
 
     // For some reason the public key in the attestation key data blob contains two leading bytes that
@@ -364,7 +364,7 @@ ErpBlob EnrolmentHelper::enrollAk (
     const ErpArray<TpmObjectNameLength>& akName,
     const std::string& decCredential)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_enrolltpmak");
 
     // Remove two bytes of the ASN1 container.
@@ -392,7 +392,7 @@ std::tuple<
     std::vector<uint8_t>,
     ErpBlob> EnrolmentHelper::getNonce (const uint32_t generation)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_generatenonce");
 
     hsmclient::UIntInput input;
@@ -440,7 +440,7 @@ ErpBlob EnrolmentHelper::enrollEnclave (
     const ErpBlob& knownAk,
     const ErpBlob& nonce)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_enrolenclave");
 
     hsmclient::EnrollEnclaveInput input;
@@ -467,7 +467,7 @@ ErpBlob EnrolmentHelper::getTeeToken (
     const ErpBlob& nonce,
     const ErpBlob& trustedQuote)
 {
-    auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryEnrolmentHelper,
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::enrolment,
                                                          "erp_getteetoken");
 
     hsmclient::TEETokenRequestInput input;

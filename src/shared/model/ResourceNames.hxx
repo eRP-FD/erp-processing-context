@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_MODEL_RESOURCENAMES_HXX
 
 #include "ProfileType.hxx"
+#include "fhirtools/repository/DefinitionKey.hxx"
 #include "fhirtools/repository/FhirVersion.hxx"
 
 #include <optional>
@@ -17,8 +18,7 @@
 
 namespace fhirtools
 {
-struct DefinitionKey;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class FhirVersion;
 }
 
@@ -26,16 +26,23 @@ namespace model
 {
 class Timestamp;
 
+class ProfileInfo : public fhirtools::DefinitionKey
+{
+public:
+    using DefinitionKey::DefinitionKey;
+    std::optional<ProfileType> findType();
+};
 
 std::optional<fhirtools::DefinitionKey> profileWithVersion(ProfileType profileType,
                                                            const model::Timestamp& referenceTime);
 
 std::optional<fhirtools::DefinitionKey> profileWithVersion(ProfileType profileType,
-                                                           const fhirtools::FhirStructureRepository& repoView);
+                                                           const fhirtools::FhirStructureRepositoryView& repoView);
 
 std::optional<std::string_view> profile(ProfileType profileType);
 std::optional<ProfileType> findProfileType(std::string_view profileUrl);
-std::string profileList(const fhirtools::FhirStructureRepository& repoView, std::initializer_list<ProfileType> types);
+std::string profileList(const fhirtools::FhirStructureRepositoryView& repoView,
+                        std::initializer_list<ProfileType> types);
 
 namespace version
 {
@@ -57,6 +64,8 @@ constexpr std::string_view kbvAnr = "https://fhir.kbv.de/NamingSystem/KBV_NS_Bas
 constexpr std::string_view kbvZanr = "http://fhir.de/sid/kzbv/zahnarztnummer";
 constexpr std::string_view organizationProfessionOid =
     "https://gematik.de/fhir/directory/CodeSystem/OrganizationProfessionOID";
+constexpr std::string_view iso3166 = "urn:iso:std:iso:3166";
+constexpr std::string_view euAccessCode = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_EU_AccessCode";
 } // namespace naming_system
 
 namespace code_system
@@ -84,6 +93,8 @@ constexpr std::string_view auditEvent = "https://gematik.de/fhir/erp/StructureDe
 constexpr std::string_view beneficiary = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_Beneficiary";
 constexpr std::string_view binary = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Binary";
 constexpr std::string_view chargeItem = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem";
+constexpr std::string_view gem_erpeu_pr_par_patch_charge_item_input =
+    "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input";
 constexpr std::string_view communication = "http://hl7.org/fhir/StructureDefinition/Communication";
 constexpr std::string_view communicationChargChangeReply = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply";
 constexpr std::string_view communicationChargChangeReq = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq";
@@ -148,6 +159,32 @@ constexpr std::string_view organization_directory =
     "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory";
 constexpr std::string_view epa_medication_pzn_ingredient =
     "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-pzn-ingredient";
+constexpr std::string_view gem_erpeu_pr_consent =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent";
+constexpr std::string_view gem_erpeu_pr_par_access_authorization_request =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_Access_Authorization_Request";
+constexpr std::string_view gem_erpeu_pr_par_access_authorization_response =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_Access_Authorization_Response";
+constexpr std::string_view gem_erpeu_pr_par_get_prescription_input =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_GET_Prescription_Input";
+constexpr std::string_view gem_erpeu_pr_par_patch_task_input =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input";
+constexpr std::string_view gem_erp_ex_eu_is_redeemable_by_patient_authorization =
+    "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_EU_IS_REDEEMABLE_BY_PATIENT_AUTHORIZATION";
+constexpr std::string_view gem_erp_ex_eu_is_redeemable_by_properties =
+    "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_EU_IS_REDEEMABLE_BY_PROPERTIES";
+constexpr std::string_view gem_erpeu_pr_par_closeoperation_input =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_CloseOperation_Input";
+constexpr std::string_view gem_erpeu_pr_par_medication_dispense =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense";
+constexpr std::string_view gem_erpeu_pr_par_medication =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication";
+constexpr std::string_view gem_erpeu_pr_practitioner =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Practitioner";
+constexpr std::string_view gem_erpeu_pr_practitionerrole =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PractitionerRole";
+constexpr std::string_view gem_erpeu_pr_organization =
+    "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Organization";
 } // namespace structure_definition
 
 namespace operation_definition
@@ -261,6 +298,7 @@ const ElementName extension{ "extension" };
 const ElementName family{ "family" };
 const ElementName _family{ "_family" };
 const ElementName form{ "form" };
+const ElementName fullUrl{"fullUrl"};
 const ElementName hash{ "hash" };
 const ElementName id{ "id" };
 const ElementName identifier{ "identifier" };
@@ -273,6 +311,7 @@ const ElementName meta{ "meta" };
 const ElementName mode{ "mode" };
 const ElementName name{ "name" };
 const ElementName numerator{ "numerator" };
+const ElementName organization{ "organization" };
 const ElementName parameter{ "parameter" };
 const ElementName part{ "part" };
 const ElementName path{ "path" };
@@ -281,6 +320,7 @@ const ElementName payload{ "payload" };
 const ElementName payor{ "payor" };
 const ElementName performer{ "performer" };
 const ElementName period{ "period" };
+const ElementName practitioner{ "practitioner" };
 const ElementName prefix{ "prefix" };
 const ElementName _prefix{ "_prefix" };
 const ElementName profile{ "profile" };
@@ -317,6 +357,7 @@ const ElementName valueDate{ "valueDate" };
 const ElementName valuePeriod{ "valuePeriod" };
 const ElementName valueRatio{ "valueRatio" };
 const ElementName valueIdentifier{ "valueIdentifier" };
+const ElementName valueInstant{ "valueInstant" };
 const ElementName valueString{ "valueString" };
 const ElementName version{ "version" };
 const ElementName whenHandedOver{ "whenHandedOver" };

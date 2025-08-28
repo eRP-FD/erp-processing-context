@@ -7,14 +7,15 @@
 
 #include "FhirStructureDefinition.hxx"
 #include "fhirtools/FPExpect.hxx"
-#include "fhirtools/repository/FhirResourceGroup.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
 
 #include <boost/algorithm/string.hpp>
 #include <ranges>
+#include <unordered_set>
 
 using namespace std::string_literals;
 using fhirtools::FhirStructureDefinition;
@@ -54,16 +55,21 @@ std::string fhirtools::FhirStructureDefinition::urlAndVersion() const
     return (std::ostringstream() << mUrl << '|' << mVersion).str();
 }
 
-fhirtools::DefinitionKey fhirtools::FhirStructureDefinition::definitionKey() const
+fhirtools::DefinitionKey fhirtools::FhirStructureDefinition::key() const
 {
     return {mUrl, mVersion};
 }
 
+const std::filesystem::path& fhirtools::FhirStructureDefinition::sourceFile() const
+{
+    return mSourceFile;
+}
+
 void FhirStructureDefinition::validate()
 {
-    Expect(mResourceGroup, "Missing group in FhirStructureDefinition:" + urlAndVersion());
-    Expect(not mUrl.empty(), "Missing url in FhirStructureDefinition.");
-    Expect(not mTypeId.empty(), "Missing type in FhirStructureDefinition: " + urlAndVersion());
+    Expect3(not mUrl.empty(), "Missing url in FhirStructureDefinition.", std::logic_error);
+    Expect3(mResourceGroup, "Missing group in FhirStructureDefinition:" + urlAndVersion(), std::logic_error);
+    Expect3(not mTypeId.empty(), "Missing type in FhirStructureDefinition: " + urlAndVersion(), std::logic_error);
 }
 
 const std::string& fhirtools::to_string(FhirStructureDefinition::Derivation derivation)
@@ -252,7 +258,7 @@ fhirtools::FhirStructureDefinition::findElementAndIndex(std::string_view element
     return {nullptr, 0};
 }
 
-const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStructureRepository& repo) const
+const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStructureRepositoryView& repo) const
 {
     const FhirStructureDefinition* parent{};
     if (kind() == Kind::slice)
@@ -273,14 +279,15 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
     return parent;
 }
 
-bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureRepository& repo,
+bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureRepositoryView& repo,
                                             const fhirtools::FhirStructureDefinition& baseProfile) const
 {
     return isDerivedFrom(repo, baseProfile.urlAndVersion());
 }
 
 //NOLINTNEXTLINE [misc-no-recursion]
-bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepository& repo, const std::string_view& baseUrl) const
+bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepositoryView& repo,
+                                            const std::string_view& baseUrl) const
 {
     if (url() == baseUrl || urlAndVersion() == baseUrl)
     {
@@ -294,7 +301,7 @@ bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepository& repo,
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStructureRepository& repo) const
+const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStructureRepositoryView& repo) const
 {
     if (derivation() != Derivation::constraint)
     {
@@ -303,7 +310,8 @@ const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStruc
     return parentType(repo)->baseType(repo);
 }
 
-const FhirStructureDefinition& FhirStructureDefinition::primitiveToSystemType(const FhirStructureRepository& repo) const
+const FhirStructureDefinition&
+FhirStructureDefinition::primitiveToSystemType(const FhirStructureRepositoryView& repo) const
 {
     if (isSystemType())
     {
@@ -324,6 +332,11 @@ const std::shared_ptr<const fhirtools::FhirResourceGroup>& fhirtools::FhirStruct
     return mResourceGroup;
 }
 
+const fhirtools::FhirStructureRepositoryBackend& fhirtools::FhirStructureDefinition::repositoryBackend() const
+{
+    return *mRepositoryBackend;
+}
+
 
 class FhirStructureDefinition::Builder::FhirSlicingBuilder : public FhirSlicing::Builder
 {
@@ -338,17 +351,24 @@ FhirStructureDefinition::Builder::Builder()
 {
 }
 
+//NOLINTNEXTLINE(hicpp-noexcept-move, performance-noexcept-move-constructor) - construction of FhirStructureDefinition might throw
+fhirtools::FhirStructureDefinition::Builder::Builder(Builder&& other) noexcept
+    : Builder{}
+{
+    swap(mFhirSlicingBuilders, other.mFhirSlicingBuilders);
+    swap(mStructureDefinition, other.mStructureDefinition);
+}
+
+
 FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::url(std::string url_)
 {
     mStructureDefinition->mUrl = std::move(url_);
     return *this;
 }
 
-FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::initGroup(const FhirResourceGroupResolver& resolver,
-                                                                              const std::filesystem::path& source)
+FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::initGroup(const FhirResourceGroupResolver& resolver)
 {
-    mStructureDefinition->mResourceGroup =
-        resolver.findGroup(mStructureDefinition->mUrl, mStructureDefinition->mVersion, source);
+    mStructureDefinition->mResourceGroup = resolver.findGroup(*mStructureDefinition);
     return *this;
 }
 
@@ -365,6 +385,11 @@ FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::version(Fhir
     return *this;
 }
 
+FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::sourceFile(std::filesystem::path path)
+{
+    mStructureDefinition->mSourceFile = std::move(path);
+    return *this;
+}
 
 FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::typeId(std::string type_)
 {
@@ -401,12 +426,51 @@ FhirStructureDefinition::Builder& FhirStructureDefinition::Builder::kind(Kind ki
 }
 
 FhirStructureDefinition::Builder&
-FhirStructureDefinition::Builder::addElement(std::shared_ptr<const FhirElement> element,
+FhirStructureDefinition::Builder::repositoryBackend(gsl::not_null<const FhirStructureRepositoryBackend*> backend)
+{
+    mStructureDefinition->mRepositoryBackend = backend.get();
+    return *this;
+}
+
+FhirStructureDefinition::Builder&
+FhirStructureDefinition::Builder::addElement(FhirElement::Builder elementBuilder,
                                              std::list<std::string> withTypes)
 {
-    const auto elementName = element->name();
+    elementBuilder.structureDefinition(mStructureDefinition.get());
+    auto element = elementBuilder.getAndReset();
+    if (element->hasBinding() && element->cardinality().max > 0)
+    {
+        // eld-11: Binding can only be present for coded elements, string, and uri
+        // binding.empty() or type.code.empty() or type.select((code = 'code') or (code = 'Coding') or (code='CodeableConcept') or (code = 'Quantity') or (code = 'string') or (code = 'uri')).exists()
+        static std::unordered_set<std::string_view> validBindingTypeIds{"code",     "Coding", "CodeableConcept",
+                                                                        "Quantity", "string", "uri"};
+        bool hasValidBindingType{false};
+        std::ostringstream types;
+        std::string_view sep{};
+        for (const auto& elementType : withTypes)
+        {
+            types << sep << elementType;
+            sep = ", ";
+            if (validBindingTypeIds.contains(elementType))
+            {
+                hasValidBindingType = true;
+                break;
+            }
+        }
+        // binding to `http://hl7.org/fhir/ValueSet/duration-units` for type `Duration` is strangely added during snapshot generation
+        bool strangeDurationBinding = (withTypes.size() == 1 && withTypes.front() == "Duration" &&
+                                       element->binding().key.url == "http://hl7.org/fhir/ValueSet/duration-units");
+        if (! hasValidBindingType && ! strangeDurationBinding)
+        {
+            TLOG(INFO) << "Element " << element->originalName() << " of " << mStructureDefinition->key()
+                       << " has defined a binding (" + to_string(element->binding().key) +
+                              ") but does not contain a valid binding type: "
+                       << types.view();
+        }
+    }
+    const auto originalName = element->originalName();
     bool added = addElementInternal(std::move(element), std::move(withTypes));
-    Expect(added, "Failed to add element: " + elementName);
+    Expect(added, "Failed to add element: " + originalName);
     return *this;
 }
 
@@ -522,8 +586,9 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
             "inserted element shouldn't contain colon: " + element->name(), std::logic_error);
     if (element->slicing())
     {
-        mFhirSlicingBuilders.emplace(mStructureDefinition->mElements.size(),
-                                     FhirSlicingBuilder{*element->slicing(), element->name()});
+        auto result = mFhirSlicingBuilders.emplace(mStructureDefinition->mElements.size(),
+                                                   FhirSlicingBuilder{*element->slicing(), element->name()});
+        result.first->second.repositoryBackend(mStructureDefinition->mRepositoryBackend);
     }
     if (element->typeId().empty() && element->contentReference().empty() && ! mStructureDefinition->isSystemType())
     {
@@ -594,6 +659,7 @@ FhirStructureDefinition::Builder::FhirSlicingBuilder& FhirStructureDefinition::B
     }
     const auto& element = mStructureDefinition->mElements.at(elementIdx);
     auto& newBuilder = mFhirSlicingBuilders[elementIdx];
+    newBuilder.repositoryBackend(mStructureDefinition->mRepositoryBackend);
     newBuilder.slicePrefix(element->name());
     return newBuilder;
 }
@@ -601,7 +667,7 @@ FhirStructureDefinition::Builder::FhirSlicingBuilder& FhirStructureDefinition::B
 void FhirStructureDefinition::Builder::commitSlicing(size_t elementIdx)
 {
     auto&& prev = mStructureDefinition->mElements.at(elementIdx);
-    prev = FhirElement::Builder{*prev}.slicing(mFhirSlicingBuilders.at(elementIdx).getAndReset()).getAndReset();
+    prev = FhirElement::Builder{*prev}.slicing(std::move(mFhirSlicingBuilders.at(elementIdx))).getAndReset();
     mFhirSlicingBuilders.erase(elementIdx);
 }
 
@@ -650,14 +716,21 @@ FhirStructureDefinition::Builder::splitSlicedName(std::string_view name)
     return result;
 }
 
-FhirStructureDefinition FhirStructureDefinition::Builder::getAndReset()
+void fhirtools::FhirStructureDefinition::Builder::reset()
 {
+    mStructureDefinition = std::make_unique<FhirStructureDefinition>();
+    mFhirSlicingBuilders.clear();
+}
+
+std::unique_ptr<FhirStructureDefinition> FhirStructureDefinition::Builder::getAndReset()
+{
+    Expect3(mStructureDefinition->mRepositoryBackend != nullptr,  "structureRepository not set.", std::logic_error);
     while (! mFhirSlicingBuilders.empty())
     {
         commitSlicing(mFhirSlicingBuilders.begin()->first);
     }
-    auto prev = std::move(*mStructureDefinition);
-    mStructureDefinition = std::make_unique<FhirStructureDefinition>();
-    prev.validate();
+    auto prev = std::move(mStructureDefinition);
+    reset();
+    prev->validate();
     return prev;
 }

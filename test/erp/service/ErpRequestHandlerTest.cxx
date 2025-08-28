@@ -10,7 +10,15 @@
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Consent.hxx"
+#include "erp/model/GemErpChrgPrParPatchChargeItemInput.hxx"
 #include "erp/model/WorkflowParameters.hxx"
+#include "erp/model/eu/GemErpEuPrParAccessAuthorizationRequest.hxx"
+#include "erp/model/eu/GemErpEuPrParAccessAuthorizationResponse.hxx"
+#include "erp/model/eu/GemErpEuPrParGetPrescriptionInput.hxx"
+#include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
+#include "erp/model/eu/GemErpEuPrTaskInput.hxx"
+#include "erp/model/eu/GemErpEuPrMedication.hxx"
+#include "shared/model/GemErpEuPrMedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/FileHelper.hxx"
@@ -40,9 +48,11 @@ public:
 	void handleRequest(PcSessionContext& session) override { (void)session; }
     void handleRequest(BaseSessionContext& session) override { handleRequest(dynamic_cast<PcSessionContext&>(session)); }
 
+
     template<typename TModel>
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
-    void testParseAndValidateRequestBodyT(std::string body, const std::string& contentMimeType, bool expectFail)
+    void testParseAndValidateRequestBodyT(std::string body, const std::string& contentMimeType, bool expectFail,
+                                          std::set<model::ProfileType> profileTypes)
     {
         Header header(HttpMethod::POST, "", Header::Version_1_1, {{Header::ContentType, contentMimeType}}, HttpStatus::Unknown);
         ServerRequest serverRequest(std::move(header));
@@ -57,17 +67,23 @@ public:
         }
         if (expectFail)
         {
-            ASSERT_ANY_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext))
+            ASSERT_ANY_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, profileTypes))
                 << "failed with " << contentMimeType << ", " << profileTypeStr
                 << " expectFail=true";
         }
         else
         {
-            ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext))
+            ASSERT_NO_THROW((void) parseAndValidateRequestBody<TModel>(sessionContext, profileTypes))
                 << "failed with " << contentMimeType << ", " << profileTypeStr
                 << " expectFail=false";
         }
 
+    }
+
+    template<model::FhirValidatableProfileConstexpr TModel>
+    void testParseAndValidateRequestBodyT(std::string body, const std::string& contentMimeType, bool expectFail)
+    {
+        testParseAndValidateRequestBodyT<TModel>(std::move(body), contentMimeType, expectFail, {TModel::profileType});
     }
 
     void testParseAndValidateRequestBody(const std::string& body, const std::string& contentMimeType,
@@ -86,10 +102,11 @@ public:
                 break;
             case GEM_ERP_PR_MedicationDispense:
             case GEM_ERP_PR_MedicationDispense_DiGA:
-                testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, expectFail);
+                testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, expectFail, {profileType});
                 break;
             case MedicationDispenseBundle:
-                testParseAndValidateRequestBodyT<model::MedicationDispenseBundle>(body, contentMimeType, expectFail);
+                testParseAndValidateRequestBodyT<model::MedicationDispenseBundle>(body, contentMimeType, expectFail,
+                                                                                  {profileType});
                 break;
             case ActivateTaskParameters:
                 testParseAndValidateRequestBodyT<model::ActivateTaskParameters>(body, contentMimeType, expectFail);
@@ -136,11 +153,45 @@ public:
             case EPAMedicationPZNIngredient:
                 FAIL() << "wrong SchemaType for this test";
                 break;
+            case GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrTaskInput>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_PAR_CloseOperation_Input:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrParCloseOperationInput>(body, contentMimeType, expectFail);
+                break;
             case GEM_ERPCHRG_PR_ChargeItem:
                 testParseAndValidateRequestBodyT<model::ChargeItem>(body, contentMimeType, expectFail);
                 break;
             case GEM_ERPCHRG_PR_Consent:
-                testParseAndValidateRequestBodyT<model::Consent>(body, contentMimeType, expectFail);
+            case GEM_ERPEU_PR_Consent:
+                testParseAndValidateRequestBodyT<model::Consent>(body, contentMimeType, expectFail, {profileType});
+                break;
+            case GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrParAccessAuthorizationRequest>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrParAccessAuthorizationResponse>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrParGetPrescriptionInput>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_MedicationDispense:
+                testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, expectFail, {profileType});
+                break;
+            case GEM_ERPEU_PR_PAR_Medication:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrMedication>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_Practitioner:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrPractitioner>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_PractitionerRole:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrPractitionerRole>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPEU_PR_Organization:
+                testParseAndValidateRequestBodyT<model::GemErpEuPrOrganization>(body, contentMimeType, expectFail);
+                break;
+            case GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
+                testParseAndValidateRequestBodyT<model::GemErpChrgPrParPatchChargeItemInput>(body, contentMimeType, expectFail);
                 break;
         }
     }

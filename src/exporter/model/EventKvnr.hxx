@@ -34,14 +34,16 @@ public:
     const std::basic_string<std::byte>& kvnrHashed() const;
     std::string getLoggingId() const;
     std::optional<Timestamp> getLastConsentCheck() const;
-    const std::optional<std::string>& getASsignedEpa() const;
+    const std::optional<std::string>& getAssignedEpa() const;
     State getState() const;
     std::int32_t getRetryCount() const;
+
+    bool useCachedValues() const;
 
 private:
     std::basic_string<std::byte> mKvnrHashed;
     std::optional<Timestamp> mLastConsentCheck;
-    std::optional<std::string> mASsignedEpa;
+    std::optional<std::string> mAssignedEpa;
     State mState;
     std::int32_t mRetryCount;
 };

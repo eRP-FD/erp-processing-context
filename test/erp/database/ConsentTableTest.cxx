@@ -14,8 +14,8 @@ public:
     {
         DatabaseTestFixture::SetUp();
         auto db = database();
-        (void)db.clearConsent(kvnr1);
-        (void)db.clearConsent(kvnr2);
+        (void)db.clearConsent(kvnr1, model::ConsentType::CHARGCONS);
+        (void)db.clearConsent(kvnr2, model::ConsentType::CHARGCONS);
         db.commitTransaction();
     }
 
@@ -31,15 +31,15 @@ TEST_F(ConsentTableTest, createAndGet)
     auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope
         auto db = database();
-        db.storeConsent(model::Consent{kvnr1, timestamp});
+        db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp});
         db.commitTransaction();
     }
     auto endTime = model::Timestamp::now();
     { //scope
         auto db = database();
-        auto fromDB = db.retrieveConsent(kvnr1);
+        auto fromDB = db.retrieveConsent(kvnr1, model::ConsentType::CHARGCONS);
         ASSERT_TRUE(fromDB.has_value());
-        EXPECT_EQ(fromDB->id(), model::Consent::createIdString(model::Consent::Type::CHARGCONS, kvnr1));
+        EXPECT_EQ(fromDB->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr1));
         EXPECT_EQ(fromDB->patientKvnr(), kvnr1);
         EXPECT_TRUE(fromDB->isChargingConsent());
         EXPECT_GE(fromDB->dateTime().toChronoTimePoint(), startTime.toChronoTimePoint());
@@ -52,23 +52,23 @@ TEST_F(ConsentTableTest, notFound)
 {
     { // scope
         auto db = database();
-        auto fromDB1 = db.retrieveConsent(kvnr1);
+        auto fromDB1 = db.retrieveConsent(kvnr1, model::ConsentType::CHARGCONS);
         ASSERT_FALSE(fromDB1.has_value());
-        auto fromDB2 = db.retrieveConsent(kvnr2);
+        auto fromDB2 = db.retrieveConsent(kvnr2, model::ConsentType::CHARGCONS);
         ASSERT_FALSE(fromDB2.has_value());
         db.commitTransaction();
     }
     { //scope
         auto db = database();
         auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
-        db.storeConsent(model::Consent{kvnr1, timestamp});
+        db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp});
         db.commitTransaction();
     }
     { // scope
         auto db = database();
-        auto fromDB1 = db.retrieveConsent(kvnr1);
+        auto fromDB1 = db.retrieveConsent(kvnr1, model::ConsentType::CHARGCONS);
         ASSERT_TRUE(fromDB1.has_value());
-        auto fromDB2 = db.retrieveConsent(kvnr2);
+        auto fromDB2 = db.retrieveConsent(kvnr2, model::ConsentType::CHARGCONS);
         ASSERT_FALSE(fromDB2.has_value());
         db.commitTransaction();
     }
@@ -80,24 +80,24 @@ TEST_F(ConsentTableTest, clear)
     { // scope
         auto db = database();
         auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
-        EXPECT_FALSE(db.clearConsent(kvnr1));
-        db.storeConsent(model::Consent{kvnr1, timestamp});
+        EXPECT_FALSE(db.clearConsent(kvnr1, model::ConsentType::CHARGCONS));
+        db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp});
         db.commitTransaction();
     }
     { // scope
         auto db = database();
-        auto fromDB1 = db.retrieveConsent(kvnr1);
+        auto fromDB1 = db.retrieveConsent(kvnr1, model::ConsentType::CHARGCONS);
         ASSERT_TRUE(fromDB1.has_value());
         db.commitTransaction();
     }
     { // scope
         auto db = database();
-        EXPECT_TRUE(db.clearConsent(kvnr1));
+        EXPECT_TRUE(db.clearConsent(kvnr1, model::ConsentType::CHARGCONS));
         db.commitTransaction();
     }
     { // scope
         auto db = database();
-        auto fromDB1 = db.retrieveConsent(kvnr1);
+        auto fromDB1 = db.retrieveConsent(kvnr1, model::ConsentType::CHARGCONS);
         ASSERT_FALSE(fromDB1.has_value());
         db.commitTransaction();
     }
@@ -109,12 +109,12 @@ TEST_F(ConsentTableTest, duplicate)//NOLINT(readability-function-cognitive-compl
     auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
     { // scope
         auto db = database();
-        EXPECT_NO_THROW(db.storeConsent(model::Consent{kvnr1, timestamp}));
+        EXPECT_NO_THROW(db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp}));
         db.commitTransaction();
     }
     { // scope
         auto db = database();
-        EXPECT_THROW(db.storeConsent(model::Consent{kvnr1, timestamp}), pqxx::unique_violation);
+        EXPECT_THROW(db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp}), pqxx::unique_violation);
         db.commitTransaction();
     }
 }

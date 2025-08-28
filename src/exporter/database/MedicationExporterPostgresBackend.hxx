@@ -42,7 +42,8 @@ public:
 
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) override;
 
-    void finalizeKvnr(const model::EventKvnr& kvnr) const override;
+    void finalizeKvnr(const model::EventKvnr& kvnr,
+                      const std::string& assignedEpaPrefix) const override;
 
     struct TaskEventQueryIndexes {
         pqxx::row::size_type id = 0;

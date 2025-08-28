@@ -20,6 +20,7 @@ class DurationTimer;
 
 namespace fhirtools
 {
+class FhirStructureRepositoryView;
 class ValidatorOptions;
 }
 
@@ -34,11 +35,13 @@ concept FhirValidatableProfileFunction = requires {
 
 template<typename T>
 concept FhirValidatableProfileConstexpr = requires {
-    { T::profileType } -> std::convertible_to<model::ProfileType>;
+    { T::profileType } -> std::convertible_to<const model::ProfileType>;
 };
 
 template<typename T>
-concept FhirValidatable = FhirValidatableProfileFunction<T> || FhirValidatableProfileConstexpr<T>;
+concept FhirValidatable = requires {
+    requires FhirValidatableProfileFunction<T> || FhirValidatableProfileConstexpr<T>;
+};
 
 // NOLINTBEGIN(cppcoreguidelines-rvalue-reference-param-not-moved)
 // NOLINTNEXTLINE(bugprone-exception-escape)
@@ -55,15 +58,9 @@ public:
     void setMetaProfile0(std::string_view metaProfile);
 
     virtual std::optional<model::Timestamp> getValidationReferenceTimestamp() const;
-    virtual gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> getValidationView() const = 0;
+    virtual gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getValidationView() const = 0;
     virtual void prepare() {};
     virtual void additionalValidation() const = 0;
-
-    [[nodiscard]] std::optional<std::string_view> identifierUse() const;
-    [[nodiscard]] std::optional<std::string_view> identifierTypeCodingCode() const;
-    [[nodiscard]] std::optional<std::string_view> identifierTypeCodingSystem() const;
-    [[nodiscard]] std::optional<std::string_view> identifierSystem() const;
-    [[nodiscard]] std::optional<std::string_view> identifierValue() const;
 
     [[nodiscard]] ProfileType getProfile() const;
     [[nodiscard]] std::optional<std::string_view> getProfileName() const;
@@ -95,7 +92,7 @@ protected:
     void setProfile(ProfileType profileType);
     void setProfile(const Profile& profile);
 
-    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
     getValidationView(ProfileType profileType) const;
 };
 
@@ -128,9 +125,9 @@ public:
 
     [[nodiscard]] fhirtools::ValidationResults
     genericValidate(ProfileType profileType, const fhirtools::ValidatorOptions& options,
-                    const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView = nullptr) const;
+                    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView = nullptr) const;
 
-    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>> getValidationView() const override;
+    gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getValidationView() const override;
 
     void additionalValidation() const override;
 

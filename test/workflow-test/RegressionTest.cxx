@@ -4,10 +4,11 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "test/util/ResourceManager.hxx"
-#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "test/util/TestUtils.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
+#include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <date/tz.h>
 #include <gtest/gtest.h>
@@ -74,7 +75,7 @@ TEST_F(RegressionTest, Erp10835)
     ASSERT_NO_FATAL_FAILURE(
         taskActivateWithOutcomeValidation(task->prescriptionId(), task->accessCode(),
                      std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
-    ASSERT_NO_FATAL_FAILURE(consentPost(kvnr, model::Timestamp::now()));
+    ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, model::Timestamp::now()));
     const auto acceptBundle = taskAccept(task->prescriptionId(), std::string{task->accessCode()});
     ASSERT_TRUE(acceptBundle);
     const auto acceptedTasks = acceptBundle->getResourcesByType<model::Task>();
@@ -134,14 +135,18 @@ TEST_F(RegressionTestErp8170, Erp8170)
 TEST_F(RegressionTest, Erp11142)
 {
     auto authoredOn = model::Timestamp::fromGermanDate("2021-06-08");
-    auto kbv_version = to_string(ResourceTemplates::Versions::KBV_ERP_current(authoredOn));
+    auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
     ASSERT_TRUE(task.has_value());
     auto accessCode = task->accessCode();
 
-    const std::string kbv_bundle_orig_xml = ResourceTemplates::kbvBundleXml({.prescriptionId = task->prescriptionId()});
+    const std::string kbv_bundle_orig_xml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = task->prescriptionId(),
+        .authoredOn = authoredOn,
+        .kbvVersion = kbvVersion,
+    });
     auto kbv_bundle_xml = String::replaceAll(kbv_bundle_orig_xml,
-                                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbv_version,
+                                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbvVersion.renderVersion(),
                                              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle");
     mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
@@ -156,8 +161,8 @@ TEST_F(RegressionTest, Erp11142)
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml =
         String::replaceAll(kbv_bundle_orig_xml, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
-                           "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbv_version);
-    mActivateTaskRequestArgs.overrideExpectedKbvVersion = "";
+                           "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbvVersion.renderVersion());
+    mActivateTaskRequestArgs.overrideExpectedKbvVersion = kbvVersion.renderVersion();
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode,
         toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
@@ -257,6 +262,7 @@ TEST_F(RegressionTest, Erp16393)
     ASSERT_TRUE(task.has_value());
     kbvBundleXml = String::replaceAll(kbvBundleXml, "160.000.006.388.698.96", task->prescriptionId().toString());
     std::string accessCode{task->accessCode()};
+    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion("1.1.0");
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(
         taskActivateResult = taskActivateWithOutcomeValidation(

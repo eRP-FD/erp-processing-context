@@ -3,6 +3,11 @@
 //
 // non-exclusively licensed to gematik GmbH
 
+#include "fhirtools/converter/FhirConverter.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/util/SaxHandler.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Parameters.hxx"
 #include "shared/model/ResourceFactory.hxx"
@@ -12,10 +17,6 @@
 #include "shared/util/String.hxx"
 #include "shared/validation/JsonValidator.hxx"
 #include "shared/validation/XmlValidator.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/util/SaxHandler.hxx"
-#include "fhirtools/validator/FhirPathValidator.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 
 
 model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml, Options options)
@@ -79,7 +80,7 @@ std::string_view model::ResourceFactoryBase::xmlDocument() const
 
 
 void model::ResourceFactoryBase::validate(
-    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) const
+    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) const
 {
     try
     {
@@ -101,7 +102,7 @@ void model::ResourceFactoryBase::validate(
 }
 
 fhirtools::ValidationResults
-model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureRepository& repo,
+model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureRepositoryView& repo,
                                             const fhirtools::ValidatorOptions& options,
                                             const std::set<fhirtools::DefinitionKey>& profiles) const
 {
@@ -119,6 +120,11 @@ std::optional<std::string_view> model::ResourceFactoryBase::getProfileName() con
     return resource().getProfileName();
 }
 
+model::ProfileType model::ResourceFactoryBase::getProfile() const
+{
+    return resource().getProfile();
+}
+
 std::string_view model::ResourceFactoryBase::getResourceType() const
 {
     return resource().getResourceType();
@@ -129,7 +135,7 @@ std::optional<model::Timestamp> model::ResourceFactoryBase::getValidationReferen
     return resource().getValidationReferenceTimestamp();
 }
 
-gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepository>>
+gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>>
 model::ResourceFactoryBase::getValidationView() const
 {
     return resource().getValidationView();
@@ -157,7 +163,7 @@ void model::ResourceFactoryBase::enableAdditionalValidation(bool enable)
 
 void model::ResourceFactoryBase::conditionalValidateGeneric(
     const std::set<fhirtools::DefinitionKey>& profiles,
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView,
+    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView,
     const fhirtools::ValidatorOptions& validatorOptions,
     const std::optional<ErpException>& validationErpException) const
 {
@@ -217,11 +223,13 @@ void model::ResourceFactoryBase::conditionalValidateGeneric(
 
 
 void model::ResourceFactoryBase::validateNoAdditional(
-    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepository>& repoView) const
+    ProfileType profileType, const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) const
 {
     using namespace std::string_literals;
-    const auto& config = Configuration::instance();
-    auto validatorOptions = mOptions.validatorOptions.value_or(config.defaultValidatorOptions(profileType));
+    auto validatorOptions =
+        (mOptions.validatorOptions)
+            ? (*mOptions.validatorOptions)
+            : (Fhir::instance().defaultValidatorOptions(profileType, value(getValidationReferenceTimestamp())));
     const auto prof = profile(profileType);
     Expect3(profileType == ProfileType::fhir || prof.has_value(),
             "Missing profile in view: "s.append(magic_enum::enum_name(profileType)), std::logic_error);

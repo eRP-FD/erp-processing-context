@@ -13,6 +13,7 @@
 
 #include <rapidjson/document.h>
 #include <string>
+#include <variant>
 
 namespace ResourceTemplates
 {
@@ -38,8 +39,11 @@ const std::string_view& actorRoleToResourceId(ActorRole actorRole);
 class CommunicationJsonStringBuilder
 {
 public:
+    using CommunicationVersion =
+        std::variant<std::monostate, ResourceTemplates::Versions::GEM_ERP, ResourceTemplates::Versions::GEM_ERPCHRG>;
+
     explicit CommunicationJsonStringBuilder(model::Communication::MessageType messageType,
-                                            std::optional<fhirtools::FhirVersion> profileVersion = std::nullopt);
+                                            CommunicationVersion profileVersion = {});
     std::string createJsonString() const;
     std::string createXmlString() const;
     CommunicationJsonStringBuilder& setPrescriptionId(const std::string& prescriptionId);
@@ -66,18 +70,20 @@ public:
 private:
     std::string senderIdentifierType() const;
     std::string receipientIdentifierType() const;
+    const std::string_view& actorRoleToResourceId(ActorRole actorRole) const;
+
 
     model::Communication::MessageType                 mMessageType;       // ["InfoReq", "ChargChangeReq", "ChargChangeReply", "Reply", "DispReq", "Representative"]
-    std::optional<std::string>                        mPrescriptionId;    // e.g. "160.123.456.789.123.58"
-    std::optional<std::string>                        mAccessCode;        // e.g. "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
-    std::optional<std::tuple<ActorRole, std::string>> mSender;            // e.g. make_tuple(Actor::Pharmacists, "A87654321")
-    std::optional<std::tuple<ActorRole, std::string>> mRecipient;         // e.g. make_tuple(Actor::Pharmacists, "A87654321")
-    std::optional<std::string>                        mTimeSent;          // e.g. "2020-01-23T12:34"
-    std::optional<std::string>                        mTimeReceived;      // e.g. "2020-01-23T12:34"
-    std::optional<std::string>                        mPayload;           // e.g. "Hello, do you ..."
-    std::optional<std::string>                        mAbout;
-    std::unique_ptr<ResourceTemplates::MedicationOptions> mMedicationOptions;
-    std::optional<fhirtools::FhirVersion> mProfileVersion;
+    std::optional<std::string>                        mPrescriptionId{};    // e.g. "160.123.456.789.123.58"
+    std::optional<std::string>                        mAccessCode{};        // e.g. "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
+    std::optional<std::tuple<ActorRole, std::string>> mSender{};            // e.g. make_tuple(Actor::Pharmacists, "A87654321")
+    std::optional<std::tuple<ActorRole, std::string>> mRecipient{};         // e.g. make_tuple(Actor::Pharmacists, "A87654321")
+    std::optional<std::string>                        mTimeSent{};          // e.g. "2020-01-23T12:34"
+    std::optional<std::string>                        mTimeReceived{};      // e.g. "2020-01-23T12:34"
+    std::optional<std::string>                        mPayload{};           // e.g. "Hello, do you ..."
+    std::optional<std::string>                        mAbout{};
+    std::unique_ptr<ResourceTemplates::MedicationOptions> mMedicationOptions = nullptr;
+    CommunicationVersion mProfileVersion{};
 };
 
 #endif // EPR_PROCESSINIG_CONTEXT_JSONTESTUTILS_HXX

@@ -42,7 +42,7 @@ std::optional<db_model::Task> MockTaskTable::retrieveTaskBasics(const model::Pre
 {
     return select(taskId.toDatabaseId(), {prescription_id, kvnr, last_modified, authored_on,
             expiry_date, accept_date, status, salt, task_key_blob_id,
-            access_code, secret, last_medication_dispense});
+            access_code, secret, last_medication_dispense, owner, redeemable_by_patient, eu_redeemable});
 }
 
 std::vector<db_model::Task> MockTaskTable::retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
@@ -50,8 +50,12 @@ std::vector<db_model::Task> MockTaskTable::retrieveAllTasksForPatient(const db_m
                                                                       const bool onlyFlowtype160,
                                                                       bool applyOnlySearch, bool withAccessCode) const
 {
-    static std::set<FieldName> selectedFields = {prescription_id, kvnr,   last_modified, last_medication_dispense, authored_on,     expiry_date,
-                                                 accept_date,     status, salt,          task_key_blob_id, last_medication_dispense};
+    static std::set<FieldName> selectedFields = { prescription_id, kvnr,
+                                                  last_modified, last_medication_dispense,
+                                                  authored_on, expiry_date,
+                                                  accept_date, status, salt,
+                                                  task_key_blob_id, last_medication_dispense,
+                                                  redeemable_by_patient, eu_redeemable };
     if (withAccessCode)
     {
         selectedFields.emplace(access_code);
@@ -85,9 +89,49 @@ uint64_t MockTaskTable::countAllTasksForPatient(const db_model::HashedKvnr& kvnr
 }
 
 uint64_t MockTaskTable::countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                                const std::optional<UrlArguments>& search) const
+                                         const std::optional<UrlArguments>& search) const
 {
-    auto allTasks = retrieveAllTasksForPatient(kvnr, search, true/*onlyFlowtype160*/, true/*applyOnlySearch*/, false);
+    auto allTasks = retrieveAllTasksForPatient(kvnr, search, true /*onlyFlowtype160*/, true /*applyOnlySearch*/, false);
+    return allTasks.size();
+}
+
+std::vector<db_model::Task> MockTaskTable::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnrHashed,
+                                                                 const std::optional<UrlArguments>& search) const
+{
+    static const std::set<FieldName> selectedFields = {prescription_id,
+                                                       kvnr,
+                                                       last_modified,
+                                                       authored_on,
+                                                       expiry_date,
+                                                       accept_date,
+                                                       status,
+                                                       salt,
+                                                       task_key_blob_id,
+                                                       healthcare_provider_prescription,
+                                                       owner,
+                                                       eu_redeemable,
+                                                       redeemable_by_patient};
+
+    std::vector<db_model::Task> allTasks;
+    for (const auto& task : mTasks)
+    {
+        if (task.second.kvnrHashed == kvnrHashed && task.second.isEuRedeemable && task.second.euRedeemableByPatient)
+        {
+            allTasks.emplace_back(select(task.first, selectedFields).value());
+        }
+    }
+
+    if (search.has_value())
+    {
+        return TestUrlArguments(search.value()).apply(std::move(allTasks));
+    }
+    return allTasks;
+}
+
+uint64_t MockTaskTable::countAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                           const std::optional<UrlArguments>& search) const
+{
+    auto allTasks = retrieveAllTasksForEu(kvnr, search);
     return allTasks.size();
 }
 
@@ -122,7 +166,8 @@ void MockTaskTable::activateTask(const model::PrescriptionId& taskId,
                                 const model::Timestamp& expiryDate,
                                 const model::Timestamp& acceptDate,
                                 const db_model::EncryptedBlob& healthCareProviderPrescription,
-                                const model::Timestamp& lastStatusUpdate)
+                                const model::Timestamp& lastStatusUpdate,
+                                bool euRedeemable)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
@@ -135,6 +180,7 @@ void MockTaskTable::activateTask(const model::PrescriptionId& taskId,
     taskRow.expiryDate.emplace(expiryDate.localDay(model::Timestamp::GermanTimezone));
     taskRow.acceptDate.emplace(acceptDate.localDay(model::Timestamp::GermanTimezone));
     taskRow.healthcareProviderPrescription = healthCareProviderPrescription;
+    taskRow.isEuRedeemable = euRedeemable;
 }
 
 void MockTaskTable::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -187,7 +233,8 @@ void MockTaskTable::updateTaskMedicationDispense(const model::PrescriptionId& ta
                                                  const db_model::HashedTelematikId& telematikId,
                                                  const model::Timestamp& whenHandedOver,
                                                  const std::optional<model::Timestamp>& whenPrepared,
-                                                 const db_model::Blob& medicationDispenseSalt)
+                                                 const db_model::Blob& medicationDispenseSalt,
+                                                 const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
@@ -200,6 +247,10 @@ void MockTaskTable::updateTaskMedicationDispense(const model::PrescriptionId& ta
     taskRow.whenHandedOver = whenHandedOver;
     taskRow.whenPrepared = whenPrepared;
     taskRow.medicationDispenseSalt = medicationDispenseSalt;
+    if (taskStatus.has_value())
+    {
+        taskRow.status = taskStatus;
+    }
 }
 
 void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
@@ -262,6 +313,30 @@ void MockTaskTable::updateTaskClearPersonalData(const model::PrescriptionId& tas
     taskRow.whenPrepared.reset();
     taskRow.performer.reset();
     taskRow.medicationDispenseBundle.reset();
+    taskRow.euRedeemableByPatient = false;
+    taskRow.isEuRedeemable = false;
+}
+
+void MockTaskTable::updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                                    bool redeemable,
+                                                    const model::Timestamp& lastModified)
+{
+    auto taskRowIt = mTasks.find(taskId.toDatabaseId());
+    Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
+    auto& taskRow = taskRowIt->second;
+    taskRow.lastModified = lastModified;
+    taskRow.euRedeemableByPatient = redeemable;
+}
+
+void MockTaskTable::updateTaskEuRedeemable(const model::PrescriptionId& taskId,
+                                           bool redeemable,
+                                           const model::Timestamp& lastModified)
+{
+    auto taskRowIt = mTasks.find(taskId.toDatabaseId());
+    Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
+    auto& taskRow = taskRowIt->second;
+    taskRow.lastModified = lastModified;
+    taskRow.isEuRedeemable = redeemable;
 }
 
 std::vector<TestUrlArguments::SearchMedicationDispense>
@@ -295,7 +370,7 @@ std::optional<db_model::Task> MockTaskTable::retrieveTaskAndReceipt(const model:
 {
     return select(taskId.toDatabaseId(), {prescription_id, kvnr, last_modified, authored_on,
             expiry_date, accept_date, status, salt, task_key_blob_id,
-            secret, owner, receipt, last_medication_dispense});
+            secret, owner, receipt, last_medication_dispense, redeemable_by_patient, eu_redeemable});
 }
 
 ::std::optional<::db_model::Task>
@@ -303,7 +378,8 @@ MockTaskTable::retrieveTaskForUpdateAndPrescription(const model::PrescriptionId&
 {
     return select(taskId.toDatabaseId(),
                   {prescription_id, kvnr, last_modified, authored_on, expiry_date, accept_date, status, salt,
-                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, last_medication_dispense});
+                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, last_medication_dispense,
+                   redeemable_by_patient, eu_redeemable});
 }
 
 
@@ -311,21 +387,24 @@ std::optional<db_model::Task> MockTaskTable::retrieveTaskAndPrescription(const m
 {
     return select(taskId.toDatabaseId(),
                   {prescription_id, kvnr, last_modified, authored_on, expiry_date, accept_date, status, salt,
-                   task_key_blob_id, access_code, owner, healthcare_provider_prescription, last_medication_dispense});
+                   task_key_blob_id, access_code, owner, healthcare_provider_prescription, last_medication_dispense,
+                   redeemable_by_patient, eu_redeemable});
 }
 
 std::optional<db_model::Task> MockTaskTable::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
 {
     return select(taskId.toDatabaseId(),
                   {prescription_id, kvnr, last_modified, authored_on, expiry_date, accept_date, status, salt,
-                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, last_medication_dispense});
+                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, last_medication_dispense,
+                   redeemable_by_patient, eu_redeemable});
 }
 
 std::optional<db_model::Task> MockTaskTable::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
 {
     return select(taskId.toDatabaseId(),
                   {prescription_id, kvnr, last_modified, authored_on, expiry_date, accept_date, status, salt,
-                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, receipt, last_medication_dispense});
+                   task_key_blob_id, access_code, secret, owner, healthcare_provider_prescription, receipt, last_medication_dispense,
+                   redeemable_by_patient, eu_redeemable});
 }
 
 
@@ -459,5 +538,7 @@ std::optional<db_model::Task> MockTaskTable::select(int64_t databaseId,
             fields.count(healthcare_provider_prescription)?t.healthcareProviderPrescription:std::nullopt;
     dbTask->receipt = fields.count(receipt)?t.receipt:std::nullopt;
     dbTask->lastMedicationDispense = fields.count(last_medication_dispense)?t.lastMedicationDispense:std::nullopt;
+    dbTask->euRedeemableByPatient = fields.count(redeemable_by_patient) ? t.euRedeemableByPatient : false;
+    dbTask->euRedeemable = fields.count(eu_redeemable) ? t.isEuRedeemable : false;
     return dbTask;
 }

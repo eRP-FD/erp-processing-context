@@ -5,12 +5,19 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-add_executable(fhirinstall EXCLUDE_FROM_ALL
-    fhirinstall_main.cxx
+if (NOT TARGET fhirinstall)
+    add_executable(fhirinstall EXCLUDE_FROM_ALL)
+endif()
 
-    FhirInstall.cxx
-    FhirPackage.cxx
+target_sources(fhirinstall
+    PRIVATE
+        fhirinstall_main.cxx
+
+        FhirInstall.cxx
+        FhirInstallArgs.cxx
+        FhirPackage.cxx
 )
+
 target_link_libraries(fhirinstall
     PRIVATE
         erp-shared

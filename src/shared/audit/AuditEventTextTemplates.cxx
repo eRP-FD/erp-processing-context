@@ -6,9 +6,10 @@
  */
 
 #include "shared/audit/AuditEventTextTemplates.hxx"
-
-#include "shared/util/TLog.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
+
+#include <iostream>
 
 
 namespace
@@ -99,11 +100,11 @@ constexpr const auto* auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} hat die Einwilligung erteilt."
+          "textTemplate": "{self} hat die Einwilligung zur Speicherung der elektronischen Abrechnungsinformationen erteilt."
         },
         {
           "eventId": 21,
-          "textTemplate": "{self} hat die Einwilligung widerrufen."
+          "textTemplate": "{self} hat die Einwilligung zur Speicherung der elektronischen Abrechnungsinformationen widerrufen."
         },
         {
           "eventId": 22,
@@ -176,6 +177,42 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 40,
           "textTemplate": "Die Löschinformation für die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden."
+        },
+        {
+          "eventId": 41,
+          "textTemplate": "Sie haben eine Zugriffsberechtigung zum Einlösen von E-Rezepten für das Land {countryCode} erteilt."
+        },
+        {
+          "eventId": 42,
+          "textTemplate": "Sie haben die Zugriffsberechtigung zum Einlösen von E-Rezepten für das Land {countryCode} gelöscht."
+        },
+        {
+          "eventId": 43,
+          "textTemplate": "{self} hat Markierung zu Einlösung im EU Ausland gespeichert."
+        },
+        {
+          "eventId": 44,
+          "textTemplate": "Der {agentName} hat in {hftpoc} in Land {countryCode} Ihre Patientendaten abgerufen."
+        },
+        {
+          "eventId": 45,
+          "textTemplate": "Der {agentName} hat in {hftpoc} in Land {countryCode} Ihre einlösbaren E-Rezepte abgerufen."
+        },
+        {
+          "eventId": 46,
+          "textTemplate": "Der {agentName} hat in {hftpoc} in Land {countryCode} Ihre einzulösenden E-Rezepte abgerufen."
+        },
+        {
+          "eventId": 47,
+          "textTemplate": "{self} hat die Einwilligung zur Einlösung von E-Rezepten in EU-Ländern erteilt."
+        },
+        {
+          "eventId": 48,
+          "textTemplate": "{self} hat die Einwilligung zur Einlösung von E-Rezepten in EU-Ländern widerrufen."
+        },
+        {
+          "eventId": 49,
+          "textTemplate": "Der {practitioner} hat in {facility} in Land {countryCode} Ihr E-Rezept eingelöst."
         }
       ]
     },
@@ -261,11 +298,11 @@ constexpr const auto* auditEventTextTemplates = R"--(
         },
         {
           "eventId": 20,
-          "textTemplate": "{self} gave the consent."
+          "textTemplate": "{self} gave the consent for saving electronic charge item."
         },
         {
           "eventId": 21,
-          "textTemplate": "{self} withdrew the consent."
+          "textTemplate": "{self} withdrew the consent for saving electronic charge item."
         },
         {
           "eventId": 22,
@@ -338,6 +375,42 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 40,
           "textTemplate": "Deletion of Dispensation could not be transferred into Patientenakte."
+        },
+        {
+          "eventId": 41,
+          "textTemplate": "You have granted authorization to redeem e-prescriptions for the country {countryCode}."
+        },
+        {
+          "eventId": 42,
+          "textTemplate": "You have revoked authorization to redeem e-prescriptions for the country {countryCode}."
+        },
+        {
+          "eventId": 43,
+          "textTemplate": "{self} has saved a marker for redemption in the EU."
+        },
+        {
+          "eventId": 44,
+          "textTemplate": "The {agentName} retrieved your patient data at {hftpoc} in country {countryCode}."
+        },
+        {
+          "eventId": 45,
+          "textTemplate": "The {agentName} retrieved a list of redeemable prescriptions at {hftpoc} in country {countryCode}."
+        },
+        {
+          "eventId": 46,
+          "textTemplate": "The {agentName} retrieved a list of prescriptions to be redeemed at {hftpoc} in country {countryCode}."
+        },
+        {
+          "eventId": 47,
+          "textTemplate": "{self} has given the consent for redeeming e-prescriptions in EU countries."
+        },
+        {
+          "eventId": 48,
+          "textTemplate": "{self} has withdrawn the consent for redeeming e-prescriptions in EU countries."
+        },
+        {
+          "eventId": 49,
+          "textTemplate": "{practitioner} at {facility} in country {countryCode} has redeemed your e-prescription."
         }
       ]
     }

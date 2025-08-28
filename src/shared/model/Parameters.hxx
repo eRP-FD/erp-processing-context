@@ -35,6 +35,10 @@ public:
     static const rapidjson::Pointer valueIdentifierSystemPointer;
     static const rapidjson::Pointer valueIdentifierValuePointer;
     static const rapidjson::Pointer valueDatePtr;
+    static const rapidjson::Pointer valueCodingSystemPointer;
+    static const rapidjson::Pointer valueCodingCodePointer;
+    static const rapidjson::Pointer valueInstantPointer;
+    static const rapidjson::Pointer valueStringPointer;
 
     static const rapidjson::Value* findPart(const rapidjson::Value& parameter, std::string_view name);
     static std::vector<const rapidjson::Value*> findParts(const rapidjson::Value& parameter, std::string_view name);
@@ -65,9 +69,14 @@ public:
 
     std::string_view getValueIdentifier(const rapidjson::Value& part) const;
     std::string_view getValueDate(const rapidjson::Value& part) const;
+    bool getValueBoolean(const rapidjson::Value& part) const;
     NumberAsStringParserDocument getResourceDoc(const rapidjson::Value& part) const;
+    std::string_view getValueCoding(const rapidjson::Value& part) const;
+    std::string_view getValueString(const rapidjson::Value& part) const;
 
     void setId(std::string_view id);
+
+    std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
 
 private:
     rapidjson::Value& findOrAddInArrayWithName(rapidjson::Value& array, std::string_view name);
@@ -197,6 +206,14 @@ std::string_view Parameters<ParametersT>::getValueDate(const rapidjson::Value& p
 }
 
 template<typename ParametersT>
+bool Parameters<ParametersT>::getValueBoolean(const rapidjson::Value& part) const
+{
+    auto* boolValue = ResourceBase::getValue(part, partValueBooleanPointer);
+    ModelExpect(boolValue && boolValue->IsBool(), "Boolean value not found");
+    return boolValue->GetBool();
+}
+
+template<typename ParametersT>
 NumberAsStringParserDocument Parameters<ParametersT>::getResourceDoc(const rapidjson::Value& part) const
 {
     const auto* resource = getResource(part);
@@ -207,10 +224,28 @@ NumberAsStringParserDocument Parameters<ParametersT>::getResourceDoc(const rapid
 }
 
 template<typename ParametersT>
+std::string_view Parameters<ParametersT>::getValueCoding(const rapidjson::Value& part) const
+{
+    return ResourceBase::getStringValue(part, valueCodingCodePointer);
+}
+
+template<typename ParametersT>
+std::string_view Parameters<ParametersT>::getValueString(const rapidjson::Value& part) const
+{
+    return ResourceBase::getStringValue(part, valueStringPointer);
+}
+
+template<typename ParametersT>
 void Parameters<ParametersT>::setId(std::string_view id)
 {
     static const rapidjson::Pointer idPtr{resource::ElementName::path(resource::elements::id)};
     Resource<ParametersT>::setValue(idPtr, id);
+}
+
+template<typename ParametersT>
+std::optional<model::Timestamp> Parameters<ParametersT>::getValidationReferenceTimestamp() const
+{
+    return model::Timestamp::now();
 }
 
 }

@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<StructureDefinition xmlns="http://hl7.org/fhir">
+  <id value="TestResource"/>
+  <url value="http://fhir-tools.test/minifhirtypes/TestResource"/>
+  <version value="0.0.9"/>
+  <name value="TestResource"/>
+  <status value="retired"/>
+  <kind value="resource"/>
+  <abstract value="true"/>
+  <type value="TestResource"/>
+  <snapshot>
+    <element id="TestResource">
+      <path value="TestResource"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+    </element>
+    <element id="TestResource.id">
+      <path value="TestResource.id"/>
+      <representation value="xmlAttr"/>
+      <min value="1"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.id"/>
+        <min value="1"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="http://hl7.org/fhirpath/System.String"/>
+      </type>
+    </element>
+    <element id="TestResource.meta">
+      <path value="TestResource.meta"/>
+      <min value="0"/>
+      <max value="1"/>
+      <base>
+        <path value="Resource.meta"/>
+        <min value="0"/>
+        <max value="1"/>
+      </base>
+      <type>
+        <code value="Meta"/>
+      </type>
+    </element>
+    <element id="TestResource.extension">
+      <path value="TestResource.extension"/>
+      <slicing>
+        <discriminator>
+          <type value="value"/>
+          <path value="url"/>
+        </discriminator>
+        <rules value="open"/>
+      </slicing>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource.extension"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Extension"/>
+      </type>
+    </element>
+    <element id="TestResource.contained">
+      <path value="TestResource.contained"/>
+      <min value="0"/>
+      <max value="*"/>
+      <base>
+        <path value="Resource.contained"/>
+        <min value="0"/>
+        <max value="*"/>
+      </base>
+      <type>
+        <code value="Resource"/>
+      </type>
+    </element>
+    <element id="TestResource.test">
+        <path value="TestResource.test"/>
+        <min value="0"/>
+        <max value="*"/>
+        <base>
+            <path value="TestResource.test"/>
+            <min value="0"/>
+            <max value="*"/>
+        </base>
+        <type>
+            <code value="string"/>
+        </type>
+    </element>
+</snapshot>
+</StructureDefinition>

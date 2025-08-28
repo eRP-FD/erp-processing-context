@@ -129,9 +129,10 @@ void MedicationExporterDatabaseFrontend::updateProcessingDelay(std::int32_t newR
     mBackend->updateProcessingDelay(newRetry, delay, kvnr);
 }
 
-void MedicationExporterDatabaseFrontend::finalizeKvnr(const model::EventKvnr& kvnr) const
+void MedicationExporterDatabaseFrontend::finalizeKvnr(const model::EventKvnr& kvnr,
+                                                      const std::string& assignedEpaPrefix) const
 {
-    mBackend->finalizeKvnr(kvnr);
+    mBackend->finalizeKvnr(kvnr, assignedEpaPrefix);
 }
 
 SafeString MedicationExporterDatabaseFrontend::taskKey(const db_model::TaskEvent& dbTaskEvent) const

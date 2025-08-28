@@ -6,14 +6,15 @@
  */
 
 #include "erp/model/Communication.hxx"
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "erp/model/Task.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Binary.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/validation/JsonValidator.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
@@ -71,12 +72,10 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     testutils::ShiftFhirResourceViewsGuard unshift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     const auto resource = ResourceManager::instance().getStringResource(
         "test/issues/ERP-8881/Malformed_URL_in_Communication_Extension.json");
-    const auto& fhirInstance = Fhir::instance();
-    const auto& backend = fhirInstance.backend();
-    const auto viewList = fhirInstance.structureRepository(model::Timestamp::fromGermanDate("2024-10-01"));
-    const auto& view =
-        viewList.match(&backend, std::string{model::resource::structure_definition::communicationReply},
-                       ResourceTemplates::Versions::GEM_ERP_1_2);
+    const auto view = Fhir::instance()
+                          .structureRepository(model::Timestamp::fromGermanDate("2024-10-01"))
+                          .match(std::string{model::resource::structure_definition::communicationReply},
+                                 ResourceTemplates::Versions::GEM_ERP_1_2);
     ASSERT_NE(view, nullptr);
     std::optional<model::Bundle> communication;
     EXPECT_NO_THROW(communication = model::Bundle::fromJsonNoValidation(resource));

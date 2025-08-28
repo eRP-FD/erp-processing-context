@@ -7,7 +7,11 @@
 
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/service/task/ActivateTaskHandler.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
+#include "fhirtools/repository/FhirValueSet.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/model/Resource.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CryptoHelper.hxx"
@@ -17,6 +21,8 @@
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
+
+#include <date/tz.h>
 
 class ActivateTaskTest : public EndpointHandlerTest
 {
@@ -65,6 +71,7 @@ public:
         std::optional<std::reference_wrapper<std::exception_ptr>> outExceptionPtr = std::nullopt;
         std::optional<std::reference_wrapper<Header>> outHeader = std::nullopt;
         std::optional<std::string_view> flowTypeDisplayName = std::nullopt;
+        bool expectedEuRedeemable = false;
     };
 
     void checkActivateTask(PcServiceContext& serviceContext, const std::string_view& taskJson,
@@ -114,7 +121,8 @@ public:
         }
 
         std::optional<model::Task> task;
-        ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()));
+        ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator()))
+            << serverResponse.getBody();
         ASSERT_TRUE(task.has_value());
         EXPECT_EQ(task->prescriptionId(), origTask.prescriptionId());
         EXPECT_EQ(task->status(), model::Task::Status::ready);
@@ -136,6 +144,7 @@ public:
         EXPECT_TRUE(task->healthCarePrescriptionUuid().has_value());
         EXPECT_TRUE(task->patientConfirmationUuid().has_value());
         EXPECT_FALSE(task->receiptUuid().has_value());
+        EXPECT_EQ(args.expectedEuRedeemable, task->isEuRedeemableByProperties());
 
         if (args.flowTypeDisplayName.has_value())
         {
@@ -181,6 +190,32 @@ public:
 
 class ActivateTaskTestPkv : public ActivateTaskTest
 {
+protected:
+
+    std::string_view pkvInsuranceType(const ResourceTemplates::Versions::KBV_ERP& ver)
+    {
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        {
+            return "KVZ10";
+        }
+        return "PKV";
+    }
+    std::string_view gkvInsuranceType(const ResourceTemplates::Versions::KBV_ERP& ver)
+    {
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        {
+            return "KVZ10";
+        }
+        return "GKV";
+    }
+    std::string_view pkvKvid10Ns(const ResourceTemplates::Versions::KBV_ERP& ver)
+    {
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        {
+            return model::resource::naming_system::gkvKvid10;
+        }
+        return model::resource::naming_system::pkvKvid10;
+    }
 };
 
 TEST_F(ActivateTaskTest, ActivateTask)
@@ -236,6 +271,22 @@ TEST_F(ActivateTaskTest, ActivateTaskDiga)
         checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891", {.signingTime = signingTime}));
 }
 
+TEST_F(ActivateTaskTest, ActivateTaskEuRedeemable)
+{
+    A_27768.test("Bestimmung der Einlösbarkeit im EU-Ausland");
+    const EnvironmentVariableGuard featureEuGuard{ConfigurationKey::FEATURE_EU, "true"};
+    testutils::ShiftFhirResourceViewsGuard erp15Guard{
+        "GEM_WF_1_5_0", floor<std::chrono::days>(model::Timestamp::now().toChronoTimePoint())};
+    auto signingTime = model::Timestamp::now();
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .authoredOn = signingTime});
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
+                                              {.signingTime = signingTime, .expectedEuRedeemable = true}));
+}
+
 TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage200)
 {
     A_22347_01.test("invalid coverage WF 200");
@@ -244,14 +295,16 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage200)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010);
     const char* const pkvKvnr = "X500000017";
     const auto authoredOn = model::Timestamp::now();
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = authoredOn});
 
     const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId,
                                                          .authoredOn = authoredOn,
                                                          .kvnr = pkvKvnr,
+                                                         .kbvVersion = kbvVersion,
                                                          .coverageInsuranceType = "GKV",
-                                                         .forceInsuranceType = "GKV",
+                                                         .forceInsuranceType = gkvInsuranceType(kbvVersion),
                                                          .forceKvid10Ns = model::resource::naming_system::gkvKvid10});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
@@ -282,14 +335,16 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage209)
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011);
     const char* const pkvKvnr = "X500000029";
     const auto authoredOn = model::Timestamp::now();
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = authoredOn});
 
     const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId,
                                                          .authoredOn = authoredOn,
                                                          .kvnr = pkvKvnr,
+                                                         .kbvVersion = kbvVersion,
                                                          .coverageInsuranceType = "GKV",
-                                                         .forceInsuranceType = "GKV",
+                                                         .forceInsuranceType = gkvInsuranceType(kbvVersion),
                                                          .forceKvid10Ns = model::resource::naming_system::gkvKvid10});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
@@ -316,20 +371,21 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage209)
 TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage160)
 {
     A_23443_01.test("invalid coverage WF 160");
-
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 50010);
     const char* const pkvKvnr = "X500000017";
     const auto authoredOn = model::Timestamp::now();
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = authoredOn});
 
     const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
                                                          .authoredOn = authoredOn,
                                                          .kvnr = pkvKvnr,
+                                                         .kbvVersion = kbvVersion,
                                                          .coverageInsuranceType = "PKV",
-                                                         .forceInsuranceType = "PKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::pkvKvid10});
+                                                         .forceInsuranceType = pkvInsuranceType(kbvVersion),
+                                                         .forceKvid10Ns = pkvKvid10Ns(kbvVersion)});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
                                               {.expectedStatus = HttpStatus::BadRequest,
@@ -359,15 +415,17 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage169)
     const auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 50010);
     const char* const pkvKvnr = "X500000017";
     const auto authoredOn = model::Timestamp::now();
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = authoredOn});
 
     const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
                                                          .authoredOn = authoredOn,
                                                          .kvnr = pkvKvnr,
+                                                         .kbvVersion = kbvVersion,
                                                          .coverageInsuranceType = "PKV",
-                                                         .forceInsuranceType = "PKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::pkvKvid10});
+                                                         .forceInsuranceType = pkvInsuranceType(kbvVersion),
+                                                         .forceKvid10Ns = pkvKvid10Ns(kbvVersion)});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
                                               {.expectedStatus = HttpStatus::BadRequest,
@@ -398,15 +456,17 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage162)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 50010);
     const char* const pkvKvnr = "X500000017";
     const auto authoredOn = model::Timestamp::now();
+    const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = authoredOn});
 
     const auto bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId,
                                                          .authoredOn = authoredOn,
                                                          .kvnr = pkvKvnr,
+                                                         .kbvVersion = kbvVersion,
                                                          .coverageInsuranceType = "PKV",
-                                                         .forceInsuranceType = "PKV",
-                                                         .forceKvid10Ns = model::resource::naming_system::pkvKvid10});
+                                                         .forceInsuranceType = pkvInsuranceType(kbvVersion),
+                                                         .forceKvid10Ns = pkvKvid10Ns(kbvVersion)});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr,
                                               {.expectedStatus = HttpStatus::BadRequest,
@@ -433,6 +493,7 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkvInvalidCoverage162)
 
 TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
 {
+    auto currentKbv = ResourceTemplates::Versions::KBV_ERP_current();
     A_23936.test("Test invalid Patient.Coding.Code");
     const auto* kvnr = "123456";
     const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
@@ -441,11 +502,12 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
         {.prescriptionId = prescriptionId,
          .authoredOn = signingTime,
          .kvnr = kvnr,
+         .kbvVersion = currentKbv,
          .coverageInsuranceSystem = "http://fhir.de/CodeSystem/versicherungsart-de-basis",
          .coverageInsuranceType = "SEL",
          .forceInsuranceType = "kvk",
          .forceKvid10Ns = "http://fhir.de/sid/gkv/kvk-versichertennummer",
-         .patientIdentifierSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_identifier_type"});
+         .patientIdentifierTypeSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_Base_identifier_type"});
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = prescriptionId});
     std::exception_ptr exception;
@@ -461,15 +523,71 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
     }
     catch (const ErpException& ex)
     {
-        EXPECT_EQ(std::string(ex.what()),
-                  "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.")
-            << ex.diagnostics().value_or("");
+        if (currentKbv < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        {
+            EXPECT_EQ(std::string(ex.what()),
+                    "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.")
+                << ex.diagnostics().value_or("");
+        }
+        else
+        {
+            EXPECT_STREQ(ex.what(), "FHIR-Validation error");
+            EXPECT_EQ(ex.diagnostics(),
+                      "Bundle: error: -erp-angabeKVKVersichertennummerVerbot: In der Ressource vom Typ Patient ist "
+                      "eine KVK-Versichertennummer vorhanden, diese darf nicht angegeben werden. (from profile: "
+                      "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); ");
+        }
     }
     catch (...)
     {
         ADD_FAILURE() << "Unexpected Exception";
     }
 }
+
+
+TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientIdentifierSystem)
+{
+    auto currentKbv = ResourceTemplates::Versions::KBV_ERP_current();
+    A_23936.test("Test invalid Patient.Coding.Code");
+    const auto* kvnr = "X123456789";
+    const auto prescriptionId = model::PrescriptionId::fromString("160.000.000.004.713.80");
+    auto signingTime = model::Timestamp::now();
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = prescriptionId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr,
+        .kbvVersion = currentKbv,
+        .forceKvid10Ns = model::resource::naming_system::pkvKvid10,
+    });
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = prescriptionId});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
+                                              {.expectedStatus = HttpStatus::BadRequest,
+                                               .signingTime = signingTime,
+                                               .expectedExpiry = std::nullopt,
+                                               .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    // clang-format off
+    std::string diagnostics =
+        "Bundle.entry[1].resource{Patient}.identifier[0].system: "
+            "error: value must match fixed value: \"http://fhir.de/sid/gkv/kvid-10\" (but is \"http://fhir.de/sid/pkv/kvid-10\") "
+                "(from profile: http://fhir.de/StructureDefinition/identifier-kvid-10|1.5.2); "
+        "Bundle.entry[1].resource{Patient}.identifier[0].system: "
+            "error: value must match fixed value: \"http://fhir.de/sid/gkv/kvid-10\" (but is \"http://fhir.de/sid/pkv/kvid-10\") "
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient:versichertenId|1.2.0); ";
+    if (currentKbv <= ResourceTemplates::Versions::KBV_ERP_1_1_0)
+    {
+        diagnostics =
+            "Bundle.entry[1].resource{Patient}.identifier[0]: "
+                "error: element doesn't match any slice in closed slicing "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0); ";
+    }
+    // clang-format on
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(std::rethrow_exception(exception), HttpStatus::BadRequest,
+                                          "FHIR-Validation error", diagnostics);
+}
+
 
 TEST_F(ActivateTaskTest, ActivateTaskBrokenSignature)
 {
@@ -584,11 +702,20 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
 
 TEST_F(ActivateTaskTest, authoredOnReference)
 {
+    if (Configuration::instance()
+            .fhirResourceViewConfiguration<Configuration::ERP>()
+            .kbvSchluesseltabellenConfiguration()
+            .size() == 1)
+    {
+        // consider adapting this test when two schlüsseltabellen are present again!
+        GTEST_SKIP();
+    }
+
     auto now = std::chrono::system_clock::now();
     auto today{date::floor<date::days>(now)};
     auto yesterday{today - date::days{1}};
 
-    testutils::ShiftFhirResourceViewsGuard viewGuard{"KBV_2023-07-01_2025-Q2", fhirtools::Date{today, fhirtools::Date::Precision::day}};
+    testutils::ShiftFhirResourceViewsGuard viewGuard{"KBV_2023-07-01", fhirtools::Date{today, fhirtools::Date::Precision::day}};
 
     using namespace std::chrono_literals;
     const auto* kvnr = "X234567891";
@@ -662,10 +789,10 @@ TEST_F(ActivateTaskTest, ERP_12708_kbv_bundle_RepeatedErrorMessages)
 
 TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
 {
+    static const std::string prescriptionItem{model::resource::structure_definition::prescriptionItem};
     std::string_view kvnr{"X123456788"};
     auto kbvBundle = ResourceTemplates::kbvBundleXml({.authoredOn = model::Timestamp::now(), .kvnr = kvnr});
-    kbvBundle = String::replaceAll(kbvBundle, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
-                                   "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle");
+    kbvBundle = String::replaceAll(kbvBundle, prescriptionItem, "https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle");
     auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
     std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(
@@ -679,10 +806,17 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
     catch (const ErpException& ex)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
+        auto viewList = Fhir::instance().structureRepository(model::Timestamp::now());
+        std::ostringstream supportedProfiles;
+        for (std::string_view sep; const auto& key: viewList.supportedVersions({prescriptionItem}))
+        {
+            supportedProfiles << sep << key;
+            sep = ", ";
+        }
         // see ERP-13187:
-        EXPECT_EQ(ex.diagnostics().value(),
-                  "invalid profile https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0"
-                  " must be one of: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0");
+        EXPECT_EQ(ex.diagnostics().value(), "invalid profile https://sample.de/StructureDefinition/KBV_PR_ERP_Bundle|" +
+                                                to_string(value(viewList.latestRenderVersion(prescriptionItem).version)) +
+                                                " must be one of: " + std::move(supportedProfiles).str());
     }
     catch (...)
     {
@@ -700,18 +834,44 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
-        std::rethrow_exception(exception),
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
-        "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
-        "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/"
-        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); "
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: per-1: If present, "
-        "start SHALL have a lower value than end (from profile: "
-        "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
+    if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    {
+        EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+            std::rethrow_exception(exception),
+            "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+            "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+            "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/"
+            "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: per-1: If present, "
+            "start SHALL have a lower value than end (from profile: "
+            "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
+    }
+    else
+    {
+        EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+            std::rethrow_exception(exception),
+            // clang-format off
+            "Bundle.entry[1].resource{MedicationRequest}.extension[2]: error: "
+                "-erp-multiplePrescriptionEinloesefristEnde: Das Ende der Einlösefrist darf nicht vor dem Beginn der Einlösefrist liegen. "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription|1.3.2); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[2]: error: "
+                "-erp-multiplePrescriptionEinloesefristEnde: Das Ende der Einlösefrist darf nicht vor dem Beginn der Einlösefrist liegen. "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung|1.3.2); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
+                "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.3.2); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
+                "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.3.2); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
+                "per-1: If present, start SHALL have a lower value than end "
+                    "(from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1); "
+            // clang-format on
+        );
+    }
 }
 
 TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
@@ -724,18 +884,35 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
-        std::rethrow_exception(exception),
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
-        "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
-        "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/"
-        "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); "
-        "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: per-1: If present, "
-        "start SHALL have a lower value than end (from profile: "
-        "http://hl7.org/fhir/StructureDefinition/Period|4.0.1); ");
+    if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    {
+        EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+            std::rethrow_exception(exception),
+            "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+            "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.1.0); "
+            "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
+            "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
+            "https://fhir.kbv.de/StructureDefinition/"
+            "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
+    }
+    else
+    {
+        EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
+            std::rethrow_exception(exception),
+            // clang-format off
+                "Bundle: error: "
+                    "-erp-multiplePrescriptionEinloesefristBeginn: Der Beginn der Einlösefrist darf nicht vor dem Ausstellungsdatum liegen. "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); "
+                "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
+                    "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.3.2); "
+                "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
+                    "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.3.2); "
+            // clang-format on
+        );
+    }
 }
 
 TEST_F(ActivateTaskTest, ERP20812_acceptUpperCase_ID)
@@ -818,6 +995,16 @@ TEST_F(ActivateTaskTest, validWithoutIK)
 
 TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
 {
+    static constexpr char medicationRequestExtension[] = R"(
+<extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_Accident">
+    <extension url="Unfallkennzeichen">
+        <valueCoding>
+            <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Ursache_Type"/>
+            <code value="4"/>
+        </valueCoding>
+    </extension>
+</extension>
+)";
     A_24030.test("Invalid IKNR in coverage extension");
     const model::Kvnr kvnr{"B123457897"};
     const model::Iknr iknr{"109911214"};
@@ -828,13 +1015,16 @@ TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
     auto signingTime = model::Timestamp::now();
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
-    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = taskId,
-         .authoredOn = signingTime,
-         .kvnr = kvnr.id(),
-         .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
-         .coverageInsuranceType = "UK",
-         .coveragePayorExtension = extensionCoverage});
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = taskId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr.id(),
+        .coverageInsuranceSystem = "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_Payor_Type_KBV",
+        .coverageInsuranceType = "UK",
+        .coveragePayorExtension = extensionCoverage,
+        .medicationRequestExtension = medicationRequestExtension,
+        .statusCoPayment = "1",
+    });
     const auto taskJson =
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
 
@@ -842,6 +1032,7 @@ TEST_F(ActivateTaskTest, failInvalidAlternativeIK)
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(
         mServiceContext, taskJson, kbvBundleXml, kvnr.id(),
         {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
+    TVLOG(1) << kbvBundleXml;
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
         std::rethrow_exception(exception), HttpStatus::BadRequest,
         "Ungültiges Institutionskennzeichen (IKNR): Das übergebene Institutionskennzeichen des Kostenträgers "
@@ -914,7 +1105,7 @@ TEST_F(ActivateTaskTest, failInvalidPZNChecksum)
         .authoredOn = signingTime,
         .kvnr = kvnr.id(),
         .medicationOptions{
-            .version = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+            .version = ResourceTemplates::Versions::KBV_ERP_current(),
             .pzn = pzn,
         },
     });
@@ -932,6 +1123,7 @@ TEST_F(ActivateTaskTest, failInvalidPZNChecksum)
 
 TEST_F(ActivateTaskTest, failInvalidPZNFormat)
 {
+    const auto kbvVersion =  ResourceTemplates::Versions::KBV_ERP_current();
     const model::Kvnr kvnr{"B123457897"};
     const model::Pzn shortPZN{"2750891"};
     auto signingTime = model::Timestamp::now();
@@ -942,7 +1134,7 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
         .authoredOn = signingTime,
         .kvnr = kvnr.id(),
         .medicationOptions{
-            .version = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+            .version = kbvVersion,
             .pzn = shortPZN,
         },
     });
@@ -953,11 +1145,12 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(
         mServiceContext, taskJson, kbvBundleXml, kvnr.id(),
         {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
+    std::string suffix =(kbvVersion >= ResourceTemplates::Versions::KBV_ERP_1_3_2)?"pzn|1.3.2":"pznCode|1.1.0";
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
         "Bundle.entry[4].resource{Medication}.code.coding[0]: "
         "error: -erp-begrenzungPznCode: Der PZN-Code muss aus genau 8 Zeichen bestehen. "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:pznCode|1.1.0); ");
+        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:" + suffix + "); ");
 }
 
 TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
@@ -1047,9 +1240,13 @@ TEST_F(ActivateTaskTest, DigaE16D)
         mServiceContext, taskJson, evdgaBundleXml, "X234567891",
         {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
+    const auto& evdgaVersion = to_string(ResourceTemplates::Versions::KBV_EVDGA_current(signingTime));
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
-        R"(; Bundle.entry[0].resource{Composition}.type.coding[0].code: error: value must match fixed value: "e16D" (but is "e16A") (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Composition|1.1))");
+        R"(; Bundle.entry[0].resource{Composition}.type.coding[0].code: error: )"
+        R"(value must match fixed value: "e16D" (but is "e16A") )"
+        R"((from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Composition|)" +
+            evdgaVersion + ")");
 }
 
 TEST_F(ActivateTaskTest, DigaDeviceRequest)
@@ -1108,9 +1305,15 @@ class ActivateTaskTestDarreichungsformValidity
 
 TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
 {
+    if (Configuration::instance()
+        .fhirResourceViewConfiguration<Configuration::ERP>()
+        .kbvSchluesseltabellenConfiguration()
+        .size() == 1)
+    {
+        // consider adapting this test when two schlüsseltabellen are present again!
+        GTEST_SKIP();
+    }
     using namespace fhirtools::version_literal;
-    const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
     const auto now = model::Timestamp::now();
     const auto today = date::floor<date::days>(now.toChronoTimePoint());
     const auto tomorrow = today + date::days{1};
@@ -1133,17 +1336,18 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
         mServiceContext, taskJson, kbvBundleXml, "X234567891",
         {.expectedStatus = HttpStatus::BadRequest, .signingTime = now, .outExceptionPtr = exception}));
     const gsl::not_null repoView = Fhir::instance().structureRepository(now).match(
-        backend, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
-        ResourceTemplates::Versions::KBV_ERP_current());
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle", ResourceTemplates::Versions::KBV_ERP_current());
     const auto* valueSet = repoView->findValueSet(
         fhirtools::DefinitionKey{"https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", std::nullopt});
     ASSERT_NE(valueSet, nullptr);
     ASSERT_EQ(valueSet->getVersion(), fhirtools::FhirVersion{GetParam().previousVersion}) << repoView->id();
-    ASSERT_FALSE(valueSet->containsCode(GetParam().darreichungsfrom,
+    auto codes = fhirtools::FhirValueSetCodes::create(std::to_address(repoView), valueSet);
+
+    ASSERT_FALSE(codes->containsCode(GetParam().darreichungsfrom,
                                         "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM")) << repoView->id();
     // Bonbons and bubble gum should be there, right?
-    ASSERT_TRUE(valueSet->containsCode("BON", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
-    ASSERT_TRUE(valueSet->containsCode("KGU", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+    ASSERT_TRUE(codes->containsCode("BON", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
+    ASSERT_TRUE(codes->containsCode("KGU", "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"));
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
         "Bundle.entry[4].resource{Medication}.form.coding[0]: error: Code " + GetParam().darreichungsfrom +
@@ -1167,7 +1371,7 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
             " with system https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM not allowed "
             "for "
             "ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM|" + GetParam().previousVersion + ", allowed are " +
-            valueSet->codesToString() +
+            codes->codesToString() +
             " (from profile: "
             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:kbvDarreichungsform|1.1.0); ");
 }
@@ -1197,8 +1401,8 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformValid)
 
 INSTANTIATE_TEST_SUITE_P(darreichnungsformen, ActivateTaskTestDarreichungsformValidity,
                          ::testing::ValuesIn(std::list<ActivateTaskTestDarreichungsformValidityParam>{
-                             {.darreichungsfrom = "LYE", .becomesValidInView = "KBV_2023-07-01_2025-Q2", .previousVersion = "1.14"},
-                             {.darreichungsfrom = "PUE", .becomesValidInView = "KBV_2023-07-01_2025-Q2", .previousVersion = "1.14"},
+                             {.darreichungsfrom = "LYE", .becomesValidInView = "KBV_2023-07-01", .previousVersion = "1.14"},
+                             {.darreichungsfrom = "PUE", .becomesValidInView = "KBV_2023-07-01", .previousVersion = "1.14"},
                          }),
                          [](const auto& p) {
                              return p.param.darreichungsfrom;
@@ -1251,8 +1455,12 @@ TEST_P(ProzessParameterFlowtype, samples)
     // Create Task
     const auto taskJson = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = signingTime});
-    std::string kbvBundleXml =
-        ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = signingTime, .kvnr = kvnr});
+    std::string kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = prescriptionId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr,
+        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(signingTime),
+    });
     std::string_view flowTypeDisplayName;
     switch (prescriptionId.type())
     {
@@ -1261,10 +1469,13 @@ TEST_P(ProzessParameterFlowtype, samples)
             break;
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
             flowTypeDisplayName = "Muster 16 (Digitale Gesundheitsanwendungen)";
-            kbvBundleXml = ResourceTemplates::evdgaBundleXml({.prescriptionId = prescriptionId.toString(),
-                                                              .timestamp = signingTime.toXsDateTime(),
-                                                              .kvnr = kvnr,
-                                                              .authoredOn = signingTime.toGermanDate()});
+            kbvBundleXml = ResourceTemplates::evdgaBundleXml({
+                .version = ResourceTemplates::Versions::KBV_EVDGA_current(signingTime),
+                .prescriptionId = prescriptionId.toString(),
+                .timestamp = signingTime.toXsDateTime(),
+                .kvnr = kvnr,
+                .authoredOn = signingTime.toGermanDate(),
+            });
             break;
         case model::PrescriptionType::direkteZuweisung:
             flowTypeDisplayName = "Muster 16 (Direkte Zuweisung)";
@@ -1387,3 +1598,89 @@ INSTANTIATE_TEST_SUITE_P(
                 "Pflichtangabe bei den Kostentraegern der Typen \"GKV\", \"BG\", \"SKT\", \"UK\" oder \"PKV\", wenn es "
                 "sich um einen Arzt, Zahnarzt oder Arzt als Vertreter handelt und keine ASV-Fachgruppennummer "
                 "angegeben ist. (from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0); "}));
+
+
+struct ActivateTaskUuidValidationTestParameters {
+    std::string urnUuidCheckFrom;
+    std::string fullUrl;
+    bool expectSuccess;
+};
+
+void PrintTo(const ActivateTaskUuidValidationTestParameters& parameters, std::ostream* os)
+{
+    (*os) << '{' << R"("urnUuidCheckFrom": ")" << parameters.urnUuidCheckFrom << R"(" )"
+          << R"("fullUrl": ")" << parameters.fullUrl << R"(" )"
+          << R"("expectSuccess": )" << std::boolalpha << parameters.expectSuccess << '}';
+}
+
+
+class ActivateTaskUuidValidationTest : public ActivateTaskTest,
+                                       public testing::WithParamInterface<ActivateTaskUuidValidationTestParameters>
+{
+public:
+    static std::list<ActivateTaskUuidValidationTestParameters> parameters();
+};
+
+TEST_P(ActivateTaskUuidValidationTest, run)
+{
+    using namespace model::resource::elements;
+    using model::resource::ElementName;
+    EnvironmentVariableGuard guard{ConfigurationKey::FHIR_VALIDATION_URN_UUID_CHECK_FROM, GetParam().urnUuidCheckFrom};
+    static rapidjson::Pointer fullUrlPtr{ElementName::path(entry, 1, fullUrl)};
+    static rapidjson::Pointer subjectReferencePtr{ElementName::path(entry, 0, resource, subject, reference)};
+    const auto& converter = Fhir::instance().converter();
+
+    auto authoredOn = model::Timestamp::now();
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    auto kbvBundle = model::UnspecifiedResource::fromXmlNoValidation(
+                         ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .authoredOn = authoredOn}))
+                         .jsonDocument();
+    kbvBundle.setValue(fullUrlPtr, GetParam().fullUrl);
+    kbvBundle.setValue(subjectReferencePtr, GetParam().fullUrl);
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+    ActivateTaskHandler handler({});
+    auto request = serverRequest(taskJson, converter.jsonToXmlString(kbvBundle), authoredOn);
+    request.setAccessToken(mJwtBuilder->makeJwtArzt());
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    if (GetParam().expectSuccess)
+    {
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext)) << kbvBundle.serializeToJsonString();
+    }
+    else
+    {
+        EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+            handler.handleRequest(sessionContext), HttpStatus::BadRequest, "FHIR-Validation error",
+            "Bundle.entry[1].fullUrl: error: value is not a valid lower-case urn:uuid.; ");
+    }
+}
+
+std::list<ActivateTaskUuidValidationTestParameters> ActivateTaskUuidValidationTest::parameters()
+{
+    using namespace std::chrono_literals;
+    const date::days globalOffset{
+        Configuration::instance().getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS)};
+
+    auto now = date::make_zoned(model::Timestamp::GermanTimezone, std::chrono::system_clock::now() - globalOffset);
+    model::Timestamp today{model::Timestamp::GermanTimezone, date::floor<std::chrono::days>(now.get_local_time())};
+    model::Timestamp yesterday{model::Timestamp::GermanTimezone,
+                               date::floor<std::chrono::days>(now.get_local_time() - 24h)};
+    model::Timestamp tomorrow{model::Timestamp::GermanTimezone,
+                              date::floor<std::chrono::days>(now.get_local_time() + 24h)};
+    return {
+        {yesterday.toGermanDate(), "urn:uuid:16fa9dd1-a702-4627-8405-cd22f01a09c7", true},
+        {today.toGermanDate(), "urn:uuid:16fa9dd1-a702-4627-8405-cd22f01a09c7", true},
+        {tomorrow.toGermanDate(), "urn:uuid:16fa9dd1-a702-4627-8405-cd22f01a09c7", true},
+        {yesterday.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", false},
+        {today.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", false},
+        {tomorrow.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", true},
+
+    };
+}
+
+INSTANTIATE_TEST_SUITE_P(parameters, ActivateTaskUuidValidationTest,
+                         testing::ValuesIn(ActivateTaskUuidValidationTest::parameters()));

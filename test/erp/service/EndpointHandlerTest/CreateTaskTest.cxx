@@ -1,4 +1,5 @@
 #include "erp/service/task/CreateTaskHandler.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"

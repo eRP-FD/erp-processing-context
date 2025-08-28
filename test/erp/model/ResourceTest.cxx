@@ -5,6 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/KbvBundle.hxx"
 #include "shared/model/MedicationDispense.hxx"
@@ -13,7 +15,6 @@
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/util/ErpException.hxx"
 #include "shared/util/String.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -60,10 +61,8 @@ TEST(ResourceFactoryTest, invalid_profile)
     };
     using namespace std::string_literals;
     const auto& fhirInstance = Fhir::instance();
-    const auto& backend = fhirInstance.backend();
-    auto supported =
-        fhirInstance.structureRepository(model::Timestamp::now())
-            .supportedVersions(&backend, {std::string{model::resource::structure_definition::prescriptionItem}});
+    auto supported = fhirInstance.structureRepository(model::Timestamp::now())
+                         .supportedVersions({std::string{model::resource::structure_definition::prescriptionItem}});
     ASSERT_FALSE(supported.empty());
     std::string_view sep{};
     std::string profileList;
@@ -73,7 +72,8 @@ TEST(ResourceFactoryTest, invalid_profile)
         profileList += to_string(profile);
         sep = ", ";
     }
-    const auto goodProfile = to_string(std::ranges::max(supported, {}, &fhirtools::DefinitionKey::version));
+    std::string goodProfile{model::resource::structure_definition::prescriptionItem};
+    goodProfile.append(1, '|').append(ResourceTemplates::Versions::KBV_ERP_current().renderVersion());
     const auto badProfile = makeBroken(goodProfile);
     auto badMedicationDispense = makeBroken(ResourceTemplates::kbvBundleXml({}));
     using Factory = model::ResourceFactory<model::KbvBundle>;

@@ -241,6 +241,17 @@ bool TestUrlArguments::matches(const std::string& parameterName, const std::opti
             }
             return false;
         }
+        bool operator() (const SearchArgument& searchArg, const model::PrescriptionId& value)
+        {
+            for (size_t idx = 0; idx < searchArg.valuesCount(); ++idx)
+            {
+                if (searchArg.valueAsPrescriptionId(idx) == value)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
     } equals;
 
     for (const auto& argumentList :
@@ -554,7 +565,8 @@ TestUrlArguments::Tasks TestUrlArguments::applySearch (TestUrlArguments::Tasks&&
                 && matches("authored-on", std::optional<model::Timestamp>{theTask.authoredOn})
                 && matches("modified", std::optional<model::Timestamp>{theTask.lastModified})
                 && matches("expiry-date", std::optional<model::Timestamp>{theTask.expiryDate})
-                && matches("accept-date", std::optional<model::Timestamp>{theTask.acceptDate}))
+                && matches("accept-date", std::optional<model::Timestamp>{theTask.acceptDate})
+                && matches("prescription_id", std::optional<model::PrescriptionId>{theTask.prescriptionId}))
             {
                 tasks.emplace_back(std::move(theTask));
             }
@@ -616,7 +628,8 @@ TestUrlArguments::Tasks TestUrlArguments::applyPaging (TestUrlArguments::Tasks&&
 }
 
 
-TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArguments::AuditDataContainer&& auditEvents) const
+TestUrlArguments::AuditDataContainer
+TestUrlArguments::applySearch(TestUrlArguments::AuditDataContainer&& auditEvents) const
 {
     if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
     {
@@ -624,10 +637,11 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArgum
 
         for (auto& auditEvent : auditEvents)
         {
-            if (matches("date", std::optional<model::Timestamp>{auditEvent.recorded})
-                && matches("entity", std::make_optional(std::string{model::resource::naming_system::prescriptionID} +
-                                                        "|" + auditEvent.prescriptionId->toString()))
-                && matches("subtype", std::optional<std::string_view>(std::string(1, static_cast<char>(auditEvent.action)))))
+            if (matches("date", std::optional<model::Timestamp>{auditEvent.recorded}) &&
+                matches("entity", std::make_optional(std::string{model::resource::naming_system::prescriptionID} + "|" +
+                                                     auditEvent.prescriptionId->toString())) &&
+                matches("subtype",
+                        std::optional<std::string_view>(std::string(1, static_cast<char>(auditEvent.action)))))
             {
                 resultAuditEvents.emplace_back(std::move(auditEvent));
             }
@@ -640,6 +654,28 @@ TestUrlArguments::AuditDataContainer TestUrlArguments::applySearch (TestUrlArgum
         // Return an unmodified copy.
         return std::move(auditEvents);
     }
+}
+
+TestUrlArguments::Consents TestUrlArguments::apply(Consents&& consents) const
+{
+    return applySearch(std::move(consents));
+}
+
+TestUrlArguments::Consents TestUrlArguments::applySearch(Consents&& consents) const
+{
+    if (! mUrlArguments.mSearchArguments.empty() || ! mUrlArguments.mHiddenSearchArguments.empty())
+    {
+        Consents result;
+        for (const auto& consent : consents)
+        {
+            if (matches("category", std::make_optional(std::string{magic_enum::enum_name(consent.category)})))
+            {
+                result.emplace_back(consent);
+            }
+        }
+        return result;
+    }
+    return std::move(consents);
 }
 
 TestUrlArguments::AuditDataContainer TestUrlArguments::applySort (TestUrlArguments::AuditDataContainer&& auditEvents) const

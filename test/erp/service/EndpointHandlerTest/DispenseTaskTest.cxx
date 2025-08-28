@@ -91,7 +91,19 @@ protected:
                 ASSERT_NO_ERP_EXCEPTION(handler.handleRequest(sessionContext));
                 break;
             case ExpectedResult::failure:
-                ASSERT_ANY_THROW(handler.handleRequest(sessionContext));
+                // clang-format off
+                ASSERT_NO_THROW(
+                    try
+                    {
+                        handler.handleRequest(sessionContext);
+                        ADD_FAILURE() << "Expected ErpException.";
+                    }
+                    catch (const ErpException& ex)
+                    {
+                        EXPECT_EQ(ex.status(), HttpStatus::BadRequest) << ex.what();
+                    }
+                );
+                // clang-format on
                 break;
             case ExpectedResult::noCatch:
                 handler.handleRequest(sessionContext);

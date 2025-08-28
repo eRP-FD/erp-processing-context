@@ -1,0 +1,15 @@
+{
+  "resourceType": "Parameters",
+  "id": "Example-PATCH-Task-Single-Input-Request-False",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.0"
+    ]
+  },
+  "parameter": [
+    {
+      "name": "eu-isRedeemableByPatientAuthorization",
+      "valueBoolean": false
+    }
+  ]
+}

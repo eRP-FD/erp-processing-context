@@ -64,6 +64,18 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case GEM_ERPCHRG_PR_ChargeItem:
         case GEM_ERPCHRG_PR_Consent:
         case DAV_PKV_PR_ERP_AbgabedatenBundle:
+        case GEM_ERPEU_PR_Consent:
+        case GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+        case GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+        case GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+        case GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+        case GEM_ERPEU_PR_PAR_CloseOperation_Input:
+        case GEM_ERPEU_PR_MedicationDispense:
+        case GEM_ERPEU_PR_PAR_Medication:
+        case GEM_ERPEU_PR_Practitioner:
+        case GEM_ERPEU_PR_PractitionerRole:
+        case GEM_ERPEU_PR_Organization:
+        case GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
             return true;
     }
     Fail("invalid value for ProfileType: " + std::to_string(static_cast<uintmax_t>(profileType)));

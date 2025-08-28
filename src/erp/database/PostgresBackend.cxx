@@ -118,7 +118,8 @@ namespace
 // GEMREQ-start A_19115-01#query
     QUERY(retrieveAllTasksByKvnr, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type FROM erp.task_view
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type,
+            eu_redeemable_patient, eu_redeemable FROM erp.task_view
         WHERE kvnr_hashed = $1
         )--")
 // GEMREQ-end A_19115-01#query
@@ -127,21 +128,38 @@ namespace
 
     QUERY(countAll160TasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task WHERE kvnr_hashed = $1)--")
 
+    QUERY(retrieveAllTasksForEuStatement, R"--(
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
+            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type, healthcare_provider_prescription, owner, eu_redeemable_patient, eu_redeemable FROM erp.task_view
+        WHERE kvnr_hashed = $1 AND eu_redeemable = true AND eu_redeemable_patient = true
+    )--");
+
+    QUERY(countAllTasksForEuStatement, R"--( SELECT COUNT(*) FROM erp.task_view WHERE kvnr_hashed = $1 AND eu_redeemable = true AND eu_redeemable_patient = true)--")
+
     QUERY(storeConsent, R"--(
-        INSERT INTO erp.consent (kvnr_hashed, date_time) VALUES ($1, $2)
+        INSERT INTO erp.consent (kvnr_hashed, date_time, category) VALUES ($1, $2, $3)
     )--")
 
-    QUERY(retrieveConsentDateTime, R"--(
-        SELECT EXTRACT(EPOCH FROM date_time) FROM erp.consent WHERE kvnr_hashed = $1
+    QUERY(retrieveAllConsents, R"--(
+        SELECT EXTRACT(EPOCH FROM date_time), category FROM erp.consent WHERE kvnr_hashed = $1
     )--")
 
 // GEMREQ-start A_22158#query
     QUERY(clearConsent, R"--(
-        DELETE FROM erp.consent WHERE kvnr_hashed = $1
+        DELETE FROM erp.consent WHERE kvnr_hashed = $1 AND category = $2
     )--")
 // GEMREQ-end A_22158#query
 
     QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
+
+    QUERY(existsCountryCodeQuery,
+          R"--(SELECT EXISTS ( SELECT 1 FROM erp.eu_country_codes WHERE iso_3166_alpha_2 = $1 ))--")
+
+    QUERY(deleteEuAccessPermissionQuery, R"--(DELETE FROM erp.eu_access_permission where kvnr_hashed = $1)--")
+    QUERY(createEuAccessPermissionQuery,
+          R"--(INSERT INTO erp.eu_access_permission (kvnr_hashed, country_code, access_code, blob_id, salt, expires) VALUES ($1, $2, $3, $4, $5, $6))--")
+    QUERY(retrieveEuAccessPermissionQuery,
+          R"--(SELECT country_code, access_code, blob_id, salt, EXTRACT(EPOCH FROM expires) FROM erp.eu_access_permission WHERE kvnr_hashed = $1)--")
 
 #undef QUERY
 
@@ -151,7 +169,7 @@ namespace
 thread_local PostgresConnection PostgresBackend::mConnection{PostgresConnection::defaultConnectString()};
 
 
-PostgresBackend::PostgresBackend (void)
+PostgresBackend::PostgresBackend()
     : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
     , mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask162(model::PrescriptionType::digitaleGesundheitsanwendungen)
@@ -172,7 +190,7 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
                                                 const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrieveallmedicationdispenses");
 
     std::string query = retrieveAllMedicationDispensesByKvnr.query;
@@ -219,7 +237,7 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
 {
     checkCommonPreconditions();
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "acquirecmac");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "acquirecmac");
 
     std::ostringstream validDateStrm;
     validDateStrm << date::year_month_day{validDate};
@@ -295,12 +313,13 @@ void PostgresBackend::activateTask(const model::PrescriptionId& taskId, const db
                                    const model::Timestamp& acceptDate,
                                    const db_model::EncryptedBlob& healthCareProviderPrescription,
                                    const db_model::EncryptedBlob& doctorIdentity,
-                                   const model::Timestamp& lastStatusUpdate)
+                                   const model::Timestamp& lastStatusUpdate,
+                                   bool euRedeemable)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .activateTask(*transaction(), taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate,
-                      acceptDate, healthCareProviderPrescription, doctorIdentity, lastStatusUpdate);
+                      acceptDate, healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable);
 }
 
 void PostgresBackend::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -323,13 +342,14 @@ void PostgresBackend::updateTaskMedicationDispense(
     const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver,
     const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::Blob& medicationDispenseSalt)
+    const db_model::Blob& medicationDispenseSalt,
+    const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispense(*transaction(), taskId, lastModified, lastMedicationDispense, medicationDispense,
                                       medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
-                                      medicationDispenseSalt);
+                                      medicationDispenseSalt, taskStatus);
 }
 
 void PostgresBackend::updateTaskMedicationDispenseReceipt(
@@ -368,6 +388,15 @@ void PostgresBackend::updateTaskClearPersonalData(const model::PrescriptionId& t
 }
 // GEMREQ-end A_19027-06#query-call-updateTaskClearPersonalData
 
+void PostgresBackend::updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
+                                                      bool redeemable,
+                                                      const model::Timestamp& lastModified)
+{
+    checkCommonPreconditions();
+    getTaskBackend(taskId.type())
+        .updateTaskEuRedeemableByPatient(*transaction(), taskId, redeemable, lastModified);
+}
+
 std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         const db_model::HashedKvnr& kvnr,
         const std::optional<Uuid>& id,
@@ -375,7 +404,7 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrieveauditeventdata");
 
     std::string query = retrieveAuditEventDataStatement.query;
@@ -383,7 +412,9 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
     // Append an expression to the query for the search, sort and paging arguments, if there are any.
     A_19398.start("Add SQL expressions for searching, sorting and paging");
     if (search.has_value())
+    {
         query += search->getSqlExpression(mConnection, "                ");
+    }
     A_19398.finish();
 
     std::optional<std::string> idStr = id.has_value() ? id->toString() : std::optional<std::string>{};
@@ -495,7 +526,7 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievealltasksforpatient");
 
     std::string query = retrieveAllTasksByKvnr.query;
@@ -513,14 +544,15 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     indexes.accessCodeIndex.reset();
     indexes.secretIndex.reset();
     indexes.ownerIndex.reset();
-
+    indexes.euRedeemableByPatientIndex = 11;
+    indexes.euRedeemableIndex = 12;
     TVLOG(2) << "got " << results.size() << " results";
     std::vector<db_model::Task> resultSet;
     resultSet.reserve(gsl::narrow<size_t>(results.size()));
 
     for (const auto& res : results)
     {
-        Expect(res.size() == 11, "Invalid number of fields in result row: " + std::to_string(res.size()));
+        Expect(res.size() == 13, "Invalid number of fields in result row: " + std::to_string(res.size()));
         Expect(!res.at(10).is_null(), "prescription_type is null");
         auto prescription_type_opt =
             magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(10).as<int16_t>()));
@@ -543,18 +575,71 @@ uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kv
                                                   const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "countalltasksforpatient");
     return executeCountQuery(*transaction(), countAllTasksByKvnr.query, kvnr, search, "tasks");
 }
 
-uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                                  const std::optional<UrlArguments>& search)
+uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                        "countall160tasksbykvnr");
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "countall160tasksbykvnr");
     return executeCountQuery(*transaction(), countAll160TasksByKvnr.query, kvnr, search, "tasks");
+}
+
+std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnrHashed,
+                                                                   const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    const auto durationGuard =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "retrievealltasksforeu");
+
+    std::string query = retrieveAllTasksForEuStatement.query;
+    // GEMREQ-start A_27582#prescriptionIdsFilterSQL
+    if (search.has_value())
+    {
+        query.append(search->getSqlExpression(transaction()->conn(), "                "));
+    }
+    // GEMREQ-end A_27582#prescriptionIdsFilterSQL
+    query.append(" FOR UPDATE");
+    TVLOG(2) << query;
+
+    const pqxx::result results = transaction()->exec(query, {kvnrHashed.binarystring()});
+
+    PostgresBackendTask::TaskQueryIndexes indexes;
+    indexes.accessCodeIndex.reset();
+    indexes.secretIndex.reset();
+    indexes.ownerIndex.reset();
+    indexes.healthcareProviderPrescriptionIndex = 11;
+    indexes.ownerIndex = 12;
+    indexes.euRedeemableByPatientIndex = 13;
+    indexes.euRedeemableIndex = 14;
+
+    TVLOG(2) << "got " << results.size() << " results";
+    std::vector<db_model::Task> resultSet;
+    resultSet.reserve(gsl::narrow<size_t>(results.size()));
+
+    for (const auto& res : results)
+    {
+        Expect(res.size() == 15, "Invalid number of fields in result row: " + std::to_string(res.size()));
+        Expect(! res.at(10).is_null(), "prescription_type is null");
+        auto prescription_type_opt =
+            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(10).as<int16_t>()));
+        Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
+        resultSet.emplace_back(
+            PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
+    }
+    return resultSet;
+}
+
+uint64_t PostgresBackend::countAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                             const std::optional<UrlArguments>& search)
+{
+    checkCommonPreconditions();
+    const auto durationGuard =
+    DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "countalltasksforeu");
+    return executeCountQuery(*transaction(), countAllTasksForEuStatement.query, kvnr, search, "EU tasks");
 }
 
 std::optional<Uuid> PostgresBackend::insertCommunication(const model::PrescriptionId& prescriptionId,
@@ -570,7 +655,7 @@ std::optional<Uuid> PostgresBackend::insertCommunication(const model::Prescripti
     checkCommonPreconditions();
     TVLOG(2) << insertCommunicationStatement.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "insertcommunication");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "insertcommunication");
 
     const pqxx::result result = transaction()->exec_params(
         insertCommunicationStatement.query,
@@ -605,7 +690,7 @@ uint64_t PostgresBackend::countRepresentativeCommunications(
 {
     checkCommonPreconditions();
     TVLOG(2) << countRepresentativeCommunicationsStatement.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "countrepresentativecommunications");
 
     const auto result = transaction()->exec_params(
@@ -629,7 +714,7 @@ bool PostgresBackend::existCommunication(const Uuid& communicationId)
 {
     checkCommonPreconditions();
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "existcommunication");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "existcommunication");
 
     const pqxx::result result =
         transaction()->exec_params(countCommunicationsByIdStatement.query, communicationId.toString());
@@ -648,7 +733,7 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
     const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievecommunications");
 
     // We don't use a prepared statement for this query because search arguments lead to dynamically generated
@@ -699,7 +784,7 @@ uint64_t PostgresBackend::countCommunications(
     const std::optional<UrlArguments>& search)
 {
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "countcommunications");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "countcommunications");
     return executeCountQuery(*transaction(), countCommunicationsStatement.query, user, search, "communications");
 }
 
@@ -708,7 +793,7 @@ std::vector<Uuid> PostgresBackend::retrieveCommunicationIds (const db_model::Has
 {
     checkCommonPreconditions();
     TVLOG(2) << retrieveCommunicationIdsStatement.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievecommunicationids");
 
     const pqxx::result results =
@@ -733,7 +818,7 @@ std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend
     checkCommonPreconditions();
     TVLOG(2) << deleteCommunicationStatement.query;
     const auto timerKeepAlive =
-        DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "deletecommunication");
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "deletecommunication");
 
     const pqxx::result result = transaction()->exec_params(deleteCommunicationStatement.query,
                                                            communicationId.toString(), sender.binarystring());
@@ -760,7 +845,7 @@ void PostgresBackend::markCommunicationsAsRetrieved (
     const db_model::HashedId& recipient)
 {
     checkCommonPreconditions();
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "markcommunicationsasretrieved");
 
     std::vector<std::string> communicationIdStrings;
@@ -784,7 +869,7 @@ void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& 
 {
     checkCommonPreconditions();
     TVLOG(2) << ::deleteCommunicationsForTaskStatement.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "deletecommunicationsfortask");
 
     const auto result = transaction()->exec_params(deleteCommunicationsForTaskStatement.query, taskId.toDatabaseId(),
@@ -793,39 +878,48 @@ void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& 
 }
 // GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
 
-void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime)
+void PostgresBackend::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime, db_model::ConsentCategory category)
 {
     checkCommonPreconditions();
     TVLOG(2) << ::storeConsent.query;
-    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                          "storeconsent");
-    transaction()->exec_params0(::storeConsent.query, kvnr.binarystring(), creationTime.toXsDateTime());
+    const auto& result = transaction()->exec(::storeConsent.query, {kvnr.binarystring(), creationTime.toXsDateTime(),
+                       magic_enum::enum_name(category)}).no_rows();
+    Expect(result.empty(), "Unexpected rows returned from storeConsent statement");
 }
 
-std::optional<model::Timestamp> PostgresBackend::retrieveConsentDateTime(const db_model::HashedKvnr& kvnr)
+std::vector<db_model::Consent> PostgresBackend::retrieveAllConsents(const db_model::HashedKvnr& kvnr,
+                                                                    const UrlArguments& searchArguments)
 {
     checkCommonPreconditions();
-    TVLOG(2) << ::retrieveConsentDateTime.query;
-    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
-                                                                          "retrieveconsentdatetime");
-    const auto& result = transaction()->exec_params(::retrieveConsentDateTime.query, kvnr.binarystring());
-    if (result.empty())
+    auto query = ::retrieveAllConsents.query;
+    query.append(searchArguments.getSqlExpression(mConnection, "                "));
+    TVLOG(0) << query;
+    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
+                                                                          "retrieveallconsents");
+    const auto& result = transaction()->exec(query, {kvnr.binarystring()});
+    std::vector<db_model::Consent> consents;
+    consents.reserve(gsl::narrow<size_t>(result.size()));
+    for (const auto& row : result)
     {
-        return std::nullopt;
+        Expect(row.size() == 2, "Expected exactly two columns.");
+        auto category = magic_enum::enum_cast<db_model::ConsentCategory>(row[1].as<std::string>());
+        Expect(category.has_value(), "Could not convert consent category to enum.");
+        consents.emplace_back(*category, model::Timestamp{row[0].as<double>()});
     }
-    Expect(result.size() == 1, "Expected exactly one row.");
-    Expect(result.front().size() == 1, "Expected exactly one column.");
-    return model::Timestamp{result.front().front().as<double>()};
+    return consents;
 }
 
 // GEMREQ-start A_22158#query-call
-bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr)
+bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr, db_model::ConsentCategory category)
 {
     checkCommonPreconditions();
     TVLOG(2) << ::clearConsent.query;
-    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres,
+    const auto durationConsumer = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "clearconsent");
-    auto result = transaction()->exec_params0(::clearConsent.query, kvnr.binarystring());
+    auto result =
+        transaction()->exec(::clearConsent.query, {kvnr.binarystring(), magic_enum::enum_name(category)}).no_rows();
     return result.affected_rows() > 0;
 }
 // GEMREQ-end A_22158#query-call
@@ -891,7 +985,7 @@ void PostgresBackend::clearAllChargeItemCommunications(const db_model::HashedKvn
     checkCommonPreconditions();
     TVLOG(2) << ::deleteChargeItemCommunicationsForKvnrStatement.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "deletechargeitemcommunicationsforkvnrstatement");
+        DurationCategory::postgres, "deletechargeitemcommunicationsforkvnrstatement");
 
     const auto result = transaction()->exec_params(
         deleteChargeItemCommunicationsForKvnrStatement.query,
@@ -909,7 +1003,7 @@ void PostgresBackend::deleteCommunicationsForChargeItem(const model::Prescriptio
     checkCommonPreconditions();
     TVLOG(2) << ::deleteCommunicationsForChargeItemStatement.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
-        DurationConsumer::categoryPostgres, "deletecommunicationsforchargeitem");
+        DurationCategory::postgres, "deletecommunicationsforchargeitem");
 
     const auto result = transaction()->exec_params(
         deleteCommunicationsForChargeItemStatement.query, taskId.toDatabaseId(),
@@ -986,7 +1080,75 @@ void PostgresBackend::healthCheck()
 {
     checkCommonPreconditions();
     TVLOG(2) << healthCheckQuery.query;
-    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryPostgres, "healthcheck");
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "healthcheck");
     const auto result = transaction()->exec(healthCheckQuery.query);
     TVLOG(2) << "got " << result.size() << " results";
+}
+
+bool PostgresBackend::existsCountryCode(const std::string& countryCode)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << existsCountryCodeQuery.query;
+    const auto durationTimer =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "existscountrycode");
+    const auto result = transaction()->exec(existsCountryCodeQuery.query, pqxx::params{countryCode});
+    TVLOG(2) << "got " << result.size() << " results";
+    Expect(result.size() == 1, "Expecting exactly one row as result.");
+    return result.front().at(0).as<bool>();
+}
+
+void PostgresBackend::deleteEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << deleteEuAccessPermissionQuery.query;
+    const auto durationTimer =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "deleteeuaccesspermission");
+    const auto result = transaction()->exec(deleteEuAccessPermissionQuery.query, {kvnr.binarystring()}).no_rows();
+    Expect(result.empty(), "Expected no rows to be returned by delete query.");
+}
+
+void PostgresBackend::createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
+                                               const db_model::EncryptedBlob& accessCode, BlobId blobId,
+                                               const db_model::Blob& salt, const model::Timestamp& validUntil)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << createEuAccessPermissionQuery.query;
+    const auto durationTimer =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "createeuaccesspermission");
+    const auto result =
+        transaction()
+            ->exec(createEuAccessPermissionQuery.query, {kvnr.binarystring(), countryCode, accessCode.binarystring(),
+                                                         blobId, salt.binarystring(), validUntil.toXsDateTime()})
+            .no_rows();
+    Expect(result.empty(), "Expected no rows to be returned by create query.");
+}
+
+std::optional<db_model::EuAccessPermission>
+PostgresBackend::retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << retrieveEuAccessPermissionQuery.query;
+    const auto durationTimer =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "retrieveeuaccesspermission");
+    const auto result = transaction()->exec(retrieveEuAccessPermissionQuery.query, {kvnr.binarystring()});
+    Expect(result.size() <= 1, "Expected up to one row as result.");
+    if (! result.empty())
+    {
+
+        constexpr pqxx::row::size_type countryCodeIdx = 0;
+        constexpr pqxx::row::size_type accessCodeIdx = 1;
+        constexpr pqxx::row::size_type blobIdIdx = 2;
+        constexpr pqxx::row::size_type saltIdx = 3;
+        constexpr pqxx::row::size_type expiresIdx = 4;
+
+        const auto& r = result.front();
+        Expect(r.size() == 5, "Expected exactly 5 columns as result.");
+        return db_model::EuAccessPermission{r.at(countryCodeIdx).as<std::string>(),
+                                            db_model::EncryptedBlob{r.at(accessCodeIdx).as<db_model::postgres_bytea>()},
+                                            model::Timestamp{r.at(expiresIdx).as<double>()},
+                                            r.at(blobIdIdx).as<BlobId>(),
+                                            db_model::Blob{r.at(saltIdx).as<db_model::postgres_bytea>()}};
+    }
+    return std::nullopt;
 }

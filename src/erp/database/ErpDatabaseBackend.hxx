@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_ERPDATABASEBACKEND_HXX
 #define ERP_PROCESSING_CONTEXT_ERPDATABASEBACKEND_HXX
 
+#include "ErpDatabaseModel.hxx"
 #include "erp/model/Communication.hxx"
 #include "erp/model/Task.hxx"
 #include "shared/database/DatabaseBackend.hxx"
@@ -39,6 +40,7 @@ class HashedTelematikId;
 class MedicationDispense;
 class Task;
 class AuditData;
+struct EuAccessPermission;
 }
 
 namespace model
@@ -83,7 +85,8 @@ public:
                               const model::Timestamp& acceptDate,
                               const db_model::EncryptedBlob& healthCareProviderPrescription,
                               const db_model::EncryptedBlob& doctorIdentity,
-                              const model::Timestamp& lastStatusUpdate) = 0;
+                              const model::Timestamp& lastStatusUpdate,
+                              bool euRedeemable) = 0;
     virtual void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                                    const model::Timestamp& lastModified,
                                    const db_model::EncryptedBlob& receipt,
@@ -97,7 +100,8 @@ public:
                                               const db_model::HashedTelematikId& telematikId,
                                               const model::Timestamp& whenHandedOver,
                                               const std::optional<model::Timestamp>& whenPrepared,
-                                              const db_model::Blob& medicationDispenseSalt) = 0;
+                                              const db_model::Blob& medicationDispenseSalt,
+                                              const std::optional<model::Task::Status>& taskStatus = std::nullopt) = 0;
     virtual void updateTaskMedicationDispenseReceipt(
         const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
@@ -111,6 +115,8 @@ public:
     virtual void updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
                                              const model::Timestamp& lastModified,
                                              const model::Timestamp& lastStatusUpdate) = 0;
+    virtual void updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId, bool redeemable,
+                                                 const model::Timestamp& lastModified) = 0;
 
     virtual std::vector<db_model::AuditData>
     retrieveAuditEventData(const db_model::HashedKvnr& kvnr, const std::optional<Uuid>& id,
@@ -134,6 +140,9 @@ public:
                                              const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
+    virtual std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
+                                                              const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     virtual std::vector<db_model::MedicationDispense> retrieveAllMedicationDispenses(
         const db_model::HashedKvnr& kvnr,
@@ -201,10 +210,13 @@ public:
                                                const model::Timestamp& retrieved,
                                                const db_model::HashedId& recipient) = 0;
 
-    virtual void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime) = 0;
+    virtual void storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime,
+                              db_model::ConsentCategory category) = 0;
 
-    virtual std::optional<model::Timestamp> retrieveConsentDateTime(const db_model::HashedKvnr& kvnr) = 0;
-    [[nodiscard]] virtual bool clearConsent(const db_model::HashedKvnr& kvnr) = 0;
+    virtual std::vector<db_model::Consent> retrieveAllConsents(const db_model::HashedKvnr& kvnr,
+                                                               const UrlArguments& searchArguments) = 0;
+    [[nodiscard]] virtual bool clearConsent(const db_model::HashedKvnr& kvnr,
+                                            db_model::ConsentCategory category) = 0;
 
     virtual void storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr) = 0;
     virtual void updateChargeInformation(const ::db_model::ChargeItem& chargeItem) = 0;
@@ -226,6 +238,13 @@ public:
 
     virtual uint64_t countChargeInformationForInsurant(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
+
+    virtual bool existsCountryCode(const std::string& countryCode) = 0;
+    virtual void deleteEuAccessPermission(const db_model::HashedKvnr& kvnr) = 0;
+    virtual void createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
+                                          const db_model::EncryptedBlob& accessCode, BlobId blobId,
+                                          const db_model::Blob& salt, const model::Timestamp& validUntil) = 0;
+    virtual std::optional<db_model::EuAccessPermission> retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr) = 0;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_ERPDATABASEBACKEND_HXX

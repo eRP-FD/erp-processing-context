@@ -22,6 +22,7 @@
 
 namespace model
 {
+class EuAccessPermission;
 class AuditData;
 class Binary;
 class Bundle;
@@ -29,7 +30,10 @@ struct ChargeInformation;
 class ChargeItem;
 class Communication;
 class Consent;
+enum class ConsentType;
 class ErxReceipt;
+class EuMedicationDispenseInfos;
+class GemErpEuPrTaskInput;
 class Kvnr;
 class MedicationDispense; // NOLINT(bugprone-forward-declaration-namespace)
 class MedicationDispenseBundle;
@@ -50,15 +54,10 @@ class JWT;
 
 enum class CmacKeyCategory : int8_t;
 
-/**
- * Facade for an external database.
- * In production that is PostgreSQL.
- * In tests it can be a collection of non-persistent C++ containers.
- */
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "32";
+    static constexpr const char* expectedSchemaVersion = "37";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -101,6 +100,7 @@ public:
                                                      const model::ErxReceipt& receipt, const JWT& pharmacyIdentity) = 0;
     virtual void updateTaskDeleteMedicationDispense(const model::Task& task) = 0;
     virtual void updateTaskClearPersonalData(const model::Task& task) = 0;
+    virtual void setTaskEuRedeemableByPatient(const model::Task& task, const model::GemErpEuPrTaskInput& model) = 0;
 
     virtual std::string storeAuditEventData(model::AuditData& auditData) = 0;
     virtual std::vector<model::AuditData> retrieveAuditEventData(
@@ -125,9 +125,12 @@ public:
     virtual std::vector<model::Task> retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAll160Tasks (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual std::vector<std::tuple<model::Task, model::Binary>>
+    retrieveAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>
-    [[nodiscard]] virtual model::MedicationsAndDispenses
+    [[nodiscard]] virtual std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     [[nodiscard]] virtual model::MedicationsAndDispenses
     retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) = 0;
@@ -189,8 +192,10 @@ public:
         const std::string& recipient) = 0;
 
     virtual void storeConsent(const model::Consent& consent) = 0;
-    virtual std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr) = 0;
-    [[nodiscard]] virtual bool clearConsent(const model::Kvnr& kvnr) = 0;
+    virtual std::optional<model::Consent> retrieveConsent(const model::Kvnr& kvnr, model::ConsentType category) = 0;
+    virtual std::vector<model::Consent>
+    retrieveAllConsents(const model::Kvnr& kvnr, const UrlArguments& searchArguments) = 0;
+    [[nodiscard]] virtual bool clearConsent(const model::Kvnr& kvnr, model::ConsentType category) = 0;
 
     virtual void storeChargeInformation(const ::model::ChargeInformation& chargeInformation) = 0;
     virtual void updateChargeInformation(const ::model::ChargeInformation& chargeInformation, const BlobId& blobId, const db_model::Blob& salt) = 0;
@@ -209,6 +214,11 @@ public:
     virtual void clearAllChargeItemCommunications(const model::Kvnr& kvnr) = 0;
     virtual void deleteCommunicationsForChargeItem(const model::PrescriptionId& id) = 0;
     virtual uint64_t countChargeInformationForInsurant (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
+
+    virtual bool existsCountryCode(const model::CountryCode& countryCode) = 0;
+    virtual void deleteEuAccessPermission(const model::Kvnr& kvnr) = 0;
+    virtual void createEuAccessPermission(const model::Kvnr& kvnr, const model::EuAccessPermission& accessPermission) = 0;
+    virtual std::optional<model::EuAccessPermission> retrieveEuAccessPermission(const model::Kvnr& kvnr) = 0;
 
     virtual ErpDatabaseBackend& getBackend() = 0;
 };

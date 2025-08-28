@@ -8,199 +8,229 @@
 #include "fhirtools/expression/StringManipulation.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
 #include <regex>
 
 namespace fhirtools
 {
-Collection StringManipIndexOf::eval(const Collection& collection) const
+EvaluationContext StringManipIndexOf::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty() || ! mArg)
+    if (context.collection.empty() || ! mArg)
     {
-        return {};
+        return context();
     }
-    const auto substrResult = mArg->eval(collection);
-    if (substrResult.empty())
+    const auto substrResult = mArg->eval(context);
+    if (substrResult.collection.empty())
     {
-        return {};
+        return context();
     }
-    FPExpect(substrResult.singleOrEmpty()->type() == Element::Type::String,
+    FPExpect(substrResult.collection.singleOrEmpty()->type() == Element::Type::String,
              "substring must be single and of type string");
-    FPExpect(collection.singleOrEmpty()->type() == Element::Type::String,
+    FPExpect(context.collection.singleOrEmpty()->type() == Element::Type::String,
              "collection must be single and of type string");
-    if (auto idx = collection.singleOrEmpty()->asString().find(substrResult.singleOrEmpty()->asString());
+    if (auto idx = context.collection.singleOrEmpty()->asString().find(substrResult.collection.singleOrEmpty()->asString());
         idx != std::string::npos)
     {
-        return {makeIntegerElement(static_cast<int>(idx))};
+        return context.makeIntegerElement(static_cast<int>(idx));
     }
-    return {makeIntegerElement(-1)};
+    return context.makeIntegerElement(-1);
 }
 
-Collection StringManipSubstring::eval(const Collection& collection) const
+EvaluationContext StringManipSubstring::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty() || ! mLhs)
+    if (context.collection.empty() || ! mLhs)
     {
-        return {};
+        return context();
     }
-    const auto startResult = mLhs->eval(collection);
-    if (startResult.empty())
+    const auto startResult = mLhs->eval(context);
+    if (startResult.collection.empty())
     {
-        return {};
+        return context();
     }
-    const size_t start = gsl::narrow<size_t>(startResult.single()->asInt());
-    const auto& asString = collection.single()->asString();
+    const auto start = gsl::narrow<size_t>(startResult.collection.single()->asInt());
+    const auto& asString = context.collection.single()->asString();
     if (start >= asString.size())
     {
-        return {};
+        return context();
     }
-    const size_t length = mRhs ? gsl::narrow<size_t>(mRhs->eval(collection).single()->asInt()) : std::string::npos;
+    const size_t length = mRhs ? gsl::narrow<size_t>(mRhs->eval(context).collection.single()->asInt()) : std::string::npos;
 
-    return {makeStringElement(asString.substr(start, length))};
+    return context.makeStringElement(asString.substr(start, length));
 }
 
-Collection StringManipStartsWith::eval(const Collection& collection) const
+EvaluationContext StringManipStartsWith::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty() || ! mArg)
+    if (context.collection.empty() || ! mArg)
     {
-        return {};
+        return context();
     }
     if (! mArg)
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    const auto prefixResult = mArg->eval(collection);
-    if (prefixResult.empty())
+    const auto prefixResult = mArg->eval(context);
+    if (prefixResult.collection.empty())
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    const auto prefix = prefixResult.single()->asString();
-    const auto& asString = collection.single()->asString();
-    return {makeBoolElement(asString.starts_with(prefix))};
+    const auto prefix = prefixResult.collection.single()->asString();
+    const auto& asString = context.collection.single()->asString();
+    return context.makeBoolElement(asString.starts_with(prefix));
 }
 
-Collection StringManipContains::eval(const Collection& collection) const
+EvaluationContext StringManipContains::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
     if (! mArg)
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    const auto substringResult = mArg->eval(collection);
-    if (substringResult.empty())
+    const auto substringResult = mArg->eval(context);
+    if (substringResult.collection.empty())
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    const auto substring = substringResult.single()->asString();
-    const auto& asString = collection.single()->asString();
-    return {makeBoolElement(asString.find(substring) != std::string::npos)};
+    const auto substring = substringResult.collection.single()->asString();
+    const auto& asString = context.collection.single()->asString();
+    return context.makeBoolElement(asString.find(substring) != std::string::npos);
 }
 
-Collection StringManipMatches::eval(const Collection& collection) const
+EvaluationContext StringManipMatches::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (! mArg || collection.empty())
+    if (! mArg || context.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto regexResult = mArg->eval(collection);
-    if (regexResult.empty())
+    const auto regexResult = mArg->eval(context);
+    if (regexResult.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto regex = regexResult.single()->asString();
-    const auto& asString = collection.single()->asString();
+    const auto regex = regexResult.collection.single()->asString();
+    const auto& asString = context.collection.single()->asString();
     std::regex reg{regex};
-    return {makeBoolElement(std::regex_match(asString, reg))};
+    return context.makeBoolElement(std::regex_match(asString, reg));
 }
 
-Collection StringManipReplaceMatches::eval(const Collection& collection) const
+EvaluationContext StringManipReplaceMatches::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (! mLhs || ! mRhs || collection.empty())
+    if (! mLhs || ! mRhs || context.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto regexResult = mLhs->eval(collection);
-    const auto replacementResult = mRhs->eval(collection);
-    if (regexResult.empty() || replacementResult.empty())
+    const auto regexResult = mLhs->eval(context);
+    const auto replacementResult = mRhs->eval(context);
+    if (regexResult.collection.empty() || replacementResult.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto regex = regexResult.single()->asString();
-    const auto replacement = replacementResult.single()->asString();
-    const auto& asString = collection.single()->asString();
+    const auto regex = regexResult.collection.single()->asString();
+    const auto replacement = replacementResult.collection.single()->asString();
+    const auto& asString = context.collection.single()->asString();
     std::regex reg{regex, std::regex::extended};
-    return {makeStringElement(std::regex_replace(asString, reg, replacement))};
+    return context.makeStringElement(std::regex_replace(asString, reg, replacement));
 }
 
-Collection StringManipLength::eval(const Collection& collection) const
+EvaluationContext StringManipLength::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
-    return {makeIntegerElement(collection.single()->asString().length())};
+    return context.makeIntegerElement(context.collection.single()->asString().length());
 }
 
-Collection PlusOperator::eval(const Collection& collection) const
+EvaluationContext PlusOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).singleOrEmpty() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).singleOrEmpty() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.singleOrEmpty() : nullptr;
+    const auto rhs = mRhs ? mRhs->eval(context).collection.singleOrEmpty() : nullptr;
     if (! lhs || ! rhs)
     {
-        return {};
+        return context();
     }
-    if (lhs->type() == Element::Type::Integer && rhs->type() == Element::Type::Integer)
+    if (isImplicitConvertible(lhs->type(), rhs->type()))
     {
-        return {makeIntegerElement(lhs->asInt() + rhs->asInt())};
+        return plus(context, *lhs, *rhs, rhs->type());
     }
-    else if (lhs->type() == Element::Type::String && rhs->type() == Element::Type::String)
+    if (isImplicitConvertible(rhs->type(), lhs->type()))
     {
-        return {makeStringElement(lhs->asString() + rhs->asString())};
+        return plus(context, *lhs, *rhs, lhs->type());
     }
-    FPFail("operator+ not yet implemented for type " + std::string{magic_enum::enum_name(lhs->type())});
+    FPFail("incompatible operand types for plus operator");
 }
 
-Collection AmpersandOperator::eval(const Collection& collection) const
+EvaluationContext PlusOperator::plus(const EvaluationContext& context, const Element& lhs, const Element& rhs, Element::Type type)
+{
+    switch (type)
+    {
+        case Element::Type::Integer:
+            return context.makeIntegerElement(lhs.asInt() + rhs.asInt());
+        case Element::Type::Decimal:
+            return context.makeDecimalElement(lhs.asDecimal() + rhs.asDecimal());
+        case Element::Type::String:
+            return context.makeStringElement(lhs.asString() + rhs.asString());
+        case Element::Type::Quantity:{
+            const auto lhsAsQuantity = lhs.asQuantity();
+            const auto rhsAsQuantity = rhs.asQuantity();
+            if (lhsAsQuantity.unit() == rhsAsQuantity.unit())
+            {
+                return context.makeQuantityElement({lhsAsQuantity.value() + rhsAsQuantity.value(), lhsAsQuantity.unit()});
+            }
+            break;
+        }
+        case Element::Type::Boolean:
+        case Element::Type::Date:
+        case Element::Type::DateTime:
+        case Element::Type::Time:
+        case Element::Type::Structured:
+            break;
+    }
+    FPFail("incompatible operand types for + operator");
+}
+
+EvaluationContext AmpersandOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).singleOrEmpty() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).singleOrEmpty() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.singleOrEmpty() : nullptr;
+    const auto rhs = mRhs ? mRhs->eval(context).collection.singleOrEmpty() : nullptr;
     const auto lhsStr = lhs ? lhs->asString() : "";
     const auto rhsStr = rhs ? rhs->asString() : "";
-    return {makeStringElement(lhsStr + rhsStr)};
+    return context.makeStringElement(lhsStr + rhsStr);
 }
 
-Collection StringManipSplit::eval(const Collection& collection) const
+EvaluationContext StringManipSplit::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
     if (! mArg)
     {
-        return collection;
+        // return context unchanged
+        return context;
     }
-    const auto delimiterResult = mArg->eval(collection);
-    if (delimiterResult.empty())
+    const auto delimiterResult = mArg->eval(context);
+    if (delimiterResult.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto delimiter = delimiterResult.front()->asString();
-    Collection result;
-    for (const auto& item: collection)
+    const auto delimiter = delimiterResult.collection.front()->asString();
+    auto result = context();
+    for (const auto& item: context.collection)
     {
         if (item->type() == Element::Type::String)
         {
@@ -210,11 +240,12 @@ Collection StringManipSplit::eval(const Collection& collection) const
     return result;
 }
 
-void fhirtools::StringManipSplit::split(Collection& result, std::string_view str, std::string_view delimiter) const
+void fhirtools::StringManipSplit::split(EvaluationContext& result, std::string_view str, std::string_view delimiter) const
 {
     if (str.empty())
     {
-        result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{}));
+        result.collection.emplace_back(
+            std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string{}));
         return;
     }
     if (delimiter.empty())
@@ -225,18 +256,20 @@ void fhirtools::StringManipSplit::split(Collection& result, std::string_view str
     for (auto range = std::ranges::search(str, delimiter); range.begin() != str.end();
          range = std::ranges::search(str, delimiter))
     {
-        result.emplace_back(
-            std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{str.begin(), range.begin()}));
+        result.collection.emplace_back(std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String,
+                                                               std::string{str.begin(), range.begin()}));
         str = {range.end(), str.end()};
     }
-    result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string{str}));
+    result.collection.emplace_back(
+        std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string{str}));
 }
 
-void fhirtools::StringManipSplit::chars(Collection& result, std::string_view str) const
+void fhirtools::StringManipSplit::chars(EvaluationContext& result, std::string_view str) const
 {
     for (char c : str)
     {
-        result.emplace_back(std::make_shared<PrimitiveElement>(mFhirStructureRepository, Element::Type::String, std::string(1, c)));
+        result.collection.emplace_back(
+            std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string(1, c)));
     }
 }
 

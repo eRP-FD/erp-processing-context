@@ -25,21 +25,24 @@ class NumberAsStringParserDocument;
 class ErpElement : public fhirtools::MutableElement
 {
 public:
-    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                        std::weak_ptr<const Element> parent, const std::string& elementId,
-                        const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);
-    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                        std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr,
-                        const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);
-    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                        std::weak_ptr<const Element> parent,
-                        const fhirtools::FhirStructureDefinition* structureDefinition, const std::string& elementId,
-                        const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject = nullptr);
+    explicit ErpElement(
+        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        std::weak_ptr<const Element> parent, const std::string& elementId, const rapidjson::Value* value,
+        const rapidjson::Value* primitiveTypeObject = nullptr);
+    explicit ErpElement(
+        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr, const rapidjson::Value* value,
+        const rapidjson::Value* primitiveTypeObject = nullptr);
+    explicit ErpElement(
+        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        std::weak_ptr<const Element> parent, const fhirtools::FhirStructureDefinition* structureDefinition,
+        const std::string& elementId, const rapidjson::Value* value,
+        const rapidjson::Value* primitiveTypeObject = nullptr);
 
-    explicit ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                        std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr,
-                        model::NumberAsStringParserDocument* document, rapidjson::Value* value,
-                        rapidjson::Value* primitiveTypeObject);
+    explicit ErpElement(
+        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr,
+        model::NumberAsStringParserDocument* document, rapidjson::Value* value, rapidjson::Value* primitiveTypeObject);
 
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;

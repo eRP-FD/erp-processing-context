@@ -1,0 +1,105 @@
+<Parameters xmlns="http://hl7.org/fhir">
+   <meta>
+      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.5"/>
+   </meta>
+   <parameter>
+      <name value="rxDispensation"/>
+      <part>
+         <name value="medicationDispense"/>
+         <resource>
+            <MedicationDispense xmlns="http://hl7.org/fhir">
+               <id value="e7b435f4-a591-4896-9ed4-f119b9be5c16"/>
+               <meta>
+                  <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.5"/>
+               </meta>
+               <identifier>
+                  <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId"/>
+                  <value value="160.000.000.485.437.07"/>
+               </identifier>
+               <status value="completed"/>
+               <medicationReference>
+                  <reference value="urn:uuid:7eb4cc73-a1a8-46dd-ab1b-850e242e9afa"/>
+               </medicationReference>
+               <subject>
+                  <identifier>
+                     <system value="http://fhir.de/sid/gkv/kvid-10"/>
+                     <value value="M259582103"/>
+                  </identifier>
+               </subject>
+               <supportingInformation>
+                  <reference value="Task/160.000.000.485.437.07"/>
+               </supportingInformation>
+               <performer>
+                  <actor>
+                     <identifier>
+                        <system value="https://gematik.de/fhir/sid/telematik-id"/>
+                        <value value="5-M259582139"/>
+                     </identifier>
+                  </actor>
+               </performer>
+               <whenPrepared value="2025-08-19"/>
+               <whenHandedOver value="2025-08-19"/>
+               <dosageInstruction>
+                  <text value="1-0-1-0"/>
+               </dosageInstruction>
+            </MedicationDispense>
+         </resource>
+      </part>
+      <part>
+         <name value="medication"/>
+         <resource>
+            <Medication xmlns="http://hl7.org/fhir">
+               <id value="7eb4cc73-a1a8-46dd-ab1b-850e242e9afa"/>
+               <meta>
+                  <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.5"/>
+               </meta>
+               <extension url="https://gematik.de/fhir/epa-medication/StructureDefinition/drug-category-extension">
+                  <valueCoding>
+                     <system value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs"/>
+                     <code value="00"/>
+                  </valueCoding>
+               </extension>
+               <extension url="https://gematik.de/fhir/epa-medication/StructureDefinition/medication-id-vaccine-extension">
+                  <valueBoolean value="false"/>
+               </extension>
+               <code>
+                  <coding>
+                     <system value="http://fhir.de/CodeSystem/ifa/pzn"/>
+                     <code value="14220225"/>
+                  </coding>
+                  <text value="Sumatriptan-1a Pharma 100 mg Tabletten"/>
+               </code>
+               <form>
+                  <coding>
+                     <system value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM"/>
+                     <code value="TAB"/>
+                  </coding>
+               </form>
+               <amount>
+                  <numerator>
+                     <extension url="https://gematik.de/fhir/epa-medication/StructureDefinition/medication-packaging-size-extension">
+                        <valueString value="1"/>
+                     </extension>
+                     <unit value="TAB"/>
+                     <system value="http://unitsofmeasure.org"/>
+                     <code value="{tbl}"/>
+                  </numerator>
+                  <denominator>
+                     <value value="1"/>
+                     <system>
+                        <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
+                           <valueCode value="unknown"/>
+                        </extension>
+                     </system>
+                     <code>
+                        <extension url="http://hl7.org/fhir/StructureDefinition/data-absent-reason">
+                           <valueCode value="unknown"/>
+                        </extension>
+                     </code>
+                  </denominator>
+               </amount>
+            </Medication>
+         </resource>
+      </part>
+   </parameter>
+</Parameters>

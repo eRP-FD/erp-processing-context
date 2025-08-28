@@ -23,11 +23,11 @@ public:
         const std::string& path,
         std::unique_ptr<HandlerType>&& handler);
 
-    void onDeleteDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
-    void onGetDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
-    void onPostDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
-    void onPutDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
-    void onPatchDo (const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    RequestHandlerContext& onDeleteDo(const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    RequestHandlerContext& onGetDo(const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    RequestHandlerContext& onPostDo(const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    RequestHandlerContext& onPutDo(const std::string& path, std::unique_ptr<HandlerType>&& handler);
+    RequestHandlerContext& onPatchDo(const std::string& path, std::unique_ptr<HandlerType>&& handler);
 
     struct MatchingHandler
     {
@@ -40,6 +40,8 @@ public:
     MatchingHandler findMatchingHandler (
         HttpMethod method,
         const std::string& target) const;
+
+    const RequestHandlerContainer& getRequestHandlers() const;
 
 private:
     RequestHandlerContainer mRequestHandlers;

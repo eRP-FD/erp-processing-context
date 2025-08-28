@@ -757,6 +757,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
                   "Neither AccessCode(ac) nor secret provided as URI-Parameter.");
         session.addOuterResponseHeaderField(Header::InnerRequestOperation,
                                             std::string(toString(getOperation())) + "?ac");
+        session.setBdeUseCase(bde::GetTaskPharmacySecretRecovery_UC_4_17);
         std::tie(task, prescriptionBinary) = databaseHandle->retrieveTaskWithSecretAndPrescription(prescriptionId);
         checkTaskState(task, false);
         A_24177.start("check AccessCode");

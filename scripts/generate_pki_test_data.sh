@@ -550,9 +550,9 @@ generate_certificate sub_ca1_ec tsl_signer_wrong_key_usage_ec "TSL signer 2" tsl
 generate_certificate sub_ca1_ec smc_b_osig_ec "SMC-B Osig Signer" smc_b_osig ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
 
-generate_root_ca root_ca_rsa rsa:2048
-generate_sub_ca root_ca_rsa sub_ca1_rsa "Example Inc. Sub CA RSA 1" rsa:2048 $normal
-generate_certificate sub_ca1_rsa tsl_signer_rsa1 "TSL Signer RSA 1" usr_cert rsa:2048 $normal \
+generate_root_ca root_ca_rsa rsa:4096
+generate_sub_ca root_ca_rsa sub_ca1_rsa "Example Inc. Sub CA RSA 1" rsa:4096 $normal
+generate_certificate sub_ca1_rsa tsl_signer_rsa1 "TSL Signer RSA 1" usr_cert rsa:4096 $normal \
   subjectAltName=email:admin@example.com,DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
 
 

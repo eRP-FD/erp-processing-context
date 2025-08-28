@@ -25,6 +25,7 @@
 #include "test/util/TestConfiguration.hxx"
 
 #include <gtest/gtest.h>
+#include <magic_enum/magic_enum_iostream.hpp>
 
 class PutRuntimeConfigHandlerTest : public ::testing::Test
 {
@@ -131,3 +132,63 @@ TEST_F(PutRuntimeConfigHandlerTest, PauseResumeThrottle)
     changeConfig("Throttle", "0");
     checkGetConfig(false, 0);
 }
+
+using magic_enum::ostream_operators::operator<<;
+
+class PutRuntimeConfigHandlerTimingThresholdTest : public PutRuntimeConfigHandlerTest,
+                                                   public testing::WithParamInterface<DurationCategory>
+{
+public:
+    void changeThreshold(const std::string& newVal)
+    {
+        auto category = GetParam();
+        auto paramName = std::string{magic_enum::enum_name(category)}.append("MetricLogThresholdMs=");
+        header.setMethod(HttpMethod::PUT);
+        ServerRequest request{Header(header)};
+        std::string body = paramName + newVal;
+        request.setBody(std::move(body));
+        exporter::SessionContext session{*serviceContext, request, response, accessLog};
+        exporter::PutRuntimeConfigHandler handler{ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS};
+        EXPECT_NO_THROW(handler.handleRequest(session));
+        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+    }
+    void checkGetConfigThreshold(DurationCategory category, int64_t expectedThreshold)
+    {
+        header.setMethod(HttpMethod::GET);
+        ServerRequest request{Header(header)};
+        exporter::SessionContext session{*serviceContext, request, response, accessLog};
+        GetConfigurationHandler handler{
+            ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
+            std::make_unique<exporter::ConfigurationFormatter>(serviceContext->getRuntimeConfiguration())};
+        EXPECT_NO_THROW(handler.handleRequest(session));
+        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+        EXPECT_EQ(session.response.getHeader().header(Header::ContentType), MimeType::json);
+
+        rapidjson::Document configDocument;
+        configDocument.Parse(session.response.getBody());
+
+        auto paramName = std::string{magic_enum::enum_name(category)}.append("MetricLogThresholdMs");
+
+        rapidjson::Pointer paramPointer{std::string{"/runtime/"}.append(paramName).append("/value")};
+        EXPECT_EQ(paramPointer.Get(configDocument)->GetInt64(), expectedThreshold);
+
+        EXPECT_EQ(serviceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdMs(category).count(),
+                  expectedThreshold);
+    }
+};
+
+TEST_P(PutRuntimeConfigHandlerTimingThresholdTest, test)
+{
+    auto category = GetParam();
+    auto defaultValue = shared::RuntimeConfigurationBase::defaultMetricsLogThresholdsMs().at(category).count();
+    checkGetConfigThreshold(GetParam(), defaultValue);
+    changeThreshold("0");
+    checkGetConfigThreshold(GetParam(), 0);
+    changeThreshold("1000");
+    checkGetConfigThreshold(GetParam(), 1000);
+    changeThreshold("");
+    checkGetConfigThreshold(GetParam(), defaultValue);
+}
+
+INSTANTIATE_TEST_SUITE_P(x, PutRuntimeConfigHandlerTimingThresholdTest,
+                         testing::ValuesIn(magic_enum::enum_values<DurationCategory>()));

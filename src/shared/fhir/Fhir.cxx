@@ -6,20 +6,74 @@
  */
 
 #include "Fhir.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/VersionMapper.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConfiguration.hxx"
+#include "fhirtools/repository/views/CodeCachingView.hxx"
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/repository/views/FhirResourceViewVerifier.hxx"
+#include "fhirtools/repository/views/VersionMappingView.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Configuration.hxx"
-#include "fhirtools/repository/FhirResourceGroupConfiguration.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 
-#include <fhirtools/repository/FhirResourceViewVerifier.hxx>
 #include <algorithm>
+#include <map>
+#include <shared_mutex>
+#include <string>
 
 std::unique_ptr<Fhir> Fhir::mInstance;
 
+namespace
+{
+
+class FhirImplBase : public Fhir
+{
+public:
+    using ViewPtr = fhirtools::FhirResourceViewList::ViewPtr;
+    using ViewConfig = fhirtools::FhirResourceViewConfiguration::ViewConfig;
+
+    ViewPtr acquireView(const ViewConfig& viewConfig) const;
+    virtual ViewPtr wrapWithVersionMapper(ViewPtr view) const = 0;
+
+    const fhirtools::FhirStructureRepositoryBackend& backend() const override
+    {
+        return mBackend;
+    }
+
+    fhirtools::FhirStructureRepositoryBackend mBackend;
+    mutable std::shared_mutex mViewsByConfigIdMutex;
+    mutable std::map<std::string, ViewPtr> mViewsByConfigId;
+};
+
+FhirImplBase::ViewPtr FhirImplBase::acquireView(const ViewConfig& viewConfig) const
+{
+    std::shared_lock read{mViewsByConfigIdMutex};
+    auto view = mViewsByConfigId.find(viewConfig.mId);
+    if (view != mViewsByConfigId.end())
+    {
+        return view->second;
+    }
+    read.unlock();
+
+    std::unique_lock write{mViewsByConfigIdMutex};
+    view = mViewsByConfigId.lower_bound(viewConfig.mId);
+    if (view != mViewsByConfigId.end() && view->first == viewConfig.mId)
+    {
+        return view->second;
+    }
+    std::string newId = viewConfig.mId + "-cached";
+    auto newView =
+        fhirtools::CodeCachingView::create(std::move(newId), wrapWithVersionMapper(viewConfig.view(&mBackend)));
+    return mViewsByConfigId.emplace_hint(view, viewConfig.mId, std::move(newView))->second;
+}
+
 template<config::ProcessType ProcessT>
-class FhirImpl final : public Fhir
+class FhirImpl final : public FhirImplBase
 {
 public:
 
@@ -31,25 +85,25 @@ public:
         return mConverter;
     }
 
-    fhirtools::FhirResourceViewConfiguration::ViewList
-    structureRepository(const model::Timestamp& referenceTimestamp) const override;
+    fhirtools::FhirResourceViewList allViews() const override;
 
-    const fhirtools::FhirStructureRepositoryBackend& backend() const override
-    {
-        return mBackend;
-    }
+    fhirtools::FhirResourceViewList structureRepository(const model::Timestamp& referenceTimestamp) const override;
 
     fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration() const override;
+
+    fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType,
+                                                        const model::Timestamp& referenceTimestamp) const override;
+
+    ViewPtr wrapWithVersionMapper(ViewPtr unmapped) const override;
 
     void ensureInitialized() override;
 
     void load();
     void validateViews() const;
-    void validateProfileRequirements(const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
+    void validateProfileRequirements(const fhirtools::FhirResourceViewList& viewList,
                                      const model::Timestamp& timestamp) const;
 
     FhirConverter mConverter;
-    fhirtools::FhirStructureRepositoryBackend mBackend;
     std::once_flag initialized;
 };
 
@@ -65,7 +119,6 @@ void FhirImpl<ProcessT>::ensureInitialized()
 template<config::ProcessType ProcessT>
 FhirImpl<ProcessT>::FhirImpl()
     : mConverter()
-    , mBackend()
 {
 }
 template<config::ProcessType ProcessT>
@@ -91,31 +144,37 @@ void FhirImpl<ProcessT>::load()
 }
 
 template<config::ProcessType ProcessT>
-fhirtools::FhirResourceViewConfiguration::ViewList
+fhirtools::FhirResourceViewList FhirImpl<ProcessT>::allViews() const
+{
+    const auto& config = Configuration::instance();
+    auto viewConfig = config.fhirResourceViewConfiguration<ProcessT>();
+    return fhirtools::FhirResourceViewList{std::bind_front(&FhirImplBase::acquireView, this), viewConfig.allViews()};
+}
+
+template<config::ProcessType ProcessT>
+fhirtools::FhirResourceViewList
 FhirImpl<ProcessT>::structureRepository(const model::Timestamp& referenceTimestamp) const
 {
     const auto& config = Configuration::instance();
-
     auto viewConfig = config.fhirResourceViewConfiguration<ProcessT>();
     fhirtools::FhirResourceViewConfiguration::ViewList viewList;
     const auto& referenceDate = fhirtools::Date{referenceTimestamp.toGermanDate()};
     viewList = viewConfig.getViewInfo(referenceDate);
     Expect(! viewList.empty(), "invalid reference date: " + referenceDate.toString(false));
-    return viewList;
+    return fhirtools::FhirResourceViewList{std::bind_front(&FhirImplBase::acquireView, this), viewList};
 }
 
 
 template<config::ProcessType ProcessT>
 void FhirImpl<ProcessT>::validateViews() const
 {
-
     const auto& config = Configuration::instance();
     auto viewConfig = config.fhirResourceViewConfiguration<ProcessT>();
     std::set<date::local_days> viewDates;
     for (const auto& viewConf : viewConfig.allViews())
     {
-        auto view = viewConf->view(&mBackend);
-        fhirtools::FhirResourceViewVerifier verifier{mBackend, view.get().get()};
+        auto view = fhirtools::CodeCachingView::create(viewConf->mId + "-cached", viewConf->view(&mBackend));
+        fhirtools::FhirResourceViewVerifier verifier{mBackend, view.get()};
         verifier.verify();
         if (viewConf->mStart)
         {
@@ -136,31 +195,31 @@ void FhirImpl<ProcessT>::validateViews() const
 }
 
 template<config::ProcessType ProcessT>
-void FhirImpl<ProcessT>::validateProfileRequirements(const fhirtools::FhirResourceViewConfiguration::ViewList& viewList,
+void FhirImpl<ProcessT>::validateProfileRequirements(const fhirtools::FhirResourceViewList& viewList,
                                                      const model::Timestamp& timestamp) const
 {
-    using ViewConfig = fhirtools::FhirResourceViewConfiguration::ViewConfig;
     for (const auto& profileTypeReq : ProcessT::requiredProfiles)
     {
-        const auto onlyViews = [&](const std::string& id) -> bool {
-            return profileTypeReq.second.onlyViews.contains(id);
+        const auto onlyViews = [&](const auto& view) -> bool {
+            return profileTypeReq.second.onlyViews.contains(std::string{view->id()});
         };
-        if (! profileTypeReq.second.onlyViews.empty() && std::ranges::none_of(viewList, onlyViews, &ViewConfig::mId))
+        if (! profileTypeReq.second.onlyViews.empty() && std::ranges::none_of(viewList.all(), onlyViews))
         {
             continue;
         }
         if (profileTypeReq.first != model::ProfileType::fhir)
         {
             std::optional<fhirtools::DefinitionKey> key;
-            for (const auto& viewConf : viewList)
+            for (const auto& view : viewList.all())
             {
-                auto view = viewConf->view(&mBackend);
                 key = profileWithVersion(profileTypeReq.first, *view);
                 if (key)
                 {
                     TVLOG(2) << view->id() << " found profile: " << *key;
                     break;
                 }
+                TVLOG(3) << view->id() << " not found profile: "
+                         << profile(profileTypeReq.first).value_or(magic_enum::enum_name(profileTypeReq.first));
             }
             Expect3(key.has_value(),
                     "could not resolve " + std::string{magic_enum::enum_name(profileTypeReq.first)} +
@@ -175,6 +234,69 @@ template<config::ProcessType ProcessT>
 fhirtools::FhirResourceViewConfiguration FhirImpl<ProcessT>::fhirResourceViewConfiguration() const
 {
     return Configuration::instance().fhirResourceViewConfiguration<ProcessT>();
+}
+
+template<config::ProcessType ProcessT>
+fhirtools::ValidatorOptions
+FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
+                                            const model::Timestamp& referenceTimestamp) const
+{
+    using enum ConfigurationKey;
+    using Severity = fhirtools::Severity;
+    const auto& config = Configuration::instance();
+    fhirtools::ValidatorOptions options;
+    options.levels.mandatoryResolvableReferenceFailure =
+        config.get<Severity>(ProcessT::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
+    options.levels.unreferencedBundledResource =
+        config.get<Severity>(ProcessT::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
+    options.levels.unreferencedContainedResource =
+        config.get<Severity>(ProcessT::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
+    options.levels.missingOrExtraMetaProfile =
+        config.get<Severity>(ProcessT::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
+
+    if constexpr (std::is_same_v<Configuration::ERP, ProcessT>)
+    {
+        const date::days globalOffset{
+            Configuration::instance().getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS)};
+        const auto urnUuidCheckFrom = model::Timestamp::fromGermanDate(
+            config.getStringValue(ConfigurationKey::FHIR_VALIDATION_URN_UUID_CHECK_FROM));
+        if (referenceTimestamp >= (urnUuidCheckFrom + globalOffset))
+        {
+            options.levels.invalidUrnUuidInUri.emplace(Severity::error);
+        }
+    }
+    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle || profileType == model::ProfileType::KBV_PR_EVDGA_Bundle)
+    {
+        options.allowNonLiteralAuthorReference =
+            config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAuthorRefMode::allow;
+        switch (config.kbvValidationOnUnknownExtension())
+        {
+            using enum Configuration::OnUnknownExtension;
+            using ReportUnknownExtensionsMode = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode;
+            case ignore:
+                options.reportUnknownExtensions = ReportUnknownExtensionsMode::disable;
+                break;
+            case report:
+            case reject:
+                // unknown extensions in closed slicing will be reported as error
+                // open slices will be unslicedWarning
+                options.reportUnknownExtensions = ReportUnknownExtensionsMode::onlyOpenSlicing;
+                break;
+        }
+        return options;
+    }
+    return options;
+}
+
+template<config::ProcessType ProcessT>
+FhirImplBase::ViewPtr FhirImpl<ProcessT>::wrapWithVersionMapper(ViewPtr unmapped) const
+{
+    std::string id{unmapped->id()};
+    id += "-mapped";
+    fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping<ProcessT>()};
+    return fhirtools::VersionMappingView::create(std::move(id), std::move(mapper), std::move(unmapped));
+}
+
 }
 
 const Fhir& Fhir::instance()
@@ -208,6 +330,11 @@ void Fhir::init(Init init)
     {
         mInstance->ensureInitialized();
     }
+}
+
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView> Fhir::defaultView() const
+{
+    return backend().defaultView();
 }
 
 Fhir::~Fhir() = default;

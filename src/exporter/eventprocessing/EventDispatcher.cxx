@@ -25,7 +25,7 @@ EventDispatcher::EventDispatcher(std::unique_ptr<IEpaMedicationClient>&& medicat
 
 Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCollector& auditDataCollector)
 {
-    A_19296_03.start("AuditEvent Content");
+    A_19296_04.start("AuditEvent Content");
     auditDataCollector.setAgentName("E-Rezept-Fachdienst");
     auditDataCollector.setAgentType(model::AuditEvent::AgentType::machine);
     auditDataCollector.setAgentWho("9-E-Rezept-Fachdienst");
@@ -104,7 +104,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
             // no audit event
             break;
     }
-    A_19296_03.finish();
+    A_19296_04.finish();
 
     return outcome;
 }

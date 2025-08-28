@@ -387,9 +387,13 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(re
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
-    auto dispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
-    boost::replace_all(dispenseBundleXml, davDispenseItemProfile + '|' + to_string(ResourceTemplates::Versions::DAV_PKV_current()),
-        davDispenseItemProfile + "|0.1");
+    const auto davPkvVersion = ResourceTemplates::Versions::DAV_PKV_current();
+    auto dispenseBundleXml = ResourceTemplates::davDispenseItemXml({
+        .davPkvVersion = davPkvVersion,
+        .prescriptionId = pkvTaskId,
+    });
+    boost::replace_all(dispenseBundleXml, davDispenseItemProfile + '|' + davPkvVersion.renderVersion(),
+                       davDispenseItemProfile + "|0.1");
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
                                         std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,

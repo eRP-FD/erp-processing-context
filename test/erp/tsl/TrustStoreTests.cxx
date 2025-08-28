@@ -40,8 +40,8 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewSet)
 
     std::vector<X509Certificate> tslCas = trustStore.getTslSignerCas();
     ASSERT_EQ(2, tslCas.size());
-    ASSERT_EQ("/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1", tslCas[0].getSubject());
-    ASSERT_EQ("/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=TSL signer", tslCas[1].getSubject());
+    ASSERT_EQ("C=DE, ST=Berlin, L=Berlin, O=Example Inc., OU=IT, CN=Example Inc. Sub CA EC 1", tslCas[0].getSubject());
+    ASSERT_EQ("C=DE, ST=Berlin, L=Berlin, O=Example Inc., OU=IT, CN=TSL signer", tslCas[1].getSubject());
 }
 
 
@@ -58,7 +58,7 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewStartFutureIgnored)
 
     std::vector<X509Certificate> tslCas = trustStore.getTslSignerCas();
     ASSERT_EQ(1, tslCas.size());
-    ASSERT_EQ("/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1",
+    ASSERT_EQ("C=DE, ST=Berlin, L=Berlin, O=Example Inc., OU=IT, CN=Example Inc. Sub CA EC 1",
               tslCas[0].getSubject());
 }
 
@@ -78,6 +78,6 @@ TEST(TrustStoreTest, TrustStoreTslSignerCaHandlingNewStartPastSet)
 
     std::vector<X509Certificate> tslCas = trustStore.getTslSignerCas();
     ASSERT_EQ(2, tslCas.size());
-    ASSERT_EQ("/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=Example Inc. Sub CA EC 1", tslCas[0].getSubject());
-    ASSERT_EQ("/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=TSL signer", tslCas[1].getSubject());
+    ASSERT_EQ("C=DE, ST=Berlin, L=Berlin, O=Example Inc., OU=IT, CN=Example Inc. Sub CA EC 1", tslCas[0].getSubject());
+    ASSERT_EQ("C=DE, ST=Berlin, L=Berlin, O=Example Inc., OU=IT, CN=TSL signer", tslCas[1].getSubject());
 }

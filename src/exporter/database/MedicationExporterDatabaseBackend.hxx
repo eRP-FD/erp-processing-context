@@ -36,7 +36,8 @@ public:
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) = 0;
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) = 0;
-    virtual void finalizeKvnr(const model::EventKvnr& kvnr) const = 0;
+    virtual void finalizeKvnr(const model::EventKvnr& kvnr,
+                              const std::string& assignedEpaPrefix) const = 0;
 };
 
 #endif// ERP_PROCESSING_CONTEXT_DATABASE_MEDICATIONEXPORTER_BACKEND_HXX

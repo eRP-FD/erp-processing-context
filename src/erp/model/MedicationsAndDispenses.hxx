@@ -1,8 +1,18 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
+
 #ifndef ERP_PROCESSING_CONTEXT_MEDICATIONS_AND_DISPENSES_HXX
 #define ERP_PROCESSING_CONTEXT_MEDICATIONS_AND_DISPENSES_HXX
 
 #include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/MedicationDispense.hxx"
+#include "shared/model/GemErpEuPrPractitioner.hxx"
+#include "shared/model/GemErpEuPrPractitionerRole.hxx"
+#include "shared/model/GemErpEuPrOrganization.hxx"
 
 #include <vector>
 

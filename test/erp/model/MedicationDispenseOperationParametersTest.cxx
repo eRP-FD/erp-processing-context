@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/MedicationDispense.hxx"
@@ -28,10 +29,8 @@ class MedicationDispenseOperationParametersProfileTypeTest : public testing::Tes
 {
     void SetUp() override
     {
-        const auto& fhirInstance = Fhir::instance();
-        const auto view = fhirInstance.structureRepository(model::Timestamp::now());
-        gsl::not_null backend = std::addressof(fhirInstance.backend());
-        auto vers = view.supportedVersions(backend, {std::string{model::resource::structure_definition::closeOperationInput}});
+        const auto view = Fhir::instance().structureRepository(model::Timestamp::now());
+        auto vers = view.supportedVersions({std::string{model::resource::structure_definition::closeOperationInput}});
         if (vers.empty())
         {
             GTEST_SKIP_("MedicationDispenseOperationParameters not supported.");

@@ -13,7 +13,13 @@ namespace model
 class EPAMedicationTypeExtension : public Extension<EPAMedicationTypeExtension>
 {
 public:
-    EPAMedicationTypeExtension(std::string_view code, std::string_view display);
+    enum class Type
+    {
+        MedicinalProductPackage,
+        ExtemporaneousPreparation,
+        PharmaceuticalBiologicProduct
+    };
+    explicit EPAMedicationTypeExtension(Type type);
     static constexpr auto url =
         "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-type-extension";
   static constexpr auto MedicinalProductPackageCode = "781405001";
@@ -22,7 +28,9 @@ public:
   static constexpr auto ExtemporaneousPreparationDisplay = "Extemporaneous preparation (product)";
   static constexpr auto PharmaceuticalBiologicProductCode = "373873005";
   static constexpr auto PharmaceuticalBiologicProductDisplay = "Pharmaceutical / biologic product (product)";
+
 private:
+    EPAMedicationTypeExtension(std::string_view code, std::string_view display);
     using Extension::Extension;
 };
 

@@ -7,8 +7,8 @@
 #include "shared/model/Device.hxx"
 #include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/KbvBundle.hxx"
-#include "shared/model/KbvCoverage.hxx"
 #include "shared/model/KbvComposition.hxx"
+#include "shared/model/KbvCoverage.hxx"
 #include "shared/model/KbvMedicationBase.hxx"
 #include "shared/model/KbvMedicationCompounding.hxx"
 #include "shared/model/KbvMedicationPzn.hxx"
@@ -17,10 +17,10 @@
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispenseOperationParameters.hxx"
+#include "shared/model/Patient.hxx"
 #include "shared/model/Reference.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Resource.txx"
-#include "shared/model/Patient.hxx"
 #include "shared/model/Signature.hxx"
 #include "shared/model/extensions/KBVMedicationCategory.hxx"
 #include "shared/model/extensions/KBVMultiplePrescription.hxx"
@@ -57,7 +57,6 @@ template class Resource<MedicationDispenseOperationParameters>;
 template class Resource<Patient>;
 template class Resource<Reference>;
 template class Resource<Signature>;
-
 
 template class BundleBase<Bundle>;
 template class BundleBase<KbvBundle>;

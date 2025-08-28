@@ -195,10 +195,8 @@ private:
             const int error = X509_STORE_CTX_get_error(context.native_handle());
             const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
             X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
-            char buffer[256];
-            X509_NAME_oneline(X509_get_subject_name(errCert), buffer, sizeof buffer);
             TVLOG(2) << "error " << error << " (" << X509_verify_cert_error_string(error)
-                     << " at depth " << errorDepth << " in " << buffer;
+                     << " at depth " << errorDepth << " in " << x509NametoString(X509_get_subject_name(errCert));
         }
     }
 

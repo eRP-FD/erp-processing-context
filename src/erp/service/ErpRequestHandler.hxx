@@ -42,7 +42,7 @@ public:
                                const std::initializer_list<std::string_view>& allowedProfessionOiDs);
     using OIDsByWorkflow = std::unordered_map<model::PrescriptionType, std::unordered_set<std::string_view>>;
     explicit ErpRequestHandler(Operation operation, OIDsByWorkflow allowedProfessionOiDsByWorkflow);
-    ~ErpRequestHandler (void) override = default;
+    ~ErpRequestHandler() override = default;
 
     // Within erp, switch from BaseSessionContext to PcSessionContext via dynamic_cast.
     // All derived classes use SessionContext.
@@ -54,7 +54,7 @@ public:
 
     bool allowedForProfessionOID(std::string_view professionOid,
                                  const std::optional<std::string>& optionalPathIdParameter) const override;
-    Operation getOperation (void) const override;
+    Operation getOperation() const override;
     std::string_view name() const;
 
     static bool isVerificationIdentityKvnr(const std::string_view& kvnr);
@@ -70,8 +70,11 @@ protected:
     static std::string getLinkBase ();
 
     /// @brief parse and validate the request body either using TModel::fromJson or TModel::fromXml based on the provided Content-Type
-    template<class TModel>
-    [[nodiscard]] static TModel parseAndValidateRequestBody(SessionContext& context, bool validateGeneric = true);
+    template<model::FhirValidatableProfileConstexpr TModel>
+    [[nodiscard]] static TModel parseAndValidateRequestBody(SessionContext& context);
+    template<model::FhirValidatable TModel>
+    [[nodiscard]] static TModel parseAndValidateRequestBody(SessionContext& context,
+                                                            const std::set<model::ProfileType>& allowedProfiles);
 
     static std::optional<std::string> getLanguageFromHeader(const Header& requestHeader);
 
@@ -95,17 +98,22 @@ public:
                                  const std::optional<std::string>& optionalPathIdParameter) const override;
 };
 
-template<class TModel>
-TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context, bool validateGeneric)
+template<model::FhirValidatableProfileConstexpr TModel>
+TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context)
 {
+    return parseAndValidateRequestBody<TModel>(context, {TModel::profileType});
+}
+template<model::FhirValidatable TModel>
+TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context,
+                                                      const std::set<model::ProfileType>& allowedProfiles)
+{
+    using namespace std::string_literals;
     auto resourceFactory = createResourceFactory<TModel>(context);
-    if (! validateGeneric)
-    {
-        resourceFactory.genericValidationMode(model::GenericValidationMode::disable);
-    }
-    auto profileType = resourceFactory.profileType();
     try
     {
+        auto profileType = resourceFactory.profileType();
+        ModelExpect(allowedProfiles.contains(profileType),
+                    "Profile Not allowed on this endpoint: "s.append(magic_enum::enum_name(profileType)));
         auto profileVersion = resourceFactory.profileVersion();
         auto profileHeader = Header::profileVersionHeader(profileType);
         if (! profileHeader.empty() && profileVersion && profileVersion->version())
@@ -114,12 +122,16 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context, b
             context.addOuterResponseHeaderField(profileHeader, *profileVersion->version());
             A_23090_06.finish();
         }
+        else
+        {
+            TVLOG(1) << "No ProfileVersionHeader for " << magic_enum::enum_name(profileType);
+        }
+        return std::move(resourceFactory).getValidated(profileType, nullptr);
     }
     catch (const model::ModelException& mex)
     {
         ErpFailWithDiagnostics(HttpStatus::BadRequest, "parsing / validation error", mex.what());
     }
-    return std::move(resourceFactory).getValidated(profileType, nullptr);
 }
 
 

@@ -8,14 +8,15 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/DispenseTaskHandler.hxx"
+#include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/crypto/Sha256.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/ByteHelper.hxx"
-#include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/parser/FhirPathParser.hxx"
 #include "test/erp/service/EndpointHandlerTest/MedicationDispenseFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CertificateDirLoader.h"
@@ -61,17 +62,29 @@ protected:
                 ASSERT_NO_THROW(handler.handleRequest(sessionContext));
                 break;
             case ExpectedResult::failure:
-                ASSERT_ANY_THROW(handler.handleRequest(sessionContext));
+                // clang-format off
+                ASSERT_NO_THROW(
+                    try
+                    {
+                        handler.handleRequest(sessionContext);
+                        ADD_FAILURE() << "Expected ErpException.";
+                    }
+                    catch (const ErpException& ex)
+                    {
+                        EXPECT_EQ(ex.status(), HttpStatus::BadRequest) << ex.what();
+                    }
+                );
+                // clang-format on
                 break;
             case ExpectedResult::noCatch:
                 handler.handleRequest(sessionContext);
         }
     }
 
-    fhirtools::Collection runRequest(const fhirtools::FhirStructureRepository& repo)
+    fhirtools::EvaluationContext runRequest(const fhirtools::FhirStructureRepositoryView& repo)
     {
         struct Element {
-            Element(const fhirtools::FhirStructureRepository& repo, model::NumberAsStringParserDocument initDoc,
+            Element(const fhirtools::FhirStructureRepositoryView& repo, model::NumberAsStringParserDocument initDoc,
                     std::string elementId)
                 : mElementId{std::move(elementId)}
                 , mDocument{std::move(initDoc)}
@@ -100,21 +113,21 @@ protected:
         auto doc = BundleFactory::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), opt)
                        .getValidated(model::ProfileType::GEM_ERP_PR_Bundle);
         auto bundleElement = std::make_shared<Element>(repo, std::move(doc).jsonDocument(), "Bundle");
-        return fhirtools::Collection{std::shared_ptr<fhirtools::Element>(bundleElement, bundleElement->mElement.get())};
+        return fhirtools::EvaluationContext{std::shared_ptr<fhirtools::Element>(bundleElement, bundleElement->mElement.get())};
     }
 
-    fhirtools::Collection getPrescriptionDigest(const fhirtools::Collection& closeResponse)
+    fhirtools::Collection getPrescriptionDigest(const fhirtools::EvaluationContext& closeResponse)
     {
         [&] {
-            ASSERT_EQ(closeResponse.size(), 1);
+            ASSERT_EQ(closeResponse.collection.size(), 1);
         }();
 
         const gsl::not_null repo = Fhir::instance().backend().defaultView();
         auto prescriptionDigestExpr =
             fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.section.entry[0].resolve()");
-        auto prescriptionDigest = prescriptionDigestExpr->eval(closeResponse);
+        auto prescriptionDigest = prescriptionDigestExpr->eval(closeResponse).collection;
         [&] {
-            ASSERT_EQ(prescriptionDigest.size(), 1) << closeResponse;
+            ASSERT_EQ(prescriptionDigest.size(), 1) << closeResponse.collection;
         }();
         return prescriptionDigest;
     }
@@ -388,10 +401,14 @@ TEST_F(CloseTaskTest, whenHandedOver)
     ResourceTemplates::MedicationDispenseBundleOptions bundleOptions{
         .medicationDispenses = {dispenseOptions, dispenseOptions}};
 
-    auto dispenseOptions1_4{dispenseOptions};
-    dispenseOptions1_4.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
-    ResourceTemplates::MedicationDispenseOperationParametersOptions parametersOptions{
-        .medicationDispenses = {dispenseOptions1_4, dispenseOptions1_4}};
+    auto parameters = [dispenseOptions](const ResourceTemplates::Versions::GEM_ERP& gemVersion) mutable {
+        dispenseOptions.gematikVersion = gemVersion;
+        return ResourceTemplates::MedicationDispenseOperationParametersOptions{
+            .version = gemVersion,
+            .medicationDispenses = {dispenseOptions, dispenseOptions}};
+    };
+    auto parametersOptions1_4 = parameters(ResourceTemplates::Versions::GEM_ERP_1_4);
+    auto parametersOptions1_5 = parameters(ResourceTemplates::Versions::GEM_ERP_1_5_2);
 
     // whenHandedOver during Workflow 1.2 period
     {
@@ -404,7 +421,7 @@ TEST_F(CloseTaskTest, whenHandedOver)
         EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
         EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
         // failure is expected due to parameters only allowed with workflow 1.4
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::failure));
     }
     // whenHandedOver during Workflow 1.3 period
     {
@@ -417,7 +434,7 @@ TEST_F(CloseTaskTest, whenHandedOver)
         EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
         EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
         // failure is expected due to parameters only allowed with workflow 1.4
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::failure));
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::failure));
     }
     // whenHandedOver during Workflow 1.4 period with Schlüsseltabellen Q2/2025 period
     {
@@ -431,7 +448,21 @@ TEST_F(CloseTaskTest, whenHandedOver)
         // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
         EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
         // -LYE not valid yet- The view now allows LYE early.
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions), ExpectedResult::success));
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::success));
+    }
+    // whenHandedOver during Workflow 1.5 period with Schlüsseltabellen Q2/2025 period
+    {
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_5_0", today};
+        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
+        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
+        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
+        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
+        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
+        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
+        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
+        // -LYE not valid yet- The view now allows LYE early.
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_5), ExpectedResult::success));
     }
 }
 
@@ -466,10 +497,10 @@ TEST_F(CloseTaskTest, NoEnvMetaVersionId)
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, std::nullopt);
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
-    auto bundle = runRequest(*repo);
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundle));
+    auto bundleContext = runRequest(*repo);
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
     auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
-    auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
+    auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest)).collection;
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "1");
 }
@@ -480,10 +511,10 @@ TEST_F(CloseTaskTest, SetMetaVersionId)
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "isSet");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
-    auto bundle = runRequest(*repo);
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundle));
+    auto bundleContext = runRequest(*repo);
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
     auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
-    auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
+    auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest)).collection;
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "isSet");
 }
@@ -494,64 +525,64 @@ TEST_F(CloseTaskTest, NoMetaVersionEmptyEnv)
     guards.emplace_back(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID, "");
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
     fhirtools::Collection prescriptionDigest;
-    auto bundle = runRequest(*repo);
-    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundle));
+    auto bundleContext = runRequest(*repo);
+    ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
     auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
-    auto metaVersionId = getMetaVersionId->eval(prescriptionDigest);
-    EXPECT_TRUE(metaVersionId.empty());
+    auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest));
+    EXPECT_TRUE(metaVersionId.collection.empty());
 }
 
 TEST_F(CloseTaskTest, prescriptionDigestRefTypeUUID)
 {
     std::vector<EnvironmentVariableGuard> guards;
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
-    fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
-    ASSERT_EQ(bundle.size(), 1);
+    std::optional<fhirtools::EvaluationContext> bundleContext;
+    ASSERT_NO_FATAL_FAILURE(bundleContext.emplace(runRequest(*repo)));
+    ASSERT_EQ(bundleContext->collection.size(), 1);
     auto refInCompositionExpr =
         fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.section.entry[0].reference");
-    auto refInComposition = refInCompositionExpr->eval(bundle);
-    ASSERT_EQ(refInComposition.size(), 1) << bundle;
-    EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:"));
+    auto refInComposition = refInCompositionExpr->eval(*bundleContext);
+    ASSERT_EQ(refInComposition.collection.size(), 1) << bundleContext->collection;
+    EXPECT_TRUE(refInComposition.collection.front()->asString().starts_with("urn:uuid:"));
     auto binaryResourceExpr =
         fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry.resource.ofType(Binary)");
-    auto binary = binaryResourceExpr->eval(bundle);
-    ASSERT_EQ(binary.size(), 1) << bundle;
-    fhirtools::Collection binaryEntry{binary.front()->parent()};
+    auto binary = binaryResourceExpr->eval(*bundleContext);
+    ASSERT_EQ(binary.collection.size(), 1) << bundleContext->collection;
+    fhirtools::EvaluationContext binaryEntry{binary.collection.front()->parent()};
     auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "fullUrl");
-    auto fullUrl = fullUrlExpr->eval(binaryEntry);
+    auto fullUrl = fullUrlExpr->eval(binaryEntry).collection;
     ASSERT_EQ(fullUrl.size(), 1);
-    EXPECT_EQ(fullUrl.front()->asString(), refInComposition.front()->asString());
+    EXPECT_EQ(fullUrl.front()->asString(), refInComposition.collection.front()->asString());
     auto idExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "id");
-    auto id = idExpr->eval(binary);
-    ASSERT_EQ(id.size(), 1) << binary;
-    EXPECT_EQ("urn:uuid:" + id.front()->asString(), refInComposition.front()->asString()) << binary;
-    EXPECT_TRUE(Uuid{id.front()->asString()}.isValidIheUuid()) << binary;
+    auto id = idExpr->eval(binary).collection;
+    ASSERT_EQ(id.size(), 1) << binary.collection;
+    EXPECT_EQ("urn:uuid:" + id.front()->asString(), refInComposition.collection.front()->asString()) << binary.collection;
+    EXPECT_TRUE(Uuid{id.front()->asString()}.isValidIheUuid()) << binary.collection;
 }
 
 TEST_F(CloseTaskTest, deviceRefUuid)
 {
     std::vector<EnvironmentVariableGuard> guards;
     const gsl::not_null repo = Fhir::instance().backend().defaultView();
-    fhirtools::Collection bundle;
-    ASSERT_NO_FATAL_FAILURE(bundle = runRequest(*repo));
-    ASSERT_EQ(bundle.size(), 1);
+    std::optional<fhirtools::EvaluationContext> bundleContext;
+    ASSERT_NO_FATAL_FAILURE(bundleContext.emplace(runRequest(*repo)));
+    ASSERT_EQ(bundleContext->collection.size(), 1);
     auto refInCompositionExpr =
         fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.author.reference");
-    auto refInComposition = refInCompositionExpr->eval(bundle);
-    ASSERT_EQ(refInComposition.size(), 1) << bundle;
-    EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:")) << bundle;
+    auto refInComposition = refInCompositionExpr->eval(*bundleContext).collection;
+    ASSERT_EQ(refInComposition.size(), 1) << bundleContext->collection;
+    EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:")) << bundleContext->collection;
     auto deviceResourceExpr =
         fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry.resource.ofType(Device)");
-    auto device = deviceResourceExpr->eval(bundle);
-    ASSERT_EQ(device.size(), 1) << bundle;
-    fhirtools::Collection deviceEntry{device.front()->parent()};
+    auto device = deviceResourceExpr->eval(*bundleContext);
+    ASSERT_EQ(device.collection.size(), 1) << bundleContext->collection;
+    fhirtools::EvaluationContext deviceEntry{device.collection.front()->parent()};
     auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "fullUrl");
-    auto fullUrl = fullUrlExpr->eval(deviceEntry);
+    auto fullUrl = fullUrlExpr->eval(deviceEntry).collection;
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), refInComposition.front()->asString());
     auto signatureWhoExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.signature.who.reference");
-    auto signatureWho = signatureWhoExpr->eval(bundle);
+    auto signatureWho = signatureWhoExpr->eval(*bundleContext).collection;
     ASSERT_EQ(signatureWho.size(), 1);
     EXPECT_EQ(signatureWho.front()->asString(), fullUrl.front()->asString());
 }
@@ -785,9 +816,17 @@ TEST_F(CloseTaskTest, DigaRedeemCodeHeader1)
 {
     auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
-    auto body = ResourceTemplates::medicationDispenseOperationParametersXml(
-        {.medicationDispenses = {},
-         .medicationDispensesDiGA = {{.prescriptionId = prescriptionId.toString(), .withRedeemCode = true}}});
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+        .medicationDispenses = {},
+        .medicationDispensesDiGA =
+            {
+                {
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .prescriptionId = prescriptionId.toString(),
+                    .withRedeemCode = true,
+                },
+            },
+    });
     const Header requestHeader{HttpMethod::POST,
                                "/Task/" + prescriptionId.toString() + "/$close/",
                                0,
@@ -813,9 +852,17 @@ TEST_F(CloseTaskTest, DigaRedeemCodeHeader0)
 {
     auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
-    auto body = ResourceTemplates::medicationDispenseOperationParametersXml(
-        {.medicationDispenses = {},
-         .medicationDispensesDiGA = {{.prescriptionId = prescriptionId.toString(), .withRedeemCode = false}}});
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+        .medicationDispenses = {},
+        .medicationDispensesDiGA =
+            {
+                {
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .prescriptionId = prescriptionId.toString(),
+                    .withRedeemCode = false,
+                },
+            },
+    });
     const Header requestHeader{HttpMethod::POST,
                                "/Task/" + prescriptionId.toString() + "/$close/",
                                0,
@@ -848,27 +895,35 @@ TEST_P(CloseTaskWrongInputTest, test)
     std::string message =
         "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für Arzneimittel zulässig.";
     JWT jwt = jwtPharmacy;
-    std::string body;
+    ResourceTemplates::MedicationDispenseOperationParametersOptions medicationDispenseOptions;
     switch (GetParam())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-        case model::PrescriptionType::direkteZuweisungPkv:
-            body = ResourceTemplates::medicationDispenseOperationParametersXml(
-                {.medicationDispenses = {},
-                 .medicationDispensesDiGA = {{.prescriptionId = prescriptionId1->toString()}}});
+        case model::PrescriptionType::direkteZuweisungPkv: {
+            medicationDispenseOptions.medicationDispenses.clear();
+            auto& md = medicationDispenseOptions.medicationDispensesDiGA.emplace_front();
+            md.prescriptionId = prescriptionId1->toString();
+            md.version = medicationDispenseOptions.version;
+            md.whenHandedOver = model::Timestamp::now().toGermanDate();
             break;
-        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        }
+        case model::PrescriptionType::digitaleGesundheitsanwendungen: {
             prescriptionId1.emplace(
                 model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002));
             message = "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
                       "Gesundheitsanwendungen zulässig.";
             jwt = mJwtBuilder->makeJwtKostentraeger();
-            body = ResourceTemplates::medicationDispenseOperationParametersXml(
-                {.medicationDispenses = {{.prescriptionId = *prescriptionId1}}});
+            auto& md = medicationDispenseOptions.medicationDispenses.emplace_front(ResourceTemplates::MedicationDispenseOptions{
+                .prescriptionId = *prescriptionId1,
+                .gematikVersion = medicationDispenseOptions.version,
+            });
+            md.medication = ResourceTemplates::MedicationOptions{.version = medicationDispenseOptions.version};
             break;
+        }
     }
+    std::string body = ResourceTemplates::medicationDispenseOperationParametersXml(medicationDispenseOptions);
     CloseTaskHandler handler({});
     const Header requestHeader{HttpMethod::POST,
                                "/Task/" + prescriptionId1->toString() + "/$close/",

@@ -7,11 +7,12 @@
 
 #include "fhirtools/util/SaxHandler.hxx"
 #include "VaListHelper.hxx"
-#include "shared/util/ExceptionWrapper.hxx"
-#include "shared/util/String.hxx"
-#include "fhirtools/util/XmlMemory.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/util/Gsl.hxx"
+#include "fhirtools/util/XmlHelper.hxx"
+#include "fhirtools/util/XmlMemory.hxx"
+#include "shared/util/ExceptionWrapper.hxx"
+#include "shared/util/String.hxx"
 
 #include <libxml/parserInternals.h>
 #include <libxml/xmlschemas.h>
@@ -89,25 +90,29 @@ void genericSuppressingErrorCallback(void*, const char*, ...)
 
 }// anonymous namespace
 
-std::string_view SaxHandler::Attribute::localname() const
+// the whole purpose of this class is to hide all the ugly pointer-arithmetics so we disable these checks for it
+//NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-type-reinterpret-cast)
+
+XmlStringView SaxHandler::Attribute::localname() const
 {
-    return mData[0];
+    return XmlStringView{mData[0]};
 }
 
-std::optional<std::string_view> SaxHandler::Attribute::prefix() const
+std::optional<XmlStringView> SaxHandler::Attribute::prefix() const
 {
-    return (mData[1] != nullptr) ? std::optional<std::string_view>(mData[1]) : std::optional<std::string_view>{};
+    return (mData[1] != nullptr) ? std::optional<XmlStringView>(mData[1]) : std::nullopt;
 }
 
-std::optional<std::string_view> SaxHandler::Attribute::uri() const
+std::optional<XmlStringView> SaxHandler::Attribute::uri() const
 {
-    return (mData[2] != nullptr) ? std::optional<std::string_view>(mData[2]) : std::optional<std::string_view>{};
+    return (mData[2] != nullptr) ? std::optional<XmlStringView>(mData[2]) : std::nullopt;
 }
 
 std::string_view SaxHandler::Attribute::value() const
 {
-    const auto* begin = mData[3];
-    const auto* end = mData[4];
+    // we return string_view not XmlStringView because there is no null-termination
+    const auto* begin = reinterpret_cast<const char*>(mData[3]);
+    const auto* end = reinterpret_cast<const char*>(mData[4]);
     return std::string_view(begin, static_cast<size_t>(end - begin));
 }
 
@@ -158,6 +163,7 @@ SaxHandler::Attribute SaxHandler::AttributeList::get(size_t index) const
     return Attribute{mAttributes + (5 * index)};
 }
 
+//NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic, cppcoreguidelines-pro-type-reinterpret-cast)
 
 SaxHandler::SaxHandler()
 {

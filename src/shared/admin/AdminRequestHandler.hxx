@@ -30,7 +30,7 @@ class PostRestartHandler : public AdminRequestHandlerBase
 public:
     explicit PostRestartHandler(ConfigurationKey adminCredentialsKey, ConfigurationKey adminDefaultShutdownDelayKey);
     ~PostRestartHandler() override;
-    Operation getOperation(void) const override;
+    Operation getOperation() const override;
 
 private:
     void doHandleRequest(BaseSessionContext& session) override;

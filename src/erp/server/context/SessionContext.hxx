@@ -13,6 +13,7 @@
 #include "shared/model/Timestamp.hxx"
 #include "shared/server/AccessLog.hxx"
 #include "shared/server/BaseSessionContext.hxx"
+#include "shared/util/BdeUseCases.hxx"
 
 #include <boost/core/noncopyable.hpp>
 #include <memory>
@@ -52,11 +53,15 @@ public:
 
     void fillMvoBdeV2(const std::optional<model::KBVMultiplePrescription>& mPExt);
 
+    void setBdeUseCase(bde::UseCase useCase);
+    std::optional<bde::UseCase> getBdeUseCase() const;
+
 private:
     std::unique_ptr<AuditDataCollector> mAuditDataCollector;
     std::unique_ptr<Database> mDatabase;
     model::Timestamp mSessionTime;
     Header::keyValueMap_t mOuterResponseHeaderFields;
+    std::optional<bde::UseCase> mBdeUseCase;
 };
 
 

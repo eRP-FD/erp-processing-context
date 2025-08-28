@@ -8,10 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_FHIR_HXX
 #define ERP_PROCESSING_CONTEXT_FHIR_HXX
 
-#include "fhirtools/converter/FhirConverter.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
 #include "shared/util/Configuration.hxx"
 
 #include <list>
@@ -20,6 +18,13 @@
 namespace model
 {
 class Timestamp;
+}
+
+namespace fhirtools
+{
+class FhirStructureRepositoryBackend;
+class FhirResourceViewList;
+class ValidatorOptions;
 }
 
 class FhirConverter;
@@ -39,12 +44,18 @@ public:
 
     virtual const FhirConverter& converter() const = 0;
 
-    virtual fhirtools::FhirResourceViewConfiguration::ViewList
-    structureRepository(const model::Timestamp& referenceTimestamp) const  = 0;
+    virtual fhirtools::FhirResourceViewList allViews() const = 0;
+
+    virtual fhirtools::FhirResourceViewList structureRepository(const model::Timestamp& referenceTimestamp) const = 0;
 
     virtual const fhirtools::FhirStructureRepositoryBackend& backend() const = 0;
 
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> defaultView() const;
+
     virtual fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration() const = 0;
+
+    virtual fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType,
+                                                                const model::Timestamp& referenceTimestamp) const = 0;
 
     virtual ~Fhir() = 0;
 private:

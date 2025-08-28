@@ -1,6 +1,7 @@
 #include "EventProcessor.hxx"
 #include "BdeMessage.hxx"
 #include "database/CommitGuard.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/client/EpaMedicationClientImpl.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/eventprocessing/EventDispatcher.hxx"
@@ -12,9 +13,11 @@
 #include "shared/audit/AuditDataCollector.hxx"
 #include "shared/database/AccessTokenIdentity.hxx"
 #include "shared/database/TransactionMode.hxx"
+#include "shared/model/GemErpEuPrMedicationDispense.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/JsonLog.hxx"
+#include "util/RuntimeConfiguration.hxx"
 
 using namespace std::chrono_literals;
 
@@ -48,6 +51,8 @@ bool EventProcessor::process()
 {
     // Workflow step 1
     const auto kvnr = autocommit([&](auto& db) {
+        DurationConsumerGuard durationConsumerGuard{
+            "none", mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()};
         return db.processNextKvnr();
     });
 
@@ -85,20 +90,25 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
     if (checkRetryCount(kvnr))
     {
         // Workflow step 2
-        const auto events = autocommit([&](auto& db) {
+        auto events = autocommit([&](auto& db) {
             return db.getAllEventsForKvnr(kvnr);
         });
 
         jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                   << KeyValue("event", "Start Processing KVNR with " + std::to_string(events.size()) + " events");
+
+        removeEuMedicationDispenseEvents(kvnr, events);
+
         if (! events.empty())
         {
             const auto& firstEvent = *events.front();
             ScopedLogContext scopedLogContext{firstEvent.getXRequestId()};
 
-            auto durationConsumerGuard{std::make_unique<DurationConsumerGuard>(firstEvent.getXRequestId())};
+            auto durationConsumerGuard{std::make_unique<DurationConsumerGuard>(
+                firstEvent.getXRequestId(),
+                mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs())};
             // Workflow step 3 - decodedKvnr = decrypt(events.front()).kvnr
-            auto epaAccount = ePaAccountLookup(firstEvent);
+            auto epaAccount = ePaAccountLookup(kvnr, firstEvent);
             durationConsumerGuard.reset();
 
             // Workflow step 4 - ePA account lookup
@@ -130,7 +140,9 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
         {
             // Workflow step 13 - set kvnr to processed
             autocommit([&](auto& db) {
-                db.finalizeKvnr(kvnr);
+                A_25941.start("Remove cached prefix, no more events for kvnr");
+                db.finalizeKvnr(kvnr, "");
+                A_25941.finish();
             });
             TLOG(WARNING) << "KVNR to process had no events";
         }
@@ -217,7 +229,8 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
     for (const auto& event : events)
     {
         ScopedLogContext scopedLogContext{event->getXRequestId()};
-        DurationConsumerGuard durationConsumerGuard{event->getXRequestId()};
+        DurationConsumerGuard durationConsumerGuard{
+            event->getXRequestId(), mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()};
         Expect(event, "No or bad events for kvnr");
 
         // Workflow step 6 - check deadletter
@@ -292,9 +305,11 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 break;
         }
     }
-    // Workflow step 13 - set kvnr to procesesd
+    // Workflow step 13 - set kvnr to processed
     autocommit([&](auto& db) {
-        db.finalizeKvnr(kvnr);
+        A_25941.start("Store prefix for reuse.");
+        db.finalizeKvnr(kvnr, epaAccount.host);
+        A_25941.finish();
     });
     jsonLog() << kvnr << KeyValue("event", "KVNR processed");
 }
@@ -310,9 +325,11 @@ void EventProcessor::processEpaDeniedOrNotFound(const model::EventKvnr& kvnr)
 
     jsonLog() << kvnr << KeyValue("event", "Delete all Task Events for KVNR");
 
-    // Workflow step 13 - set kvnr to procesesd
+    // Workflow step 13 - set kvnr to processed
     autocommit([&](auto& db) {
-        db.finalizeKvnr(kvnr);
+        A_25941.start("Remove cached prefix for lookup denied / not found");
+        db.finalizeKvnr(kvnr, "");
+        A_25941.finish();
     });
 }
 
@@ -353,13 +370,15 @@ void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollecto
     }
 }
 
-EpaAccount EventProcessor::ePaAccountLookup(const model::TaskEvent& taskEvent)
+EpaAccount EventProcessor::ePaAccountLookup(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent)
 {
     mEpaAccountLookup.lookupClient()
         .addLogAttribute(BDEMessage::lastModifiedTimestampKey, taskEvent.getLastModified())
         .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString())
         .addLogAttribute(BDEMessage::hashedKvnrKey,  std::make_optional<model::HashedKvnr>(taskEvent.getHashedKvnr()));
-    return mEpaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
+    auto acc = mEpaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr(),
+                                        kvnr.useCachedValues() ? kvnr.getAssignedEpa() : std::nullopt);
+    return acc;
 }
 
 void EventProcessor::scheduleRetryQueue(const model::EventKvnr& kvnr)
@@ -388,4 +407,42 @@ void EventProcessor::scheduleHealthRecordConflict(const model::EventKvnr& kvnr)
 std::chrono::seconds EventProcessor::calculateExponentialBackoffDelay(std::int32_t retry)
 {
     return std::chrono::seconds(static_cast<std::int32_t>(std::pow(3, std::max(retry, 0))) * 60);
+}
+
+void EventProcessor::removeEuMedicationDispenseEvents(const model::EventKvnr &kvnr, std::vector<std::unique_ptr<model::TaskEvent>>& events)
+{
+    std::unordered_set<const model::TaskEvent*> eventsToRemove;
+    for (const auto& event : events)
+    {
+        if (event->model::TaskEvent::getUseCase() != model::TaskEvent::UseCase::provideDispensation)
+        {
+            continue;
+        }
+
+        const auto& dispensationTaskEvent = dynamic_cast<const model::ProvideDispensationTaskEvent&>(*event);
+        const auto& resources = dispensationTaskEvent.getMedicationDispenseBundle().getResourcesByType<model::MedicationDispense>();
+
+        if (std::any_of(resources.begin(), resources.end(), [](const auto& r) {
+            return r.getProfile() == model::ProfileType::GEM_ERPEU_PR_MedicationDispense;
+        }))
+        {
+            eventsToRemove.insert(event.get());
+        }
+    }
+
+    for (const auto* event : eventsToRemove)
+    {
+        EventProcessor::jsonLog() << kvnr << KeyValue("event", "Deleting event with eu medication dispenses")
+                << KeyValue("prescription_id", event->model::TaskEvent::getPrescriptionId().model::PrescriptionId::toString());
+
+        autocommit([&](auto& db) {
+            db.deleteOneEventForKvnr(kvnr, event->model::TaskEvent::getId());
+        });
+    }
+
+    events.erase(std::remove_if(events.begin(), events.end(),
+                                [&eventsToRemove](const std::unique_ptr<model::TaskEvent>& event) {
+                                    return eventsToRemove.contains(event.get());
+                                }),
+                 events.end());
 }

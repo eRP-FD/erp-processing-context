@@ -128,7 +128,6 @@ int ErpMain::runApplication (
     const auto& configuration = Configuration::instance();
     configuration.check(Configuration::ProcessType::ERP);
 
-    log << "setting up signal handler";
     state = MainState::Initializing;
 
     // trigger construction of singleton, before starting any thread
@@ -156,6 +155,7 @@ int ErpMain::runApplication (
                    <<  Database::expectedSchemaVersion << "'";
     }
 
+    log << "setting up signal handler";
     SignalHandler signalHandler(ioContext);
     signalHandler.registerSignalHandlers({SIGINT, SIGTERM}); // Note that SIGPIPE is ignored when calling this method.
 

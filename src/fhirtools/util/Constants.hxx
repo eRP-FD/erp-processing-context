@@ -29,6 +29,9 @@ static constexpr std::string_view systemTypeDateTime{"http://hl7.org/fhirpath/Sy
 static constexpr std::string_view systemTypeDecimal{"http://hl7.org/fhirpath/System.Decimal"};
 static constexpr std::string_view systemTypeInteger{"http://hl7.org/fhirpath/System.Integer"};
 
+// type
+static constexpr std::string_view extension{"Extension.extension"};
+
 // Misc:
 static constexpr std::string_view typePlaceholder{"[x]"};
 

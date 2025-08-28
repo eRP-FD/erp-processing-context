@@ -116,7 +116,7 @@ model::NumberAsStringParserDocument model::NumberAsStringParserDocument::fromJso
     NumberAsStringParserDocument document;
     rj::MemoryStream s(json.data(), json.size());
     document.ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
-    ModelExpect(!document.HasParseError(), "can not parse json string");
+    ModelExpect(!document.HasParseError(), "can not parse json string " + std::string{json});
     return document;
 }
 

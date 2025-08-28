@@ -69,3 +69,13 @@ void SessionContext::fillMvoBdeV2(const std::optional<model::KBVMultiplePrescrip
         A_23090_06.finish();
     }
 }
+
+void SessionContext::setBdeUseCase(bde::UseCase useCase)
+{
+    mBdeUseCase = useCase;
+}
+
+std::optional<bde::UseCase> SessionContext::getBdeUseCase() const
+{
+    return mBdeUseCase;
+}

@@ -29,7 +29,8 @@ Collection::value_type Collection::singleOrEmpty() const
 
 Collection::value_type Collection::single() const
 {
-    FPExpect(size() == 1, "Collection size must be 1");
+    using namespace std::string_literals;
+    FPExpect(size() == 1, "Collection size must be 1"s.append((std::ostringstream{} << (*this)).view()));
     return at(0);
 }
 

@@ -8,178 +8,179 @@
 #include "fhirtools/expression/Functions.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 
 namespace fhirtools
 {
-Collection ExistenceEmpty::eval(const Collection& collection) const
+EvaluationContext ExistenceEmpty::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return {makeBoolElement(collection.empty())};
+    return context.makeBoolElement(context.collection.empty());
 }
 
 UnaryExpression::UnaryExpression(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg)
-    : Expression(fhirStructureRepository)
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mArg(std::move(arg))
 {
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
-Collection ExistenceExists::eval(const Collection& collection) const
+EvaluationContext ExistenceExists::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     if (! mArg)
     {
-        return {makeBoolElement(! collection.empty())};
+        return context.makeBoolElement(!context.collection.empty());
     }
-    return ExistenceExists(mFhirStructureRepository, nullptr)
-        .eval(FilteringWhere(mFhirStructureRepository, mArg).eval(collection));
+    return ExistenceExists(fhirStructureRepository(), nullptr)
+        .eval(FilteringWhere(fhirStructureRepository(), mArg).eval(context));
 }
 
-Collection ExistenceAll::eval(const Collection& collection) const
+EvaluationContext ExistenceAll::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     FPExpect(mArg, "no criterion argument given to all(...)");
-    for (const auto& item : collection)
+    for (const auto& item : context.collection)
     {
-        auto result = mArg->eval({item}).boolean();
+        auto result = mArg->eval(context(item)).collection.boolean();
         if (! result || ! result->asBool())
         {
-            return {makeBoolElement(false)};
+            return context.makeBoolElement(false);
         }
     }
-    return {makeBoolElement(true)};
+    return context.makeBoolElement(true);
 }
 
-Collection ExistenceAllTrue::eval(const Collection& collection) const
+EvaluationContext ExistenceAllTrue::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    for (const auto& item : collection)
+    for (const auto& item : context.collection)
     {
         if (! item->asBool())
         {
-            return {makeBoolElement(false)};
+            return context.makeBoolElement(false);
         }
     }
-    return {makeBoolElement(true)};
+    return context.makeBoolElement(true);
 }
 
-Collection ExistenceAnyTrue::eval(const Collection& collection) const
+EvaluationContext ExistenceAnyTrue::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    for (const auto& item : collection)
+    for (const auto& item : context.collection)
     {
         if (item->asBool())
         {
-            return {makeBoolElement(true)};
+            return context.makeBoolElement(true);
         }
     }
-    return {makeBoolElement(false)};
+    return context.makeBoolElement(false);
 }
 
-Collection ExistenceAllFalse::eval(const Collection& collection) const
+EvaluationContext ExistenceAllFalse::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    for (const auto& item : collection)
+    for (const auto& item : context.collection)
     {
         if (item->asBool())
         {
-            return {makeBoolElement(false)};
+            return context.makeBoolElement(false);
         }
     }
-    return {makeBoolElement(true)};
+    return context.makeBoolElement(true);
 }
 
-Collection ExistenceAnyFalse::eval(const Collection& collection) const
+EvaluationContext ExistenceAnyFalse::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    for (const auto& item : collection)
+    for (const auto& item : context.collection)
     {
         if (! item->asBool())
         {
-            return {makeBoolElement(true)};
+            return context.makeBoolElement(true);
         }
     }
-    return {makeBoolElement(false)};
+    return context.makeBoolElement(false);
 }
 
-Collection ExistenceCount::eval(const Collection& collection) const
+EvaluationContext ExistenceCount::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return {makeIntegerElement(collection.size())};
+    return context.makeIntegerElement(context.collection.size());
 }
 
-Collection ExistenceDistinct::eval(const Collection& collection) const
+EvaluationContext ExistenceDistinct::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    Collection ret;
-    std::ranges::copy_if(collection, std::back_insert_iterator(ret), [&ret](const Collection::value_type& val) {
-        return ! ret.contains(val);
-    });
+    auto ret = context();
+    std::ranges::copy_if(context.collection, std::back_insert_iterator(ret.collection),
+                         [&ret](const Collection::value_type& val) {
+                             return ! ret.collection.contains(val);
+                         });
     return ret;
 }
 
-Collection ExistenceIsDistinct::eval(const Collection& collection) const
+EvaluationContext ExistenceIsDistinct::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return {makeBoolElement(std::make_shared<ExistenceDistinct>(mFhirStructureRepository)->eval(collection).size() ==
-                            collection.size())};
+    return context.makeBoolElement(std::make_shared<ExistenceDistinct>(fhirStructureRepository())->eval(context).collection.size() ==
+                            context.collection.size());
 }
 
-Collection FilteringWhere::eval(const Collection& collection) const
+EvaluationContext FilteringWhere::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     FPExpect(mArg, "no criterion argument given to where(...)");
-    Collection ret;
-    for (const auto& item : collection)
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
-        const auto result = mArg->eval({item}).boolean();
+        const auto result = mArg->eval(context(item)).collection.boolean();
         if (result && result->asBool())
         {
-            ret.emplace_back(item);
+            ret.collection.emplace_back(item);
         }
     }
     return ret;
 }
 
-Collection FilteringSelect::eval(const Collection& collection) const
+EvaluationContext FilteringSelect::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     FPExpect(mArg, "no projection argument given to select(...)");
-    Collection ret;
-    for (const auto& item : collection)
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
-        ret.append(mArg->eval({item}));
+        ret.collection.append(mArg->eval(context(item)).collection);
     }
     return ret;
 }
 
-Collection FilteringOfType::eval(const Collection& collection) const
+EvaluationContext FilteringOfType::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
     FPExpect(mArg, "type specifier not specified");
-    const auto arg = mArg->eval(collection).singleOrEmpty();
+    const auto arg = mArg->eval(context).collection.singleOrEmpty();
     FPExpect(arg, "type not specified");
-    const auto* type = mFhirStructureRepository->findTypeById(arg->asString());
+    const auto* type = fhirStructureRepository()->findTypeById(arg->asString());
     FPExpect(type, "could not resolve type " + arg->asString());
-    Collection ret;
-    for (const auto& item : collection)
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
         if (item->getStructureDefinition()->isSystemType() &&
             type->kind() == FhirStructureDefinition::Kind::primitiveType)
         {
             if (item->getStructureDefinition()->isDerivedFrom(
-                    *mFhirStructureRepository, type->primitiveToSystemType(*mFhirStructureRepository).url()))
+                    *fhirStructureRepository(), type->primitiveToSystemType(*fhirStructureRepository()).url()))
             {
-                ret.emplace_back(item);
+                ret.collection.emplace_back(item);
             }
         }
         else
         {
-            if (item->getStructureDefinition()->isDerivedFrom(*mFhirStructureRepository, type->url()))
+            if (item->getStructureDefinition()->isDerivedFrom(*fhirStructureRepository(), type->url()))
             {
-                ret.emplace_back(item);
+                ret.collection.emplace_back(item);
             }
         }
     }
@@ -187,99 +188,100 @@ Collection FilteringOfType::eval(const Collection& collection) const
 }
 
 SubsettingIndexer::SubsettingIndexer(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr lhs,
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
     ExpressionPtr rhs)
-    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
 
-Collection SubsettingIndexer::eval(const Collection& collection) const
+EvaluationContext SubsettingIndexer::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto lhs = mLhs->eval(collection);
-    auto index = static_cast<size_t>(mRhs->eval(collection).single()->asInt());
-    if (lhs.size() <= index)
+    auto lhs = mLhs->eval(context);
+    auto index = static_cast<size_t>(mRhs->eval(context).collection.single()->asInt());
+    if (lhs.collection.size() <= index)
     {
-        return {};
+        return context();
     }
-    return {lhs[index]};
+    return context(lhs.collection[index]);
 }
 
-Collection SubsettingFirst::eval(const Collection& collection) const
+EvaluationContext SubsettingFirst::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return collection.empty() ? Collection{} : Collection{collection[0]};
+    return context.collection.empty() ? context() : context(context.collection[0]);
 }
 
-Collection SubsettingLast::eval(const Collection& collection) const
+EvaluationContext SubsettingLast::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return collection.empty() ? Collection{} : Collection{collection.back()};
+    return context.collection.empty() ? context() : context(context.collection.back());
 }
 
-Collection SubsettingTail::eval(const Collection& collection) const
+EvaluationContext SubsettingTail::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return collection.empty() ? Collection{} : Collection{collection.begin() + 1, collection.end()};
+    return context.collection.empty() ? context() : context({context.collection.begin() + 1, context.collection.end()});
 }
 
 SubsettingIntersect::SubsettingIntersect(
-    const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository, ExpressionPtr arg)
-    : UnaryExpression(fhirStructureRepository, std::move(arg))
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
+    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
 
-Collection SubsettingIntersect::eval(const Collection& collection) const
+EvaluationContext SubsettingIntersect::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto other = mArg->eval(collection);
-    Collection ret;
-    for (const auto& item : collection)
+    auto other = mArg->eval(context);
+    auto ret = context();
+    for (const auto& item : context.collection)
     {
-        if (other.contains(item) && ! ret.contains(item))
+        if (other.collection.contains(item) && ! ret.collection.contains(item))
         {
-            ret.push_back(item);
+            ret.collection.push_back(item);
         }
     }
     return ret;
 }
 
-CombiningUnion::CombiningUnion(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
-                               ExpressionPtr lhs, ExpressionPtr rhs)
-    : BinaryExpression(fhirStructureRepository, std::move(lhs), std::move(rhs))
+CombiningUnion::CombiningUnion(
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
+    ExpressionPtr rhs)
+    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
 
-Collection CombiningUnion::eval(const Collection& collection) const
+EvaluationContext CombiningUnion::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    auto lhs = mLhs->eval(collection);
-    auto rhs = mRhs->eval(collection);
-    Collection ret;
-    for (const auto& item : lhs)
+    auto lhs = mLhs->eval(context);
+    auto rhs = mRhs->eval(context);
+    auto ret = context();
+    for (const auto& item : lhs.collection)
     {
-        if (! ret.contains(item))
+        if (! ret.collection.contains(item))
         {
-            ret.push_back(item);
+            ret.collection.push_back(item);
         }
     }
-    for (const auto& item : rhs)
+    for (const auto& item : rhs.collection)
     {
-        if (! ret.contains(item))
+        if (! ret.collection.contains(item))
         {
-            ret.push_back(item);
+            ret.collection.push_back(item);
         }
     }
     return ret;
 }
 
-Collection CombiningCombine::eval(const Collection& collection) const
+EvaluationContext CombiningCombine::eval(const EvaluationContext& context) const
 {
-    Collection ret = collection;
-    ret.append(mArg->eval(collection));
+    auto ret = context;
+    ret.collection.append(mArg->eval(context).collection);
     return ret;
 }
 }

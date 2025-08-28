@@ -8,13 +8,13 @@
 #include "fhirtools/expression/Conversion.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 
 namespace fhirtools
 {
-ConversionIif::ConversionIif(const std::shared_ptr<const fhirtools::FhirStructureRepository>& fhirStructureRepository,
+ConversionIif::ConversionIif(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
                              ExpressionPtr criterion, ExpressionPtr trueResult, ExpressionPtr falseResult)
-    : Expression(fhirStructureRepository)
+    : Expression(std::move(fhirStructureRepositoryView))
     , mCriterion(std::move(criterion))
     , mTrueResult(std::move(trueResult))
     , mFalseResult(std::move(falseResult))
@@ -22,51 +22,51 @@ ConversionIif::ConversionIif(const std::shared_ptr<const fhirtools::FhirStructur
     FPExpect(mCriterion, "Criterion is mandatory");
 }
 
-Collection ConversionIif::eval(const Collection& collection) const
+EvaluationContext ConversionIif::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto result = mCriterion->eval(collection).boolean();
+    const auto result = mCriterion->eval(context).collection.boolean();
 
     if (result && result->asBool())
     {
-        return mTrueResult ? mTrueResult->eval({collection}) : Collection{};
+        return mTrueResult ? mTrueResult->eval(context) : context();
     }
-    return mFalseResult ? mFalseResult->eval({collection}) : Collection{};
+    return mFalseResult ? mFalseResult->eval(context) : context();
 }
 
-Collection ConversionToInteger::eval(const Collection& collection) const
+EvaluationContext ConversionToInteger::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto& element = collection.single();
+    const auto& element = context.collection.single();
     try
     {
-        return {makeIntegerElement(element->asInt())};
+        return context.makeIntegerElement(element->asInt());
     }
     catch (const std::exception&)
     {
-        return {};
+        return context();
     }
 }
 
-Collection ConversionToString::eval(const Collection& collection) const
+EvaluationContext ConversionToString::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
-    const auto& element = collection.single();
+    const auto& element = context.collection.single();
     try
     {
-        return {makeStringElement(element->asString())};
+        return context.makeStringElement(element->asString());
     }
     catch (const std::exception&)
     {
-        return {makeBoolElement(false)};
+        return context.makeBoolElement(false);
     }
 }
 }

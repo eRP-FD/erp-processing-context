@@ -155,7 +155,7 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     Expect(publicKey != nullptr, "Missing public key");
     Expect(EVP_PKEY_id(publicKey) == EVP_PKEY_EC, "Wrong pubkey information");
     Expect(EVP_PKEY_bits(publicKey) == 256, "Wrong pubkey bit length");
-// GEMREQ-end A_20365#verifySignatureStart
+    // GEMREQ-end A_20365#verifySignatureStart
     // Create digest and fill with data.
     auto ctx = shared_EVP_MD_CTX::make();
     Expect(ctx != nullptr, "Can't create context");
@@ -271,11 +271,11 @@ std::optional<std::string> JWT::stringForClaim(const std::string_view& claimName
 
 void JWT::checkRequiredClaims() const
 {
-    auto checkClaimsPresence = [this] (const std::vector<std::string_view>& RequiredClaims) {
+    auto checkClaimsPresence = [this] (const std::vector<std::string_view>& requiredClaims) {
         A_20369_01.start("Check that required claims are provided.");
-        for (const auto& claim : RequiredClaims)
+        for (const auto& claim : requiredClaims)
         {
-            if (mClaims.HasMember(std::string{claim}) == false)
+            if (!mClaims.HasMember(std::string{claim}))
             {
                 Fail2("Pre-verification failed - Missing required claims.", JwtRequiredClaimException);
             }
@@ -352,14 +352,17 @@ void JWT::checkRequiredClaims() const
     // GEMREQ-end A_20370
 
     // GEMREQ-start A_19439#claims
-    A_19439_02.start("Check for a specific authentication strength claim.");
+    A_19439_04.start("E-Rezept-Fachdienst - Authentifizierung Authentifizierungsstärke");
     auto acr = stringForClaim(JWT::acrClaim);
     Expect(acr.has_value(), "Missing required acr claim.");
-    if (acr != acrContent)
+    auto telematikAuthConsent = stringForClaim(telematikAuthConsentClaim).value_or("");
+    const bool isLoaHigh = (acr == acrContent);
+    const bool isSubstantial = (acr == acrContentSubst && telematikAuthConsent == authConsent && professionOid == profession_oid::oid_versicherter);
+    if (!isLoaHigh && !isSubstantial)
     {
         Fail2("The provided acr claim is not supported.", JwtInvalidFormatException);
     }
-    A_19439_02.finish();
+    A_19439_04.finish();
     // GEMREQ-end A_19439#claims
 }
 

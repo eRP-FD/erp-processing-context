@@ -180,5 +180,5 @@ void RedisClient::flushdb()
 
 DurationTimer RedisClient::timingLogTimer(const std::string& metric)
 {
-    return DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryRedis, metric);
+    return DurationConsumer::getCurrent().getTimer(DurationCategory::redis, metric);
 }

@@ -8,6 +8,8 @@
 
 #include "fhirtools/validator/Severity.hxx"
 
+#include <optional>
+
 namespace fhirtools
 {
 
@@ -45,6 +47,10 @@ public:
         Severity unreferencedContainedResource = Severity::error;
         /// Some references must be resolvable in a Bundle. This sets the Severity for failed resolution
         Severity mandatoryResolvableReferenceFailure = Severity::error;
+        /// A_27698 - non-Standard check for number of entries in meta.profile
+        Severity missingOrExtraMetaProfile = Severity::debug;
+        /// ERP-30000 - severity for invalid/non-lower-case UUID in field of type `uri` (or derived) - nullopt disables the check
+        std::optional<Severity> invalidUrnUuidInUri = std::nullopt;
     };
     SeverityLevels levels{};
     // collect additional information, useful for FHIR-Transformer

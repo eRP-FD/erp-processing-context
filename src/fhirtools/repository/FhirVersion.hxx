@@ -18,7 +18,7 @@ public:
         static constexpr std::string_view str{"<none>"};
     };
     static constexpr NotVersioned notVersioned{};
-    FhirVersion(NotVersioned);
+    FhirVersion(NotVersioned); //NOLINT(google-explicit-constructor, hicpp-explicit-conversions)
     explicit FhirVersion(std::string version);
 
     std::optional<std::string> version() const;
@@ -38,11 +38,13 @@ public:
 private:
     std::optional<Version> mVersion;
 
+    friend const std::string& to_string(const FhirVersion& ver);
     friend class ::std::hash<FhirVersion>;
 };
 
 std::ostream& operator<<(std::ostream& out, const FhirVersion& ver);
-std::string to_string(const FhirVersion& ver);
+const std::string& to_string(const FhirVersion& ver);
+std::string to_string(FhirVersion&& ver);
 
 namespace version_literal
 {

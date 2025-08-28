@@ -1,3 +1,9 @@
+/*
+ * (C) Copyright IBM Deutschland GmbH 2021, 2025
+ * (C) Copyright IBM Corp. 2021, 2025
+ *
+ * non-exclusively licensed to gematik GmbH
+ */
 #include "shared/util/Environment.hxx"
 #include "shared/util/GLogConfiguration.hxx"
 #include "tools/fhirinstall/ShowHelp.hxx"
@@ -29,6 +35,15 @@ void usage(std::string_view app, std::ostream& out)
     out << "        target folder for configuration file templates\n";
     out << "        Even though these files can be loaded, they probably need editing.\n";
     out << "        Be careful providing any folder that is read automatically. \n";
+    out << "-x <excludefile_folder>\n";
+    out << "        Folder containing files with name <package_name>-<package_version>.exclude.txt\n";
+    out << "        The file contains one filename per line. Matching files will be excluded from installation.\n";
+    out << "        Lines starting with `#` are ignored.\n";
+    out << "-s <package_substitution>\n";
+    out << "        Replace one package by a different package: \n";
+    out << "        <package1>@<version1>=<package1>@<version2> : instead of <package1>@<version1> use <package2>@<version2>\n";
+    out << "        <package>@<version1>=@<version2> : for <package> use version2 instead of version1\n";
+    out << "        <package>=@<version> : for <package> always use <version>\n";
     out << "\n";
     out << "Example:\n";
     out << app << " -p ~/.fhir/packages -o resources/fhir/profiles -c resources -- kbv.ita.erp@1.1.1\n\n";

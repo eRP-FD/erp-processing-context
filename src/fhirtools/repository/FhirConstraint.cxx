@@ -30,8 +30,8 @@ const std::string& FhirConstraint::getExpression() const
     return mExpression;
 }
 
-std::shared_ptr<const fhirtools::Expression> FhirConstraint::parsedExpression(const FhirStructureRepository& repo,
-                                                                   ExpressionCache* cache) const
+std::shared_ptr<const fhirtools::Expression> FhirConstraint::parsedExpression(const FhirStructureRepositoryView& repo,
+                                                                              ExpressionCache* cache) const
 {
     if (! mParsedExpression)
     {

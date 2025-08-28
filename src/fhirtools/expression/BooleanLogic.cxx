@@ -6,98 +6,98 @@
  */
 
 #include "fhirtools/expression/BooleanLogic.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/expression/ExpressionTrace.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 
 namespace fhirtools
 {
-Collection BooleanAndOperator::eval(const Collection& collection) const
+EvaluationContext BooleanAndOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).boolean() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).boolean() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.boolean() : nullptr;
+    const auto rhs = mRhs ? mRhs->eval(context).collection.boolean() : nullptr;
     if (lhs && lhs->asBool() && rhs && rhs->asBool())
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
     if ((lhs && ! lhs->asBool()) || (rhs && ! rhs->asBool()))
     {
-        return {makeBoolElement(false)};
+        return context.makeBoolElement(false);
     }
-    return {};
+    return context();
 }
 
-Collection BooleanOrOperator::eval(const Collection& collection) const
+EvaluationContext BooleanOrOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).boolean() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).boolean() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.boolean() : nullptr;
+    const auto rhs = mRhs ? mRhs->eval(context).collection.boolean() : nullptr;
     if (lhs && ! lhs->asBool() && rhs && ! rhs->asBool())
     {
-        return {makeBoolElement(false)};
+        return context.makeBoolElement(false);
     }
     if ((lhs && lhs->asBool()) || (rhs && rhs->asBool()))
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    return {};
+    return context();
 }
 
-Collection BooleanNotOperator::eval(const Collection& collection) const
+EvaluationContext BooleanNotOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (collection.empty())
+    if (context.collection.empty())
     {
-        return {};
+        return context();
     }
-    return {makeBoolElement(! collection.single()->asBool())};
+    return context.makeBoolElement(! context.collection.single()->asBool());
 }
 
-Collection BooleanXorOperator::eval(const Collection& collection) const
+EvaluationContext BooleanXorOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).boolean() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).boolean() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.boolean() : nullptr;
+    const auto rhs = mRhs ? mRhs->eval(context).collection.boolean() : nullptr;
     if (! lhs || ! rhs)
     {
-        return {};
+        return context();
     }
     if ((lhs->asBool() && ! rhs->asBool()) || (! lhs->asBool() && rhs->asBool()))
     {
-        return {makeBoolElement(true)};
+        return context.makeBoolElement(true);
     }
-    return {makeBoolElement(false)};
+    return context.makeBoolElement(false);
 }
 
-Collection BooleanImpliesOperator::eval(const Collection& collection) const
+EvaluationContext BooleanImpliesOperator::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    const auto lhs = mLhs ? mLhs->eval(collection).boolean() : nullptr;
-    const auto rhs = mRhs ? mRhs->eval(collection).boolean() : nullptr;
+    const auto lhs = mLhs ? mLhs->eval(context).collection.boolean() : nullptr;
     if (lhs)
     {
         if (lhs->asBool())
         {
+            const auto rhs = mRhs ? mRhs->eval(context).collection.boolean() : nullptr;
             if (! rhs)
             {
-                return {};
+                return context();
             }
-            return {rhs};
+            return context(rhs);
         }
         else
         {
-            return {makeBoolElement(true)};
+            return context.makeBoolElement(true);
         }
     }
     else
     {
+        const auto rhs = mRhs ? mRhs->eval(context).collection.boolean() : nullptr;
         if (rhs && rhs->asBool())
         {
-            return {makeBoolElement(true)};
+            return context.makeBoolElement(true);
         }
     }
-    return {};
+    return context();
 }
 }

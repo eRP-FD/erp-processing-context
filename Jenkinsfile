@@ -33,6 +33,9 @@ pipeline {
         stage ('Checkout & reqmd in parallel') {
             parallel  {
                 stage('Checkout') {
+                    options {
+                        throttle(['unit-test-category'])
+                    }
                     steps {
                         cleanWs()
                         commonCheckout()
@@ -40,6 +43,9 @@ pipeline {
                 }
 
                 stage('Verify that reqmd docs are up-to-date') {
+                    options {
+                        throttle(['unit-test-category'])
+                    }
                     agent {
                         kubernetes {
                             cloud 'toolchain-cluster'
@@ -71,6 +77,9 @@ pipeline {
         }
 
         stage('Create Release') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -95,6 +104,9 @@ pipeline {
             }
             stages {
                 stage ("Build") {
+                    options {
+                        throttle(['gcc-build-category'])
+                    }
                     environment {
                         BUILD_WRAPPER_HOME = tool 'Sonar_Build_Wrapper_Linux_eRp'
                     }
@@ -103,7 +115,7 @@ pipeline {
                             loadNexusConfiguration {
                                 loadGithubSSHConfiguration {
                                     def erp_build_version = sh(returnStdout: true, script: "git describe").trim().toLowerCase()
-                                    def erp_release_version = "1.18.0"
+                                    def erp_release_version = "1.19.0"
                                     def result = sh(returnStatus: true, script: "cd /media/erp && scripts/ci-build.sh "+
                                             "--build_version='${erp_build_version}' " +
                                             "--release_version='${erp_release_version}' " +
@@ -115,6 +127,7 @@ pipeline {
                                     }
                                     // Fix build folder file permissions
                                     sh "chmod o+w build/"
+                                    sh "chmod -R o+r build/"
                                 }
                             }
                         }
@@ -128,6 +141,9 @@ pipeline {
                 stage ("test, analyze in parallel"){
                     parallel  {
                         stage ("Upload Conan Packages") {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
                             when {
                                 anyOf {
                                     branch 'master'
@@ -185,6 +201,9 @@ pipeline {
                             }
                         }
                         stage('Dependency Track') {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
                             when {
                                 anyOf {
                                     branch 'master'
@@ -193,71 +212,108 @@ pipeline {
                             }
                             steps {
                                 script {
-                                    String workspace = sh(returnStdout: true, script: 'pwd').trim()
+                                    sbom_report_json = "${env.WORKSPACE}/build/RelWithDebInfo/generators/sbom/sbom.cdx.json"
+                                    sbom_report = "build/RelWithDebInfo/bom.xml"
                                     sh """
-                                        cyclonedx convert --output-version v1_1 --input-file build/RelWithDebInfo/generators/sbom/sbom.cdx.json --output-file build/RelWithDebInfo/bom.xml
+                                        cyclonedx convert --output-version v1_1 --input-file ${sbom_report_json} --output-file ${sbom_report}
                                     """
-                                    // See ERP-26151 for further details:
-                                    //
-                                    // dependencyTrackPublisher artifact: "build/RelWithDebInfo/bom.xml", projectName: "erp-processing-context",
-                                    //     projectVersion: "${currentBuild.displayName}", synchronous: true
-                                    // dependencyTrackPublisher artifact: "build/RelWithDebInfo/bom.xml", projectName: "erp-processing-context",
-                                    //     projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                                    dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
+                                        projectVersion: "${currentBuild.displayName}", synchronous: true
+                                    dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
+                                        projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                                }
+                            }
+                            post {
+                                always {
+                                    archiveArtifacts artifacts: "build/RelWithDebInfo/bom.xml"
                                 }
                             }
                         }
-                        stage ("Run Tests (erp-test) Testzeitraum 2025-01-15") {
+                        stage ("Run Tests (erp-test) Testzeitraum heute") {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
                             steps {
-                                sh """
-                                    # YESTERDAY_DATE=\$(date -d "yesterday" +%Y-%m-%d)
-                                    # CURRENT_DATE=\$(date +%Y-%m-%d)
-                                    # TOMORROW_DATE=\$(date -d "tomorrow" +%Y-%m-%d)
-                                    # # Set environments for resource-views
-                                    # export ERP_DARREICHUNGSFORM_1_13_VALID_UNTIL=\$YESTERDAY_DATE
-                                    # export ERP_2024_10_01_VALID_FROM=\$YESTERDAY_DATE
-                                    # export ERP_2024_11_01_VALID_FROM=\$YESTERDAY_DATE
-                                    # export ERP_GEM_2025_01_15_VALID_FROM=\$CURRENT_DATE
-                                    # export ERP_DAV_2025_01_15_VALID_FROM=\$CURRENT_DATE
-                                    # env |grep ERP_
-                                    # Run the unit and integration tests
+                                sh """#!/bin/bash
                                     cd build/RelWithDebInfo/bin
-                                    ./erp-test --erp_instance=3 --gtest_output=xml:erp-test-3.xml
+                                    set -o pipefail
+                                    ./erp-test --erp_instance=1 --gtest_output=xml:erp-test-1.xml 2>&1 |
+                                        tee unfiltered_erp-test-1.log |
+                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
                                 """
                             }
                             post {
                                 always {
-                                    junit "build/RelWithDebInfo/bin/erp-test-3.xml"
+                                    archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
+                                    junit "build/RelWithDebInfo/bin/erp-test-1.xml"
+                                }
+                            }
+                        }
+                        stage ("Run Tests (erp-test) Testzeitraum 2025-10-01") {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
+                            steps {
+                                sh """#!/bin/bash
+                                    cd build/RelWithDebInfo/bin
+                                    set -o pipefail
+                                    ./erp-test --erp_instance=2 --erp_testdate="2025-10-01" --gtest_output=xml:erp-test-2.xml 2>&1 |
+                                        tee unfiltered_erp-test-2.log |
+                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
+                                """
+                            }
+                            post {
+                                always {
+                                    archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
+                                    junit "build/RelWithDebInfo/bin/erp-test-2.xml"
                                 }
                             }
                         }
                         stage ("Run Tests (fhirtools)") {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
                             steps {
-                                sh """
+                                sh """#!/bin/bash
                                     find build/RelWithDebInfo
                                     cd build/RelWithDebInfo/bin
-                                    ./fhirtools-test --gtest_output=xml:fhirtools-test.xml
+                                    set -o pipefail
+                                    ./fhirtools-test --gtest_output=xml:fhirtools-test.xml 2>&1 |
+                                        tee unfiltered_fhirtools-test.log |
+                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
                                 """
                             }
                             post {
                                 always {
+                                    archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
                                     junit "build/RelWithDebInfo/bin/fhirtools-test.xml"
                                 }
                             }
                         }
-                        stage ("Run Tests (exporter)") {
+                        stage ("Run Tests (exporter) Testzeitraum heute") {
+                            options {
+                                throttle(['unit-test-category'])
+                            }
                             steps {
-                                sh """
+                                sh """#!/bin/bash
                                     cd build/RelWithDebInfo/bin
-                                    ./exporter-test --gtest_output=xml:exporter-test.xml
+                                    set -o pipefail
+                                    ./exporter-test --gtest_output=xml:exporter-test.xml 2>&1 |
+                                        tee unfiltered_exporter-test.log |
+                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
                                 """
                             }
                             post {
                                 always {
+                                    archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
                                     junit "build/RelWithDebInfo/bin/exporter-test.xml"
                                 }
                             }
                         }
                         stage('Static Analysis') {
+                            options {
+                                throttle(['gcc-build-category'])
+                            }
                             when {
                                 not {
                                     anyOf {
@@ -289,6 +345,9 @@ pipeline {
         }
 
         stage('Build docker image') {
+            options {
+                throttle(['gcc-build-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -303,7 +362,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.18.0"
+                                def release_version = "1.19.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -329,6 +388,9 @@ pipeline {
         }
 
         stage('Build docker image (erp-medication-exporter)') {
+            options {
+                throttle(['gcc-build-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -369,6 +431,9 @@ pipeline {
         }
 
         stage('Build blob-db-initialization docker image') {
+            options {
+                throttle(['gcc-build-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -383,7 +448,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                               usernameVariable: 'GITHUB_USERNAME',
                                                               passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                def release_version = "1.18.0"
+                                def release_version = "1.19.0"
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
                                     "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
@@ -407,6 +472,9 @@ pipeline {
         }
 
         stage('SBOM') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -419,6 +487,9 @@ pipeline {
         }
 
         stage('Create Artifact For Integration Tests') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -440,6 +511,9 @@ pipeline {
         }
 
         stage('Publish Artifacts') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -452,6 +526,9 @@ pipeline {
         }
 
         stage('Publish Release') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -464,6 +541,9 @@ pipeline {
         }
 
         stage('Deployment to dev') {
+            options {
+                throttle(['unit-test-category'])
+            }
             when {
                 anyOf {
                     branch 'master'
@@ -481,6 +561,9 @@ pipeline {
             }
         }
         stage('Integration tests against dev') {
+            options {
+                throttle(['unit-test-category'])
+            }
              when {
                  anyOf {
                      branch 'master'

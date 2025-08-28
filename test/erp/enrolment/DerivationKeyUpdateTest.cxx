@@ -10,11 +10,12 @@
 #include "shared/hsm/ErpTypes.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "tools/EnrolmentApiClient.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test/workflow-test/EndpointTestClient.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
-#include "tools/EnrolmentApiClient.hxx"
 
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
@@ -284,10 +285,26 @@ public:
             {
                 ::std::cout << "Creating consent for KVNr " << mKvnr << ::std::endl;
                 mTest.forceUpdateBlobCache();
-                ASSERT_NO_FATAL_FAILURE(mTest.consentPost(mKvnr.id(), ::model::Timestamp::now()));
+                ASSERT_NO_FATAL_FAILURE(mTest.consentPost(model::ConsentType::CHARGCONS, mKvnr.id(), ::model::Timestamp::now()));
                 break;
             }
-            case ::model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case ::model::PrescriptionType::apothekenpflichigeArzneimittel: {
+                if (Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_EU))
+                {
+                    ::std::cout << "Creating consent for KVNr " << mKvnr << ::std::endl;
+                    mTest.forceUpdateBlobCache();
+                    mTest.mConsentItemRequestArgs.overrideExpectedPatientenrechnungVersion = "XXX";
+                    mTest.mConsentItemRequestArgs.overrideExpectedWorkflowVersion =
+                        *ResourceTemplates::Versions::GEM_ERPEU_current().version();
+                    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
+                                                     date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+                    ASSERT_NO_FATAL_FAILURE(
+                        mTest.consentPost(model::ConsentType::EUDISPCONS, mKvnr.id(), ::model::Timestamp::now()));
+                    mTest.mConsentItemRequestArgs.overrideExpectedPatientenrechnungVersion = "";
+                    mTest.mConsentItemRequestArgs.overrideExpectedWorkflowVersion = "";
+                }
+                break;
+            }
             case ::model::PrescriptionType::digitaleGesundheitsanwendungen:
             case ::model::PrescriptionType::direkteZuweisung:
                 break;

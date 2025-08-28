@@ -1,8 +1,9 @@
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -47,11 +48,11 @@ protected:
                 ResourceManager::getAbsoluteFilename("test/fhir-path/profiles/mini_pattern_and_fixed.xml"),
             },
             resolver);
-        view = std::make_shared<fhirtools::FhirResourceViewGroupSet>(
+        view = fhirtools::FhirResourceViewGroupSet::create(
             miniFhirAndPatternAndFixed, resolver.findGroupById(miniFhirAndPatternAndFixed), &backend);
     }
     fhirtools::FhirStructureRepositoryBackend backend;
-    std::shared_ptr<const fhirtools::FhirStructureRepository> view;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> view;
 };
 
 TEST_P(ValueMatchingTest, run)

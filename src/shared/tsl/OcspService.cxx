@@ -78,7 +78,7 @@ namespace
                                  const util::Buffer& request)
     {
         const auto urlParts = UrlHelper::parseUrl(url.url);
-        auto timer = DurationConsumer::getCurrent().getTimer(DurationConsumer::categoryOcspRequest, urlParts.mHost);
+        auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::ocsprequest, urlParts.mHost);
         timer.keyValue("url", url.url);
 
         try

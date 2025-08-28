@@ -172,6 +172,20 @@ TEST_F(TslParsingTests, BnaXmlRsa256)
     EXPECT_EQ(tslParser.getSequenceNumber(), "10282");
 }
 
+TEST_F(TslParsingTests, BnaTslv6)
+{
+    // Just use an outdated TSL.xml to test parsing
+    TslParser tslParser{
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/tsl/Test-TLv6.xml"),
+        TslMode::BNA,
+        *StaticData::getXmlValidator(),
+        model::Timestamp::fromGermanDate("2025-07-01").toChronoTimePoint()
+    };
+
+    EXPECT_EQ(tslParser.getId(), "TrustServiceStatusList-1");
+    EXPECT_EQ(tslParser.getSequenceNumber(), "140");
+}
+
 TEST_F(TslParsingTests, PseudoBnaTsl)
 {
     TslParser tslParser{

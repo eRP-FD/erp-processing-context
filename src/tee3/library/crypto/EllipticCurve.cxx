@@ -124,7 +124,7 @@ std::string toString(const X509_NAME* name)
 {
     using namespace epa;
     auto mem = shared_BIO::make();
-    const int status = X509_NAME_print(mem.get(), name, 0);
-    AssertOpenSsl(status == 1) << "serialization of certificate failed";
+    const int status = X509_NAME_print_ex(mem.get(), name, 0, XN_FLAG_ONELINE);
+    AssertOpenSsl(status != -1) << "serialization of certificate failed";
     return bioToString(mem.get());
 }

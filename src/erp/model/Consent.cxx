@@ -6,14 +6,13 @@
  */
 
 #include "erp/model/Consent.hxx"
+#include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/Expect.hxx"
-#include "shared/model/RapidjsonDocument.hxx"
-
-#include <mutex>
-#include <rapidjson/pointer.h>
 
 #include <magic_enum/magic_enum.hpp>
+#include <rapidjson/pointer.h>
+#include <mutex>
 
 
 namespace model
@@ -49,16 +48,16 @@ const std::string consent_template = R"--(
     {
       "coding": [
         {
-          "system": "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType",
-          "code": "CHARGCONS",
-          "display": "Consent for saving electronic charge item"
+          "system": "",
+          "code": "",
+          "display": ""
         }
       ]
     }
   ],
   "patient": {
     "identifier": {
-      "system": "http://fhir.de/sid/pkv/kvid-10",
+      "system": "http://fhir.de/sid/gkv/kvid-10",
       "value": ""
     }
   },
@@ -86,8 +85,10 @@ void initTemplates()
 
 
 const rapidjson::Pointer idPointer(ElementName::path(elements::id));
-const rapidjson::Pointer patientKvnrValuePointer(ElementName::path(elements::patient, elements::identifier, elements::value));
-const rapidjson::Pointer patientKvnrSystemPointer(ElementName::path(elements::patient, elements::identifier, elements::system));
+const rapidjson::Pointer patientKvnrValuePointer(ElementName::path(elements::patient, elements::identifier,
+                                                                   elements::value));
+const rapidjson::Pointer patientKvnrSystemPointer(ElementName::path(elements::patient, elements::identifier,
+                                                                    elements::system));
 const rapidjson::Pointer dateTimePointer(ElementName::path(elements::dateTime));
 
 const rapidjson::Pointer categoryPointer(ElementName::path(elements::category));
@@ -97,29 +98,62 @@ const rapidjson::Pointer codePointer(ElementName::path(elements::code));
 
 const auto consentIdSeparator = '-';
 
-}  // anonymous namespace
+}// anonymous namespace
 
+ProfileType Consent::profileType() const
+{
+    const auto profileName = getProfileName();
+    ModelExpect(profileName.has_value(), "Profile missing in Consent resource.");
+    const auto profileType = findProfileType(*profileName);
+    ModelExpect(profileType.has_value(), "Unsupported profile type: " + std::string{*profileName});
+    return *profileType;
+}
+
+ProfileType Consent::profileType(ConsentType type)
+{
+    switch (type)
+    {
+        case ConsentType::CHARGCONS:
+            return ProfileType::GEM_ERPCHRG_PR_Consent;
+        case ConsentType::EUDISPCONS:
+            return ProfileType::GEM_ERPEU_PR_Consent;
+    }
+    ModelFail("Invalid Consent type: " + std::to_string(static_cast<uintmax_t>(type)));
+}
 
 // static
-std::string Consent::createIdString(Consent::Type type, const Kvnr& kvnr)
+std::string Consent::createIdString(ConsentType type, const Kvnr& kvnr)
 {
     return std::string(magic_enum::enum_name(type)) + consentIdSeparator + kvnr.id();
 }
 
+std::string Consent::createIdString(model::AuditEventId auditEventId, const model::Kvnr& kvnr)
+{
+    if (auditEventId == model::AuditEventId::POST_Consent || auditEventId == model::AuditEventId::DELETE_Consent)
+    {
+        return createIdString(model::ConsentType::CHARGCONS, kvnr);
+    }
+    if (auditEventId == model::AuditEventId::POST_EU_Consent || auditEventId == model::AuditEventId::DELETE_EU_Consent)
+    {
+        return createIdString(model::ConsentType::EUDISPCONS, kvnr);
+    }
+    ModelFail("invalid audit id for consent: " + std::string{magic_enum::enum_name(auditEventId)});
+}
+
 // static
-std::pair<Consent::Type, std::string> Consent::splitIdString(const std::string_view& idStr)
+std::pair<ConsentType, std::string> Consent::splitIdString(const std::string_view& idStr)
 {
     const auto sepPos = idStr.find(consentIdSeparator);
     ModelExpect(sepPos != std::string::npos, "Invalid Consent id " + std::string(idStr));
-    const auto type = magic_enum::enum_cast<Consent::Type>(idStr.substr(0, sepPos));
+    const auto type = magic_enum::enum_cast<ConsentType>(idStr.substr(0, sepPos));
     ModelExpect(type.has_value(), "Invalid Consent type in id " + std::string(idStr));
     const auto kvnr = idStr.substr(sepPos + 1);
     return std::make_pair(*type, std::string(kvnr));
 }
 
 
-Consent::Consent(const Kvnr& kvnr, const model::Timestamp& dateTime)
-    : Resource(profileType,
+Consent::Consent(ConsentType category, const Kvnr& kvnr, const model::Timestamp& dateTime)
+    : Resource(profileType(category),
                []() {
                    std::call_once(onceFlag, initTemplates);
                    return ConsentTemplate;
@@ -128,7 +162,8 @@ Consent::Consent(const Kvnr& kvnr, const model::Timestamp& dateTime)
 {
     setPatientKvnr(kvnr);
     setDateTime(dateTime);
-    fillId();
+    fillCategory(category);
+    fillId(category, kvnr);
 }
 
 Consent::Consent(NumberAsStringParserDocument&& jsonTree)
@@ -148,26 +183,19 @@ Kvnr Consent::patientKvnr() const
 
 bool Consent::isChargingConsent() const
 {
-    const auto* categoryArray = getValue(categoryPointer);
-    if(!categoryArray)
-        return false;
-    ModelExpect(categoryArray->IsArray(), ResourceBase::pointerToString(categoryPointer) + ": element must be array");
-    for(auto categoryItem = categoryArray->Begin(), catEnd = categoryArray->End(); categoryItem != catEnd; ++categoryItem)
+    try
     {
-        const auto* codingArray = getValue(*categoryItem, codingPointer);
-        if(!codingArray)
-            return false;
-        ModelExpect(codingArray->IsArray(), ResourceBase::pointerToString(codingPointer) + ": element must be array");
-        for(auto codingItem = codingArray->Begin(), codingEnd = codingArray->End(); codingItem != codingEnd; ++codingItem)
+        switch (consentCategory())
         {
-            const auto system = getOptionalStringValue(*codingItem, systemPointer);
-            const auto code = getOptionalStringValue(*codingItem, codePointer);
-            if(system.has_value() && system.value() == code_system::consentType &&
-               code.has_value() && code.value() == chargingConsentType)
-            {
+            case ConsentType::CHARGCONS:
                 return true;
-            }
+            case ConsentType::EUDISPCONS:
+                break;
         }
+    }
+    catch (const ModelException&)
+    {
+        // not handled, false is returned.
     }
     return false;
 }
@@ -177,15 +205,48 @@ model::Timestamp Consent::dateTime() const
     return model::Timestamp::fromFhirDateTime(std::string(getStringValue(dateTimePointer)));
 }
 
-void Consent::fillId()
+ConsentType Consent::consentCategory() const
 {
-    ModelExpect(isChargingConsent(), "Unsupported Consent type");
-    setValue(idPointer, createIdString(Consent::Type::CHARGCONS, patientKvnr()));
+    const auto* categoryArray = getValue(categoryPointer);
+    ModelExpect(categoryArray && categoryArray->IsArray() && categoryArray->GetArray().Size() == 1,
+                ResourceBase::pointerToString(categoryPointer) + ": element must be array of size 1");
+    const auto* codingArray = getValue(categoryArray->GetArray()[0], codingPointer);
+    ModelExpect(codingArray && codingArray->IsArray() && codingArray->GetArray().Size() == 1,
+                ResourceBase::pointerToString(codingPointer) + ": element must be array of size 1");
+    const auto system = getOptionalStringValue(codingArray->GetArray()[0], systemPointer);
+    const auto code = getOptionalStringValue(codingArray->GetArray()[0], codePointer);
+    ModelExpect(system.has_value() && code.has_value(),
+                ResourceBase::pointerToString(codingPointer) + ": system and code must be present");
+    const auto enumOpt = magic_enum::enum_cast<ConsentType>(code.value());
+    ModelExpect(enumOpt.has_value(),
+                "Unsupported Consent category: " + std::string{system.value()} + "/" + std::string{code.value()});
+    // the system is already checked by fhir validator
+    return enumOpt.value();
 }
 
-void Consent::setId(const std::string_view& id)
+void Consent::fillId(ConsentType category, const Kvnr& kvnr)
 {
-    setValue(idPointer, id);
+    setValue(idPointer, createIdString(category, kvnr));
+}
+
+void Consent::fillCategory(ConsentType category)
+{
+    static const rapidjson::Pointer systemPointer(ElementName::path(elements::category, 0, elements::coding, 0, elements::system));
+    static const rapidjson::Pointer codePointer(ElementName::path(elements::category, 0, elements::coding, 0, elements::code));
+    static const rapidjson::Pointer displayPointer(ElementName::path(elements::category, 0, elements::coding, 0, elements::display));
+    switch (category)
+    {
+        case ConsentType::CHARGCONS:
+            setValue(systemPointer, "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType");
+            setValue(codePointer, "CHARGCONS");
+            setValue(displayPointer, "Consent for saving electronic charge item");
+            break;
+        case ConsentType::EUDISPCONS:
+            setValue(systemPointer, "https://gematik.de/fhir/erp-eu/CodeSystem/GEM_ERPEU_CS_ConsentType");
+            setValue(codePointer, "EUDISPCONS");
+            setValue(displayPointer, "Consent for redeeming e-prescriptions in EU countries");
+            break;
+    }
 }
 
 void Consent::setPatientKvnr(const Kvnr& kvnr)
@@ -203,4 +264,4 @@ std::optional<model::Timestamp> Consent::getValidationReferenceTimestamp() const
 {
     return Timestamp::now();
 }
-} // namespace model
+}// namespace model

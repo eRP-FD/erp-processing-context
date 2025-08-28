@@ -19,7 +19,7 @@ namespace fhirtools
 {
 class Element;
 class FhirStructureDefinition;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class ProfiledElementTypeInfo;
 class ValidatorOptions;
 
@@ -66,23 +66,24 @@ private:
                          std::ostringstream&& elementFullPath);
 
     void processReference(const Element& element, std::string_view elementFullPath, std::string resourcePath);
-    std::set<ProfiledElementTypeInfo> subProfiledElementTypes(const FhirStructureRepository& element,
+    std::set<ProfiledElementTypeInfo> subProfiledElementTypes(const FhirStructureRepositoryView& repoView,
                                                               std::string_view subFieldName,
                                                               std::string_view subFullPathBase);
     std::set<ProfiledElementTypeInfo> sliceProfiledElementTypes(const Element& element,
                                                                 const ProfiledElementTypeInfo& profiledElementTypeInfo);
     std::set<ProfiledElementTypeInfo> profilesFromResource(const Element&, std::string_view elementFullPath);
     void addSliceProfiles(const Element& element, std::string_view elementFullPath);
-    void addProfiles(const FhirStructureRepository& repo, const std::list<std::string>& newProfileUrls,
+    void addProfiles(const FhirStructureRepositoryView& repo, const std::list<std::string>& newProfileUrls,
                      std::string_view elementFullPath, const FhirStructureDefinition* sourceProfile);
-    void addProfiles(const fhirtools::FhirStructureRepository& repo,
+    void addProfiles(const fhirtools::FhirStructureRepositoryView& repo,
                      const std::set<fhirtools::ProfiledElementTypeInfo>& newProfiles, std::string_view elementFullPath);
 
     static bool isDocumentBundle(bool isBundle, const Element& element);
-    static ElementType getElementType(const FhirStructureRepository& repo, const ProfiledElementTypeInfo& elementInfo);
+    static ElementType getElementType(const FhirStructureRepositoryView& repo,
+                                      const ProfiledElementTypeInfo& elementInfo);
     ResourceHandling getResourceHandling(ElementType elementType) const;
     ReferenceContext::AnchorType referenceRequirement(ResourceHandling elementType);
-    const FhirStructureDefinition* getTypeFromReferenceElement(const FhirStructureRepository& repo,
+    const FhirStructureDefinition* getTypeFromReferenceElement(const FhirStructureRepositoryView& repo,
                                                                const Element& referenceElement,
                                                                const std::string_view elementFullPath);
 

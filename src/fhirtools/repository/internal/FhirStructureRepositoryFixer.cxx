@@ -3,10 +3,12 @@
 //
 // non-exclusively licensed to gematik GmbH
 
+#include "FhirStructureRepositoryFixer.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/internal/FhirStructureRepositoryFixer.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/util/Constants.hxx"
 
 using fhirtools::FhirStructureRepositoryFixer;
 
@@ -28,13 +30,13 @@ void FhirStructureRepositoryFixer::fixStructureDefinition(StructureDefinitionEnt
     auto& elements = profile->second->mElements;
     for (auto element = elements.begin(), end = elements.end(); element != end; ++element)
     {
-        fixElement(*profile->second, element);
+        fixElement(element);
     }
 }
 
-void FhirStructureRepositoryFixer::fixElement(FhirStructureDefinition& profile, ElementEntry& element)
+void FhirStructureRepositoryFixer::fixElement(ElementEntry& element)
 {
-    auto builder = fixMissingSlicingInDerivate(profile, *element);
+    auto builder = fixMissingSlicingInDerivate(*element);
     if (builder)
     {
         *element = builder->getAndReset();
@@ -42,43 +44,61 @@ void FhirStructureRepositoryFixer::fixElement(FhirStructureDefinition& profile, 
 }
 
 std::unique_ptr<fhirtools::FhirElement::Builder>
-FhirStructureRepositoryFixer::fixMissingSlicingInDerivate(FhirStructureDefinition& profile,
-                                                          std::shared_ptr<const FhirElement>& element,
+FhirStructureRepositoryFixer::fixMissingSlicingInDerivate(std::shared_ptr<const FhirElement>& element,
                                                           std::unique_ptr<FhirElement::Builder> builder)
 {
-    // sometimes in a derived Profile, the slicing isn't copied from the baseDefinition
-    // this function traverses the derivation-tree down to all possible basetypes and copies the slicing if it was found
-    bool isSliceRoot = profile.kind() == FhirStructureDefinition::Kind::slice && element->name() == profile.typeId();
-    if (element->slicing() || isSliceRoot)
+    // sometimes in a derived Profile, the discriminators aren't copied from the baseDefinition
+    // this function traverses the derivation-tree down to all possible basetypes and copies them if found
+    const ProfiledElementTypeInfo elementPet{element};
+    if (element->slicing() == nullptr && element->typeId() == "Extension")
     {
-        return builder;
-    }
-    auto parentSlicing = findParentSlicing(ProfiledElementTypeInfo{&profile, element});
-    if (parentSlicing)
-    {
-        TVLOG(2) << "Slicing not copied from parent type: " << profile.url() << '|' << profile.version() << "@"
-                 << element->originalName() << " - fixing";
+        // we need this for closed-extensions-light feature.
+        const auto extension = get<ProfiledElementTypeInfo>(mRepo.resolveBaseContentReference(fhirtools::constants::extension));
+        Expect3(extension.element()->slicing(), "Extension.extension is not sliced.", std::logic_error);
         if (! builder)
         {
             builder = std::make_unique<FhirElement::Builder>(*element);
         }
-        builder->slicing(FhirSlicing{*parentSlicing});
+        TVLOG(4) << "Fixed extension: " << elementPet;
+        builder->slicing(FhirSlicing::Builder{*extension.element()->slicing()});
+        return builder;
     }
+    if (!element->hasSlices() || !element->slicing()->discriminators().empty() || element->cardinality().max == 0)
+    {
+        return builder;
+    }
+    auto parentSlicing = findParentSlicing(elementPet);
+    if (parentSlicing)
+    {
+        TVLOG(4) << "Slicing not copied from parent type: " << elementPet << " - fixing";
+        if (! builder)
+        {
+            builder = std::make_unique<FhirElement::Builder>(*element);
+        }
+        FhirSlicing::Builder copied{*element->slicing()};
+        for (auto disc: parentSlicing->discriminators())
+        {
+            copied.addDiscriminator(std::move(disc));
+        }
+        builder->slicing(std::move(copied));
+        return builder;
+    }
+    TLOG(INFO) << "Failed to fix Slicing: " << elementPet;
     return builder;
 }
 
-std::optional<fhirtools::FhirSlicing>
+std::shared_ptr<const fhirtools::FhirSlicing>
 // NOLINTNEXTLINE(misc-no-recursion)
 FhirStructureRepositoryFixer::findParentSlicing(const ProfiledElementTypeInfo& pet) const
 {
     if (pet.profile()->isSystemType())
     {
-        return std::nullopt;
+        return nullptr;
     }
     for (auto parentPet = pet.typeInfoInParentStuctureDefinition(*mRepo.defaultView()); parentPet;
          parentPet = parentPet->typeInfoInParentStuctureDefinition(*mRepo.defaultView()))
     {
-        if (parentPet && parentPet->element()->slicing())
+        if (auto slicing = parentPet->element()->slicing(); slicing && !slicing->discriminators().empty())
         {
             return parentPet->element()->slicing();
         }
@@ -95,11 +115,11 @@ FhirStructureRepositoryFixer::findParentSlicing(const ProfiledElementTypeInfo& p
             return slicing;
         }
     }
-    return std::nullopt;
+    return nullptr;
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-std::optional<fhirtools::FhirSlicing> fhirtools::FhirStructureRepositoryFixer::findParentSlicing(
+std::shared_ptr<const fhirtools::FhirSlicing> fhirtools::FhirStructureRepositoryFixer::findParentSlicing(
     const FhirStructureDefinition& profile, const std::string_view baseElementName, const std::string_view rest) const
 {
     auto baseElement = profile.findElement(baseElementName);
@@ -121,7 +141,7 @@ std::optional<fhirtools::FhirSlicing> fhirtools::FhirStructureRepositoryFixer::f
     if (element)
     {
         return element->slicing() ? element->slicing()
-                                  : findParentSlicing(ProfiledElementTypeInfo{baseElementType, element});
+                                  : findParentSlicing(ProfiledElementTypeInfo{element});
     }
-    return std::nullopt;
+    return nullptr;
 }

@@ -7,6 +7,9 @@
 #ifndef FHIR_TOOLS_FHIR_FHIRSLICING_HXX
 #define FHIR_TOOLS_FHIR_FHIRSLICING_HXX
 
+#include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/util/Gsl.hxx"
+
 #include <list>
 #include <memory>
 #include <string>
@@ -21,8 +24,8 @@ class FhirElement;
 class FhirSlice;
 class FhirSliceDiscriminator;
 class FhirStructureDefinition;
-class FhirStructureRepository;
-class ProfiledElementTypeInfo;
+class FhirStructureRepositoryBackend;
+class FhirStructureRepositoryView;
 class ValueElement;
 class ValidatorOptions;
 
@@ -44,8 +47,6 @@ public:
     };
 
     FhirSlicing();
-    FhirSlicing(const FhirSlicing&);
-    FhirSlicing(FhirSlicing&&) noexcept;
     ~FhirSlicing();
 
     class Builder;
@@ -57,6 +58,7 @@ public:
         openAtEnd
     };
 
+    std::shared_ptr<const FhirElement> baseElement() const;
     [[nodiscard]] SlicingRules slicingRules() const;
     [[nodiscard]] bool ordered() const;
 
@@ -68,10 +70,14 @@ public:
 
 
 private:
+    FhirSlicing(const FhirSlicing&);
+    FhirSlicing(FhirSlicing&&) noexcept;
+
     SlicingRules mSlicingRules = SlicingRules::open;
     bool mOrdered{};
     std::vector<FhirSlice> mSlices;
     std::list<FhirSliceDiscriminator> mDiscriminators;
+    std::weak_ptr<const FhirElement> mBaseElement;
 };
 
 
@@ -81,14 +87,14 @@ public:
     class Builder;
     [[nodiscard]] const std::string& name() const;
     [[nodiscard]] const FhirStructureDefinition& profile() const;
-    std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepository& repo,
+    std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepositoryView& repo,
                                                       const std::list<FhirSliceDiscriminator>& discriminators) const;
 
     FhirSlice();
-    ~FhirSlice();
-
     FhirSlice(const FhirSlice&);
     FhirSlice(FhirSlice&&) noexcept;
+    ~FhirSlice();
+
     FhirSlice& operator=(const FhirSlice&) = delete;
     FhirSlice& operator=(FhirSlice&&) = delete;
 
@@ -111,31 +117,31 @@ public:
     };
     [[nodiscard]] const std::string& path() const;
     [[nodiscard]] DiscriminatorType type() const;
-    [[nodiscard]] std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepository& repo,
-                                                                    const FhirStructureDefinition* def) const;
+    [[nodiscard]] std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepositoryView& repo,
+                                                                    const FhirStructureDefinition& def) const;
 
 private:
-    static std::list<ProfiledElementTypeInfo> collect(const FhirStructureRepository& repo,
+    static std::list<ProfiledElementTypeInfo> collect(const FhirStructureRepositoryView& repo,
                                                       const FhirStructureDefinition* def, std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectElements(const FhirStructureRepository& repo,
+    static std::list<ProfiledElementTypeInfo> collectElements(const FhirStructureRepositoryView& repo,
                                                               const ProfiledElementTypeInfo& parentDef,
                                                               std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectSubElements(const FhirStructureRepository& repo,
+    static std::list<ProfiledElementTypeInfo> collectSubElements(const FhirStructureRepositoryView& repo,
                                                                  const ProfiledElementTypeInfo& parentDef,
                                                                  std::string_view path);
 
     static std::shared_ptr<const FhirElement> collectElement(const FhirStructureDefinition* def, std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectFromValues(const FhirStructureRepository& repo,
+    static std::list<ProfiledElementTypeInfo> collectFromValues(const FhirStructureRepositoryView& repo,
                                                                 const std::shared_ptr<const FhirElement>& element,
                                                                 std::string_view path);
     static std::list<std::shared_ptr<const ValueElement>> collectFromValues(std::shared_ptr<const ValueElement> element,
                                                                             std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectFromResolve(const FhirStructureRepository& repo,
+    static std::list<ProfiledElementTypeInfo> collectFromResolve(const FhirStructureRepositoryView& repo,
                                                                  const ProfiledElementTypeInfo& parentDef,
                                                                  std::string_view path);
 
     [[nodiscard]] std::shared_ptr<FhirSlicing::Condition>
-    valueishCondition(const FhirStructureRepository& repo, std::list<ProfiledElementTypeInfo> elementInfos,
+    valueishCondition(const FhirStructureRepositoryView& repo, std::list<ProfiledElementTypeInfo> elementInfos,
                       const FhirStructureDefinition* def, ExpressionPtr) const;
 
     // For a slicing the returned bools indicate if that slicing has a pattern, fixed, or binding condition or a
@@ -151,9 +157,11 @@ private:
 class FhirSlicing::Builder
 {
 public:
-    explicit Builder(FhirSlicing, std::string slicePrefix);
+    explicit Builder(const FhirSlicing& slicingTemplate, std::string slicePrefix);
+    explicit Builder(const FhirSlicing& slicingTemplate);
     Builder();
-    explicit Builder(Builder&&) noexcept;
+    Builder(Builder&&) noexcept;
+    Builder& operator = (Builder&&) noexcept;
     ~Builder();
 
     Builder& slicePrefix(std::string);
@@ -166,17 +174,24 @@ public:
 
     Builder& addDiscriminator(FhirSliceDiscriminator&&);
 
-    FhirSlicing getAndReset();
+    Builder& baseElement(std::weak_ptr<const FhirElement> baseElement);
+
+    Builder& repositoryBackend(gsl::not_null<const FhirStructureRepositoryBackend*> backend);
+
+    std::shared_ptr<const FhirSlicing> getAndReset();
 
 private:
+    class ConstructFhirSlicing;
+
     std::string sliceId(const std::string& elementName);
     void commitSlice();
 
     std::string mSlicePrefix;
     std::string mSliceId;
-    std::unique_ptr<FhirSlicing> mFhirSlicing;
+    std::shared_ptr<FhirSlicing> mFhirSlicing;
     class FhirStructureDefinitionBuilder;
     std::unique_ptr<FhirStructureDefinitionBuilder> mFhirStructureBuilder;
+    const FhirStructureRepositoryBackend* mRepositoryBackend = nullptr;
 };
 
 class FhirSlice::Builder
@@ -184,11 +199,15 @@ class FhirSlice::Builder
 public:
     Builder();
     Builder& name(std::string n);
-    Builder& profile(FhirStructureDefinition&& prof);
+    Builder& profile(std::unique_ptr<FhirStructureDefinition> prof);
     Builder& profile(std::string url);
 
     [[nodiscard]] FhirSlice getAndReset();
 
+    Builder(const Builder&) = delete;
+    Builder(Builder&&) = delete;
+    Builder& operator = (const Builder&) = delete;
+    Builder& operator = (Builder&&) = delete;
 private:
     std::unique_ptr<FhirSlice> mFhirSlice;
 };

@@ -23,7 +23,7 @@
 namespace fhirtools {
 class FhirElement;
 class FhirStructureDefinition;
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 }
 
 /// @brief Algorithm class for parsing FHIR XML Documents into FHIR-JSON
@@ -44,13 +44,13 @@ class FhirSaxHandler final
 public:
     ~FhirSaxHandler() override;
 
-    static model::NumberAsStringParserDocument parseXMLintoJSON(
-        const fhirtools::FhirStructureRepository& repo, const std::string_view& xmlDocument,
-        XmlValidatorContext* schemaValidationContext);
+    static model::NumberAsStringParserDocument parseXMLintoJSON(const fhirtools::FhirStructureRepositoryView& repo,
+                                                                const std::string_view& xmlDocument,
+                                                                XmlValidatorContext* schemaValidationContext);
 
 private:
     class Context;
-    explicit FhirSaxHandler(const fhirtools::FhirStructureRepository& repo);
+    explicit FhirSaxHandler(const fhirtools::FhirStructureRepositoryView& repo);
 
     model::NumberAsStringParserDocument parseXMLintoJSONInternal(
         const std::string_view& xmlDocument,
@@ -122,7 +122,7 @@ private:
 
     model::NumberAsStringParserDocument mResult; ///< will contain the final result document one all Contexts have been joined
     std::list<Context> mStack; ///< holds the nested contexts back() is the current context
-    const fhirtools::FhirStructureRepository& mStructureRepo;
+    const fhirtools::FhirStructureRepositoryView& mStructureRepo;
     UniqueXmlDocumentPtr mCurrentXHTMLDoc;
     xmlNodePtr mCurrentXHTMLNode = nullptr;
 };

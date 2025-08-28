@@ -28,6 +28,7 @@ public:
 
     const std::string& getStringResource(const std::string_view& resourceFile);
     const rapidjson::Document& getJsonResource(const std::string_view& resourceFile);
+    rapidjson::Document toJsonDoc(const std::string &jsonString);
 
     virtual ~ResourceManager() noexcept;
 

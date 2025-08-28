@@ -12,6 +12,7 @@
 #include "erp/util/ConfigurationFormatter.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/admin/AdminRequestHandler.hxx"
+#include "shared/admin/GetMetricsHandler.hxx"
 
 namespace AdminServer
 {
@@ -27,5 +28,6 @@ void addEndpoints(RequestHandlerManager& manager, std::shared_ptr<const erp::Run
     manager.onGetDo("/health", std::make_unique<HealthHandler>());
     manager.onPutDo("/admin/configuration",
                     std::make_unique<PutRuntimeConfigHandler>(ConfigurationKey::ADMIN_RC_CREDENTIALS));
+    manager.onGetDo("/metrics", std::make_unique<GetMetricsHandler>());
 }
 }

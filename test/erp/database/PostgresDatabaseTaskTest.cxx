@@ -17,6 +17,7 @@
 
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/model/eu/GemErpEuPrTaskInput.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/AuditData.hxx"
@@ -28,8 +29,10 @@
 #include "test_config.h"
 #include "test/erp/database/PostgresDatabaseTest.hxx"
 #include "test/util/CryptoHelper.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 
 class PostgresDatabaseTaskTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>
@@ -74,7 +77,7 @@ public:
         ASSERT_FALSE(result.empty());
         ASSERT_EQ(result.size(), 1);
         ASSERT_FALSE(result.front().empty());
-        ASSERT_EQ(result.front().size(), 25);
+        ASSERT_EQ(result.front().size(), 27);
     }
 
     UrlArguments searchForStatus(const std::string& status)
@@ -1149,7 +1152,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     const std::string_view agentName = "Apotheke Am Grünen Baum";
     model::AuditData auditDataOrig(
         model::AuditEventId::GET_Task_id_pharmacy,
-        model::AuditMetaData(agentName, telematicId),
+        model::AuditMetaData(agentName, telematicId, {}),
         model::AuditEvent::Action::read, model::AuditEvent::AgentType::human, kvnr, deviceId, id, std::nullopt);
     const std::string createdUuid = database().storeAuditEventData(auditDataOrig);
     database().commitTransaction();
@@ -1226,6 +1229,57 @@ TEST_P(PostgresDatabaseTaskTest, retrieveTaskWithSecretAndPrescription)
 
     ASSERT_TRUE(prescriptionBin.has_value());
     EXPECT_EQ(prescriptionBin->id(), expect.healthCarePrescriptionUuid());
+}
+
+TEST_P(PostgresDatabaseTaskTest, setRedeemableByPatientAuthorization_Validate_true)
+{
+    if (!usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    EnvironmentVariableGuard featureToggleGuard("ERP_FEATURE_EU", "true");
+    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
+                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+
+    const std::string xml = R"(<?xml version="1.0" encoding="UTF-8"?>
+<Parameters xmlns="http://hl7.org/fhir">
+  <meta>
+    <profile value="https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.0"/>
+  </meta>
+  <parameter>
+    <name value="eu-isRedeemableByPatientAuthorization"/>
+    <valueBoolean value="true"/>
+  </parameter>
+</Parameters>)";
+
+    // Create task
+    model::Task task(prescriptionType(), "access_code");
+    const auto id = database().storeTask(task);
+    database().commitTransaction();
+
+    // Activate task
+    task.setPrescriptionId(id);
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}, id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setAcceptDate(model::Timestamp::now());
+    task.setExpiryDate(model::Timestamp::now());
+    task.setEuRedeemableByProperties(true);
+    database().activateTask(task, model::Binary{Uuid().toString(), "HealthCareProviderPrescription"}, mJwtBuilder.makeJwtArzt());
+    database().commitTransaction();
+
+    // Set redeemable flag
+    const auto isEuRedeemableByPatientAuthorizationParam = model::GemErpEuPrTaskInput::fromXmlNoValidation(xml);
+    database().setTaskEuRedeemableByPatient(task, isEuRedeemableByPatientAuthorizationParam);
+    database().commitTransaction();
+
+    pqxx::result result;
+    auto &&txn = createTransaction();
+    ASSERT_NO_THROW(result = txn.exec("SELECT eu_redeemable_patient FROM " + taskTableName() + " WHERE prescription_id='" + std::to_string(id.toDatabaseId()) + "'") );
+    txn.commit();
+    ASSERT_FALSE(result.empty());
+    ASSERT_EQ(result.size(), 1);
+    ASSERT_FALSE(result.front().empty());
+    ASSERT_EQ(result.front().size(), 1);
+    ASSERT_EQ(result.front().at(0).as<bool>(), true);
 }
 
 

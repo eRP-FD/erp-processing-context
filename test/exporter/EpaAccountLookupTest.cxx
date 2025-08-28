@@ -9,6 +9,9 @@
 
 #include <gtest/gtest.h>
 
+#include "shared/util/Configuration.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
+
 class EpaAccountLookupTest : public testing::Test
 {
 };
@@ -108,5 +111,45 @@ TEST_F(EpaAccountLookupTest, conflict)
     EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::conflict);
     EXPECT_EQ(epaAccount.host, "huhu");
     EXPECT_EQ(epaAccount.port, 3);
+    EXPECT_EQ(epaAccount.kvnr, model::Kvnr("X123456788", model::Kvnr::Type::gkv));
+}
+
+TEST_F(EpaAccountLookupTest, allowedCached)
+{
+    auto client = std::make_unique<EpaAccountLookupClientMock>();
+    client->setResponseStatus(HttpStatus::OK);
+    client->setResponseBody(R"_(
+{
+  "data": [
+    {
+      "functionId": "medication",
+      "decision": "deny"
+    },
+    {
+      "functionId": "erp-submission",
+      "decision": "permit"
+    }
+  ]
+}
+)_");
+
+    std::string str = "";
+    for (size_t i = 0; i < 10; ++i)
+    {
+        if (str.size())
+        {
+            str += ";";
+        }
+        str += "server" + std::to_string(i) + ".testing.example.com:" + std::to_string((1 + i) * 1000 + i);
+    }
+    EnvironmentVariableGuard featureToggleGuard(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN,
+                                                str);
+    auto fqdns = Configuration::instance().epaFQDNs();
+
+    EpaAccountLookup lookup(std::move(client));
+    auto epaAccount = lookup.lookup("x-request-id", model::Kvnr("X123456788", model::Kvnr::Type::gkv), "server7");
+    EXPECT_EQ(epaAccount.lookupResult, EpaAccount::Code::allowed);
+    EXPECT_EQ(epaAccount.host, "server7.testing.example.com");
+    EXPECT_EQ(epaAccount.port, 8007);
     EXPECT_EQ(epaAccount.kvnr, model::Kvnr("X123456788", model::Kvnr::Type::gkv));
 }

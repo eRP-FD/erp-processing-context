@@ -21,6 +21,7 @@
 #include "shared/hsm/VsdmKeyBlobDatabase.hxx"
 #include "shared/hsm/VsdmKeyCache.hxx"
 #include "shared/server/BaseServiceContext.hxx"
+#include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/health/ApplicationHealth.hxx"
 #include "shared/validation/JsonValidator.hxx"
@@ -28,17 +29,6 @@
 
 namespace
 {
-std::unique_ptr<TslRefreshJob> setupTslRefreshJob(TslManager& tslManager, const Configuration& configuration)
-{
-    GS_A_4899.start("Create asynchronous TSL-Update job.");
-    // 24 Hours per default
-    const std::chrono::seconds tslRefreshInterval{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)};
-    auto refreshJob = std::make_unique<TslRefreshJob>(tslManager, tslRefreshInterval);
-    refreshJob->start();
-    GS_A_4899.finish();
-    return refreshJob;
-}
-
 std::unique_ptr<RateLimiter> createRateLimiter(std::shared_ptr<RedisInterface>& redisClient)
 {
     const auto calls = gsl::narrow<size_t>(Configuration::instance().getIntValue(ConfigurationKey::TOKEN_ULIMIT_CALLS));
@@ -60,8 +50,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     , mJsonValidator(factories.jsonValidatorFactory())
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
     , mTelematicPseudonymManager(TelematicPseudonymManager::create(this))
-    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, *mTslManager, *mHsmPool))
-    , mTslRefreshJob(setupTslRefreshJob(*mTslManager, configuration))
+    , mCFdSigErpManager(std::make_unique<CFdSigErpManager>(configuration, getTslManager(), *mHsmPool))
     , mReportPseudonameKeyRefreshJob(
           PseudonameKeyRefreshJob::setupPseudonameKeyRefreshJob(*mHsmPool, *getBlobCache(), configuration))
     , mRegistrationInterface(
@@ -70,6 +59,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     // GEMREQ-end A_20974-01
     , mRuntimeConfiguration(std::make_shared<erp::RuntimeConfiguration>())
 {
+    setupTslRefreshJob(std::chrono::seconds{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)});
     Expect3(mDatabaseFactory != nullptr, "database factory has been passed as nullptr to ServiceContext constructor",
             std::logic_error);
 
@@ -103,10 +93,6 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
 
 PcServiceContext::~PcServiceContext()
 {
-    if (mTslRefreshJob != nullptr)
-    {
-        mTslRefreshJob->shutdown();
-    }
     if (mReportPseudonameKeyRefreshJob != nullptr)
     {
         mReportPseudonameKeyRefreshJob->shutdown();

@@ -5,15 +5,16 @@
 #include "fhirtools/converter/internal/FhirSAXHandler.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "test/util/ResourceManager.hxx"
 
-#include <shared/fhir/Fhir.hxx>
 #include <gtest/gtest.h>
+#include <shared/fhir/Fhir.hxx>
 #include <filesystem>
 #include <memory>
 #include <ranges>
@@ -61,7 +62,7 @@ public:
     {
         ASSERT_NO_THROW((void) repo());
     }
-    [[nodiscard]] const FhirStructureRepository& repo()
+    [[nodiscard]] const FhirStructureRepositoryView& repo()
     {
         static std::shared_ptr instance = BaseT::makeRepo();
         return *instance;
@@ -139,7 +140,7 @@ protected:
     ResourceManager& resourceManager = ResourceManager::instance();
 
 private:
-    static std::shared_ptr<FhirStructureRepository> makeRepo()
+    static std::shared_ptr<FhirStructureRepositoryView> makeRepo()
     {
         std::list<std::filesystem::path> files = BaseT::fileList();
         std::list<std::filesystem::path> absolutfiles;
@@ -149,11 +150,11 @@ private:
                 std::make_unique<FhirStructureRepositoryBackend>();
             FhirResourceGroupConst resolver{"test"};
             std::shared_ptr<FhirResourceViewGroupSet> view =
-                std::make_shared<FhirResourceViewGroupSet>("test", resolver.findGroupById("test"), backend.get());
+                FhirResourceViewGroupSet::create("test", resolver.findGroupById("test"), backend.get());
         };
         auto result = std::make_shared<RepoItems>();
         result->backend->load(absolutfiles, result->resolver);
-        return std::shared_ptr<FhirStructureRepository>{result, result->view.get()};
+        return std::shared_ptr<FhirStructureRepositoryView>{result, result->view.get()};
     }
 };
 }

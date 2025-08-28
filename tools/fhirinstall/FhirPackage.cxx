@@ -5,23 +5,25 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "FhirPackage.hxx"
-
-#include "fhirtools/repository/FhirStructureRepository.hxx"
-#include "fhirtools/repository/FhirVersion.hxx"
 #include "fhirtools/converter/internal/FhirJsonToXmlConverter.hxx"
 #include "fhirtools/converter/internal/FhirSAXHandler.hxx"
+#include "fhirtools/repository/FhirVersion.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "tools/fhirinstall/ShowHelp.hxx"
+#include "tools/fhirinstall/FhirInstallArgs.hxx"
 
-#include <algorithm>
 #include <boost/algorithm/string/replace.hpp>
-#include <cerrno>
-#include <functional>
-#include <system_error>
+#include <boost/algorithm/string/trim.hpp>
 #include <libxml2/libxml/tree.h>
-#include <iostream>
 #include <rapidjson/rapidjson.h>
+#include <algorithm>
+#include <cerrno>
+#include <fstream>
+#include <functional>
+#include <iostream>
+#include <system_error>
 #include <utility>
 
 static inline const rapidjson::Pointer resourceTypePtr{"/resourceType"};
@@ -60,16 +62,20 @@ FhirPackage::FhirPackage(Id id)
 {
 }
 
-bool FhirPackage::install(const fhirtools::FhirStructureRepository& view, const std::filesystem::path& cacheFolder,
-                          const std::filesystem::path& outputFolder)
+bool FhirPackage::install(const fhirtools::FhirStructureRepositoryView& view, const FhirInstallArgs& arguments)
 {
-    const std::filesystem::directory_entry src{cacheFolder / (mId.name + '#' + to_string(mId.version))};
+    const std::filesystem::path packageFolder{arguments.cacheFolder / (mId.name + '#' + to_string(mId.version))};
+    const std::filesystem::path excludeFileName{mId.name + '-' + to_string(mId.version) + ".exclude.txt"};
+    const std::filesystem::directory_entry src{packageFolder};
+    auto excludedFiles = arguments.excludeFileFolder ? readExcludeFile(*arguments.excludeFileFolder / excludeFileName, src)
+                                           : std::set<std::filesystem::path>{};
     if (! exists(src))
     {
         LOG(ERROR) << "source package not in cache: " << mId;
         return false;
     }
-    installDir(view, src, outputFolder / (mId.name + '-' + to_string(mId.version)));
+    installDir(view, src, arguments.outputFolder / (mId.name + '-' + to_string(mId.version)), excludedFiles,
+               arguments.substitutions);
     return ! mHadError;
 }
 
@@ -118,6 +124,7 @@ void FhirPackage::writeConfigAfterInstall(std::ostream& out, const std::filesyst
         {
             auto matchUrl = res.url;
             boost::algorithm::replace_all(matchUrl, ".", R"(\.)");
+            boost::algorithm::replace_all(matchUrl, "?", R"(\?)");
             rapidjson::Value matchObject{rapidjson::kObjectType};
             matchObject.AddMember("url", doc.makeString(matchUrl), alloc);
             if (res.version && res.version != fhirtools::FhirVersion::notVersioned)
@@ -199,27 +206,30 @@ bool FhirPackage::process(const std::filesystem::directory_entry& src, const mod
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
-void FhirPackage::installDir(const fhirtools::FhirStructureRepository& view,
-                             const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder)
+void FhirPackage::installDir(const fhirtools::FhirStructureRepositoryView& view,
+                             const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder,
+                             const std::set<std::filesystem::path>& excludedFiles,
+                             const std::map<std::string, FhirPackage::Id>& substitutions)
 {
-    std::error_code ec;
-    create_directories(destFolder, ec);
-    if (ec)
-    {
-        LOG(ERROR) << "failed creating target folder: " << destFolder;
-        mHadError = true;
-        return;
-    }
     for (const auto& entry : std::filesystem::directory_iterator{src})
     {
-        install(view, entry, destFolder);
+        install(view, entry, destFolder, excludedFiles, substitutions);
     }
 }
 
-void FhirPackage::convert(const fhirtools::FhirStructureRepository& view, const std::filesystem::directory_entry& src,
-                          const std::filesystem::path& destFolder)
+void FhirPackage::convert(const fhirtools::FhirStructureRepositoryView& view,
+                          const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder)
 {
-    const auto& asJsonDoc = Json::fromJson(FileHelper::readFileAsString(src));
+    model::NumberAsStringParserDocument asJsonDoc;
+    try {
+        asJsonDoc = Json::fromJson(FileHelper::readFileAsString(src));
+    }
+    catch (const std::exception& ex)
+    {
+        LOG(ERROR) << ex.what() << " reading: " << src;
+        mHadError = true;
+        return;
+    }
     if (! process(src, asJsonDoc))
     {
         VLOG(1) << "skipping unneeded: " << src;
@@ -235,6 +245,14 @@ void FhirPackage::convert(const fhirtools::FhirStructureRepository& view, const 
     auto asXmlDoc = FhirJsonToXmlConverter::jsonToXml(view, asJsonDoc);
     const auto& nativeOutName = outname.native();
     errno = 0;
+    std::error_code ec;
+    create_directories(destFolder, ec);
+    if (ec)
+    {
+        LOG(ERROR) << "failed creating target folder: " << destFolder;
+        mHadError = true;
+        return;
+    }
     auto size = xmlSaveFormatFileEnc(nativeOutName.c_str(), asXmlDoc.get(), "utf-8", 1);
     if (size < 0)
     {
@@ -252,19 +270,26 @@ void FhirPackage::convert(const fhirtools::FhirStructureRepository& view, const 
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
-void FhirPackage::install(const fhirtools::FhirStructureRepository& view, const std::filesystem::directory_entry& src,
-                          const std::filesystem::path& destFolder)
+void FhirPackage::install(const fhirtools::FhirStructureRepositoryView& view,
+                          const std::filesystem::directory_entry& src, const std::filesystem::path& destFolder,
+                          const std::set<std::filesystem::path>& excludedFiles,
+                          const std::map<std::string, FhirPackage::Id>& substitutions)
 {
     if (is_directory(src))
     {
-        installDir(view, src, destFolder / src.path().filename());
+        installDir(view, src, destFolder / src.path().filename(), excludedFiles, substitutions);
         return;
     }
     const auto& srcFilePath = src.path();
+    if (excludedFiles.contains(srcFilePath))
+    {
+        VLOG(1) << "skipping excluded file: " << src;
+        return;
+    }
     const auto& srcFileName = srcFilePath.filename();
     if (srcFileName == "package.json")
     {
-        processPackageInfo(src);
+        processPackageInfo(src, substitutions);
         return;
     }
     if (srcFileName == "fhirpkg.lock.json")
@@ -301,6 +326,13 @@ void FhirPackage::install(const fhirtools::FhirStructureRepository& view, const 
         return;
     }
     std::error_code ec;
+    create_directories(destFolder, ec);
+    if (ec)
+    {
+        LOG(ERROR) << "failed creating target folder: " << destFolder;
+        mHadError = true;
+        return;
+    }
     copy(src.path(), destFolder, ec);
     if (ec == std::errc::file_exists)
     {
@@ -316,7 +348,8 @@ void FhirPackage::install(const fhirtools::FhirStructureRepository& view, const 
     VLOG(0) << "copied: " << destFolder / src.path().native();
 }
 
-void FhirPackage::processPackageInfo(const std::filesystem::directory_entry& src)
+void FhirPackage::processPackageInfo(const std::filesystem::directory_entry& src,
+                                     const std::map<std::string, FhirPackage::Id>& substitutions)
 {
     LOG(INFO) << "reading package info: " << src;
     auto pkgInfo = Json::fromJson(FileHelper::readFileAsString(src));
@@ -340,12 +373,75 @@ void FhirPackage::processPackageInfo(const std::filesystem::directory_entry& src
         fhirtools::FhirVersion depVersion{std::string{Json::valueAsString(member.value)}};
         if (depName == "hl7.fhir.r4.core" || depName == "kbv.all.st")
         {
-            // don't install fhir core of KBV-Schlüsseltabellen
+            // don't install fhir core or KBV-Schlüsseltabellen
             continue;
         }
-        const auto& depPkg = mDependencies.emplace(get(Id{std::move(depName), std::move(depVersion)}));
+        Id depId = applySubstitutions(substitutions, Id{std::move(depName), std::move(depVersion)});
+        const auto& depPkg = mDependencies.emplace(get(depId));
         LOG(INFO) << mId << " depends on: " << (*depPkg.first)->id();
     }
+}
+
+FhirPackage::Id FhirPackage::applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id)
+{
+    auto subst = substitutions.find(to_string(id));
+    if (subst == substitutions.end())
+    {
+        subst = substitutions.find(id.name);
+    }
+    if (subst != substitutions.end())
+    {
+        LOG(INFO) << mId << ": substituting dependency " << id << " with " << subst->second;
+        return subst->second;
+    }
+    return id;
+}
+
+std::set<std::filesystem::path> FhirPackage::readExcludeFile(const std::filesystem::path& excludeFile,
+                                                             const std::filesystem::path& srcFolder)
+{
+    std::ifstream excludes;
+    excludes.open(excludeFile);
+    if (excludes.fail())
+    {
+        std::error_code ec(errno, std::system_category());
+        if (ec == std::errc::no_such_file_or_directory)
+        {
+            LOG(INFO) << "no exclude file for package: " << mId;
+            VLOG(0) << "    exclude file name is: " << excludeFile;
+            return {};
+        }
+        mHadError = true;
+        LOG(ERROR) << ec.message() << ": " << excludeFile;
+        return {};
+    }
+    std::set<std::filesystem::path> result;
+    std::string line;
+    while (getline(excludes, line))
+    {
+        boost::algorithm::trim(line);
+        if (line.empty() || line.starts_with('#'))
+        {
+            continue;
+        }
+        std::filesystem::path path{std::move(line)};
+        if (path.is_absolute())
+        {
+            result.emplace(std::move(path));
+        }
+        else
+        {
+            result.emplace(srcFolder / path);
+        }
+    }
+    if (excludes.bad())
+    {
+        std::error_code ec(errno, std::system_category());
+        mHadError = true;
+        LOG(ERROR) << ec.message() << ": " << excludeFile;
+        return {};
+    }
+    return result;
 }
 
 
@@ -354,4 +450,13 @@ std::ostream& operator<<(std::ostream& out, const FhirPackage::Id& id)
     std::ostream xout{out.rdbuf()};
     xout << id.name << '@' << id.version;
     return out;
+}
+
+std::string to_string(const FhirPackage::Id& id)
+{
+    std::string result;
+    const auto& versionStr = to_string(id.version);
+    result.reserve(id.name.size() + versionStr.size() + 1);
+    result.append(id.name).append(1, '@').append(versionStr);
+    return result;
 }

@@ -76,8 +76,7 @@ private:
     std::string medicationDispenseXml(BodyOptions opt) const;
     std::string medicationDispenseBundleXml(BodyOptions opt) const;
     std::string medicationDispenseBundleXmlNoProfile(const BodyOptions& opt) const;
-    std::string dispenseOperationInputParamers(const BodyOptions& opt) const;
-    std::string closeOperationInputParamers(const BodyOptions& opt) const;
+    std::string operationInputParamers(model::ProfileType profileType, const BodyOptions& opt) const;
 
 
 

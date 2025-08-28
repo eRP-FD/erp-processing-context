@@ -7,12 +7,12 @@
 
 #include "test/util/TestUtils.hxx"
 #include "erp/model/ErxReceipt.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/model/Timestamp.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
-#include "fhirtools/validator/ValidatorOptions.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <date/tz.h>
@@ -85,7 +85,7 @@ template<typename BundleT>
 BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType)
 {
     // TODO: validate ERP-23976
-    (void)profileType;
+    (void) profileType;
     return BundleT::fromXmlNoValidation(xmlDoc);
     // const auto& config = Configuration::instance();
     // using BundleFactory = typename model::ResourceFactory<BundleT>;
@@ -108,30 +108,33 @@ BundleT getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType
     // return BundleFactory::fromXml(xmlDoc, *StaticData::getXmlValidator(), opt).getValidated(profileType);
 }
 
+void bestEffortValidateJson(const std::string& json)
+{
+    bestEffortValidate(model::UnspecifiedResource::fromJsonNoValidation(json));
+}
 void bestEffortValidate(const model::UnspecifiedResource& res)
 {
     const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
     const auto& resourceType = res.getResourceType();
     fhirtools::ValidatorOptions options{.allowNonLiteralAuthorReference = true};
-    std::shared_ptr<fhirtools::FhirStructureRepository> repoView;
+    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> repoView;
     //NOLINTBEGIN(bugprone-branch-clone)
     // TODO: also validate Bundle ERP-23976
     if (resourceType == model::OperationOutcome::resourceTypeName)
     {
-        repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+        repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest();
     }
     else if (auto profileName = res.getProfileName())
     {
         auto viewList = fhirInstance.structureRepository(model::Timestamp::now());
         fhirtools::DefinitionKey key{*profileName};
         ASSERT_TRUE(key.version.has_value()) << " missing version in profile: " << *profileName;
-        repoView = viewList.match(backend, key.url, *key.version);
+        repoView = viewList.match(key.url, *key.version);
         ASSERT_NE(repoView, nullptr) << " no view for profile: " << *profileName;
     }
     else if (resourceType != model::Bundle::resourceTypeName)
     {
-        repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest().view(backend);
+        repoView = fhirInstance.structureRepository(model::Timestamp::now()).latest();
     }
     //NOLINTEND(bugprone-branch-clone)
     if (repoView)
@@ -164,12 +167,6 @@ std::string shiftDate(const std::string& realDate)
 
 testutils::ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const AsConfiguredTag&)
 {
-    const auto& dirtyViews = Fhir::instance().fhirResourceViewConfiguration().allViews();
-    for (const auto& view: dirtyViews)
-    {
-        envGuards.emplace_back(view->mEnvName + "_VALID_FROM", std::nullopt);
-        envGuards.emplace_back(view->mEnvName + "_VALID_UNTIL", std::nullopt);
-    }
     envGuards.emplace_back("ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS", std::nullopt);
 }
 

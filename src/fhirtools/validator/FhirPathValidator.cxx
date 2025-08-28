@@ -8,7 +8,7 @@
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
-#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
@@ -23,22 +23,27 @@ using fhirtools::FhirConstraint;
 using fhirtools::FhirPathValidator;
 fhirtools::FhirPathValidator::FhirPathValidator(const fhirtools::ValidatorOptions& options,
                                                 std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
-                                                const std::shared_ptr<const FhirStructureRepository>& repo)
+                                                std::unique_ptr<ProfiledElementTypeInfo> initMetaRootDefPtr,
+                                                const std::shared_ptr<const FhirStructureRepositoryView>& repo)
     : mOptions{options}
     , mExtensionRootDefPtr{std::move(initExtensionRootDefPtr)}
+    , mMetaRootDefPtr{std::move(initMetaRootDefPtr)}
     , mRepo(repo)
 {
 }
 
 fhirtools::FhirPathValidator
 fhirtools::FhirPathValidator::create(const fhirtools::ValidatorOptions& options,
-                                     const std::shared_ptr<const FhirStructureRepository>& repo)
+                                     const std::shared_ptr<const FhirStructureRepositoryView>& repo)
 {
     using namespace std::string_literals;
-    Expect3(repo != nullptr, "Failed to get FhirStructureRepository from element", std::logic_error);
+    Expect3(repo != nullptr, "Failed to get FhirStructureRepositoryView from element", std::logic_error);
     const auto* extensionDef = repo->findTypeById("Extension"s);
     Expect3(extensionDef != nullptr, "StructureDefinition for Extension not found.", std::logic_error);
-    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(extensionDef), repo};
+    const auto* metaDef = repo->findTypeById("Meta"s);
+    Expect3(metaDef != nullptr, "StructureDefinition for Meta not found.", std::logic_error);
+    return FhirPathValidator{options, std::make_unique<ProfiledElementTypeInfo>(*extensionDef),
+                             std::make_unique<ProfiledElementTypeInfo>(*metaDef), repo};
 }
 
 
@@ -66,7 +71,7 @@ fhirtools::ValidationResults FhirPathValidator::validateWithProfiles(const std::
         {
             if (profile->typeId() == elementType)
             {
-                profiles.emplace(profile);
+                profiles.emplace(*profile);
             }
             else
             {
@@ -101,6 +106,12 @@ const fhirtools::ProfiledElementTypeInfo& fhirtools::FhirPathValidator::extensio
 {
     return *mExtensionRootDefPtr;
 }
+
+const fhirtools::ProfiledElementTypeInfo& fhirtools::FhirPathValidator::metaRootDefPtr() const
+{
+    return *mMetaRootDefPtr;
+}
+
 void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const Element>& element,
                                                     std::set<ProfiledElementTypeInfo> extraProfiles,
                                                     const std::string& elementFullPath)
@@ -118,7 +129,7 @@ void fhirtools::FhirPathValidator::validateInternal(const std::shared_ptr<const 
             auto elementDef = profileDef->findElement(elementId);
             if (elementDef)
             {
-                defPtrs.emplace(profileDef, std::move(elementDef));
+                defPtrs.emplace(std::move(elementDef));
             }
             else
             {

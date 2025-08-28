@@ -10,14 +10,15 @@
 
 class DurationConsumer;
 
-#include "JsonLog.hxx"
+#include "shared/util/DurationCategory.hxx"
+#include "shared/util/JsonLog.hxx"
 
 #include <chrono>
 #include <functional>
+#include <map>
 #include <optional>
 #include <string>
 #include <unordered_map>
-
 
 /**
  * Measure how much time passes between construction and destruction.
@@ -28,7 +29,7 @@ class DurationTimer
 public:
     using Receiver = std::function<void(
         std::chrono::steady_clock::duration duration,
-        const std::string& category,
+        DurationCategory category,
         const std::string& metric,
         const std::string& sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap,
@@ -36,7 +37,7 @@ public:
 
     explicit DurationTimer (
         Receiver& receiver,
-        std::string  category,
+        DurationCategory category,
         std::string  metric,
         std::string  sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap);
@@ -47,7 +48,7 @@ public:
 
 private:
     Receiver mReceiver;
-    std::string mCategory;
+    DurationCategory mCategory;
     std::string mMetric;
     std::string mSessionIdentifier;
     std::unordered_map<std::string, std::string> mKeyValueMap;
@@ -64,19 +65,11 @@ private:
 class DurationConsumer
 {
 public:
-    // Keep these names in sync with the configuration:
-    static constexpr auto categoryRedis = "redis";
-    static constexpr auto categoryPostgres = "postgres";
-    static constexpr auto categoryUrlRequestSender = "httpclient";
-    static constexpr auto categoryFhirValidation = "fhirvalidation";
-    static constexpr auto categoryOcspRequest = "ocsprequest";
-    static constexpr auto categoryHsm = "hsm";
-    static constexpr auto categoryEnrolmentHelper = "enrolment";
-
     static DurationConsumer& getCurrent();
 
 
-    void initialize(const std::string& sessionIdentifier, DurationTimer::Receiver&& receiver);
+    void initialize(const std::string& sessionIdentifier, DurationTimer::Receiver&& receiver,
+                    std::map<DurationCategory, std::chrono::milliseconds> loggingThresholds);
     void reset() noexcept;
     bool isInitialized() const;
     std::optional<std::string> getSessionIdentifier() const;
@@ -86,8 +79,9 @@ public:
      * Default implementation of DurationTimer::Receiver
      */
     static void defaultReceiver(
+        const std::map<DurationCategory, std::chrono::milliseconds>& loggingThresholds,
         std::chrono::steady_clock::duration duration,
-        const std::string& category,
+        DurationCategory category,
         const std::string& metric,
         const std::string& sessionIdentifier,
         const std::unordered_map<std::string, std::string>& keyValueMap,
@@ -96,13 +90,14 @@ public:
     /**
      * Return a timer that measures how long it takes until its destructor is called.
      */
-    DurationTimer getTimer(const std::string& category, const std::string& metric,
+    DurationTimer getTimer(DurationCategory category, const std::string& metric,
                            const std::unordered_map<std::string, std::string>& keyValueMap = {});
 
 private:
     bool mIsInitialized = false;
     std::optional<std::string> mSessionIdentifier;
     DurationTimer::Receiver mReceiver;
+    std::map<DurationCategory, std::chrono::milliseconds> mLoggingThresholds;
 };
 
 
@@ -113,11 +108,11 @@ private:
 class DurationConsumerGuard
 {
 public:
-    explicit DurationConsumerGuard (
-        const std::string& sessionIdentifier,
-        DurationTimer::Receiver&& receiver = nullptr);
+    explicit DurationConsumerGuard(const std::string& sessionIdentifier,
+                                   std::map<DurationCategory, std::chrono::milliseconds>&& loggingThresholds = {},
+                                   DurationTimer::Receiver&& receiver = nullptr);
 
-    ~DurationConsumerGuard (void);
+    ~DurationConsumerGuard ();
 };
 
 

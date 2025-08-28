@@ -17,6 +17,8 @@
 #include <optional>
 #include <string_view>
 
+class XmlStringView;
+
 namespace fhirtools
 {
 class SaxHandler
@@ -34,12 +36,12 @@ public:
     class Attribute
     {
     public:
-        std::string_view localname() const;
-        std::optional<std::string_view> prefix() const;
-        std::optional<std::string_view> uri() const;
+        XmlStringView localname() const;
+        std::optional<XmlStringView> prefix() const;
+        std::optional<XmlStringView> uri() const;
         std::string_view value() const;
     private:
-        explicit Attribute(const char** const attributes)
+        explicit Attribute(const xmlChar** const attributes)
             : mData(attributes)
         {}
         /// each attribute is described by 5 character pointers:
@@ -49,7 +51,7 @@ public:
         /// value-end: pointer to the past the end of the value attribute.
         /// this structure originates from the function parameter attributes in startElementNsSAX2Func
         /// see http://www.xmlsoft.org/html/libxml-parser.html#startElementNsSAX2Func
-        const char** const mData;
+        const xmlChar** const mData;
         friend class SaxHandler;
     };
 
@@ -68,12 +70,12 @@ public:
 
 
         AttributeList(const xmlChar** const attributes, size_t count)
-            : mAttributes(reinterpret_cast<const char**>(attributes))
+            : mAttributes(attributes)
             , mSize(count)
         {}
         /// see http://www.xmlsoft.org/html/libxml-parser.html#startElementNsSAX2Func
         /// this is a seuence of 5-tuples as described for Attribute::mData
-        const char** const mAttributes;
+        const xmlChar** const mAttributes;
         size_t mSize;
         friend class SaxHandler;
     };

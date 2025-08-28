@@ -3,11 +3,10 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "erp/admin/PutRuntimeConfigHandler.hxx"
-
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/server/context/SessionContext.hxx"
-#include "shared/server/request/ServerRequest.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
+#include "shared/server/request/ServerRequest.hxx"
 #include "shared/util/UrlHelper.hxx"
 
 PutRuntimeConfigHandler::PutRuntimeConfigHandler(ConfigurationKey adminRcCredentialsKey)
@@ -55,6 +54,15 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
                         (std::ostringstream{} << "invalid: " << param.first << "=" << param.second << ". " << re.what())
                             .str());
             }
+        }
+        else if (erp::RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.contains(param.first))
+        {
+            const auto category =
+                erp::RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.at(param.first);
+            const auto defaults = erp::RuntimeConfiguration::defaultMetricsLogThresholdsMs();
+            const auto value =
+                ! param.second.empty() ? std::chrono::milliseconds{std::stol(param.second)} : defaults.at(category);
+            runtimeConfig->setMetricsLogThresholdMs(category, value);
         }
         else
         {

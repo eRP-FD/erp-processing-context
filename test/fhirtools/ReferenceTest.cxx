@@ -6,14 +6,16 @@
  */
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
-#include "shared/model/ResourceNames.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
-#include "fhirtools/repository/FhirResourceGroupConst.hxx"
-#include "fhirtools/repository/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/views/DefaultFhirStructureRepositoryView.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
+#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/internal/ReferenceContext.hxx"
 #include "fhirtools/validator/internal/ReferenceFinder.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
@@ -113,11 +115,11 @@ protected:
                            mkres("test/fhir-path/profiles/ReferenceExtension.xml")});
         return profileList;
     }
-    static const FhirStructureRepository& repo()
+    static const FhirStructureRepositoryView& repo()
     {
         static FhirResourceGroupConst resolver{"test"};
         static gsl::not_null backend = DefaultFhirStructureRepository::create(getProfileList(), resolver);
-        static auto view = std::make_shared<FhirResourceViewGroupSet>("test", resolver.findGroupById("test"),
+        static auto view = FhirResourceViewGroupSet::create("test", resolver.findGroupById("test"),
                                                                       std::addressof(*backend));
         return *view;
     }

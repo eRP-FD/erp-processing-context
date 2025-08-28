@@ -63,6 +63,7 @@ const rapidjson::Pointer telematicIdSystemPointer(ElementName::path(elements::pe
                                                                     elements::identifier, elements::value));
 const rapidjson::Pointer telematikIdValuePointer(ElementName::path(elements::performer, 0, elements::actor,
                                                                    elements::identifier, elements::value));
+const rapidjson::Pointer performerReferencePointer(ElementName::path(elements::performer, 0, elements::actor, elements::reference));
 const rapidjson::Pointer whenHandedOverPointer(ElementName::path(elements::whenHandedOver));
 const rapidjson::Pointer whenPreparedPointer(ElementName::path(elements::whenPrepared));
 const rapidjson::Pointer medicationReferencePointer(ElementName::path(elements::medicationReference, elements::reference));
@@ -162,6 +163,11 @@ void MedicationDispense::setMedicationReference(std::string_view newReference)
     setValue(medicationReferencePointer, newReference);
 }
 
+void MedicationDispense::setPerformerReference(std::string_view newReference)
+{
+    setValue(performerReferencePointer, newReference);
+}
+
 void MedicationDispense::additionalValidation() const
 {
     Resource<MedicationDispense>::additionalValidation();
@@ -173,6 +179,11 @@ void MedicationDispense::additionalValidation() const
 std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() const
 {
     return whenHandedOver();
+}
+
+std::string_view MedicationDispense::performerReference() const
+{
+    return getStringValue(performerReferencePointer);
 }
 
 template class Extension<GemErpExRedeemCode>;

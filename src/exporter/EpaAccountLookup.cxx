@@ -29,7 +29,8 @@ EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceCont
 {
 }
 
-EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr)
+EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
+                                    const std::optional<std::string>& prefix /* = std::nullopt */)
 {
     static const auto epaFqdns = [] {
         auto fqdns = Configuration::instance().epaFQDNs();
@@ -45,6 +46,19 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
     std::mt19937 gen{rd()};
     auto shuffledEpaFqdns{epaFqdns};
     std::ranges::shuffle(shuffledEpaFqdns, gen);
+    if (prefix.has_value())
+    {
+        size_t idx = 0;
+        for (auto& entry : shuffledEpaFqdns)
+        {
+            if (std::get<0>(entry).starts_with(prefix.value() + "."))
+            {
+                std::swap(shuffledEpaFqdns[0], shuffledEpaFqdns[idx]);
+                break;
+            }
+            idx++;
+        }
+    }
     return lookup(xRequestId, kvnr, shuffledEpaFqdns);
 }
 

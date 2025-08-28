@@ -18,7 +18,7 @@ class JsonValidator;
 
 namespace fhirtools
 {
-class FhirStructureRepository;
+class FhirStructureRepositoryView;
 class ValidationResults;
 }
 

@@ -1,0 +1,12 @@
+{
+  "resourceType": "UriValidation",
+  "id": "valid_UriValidation_direct",
+  "_uri": {
+    "extension": [
+      {
+        "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+        "valueString": "unknown"
+      }
+    ]
+  }
+}

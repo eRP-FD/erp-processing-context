@@ -64,6 +64,8 @@ enum class SigningAlgorithm
     ellipticCurve
 };
 
+std::string_view to_string(SigningAlgorithm signingAlgorithm);
+
 
 class X509Certificate
 {

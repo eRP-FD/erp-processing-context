@@ -21,8 +21,8 @@ bool FhirInstall::run(const std::span<const char*>& args)
 
 
 FhirInstall::FhirInstall(const std::span<const char*>& args)
+    : mArgumemts{args}
 {
-    readArgs(args);
     mBackend.load(
         {
             ResourceManager::getAbsoluteFilename("fhir/hl7.org/profiles-types.xml"),
@@ -41,21 +41,21 @@ bool FhirInstall::run()
     // do not install fhir core:
     static const FhirPackage::Id fhirCore("hl7.fhir.r4.core", "4.0.1"_ver);
     FhirPackage::PtrSet installedPackages;
-    while (!mPackages.empty())
+    while (! mArgumemts.packages.empty())
     {
-        auto pack = mPackages.extract(mPackages.begin());
+        auto pack = mArgumemts.packages.extract(mArgumemts.packages.begin());
         if (! installedPackages.contains(pack.value()) && pack.value()->id() != fhirCore)
         {
-            const bool ok = pack.value()->install(*mView, cacheFolder(), outputFolder());
+            const bool ok = pack.value()->install(*mView, mArgumemts);
             mHadError |= !ok;
             auto deps = pack.value()->dependencies();
-            mPackages.merge(std::move(deps));
+            mArgumemts.packages.merge(std::move(deps));
             installedPackages.insert(std::move(pack));
         }
     }
-    if (mConfigFolder)
+    if (mArgumemts.configFolder)
     {
-        std::filesystem::create_directories(*mConfigFolder);
+        std::filesystem::create_directories(*mArgumemts.configFolder);
         for (const auto& package: installedPackages)
         {
             installConfig(*package);
@@ -75,12 +75,12 @@ void FhirInstall::installConfig(const FhirPackage& package)
         fileName += to_string(packId.version);
     }
     fileName += ".config.json";
-    auto configPath = value(mConfigFolder) / fileName;
+    auto configPath = value(mArgumemts.configFolder) / fileName;
     if (! exists(configPath))
     {
         VLOG(1) << "Writing config: " << configPath;
         std::ofstream configFile{configPath};
-        package.writeConfigAfterInstall(configFile, value(mOutputFolder));
+        package.writeConfigAfterInstall(configFile, mArgumemts.outputFolder);
     }
     else
     {
@@ -88,73 +88,7 @@ void FhirInstall::installConfig(const FhirPackage& package)
     }
 }
 
-
-const std::filesystem::path& FhirInstall::cacheFolder() const
-{
-    return mCacheFolder.value();
-}
-
-const std::optional<std::filesystem::path>& FhirInstall::configFolder() const
-{
-    return mConfigFolder;
-}
-
-const std::filesystem::path& FhirInstall::outputFolder() const
-{
-    return mOutputFolder.value();
-}
-
-const fhirtools::FhirStructureRepository& FhirInstall::view() const
+const fhirtools::FhirStructureRepositoryView& FhirInstall::view() const
 {
     return *mView;
-}
-
-void FhirInstall::readArgs(const std::span<const char*>& args)
-{
-    // skip appname:
-    auto argPtr = std::ranges::next(args.begin(), 1, args.end());
-
-    for (; argPtr != args.end(); ++argPtr)
-    {
-        const std::string_view arg{*argPtr};
-        if (arg == "-p")
-        {
-            ++argPtr;
-            Expect3(argPtr != args.end(), "missing package_cache_folder argument to `-p`", ShowHelp);
-            Expect3(! mCacheFolder.has_value(), "`-p` supported only once", ShowHelp);
-            mCacheFolder.emplace(*argPtr);
-        }
-        else if (arg == "-o")
-        {
-            ++argPtr;
-            Expect3(argPtr != args.end(), "missing output_folder argument to `-o`", ShowHelp);
-            Expect3(! mOutputFolder.has_value(), "`-o` supported only once", ShowHelp);
-            mOutputFolder.emplace(*argPtr);
-        }
-        else if (arg == "-c")
-        {
-            ++argPtr;
-            Expect3(argPtr != args.end(), "missing config_folder argument to `-c`", ShowHelp);
-            Expect3(! mConfigFolder.has_value(), "`-c` supported only once", ShowHelp);
-            mConfigFolder.emplace(*argPtr);
-        }
-        else if (arg == "--")
-        {
-            ++argPtr;
-            break;
-        }
-        else if (! arg.starts_with('-'))
-        {
-            break;
-        }
-    }
-    for (; argPtr != args.end(); ++argPtr)
-    {
-        const std::string_view arg{*argPtr};
-        mPackages.emplace(FhirPackage::get(FhirPackage::Id{arg}));
-    }
-
-    Expect3(mCacheFolder.has_value(), "missing package cache folder `-p` argument", ShowHelp);
-    Expect3(mOutputFolder.has_value(), "missing output folder `-o` argument", ShowHelp);
-    Expect3(! mPackages.empty(), "no pacakges provided", ShowHelp);
 }

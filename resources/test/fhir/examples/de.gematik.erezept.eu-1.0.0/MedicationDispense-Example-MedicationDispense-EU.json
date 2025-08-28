@@ -1,0 +1,33 @@
+{
+  "resourceType": "MedicationDispense",
+  "id": "Example-MedicationDispense-EU",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense|1.0"
+    ]
+  },
+  "identifier": [
+    {
+      "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+      "value": "160.000.033.491.280.78"
+    }
+  ],
+  "status": "completed",
+  "subject": {
+    "identifier": {
+      "system": "http://fhir.de/sid/gkv/kvid-10",
+      "value": "X123456789"
+    }
+  },
+  "performer": [
+    {
+      "actor": {
+        "reference": "PractitionerRole/Example-EU-PractitionerRole"
+      }
+    }
+  ],
+  "whenHandedOver": "2025-10-01",
+  "medicationReference": {
+    "reference": "Medication/SumatripanMedication"
+  }
+}

@@ -8,11 +8,12 @@
 #include "ResourceManager.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/FileHelper.hxx"
+#include "shared/util/InvalidConfigurationException.hxx"
 #include "shared/util/TLog.hxx"
 #include "test/util/TestConfiguration.hxx"
 
 #include <rapidjson/error/en.h>
-#include <initializer_list>
+#include <list>
 #include <stdexcept>
 
 #include "tool_config.hxx"
@@ -34,14 +35,18 @@ std::filesystem::path ResourceManager::getAbsoluteFilename(const std::filesystem
     {
         return resourceFile;
     }
-    const std::initializer_list<std::filesystem::path> tryFiles
+    std::list<std::filesystem::path> tryFiles
     {
             ToolConfig::RESOURCE_BINARY_DIR / resourceFile,
             ToolConfig::RESOURCE_SOURCE_DIR / resourceFile,
             ToolConfig::RESOURCE_OUTPUT_DIR / resourceFile,
-            std::filesystem::path(
-                TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH)) /
-                resourceFile};
+    };
+    const auto testResourceManagerPath = TestConfiguration::instance().getOptionalStringValue(
+        TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH, std::string{});
+    if (!testResourceManagerPath.empty())
+    {
+        tryFiles.emplace_front(std::filesystem::path{testResourceManagerPath} / resourceFile);
+    }
     for (const auto& file : tryFiles)
     {
         if (exists(file))
@@ -80,6 +85,24 @@ const std::string & ResourceManager::getStringResource(const std::string_view& r
 }
 
 
+rapidjson::Document ResourceManager::toJsonDoc(const std::string &jsonString) {
+    rapidjson::Document doc;
+    rapidjson::ParseResult result = doc.Parse(jsonString);
+    if (result.IsError())
+    {
+        using std::min;
+        std::string nearStr = jsonString.substr(
+            result.Offset(),
+            min(jsonString.size() - result.Offset(), static_cast<size_t>(10)));
+        std::ostringstream msg;
+        msg << "JSON Parse Error in " << jsonString << " '"
+                << rapidjson::GetParseError_En(result.Code()) << "' near: " << nearStr;
+        TLOG(ERROR) << msg.str();
+        throw std::runtime_error(msg.str());
+    }
+    return doc;
+}
+
 const rapidjson::Document& ResourceManager::getJsonResource(const std::string_view& resourceFile)
 {
     {
@@ -95,21 +118,7 @@ const rapidjson::Document& ResourceManager::getJsonResource(const std::string_vi
     if (inserted)
     {
         const auto& jsonString = getStringResource(resourceFile, lock);
-        rapidjson::Document doc;
-        rapidjson::ParseResult result = doc.Parse(jsonString);
-        if (result.IsError())
-        {
-            using std::min;
-            std::string nearStr = jsonString.substr(
-                result.Offset(),
-                min(jsonString.size() - result.Offset(), static_cast<size_t>(10)));
-            std::ostringstream msg;
-            msg << "JSON Parse Error in " << resourceFile << " '"
-                << rapidjson::GetParseError_En(result.Code()) << "' near: " << nearStr;
-            TLOG(ERROR) << msg.str();
-            throw std::runtime_error(msg.str());
-        }
-        iterator->second = std::move(doc);
+        iterator->second = toJsonDoc(jsonString);
     }
     return iterator->second;
 }

@@ -1,0 +1,17 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+
+# removed due to dependency to http://fhir.de/StructureDefinition/observation-de-vitalsign
+package/StructureDefinition-KBV-PR-Base-Observation-Blood-Pressure.json
+package/StructureDefinition-KBV-PR-Base-Observation-Body-Height.json
+package/StructureDefinition-KBV-PR-Base-Observation-Body-Temperature.json
+package/StructureDefinition-KBV-PR-Base-Observation-Body-Weight.json
+package/StructureDefinition-KBV-PR-Base-Observation-Head-Circumference.json
+package/StructureDefinition-KBV-PR-Base-Observation-Heart-Rate.json
+package/StructureDefinition-KBV-PR-Base-Observation-Peripheral-Oxygen-Saturation.json
+package/StructureDefinition-KBV-PR-Base-Observation-Respiratory-Rate.json

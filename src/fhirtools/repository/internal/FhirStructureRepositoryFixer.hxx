@@ -29,15 +29,15 @@ class FhirStructureRepositoryFixer
 
     using ElementEntries = decltype(FhirStructureDefinition::mElements);
     using ElementEntry = ElementEntries::iterator;
-    void fixElement(FhirStructureDefinition& profile, ElementEntry& element);
+    void fixElement(ElementEntry& element);
 
 
     [[nodiscard]] std::unique_ptr<FhirElement::Builder>
-    fixMissingSlicingInDerivate(FhirStructureDefinition& profile, std::shared_ptr<const FhirElement>& element,
+    fixMissingSlicingInDerivate(std::shared_ptr<const FhirElement>& element,
                                 std::unique_ptr<FhirElement::Builder> builder = nullptr);
 
-    std::optional<fhirtools::FhirSlicing> findParentSlicing(const ProfiledElementTypeInfo& pet) const;
-    std::optional<fhirtools::FhirSlicing> findParentSlicing(const FhirStructureDefinition& profile,
+    std::shared_ptr<const fhirtools::FhirSlicing> findParentSlicing(const ProfiledElementTypeInfo& pet) const;
+    std::shared_ptr<const fhirtools::FhirSlicing> findParentSlicing(const FhirStructureDefinition& profile,
                                                             const std::string_view baseElementName,
                                                             const std::string_view rest) const;
 

@@ -6,10 +6,10 @@
  */
 
 #include "shared/util/ConfigurationFormatter.hxx"
-#include "shared/util/Configuration.hxx"
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/String.hxx"
-#include "fhirtools/repository/FhirResourceViewConfiguration.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
@@ -58,15 +58,6 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
             defaultValue = value;
         }
         processConfOption(document, erpEnvVariables, confOption, flags, value, defaultValue, modified);
-    }
-    const auto viewConfig = Fhir::instance().fhirResourceViewConfiguration();
-    for (const auto& [confOption, value, defaultValue] : viewConfig.variables())
-    {
-        KeyData keyData{.environmentVariable = confOption.environmentVariable,
-                        .jsonPath = confOption.jsonPath,
-                        .flags = KeyData::categoryFunctionalStatic,
-                        .description = ""};
-        processConfOption(document, erpEnvVariables, keyData, flags, value, defaultValue, value != defaultValue);
     }
 
     const rapidjson::Pointer unusedVarsPointer("/unusedVariables");
