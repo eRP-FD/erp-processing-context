@@ -301,7 +301,7 @@ public:
     {
         auto systemSubElement = element.subElements("system");
         auto codeSubElement = element.subElements("code");
-        if (systemSubElement.size() != 1 || codeSubElement.size() == 1)
+        if (systemSubElement.size() != 1 || codeSubElement.size() != 1)
         {
             return false;
         }

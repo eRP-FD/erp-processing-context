@@ -278,6 +278,7 @@ namespace
         "CN=Pseudo German Trusted List Signer 11, O=Pseudo Federal Network Agency, C=DE",
         "CN=Pseudo German Trusted List Signer 10, O=Pseudo Federal Network Agency, C=DE",
         "CN=Pseudo German Trusted List Signer 9, O=Pseudo Federal Network Agency, C=DE",
+        "C=DE, O=gematik GmbH NOT-VALID, OU=Komponenten-CA der Telematikinfrastruktur, CN=GEM.KOMP-CA57 TEST-ONLY",
     };
 }
 

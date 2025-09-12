@@ -390,10 +390,10 @@ TEST_F(IdpUpdaterTest, updateStaticCertificate2) // NOLINT(readability-function-
             std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/erp-5948-certificate.pem"));
     auto idpCertificateGemKompCa10 = Certificate::fromPem(
         FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-GEM.KOMP-CA10.pem"));
+            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/IDP-Wansim-GEM.KOMP-CA57.pem"));
     auto tslManager = createAndSetupTslManager(
         {
-            {"http://ehca-testref.sig-test.telematik-test:8080/status/ecc-ocsp",
+            {"http://ehca-testref.komp-ca.telematik-test:8080/status/ecc-ocsp",
                 {{TslTestHelper::getTslSignerCertificate(), TslTestHelper::getTslSignerCACertificate(), MockOcsp::CertificateOcspTestMode::SUCCESS},
                  {idpCertificateErp5948, idpCertificateGemKompCa10, MockOcsp::CertificateOcspTestMode::SUCCESS}}}
         });
