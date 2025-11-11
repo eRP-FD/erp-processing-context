@@ -63,10 +63,10 @@ void SessionContext::fillMvoBdeV2(const std::optional<model::KBVMultiplePrescrip
 {
     if (mPExt && mPExt->isMultiplePrescription() && mPExt->numerator().has_value())
     {
-        A_23090_06.start(
+        A_23090_07.start(
             "\"mvonr\": $mvo-nummer: Der Wert Nummer des Rezepts der Mehrfachverordnung, Datentyp Integer");
         addOuterResponseHeaderField(Header::MvoNumber, std::to_string(*mPExt->numerator()));
-        A_23090_06.finish();
+        A_23090_07.finish();
     }
 }
 

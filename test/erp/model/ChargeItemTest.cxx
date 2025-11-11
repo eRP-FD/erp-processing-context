@@ -13,6 +13,7 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <gtest/gtest.h>
 
 using namespace ::std::literals;
@@ -46,7 +47,7 @@ void checkSetSupportingInfoReferences(model::ChargeItem& chargeItem, const model
 void checkCommon(model::ChargeItem& chargeItem)
 {
     ASSERT_TRUE(chargeItem.prescriptionId());
-    EXPECT_EQ(chargeItem.prescriptionId()->toString(), "160.123.456.789.123.58");
+    EXPECT_EQ(chargeItem.prescriptionId()->toString(), "200.123.456.789.123.72");
     EXPECT_EQ(chargeItem.subjectKvnr(), "X234567891");
     EXPECT_EQ(chargeItem.entererTelematikId(), "606358757");
     ASSERT_TRUE(chargeItem.enteredDate());
@@ -106,6 +107,14 @@ void checkCommon(model::ChargeItem& chargeItem)
 
 class ChargeItemTest : public testing::Test
 {
+public:
+    std::string chargeItemXml = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{"X234567891", model::Kvnr::Type::pkv},
+        .prescriptionId = model::PrescriptionId::fromDatabaseId(
+            model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 123'456'789'123),
+        .dispenseBundleBase64 = "UEtWIGRpc3BlbnNlIGl0ZW0gYnVuZGxl",
+        .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put,
+    });
 };
 
 TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function-cognitive-complexity)
@@ -115,11 +124,14 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
     EXPECT_FALSE(chargeItem.isMarked());
 
     ::std::optional<::model::ChargeItem> sourceChargeItem;
-    ASSERT_NO_THROW(
-        sourceChargeItem = ::model::ChargeItem::fromXml(
-            ::ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-            *::StaticData::getXmlValidator()));
+    ASSERT_NO_THROW(sourceChargeItem = ::model::ChargeItem::fromXml(chargeItemXml, *::StaticData::getXmlValidator()));
     ASSERT_TRUE(sourceChargeItem.has_value());
+
+    EXPECT_FALSE(chargeItem.id().has_value());
+    ASSERT_TRUE(sourceChargeItem->id().has_value());
+    chargeItem.setId(sourceChargeItem->id().value());
+    ASSERT_TRUE(chargeItem.id());
+    EXPECT_EQ(chargeItem.id(), sourceChargeItem->id());
 
     EXPECT_FALSE(chargeItem.prescriptionId());
     ASSERT_TRUE(sourceChargeItem->prescriptionId());
@@ -129,7 +141,7 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
 
     EXPECT_FALSE(chargeItem.subjectKvnr());
     ASSERT_TRUE(sourceChargeItem->subjectKvnr());
-    chargeItem.setSubjectKvnr(sourceChargeItem->subjectKvnr().value());
+    chargeItem.setSubjectKvnr(model::Kvnr{sourceChargeItem->subjectKvnr()->id(), model::Kvnr::Type::unspecified});
     ASSERT_TRUE(chargeItem.subjectKvnr());
     EXPECT_EQ(chargeItem.subjectKvnr(), sourceChargeItem->subjectKvnr());
 
@@ -165,9 +177,7 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
 TEST_F(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
 {
     std::optional<model::ChargeItem> optChargeItem;
-    ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(
-                        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input.xml"),
-                        *StaticData::getXmlValidator()));
+    ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(chargeItemXml, *StaticData::getXmlValidator()));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -176,11 +186,9 @@ TEST_F(ChargeItemTest, ConstructFromXml)//NOLINT(readability-function-cognitive-
 
 TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-complexity)
 {
+    boost::replace_nth(chargeItemXml, R"(valueBoolean value="false")", 2, R"(valueBoolean value="true")");
     std::optional<model::ChargeItem> optChargeItem;
-    ASSERT_NO_THROW(
-        optChargeItem = model::ChargeItem::fromJson(
-            ResourceManager::instance().getStringResource("test/EndpointHandlerTest/charge_item_input_marked.json"),
-            *StaticData::getJsonValidator()));
+    ASSERT_NO_THROW(optChargeItem = model::ChargeItem::fromXml(chargeItemXml, *StaticData::getXmlValidator()));
 
     EXPECT_NO_FATAL_FAILURE(checkCommon(optChargeItem.value()));
 
@@ -212,9 +220,7 @@ TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-c
 TEST_F(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-complexity)
 {
     ::std::optional<::model::ChargeItem> chargeItem;
-    ASSERT_NO_THROW(chargeItem = ::model::ChargeItem::fromXml(::ResourceManager::instance().getStringResource(
-                                                                  "test/EndpointHandlerTest/charge_item_input.xml"),
-                                                              *::StaticData::getXmlValidator()));
+    ASSERT_NO_THROW(chargeItem = ::model::ChargeItem::fromXml(chargeItemXml, *::StaticData::getXmlValidator()));
     ASSERT_TRUE(chargeItem.has_value());
 
     ::std::optional<::model::Binary> containedBinary;
@@ -231,18 +237,13 @@ TEST_F(ChargeItemTest, MarkingFlags)//NOLINT(readability-function-cognitive-comp
     ::model::ChargeItem chargeItem;
 
     EXPECT_FALSE(chargeItem.isMarked());
+    boost::replace_nth(chargeItemXml, R"(valueBoolean value="false")", 2, R"(valueBoolean value="true")");
+    auto chargeItemInputMarked = ::model::ChargeItem::fromXml(chargeItemXml, *StaticData::getXmlValidator());
+    boost::replace_all(chargeItemXml, R"(valueBoolean value="false")", R"(valueBoolean value="true")");
+    auto chargeItemInputMarkedAll = ::model::ChargeItem::fromXml(chargeItemXml, *StaticData::getXmlValidator());
 
-    for (const auto& chargeItemJson : {"test/EndpointHandlerTest/charge_item_input_marked.json",
-                                       "test/EndpointHandlerTest/charge_item_input_marked_all.json"})
+    for (const auto& sourceChargeItem : {&chargeItemInputMarked, &chargeItemInputMarkedAll})
     {
-
-        ::std::optional<::model::ChargeItem> sourceChargeItem;
-        ASSERT_NO_THROW(
-            sourceChargeItem = ::model::ChargeItem::fromJson(
-                ::ResourceManager::instance().getStringResource(chargeItemJson), *::StaticData::getJsonValidator()))
-            << chargeItemJson;
-        ASSERT_TRUE(sourceChargeItem.has_value());
-
         const auto sourceMarkingFlag = sourceChargeItem->markingFlags();
         ASSERT_TRUE(sourceMarkingFlag.has_value());
         chargeItem.setMarkingFlags(sourceMarkingFlag.value());

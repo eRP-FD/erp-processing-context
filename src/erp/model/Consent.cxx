@@ -256,7 +256,7 @@ void Consent::setPatientKvnr(const Kvnr& kvnr)
 
 void Consent::setDateTime(const model::Timestamp& dateTime)
 {
-    setValue(dateTimePointer, dateTime.toXsDateTime());
+    setValue(dateTimePointer, dateTime.toXsDateTimeWithoutFractionalSeconds());
 }
 
 

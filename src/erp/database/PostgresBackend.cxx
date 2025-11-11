@@ -111,7 +111,7 @@ namespace
 
     QUERY(retrieveAllMedicationDispensesByKvnr, R"--(
         SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type from erp.task_view
-        WHERE kvnr_hashed = $1 AND ($2::bigint IS NULL OR prescription_id = $2::bigint)
+        WHERE kvnr_hashed = $1 AND ($2::bigint IS NULL OR (prescription_id = $2::bigint AND prescription_type = $3::smallint))
             AND medication_dispense_bundle IS NOT NULL
         )--")
 
@@ -200,9 +200,11 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
     }
     TVLOG(2) << query;
 
-    const pqxx::result results =
-        transaction()->exec_params(query, kvnrHashed.binarystring(),
-                                   prescriptionId ? prescriptionId->toDatabaseId() : std::optional<std::int64_t>{});
+    const pqxx::result results = transaction()->exec(
+        query,
+        {kvnrHashed.binarystring(), prescriptionId ? prescriptionId->toDatabaseId() : std::optional<std::int64_t>{},
+         prescriptionId ? static_cast<int16_t>(magic_enum::enum_integer(prescriptionId->type()))
+                        : std::optional<std::int16_t>{}});
 
     TVLOG(2) << "got " << results.size() << " results";
 

@@ -954,7 +954,8 @@ void UrlArguments::appendPrescriptionIdComparison(std::ostream& os, const Search
         }
         const auto& value = argument.valueAsPrescriptionId(idx);
 
-        os << "(" << argument.name << " = " << value.toDatabaseId() << ")";
+        os << "(" << argument.name << " = " << value.toDatabaseId()
+           << " AND prescription_type = " << static_cast<int16_t>(magic_enum::enum_integer(value.type())) << ")";
     }
 }
 

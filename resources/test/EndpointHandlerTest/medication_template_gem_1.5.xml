@@ -3,16 +3,6 @@
         <meta>
           <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.5"/>
         </meta>
-        <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type">
-          <valueCodeableConcept>
-            <coding>
-              <system value="http://snomed.info/sct"/>
-              <version value="http://snomed.info/sct/900000000000207008/version/20220331"/>
-              <code value="763158003"/>
-              <display value="Medicinal product (product)"/>
-            </coding>
-          </valueCodeableConcept>
-        </extension>
         <extension url="https://gematik.de/fhir/epa-medication/StructureDefinition/drug-category-extension">
           <valueCoding>
             <system value="https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs"/>

@@ -12,6 +12,7 @@
 // clang-format off
 static constexpr Requirement A_25940("E-Rezept-Fachdienst - ePA - Aktualisierung Cache Zuordnung KVNR zu ePA-Aktensystem");
 static constexpr Requirement A_25941("E-Rezept-Fachdienst - ePA - Aktualisierung Cache Zuordnung KVNR zu ePA-Aktensystem - Statuscode 404");
+static constexpr Requirement A_25942("E-Rezept-Fachdienst - ePA - Fehlerbehandlung - Information Service - Fehler im Information Service");
 [[maybe_unused]] static Requirement A_25937("E-Rezept-Fachdienst - ePA - Lokalisierung des ePA-Aktensysteme");
 [[maybe_unused]] static Requirement A_25938("E-Rezept-Fachdienst - ePA - Aktualisierung Cache ePA-Aktensysteme");
 [[maybe_unused]] static Requirement A_25951("E-Rezept-Fachdienst - ePA - Prüfung des Widerspruchs vor Übermittlung");

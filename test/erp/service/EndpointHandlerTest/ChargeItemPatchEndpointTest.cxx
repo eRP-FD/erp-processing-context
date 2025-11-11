@@ -118,8 +118,7 @@ TEST_P(ChargeItemPatchEndpointTestP, ChargeItemPatchEndpointTest)
         else
         {
             EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-            testutils::bestEffortValidateJson(serverResponse.getBody());
-            auto chargeItem = model::ChargeItem::fromJsonNoValidation(serverResponse.getBody());
+            auto chargeItem = model::ChargeItem::fromJson(serverResponse.getBody(), *StaticData::getJsonValidator());
             auto markingFlags = chargeItem.markingFlags();
             ASSERT_TRUE(markingFlags.has_value());
             auto allMarkings = markingFlags->getAllMarkings();

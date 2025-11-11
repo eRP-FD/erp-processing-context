@@ -76,7 +76,7 @@ std::optional<DatabaseConnectionInfo> DatabaseFrontend::getConnectionInfo() cons
     return mBackend->getConnectionInfo();
 }
 
-std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
+std::tuple<model::MedicationsAndDispenses, std::list<model::EuMedicationDispenseInfos>>
 DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
     auto hashedKvnr = mDerivation.hashKvnr(kvnr);
@@ -84,7 +84,7 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
     const auto encryptedResult = mBackend->retrieveAllMedicationDispenses(hashedKvnr, {}, search);
 
     model::MedicationsAndDispenses resultSet;
-    std::optional<model::EuMedicationDispenseInfos> euInfo{std::nullopt};
+    std::list<model::EuMedicationDispenseInfos> euInfos;
 
     std::map<BlobId, SafeString> keys;
 
@@ -111,14 +111,18 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
             // Ignores expected eu resources.
             resultSet.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
             // Handle ignored eu resources here:
-            euInfo = EuMedicationDispenseInfos::create(bundle);
+            auto euInfo = EuMedicationDispenseInfos::create(bundle);
+            if (euInfo.has_value())
+            {
+                euInfos.push_back( std::move(*euInfo) );
+            }
         }
         else
         {
             Fail2("unable to detect resource type of stored medication dispense", std::logic_error);
         }
     }
-    return {std::move(resultSet), std::move(euInfo)};
+    return {std::move(resultSet), std::move(euInfos)};
 }
 
 model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(const model::Kvnr& kvnr,
@@ -723,7 +727,7 @@ ConsentType mapConsentCategoryR(const db_model::ConsentCategory& category)
 void DatabaseFrontend::storeConsent(const Consent& consent)
 {
     const auto& hashedKvnr = mDerivation.hashKvnr(consent.patientKvnr());
-    mBackend->storeConsent(hashedKvnr, Timestamp::now(), (mapConsentCategory(consent.consentCategory())));
+    mBackend->storeConsent(hashedKvnr, consent.dateTime(), (mapConsentCategory(consent.consentCategory())));
 }
 
 std::optional<model::Consent> DatabaseFrontend::retrieveConsent(const model::Kvnr& kvnr,

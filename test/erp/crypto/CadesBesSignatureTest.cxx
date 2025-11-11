@@ -72,7 +72,7 @@ public:
         Expect(BIO_write(bioIndata.get(), plain.data(), static_cast<int>(plain.size())) ==
                       static_cast<int>(plain.size()), "can not write bio");
         shared_CMS_ContentInfo contentInfo = shared_CMS_ContentInfo::make(d2i_CMS_bio(bioIndata.get(), nullptr));
-        Expect(contentInfo != nullptr, "can not create CMS_ContentInfo");
+        OpenSslExpect(contentInfo != nullptr, "can not create CMS_ContentInfo");
 
         const int nidOcspResponseRevocationContainer = OBJ_txt2nid("1.3.6.1.5.5.7.16.2");
         if (nidOcspResponseRevocationContainer != NID_undef)
@@ -572,6 +572,53 @@ TEST_F(CadesBesSignatureTest, noProvidedOcspResponseInCms)
     }
 }
 
+
+TEST_F(CadesBesSignatureTest, replacedOcspResponseInCms)
+{
+    const std::string_view myText = "The text to be signed";
+    auto privKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{privateKey()});
+    auto cert = Certificate::fromPem(certificate());
+    auto certCA = Certificate::fromPem(CACertificate());
+
+    std::string signedText;
+    std::string invalidOcspResponse;
+    // embed an invalid ocsp response (incorrect produced at) into the signed text
+    {
+        auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
+        auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+        const OcspCertidPtr certId(OCSP_cert_to_id(nullptr, cert.toX509(), certCA.toX509()));
+        const auto certPair =
+            MockOcsp::CertificatePair{.certificate = cert,
+                                      .issuer = certCA,
+                                      .testMode = MockOcsp::CertificateOcspTestMode::WRONG_PRODUCED_AT};
+        invalidOcspResponse = MockOcsp::create(certId.get(), {certPair}, ocspCert, ocspKey).toDer();
+        const auto cadesBesSignature = CadesBesSignature{cert, privKey, std::string{myText}, std::nullopt,
+                                                         OcspHelper::stringToOcspResponse(invalidOcspResponse)};
+        ASSERT_NO_THROW(signedText = cadesBesSignature.getBase64());
+    }
+
+    // the TSL manager is expected to request a new OCSP response and replace the old
+    // one in the signed text
+    {
+        const std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>(
+            {}, {}, {{"http://ocsp.test.ibm.de/", {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
+        // created cadesBesSignature does contains embedded OCSP-Response which is being replaced
+        OcspResponsePtr ocspResponseFromCms;
+        auto cadesBesSignature = CadesBesSignature{signedText, *manager};
+        ASSERT_NO_THROW(ocspResponseFromCms = getEmbeddedOcspResponse(cadesBesSignature.getBase64()));
+        ASSERT_NE(ocspResponseFromCms, nullptr);
+
+        // validate embedded OCSP response, it should be the same as in the cache
+        auto x509Certificate = X509Certificate::createFromBase64(cert.toBase64Der());
+        auto ocspResponseData =
+            manager->getCertificateOcspResponse(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES},
+                                                TslTestHelper::getDefaultTestOcspCheckDescriptor());
+        const std::string bioOcspResponseFromCms = OcspHelper::ocspResponseToString(*ocspResponseFromCms);
+        ASSERT_EQ(ocspResponseData.response, bioOcspResponseFromCms);
+        // OCSP response is not the invalid one
+        ASSERT_NE(ocspResponseData.response, invalidOcspResponse);
+    }
+}
 
 TEST_F(CadesBesSignatureTest, validateSmcBOsig)
 {

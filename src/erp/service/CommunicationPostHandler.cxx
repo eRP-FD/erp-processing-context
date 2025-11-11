@@ -106,7 +106,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             session.request.getAccessToken().stringForClaim(JWT::professionOIDClaim);
         ErpExpect(senderProfessionOid.has_value(), HttpStatus::BadRequest,
             "JWT does not contain a claim for the senders profession Oid");
-        const Identity sender{validateSender(messageType, senderProfessionOid.value(), senderClaim.value())};
+        const Identity sender{validateSender(communication, senderProfessionOid.value(), senderClaim.value())};
         communication.setSender(sender);
         A_19448_01.finish();
 
@@ -120,10 +120,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         std::optional<Task> task{};
         std::optional<model::Kvnr> taskKvnr{};
-        if (messageType == Communication::MessageType::DispReq ||
-            messageType == Communication::MessageType::InfoReq ||
-            messageType == Communication::MessageType::Reply ||
-            messageType == Communication::MessageType::Representative)
+        if (communication.requiresTask())
         {
             A_21371_02.start("check existence of task");
             auto [taskAndKey, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
@@ -142,7 +139,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         session.accessLog.prescriptionId(prescriptionId);
 
         // Check for valid format of KNVR of recipient or Telematic ID
-        validateRecipient(messageType, recipient);
+        validateRecipient(communication, recipient);
 
         A_20229_01.start("limit KVNR -> KVNR messages to 10 per task");
         if (messageType == Communication::MessageType::Representative)
@@ -197,19 +194,13 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         }
         A_20752.finish();
 
-        if (messageType == Communication::MessageType::DispReq ||
-            messageType == Communication::MessageType::InfoReq ||
-            messageType == Communication::MessageType::Reply ||
-            messageType == Communication::MessageType::Representative)
-        {
-            A_20753.start("Exclusion of representative access to or using verification identity");
-            // The service MUST refuse any access to e-prescriptions using an AccessCode (representative access)
-            // if the access results in a combination of KVNR of the eGK test card and KVNR of the insured.
-            // Insured persons are not allowed to access test prescriptions.
-            // With the eGK test card it is not allowed to access prescriptions of insured person's.
-            checkVerificationIdentitiesOfKvnrs(messageType, taskKvnr.value(), sender, recipient);
-            A_20753.finish();
-        }
+        A_20753.start("Exclusion of representative access to or using verification identity");
+        // The service MUST refuse any access to e-prescriptions using an AccessCode (representative access)
+        // if the access results in a combination of KVNR of the eGK test card and KVNR of the insured.
+        // Insured persons are not allowed to access test prescriptions.
+        // With the eGK test card it is not allowed to access prescriptions of insured person's.
+        checkVerificationIdentitiesOfKvnrs(messageType, taskKvnr, sender, recipient);
+        A_20753.finish();
 
         // GEMREQ-start A_19450-01#callVerifyPayload
         A_19450_01.start("do not allow malicious code in payload");
@@ -233,9 +224,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         makeResponse(session, HttpStatus::Created, &communication);
 
         A_22367_02.start("Create initial subscription only for specific message types.");
-        if (messageType == Communication::MessageType::InfoReq ||
-            messageType == Communication::MessageType::ChargChangeReq ||
-            messageType == Communication::MessageType::DispReq)
+        if (communication.isRequest())
         {
             SubscriptionPostHandler::publish(session, std::get<model::TelematikId>(recipient));
         }
@@ -277,12 +266,11 @@ void CommunicationPostHandler::checkForChargeItemReference(const PrescriptionId&
 }
 
 model::Identity CommunicationPostHandler::validateSender(
-    model::Communication::MessageType messageType,
+    const model::Communication& communication,
     const std::string& professionOid,
     const std::string& sender) const
 {
-    if (messageType == Communication::MessageType::Reply ||
-        messageType == Communication::MessageType::ChargChangeReply)
+    if (communication.isReply())
     {
         ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::InnerRequestRole::pharmacy,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication reply message");
@@ -295,19 +283,18 @@ model::Identity CommunicationPostHandler::validateSender(
         ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::InnerRequestRole::patient,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication message");
         ErpExpect(Kvnr::isKvnr(sender), HttpStatus::BadRequest, "Invalid Kvnr");
-        auto kvnrType = messageType == Communication::MessageType::ChargChangeReq ? model::Kvnr::Type::pkv
-                                                                                  : model::Kvnr::Type::unspecified;
+        auto kvnrType = communication.messageType() == Communication::MessageType::ChargChangeReq
+                            ? model::Kvnr::Type::pkv
+                            : model::Kvnr::Type::unspecified;
         return model::Kvnr{sender, kvnrType};
     }
 }
 
 void CommunicationPostHandler::validateRecipient(
-    model::Communication::MessageType messageType,
+    const model::Communication& communication,
     const model::Identity& recipient) const
 {
-    if (messageType == Communication::MessageType::InfoReq ||
-        messageType == Communication::MessageType::ChargChangeReq ||
-        messageType == Communication::MessageType::DispReq)
+    if (communication.isRequest())
     {
         ErpExpect(std::holds_alternative<model::TelematikId>(recipient), HttpStatus::BadRequest,
                   "Expected TelematikId, got KVNR");
@@ -354,6 +341,10 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
         ErpExpect(!communicationAccessCode.has_value(), HttpStatus::BadRequest,
                   "Charge item change reply must not contain an access code in payload");
         break;
+    case Communication::MessageType::DiGA:
+        ErpExpect(! communicationAccessCode.has_value(), HttpStatus::BadRequest,
+                  "DiGA must not contain an access code in payload");
+        break;
     case Communication::MessageType::DispReq:
         ErpExpect(communicationAccessCode.has_value(), HttpStatus::BadRequest,
                 "Dispense request must contain an access code in payload");
@@ -361,8 +352,10 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
     case Communication::MessageType::Representative:
         // If sent by insurant ..
         if (senderKvnr == taskKvnr)
+        {
             ErpExpect(communicationAccessCode.has_value(), HttpStatus::BadRequest,
-                    "Representative message sent by insurant must contain an access code in payload");
+                   "Representative message sent by insurant must contain an access code in payload");
+        }
         break;
     }
 
@@ -381,29 +374,34 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
 
 void CommunicationPostHandler::checkVerificationIdentitiesOfKvnrs(
     Communication::MessageType messageType,
-    const model::Kvnr& taskKvnr,
+    const std::optional<model::Kvnr>& taskKvnr,
     const model::Identity& sender,
     const model::Identity& recipient) const
 {
-    if (messageType == Communication::MessageType::InfoReq || messageType == Communication::MessageType::DispReq)
+    switch (messageType)
     {
-        ErpExpect(std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr.verificationIdentity(),
-                  HttpStatus::BadRequest,
-                  "KVNR verification identities may not access information from insurants and vice versa");
-    }
-    else if (messageType == Communication::MessageType::Reply)
-    {
-        ErpExpect(std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr.verificationIdentity(),
-                  HttpStatus::BadRequest,
-                  "KVNR verification identities may not access information from insurants and vice versa");
-    }
-    else if (messageType == Communication::MessageType::Representative)
-    {
-        ErpExpect(std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr.verificationIdentity(),
-                  HttpStatus::BadRequest,
-                  "KVNR verification identities may not access information from insurants and vice versa");
-        ErpExpect(std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr.verificationIdentity(),
-                  HttpStatus::BadRequest,
-                  "KVNR verification identities may not access information from insurants and vice versa");
+        case Communication::MessageType::InfoReq:
+        case Communication::MessageType::DispReq:
+            ErpExpect(taskKvnr && std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr->verificationIdentity(),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
+            break;
+        case Communication::MessageType::Reply:
+        case Communication::MessageType::DiGA:
+            ErpExpect(taskKvnr && std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr->verificationIdentity(),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
+            break;
+        case Communication::MessageType::Representative:
+            ErpExpect(taskKvnr && std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr->verificationIdentity(),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
+            ErpExpect(taskKvnr && std::get<model::Kvnr>(recipient).verificationIdentity() == taskKvnr->verificationIdentity(),
+                      HttpStatus::BadRequest,
+                      "KVNR verification identities may not access information from insurants and vice versa");
+            break;
+        case Communication::MessageType::ChargChangeReq:
+        case Communication::MessageType::ChargChangeReply:
+            break;
     }
 }

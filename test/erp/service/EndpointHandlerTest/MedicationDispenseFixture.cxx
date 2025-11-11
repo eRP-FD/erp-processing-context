@@ -31,57 +31,6 @@ std::list<MedicationDispenseFixture::ProfileValidityTestParams> MedicationDispen
     using V = ResourceTemplates::Versions;
 
     return {
-        { success , "2025-04-15", single, V::GEM_ERP_1_2 },
-        { success , "2025-04-15", single, V::GEM_ERP_1_3 },
-        { failure , "2025-04-15", single, V::GEM_ERP_1_4 },
-        { failure , "2025-04-15", single, V::GEM_ERP_1_5_2 },
-        { success , "2025-04-15", bundle, V::GEM_ERP_1_2 },
-        { success , "2025-04-15", bundle, V::GEM_ERP_1_3 },
-        { failure , "2025-04-15", bundle, V::GEM_ERP_1_4 },
-        { failure , "2025-04-15", bundle, V::GEM_ERP_1_5_2 },
-        { success , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_2 },
-        { success , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_3 },
-        { failure , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_4 },
-        { failure , "2025-04-15", bundleNoProfile, V::GEM_ERP_1_5_2 },
-        { failure , "2025-04-15", parameters, V::GEM_ERP_1_2 },
-        { failure , "2025-04-15", parameters, V::GEM_ERP_1_3 },
-        { success , "2025-04-15", parameters, V::GEM_ERP_1_4 },
-        { failure , "2025-04-15", parameters, V::GEM_ERP_1_5_2 },
-
-        { failure , "2025-04-16", single, V::GEM_ERP_1_2 },
-        { failure , "2025-04-16", single, V::GEM_ERP_1_3 },
-        { failure , "2025-04-16", single, V::GEM_ERP_1_4 },
-        { failure , "2025-04-16", single, V::GEM_ERP_1_5_2 },
-        { failure , "2025-04-16", bundle, V::GEM_ERP_1_2 },
-        { failure , "2025-04-16", bundle, V::GEM_ERP_1_3 },
-        { failure , "2025-04-16", bundle, V::GEM_ERP_1_4 },
-        { failure , "2025-04-16", bundle, V::GEM_ERP_1_5_2 },
-        { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_2 },
-        { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_3 },
-        { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_4 },
-        { failure , "2025-04-16", bundleNoProfile, V::GEM_ERP_1_5_2 },
-        { failure , "2025-04-16", parameters, V::GEM_ERP_1_2 },
-        { failure , "2025-04-16", parameters, V::GEM_ERP_1_3 },
-        { success , "2025-04-16", parameters, V::GEM_ERP_1_4 },
-        { failure , "2025-04-16", parameters, V::GEM_ERP_1_5_2 },
-
-        { failure , "2025-09-30", single, V::GEM_ERP_1_2 },
-        { failure , "2025-09-30", single, V::GEM_ERP_1_3 },
-        { failure , "2025-09-30", single, V::GEM_ERP_1_4 },
-        { failure , "2025-09-30", single, V::GEM_ERP_1_5_2 },
-        { failure , "2025-09-30", bundle, V::GEM_ERP_1_2 },
-        { failure , "2025-09-30", bundle, V::GEM_ERP_1_3 },
-        { failure , "2025-09-30", bundle, V::GEM_ERP_1_4 },
-        { failure , "2025-09-30", bundle, V::GEM_ERP_1_5_2 },
-        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_2 },
-        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_3 },
-        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_4 },
-        { failure , "2025-09-30", bundleNoProfile, V::GEM_ERP_1_5_2 },
-        { failure , "2025-09-30", parameters, V::GEM_ERP_1_2 },
-        { failure , "2025-09-30", parameters, V::GEM_ERP_1_3 },
-        { success , "2025-09-30", parameters, V::GEM_ERP_1_4 },
-        { failure , "2025-09-30", parameters, V::GEM_ERP_1_5_2 },
-
         { failure , "2025-10-01", single, V::GEM_ERP_1_2 },
         { failure , "2025-10-01", single, V::GEM_ERP_1_3 },
         { failure , "2025-10-01", single, V::GEM_ERP_1_4 },
@@ -98,6 +47,12 @@ std::list<MedicationDispenseFixture::ProfileValidityTestParams> MedicationDispen
         { failure , "2025-10-01", parameters, V::GEM_ERP_1_3 },
         { success , "2025-10-01", parameters, V::GEM_ERP_1_4 },
         { success , "2025-10-01", parameters, V::GEM_ERP_1_5_2 },
+
+        { success , "2026-01-11", parameters, V::GEM_ERP_1_4 },
+        { success , "2026-01-11", parameters, V::GEM_ERP_1_5_2 },
+
+        { failure , "2026-01-12", parameters, V::GEM_ERP_1_4 },
+        { success , "2026-01-12", parameters, V::GEM_ERP_1_5_2 },
     };
 }
 
@@ -125,12 +80,14 @@ std::list<MedicationDispenseFixture::MaxWhenHandedOverTestParams> MedicationDisp
         { success , {"2025-01-12", "2025-01-15", "2025-01-14"}, parameters, V::GEM_ERP_1_4 },
         { success , {"2025-01-12", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_4 },
         { success , {"2025-10-01", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_4 },
+        { failure , {"2026-01-10", "2026-01-12", "2025-01-15"}, parameters, V::GEM_ERP_1_4 },
 
         { failure , {"2025-01-12", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
         { failure , {"2025-01-15", "2025-01-11", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
         { failure , {"2025-01-12", "2025-01-15", "2025-01-14"}, parameters, V::GEM_ERP_1_5_2 },
         { failure , {"2025-01-12", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
         { success , {"2025-10-01", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
+        { success , {"2026-01-10", "2026-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
     };
 }
 
@@ -201,8 +158,10 @@ std::list<ResourceTemplates::MedicationDispenseOptions>
 MedicationDispenseFixture::getMultiMedicationDispenseOptions(const BodyOptions& opt) const
 {
     std::list<ResourceTemplates::MedicationDispenseOptions> result;
-    auto overrideWhenHandedOverExtra = opt.overrideWhenHandedOver.empty() ? testutils::shiftDate(lastValidDayOf_1_3)
-    : opt.overrideWhenHandedOver.back();
+    auto fallbackDate = (opt.bodyType == BodyType::parameters) ? model::Timestamp::now().toGermanDate()
+                                                               : testutils::shiftDate(lastValidDayOf_1_3);
+    auto overrideWhenHandedOverExtra =
+        opt.overrideWhenHandedOver.empty() ? fallbackDate : opt.overrideWhenHandedOver.back();
     auto overrideWhenHandedOver = opt.overrideWhenHandedOver.begin();
 
     for (size_t idx = 0; idx < std::max(opt.overrideWhenHandedOver.size(), 2ul); ++idx)

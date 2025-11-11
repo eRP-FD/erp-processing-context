@@ -77,7 +77,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -91,7 +91,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -104,7 +104,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -117,7 +117,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -130,7 +130,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -143,7 +143,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 
@@ -159,7 +159,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -172,7 +172,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 }
@@ -199,7 +199,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -213,7 +213,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -226,7 +226,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 
@@ -242,7 +242,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 }
@@ -267,7 +267,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -281,7 +281,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -296,7 +296,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -311,7 +311,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -327,7 +327,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -340,7 +340,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtPharmacy),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -354,7 +354,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
@@ -368,7 +368,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
             createCommunicationPostHeader("/Communication", jwtInsurant),
             jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -432,7 +432,7 @@ TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cogniti
     auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirXmlUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -486,7 +486,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -526,7 +526,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq)//NOLINT(readability-function-cogni
         jsonString = String::replaceAll(jsonString, "Task/", "https://erp.lu2.erezepttest.net:443/Task/");
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -561,7 +561,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     auto outerResponse = client.send(encryptRequest(requestByInsurant, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -614,7 +614,7 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     outerResponse = client.send(encryptRequest(requestByRepresentative, jwtRepresentative));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    innerResponse = verifyOuterResponse(outerResponse);
+    innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -672,7 +672,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readabilit
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -692,7 +692,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readabilit
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -721,7 +721,7 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readabilit
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -741,7 +741,7 @@ TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readabilit
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -771,7 +771,7 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -791,7 +791,7 @@ TEST_F(CommunicationPostHandlerTest, RepresentativeIncorrectMatches)//NOLINT(rea
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -846,7 +846,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
             auto outerResponse = client.send(encryptRequest(request, jwtSender));
 
             // Verify and decrypt the outer response. Also the generic part of the inner response.
-            auto innerResponse = verifyOuterResponse(outerResponse);
+            auto innerResponse = verifyResponse(outerResponse);
             EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
             EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -913,7 +913,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20229)//NOLINT(readability
         auto outerResponse = client.send(encryptRequest(request, jwtSender));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::TooManyRequests);
     }
 }
@@ -975,7 +975,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
             auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
             // Verify and decrypt the outer response. Also the generic part of the inner response.
-            auto innerResponse = verifyOuterResponse(outerResponse);
+            auto innerResponse = verifyResponse(outerResponse);
             EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
             EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -1020,7 +1020,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
             auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
             // Verify and decrypt the outer response. Also the generic part of the inner response.
-            auto innerResponse = verifyOuterResponse(outerResponse);
+            auto innerResponse = verifyResponse(outerResponse);
             ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         }
     }
@@ -1049,7 +1049,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20231)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }
 
@@ -1093,7 +1093,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentString_exceedsMaxAllo
     auto outerResponse = client.send(encryptRequest(requestFitsMaxSize, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
 
     std::string contentStringExceedsMaxSize(CommunicationPayload::maxPayloadSize + 1, 'x');
@@ -1113,7 +1113,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentString_exceedsMaxAllo
     outerResponse = client.send(encryptRequest(requestExceedsMaxSize, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    innerResponse = verifyOuterResponse(outerResponse);
+    innerResponse = verifyResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     std::optional<OperationOutcome> outcome;
     ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1150,7 +1150,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentReference_notAllowed)
     auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     std::optional<OperationOutcome> outcome;
     ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1198,7 +1198,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentAttachment_notAllowed
     auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     std::optional<OperationOutcome> outcome;
     ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1238,7 +1238,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26320_task_must_be_ready)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1263,7 +1263,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26320_task_must_be_ready)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1293,7 +1293,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26320_task_must_be_ready)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1328,7 +1328,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26321_expiry_date_is_greater_equal
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1352,7 +1352,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26321_expiry_date_is_greater_equal
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1393,7 +1393,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
     }
 
@@ -1420,7 +1420,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
     }
 
@@ -1447,7 +1447,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
         std::optional<OperationOutcome> outcome;
         ASSERT_NO_FATAL_FAILURE(outcome = OperationOutcome::fromJsonNoValidation(innerResponse.getBody()));
@@ -1483,7 +1483,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
         EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -1538,7 +1538,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     }
 
@@ -1559,7 +1559,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         auto outerResponse = client.send(encryptRequest(requestAToB, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     }
 
@@ -1582,7 +1582,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant
         auto outerResponse = client.send(encryptRequest(requestAToB, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     }
 }
@@ -1618,7 +1618,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1641,7 +1641,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1664,7 +1664,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1687,7 +1687,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -1727,7 +1727,7 @@ TEST_F(CommunicationPostHandlerTest,
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1751,7 +1751,7 @@ TEST_F(CommunicationPostHandlerTest,
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1775,7 +1775,7 @@ TEST_F(CommunicationPostHandlerTest,
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1799,7 +1799,7 @@ TEST_F(CommunicationPostHandlerTest,
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -1840,7 +1840,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1867,7 +1867,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1893,7 +1893,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1920,7 +1920,7 @@ TEST_F(CommunicationPostHandlerTest, Reply_A20753_ExclusionOfVerificationIdentit
         auto outerResponse = client.send(encryptRequest(request1, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -1959,7 +1959,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -1983,7 +1983,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -2007,7 +2007,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -2031,7 +2031,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A20753_ExclusionOfVerificationIdent
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -2069,7 +2069,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -2092,7 +2092,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -2115,7 +2115,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 
@@ -2139,7 +2139,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -2165,7 +2165,7 @@ TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
 }
 
@@ -2189,7 +2189,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-functio
 
     ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -2223,7 +2223,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-functio
         jsonString = String::replaceAll(jsonString, "ChargeItem/", "https://erp.lu2.erezepttest.net:443/ChargeItem/");
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
     }
 }
@@ -2250,7 +2250,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReply)//NOLINT(readability-funct
     ClientRequest request(createCommunicationPostHeader("/Communication", jwtPharmacy), jsonString);
 
     auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirXmlUtf8));
 
     EXPECT_EQ(innerResponse.getHeader().hasHeader(Header::Location), true);
@@ -2301,7 +2301,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-func
 
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -2315,7 +2315,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReqErr)//NOLINT(readability-func
 
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 }
@@ -2340,7 +2340,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReplyErr)//NOLINT(readability-fu
 
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
@@ -2353,7 +2353,7 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReplyErr)//NOLINT(readability-fu
 
         ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 }

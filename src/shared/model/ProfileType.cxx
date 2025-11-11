@@ -33,6 +33,7 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case GEM_ERP_PR_Communication_InfoReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
+        case GEM_ERP_PR_Communication_DiGA:
         case GEM_ERP_PR_Communication_Reply:
         case GEM_ERP_PR_Communication_Representative:
         case GEM_ERP_PR_Composition:
@@ -71,7 +72,7 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case GEM_ERPEU_PR_PAR_PATCH_Task_Input:
         case GEM_ERPEU_PR_PAR_CloseOperation_Input:
         case GEM_ERPEU_PR_MedicationDispense:
-        case GEM_ERPEU_PR_PAR_Medication:
+        case GEM_ERPEU_PR_Medication:
         case GEM_ERPEU_PR_Practitioner:
         case GEM_ERPEU_PR_PractitionerRole:
         case GEM_ERPEU_PR_Organization:

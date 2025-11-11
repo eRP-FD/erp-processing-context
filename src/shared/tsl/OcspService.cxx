@@ -72,7 +72,7 @@ namespace
     }
 
 
-    // GEMREQ-start A_20159-03#sendOcspRequest
+    // GEMREQ-start A_20159-04#sendOcspRequest
     std::string sendOcspRequest (const UrlRequestSender& requestSender,
                                  const OcspUrl& url,
                                  const util::Buffer& request)
@@ -117,7 +117,7 @@ namespace
                               trustStore.getTslMode());
         }
     }
-    // GEMREQ-end A_20159-03#sendOcspRequest
+    // GEMREQ-end A_20159-04#sendOcspRequest
 
 
     X509* checkSignatureAndGetSigner (OCSP_BASICRESP& basicResponse)
@@ -481,7 +481,7 @@ namespace
 
 
     OcspResponse requestStatus(
-            OcspCertidPtr certId,
+            const OcspCertidPtr& certId,
             const X509Certificate& certificate,
             const OcspResponsePtr& ocspResponse,
             const std::optional<std::string>& serializedOcspResponse,
@@ -516,7 +516,7 @@ namespace
 
     OcspResponse sendOcspRequestAndGetStatus(
             const X509Certificate& certificate,
-            OcspCertidPtr certId,
+            const OcspCertidPtr& certId,
             const UrlRequestSender& requestSender,
             const OcspUrl& ocspUrl,
             TrustStore& trustStore,
@@ -531,7 +531,7 @@ namespace
         OcspResponsePtr ocspResponse = OcspHelper::stringToOcspResponse(response);
 
         return requestStatus(
-            std::move(certId),
+            certId,
             certificate,
             ocspResponse,
             response,
@@ -544,8 +544,46 @@ namespace
         );
     }
 
+    OcspResponse getCurrentResponseForModeUseCacheWhenInvalid(
+        const X509Certificate& certificate, const UrlRequestSender& requestSender, const OcspUrl& ocspUrl,
+        TrustStore& trustStore, const std::optional<std::vector<X509Certificate>>& ocspSignerCertificates,
+        bool validateHashExtension, const OcspCheckDescriptor& ocspCheckDescriptor, const OcspCertidPtr& certId)
+    {
+        if (ocspCheckDescriptor.providedOcspResponse != nullptr)
+        {
+            // if there is a provided OCSP request, we allow it to be invalid
+            try
+            {
+                auto ocspResponse = requestStatus(
+                    certId, certificate, ocspCheckDescriptor.providedOcspResponse, std::nullopt,
+                    ocspCheckDescriptor.timeSettings, trustStore, ocspSignerCertificates, validateHashExtension,
+                    true,// validateProducedAt
+                    true // allowCaching
+                );
+                return ocspResponse;
+            }
+            catch (const std::exception& e)
+            {
+                TVLOG(1) << "Provided OCSP response is not valid, fallback to cache or requesting one";
+            }
+        }
+        // if there is no provided OCSP request, or we skipped the expired response
+        // first try the OCSP response from the cache
+        const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
+        if (cachedOcspData.has_value())
+        {
+            TVLOG(2) << "Returning cached OCSP status: " << cachedOcspData->status.to_string();
+            return *cachedOcspData;
+        }
 
-// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-03#getCurrentResponseInternal
+        // and if there is no valid OCSP response in the cache,
+        // send OCSP-request
+        return sendOcspRequestAndGetStatus(certificate, certId, requestSender, ocspUrl, trustStore,
+                                           ocspSignerCertificates, validateHashExtension, ocspCheckDescriptor);
+    }
+
+
+// GEMREQ-start A_20765-02#ocspCheckModes, A_20159-04#getCurrentResponseInternal
     /**
      * Gets the OCSP status of a certificate.
      *
@@ -559,7 +597,7 @@ namespace
      * @param validateHashExtension whether the response hash extension should be validated
      * @param ocspCheckDescriptor describes the approach to do the OCSP check
      *
-     * @return  OCSP status (good / revoked / unknown)
+     * @return OCSP response
      * @throws OcspService::OcspError on error
      */
     OcspResponse getCurrentResponseInternal (
@@ -589,7 +627,7 @@ namespace
                     // send OCSP-request
                     return sendOcspRequestAndGetStatus(
                         certificate,
-                        std::move(certId),
+                        certId,
                         requestSender,
                         ocspUrl,
                         trustStore,
@@ -621,7 +659,7 @@ namespace
                     bool validateProducedAt = (ocspCheckDescriptor.mode != OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED);
                     // if there is a provided OCSP request it must be valid or an error must be reported
                     auto ocspResponse = requestStatus(
-                        std::move(certId),
+                        certId,
                         certificate,
                         ocspCheckDescriptor.providedOcspResponse,
                         std::nullopt,
@@ -645,9 +683,6 @@ namespace
                         return ocspResponse;
                     }
                     TVLOG(1) << "Response is valid but outdated, fallback to cache";
-                    // recreate the certId pointer which has been moved before
-                    certId = OcspCertidPtr(
-                        OCSP_cert_to_id(nullptr, certificate.getX509ConstPtr(), issuer.getX509ConstPtr()));
                 }
                 // if there is no provided OCSP request, or we skipped the expired response
                 // first try the OCSP response from the cache
@@ -663,7 +698,7 @@ namespace
                 // send OCSP-request
                 return sendOcspRequestAndGetStatus(
                     certificate,
-                    std::move(certId),
+                    certId,
                     requestSender,
                     ocspUrl,
                     trustStore,
@@ -673,6 +708,10 @@ namespace
                 break;
             }
             // GEMREQ-end A_24913#outdatedResponse
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_INVALID:
+                return getCurrentResponseForModeUseCacheWhenInvalid(certificate, requestSender, ocspUrl, trustStore,
+                                                                    ocspSignerCertificates, validateHashExtension,
+                                                                    ocspCheckDescriptor, certId);
             case OcspCheckDescriptor::CACHED_ONLY:
                 {
                     const auto cachedOcspData = trustStore.getCachedOcspData(certificate.getSha256FingerprintHex());
@@ -686,7 +725,7 @@ namespace
                         trustStore.getTslMode());
                 // if there is a provided OCSP request it must be valid or an error must be reported
                 return requestStatus(
-                    std::move(certId),
+                    certId,
                     certificate,
                     ocspCheckDescriptor.providedOcspResponse,
                     std::nullopt,
@@ -700,7 +739,7 @@ namespace
         }
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckDescriptor.mode)));
     }
-// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-03#getCurrentResponseInternal
+// GEMREQ-end A_20765-02#ocspCheckModes, A_20159-04#getCurrentResponseInternal
 
 
     OcspCheckDescriptor getTslSignerOcspCheckDescriptor()
@@ -716,7 +755,7 @@ namespace
 }   // anonymous namespace
 
 
-// GEMREQ-start A_20159-03#getCurrentResponse
+// GEMREQ-start A_20159-04#getCurrentResponse
 OcspResponse
 OcspService::getCurrentResponse (const X509Certificate& certificate,
                                const UrlRequestSender& requestSender,
@@ -733,7 +772,7 @@ OcspService::getCurrentResponse (const X509Certificate& certificate,
                                          validateHashExtension,
                                          ocspCheckDescriptor);
 }
-// GEMREQ-end A_20159-03#getCurrentResponse
+// GEMREQ-end A_20159-04#getCurrentResponse
 
 
 OcspStatus

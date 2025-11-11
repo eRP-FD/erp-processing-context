@@ -22,20 +22,12 @@ class Expression
 {
 public:
     virtual ~Expression() = default;
-    explicit Expression(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView);
     [[nodiscard]] virtual EvaluationContext eval(const EvaluationContext&) const = 0;
 
     virtual std::string debugInfo() const
     {
         return "";
     }
-
-protected:
-
-    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepository() const;
-
-private:
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mFhirStructureRepository;
 };
 
 using ExpressionPtr = std::shared_ptr<Expression>;
@@ -43,8 +35,7 @@ using ExpressionPtr = std::shared_ptr<Expression>;
 class UnaryExpression : public Expression
 {
 public:
-    explicit UnaryExpression(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                             ExpressionPtr arg);
+    explicit UnaryExpression(ExpressionPtr arg);
 
 protected:
     ExpressionPtr mArg;
@@ -53,8 +44,7 @@ protected:
 class BinaryExpression : public Expression
 {
 public:
-    BinaryExpression(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                     ExpressionPtr lhs, ExpressionPtr rhs);
+    BinaryExpression(ExpressionPtr lhs, ExpressionPtr rhs);
 
 protected:
     ExpressionPtr mLhs;
@@ -73,8 +63,7 @@ public:
 class PathSelection : public Expression
 {
 public:
-    explicit PathSelection(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                           const std::string& subElement);
+    explicit PathSelection(std::string subElement);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
     std::string debugInfo() const override;
@@ -166,10 +155,8 @@ class TypesIsOperator : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "is";
-    explicit TypesIsOperator(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                             const ExpressionPtr expression, const std::string& type);
-    explicit TypesIsOperator(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                             const ExpressionPtr typeExpression);
+    explicit TypesIsOperator(ExpressionPtr expression, std::string type);
+    explicit TypesIsOperator(ExpressionPtr typeExpression);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
 private:
@@ -183,7 +170,7 @@ class TypeAsOperator : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "as";
-    explicit TypeAsOperator(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
+    explicit TypeAsOperator(const fhirtools::FhirStructureRepositoryBackend& fhirStructureRepository,
                             ExpressionPtr expression, std::string type);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
@@ -214,9 +201,7 @@ class CollectionsContainsOperator : public CollectionsInOperator
 {
 public:
     static constexpr auto IDENTIFIER = "contains";
-    CollectionsContainsOperator(
-        std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
-        ExpressionPtr rhs);
+    CollectionsContainsOperator(ExpressionPtr lhs, ExpressionPtr rhs);
 };
 }
 #endif//FHIR_TOOLS_SRC_FHIR_PATH_EXPRESSION_EXPRESSION_HXX

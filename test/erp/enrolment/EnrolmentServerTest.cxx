@@ -14,10 +14,15 @@
 #include "shared/enrolment/EnrolmentModel.hxx"
 #include "shared/enrolment/EnrolmentRequestHandler.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/enrolment/PseudonameLogKeyPackage.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/erp-serverinfo.hxx"
+#include "shared/hsm/HsmIdentity.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/hsm/TeeTokenUpdater.hxx"
+#include "shared/hsm/production/HsmProductionClient.hxx"
+#include "shared/hsm/production/HsmProductionFactory.hxx"
+#include "shared/hsm/production/HsmRawSession.hxx"
 #include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
 #include "shared/network/client/HttpsClient.hxx"
@@ -56,6 +61,21 @@
 #endif
 #endif
 
+class HsmProductionSetupFactory : public HsmFactory
+{
+public:
+    explicit HsmProductionSetupFactory(std::unique_ptr<HsmClient>&& hsmClient, std::shared_ptr<BlobCache> blobCache)
+        : HsmFactory(std::move(hsmClient), std::move(blobCache))
+    {
+    }
+
+    ~HsmProductionSetupFactory () override = default;
+
+    std::shared_ptr<HsmRawSession> rawConnect() override
+    {
+        return std::make_shared<HsmRawSession>(HsmProductionClient::connect(HsmIdentity::getSetupIdentity()));
+    }
+};
 
 
 class EnrolmentServerTest : public MockAndProductionTestBase
@@ -67,6 +87,7 @@ public:
     static constexpr char vsdmOperatorId = '?';
 
     std::shared_ptr<BlobCache> blobCache;
+    std::shared_ptr<HsmFactory> hsmSetupFactory;
 
     EnvironmentVariableGuard enrolmentApiCredentials{ConfigurationKey::ENROLMENT_API_CREDENTIALS, defaultBasicAuth};
 
@@ -82,6 +103,15 @@ public:
             GTEST_SKIP();
         }
         blobCache = createBlobCache();
+        switch (GetParam())
+        {
+            case MockBlobCache::MockTarget::SimulatedHsm:
+                hsmSetupFactory = std::make_unique<HsmProductionSetupFactory>(std::make_unique<HsmProductionClient>(),
+                                                                              mContext->getBlobCache());
+                break;
+            case MockBlobCache::MockTarget::MockedHsm:
+                break;
+        }
 
         if (mServer == nullptr)
         {
@@ -126,6 +156,17 @@ public:
                 .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
             }
         });
+    }
+
+    std::shared_ptr<HsmSession> getHsmSetupSession() {
+        switch (GetParam())
+        {
+            case MockBlobCache::MockTarget::SimulatedHsm:
+                return hsmSetupFactory->connect();
+            case MockBlobCache::MockTarget::MockedHsm:
+                return mContext->getHsmPool().getHsmFactory().connect();
+        }
+        Fail("should be unreachable");
     }
 
     Header createHeader(const HttpMethod method, std::string&& target)
@@ -242,7 +283,7 @@ public:
     std::string createVsdmKeyPackage(char operatorId, char version,
                                      const std::optional<util::Buffer>& key = std::nullopt)
     {
-        auto package =  VsdmHmacKey{operatorId, version};
+        auto package = VsdmHmacKey{operatorId, version};
         package.set(VsdmHmacKey::jsonKey::exp, "2025-31-12");
         if (key)
         {
@@ -250,6 +291,14 @@ public:
             package.set(VsdmHmacKey::jsonKey::encryptedKey, createEncryptedVsdmKey(*key));
             package.set(VsdmHmacKey::jsonKey::hmacEmptyString, hashHex);
         }
+        return package.serializeToString();
+    }
+
+    std::string createPseudonymizationKeyPackage(unsigned int version, util::Buffer key)
+    {
+        auto package = EnrolmentModel{};
+        package.set(PseudonameLogKeyPackage::JsonKey::version, std::to_string(version));
+        package.set(PseudonameLogKeyPackage::JsonKey::encryptedKey, createEncryptedVsdmKey(key));
         return package.serializeToString();
     }
 
@@ -286,6 +335,15 @@ public:
             vsdmKeys.emplace_back(buffer.GetString());
         }
         return vsdmKeys;
+    }
+
+    std::string createPseudonymizationLogKeyPostBody(uint32_t generation, std::string_view pnLogKeyPackage)
+    {
+        std::ostringstream os;
+        const ErpVector pnLogKeyData = ErpVector::create(pnLogKeyPackage);
+        const ErpBlob blob = getHsmSetupSession()->wrapPseudonameLogKeyPackage(pnLogKeyData, generation);
+        os << R"({"blob":{"generation":)" << blob.generation << R"(,"data":")" << Base64::encode(blob.data) << "\"}}";
+        return os.str();
     }
 
     size_t toSecondsSinceEpoch (const std::chrono::system_clock::time_point t)
@@ -473,6 +531,7 @@ public:
                 case BlobType::EciesKeypair:
                 case BlobType::PseudonameKey:
                 case BlobType::VauAut:
+                case BlobType::PseudonameLogKey:
                     Fail2("BlobType not supported by UseKeyBlobGuard", std::logic_error);
                     break;
             }
@@ -584,7 +643,8 @@ TEST_P(EnrolmentServerTest, GetEnclaveStatus)//NOLINT(readability-function-cogni
     const auto id = model.getString(enrolment::GetEnclaveStatus::responseEnclaveId);
     ASSERT_TRUE(Uuid(id).isValidIheUuid());
     // The difference between the enclave time and "now" should only be as large as it takes to return that value back to us, i.e. very small.
-    ASSERT_LT(gsl::narrow<size_t>(model.getInt64(enrolment::GetEnclaveStatus::responseEnclaveTime)) - secondsSinceEpoch, 1);
+    ASSERT_LT(
+        model.getInt64(enrolment::GetEnclaveStatus::responseEnclaveTime) - gsl::narrow<int64_t>(secondsSinceEpoch), 1);
     // Initial state is "QuoteKnown", as set up by MockBlobDatabase::createBlobCache()
     ASSERT_EQ(model.getString(enrolment::GetEnclaveStatus::responseEnrolmentStatus), "QuoteKnown");
 
@@ -1550,6 +1610,50 @@ TEST_P(EnrolmentServerTest, DeleteVsdmKey_Fail)
         ASSERT_EQ(response.getBody(), "");
         ASSERT_ANY_THROW(mContext->getVsdmKeyBlobDatabase().getBlob(vsdmOperatorId, version));
     }
+}
+
+
+TEST_P(EnrolmentServerTest, PostPseudonymizationLogKey_success)
+{
+    {
+        const auto key = Random::randomBinaryData(PseudonameLogKeyPackage::keyLength);
+        const auto pnKeyLogPackage = createPseudonymizationKeyPackage(1, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/PseudoLogKey"),
+                                                          createPseudonymizationLogKeyPostBody(0, pnKeyLogPackage)));
+        checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_TRUE(response.getBody().empty());
+        auto hsmPool = mContext->getHsmPool().acquire();
+        auto& hsmSession = hsmPool.session();
+        auto logKey = hsmSession.getPseudonameLogKey();
+        ASSERT_TRUE(logKey.has_value());
+        auto cachedKey = util::rawToBuffer(logKey->begin(), logKey->size());
+        ASSERT_EQ(cachedKey, key);
+    }
+
+    // overwrite with new key
+    {
+        const auto key = Random::randomBinaryData(PseudonameLogKeyPackage::keyLength);
+        const auto pnKeyLogPackage = createPseudonymizationKeyPackage(2, key);
+        auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/PseudoLogKey"),
+                                                      createPseudonymizationLogKeyPostBody(0, pnKeyLogPackage)));
+                checkResponseHeader(response, HttpStatus::Created);
+        ASSERT_TRUE(response.getBody().empty());
+        auto hsmPool = mContext->getHsmPool().acquire();
+        auto& hsmSession = hsmPool.session();
+        auto logKey = hsmSession.getPseudonameLogKey();
+        ASSERT_TRUE(logKey.has_value());
+        auto cachedKey = util::rawToBuffer(logKey->begin(), logKey->size());
+        ASSERT_EQ(cachedKey, key);
+    }
+}
+
+TEST_P(EnrolmentServerTest, PostPseudonymizationLogKey_wrong_length)
+{
+    const auto key = Random::randomBinaryData(PseudonameLogKeyPackage::keyLength+1);
+    const auto pnKeyLogPackage = createPseudonymizationKeyPackage(1, key);
+    auto response = createClient().send(ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/PseudoLogKey"),
+                                                      createPseudonymizationLogKeyPostBody(0, pnKeyLogPackage)));
+    checkResponseHeader(response, HttpStatus::BadRequest);
 }
 
 /**

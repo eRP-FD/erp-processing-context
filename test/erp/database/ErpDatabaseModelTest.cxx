@@ -23,7 +23,7 @@ TEST_F(ErpDatabaseModelTest, AccessToken_getJson)
         EXPECT_FALSE(d.HasParseError());
         EXPECT_EQ(std::string(d["id"].GetString()), std::string("0123456789"));
         EXPECT_EQ(std::string(d["name"].GetString()), std::string("Institutions- oder Organisations-Bezeichnung"));
-        EXPECT_EQ(std::string(d["oid"].GetString()), std::string("1.2.276.0.76.4.30"));
+        EXPECT_EQ(std::string(d["oid"].GetString()), std::string("1.2.276.0.76.4.50"));
     }
 
     {

@@ -17,8 +17,7 @@ class ConversionIif : public Expression
 {
 public:
     static constexpr auto IDENTIFIER = "iif";
-    ConversionIif(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                  ExpressionPtr criterion, ExpressionPtr trueResult, ExpressionPtr falseResult);
+    ConversionIif(ExpressionPtr criterion, ExpressionPtr trueResult, ExpressionPtr falseResult);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
 private:

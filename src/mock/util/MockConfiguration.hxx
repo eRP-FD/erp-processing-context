@@ -28,7 +28,8 @@ enum class MockConfigurationKey
     MOCK_GENERATED_PKI_PATH,
     MOCK_VAU_AUT_PRIVATE_KEY,
     MOCK_VAU_AUT_CERT,
-    MOCK_VAU_AUT_SIGNER_CERT
+    MOCK_VAU_AUT_SIGNER_CERT,
+    MOCK_PSEUDONYMIZATION_LOG_KEY,
 };
 
 class MockConfigurationKeyNames : public ConfigurationKeyNamesBase<MockConfigurationKey>

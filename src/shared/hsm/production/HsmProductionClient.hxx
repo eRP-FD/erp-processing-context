@@ -98,6 +98,11 @@ public:
         const HsmRawSession& session,
         SignVauAutInput&& input) override;
 
+    ErpBlob wrapPseudonameLogKeyPackage(const HsmRawSession& session, WrapPseudonameKeyPackageInput&& input) override;
+    ErpVector unwrapPseudonameLogKeyPackage(const HsmRawSession& session, UnwrapRawPayloadInput&& input) override;
+    ErpBlob wrapPseudonameLogKey(const HsmRawSession& session, AES128KeyInput&& input) override;
+    ErpArray<Aes128Length> unwrapPseudonameLogKey(const HsmRawSession& session, UnwrapPseudonameLogKeyInput&& input) override;
+
     ::ParsedQuote parseQuote(const ::ErpVector& quote) const override;
 
     void reconnect (HsmRawSession& session) override;
@@ -124,8 +129,7 @@ private:
             const auto origin = FileNameAndLineNumber({__FILE__, __LINE__});                                           \
             if ((response).returnCode == ERP_ERR_ECIES_CURVE_MISMATCH)                                                 \
                 throw ExceptionWrapper<HsmEciesCurveMismatchException>::create(origin, s.str(), (response).returnCode);\
-            else                                                                                                       \
-                throw ExceptionWrapper<HsmException>::create(origin, s.str(), (response).returnCode);                  \
+            throw ExceptionWrapper<HsmException>::create(origin, s.str(), (response).returnCode);                      \
         }                                                                                                              \
     }
 

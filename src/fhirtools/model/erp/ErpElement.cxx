@@ -9,7 +9,7 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"
-#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>
@@ -22,18 +22,18 @@ using fhirtools::MutableElement;
 using fhirtools::PrimitiveElement;
 using fhirtools::ProfiledElementTypeInfo;
 
-ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+ErpElement::ErpElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                        std::weak_ptr<const Element> parent, const std::string& elementId, const rapidjson::Value* value,
                        const rapidjson::Value* primitiveTypeObject)
-    : ErpElement(fhirStructureRepositoryView, std::move(parent),
-                 ProfiledElementTypeInfo{fhirStructureRepositoryView, elementId}, value, primitiveTypeObject)
+    : ErpElement(fhirStructureRepository, std::move(parent),
+                 ProfiledElementTypeInfo{*fhirStructureRepository, elementId}, value, primitiveTypeObject)
 {
 }
 
-ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+ErpElement::ErpElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                        std::weak_ptr<const Element> parent, ProfiledElementTypeInfo defPtr,
                        const rapidjson::Value* value, const rapidjson::Value* primitiveTypeObject)
-    : MutableElement(fhirStructureRepositoryView, std::move(parent), std::move(defPtr))
+    : MutableElement(fhirStructureRepository, std::move(parent), std::move(defPtr))
     , mValue(value)
     , mPrimitiveTypeObject(primitiveTypeObject)
 {
@@ -41,21 +41,20 @@ ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepos
     FPExpect(! mPrimitiveTypeObject || mPrimitiveTypeObject->IsObject(), "primitive type object is not an object.");
 }
 
-ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+ErpElement::ErpElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                        std::weak_ptr<const Element> parent, const FhirStructureDefinition* structureDefinition,
                        const std::string& elementId, const rapidjson::Value* value,
                        const rapidjson::Value* primitiveTypeObject)
-    : ErpElement(fhirStructureRepositoryView, std::move(parent),
-                 ProfiledElementTypeInfo{structureDefinition->findElement(elementId)}, value,
-                 primitiveTypeObject)
+    : ErpElement(fhirStructureRepository, std::move(parent),
+                 ProfiledElementTypeInfo{structureDefinition->findElement(elementId)}, value, primitiveTypeObject)
 {
 }
 
-ErpElement::ErpElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+ErpElement::ErpElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                        std::weak_ptr<const Element> parent, fhirtools::ProfiledElementTypeInfo defPtr,
                        model::NumberAsStringParserDocument* document, rapidjson::Value* value,
                        rapidjson::Value* primitiveTypeObject)
-    : MutableElement(fhirStructureRepositoryView, std::move(parent), std::move(defPtr))
+    : MutableElement(fhirStructureRepository, std::move(parent), std::move(defPtr))
     , mValue(value)
     , mPrimitiveTypeObject(primitiveTypeObject)
     , mValueMutable(value)
@@ -221,21 +220,21 @@ std::shared_ptr<ErpElement> ErpElement::createElement(ProfiledElementTypeInfo de
                                                       const std::string& elementName,
                                                       std::optional<size_t> arrayIndex) const
 {
+    const auto* repo = std::addressof(getFhirStructureRepository());
     if (isResource)
     {
-        const auto& structureDef = getFhirStructureRepository()->findTypeById(resourceType(*val));
-        defPtr.typecast(*getFhirStructureRepository(), structureDef);
+        const auto& structureDef = repo->findTypeById(resourceType(*val));
+        defPtr.typecast(structureDef);
     }
     std::shared_ptr<ErpElement> subElement;
     if (! mDocumentMutable)
     {
-        subElement =
-            std::make_shared<ErpElement>(getFhirStructureRepository(), weak_from_this(), defPtr, val, primitiveVal);
+        subElement = std::make_shared<ErpElement>(repo, weak_from_this(), defPtr, val, primitiveVal);
     }
     else
     {
-        subElement = std::make_shared<ErpElement>(getFhirStructureRepository(), weak_from_this(), defPtr,
-                                                  mDocumentMutable, valMutable, primitiveValMutable);
+        subElement = std::make_shared<ErpElement>(repo, weak_from_this(), defPtr, mDocumentMutable, valMutable,
+                                                  primitiveValMutable);
     }
     subElement->mElementName = elementName;
     subElement->mArrayIndex = arrayIndex;
@@ -261,7 +260,7 @@ std::vector<std::shared_ptr<const Element>> ErpElement::subElements(const std::s
     rapidjson::Pointer pointer{"/" + name};
     rapidjson::Pointer primitivePointer{"/_" + name};
 
-    auto subPointerList = definitionPointer().subDefinitions(*getFhirStructureRepository(), name);
+    auto subPointerList = definitionPointer().subDefinitions(name);
     FPExpect(! subPointerList.empty(),
              definitionPointer().profile()->urlAndVersion() + " no such element: " + elementId + '.' + name);
     const auto& subPtr = subPointerList.back();
@@ -342,31 +341,32 @@ std::vector<std::shared_ptr<const Element>> ErpElement::arraySubElements(const P
 PrimitiveElement ErpElement::asPrimitiveElement() const
 {
     Expect3(mValue, "Element has no value", std::logic_error);
+    const auto* repo = std::addressof(getFhirStructureRepository());
     switch (type())
     {
         case Type::Integer:
-            return PrimitiveElement(getFhirStructureRepository(), type(),
+            return PrimitiveElement(repo, type(),
                                     model::NumberAsStringParserDocument::getOptionalIntValue(*mValue, {}).value());
         case Type::Decimal:
             return PrimitiveElement(
-                getFhirStructureRepository(), type(),
+                repo, type(),
                 fhirtools::DecimalType(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
         case Type::String:
-            return PrimitiveElement(getFhirStructureRepository(), type(),
+            return PrimitiveElement(repo, type(),
                                     std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
         case Type::Boolean:
-            return PrimitiveElement(getFhirStructureRepository(), type(), mValue->GetBool());
+            return PrimitiveElement(repo, type(), mValue->GetBool());
         case Type::Date:
             return PrimitiveElement(
-                getFhirStructureRepository(), type(),
+                repo, type(),
                 fhirtools::Date(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::DateTime:
             return PrimitiveElement(
-                getFhirStructureRepository(), type(),
+                repo, type(),
                 fhirtools::DateTime(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::Time:
             return PrimitiveElement(
-                getFhirStructureRepository(), type(),
+                repo, type(),
                 fhirtools::Time(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
         case Type::Structured:
             break;
@@ -377,8 +377,7 @@ PrimitiveElement ErpElement::asPrimitiveElement() const
             FPExpect(! value.empty(), "Quantity value not defined");
             const auto unit =
                 model::NumberAsStringParserDocument::getOptionalStringValue(*mValue, rapidjson::Pointer("/unit"));
-            return PrimitiveElement(getFhirStructureRepository(), type(),
-                                    QuantityType(fhirtools::DecimalType(value), unit.value_or("")));
+            return PrimitiveElement(repo, type(), QuantityType(fhirtools::DecimalType(value), unit.value_or("")));
         }
     }
     FPFail("not convertible to primitive");
@@ -476,4 +475,9 @@ void ErpElement::removeSubElement(const std::string& name, std::optional<size_t>
     useValue->Accept(writer);
     TVLOG(1) << buffer.GetString();
     mDocumentMutable->removeEntry(*useValue, rapidjson::Pointer{ptr});
+}
+
+const rapidjson::Value* ErpElement::jsonValue() const
+{
+    return mValue;
 }

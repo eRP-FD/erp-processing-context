@@ -29,9 +29,9 @@ const std::string& FhirConstraint::getExpression() const
 {
     return mExpression;
 }
-
-std::shared_ptr<const fhirtools::Expression> FhirConstraint::parsedExpression(const FhirStructureRepositoryView& repo,
-                                                                              ExpressionCache* cache) const
+std::shared_ptr<const fhirtools::Expression>
+FhirConstraint::parsedExpression(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
+                                 ExpressionCache* cache) const
 {
     if (! mParsedExpression)
     {
@@ -40,13 +40,13 @@ std::shared_ptr<const fhirtools::Expression> FhirConstraint::parsedExpression(co
             auto cacheEntry = cache->try_emplace(mExpression, std::shared_ptr<const Expression>{});
             if (cacheEntry.second)
             {
-                cacheEntry.first->second = FhirPathParser::parse(&repo, getExpression());
+                cacheEntry.first->second = FhirPathParser::parse(repo, getExpression());
             }
             mParsedExpression = cacheEntry.first->second;
         }
         else
         {
-            mParsedExpression = FhirPathParser::parse(&repo, getExpression());
+            mParsedExpression = FhirPathParser::parse(repo, getExpression());
         }
     }
     return mParsedExpression;

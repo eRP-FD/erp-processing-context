@@ -11,7 +11,7 @@
 #include "fhirtools/repository/FhirElement.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
-#include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
@@ -37,9 +37,9 @@ ProfiledElementTypeInfo::ProfiledElementTypeInfo(std::shared_ptr<const FhirEleme
     }
 }
 
-ProfiledElementTypeInfo::ProfiledElementTypeInfo(
-    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo, std::string_view elementId)
-    : ProfiledElementTypeInfo{get<ProfiledElementTypeInfo>(repo->resolveBaseContentReference(elementId))}
+ProfiledElementTypeInfo::ProfiledElementTypeInfo(const fhirtools::FhirStructureRepositoryBackend& repo,
+                                                 std::string_view elementId)
+    : ProfiledElementTypeInfo{get<ProfiledElementTypeInfo>(repo.resolveBaseContentReference(elementId))}
 {
 }
 
@@ -95,14 +95,14 @@ std::optional<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subField(const s
                          : std::nullopt;
 }
 
-std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(const FhirStructureRepositoryView& repo,
-                                                                           std::string_view name) const
+std::list<ProfiledElementTypeInfo> ProfiledElementTypeInfo::subDefinitions(std::string_view name) const
 {
     auto subElementDef = subField(name);
     if (! subElementDef)
     {
         return {};
     }
+    const auto& repo = mElement->structureDefinition().repositoryBackend();
     std::list<ProfiledElementTypeInfo> result;
     result.emplace_back(*subElementDef);
     if (! subElementDef->element()->isBackbone())
@@ -166,15 +166,14 @@ std::string_view ProfiledElementTypeInfo::elementPath(bool includeDot) const
             elementName.end()};
 }
 
-std::optional<ProfiledElementTypeInfo>
-fhirtools::ProfiledElementTypeInfo::typeInfoInParentStuctureDefinition(const FhirStructureRepositoryView& repo) const
+std::optional<ProfiledElementTypeInfo> fhirtools::ProfiledElementTypeInfo::typeInfoInParentStuctureDefinition() const
 {
     using namespace std::string_literals;
     if (profile()->derivation() == FhirStructureDefinition::Derivation::basetype)
     {
         return std::nullopt;
     }
-    const auto* parentType = profile()->parentType(repo);
+    const auto* parentType = profile()->parentType();
     if (parentType)
     {
         auto path = elementPath(true);
@@ -192,11 +191,10 @@ const fhirtools::FhirStructureDefinition* fhirtools::ProfiledElementTypeInfo::pr
     return std::addressof(mElement->structureDefinition());
 }
 
-void ProfiledElementTypeInfo::typecast(const FhirStructureRepositoryView& repo,
-                                       const FhirStructureDefinition* structDef)
+void ProfiledElementTypeInfo::typecast(const FhirStructureDefinition* structDef)
 {
     Expect3(structDef != nullptr, "defPtr must not be null", std::logic_error);
-    Expect3(structDef->isDerivedFrom(repo, *profile()),
+    Expect3(structDef->isDerivedFrom(*profile()),
             "target type must be derived from source-type: " + to_string(*this) + " -> " + structDef->urlAndVersion(),
             std::logic_error);
     Expect3(mElement->isRoot(), "typecast not supported for non-root: " + to_string(*this), std::logic_error);

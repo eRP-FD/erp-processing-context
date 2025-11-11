@@ -29,7 +29,7 @@ class ClosedSliceExtensionsReportTest : public ClosedSliceExtensionsNoReportTest
 protected:
     fhirtools::ValidatorOptions validatorOptions() override
     {
-        return { .reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable };
+        return { .reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing };
     }
 };
 
@@ -59,27 +59,27 @@ INSTANTIATE_TEST_SUITE_P( samples, ClosedSliceExtensionsReportTest, ::testing::V
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/valid_string.json"},
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/report_unknownUrl1.json",
         {
-            {std::make_tuple(Severity::warning, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[0]"}
+            {std::make_tuple(Severity::error, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[0]"}
         }
     },
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/report_unknownUrl2.json",
         {
-            {std::make_tuple(Severity::warning, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[1]"}
+            {std::make_tuple(Severity::error, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[1]"}
         }
     },
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/report_unexpectedUrl1.json",
         {
-            {std::make_tuple(Severity::warning, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[0]"}
+            {std::make_tuple(Severity::error, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[0]"}
         }
     },
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/report_unexpectedUrl2.json",
         {
-            {std::make_tuple(Severity::warning, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[1]"}
+            {std::make_tuple(Severity::error, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[1]"}
         }
     },
     Sample{"DomainResource", "test/fhir-path/closedSlicingExtensions/samples/report_unexpectedUrl3.json",
         {
-            {std::make_tuple(Severity::warning, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[2]"}
+            {std::make_tuple(Severity::error, fhirtools::ExtendedValidation::unslicedExtension), "DomainResource.extension[2]"}
         }
     }
 ));

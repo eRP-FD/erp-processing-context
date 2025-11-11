@@ -16,8 +16,7 @@ namespace fhirtools
 class ComparisonOperator : public BinaryExpression
 {
 public:
-    ComparisonOperator(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                       ExpressionPtr lhs, ExpressionPtr rhs);
+    ComparisonOperator(ExpressionPtr lhs, ExpressionPtr rhs);
 
 protected:
     template <bool (*cmp)(std::partial_ordering)>

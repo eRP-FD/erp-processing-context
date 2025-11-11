@@ -94,7 +94,7 @@ public:
     JWT jwtKrankenhausapotheke;
 
     ClientTeeProtocol teeProtocol;
-    HttpsClient mClient;
+    HttpsReconnectingClient mClient;
     ContentMimeType mMimeType{ContentMimeType::fhirJsonUtf8};
 };
 

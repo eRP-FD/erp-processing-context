@@ -1,0 +1,30 @@
+{
+    "resourceType": "Bundle",
+    "id": "bundle_fullUrl",
+    "type": "collection",
+    "entry": [
+        {
+            "fullUrl": "http://fhirtools.test/Device/1",
+            "resource": {
+                "resourceType": "Device",
+                "id": "1",
+                "text": "<div>good reference</div>"
+            }
+        },
+        {
+            "fullUrl": "http://fhirtools.test/Device/2",
+            "resource": {
+                "resourceType": "Device",
+                "id": "WRONG_ID"
+            }
+        },
+        {
+            "fullUrl": "http://fhirtools.test/DomainResource/1",
+            "resource": {
+                "resourceType": "Basic",
+                "id": "1",
+                "text": "<div>Wrong ResourceType</div>"
+            }
+        }
+    ]
+}

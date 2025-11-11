@@ -8,6 +8,7 @@
 #include "fhirtools/util/SaxHandler.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Parameters.hxx"
 #include "shared/model/ResourceFactory.hxx"
@@ -108,11 +109,61 @@ model::ResourceFactoryBase::validateGeneric(const fhirtools::FhirStructureReposi
 {
     std::string resourceTypeName;
     resourceTypeName = resource().getResourceType();
-    rootElement = std::make_shared<ErpElement>(repo.shared_from_this(), std::weak_ptr<const fhirtools::Element>{},
-                                               resourceTypeName, &resource().jsonDocument());
+    rootElement = std::make_shared<ErpElement>(std::addressof(Fhir::instance().backend()),
+                                               std::weak_ptr<const fhirtools::Element>{}, resourceTypeName,
+                                               &resource().jsonDocument());
 
     auto timer = resource().timingLogTimer();
-    return fhirtools::FhirPathValidator::validateWithProfiles(rootElement, resourceTypeName, profiles, options);
+    return fhirtools::FhirPathValidator::validateWithProfiles(repo.shared_from_this(), rootElement, resourceTypeName,
+                                                              profiles, options);
+}
+
+std::string model::ResourceFactoryBase::errorMessage(const fhirtools::ValidationResults& validationResults)
+{
+    for (const auto& result: validationResults.results())
+    {
+        if (result.severity() < fhirtools::Severity::error)
+        {
+            continue;
+        }
+        if (const auto* extendedValidationResult =
+                std::get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&result.reason))
+        {
+            switch (get<fhirtools::ExtendedValidation>(*extendedValidationResult))
+            {
+                using enum fhirtools::ExtendedValidation;
+                case unslicedExtension:
+                    A_22927_02.start("generate required message");
+                    return "Unintendierte Verwendung von Extensions an unspezifizierter Stelle";
+                    A_22927_02.finish();
+                case invalidUrnUuidInUri:
+                case bundleFullUrlMissing:
+                case bundleFullUrlResourceTypeMissmatch:
+                    break;
+                case bundleFullUrlIdMissmatch:
+                    A_26229_01.start("generate required message");
+                    return "Die ID einer Ressource und die ID der zugehörigen fullUrl stimmen nicht überein.";
+                    A_26229_01.finish();
+                    break;
+                case bundleFullUrlInvalidFormat:
+                    A_26233_01.start("generate required message");
+                    return "Format der fullUrl ist ungültig.";
+                    A_26233_01.finish();
+                    break;
+                case bundledResourceMissingId:
+                    A_27648.start("generate required message");
+                    return "Die ID einer Ressource im Bundle ist nicht vorhanden";
+                    A_27648.finish();
+                    break;
+                case unresolveableReferenceInBundle:
+                    A_27649.start("generate required message");
+                    return "Referenz einer Ressource konnte nicht aufgelöst werden.";
+                    A_27649.finish();
+                    break;
+            }
+        }
+    }
+    return "FHIR-Validation error";
 }
 
 std::optional<std::string_view> model::ResourceFactoryBase::getProfileName() const
@@ -217,7 +268,7 @@ void model::ResourceFactoryBase::conditionalValidateGeneric(
              genericValidationMode == GenericValidationMode::require_success)
     {
         TVLOG(2) << resource().serializeToJsonString();
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, errorMessage(validationResult), validationResult.summary());
     }
 }
 

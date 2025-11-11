@@ -36,13 +36,13 @@ public:
 
 bool HsmTestBase::isHsmSimulatorSupportedAndConfigured (void)
 {
-    static const bool isSimulatorSupportedAndConfigured = mAllowProductionHsm &&
+    static const bool isSimulatorSupportedAndConfigured =
 #if WITH_HSM_TPM_PRODUCTION > 0
-        false;
-#else
         ! Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE).empty();
+#else
+        false;
 #endif
-    return isSimulatorSupportedAndConfigured;
+    return mAllowProductionHsm && isSimulatorSupportedAndConfigured;
 }
 
 

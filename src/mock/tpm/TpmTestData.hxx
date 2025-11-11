@@ -80,6 +80,12 @@ namespace tpm
         "AiACrLWTSgmzGpeaF5IGbrxuXAuUnHZa3vtERcpnlTl8GAIgL7yiaE5ZQwgu2aRK"
         "1j3XKLmXZG0gKu7zyd9sJbzViU4="
     );
+    // cleartext "helloworld12345\0"
+    constexpr static auto pseudonymizationLogKey_base64 = std::string_view(
+        "QgAAAAAAAABoAAAAAAAAAFet3uX8jYsMs1rW7dq0lHRVQ+++iteVivPQMEIzOCQIQgAAAFNJTUwA"
+        "l1ai6brpQaqWePjUET0L4tCNNttncFGPlzX86AAAABwAAADNIMBcMoUMcDXrwLNYJDQbSrHvOr+l"
+        "MEw9gwzq"
+    );
 }
 
 #endif

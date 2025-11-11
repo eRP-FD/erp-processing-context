@@ -24,13 +24,20 @@ public:
     class Getter;
     class Setter;
 
+    enum class ThrottleMode
+    {
+        MANUAL,
+        AUTOMATIC_EPA_LOOKUP
+    };
+
 private:
     bool isPaused() const;
     std::chrono::milliseconds throttleValue() const;
+    ThrottleMode throttleMode() const;
 
     void pause();
     void resume();
-    void throttle(const std::chrono::milliseconds& throttle);
+    void throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle);
 
     void setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs);
     std::chrono::milliseconds getMetricsLogThresholdMs(DurationCategory category) const;
@@ -40,6 +47,7 @@ private:
 
     bool mPause{false};
     std::chrono::milliseconds mThrottle{0};
+    ThrottleMode mThrottleMode{ThrottleMode::MANUAL};
 };
 
 class RuntimeConfiguration::Getter : boost::noncopyable
@@ -49,6 +57,7 @@ public:
 
     bool isPaused() const;
     std::chrono::milliseconds throttleValue() const;
+    ThrottleMode throttleMode() const;
 
     std::chrono::milliseconds getMetricsLogThresholdMs(DurationCategory category) const;
     std::map<DurationCategory, std::chrono::milliseconds> getMetricsLogThresholdsMs() const;
@@ -72,10 +81,11 @@ public:
 
     void pause();
     void resume();
-    void throttle(const std::chrono::milliseconds& throttle);
+    void throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle);
 
     bool isPaused() const;
     std::chrono::milliseconds throttleValue() const;
+    ThrottleMode throttleMode() const;
 
     void setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs);
 

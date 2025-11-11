@@ -5,6 +5,7 @@ Checks:
   -hicpp-move-const-arg,
   -performance-move-const-arg,
   -performance-unnecessary-value-param,
+  -cppcoreguidelines-macro-usage,
   -cppcoreguidelines-pro-type-const-cast,
   -cppcoreguidelines-pro-bounds-constant-array-index,
   -clang-diagnostic-unused-result,

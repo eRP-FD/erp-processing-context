@@ -20,7 +20,7 @@
 #include "shared/model/Binary.hxx"
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -247,7 +247,7 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
     SafeString decryptedDoctorIdentity;
     ASSERT_NO_THROW(decryptedDoctorIdentity = getDBCodec().decode(encryptedDoctorIdentity, taskKey));
     SafeString expectedDoctorIdentity{
-        R"({"id":"0123456789","name":"Institutions- oder Organisations-Bezeichnung","oid":"1.2.276.0.76.4.30"})"};
+        R"({"id":"0123456789","name":"Institutions- oder Organisations-Bezeichnung","oid":"1.2.276.0.76.4.50"})"};
     EXPECT_EQ(decryptedDoctorIdentity, expectedDoctorIdentity);
     // 23: pharmacy_identity
     db_model::EncryptedBlob encryptedPharmacyIdentity{row[col::pharmacy_identity].as<db_model::postgres_bytea>()};

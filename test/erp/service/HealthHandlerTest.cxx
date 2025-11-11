@@ -247,7 +247,9 @@ public:
         const rapidjson::Pointer& pointer,
         const std::string& expectedValue)
     {
-        const std::string value = pointer.Get(document)->GetString();
+        const auto* valuePtr = pointer.Get(document);
+        ASSERT_NE(valuePtr, nullptr);
+        const std::string value = valuePtr->GetString();
         EXPECT_TRUE(value.find(expectedValue) != std::string::npos)
             << "Actual: " << value << "\nExpected to contain: " << expectedValue;
     }

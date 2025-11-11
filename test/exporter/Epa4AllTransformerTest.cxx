@@ -904,9 +904,10 @@ std::string Epa4AllTransformerTest::str(const rapidjson::Value& value)
 void Epa4AllTransformerTest::validate(fhirtools::DefinitionKey targetProfileKey, const rapidjson::Value* resource,
                                       const model::Timestamp& timestamp)
 {
+    auto repoView = getRepo(targetProfileKey, timestamp);
     auto erpElement = createErpElement(targetProfileKey, resource, timestamp);
     auto validationResult = fhirtools::FhirPathValidator::validateWithProfiles(
-        erpElement, erpElement->definitionPointer().element()->name(), {targetProfileKey}, {});
+        repoView, erpElement, erpElement->definitionPointer().element()->name(), {targetProfileKey}, {});
     EXPECT_LT(validationResult.highestSeverity(), fhirtools::Severity::error) << validationResult.summary();
 }
 void Epa4AllTransformerTest::checkExpression(const std::string& expression, fhirtools::DefinitionKey targetProfileKey,
@@ -914,9 +915,9 @@ void Epa4AllTransformerTest::checkExpression(const std::string& expression, fhir
 {
     auto erpElement = createErpElement(targetProfileKey, resource, model::Timestamp::now());
     auto repoView = getRepo(targetProfileKey, model::Timestamp::now());
-    auto parsedExpression = fhirtools::FhirPathParser::parse(repoView.get(), expression);
+    auto parsedExpression = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), expression);
     Expect3(parsedExpression, "could not parse " + expression, std::logic_error);
-    auto resultCollection = parsedExpression->eval(fhirtools::EvaluationContext{erpElement}).collection;
+    auto resultCollection = parsedExpression->eval(fhirtools::EvaluationContext{repoView, erpElement}).collection;
     ASSERT_EQ(resultCollection.size(), 1) << expression << " did not evaluate";
     EXPECT_TRUE(resultCollection.boolean()->asBool());
 }
@@ -927,9 +928,9 @@ std::shared_ptr<ErpElement> Epa4AllTransformerTest::createErpElement(fhirtools::
     auto repoView = getRepo(targetProfileKey, timestamp);
     const auto* targetProfile = repoView->findStructure(targetProfileKey);
     Expect(targetProfile, "profile not found in repo view " + to_string(targetProfileKey));
-    auto erpElement =
-        std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{},
-                                     fhirtools::ProfiledElementTypeInfo{*targetProfile}, resource, nullptr);
+    auto erpElement = std::make_shared<ErpElement>(
+        std::addressof(Fhir::instance().backend()), std::weak_ptr<const fhirtools::Element>{},
+        fhirtools::ProfiledElementTypeInfo{*targetProfile}, resource, nullptr);
     return erpElement;
 }
 std::shared_ptr<const fhirtools::FhirStructureRepositoryView>

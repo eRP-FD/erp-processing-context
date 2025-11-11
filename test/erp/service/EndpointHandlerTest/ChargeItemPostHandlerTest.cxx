@@ -360,6 +360,9 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readabili
                                      "Bundle_invalid_AbgabedatenBundle-missing-Bankverbindung.xml");
     dispenseBundleXml = regex_replace(dispenseBundleXml, std::regex{R"(<whenHandedOver value="[0-9-]+" />)"},
                                       "<whenHandedOver value=\"" + model::Timestamp::now().toGermanDate() + "\"/>");
+    auto renderVersion = ResourceTemplates::Versions::DAV_PKV_current().renderVersion();
+    dispenseBundleXml = regex_replace(dispenseBundleXml, std::regex{R"((DAV-PKV-PR-ERP-[^|"]+)\|1.3)"},
+                                      "$1|" + renderVersion);
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(), dispenseBundleXml,
                                         std::nullopt};
     const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
@@ -420,10 +423,14 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(reada
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
-
-    auto& resourceManager = ResourceManager::instance();
-    const auto chargeItemXml = resourceManager.getStringResource(
-        std::string{TEST_DATA_DIR} + "/validation/xml/pkv/chargeItem/ChargeItem_invalid_wrongEnterer.xml");
+    auto chargeItemXml = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+        .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
+        .operation = OperationType::Post,
+    });
+    boost::replace_first(chargeItemXml, "https://gematik.de/fhir/sid/telematik-id",
+                         "https://gematik.de/fhir/NamingSystem/wrong");
     auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     inputChargeItem.setPrescriptionId(pkvTaskId);
 
@@ -445,10 +452,14 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLIN
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
-
-    auto& resourceManager = ResourceManager::instance();
-    const auto chargeItemXml = resourceManager.getStringResource(
-        std::string{TEST_DATA_DIR} + "/validation/xml/pkv/chargeItem/ChargeItem_invalid_wrongVersion.xml");
+    auto chargeItemXml = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+        .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
+        .operation = OperationType::Post,
+    });
+    chargeItemXml = std::regex_replace(chargeItemXml, std::regex{R"(GEM_ERPCHRG_PR_ChargeItem\|[^"]+)"},
+                                       "GEM_ERPCHRG_PR_ChargeItem|0.1");
     auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     inputChargeItem.setPrescriptionId(pkvTaskId);
 

@@ -9,5 +9,11 @@ enum class ExtendedValidation
 {
     unslicedExtension,
     invalidUrnUuidInUri,
+    bundleFullUrlMissing,
+    bundleFullUrlIdMissmatch,
+    bundleFullUrlResourceTypeMissmatch,
+    bundleFullUrlInvalidFormat,
+    bundledResourceMissingId,
+    unresolveableReferenceInBundle,
 };
 }

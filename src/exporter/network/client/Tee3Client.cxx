@@ -6,6 +6,8 @@
 
 #include "exporter/network/client/Tee3Client.hxx"
 #include "exporter/BdeMessage.hxx"
+#include "exporter/model/EpaOpRxDispensationErpOutputParameters.hxx"
+#include "exporter/model/EpaOpRxPrescriptionErpOutputParameters.hxx"
 #include "exporter/network/client/Tee3ClientsForHost.hxx"
 #include "exporter/tee3/EpaCertificateService.hxx"
 #include "exporter/VauAutTokenSigner.hxx"
@@ -191,6 +193,49 @@ boost::system::result<epa::Tee3Protocol::VauCid> getVauCidChecked(const Tee3Clie
         return Tee3Client::error::tee3_handshake_failed;
     }
     return vauCid;
+}
+
+const std::array<std::string_view, 3> erpOps{
+    "provide-prescription-erp",
+    "cancel-prescription-erp",
+    "provide-dispensation-erp"
+};
+
+void addIssueDetailCode(BDEMessage& bde, const std::string& responseBody)
+{
+    auto obj = model::NumberAsStringParserDocument::fromJson(responseBody);
+
+    switch (value(bde.mInnerResponseCode))
+    {
+        case 200: {
+            model::EPAOperationOutcome::Issue issue;
+            if (bde.mInnerOperation.ends_with("provide-dispensation-erp"))
+            {
+                model::EPAOpRxDispensationERPOutputParameters params(std::move(obj));
+                issue = params.getOperationOutcomeIssue();
+            }
+            else
+            {
+                model::EPAOpRxPrescriptionERPOutputParameters params(std::move(obj));
+                issue = params.getOperationOutcomeIssue();
+            }
+            bde.mErrorCode.emplace(std::string{magic_enum::enum_name(issue.detailsCode)});
+            break;
+        }
+
+        case 400: {
+            const auto outcome = model::OperationOutcome::fromJson(obj);
+            const auto& issues = outcome.issues();
+            if (! issues.empty() && ! issues.front().detailsCodings.empty())
+            {
+                if (auto code = issues.front().detailsCodings.front().getCode())
+                {
+                    bde.mErrorCode.emplace(code.value());
+                }
+            }
+            break;
+        }
+    }
 }
 
 } // namespace
@@ -501,6 +546,13 @@ Tee3Client::sendInner(std::string xRequestId, Request request, std::unordered_ma
     if (response)
     {
         bde.mInnerResponseCode = response->result_int();
+
+        if (std::ranges::any_of(erpOps, [&](auto op) {
+                return bde.mInnerOperation.ends_with(op);
+            }))
+        {
+            addIssueDetailCode(bde, response->body());
+        }
     }
     else
     {

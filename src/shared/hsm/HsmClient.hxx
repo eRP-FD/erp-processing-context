@@ -88,6 +88,25 @@ struct SignVauAutInput
     ErpVector signableData;
 };
 
+struct WrapPseudonameKeyPackageInput
+{
+    unsigned int generation = 0;
+    ErpVector rawPayload;
+};
+
+struct AES128KeyInput
+{
+    ErpBlob teeToken;
+    unsigned int generation = 0;
+    ErpArray<Aes128Length> aesKey = {};
+};
+
+struct UnwrapPseudonameLogKeyInput
+{
+    ErpBlob teeToken;
+    ErpBlob pseudonameAesKey;
+};
+
 struct ParsedQuote {
     ::ErpVector qualifiedSignerName;
     ::ErpVector qualifyingInformation;
@@ -170,6 +189,11 @@ public:
     virtual ErpVector signWithVauAutKey(
         const HsmRawSession& session,
         SignVauAutInput&& input) = 0;
+
+    virtual ErpBlob wrapPseudonameLogKeyPackage(const HsmRawSession& session, WrapPseudonameKeyPackageInput&& input) = 0;
+    virtual ErpVector unwrapPseudonameLogKeyPackage(const HsmRawSession& session, UnwrapRawPayloadInput&& input) = 0;
+    virtual ErpBlob wrapPseudonameLogKey(const HsmRawSession& session, AES128KeyInput&& input) = 0;
+    virtual ErpArray<Aes128Length> unwrapPseudonameLogKey(const HsmRawSession& session, UnwrapPseudonameLogKeyInput&& input) = 0;
 
     virtual ::ParsedQuote parseQuote(const ::ErpVector& quote) const = 0;
 

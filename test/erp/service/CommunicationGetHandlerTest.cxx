@@ -17,6 +17,7 @@
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ServerTestBaseAutoCleanup.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <pqxx/connection>
 #include <pqxx/pqxx>
@@ -66,7 +67,7 @@ public:
             std::sort(expectedCommunicationIds.begin(), expectedCommunicationIds.end());
         }
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         verifyGenericInnerResponse(innerResponse, expectedHttpStatus, expectedMimeType);
 
         // Verify the returned bundle.
@@ -81,6 +82,7 @@ public:
             {
                 bundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody());
             }
+            EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
             if (bundle.getResourceCount() != expectedCommunicationIds.size())
             {
                 EXPECT_EQ(bundle.getResourceCount(), expectedCommunicationIds.size());
@@ -130,7 +132,7 @@ public:
                                            const std::string& expectedMimeType = ContentMimeType::fhirJsonUtf8)
     {
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         verifyGenericInnerResponse(innerResponse, HttpStatus::OK, expectedMimeType);
 
         // Verify the returned bundle.
@@ -175,14 +177,14 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_noFilter)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle.
     const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
-
     EXPECT_NO_THROW((void) model::ResourceFactory<model::Communication>::fromXml(communication.serializeToXmlString(),
                                                                                  *StaticData::getXmlValidator(), {})
                         .getValidated(model::Communication::messageTypeToProfileType(communication.messageType())));
@@ -223,11 +225,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterByRecipient)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle. Of the two Communication objects in the DB, only one is expected, based on the recipient.
     const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
     ASSERT_EQ(bundle.getResourceCount(), 1);
     const auto communication = model::Communication::fromJson(bundle.getResource(0));
 
@@ -272,11 +275,12 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_filterBySender)//NOLINT
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned bundle. Of the two Communication objects in the DB, only one is expected, based on the recipient.
     const auto bundle = model::Bundle::fromJsonNoValidation(innerResponse.getBody());
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
     ASSERT_EQ(bundle.getResourceCount(), 2);
     const auto communication1 = model::Communication::fromJson(bundle.getResource(0));
     const auto communication2 = model::Communication::fromJson(bundle.getResource(1));
@@ -1353,7 +1357,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_success)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     verifyGenericInnerResponse(innerResponse);
 
     // Verify the returned Communication object.
@@ -1384,7 +1388,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForMissingObject)
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
     ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value());  // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
@@ -1418,7 +1422,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_failForObjectDirectedAt
     auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
     ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value()); // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));
@@ -1444,7 +1448,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
 
     ClientRequest request(createGetHeader("/Communication/" + givenCommunication1.id().value().toString(), jwtPharmacy), "");
     auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     verifyGenericInnerResponse(innerResponse, HttpStatus::NotFound);
 }
 
@@ -1459,7 +1463,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searching_paging)
     for (int idxPatient = 0; idxPatient < 18; ++idxPatient)
     {
          const auto communication = addCommunicationToDatabase({
-            task.prescriptionId(), model::Communication::MessageType::InfoReq,
+            task.prescriptionId(), model::Communication::MessageType::DispReq,
             {ActorRole::Insurant, InsurantA}, {ActorRole::Pharmacists, pharmacy1},
             std::string(task.accessCode()),
             RepresentativeMessageByInsurant, timestamp + std::chrono::hours(-24 * idxPatient) });

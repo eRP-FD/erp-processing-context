@@ -31,7 +31,7 @@ pipeline {
             agent {
                 docker {
                     label 'dockerstage'
-                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.2.0'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
                     registryUrl 'https://de.icr.io/v2'
                     registryCredentialsId 'icr_image_puller_erp_dev_api_key'
                     reuseNode true
@@ -92,6 +92,7 @@ pipeline {
                             #
                             # The references resources have different base paths due to mixing of different build artifacts. Fixt it:
                             #
+                            sed -i "s|${ERP_BUILD_ROOT}|\${TEST_BASE}|g" ./001_fhir-resource-groups.config.json
                             sed -i "s|${ERP_BUILD_ROOT}|\${TEST_BASE}|g" ./01_production.config.json
                             sed -i "s|${ERP_BUILD_ROOT}|\${TEST_BASE}|g" ./02_development.config.json
                             #

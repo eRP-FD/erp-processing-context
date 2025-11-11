@@ -74,6 +74,29 @@ std::optional<model::Timestamp> model::FhirResourceBase::getValidationReferenceT
     return std::nullopt;
 }
 
+fhirtools::ValidationResults FhirResourceBase::genericValidate(
+    ProfileType profileType, const fhirtools::ValidatorOptions& options,
+    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) const
+{
+    std::string resourceTypeName{getResourceType()};
+    auto fhirPathElement = std::make_shared<ErpElement>(std::addressof(Fhir::instance().backend()),
+                                                        std::weak_ptr<const fhirtools::Element>{}, resourceTypeName,
+                                                        &ResourceBase::jsonDocument());
+    std::set<fhirtools::DefinitionKey> profileKeys;
+    if (const auto& modelProfile = profile(profileType))
+    {
+        profileKeys.emplace(*modelProfile);
+    }
+    for (const auto& prof : fhirPathElement->profiles())
+    {
+        profileKeys.emplace(prof);
+    }
+    auto timer = timingLogTimer();
+
+    return fhirtools::FhirPathValidator::validateWithProfiles(repoView ? repoView : getValidationView().get(),
+                                                              fhirPathElement, resourceTypeName, profileKeys, options);
+}
+
 void FhirResourceBase::setProfile(const Profile& profile)
 {
     std::visit(

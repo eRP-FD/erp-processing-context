@@ -6,16 +6,15 @@
  */
 
 #include "shared/model/GemErpEuPrMedicationDispense.hxx"
+#include "shared/model/Resource.txx"
 #include "shared/model/TelematikId.hxx"
 
 namespace model
 {
-
-namespace
+model::GemErpEuPrMedicationDispense::GemErpEuPrMedicationDispense(model::NumberAsStringParserDocument&& jsonTree)
+    : MedicationDispense{jsonTree}
 {
-using namespace model::resource;
-
-
 }
 
+template GemErpEuPrMedicationDispense Resource<GemErpEuPrMedicationDispense>::fromJson(NumberAsStringParserDocument&&);
 }

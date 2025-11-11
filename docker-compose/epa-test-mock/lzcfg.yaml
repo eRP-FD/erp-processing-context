@@ -3,6 +3,14 @@ getConsentDecisions:
     code: 200
     template: getConsentDecisions.permit.json
     delay: 5000
+  - kvnr: "X011999972"
+    code: 500
+    template: getConsentDecisions.conflict.json
+    delay: 100
+  - kvnr: "X011300999"
+    code: 409
+    template: getConsentDecisions.conflict.json
+    delay: 500
   - kvnr: ".*"
     code: 200
     template: getConsentDecisions.permit.json
@@ -33,7 +41,7 @@ providePrescription:
     delay: 300
   - kvnr: ".*"
     code: 200
-    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json  
+    template: prescriptionoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
 cancelPrescription:
   - kvnr: ".*"
     code: 200
@@ -67,6 +75,13 @@ provideDispensation:
     code: 409
     template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
     delay: 300
+  - kvnr: "X011300023"
+    code: 409
+    template: dispensationoutput_MEDICATIONSVC_PRESCRIPTION_NO_EXIST.json
+  - kvnr: "X011300013"
+    delay: 12000
+    code: 200
+    template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json
   - kvnr: ".*"
     code: 200
     template: dispensationoutput_MEDICATIONSVC_OPERATION_SUCCESS.json

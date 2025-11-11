@@ -245,11 +245,11 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     A_19112.finish();
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_19445_10.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_19445_11.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_19445_10.finish();
+    A_19445_11.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
@@ -522,10 +522,10 @@ void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatu
                 return;
         }
     }
-    A_19445_10.start(
+    A_19445_11.start(
         "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 162, 200 and 209)>");
     setAcceptDateDependentPrescriptionType(baseTime);
-    A_19445_10.finish();
+    A_19445_11.finish();
 }
 
 void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)

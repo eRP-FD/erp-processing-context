@@ -123,6 +123,7 @@ void EuCloseTaskHandler::handleRequest(PcSessionContext& session)
         task->setStatus(model::Task::Status::completed);
         A_27075.finish();
 
+        task->updateLastUpdate();
         auto practitioner = validatedDoc.practitionerModel();
         auto practitionerRole = validatedDoc.practitionerRoleModel();
         auto organization = validatedDoc.organizationModel();

@@ -20,11 +20,11 @@ void AbortTaskHandler::checkAccessValidityPharmacy(
         const model::Task &task,
         const ServerRequest &request)
 {
-    A_19145.start("Check correct task status for user pharmacy");
+    A_19146.start("Check correct task status for user pharmacy");
     ErpExpect(task.status() == model::Task::Status::inprogress, HttpStatus::Forbidden,
               "Task must be in progress for user pharmacy, is: " +
                   std::string(model::Task::StatusNames.at(task.status())));
-    A_19145.finish();
+    A_19146.finish();
 
     // check secret
     A_19224.start("Check secret for user pharmacy");
@@ -43,11 +43,11 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
     const model::Task &task,
     const ServerRequest &request)
 {
-    A_19146.start("Check correct task status for user other than pharmacy");
+    A_19145_01.start("Check correct task status for user other than pharmacy");
     ErpExpect(task.status() != model::Task::Status::inprogress, HttpStatus::Forbidden,
               "Task must not be in progress for users other than pharmacy, but is: " +
                   std::string(model::Task::StatusNames.at(task.status())));
-    A_19146.finish();
+    A_19145_01.finish();
 
     if(professionOIDClaim == profession_oid::oid_versicherter)
     {

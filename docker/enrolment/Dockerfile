@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.2.2 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \

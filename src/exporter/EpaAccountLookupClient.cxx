@@ -64,6 +64,9 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
             std::ostringstream os{};
             os << "got response code " << result.getHeader().status() << " from account lookup to " << host << ":" << port;
             bde.mError = os.str();
+            const auto doc = model::NumberAsStringParserDocument::fromJson(result.getBody());
+            const auto errorCodeStr = doc.getStringValueFromPointer(rapidjson::Pointer{"/errorCode"});
+            bde.mErrorCode = errorCodeStr;
         }
         const std::string code = result.getHeader().header(Header::InnerResponseCode).value_or("0");
         bde.mInnerResponseCode = static_cast<unsigned int>(std::strtoul(code.c_str(), nullptr, 10));

@@ -12,6 +12,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
@@ -37,6 +38,7 @@ public:
         composition = 0b10,
         all = contained | composition,
     };
+    struct ResourceInfo;
     struct ReferenceInfo {
         Element::Identity identity;
         std::string elementFullPath;
@@ -44,16 +46,21 @@ public:
         std::shared_ptr<const Element> referencingElement;
         std::map<const FhirStructureDefinition*, std::set<const FhirStructureDefinition*>> targetProfileSets;
         bool mustBeResolvable = false;
+        bool resolved = false;
+        std::weak_ptr<ResourceInfo> referencedResource{};
     };
     struct ResourceInfo {
         Element::Identity identity;
+        std::optional<std::string> fullUrl = std::nullopt;
+        std::optional<std::string> id = std::nullopt;
         std::string elementFullPath;
         std::shared_ptr<const Element> resourceRoot;
         AnchorType anchorType = AnchorType::none;
         AnchorType referenceRequirement = AnchorType::none;
         AnchorType referencedByAnchor = AnchorType::none;
         std::list<ReferenceInfo> referenceTargets{};
-        std::list<std::shared_ptr<ResourceInfo>> contained{};
+        std::weak_ptr<const ResourceInfo> parent;
+        std::list<std::shared_ptr<ResourceInfo>> children{}; // either from Bundle.entry or from DomainResource.contained
     };
     void merge(ReferenceContext&&);
     void addResource(std::shared_ptr<ResourceInfo> newResource);
@@ -66,9 +73,7 @@ public:
     ReferenceContext(ReferenceContext&&) = default;
     ReferenceContext& operator = (const ReferenceContext&) = delete;
     ReferenceContext& operator = (ReferenceContext&&) = default;
-#ifndef NDEBUG
     void dumpToLog() const;
-#endif
 
 private:
     class Finalizer;

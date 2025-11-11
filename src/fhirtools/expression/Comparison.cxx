@@ -13,10 +13,8 @@
 namespace fhirtools
 {
 
-ComparisonOperator::ComparisonOperator(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
-    ExpressionPtr rhs)
-    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
+ComparisonOperator::ComparisonOperator(ExpressionPtr lhs, ExpressionPtr rhs)
+    : BinaryExpression(std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }

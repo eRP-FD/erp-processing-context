@@ -25,13 +25,7 @@ using namespace std::string_literals;
 class ElementTest : public testing::Test
 {
 public:
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
-    const FhirStructureRepositoryView& repo = *mRepo;
-};
-
-class ElementTaskTest : public testing::Test
-{
-public:
+    const fhirtools::FhirStructureRepositoryBackend& backend = DefaultFhirStructureRepository::getBackendWithTest();
     std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
     const FhirStructureRepositoryView& repo = *mRepo;
 };
@@ -40,51 +34,51 @@ TEST_F(ElementTest, TypeDetection)
 {
     const auto* const testStructure = repo.findTypeById("Test");
     ASSERT_TRUE(testStructure);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test"), Element::Type::Structured);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.string"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiString"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.num"), Element::Type::Integer);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiNum"), Element::Type::Integer);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.dec"), Element::Type::Decimal);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multiDec"), Element::Type::Decimal);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.boolean"), Element::Type::Boolean);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.multibool"), Element::Type::Boolean);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.intAsString"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.decimalAsString"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.boolAsString"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.date"), Element::Type::Date);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.dateTime"), Element::Type::DateTime);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.time"), Element::Type::Time);
-    EXPECT_EQ(Element::getElementType(&repo, testStructure, "Test.quantity"), Element::Type::Quantity);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.string"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.multiString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.num"), Element::Type::Integer);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.multiNum"), Element::Type::Integer);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.dec"), Element::Type::Decimal);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.multiDec"), Element::Type::Decimal);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.boolean"), Element::Type::Boolean);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.multibool"), Element::Type::Boolean);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.intAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.decimalAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.boolAsString"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.date"), Element::Type::Date);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.dateTime"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.time"), Element::Type::Time);
+    EXPECT_EQ(Element::getElementType(backend, testStructure, "Test.quantity"), Element::Type::Quantity);
 }
 
-TEST_F(ElementTaskTest, TypeDetectionTask)
+TEST_F(ElementTest, TypeDetectionTask)
 {
     const auto* const hl7task = repo.findTypeById("Task");
     ASSERT_TRUE(hl7task);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task"), Element::Type::Structured);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.id"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.meta"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.id"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.meta"), Element::Type::Structured);
     //    EXPECT_EQ(Element::GetElementType(&repo, hl7task, "Task.meta.id"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.language"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.text"), Element::Type::Structured);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.contained"), Element::Type::Structured);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.extension"), Element::Type::Structured);
-    EXPECT_EQ(Element::getElementType(&repo, hl7task, "Task.implicitRules"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.implicitRules"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.language"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.text"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.contained"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.extension"), Element::Type::Structured);
+    EXPECT_EQ(Element::getElementType(backend, hl7task, "Task.implicitRules"), Element::Type::String);
 
     const auto* hl7Meta = repo.findTypeById("Meta");
     ASSERT_TRUE(hl7Meta);
-    EXPECT_EQ(Element::getElementType(&repo, hl7Meta, "Meta.id"), Element::Type::String);
-    EXPECT_EQ(Element::getElementType(&repo, hl7Meta, "Meta.lastUpdated"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(backend, hl7Meta, "Meta.id"), Element::Type::String);
+    EXPECT_EQ(Element::getElementType(backend, hl7Meta, "Meta.lastUpdated"), Element::Type::DateTime);
 
     const auto* hl7instant = repo.findTypeById("instant");
     ASSERT_TRUE(hl7instant);
-    EXPECT_EQ(Element::getElementType(&repo, hl7instant, "instant.value"), Element::Type::DateTime);
+    EXPECT_EQ(Element::getElementType(backend, hl7instant, "instant.value"), Element::Type::DateTime);
 }
 
 
-TEST_F(ElementTaskTest, SubElements)
+TEST_F(ElementTest, SubElements)
 {
     const auto* const hl7task = repo.findTypeById("Task");
     ASSERT_TRUE(hl7task);
@@ -104,7 +98,7 @@ TEST_F(ElementTaskTest, SubElements)
 }
 )--";
     auto taskResource = model::NumberAsStringParserDocument::fromJson(task);
-    ErpElement taskElement(mRepo, {}, hl7task, "Task", &taskResource);
+    ErpElement taskElement(&backend, {}, hl7task, "Task", &taskResource);
 
     auto subElementNames = taskElement.subElementNames();
     std::vector<std::string> expectedElementNames = {"id", "meta"};
@@ -125,7 +119,7 @@ TEST_F(ElementTest, ConvertFromString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.string",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.string",
                           rapidjson::Pointer("/string").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -142,7 +136,7 @@ TEST_F(ElementTest, ConvertFromInt)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.num",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.num",
                           rapidjson::Pointer("/num").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 12);
@@ -159,7 +153,7 @@ TEST_F(ElementTest, ConvertFromDecimal)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.dec",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.dec",
                           rapidjson::Pointer("/dec").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -177,7 +171,7 @@ TEST_F(ElementTest, ConvertFromBoolean)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.boolean",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.boolean",
                           rapidjson::Pointer("/boolean").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 1);
@@ -194,7 +188,7 @@ TEST_F(ElementTest, ConvertFromIntAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.intAsString",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.intAsString",
                           rapidjson::Pointer("/intAsString").Get(testResource));
 
     EXPECT_EQ(erpElement.asInt(), 32);
@@ -211,7 +205,7 @@ TEST_F(ElementTest, ConvertFromDecimalAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.decimalAsString",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.decimalAsString",
                           rapidjson::Pointer("/decimalAsString").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -229,7 +223,7 @@ TEST_F(ElementTest, ConvertFromBoolAsString)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.boolAsString",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.boolAsString",
                           rapidjson::Pointer("/boolAsString").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -246,7 +240,7 @@ TEST_F(ElementTest, ConvertFromDate)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.date",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.date",
                           rapidjson::Pointer("/date").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -263,7 +257,7 @@ TEST_F(ElementTest, ConvertFromDateTime)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.dateTime",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.dateTime",
                           rapidjson::Pointer("/dateTime").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -280,7 +274,7 @@ TEST_F(ElementTest, ConvertFromTime)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.time",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.time",
                           rapidjson::Pointer("/time").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -297,7 +291,7 @@ TEST_F(ElementTest, ConvertFromQuantity)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test.quantity",
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test.quantity",
                           rapidjson::Pointer("/quantity").Get(testResource));
 
     EXPECT_THROW((void) erpElement.asInt(), std::exception);
@@ -320,15 +314,15 @@ TEST_F(ElementTest, QuantityArithmetik)
 
 TEST_F(ElementTest, CompareTo)
 {
-    const PrimitiveElement elementInt3(mRepo, Element::Type::Integer, 3);
-    const PrimitiveElement elementInt4(mRepo, Element::Type::Integer, 4);
-    const PrimitiveElement elementDecPi(mRepo, Element::Type::Decimal, DecimalType("3.1415"));
-    const PrimitiveElement elementDec3(mRepo, Element::Type::Decimal, DecimalType(3));
-    const PrimitiveElement elementStrA(mRepo, Element::Type::String, "abc"s);
-    const PrimitiveElement elementStrB(mRepo, Element::Type::String, "ABC"s);
-    const PrimitiveElement elementQuantitiy1(mRepo, Element::Type::Quantity, Element::QuantityType(15, "cm"));
-    const PrimitiveElement elementQuantitiy2(mRepo, Element::Type::Quantity, Element::QuantityType(16, "cm"));
-    const PrimitiveElement elementQuantitiy3(mRepo, Element::Type::Quantity, Element::QuantityType(3, ""));
+    const PrimitiveElement elementInt3(&backend, Element::Type::Integer, 3);
+    const PrimitiveElement elementInt4(&backend, Element::Type::Integer, 4);
+    const PrimitiveElement elementDecPi(&backend, Element::Type::Decimal, DecimalType("3.1415"));
+    const PrimitiveElement elementDec3(&backend, Element::Type::Decimal, DecimalType(3));
+    const PrimitiveElement elementStrA(&backend, Element::Type::String, "abc"s);
+    const PrimitiveElement elementStrB(&backend, Element::Type::String, "ABC"s);
+    const PrimitiveElement elementQuantitiy1(&backend, Element::Type::Quantity, Element::QuantityType(15, "cm"));
+    const PrimitiveElement elementQuantitiy2(&backend, Element::Type::Quantity, Element::QuantityType(16, "cm"));
+    const PrimitiveElement elementQuantitiy3(&backend, Element::Type::Quantity, Element::QuantityType(3, ""));
 
     EXPECT_EQ(elementInt3.compareTo(elementInt3), std::strong_ordering::equal);
     EXPECT_EQ(elementInt3.compareTo(elementInt4), std::strong_ordering::less);
@@ -451,10 +445,10 @@ TEST_F(ElementTest, Equals1)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6"})");
-    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
-                                                   "Test", &testResource);
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   mRepo->findTypeById("Test"), "Test", &testResource);
     auto element1 = erpElement->subElements("stringPrimitive")[0];
-    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    auto element2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "Kirchspielsweg 6");
     ASSERT_TRUE(element1);
     EXPECT_TRUE(element1->equals(*element2) == true);
     EXPECT_TRUE(element2->equals(*element1) == true);
@@ -464,10 +458,10 @@ TEST_F(ElementTest, Equals2)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
-    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
-                                                   "Test", &testResource);
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   mRepo->findTypeById("Test"), "Test", &testResource);
     auto element1 = erpElement->subElements("stringPrimitive")[0];
-    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    auto element2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "Kirchspielsweg 6");
     ASSERT_TRUE(element1);
     EXPECT_TRUE(element1->equals(*element2) == true);
     EXPECT_TRUE(element2->equals(*element1) == true);
@@ -477,10 +471,10 @@ TEST_F(ElementTest, NotEquals1)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
-    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
-                                                   "Test", &testResource);
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   mRepo->findTypeById("Test"), "Test", &testResource);
     auto element1 = erpElement->subElements("stringPrimitive")[0];
-    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 6");
+    auto element2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "Kirchspielsweg 6");
     ASSERT_TRUE(element1);
     EXPECT_FALSE(element1->equals(*element2) == true);
     EXPECT_FALSE(element2->equals(*element1) == true);
@@ -490,10 +484,10 @@ TEST_F(ElementTest, NotEquals2)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6", "_stringPrimitive": {"extension": [{"url": "anyExtension", "valueCode": "unknown"}]}})");
-    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
-                                                   "Test", &testResource);
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   mRepo->findTypeById("Test"), "Test", &testResource);
     auto element1 = erpElement->subElements("stringPrimitive")[0];
-    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 7");
+    auto element2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "Kirchspielsweg 7");
     ASSERT_TRUE(element1);
     EXPECT_FALSE(element1->equals(*element2) == true);
     EXPECT_FALSE(element2->equals(*element1) == true);
@@ -503,10 +497,10 @@ TEST_F(ElementTest, NotEquals3)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6"})");
-    auto erpElement = std::make_shared<ErpElement>(mRepo, std::weak_ptr<const Element>{}, mRepo->findTypeById("Test"),
-                                                   "Test", &testResource);
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   mRepo->findTypeById("Test"), "Test", &testResource);
     auto element1 = erpElement->subElements("stringPrimitive")[0];
-    auto element2 = std::make_shared<PrimitiveElement>(mRepo, Element::Type::String, "Kirchspielsweg 7");
+    auto element2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "Kirchspielsweg 7");
     ASSERT_TRUE(element1);
     EXPECT_FALSE(element1->equals(*element2) == true);
     EXPECT_FALSE(element2->equals(*element1) == true);
@@ -517,7 +511,7 @@ TEST_F(ElementTest, asRaw)
     auto testResource = model::NumberAsStringParserDocument::fromJson(
         ResourceManager::instance().getStringResource("test/fhir-path/test-resource.json"));
 
-    ErpElement erpElement(mRepo, {}, repo.findTypeById("Test"), "Test", &testResource);
+    ErpElement erpElement(&backend, {}, repo.findTypeById("Test"), "Test", &testResource);
 
     auto testElement = [&](const std::string& subElementName, const std::string& expectedValue) {
         const auto& subElements = erpElement.subElements(subElementName);
@@ -548,7 +542,7 @@ public:
         const auto& docStr =
             ResourceManager::instance().getStringResource("test/fhir-path/element-navigation-test.json");
         json = model::NumberAsStringParserDocument::fromJson(docStr);
-        bundle = std::make_shared<ErpElement>(mRepo, std::weak_ptr<fhirtools::Element>{}, "Bundle", &json.value());
+        bundle = std::make_shared<ErpElement>(&backend, std::weak_ptr<fhirtools::Element>{}, "Bundle", &json.value());
         ASSERT_EQ(bundle->resourceType(), "Bundle");
 
         entryElements = bundle->subElements("entry");
@@ -833,7 +827,7 @@ TEST_F(ElementNavigationTest, resolveReferenceByString)
         testResolution(*entry1BundleEntry0Resource[0], "http://erp.test/DomainResource/1", nullptr));
 
     // resolve http://erp.test/DomainResource/1#2
-    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/DomainResource/1#2", nullptr));
+    EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/DomainResource/1#2", entry0DomainResourceContained[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry0DomainResource[0], "http://erp.test/DomainResource/1#2",
                                            entry0DomainResourceContained[0]));
     EXPECT_NO_FATAL_FAILURE(
@@ -851,7 +845,7 @@ TEST_F(ElementNavigationTest, resolveReferenceByString)
     // resolve http://erp.test/Resource/2
     EXPECT_NO_FATAL_FAILURE(testResolution(*bundle, "http://erp.test/Resource/2", entry1BundleEntry0Resource[0]));
     EXPECT_NO_FATAL_FAILURE(testResolution(*entry0DomainResource[0], "http://erp.test/Resource/2", nullptr));
-    EXPECT_NO_FATAL_FAILURE(testResolution(*entry1BundleEntry[0], "http://erp.test/Resource/2", nullptr));
+    EXPECT_NO_FATAL_FAILURE(testResolution(*entry1BundleEntry[0], "http://erp.test/Resource/2", entry1BundleEntry0Resource[0]));
     EXPECT_NO_FATAL_FAILURE(
         testResolution(*entry1BundleEntry0Resource[0], "http://erp.test/Resource/2", entry1BundleEntry0Resource[0]));
 }
@@ -929,9 +923,9 @@ protected:
             return std::move(out).str();
         };
         [&] {
-            auto expr = fhirtools::FhirPathParser::parse(view.get(), fhirPath);
+            auto expr = fhirtools::FhirPathParser::parse(&backend, fhirPath);
             ASSERT_NE(expr, nullptr) << "compile failure: " << fhirPath;
-            const auto collection = expr->eval(EvaluationContext{element}).collection;
+            const auto collection = expr->eval(EvaluationContext{view, element}).collection;
             ASSERT_EQ(collection.size(), 1) << fhirPath << " in " << elementAsJson();
             result = collection.single();
         }();
@@ -952,9 +946,9 @@ TEST_F(ElementNavigationTest2, genericResolve)
 {
     auto referencesGenericJson = resourceManager.getStringResource("test/fhir-path/samples/references_generic.json");
     auto referencesGeneric = model::NumberAsStringParserDocument::fromJson(referencesGenericJson);
-    auto rootElement = std::make_shared<const ErpElement>(view, std::weak_ptr<const fhirtools::Element>{}, "Parameters",
-                                                          &referencesGeneric);
-    auto result = fhirtools::FhirPathValidator::validate(rootElement, "Parameters", {});
+    auto rootElement = std::make_shared<const ErpElement>(&backend, std::weak_ptr<const fhirtools::Element>{},
+                                                          "Parameters", &referencesGeneric);
+    auto result = fhirtools::FhirPathValidator::validate(view, rootElement, "Parameters", {});
     // get fields:
     ASSERT_LT(result.highestSeverity(), fhirtools::Severity::warning);
     ElementPtr one;

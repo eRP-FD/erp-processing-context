@@ -67,6 +67,7 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
 {
     A_25951.start("check consent");
     bool allNotFound = true;
+    std::set<std::string> failingHosts;
     for (const auto& [host, port] : epaAsHostPortList)
     {
         auto result = checkConsent(xRequestId, kvnr, host, port);
@@ -75,10 +76,11 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
             case EpaAccount::Code::allowed:
             case EpaAccount::Code::deny:
             case EpaAccount::Code::conflict:
-                return EpaAccount{.kvnr = kvnr, .host = host, .port = port, .lookupResult = result};
+                return EpaAccount{.kvnr = kvnr, .host = host, .port = port, .lookupResult = result, .failingHosts = failingHosts};
             case EpaAccount::Code::notFound:
                 break;
             case EpaAccount::Code::unknown:
+                failingHosts.emplace(host);
                 allNotFound = false;
                 break;
         }
@@ -86,7 +88,9 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
     return EpaAccount{.kvnr = kvnr,
                       .host = {},
                       .port = 0,
-                      .lookupResult = allNotFound ? EpaAccount::Code::notFound : EpaAccount::Code::unknown};
+                      .lookupResult = allNotFound ? EpaAccount::Code::notFound : EpaAccount::Code::unknown,
+                      .failingHosts = failingHosts
+};
     A_25951.finish();
 }
 

@@ -928,25 +928,41 @@ std::string evdgaBundleXml(const EvdgaBundleOptions& options)
 
 std::string consentJson(const ConsentOptions& options)
 {
+    struct VersionStr {
+        std::string operator()(const Versions::GEM_ERPCHRG& ver)
+        {
+            Expect3(options.consentCategory == model::ConsentType::CHARGCONS, "version type doesn't match consentType",
+                    std::logic_error);
+            return ver.renderVersion();
+        }
+        std::string operator()(const Versions::GEM_ERPEU& ver)
+        {
+            Expect3(options.consentCategory == model::ConsentType::EUDISPCONS, "version type doesn't match consentType",
+                    std::logic_error);
+            return ver.renderVersion();
+        }
+        std::string operator()(const std::monostate&)
+        {
+            switch (options.consentCategory)
+            {
+                case model::ConsentType::CHARGCONS:
+                    return Versions::GEM_ERPCHRG_current().renderVersion();
+                case model::ConsentType::EUDISPCONS:
+                    return Versions::GEM_ERPEU_current().renderVersion();
+            }
+            Fail2("Invalid Consent Type: " + std::to_string(static_cast<uintmax_t>(options.consentCategory)), std::logic_error);
+        }
+        const ConsentOptions& options;
+    };
     auto& resourceManager = ResourceManager::instance();
     auto consent = resourceManager.getStringResource("test/EndpointHandlerTest/consent_template.json");
-    model::Timestamp timestamp{static_cast<int64_t>(0)};
-    try
-    {
-        timestamp = model::Timestamp::fromFhirDateTime(options.timestamp);
-    }
-    catch (...)
-    {
-        timestamp = model::Timestamp::now();
-    }
     boost::replace_all(consent, "##KVNR##", options.kvnr);
     boost::replace_all(consent, "##DATETIME##", options.timestamp);
     boost::replace_all(consent, "##CATEGORY##", magic_enum::enum_name(options.consentCategory));
-    std::string profile;
+    auto version = std::visit(VersionStr{options}, options.version);
     switch (options.consentCategory)
     {
         case model::ConsentType::CHARGCONS: {
-            auto version = Versions::GEM_ERPCHRG_current(timestamp).renderVersion();
             boost::replace_all(consent, "##CATEGORY_SYSTEM##", "https://gematik.de/fhir/erpchrg/CodeSystem/GEM_ERPCHRG_CS_ConsentType");
             boost::replace_all(consent, "##PROFILE##",
                                "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|" + version);
@@ -954,7 +970,6 @@ std::string consentJson(const ConsentOptions& options)
             break;
         }
         case model::ConsentType::EUDISPCONS: {
-            auto version = Versions::GEM_ERPEU_current(timestamp).renderVersion();
             boost::replace_all(consent, "##CATEGORY_SYSTEM##", "https://gematik.de/fhir/erp-eu/CodeSystem/GEM_ERPEU_CS_ConsentType");
             boost::replace_all(consent, "##PROFILE##",
                                "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent|" + version);

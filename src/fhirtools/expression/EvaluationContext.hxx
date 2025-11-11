@@ -19,9 +19,11 @@ namespace fhirtools
 class EvaluationContext {
 public:
     // uses element to initialize context and collection
-    explicit EvaluationContext(std::shared_ptr<const Element> element);
+    EvaluationContext(std::shared_ptr<const FhirStructureRepositoryView> initView,
+                      std::shared_ptr<const Element> element);
 
-    EvaluationContext(Collection initCollection, std::shared_ptr<const Element> initContext);
+    EvaluationContext(std::shared_ptr<const FhirStructureRepositoryView> initView, Collection initCollection,
+                      std::shared_ptr<const Element> initContext);
 
     [[nodiscard]] EvaluationContext makeElement(std::shared_ptr<fhirtools::Element> element) const;
     [[nodiscard]] EvaluationContext makeIntegerElement(int32_t value) const;
@@ -46,6 +48,7 @@ public:
 
     Collection collection;
     std::shared_ptr<const Element> context;
+    std::shared_ptr<const FhirStructureRepositoryView> view;
 
 private:
     template<typename ValueT>

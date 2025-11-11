@@ -129,7 +129,7 @@ TEST_F(PostgresDatabaseTest, getAllEventsForKvnr)//NOLINT(readability-function-c
         EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "1-Arzt-1");
         EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
-        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
+        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.50");
     }
     {
         const auto& event = *events.at(1);

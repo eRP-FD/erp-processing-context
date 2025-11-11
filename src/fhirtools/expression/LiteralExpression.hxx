@@ -17,8 +17,7 @@ namespace fhirtools
 class LiteralExpression : public Expression
 {
 public:
-    LiteralExpression(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                      std::shared_ptr<PrimitiveElement> value);
+    LiteralExpression(std::shared_ptr<PrimitiveElement> value);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 
 protected:
@@ -38,7 +37,7 @@ class LiteralBooleanExpression : public LiteralExpression
 {
 public:
     explicit LiteralBooleanExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView, bool value);
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, bool value);
 };
 
 // http://hl7.org/fhirpath/N1/#string
@@ -46,7 +45,7 @@ class LiteralStringExpression : public LiteralExpression
 {
 public:
     explicit LiteralStringExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
         const std::string_view& value);
 };
 
@@ -55,8 +54,7 @@ class LiteralIntegerExpression : public LiteralExpression
 {
 public:
     explicit LiteralIntegerExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
-        int32_t value);
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, int32_t value);
 };
 
 // http://hl7.org/fhirpath/N1/#decimal
@@ -64,8 +62,7 @@ class LiteralDecimalExpression : public LiteralExpression
 {
 public:
     explicit LiteralDecimalExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
-        DecimalType value);
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, DecimalType value);
 };
 
 // http://hl7.org/fhirpath/N1/#date
@@ -73,7 +70,7 @@ class LiteralDateExpression : public LiteralExpression
 {
 public:
     explicit LiteralDateExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
         const std::string& value);
 };
 
@@ -82,7 +79,7 @@ class LiteralTimeExpression : public LiteralExpression
 {
 public:
     explicit LiteralTimeExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
         const std::string& value);
 };
 
@@ -91,7 +88,7 @@ class LiteralDateTimeExpression : public LiteralExpression
 {
 public:
     explicit LiteralDateTimeExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
         const std::string& value);
 };
 
@@ -100,7 +97,7 @@ class LiteralQuantityExpression : public LiteralExpression
 {
 public:
     explicit LiteralQuantityExpression(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+        gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
         const std::string& value);
 };
 

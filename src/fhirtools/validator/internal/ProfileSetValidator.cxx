@@ -67,26 +67,26 @@ bool ProfileSetValidator::isArray() const
     return mElementInParent && mElementInParent->isArray();
 }
 
-void ProfileSetValidator::typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef)
+void ProfileSetValidator::typecast(const FhirStructureDefinition* structDef)
 {
-    mRootValidator.typecast(repo, structDef);
+    mRootValidator.typecast(structDef);
     for (auto&& profVal : mProfileValidators)
     {
         const auto& defPtr = profVal.second.definitionPointer();
-        if (! defPtr.element()->isRoot() || defPtr.profile()->isDerivedFrom(repo, *structDef))
+        if (! defPtr.element()->isRoot() || defPtr.profile()->isDerivedFrom(*structDef))
         {
             continue;
         }
-        profVal.second.typecast(repo, structDef);
+        profVal.second.typecast(structDef);
     }
 }
 
-void ProfileSetValidator::addProfile(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* profile)
+void ProfileSetValidator::addProfile(const FhirStructureDefinition* profile)
 {
     Expect3(rootPointer().element()->isRoot(), "cannot add profiles to non-root: " + to_string(rootPointer()),
             std::logic_error);
     Expect3(profile != nullptr, "profiles set must not contain null", std::logic_error);
-    if (profile->isDerivedFrom(repo, *rootPointer().profile()))
+    if (profile->isDerivedFrom(*rootPointer().profile()))
     {
         ProfiledElementTypeInfo defPtr{*profile};
         mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
@@ -94,17 +94,15 @@ void ProfileSetValidator::addProfile(const FhirStructureRepositoryView& repo, co
     }
 }
 
-void ProfileSetValidator::addProfiles(const FhirStructureRepositoryView& repo,
-                                      const std::set<const FhirStructureDefinition*>& profiles)
+void ProfileSetValidator::addProfiles(const std::set<const FhirStructureDefinition*>& profiles)
 {
     for (const auto* prof : profiles)
     {
-        addProfile(repo, prof);
+        addProfile(prof);
     }
 }
 
-void fhirtools::ProfileSetValidator::requireOne(const fhirtools::FhirStructureRepositoryView& repo,
-                                                const std::set<const FhirStructureDefinition*>& profiles,
+void fhirtools::ProfileSetValidator::requireOne(const std::set<const FhirStructureDefinition*>& profiles,
                                                 std::string_view elementFullPath,
                                                 const std::function<std::string()>& contextMessageGetter)
 {
@@ -115,7 +113,7 @@ void fhirtools::ProfileSetValidator::requireOne(const fhirtools::FhirStructureRe
     SolverDataMap solverData;
     for (const auto* prof : profiles)
     {
-        solverData.emplace(createSolverDataValue(repo, prof, elementFullPath, contextMessageGetter));
+        solverData.emplace(createSolverDataValue(prof, elementFullPath, contextMessageGetter));
     }
     solver.requireOne(std::move(solverData));
 }
@@ -124,7 +122,6 @@ void ProfileSetValidator::addTargetProfiles(const ReferenceContext::ReferenceInf
                                             const std::set<const FhirStructureDefinition*>& metaProfiles,
                                             std::string_view elementFullPath)
 {
-    const auto& repo = *target.referencingElement->getFhirStructureRepository();
     for (const auto& profileSet : target.targetProfileSets)
     {
         if (! profileSet.second.empty())
@@ -132,14 +129,14 @@ void ProfileSetValidator::addTargetProfiles(const ReferenceContext::ReferenceInf
             // see if the resources meta.profile already claimes to fullfil one of the profiles
             const bool alreadyChecked = std::ranges::any_of(metaProfiles, [&](const auto& metaProf) {
                 return std::ranges::any_of(profileSet.second, [&](const auto& targetProfile) {
-                    return metaProf->isDerivedFrom(repo, *targetProfile);
+                    return metaProf->isDerivedFrom(*targetProfile);
                 });
             });
             if (alreadyChecked)
             {
                 continue;
             }
-            requireOne(repo, profileSet.second, target.elementFullPath, [=] {
+            requireOne(profileSet.second, target.elementFullPath, [=] {
                 std::ostringstream oss;
                 oss << "referenced resource " << elementFullPath << " must match one of: [";
                 std::string_view sep;
@@ -156,18 +153,17 @@ void ProfileSetValidator::addTargetProfiles(const ReferenceContext::ReferenceInf
 }
 
 ProfileSetValidator::SolverDataValue
-ProfileSetValidator::createSolverDataValue(const FhirStructureRepositoryView& repo,
-                                           const FhirStructureDefinition* profile, std::string_view elementFullPath,
+ProfileSetValidator::createSolverDataValue(const FhirStructureDefinition* profile, std::string_view elementFullPath,
                                            const std::function<std::string()>& contextMessageGetter)
 {
     Expect3(profile != nullptr, "profiles set must not contain null", std::logic_error);
-    if (profile->baseType(repo) == rootPointer().profile())
+    if (profile->baseType() == rootPointer().profile())
     {
         ProfiledElementTypeInfo defPtr{*profile};
         const auto& [validator, inserted] = mProfileValidators.emplace(defPtr, ProfileValidator{defPtr, *this});
         return {std::move(defPtr), validator->second.validationData()};
     }
-    else if (rootPointer().profile()->isDerivedFrom(repo, *profile))
+    if (rootPointer().profile()->isDerivedFrom(*profile))
     {
         return {mRootValidator.definitionPointer(), mRootValidator.validationData()};
     }
@@ -196,7 +192,7 @@ ProfileSetValidator::SolverDataValue ProfileSetValidator::createErrorSolverData(
 std::shared_ptr<ProfileSetValidator> ProfileSetValidator::subField(const FhirStructureRepositoryView& repo,
                                                                    const std::string& name)
 {
-    auto rootList = rootPointer().subDefinitions(repo, name);
+    auto rootList = rootPointer().subDefinitions(name);
     FPExpect(! rootList.empty(), rootPointer().profile()->urlAndVersion() +
                                      " field resolution failed: " + rootPointer().element()->name() + '.' + name);
     auto result = std::shared_ptr<ProfileSetValidator>(new ProfileSetValidator{this, rootList.back()});
@@ -413,6 +409,11 @@ const ProfileValidator& ProfileSetValidator::getValidator(const ProfileValidator
     return result->second;
 }
 
+const FhirPathValidator& fhirtools::ProfileSetValidator::fhirPathValidator() const
+{
+    return mValidator;
+}
+
 void fhirtools::ProfileSetValidator::finalize(std::string_view elementFullPath,
                                               const std::shared_ptr<const Element>& element)
 {
@@ -539,8 +540,9 @@ const fhirtools::ValidatorOptions& fhirtools::ProfileSetValidator::options() con
 fhirtools::ReferenceContext fhirtools::ProfileSetValidator::buildReferenceContext(const Element& element,
                                                                                   std::string_view elementFullPath)
 {
-    auto findResult = ReferenceFinder::find(element, mIncludeInResult, options(), elementFullPath);
-#ifndef NDEBUG
+    auto findResult =
+        ReferenceFinder::find(mValidator.get().repositoryView(), element, mIncludeInResult, options(), elementFullPath);
+#ifdef ENABLE_DEBUG_LOG
     findResult.referenceContext.dumpToLog();
 #endif
     mResults.merge(std::move(findResult.validationResults));
@@ -601,19 +603,13 @@ std::optional<FhirSlicing::SlicingRules> ProfileSetValidator::getRuleOverride(co
         return std::nullopt;
     }
     const auto& options = mValidator.get().options();
-    const auto& slicing = pet.element()->slicing();
     switch (options.reportUnknownExtensions)
     {
         using enum ValidatorOptions::ReportUnknownExtensionsMode;
         case disable:
             return std::nullopt;
-        case enable:
+        case closeSlicing:
             break;
-        case onlyOpenSlicing:
-            if (slicing->slicingRules() != FhirSlicing::SlicingRules::open)
-            {
-                return std::nullopt;
-            }
     }
     // Only report for the slicing with the most slices, because:
     // 1. The empty definition is also always considered

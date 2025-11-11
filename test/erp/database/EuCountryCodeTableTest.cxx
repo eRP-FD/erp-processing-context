@@ -3,7 +3,7 @@
 // non-exclusively licensed to gematik GmbH
 
 
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 class EuCountryCodeTableTest : public PostgresDatabaseTest
 {
     void SetUp() override

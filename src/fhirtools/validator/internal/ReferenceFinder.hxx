@@ -11,6 +11,7 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <string_view>
@@ -33,7 +34,8 @@ public:
         void merge(FinderResult&&);
     };
 
-    [[nodiscard]] static FinderResult find(const Element& element, std::set<ProfiledElementTypeInfo> profiles,
+    [[nodiscard]] static FinderResult find(const std::shared_ptr<const FhirStructureRepositoryView>& view,
+                                           const Element& element, std::set<ProfiledElementTypeInfo> profiles,
                                            const ValidatorOptions&, std::string_view elementFullPath);
 
     ReferenceFinder(const ReferenceFinder&) = delete;
@@ -53,15 +55,19 @@ private:
         bundleEntry,
         bundledResource,
         containedResource,
+        resourceId,
         other
     };
 
     using ReferenceInfo = ReferenceContext::ReferenceInfo;
     using ResourceInfo = ReferenceContext::ResourceInfo;
-    ReferenceFinder(std::set<ProfiledElementTypeInfo> profiles, std::shared_ptr<ResourceInfo> currentResource,
-                    bool followBundleEntry, bool isDocumentBundle, size_t bundleIndex, const ValidatorOptions&);
+    ReferenceFinder(std::shared_ptr<const FhirStructureRepositoryView> view, std::set<ProfiledElementTypeInfo> profiles,
+                    std::shared_ptr<ResourceInfo> currentResource, bool followBundleEntry, bool isDocumentBundle,
+                    size_t bundleIndex, const ValidatorOptions&);
 
     void findInternal(const Element& element, std::string_view elementFullPath, const std::string& resourcePath);
+    void processSubElements(const Element& element, const std::string& subName, std::string_view elementFullPath,
+                           const std::string& resourcePath);
     void processResource(const Element& element, std::set<ProfiledElementTypeInfo> allSubPets, ElementType elementType,
                          std::ostringstream&& elementFullPath);
 
@@ -79,20 +85,25 @@ private:
                      const std::set<fhirtools::ProfiledElementTypeInfo>& newProfiles, std::string_view elementFullPath);
 
     static bool isDocumentBundle(bool isBundle, const Element& element);
-    static ElementType getElementType(const FhirStructureRepositoryView& repo,
-                                      const ProfiledElementTypeInfo& elementInfo);
+    static ElementType getElementType(const ProfiledElementTypeInfo& elementInfo);
+    static ElementType getBundleElementType(const ProfiledElementTypeInfo& elementInfo, std::string_view elementPath);
+    static std::optional<std::string> fullUrlFromEntry(const Element& bundleEntry);
+    static ReferenceContext::AnchorType anchorType(const Element& element, ResourceHandling resourceHandling,
+                                                   bool isComposition);
     ResourceHandling getResourceHandling(ElementType elementType) const;
     ReferenceContext::AnchorType referenceRequirement(ResourceHandling elementType);
     const FhirStructureDefinition* getTypeFromReferenceElement(const FhirStructureRepositoryView& repo,
                                                                const Element& referenceElement,
                                                                const std::string_view elementFullPath);
 
+    std::shared_ptr<const FhirStructureRepositoryView> mView;
     std::set<ProfiledElementTypeInfo> mProfiledElementTypes;
     FinderResult mResult;
     std::shared_ptr<ResourceInfo> mCurrentResource;
     bool mFollowBundleEntry = true;
     bool mIsDocumentBundle = false;
     size_t mBundleIndex;
+    std::optional<std::string> mFullUrl;
     const ValidatorOptions& mOptions;
 };
 

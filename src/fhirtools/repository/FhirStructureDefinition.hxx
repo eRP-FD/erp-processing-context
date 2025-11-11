@@ -117,11 +117,11 @@ public:
 
     [[nodiscard]] std::shared_ptr<const FhirElement> findElement(std::string_view elementId) const;
     std::tuple<std::shared_ptr<const FhirElement>, size_t> findElementAndIndex(std::string_view elementId) const;
-    const FhirStructureDefinition* parentType(const FhirStructureRepositoryView& repo) const;
-    bool isDerivedFrom(const FhirStructureRepositoryView& repo, const std::string_view& baseUrl) const;
-    bool isDerivedFrom(const FhirStructureRepositoryView& repo, const FhirStructureDefinition& baseProfile) const;
-    const FhirStructureDefinition* baseType(const FhirStructureRepositoryView& repo) const;
-    const FhirStructureDefinition& primitiveToSystemType(const FhirStructureRepositoryView& repo) const;
+    const FhirStructureDefinition* parentType() const;
+    bool isDerivedFrom(const std::string_view& baseUrl) const;
+    bool isDerivedFrom(const FhirStructureDefinition& baseProfile) const;
+    const FhirStructureDefinition* baseType() const;
+    const FhirStructureDefinition& primitiveToSystemType() const;
     const std::shared_ptr<const FhirResourceGroup>& resourceGroup() const;
 
     const FhirStructureRepositoryBackend& repositoryBackend() const;

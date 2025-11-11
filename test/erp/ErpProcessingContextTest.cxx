@@ -89,41 +89,46 @@ TEST_F(ErpProcessingContextTest, GetAllTasks_ProfessionOIDs)
     });
 }
 
+// GEMREQ-start A_19113
 TEST_F(ErpProcessingContextTest, GetTask_ProfessionOIDs)
 {
-    A_19113_01.test("Unit test of allowedForProfessionOID() function");
+    A_19113_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/Task/{id}", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
-            "1.2.276.0.76.4.55" // oid_krankenhausapotheke
+            "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.59", // oid_kostentraeger
     });
 }
+// GEMREQ-end A_19113
 
+// GEMREQ-start A_19018
 TEST_F(ErpProcessingContextTest, PostTaskCreate_ProfessionOIDs)
 {
-    A_19018.test("Unit test of allowedForProfessionOID() function");
+    A_19018_01.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Task/$create", {
-            "1.2.276.0.76.4.30", // oid_arzt
-            "1.2.276.0.76.4.31", // oid_zahnarzt
             "1.2.276.0.76.4.50", // oid_praxis_arzt
             "1.2.276.0.76.4.51", // oid_zahnarztpraxis
             "1.2.276.0.76.4.52", // oid_praxis_psychotherapeut
             "1.2.276.0.76.4.53", // oid_krankenhaus
+            "1.2.276.0.76.4.257", // oid_institution_vorsorge_reha
     });
 }
+// GEMREQ-end A_19018
 
+// GEMREQ-start A_19022
 TEST_F(ErpProcessingContextTest, PostTaskActivate_ProfessionOIDs)
 {
-    A_19022.test("Unit test of allowedForProfessionOID() function");
+    A_19022_01.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Task/{id}/$activate", {
-            "1.2.276.0.76.4.30", // oid_arzt
-            "1.2.276.0.76.4.31", // oid_zahnarzt
             "1.2.276.0.76.4.50", // oid_praxis_arzt
             "1.2.276.0.76.4.51", // oid_zahnarztpraxis
             "1.2.276.0.76.4.52", // oid_praxis_psychotherapeut
             "1.2.276.0.76.4.53", // oid_krankenhaus
+            "1.2.276.0.76.4.257", // oid_institution_vorsorge_reha
     });
 }
+// GEMREQ-end A_19022
 
 // GEMREQ-start A_19166-test1
 TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWfOther)
@@ -189,21 +194,22 @@ TEST_F(ErpProcessingContextTest, PostTaskClose_ProfessionOIDs)
 }
 // GEMREQ-end A_19230-01-test1
 
+// GEMREQ-start A_19026
 TEST_F(ErpProcessingContextTest, PostTaskAbort_ProfessionOIDs)
 {
-    A_19026.test("Unit test of allowedForProfessionOID() function");
+    A_19026_01.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Task/{id}/$abort", {
             "1.2.276.0.76.4.49", // oid_versicherter
-            "1.2.276.0.76.4.30", // oid_arzt
-            "1.2.276.0.76.4.31", // oid_zahnarzt
             "1.2.276.0.76.4.50", // oid_praxis_arzt
             "1.2.276.0.76.4.51", // oid_zahnarztpraxis
             "1.2.276.0.76.4.52", // oid_praxis_psychotherapeut
             "1.2.276.0.76.4.53", // oid_krankenhaus
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
             "1.2.276.0.76.4.55", // oid_krankenhausapotheke
+            "1.2.276.0.76.4.257", // oid_institution_vorsorge_reha
     });
 }
+// GEMREQ-end A_19026
 
 // GEMREQ-start A_19405
 TEST_F(ErpProcessingContextTest, GetAllMedicationDispenses_ProfessionOIDs)

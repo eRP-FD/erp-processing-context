@@ -44,7 +44,7 @@ using OcspRequestPtr = OpensslUniquePtr<OCSP_REQUEST, &OCSP_REQUEST_free>;
 using OcspResponsePtr = OpensslUniquePtr<OCSP_RESPONSE, &OCSP_RESPONSE_free>;
 using EcdsaSignaturePtr = OpensslUniquePtr<ECDSA_SIG, &ECDSA_SIG_free>;
 using OpenSslBufferPtr = OpensslUniquePtr<unsigned char, &opensslBufferDeleteFunction>;
-
+using EvpCipherCtxPtr = OpensslUniquePtr<EVP_CIPHER_CTX, &EVP_CIPHER_CTX_free>;
 
 // Use
 // #define LOCAL_LOGGING

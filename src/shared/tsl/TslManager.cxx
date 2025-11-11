@@ -71,6 +71,7 @@ namespace
             case OcspCheckDescriptor::FORCE_OCSP_REQUEST_STRICT:
             case OcspCheckDescriptor::FORCE_OCSP_REQUEST_ALLOW_CACHE:
             case OcspCheckDescriptor::PROVIDED_ONLY:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_INVALID:
                 return false;
             case OcspCheckDescriptor::PROVIDED_OR_CACHE:
             case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
@@ -206,7 +207,7 @@ X509Store TslManager::getTslTrustedCertificateStore(
 }
 
 
-// GEMREQ-start A_22141#verifyCertificate, A_20159-03#verifyCertificate
+// GEMREQ-start A_22141#verifyCertificate, A_20159-04#verifyCertificate
 void TslManager::verifyCertificate(const TslMode tslMode,
                                    const X509Certificate& certificate,
                                    const std::unordered_set<CertificateType>& typeRestrictions,
@@ -243,7 +244,7 @@ void TslManager::verifyCertificate(const TslMode tslMode,
         HANDLE_EXCEPTION("certificate verification failed");
     }
 }
-// GEMREQ-end A_22141#verifyCertificate, A_20159-03#verifyCertificate
+// GEMREQ-end A_22141#verifyCertificate, A_20159-04#verifyCertificate
 
 
 // GEMREQ-start A_20765-02#ocspResponse

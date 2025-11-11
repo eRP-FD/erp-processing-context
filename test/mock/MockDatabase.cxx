@@ -9,8 +9,12 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Consent.hxx"
+#include "erp/model/ErxReceipt.hxx"
+#include "erp/model/Task.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/crypto/CMAC.hxx"
+#include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/crypto/SignedPrescription.hxx"
 #include "shared/database/DatabaseModel.hxx"
 #include "shared/hsm/HsmClient.hxx"
 #include "shared/hsm/HsmPool.hxx"
@@ -29,6 +33,7 @@
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <test/util/CryptoHelper.hxx>
 #include <tuple>
 
@@ -337,6 +342,46 @@ SafeString MockDatabase::getAuditEventKey(const db_model::HashedKvnr& kvnr, Blob
     return std::move(key);
 }
 
+std::string MockDatabase::receiptJson(const model::Task& task, const std::string& telematikId,
+                                     const CadesBesSignature& prescription)
+{
+    const auto& config = Configuration::instance();
+    const Uuid digestId{};
+    const Uuid authorIdentifier{};
+    const std::optional metaVersionId =
+        config.getOptionalStringValue(ConfigurationKey::SERVICE_TASK_CLOSE_PRESCRIPTION_DIGEST_VERSION_ID);
+    const auto& prescriptionId = task.prescriptionId();
+
+    const model::Composition compositionResource{telematikId, task.lastStatusChangeDate(), model::Timestamp::now(),
+                                                 authorIdentifier.toUrn(), digestId.toUrn()};
+    auto digest = Base64::encode(prescription.getMessageDigest());
+    auto linkBase = Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
+    const auto prescriptionDigestResource =
+        ::model::Binary{digestId.toString(), digest, ::model::Binary::Type::Digest, metaVersionId};
+
+    const auto link = linkBase + "/Task/" + prescriptionId.toString() + "/$close/";
+    model::ErxReceipt responseReceipt(Uuid(value(task.receiptUuid())), link, prescriptionId, compositionResource,
+                                      authorIdentifier.toUrn(), model::Device{}, digestId.toUrn(),
+                                      prescriptionDigestResource);
+    auto hsmSession = mHsmPool.acquire();
+    auto [key, _] = hsmSession.session().getVauSigPrivateKey({}, {});
+    const std::string base64SignatureData =
+        CadesBesSignature(hsmSession.session().getVauSigCertificate(), key, responseReceipt.serializeToXmlString())
+            .getBase64();
+    const model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier.toUrn());
+    responseReceipt.setSignature(signature);
+    return responseReceipt.serializeToJsonString();
+}
+
+std::tuple<Certificate, shared_EVP_PKEY> MockDatabase::certAndKey(const std::optional<std::string>& certPemFilename)
+{
+    auto pem = CryptoHelper::qesCertificatePem(certPemFilename);
+    auto cert = Certificate::fromPem(pem);
+    return std::make_tuple(std::move(cert),
+                           EllipticCurveUtils::pemToPrivatePublicKeyPair(SafeString{pem.data(), pem.size()}));
+
+}
+
 
 void MockDatabase::insertTask(const model::Task& task,
                               const std::optional<std::string>& medicationDispense,
@@ -466,10 +511,6 @@ void MockDatabase::addCountry(const std::string& country)
 
 namespace {
 
-std::string replacePrescriptionId(const std::string& templateStr, const std::string& prescriptionId)
-{
-    return String::replaceAll(templateStr, "##PRESCRIPTION_ID##", prescriptionId);
-}
 std::string replaceKvnr(const std::string& templateStr, const std::string& kvnr)
 {
     return String::replaceAll(templateStr, "##KVNR##", kvnr);
@@ -481,6 +522,8 @@ std::string replaceKvnr(const std::string& templateStr, const std::string& kvnr)
 void MockDatabase::fillWithStaticData ()
 {
     auto& resourceManager = ResourceManager::instance();
+    const auto [certificate, privKey] = certAndKey();
+
     const auto& kbvBundle = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml());
     std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const auto dataPath(std::string{ TEST_DATA_DIR } + "/EndpointHandlerTest");
@@ -579,6 +622,7 @@ void MockDatabase::fillWithStaticData ()
     const char* const pkvKvnr1 = "X500000056";
     auto taskPkv1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId1, .kvnr = pkvKvnr1}));
+    taskPkv1.setReceiptUuid();
     // Activated task without consent:
     const auto pkvTaskId1a = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50001);
     const char* const pkvKvnr1a = "X500000017";
@@ -609,8 +653,8 @@ void MockDatabase::fillWithStaticData ()
     // PKV KBV Bundles for the activated tasks:
     //const auto kbvBundlePkvTemplate = resourceManager.getStringResource(dataPath + "/kbv_pkv_bundle_template.xml");
     const auto kbvBundlePkv1Xml = ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId1, .kvnr = pkvKvnr1});
-    const auto& kbvBundlePkv1 = CryptoHelper::toCadesBesSignature(kbvBundlePkv1Xml);
-    auto healthCarePrescriptionBundlePkv1 = model::Binary(taskPkv1.healthCarePrescriptionUuid().value(), kbvBundlePkv1);
+    const CadesBesSignature kbvBundlePkv1{certificate, privKey, kbvBundlePkv1Xml};
+    auto healthCarePrescriptionBundlePkv1 = model::Binary(taskPkv1.healthCarePrescriptionUuid().value(), kbvBundlePkv1.getBase64());
     const auto& kbvBundlePkv1a = CryptoHelper::toCadesBesSignature(
         ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId1a, .kvnr = pkvKvnr1a}));
     const auto healthCarePrescriptionBundlePkv1a =
@@ -641,13 +685,17 @@ void MockDatabase::fillWithStaticData ()
     storeConsent(mDerivation.hashKvnr(consent209.patientKvnr()), consent209.dateTime(), db_model::ConsentCategory::CHARGCONS);
 
     // add static chargeItem entry for kvnr1
-    const auto chargeItemInput = resourceManager.getStringResource(dataPath + "/charge_item_input_marked.json");
-    auto chargeItem = model::ChargeItem::fromJsonNoValidation(chargeItemInput);
+    auto chargeItemInput = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{pkvKvnr1, model::Kvnr::Type::pkv},
+        .prescriptionId = pkvTaskId1,
+        .dispenseBundleBase64 = "UEtWIGRpc3BlbnNlIGl0ZW0gYnVuZGxl",
+        .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put,
+    });
+    boost::replace_nth(chargeItemInput, R"(valueBoolean value="false")", 2, R"(valueBoolean value="true")");
+    auto chargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemInput);
     const auto dispenseItemBundle1 =
         ::model::Bundle::fromXmlNoValidation(ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId1}));
 
-    chargeItem.setPrescriptionId(pkvTaskId1);
-    chargeItem.setSubjectKvnr(pkvKvnr1);
     chargeItem.setEntererTelematikId("606358757");
     chargeItem.setAccessCode(mockAccessCode);
 
@@ -658,13 +706,13 @@ void MockDatabase::fillWithStaticData ()
         storeChargeInformation(
             ::db_model::ChargeItem{
                 ::model::ChargeInformation{
-                    ::std::move(chargeItem), ::std::move(healthCarePrescriptionBundlePkv1),
+                    ::std::move(chargeItem), std::move(healthCarePrescriptionBundlePkv1),
                     ::model::Bundle::fromXmlNoValidation(kbvBundlePkv1Xml),
                     ::model::Binary{std::string{dispenseItemBundle1.getId()},
                                     ::CryptoHelper::toCadesBesSignature(dispenseItemBundle1.serializeToJsonString())},
                     ::model::AbgabedatenPkvBundle::fromJson(dispenseItemBundle1.jsonDocument()),
-                    ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
-                        ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId1.toString()))},
+                    ::model::Bundle::fromJsonNoValidation(
+                        receiptJson(taskPkv1, "3-SMC-B-Testkarte-883110000129070", kbvBundlePkv1))},
                 optionalDerivedKeyData.blobId, ::db_model::Blob{optionalDerivedKeyData.salt}, key, mCodec},
             mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
     }
@@ -674,12 +722,13 @@ void MockDatabase::fillWithStaticData ()
     const auto pkvTaskId3 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto taskPkv3 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId3, .kvnr = pkvKvnr1}));
-    const auto& kbvBundlePkv3 = CryptoHelper::toCadesBesSignature(
-        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId3, .kvnr = pkvKvnr1}));
+    CadesBesSignature kbvBundlePkv3{certificate, privKey,
+                                    ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId3, .kvnr = pkvKvnr1}),
+                                    model::Timestamp::now()};
     const auto healthCarePrescriptionBundlePkv3 =
-        model::Binary(taskPkv3.healthCarePrescriptionUuid().value(), kbvBundlePkv3).serializeToJsonString();
-    const auto receipt = replacePrescriptionId(FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId3.toString());
-    insertTask(taskPkv3, std::nullopt, healthCarePrescriptionBundlePkv3, receipt);
+        model::Binary(taskPkv3.healthCarePrescriptionUuid().value(), kbvBundlePkv3.getBase64()).serializeToJsonString();
+    const auto receiptPkv3 = receiptJson(taskPkv3, "3-SMC-B-Testkarte-883110000129070", kbvBundlePkv3);
+    insertTask(taskPkv3, std::nullopt, healthCarePrescriptionBundlePkv3, receiptPkv3);
     // Closed task without consent:
     const auto pkvTaskId4 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50021);
     const auto taskPkv4 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
@@ -690,11 +739,14 @@ void MockDatabase::fillWithStaticData ()
     const auto pkvTaskId5 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
     const auto taskPkv5 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId5, .kvnr = pkvKvnr1}));
-    const auto& kbvBundlePkv5 = CryptoHelper::toCadesBesSignature(
-        ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId5, .kvnr = pkvKvnr1}));
+    const CadesBesSignature kbvBundlePkv5{certificate, privKey,
+                                          ResourceTemplates::kbvBundleXml({
+                                              .prescriptionId = pkvTaskId5,
+                                              .kvnr = pkvKvnr1,
+                                          })};
     const auto healthCarePrescriptionBundlePkv5 =
-        model::Binary(taskPkv5.healthCarePrescriptionUuid().value(), kbvBundlePkv3).serializeToJsonString();
-    const auto receipt5 = replacePrescriptionId(FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId5.toString());
+        model::Binary(taskPkv5.healthCarePrescriptionUuid().value(), kbvBundlePkv3.getBase64()).serializeToJsonString();
+    const auto receipt5 = receiptJson(taskPkv5, "", kbvBundlePkv5);
     insertTask(taskPkv5, std::nullopt, healthCarePrescriptionBundlePkv5, receipt5);
 
     // static ChargeItem for task for insurant with consent (added above):
@@ -725,8 +777,7 @@ void MockDatabase::fillWithStaticData ()
                 ::model::Binary{std::string{dispenseItemBundle3.getId()},
                                 ::CryptoHelper::toCadesBesSignature(dispenseItemBundle3.serializeToXmlString())},
                 ::model::AbgabedatenPkvBundle::fromJson(dispenseItemBundle3.jsonDocument()),
-                ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
-                    ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId3.toString()))},
+                ::model::Bundle::fromJsonNoValidation(receiptPkv3)},
             optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
         mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
 
@@ -734,14 +785,18 @@ void MockDatabase::fillWithStaticData ()
     {
         const char* qesOldFilename = "test/tsl/X509Certificate/80276883531000000027-C.HP.QES.pem";
         const char* erp17321kvnr = "E173210118";
+        const auto& [oldCert, oldKey] = certAndKey(qesOldFilename);
         const auto pkvTaskId6 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50023);
         const auto taskPkv6 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = pkvTaskId6, .kvnr = erp17321kvnr}));
-        const auto& kbvBundlePkv6 = CryptoHelper::toCadesBesSignature(
-            ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId6, .kvnr = erp17321kvnr}), qesOldFilename);
+        const CadesBesSignature kbvBundlePkv6{oldCert, oldKey,
+                                              ResourceTemplates::kbvBundleXml({
+                                                  .prescriptionId = pkvTaskId6,
+                                                  .kvnr = erp17321kvnr,
+                                              })};
         const auto healthCarePrescriptionBundlePkv6 =
-            model::Binary(taskPkv6.healthCarePrescriptionUuid().value(), kbvBundlePkv6).serializeToJsonString();
-        const auto receipt6 = replacePrescriptionId(FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId6.toString());
+            model::Binary(taskPkv6.healthCarePrescriptionUuid().value(), kbvBundlePkv6.getBase64()).serializeToJsonString();
+        const auto receipt6 = receiptJson(taskPkv6, "1-61b0d8d1dc0a583cdc0471e475aee79a60e9f57f", kbvBundlePkv6);
         insertTask(taskPkv6, std::nullopt, healthCarePrescriptionBundlePkv6, receipt6);
         TLOG(INFO) << pkvTaskId6.toString();
 
@@ -775,8 +830,7 @@ void MockDatabase::fillWithStaticData ()
                                     ::CryptoHelper::toCadesBesSignature(dispenseItemBundle6.serializeToXmlString(),
                                         qesOldFilename)},
                     ::model::AbgabedatenPkvBundle::fromJson(dispenseItemBundle6.jsonDocument()),
-                    ::model::Bundle::fromJsonNoValidation(replacePrescriptionId(
-                        ::FileHelper::readFileAsString(dataPath + "/receipt_template.json"), pkvTaskId6.toString()))},
+                    ::model::Bundle::fromJsonNoValidation(receipt6)},
                 optionalData.blobId, ::db_model::Blob{optionalData.salt}, key, mCodec},
             mDerivation.hashKvnr(model::Kvnr{std::string{pkvKvnr1}}));
 

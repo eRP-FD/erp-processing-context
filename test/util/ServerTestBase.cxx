@@ -30,7 +30,7 @@
 #include "shared/util/Base64.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/FileHelper.hxx"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
@@ -90,6 +90,8 @@ void ServerTestBase::startServer (void)
         // Server already created and assumed running. Nothing more to do.
         return;
     }
+    // init now, should avoid connection timeouts later
+    (void)Fhir::instance();
 
     mJwt = std::make_unique<JWT>( mJwtBuilder.makeJwtVersicherter(InsurantF) );
 
@@ -178,10 +180,10 @@ void ServerTestBase::TearDown (void)
 }
 
 
-HttpsClient ServerTestBase::createClient (void)
+HttpsReconnectingClient ServerTestBase::createClient (void)
 {
     const auto& config = Configuration::instance();
-    return HttpsClient(ConnectionParameters{
+    return HttpsReconnectingClient(ConnectionParameters{
         .hostname = "127.0.0.1",
         .port = config.getStringValue(ConfigurationKey::ADMIN_SERVER_PORT),
         .connectionTimeout = std::chrono::seconds{30},
@@ -295,7 +297,7 @@ ClientRequest ServerTestBase::encryptRequest (const ClientRequest& innerRequest,
 }
 
 
-ClientResponse ServerTestBase::verifyOuterResponse (const ClientResponse& outerResponse)
+ClientResponse ServerTestBase::verifyResponse (const ClientResponse& outerResponse)
 {
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK)
                     << "header status was " << toString(outerResponse.getHeader().status());
@@ -313,15 +315,11 @@ void ServerTestBase::validateInnerResponse(const ClientResponse& innerResponse) 
     std::optional<model::UnspecifiedResource> resourceForValidation;
     if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirXmlUtf8})
     {
-        resourceForValidation = model::UnspecifiedResource::fromXmlNoValidation(innerResponse.getBody());
+        ASSERT_NO_FATAL_FAILURE((void)testutils::createResourceFromXml(innerResponse.getBody()));
     }
     else if (innerResponse.getHeader().contentType() == std::string{ContentMimeType::fhirJsonUtf8})
     {
-        resourceForValidation = model::UnspecifiedResource::fromJsonNoValidation(innerResponse.getBody());
-    }
-    if (resourceForValidation)
-    {
-        ASSERT_NO_THROW(testutils::bestEffortValidate(*resourceForValidation));
+        ASSERT_NO_FATAL_FAILURE((void)testutils::createResourceFromJson(innerResponse.getBody()));
     }
 }
 
@@ -538,17 +536,22 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
 
 
     std::vector<model::MedicationDispense> medicationDispenses;
+    std::vector<model::GemErpPrMedication> medications;
     for (size_t i = 0; i < numMedications; ++i)
     {
         if (medicationWhenPrepared.has_value())
         {
-            medicationDispenses.emplace_back(
-                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, *medicationWhenPrepared));
+            auto [dispense, medication] =
+                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, *medicationWhenPrepared);
+            medications.emplace_back(std::move(medication));
+            medicationDispenses.emplace_back(std::move(dispense));
         }
         else
         {
-            medicationDispenses.emplace_back(
-                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, std::monostate{}));
+            auto [dispense, medication] =
+                createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, std::monostate{});
+            medications.emplace_back(std::move(medication));
+            medicationDispenses.emplace_back(std::move(dispense));
         }
         medicationDispenses.back().setId(model::MedicationDispenseId(medicationDispenses.back().prescriptionId(), i));
     }
@@ -558,8 +561,9 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
         compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
     auto database = createDatabase();
-    database->updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}}, responseReceipt,
-                                                  mJwtBuilder.makeJwtApotheke());
+    database->updateTaskMedicationDispenseReceipt(task,
+                                                  model::MedicationDispenseBundle{"", medicationDispenses, medications},
+                                                  responseReceipt, mJwtBuilder.makeJwtApotheke());
     database->deleteCommunicationsForTask(task.prescriptionId());
     database->commitTransaction();
 
@@ -579,7 +583,7 @@ void ServerTestBase::abortTask(Task& task)
     database->commitTransaction();
 }
 
-MedicationDispense ServerTestBase::createMedicationDispense(
+std::pair<model::MedicationDispense, model::GemErpPrMedication> ServerTestBase::createMedicationDispense(
     Task& task,
     const std::string_view& telematicIdPharmacy,
     const Timestamp& whenHandedOver,
@@ -587,6 +591,8 @@ MedicationDispense ServerTestBase::createMedicationDispense(
 {
     PrescriptionId prescriptionId = task.prescriptionId();
     const auto kvnrPatient = task.kvnr().value();
+    const auto& version = ResourceTemplates::Versions::GEM_ERP_current(whenHandedOver);
+    Uuid medicationId{};
 
     const auto medicationDispenseString = ResourceTemplates::medicationDispenseXml({
         .id = model::MedicationDispenseId{prescriptionId, 0},
@@ -595,9 +601,16 @@ MedicationDispense ServerTestBase::createMedicationDispense(
         .telematikId = telematicIdPharmacy,
         .whenHandedOver = whenHandedOver,
         .whenPrepared = whenPrepared,
+        .gematikVersion = version,
+        .medication = medicationId.toUrn(),
+    });
+    const auto medicationString = ResourceTemplates::medicationXml({
+        .version = version,
+        .id = medicationId.toString(),
     });
 
-    return MedicationDispense::fromXmlNoValidation(medicationDispenseString);
+    return {MedicationDispense::fromXmlNoValidation(medicationDispenseString),
+            model::GemErpPrMedication::fromXmlNoValidation(medicationString)};
 }
 
 std::vector<Uuid> ServerTestBase::addCommunicationsToDatabase(const std::vector<CommunicationDescriptor>& descriptors)

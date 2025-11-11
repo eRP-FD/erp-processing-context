@@ -80,11 +80,11 @@ void ActivateTaskHandler::handleRequest(PcSessionContext& session)
     A_19020.start("check PKCS#7 for structural validity");
     A_20704.start("Set VAU-Error-Code header field to invalid_prescription when an invalid "
                   "prescription has been transmitted");
-    // GEMREQ-start A_20159-03#fromBinCall
+    // GEMREQ-start A_20159-04#fromBinCall
     const auto cadesBesSignature =
         SignedPrescription::fromBin(cadesBesSignatureFile, session.serviceContext.getTslManager(),
                                     allowedProfessionOidsForQesSignature(task.type()));
-    // GEMREQ-end A_20159-03#fromBinCall
+    // GEMREQ-end A_20159-04#fromBinCall
     A_20704.finish();
     A_19020.finish();
 
@@ -115,7 +115,7 @@ void ActivateTaskHandler::handlePrescriptionRequest(PcSessionContext& session, D
 {
     const auto& prescription = cadesBesSignature.payload();
 
-    auto [responseStatus, prescriptionBundle] =
+    auto prescriptionBundle =
         prescriptionBundleFromXml<model::KbvBundle>(session, prescription);
 
     const auto compositions = prescriptionBundle.getResourcesByType<model::Composition>("Composition");
@@ -147,13 +147,13 @@ void ActivateTaskHandler::handlePrescriptionRequest(PcSessionContext& session, D
         setMvoExpiryAcceptDates(task, mvoEndDate, signingDay);
     }
 
-    handleGeneric(session, taskAndKey, cadesBesSignature, prescriptionBundle, responseStatus, isMvo, legalBasisCode);
+    handleGeneric(session, taskAndKey, cadesBesSignature, prescriptionBundle, isMvo, legalBasisCode);
 }
 
 template<typename KbvOrEvdgaBundle>
 void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
                                         const SignedPrescription& cadesBesSignature,
-                                        const KbvOrEvdgaBundle& kbvOrEvdgaBundle, HttpStatus responseStatus, bool isMvo,
+                                        const KbvOrEvdgaBundle& kbvOrEvdgaBundle, bool isMvo,
                                         std::optional<model::KbvStatusKennzeichen> legalBasisCode)
 {
     auto& task = taskAndKey.task;
@@ -172,6 +172,8 @@ void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::Tas
     }
 
     checkValidCoverage(kbvOrEvdgaBundle, task.type());
+
+    HttpStatus responseStatus = HttpStatus::OK;
 
     if (! checkPractitioner(kbvOrEvdgaBundle, session))
     {
@@ -208,22 +210,22 @@ void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::Tas
     if (! isMvo)
     {
         // A_19445 Part 1 and 4 are in $create
-        A_19445_10.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
+        A_19445_11.start("2. Task.ExpiryDate = <Date of QES Creation + 3 month");
         auto expiryDate = signingDay + date::months{3};
         if (! expiryDate.ok())
         {
             expiryDate = expiryDate.year() / expiryDate.month() / date::last;
         }
         task.setExpiryDate(model::Timestamp{date::sys_days{expiryDate}});
-        A_19445_10.finish();
+        A_19445_11.finish();
         const auto& config = Configuration::instance();
-        A_19445_10.start(
+        A_19445_11.start(
             "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 162, 200 and 209)>");
         A_19517_02.start("different validity duration (accept date) for different types");
         task.setAcceptDate(*signingTime, legalBasisCode,
                            config.getIntValue(ConfigurationKey::SERVICE_TASK_ACTIVATE_ENTLASSREZEPT_VALIDITY_WD));
         A_19517_02.finish();
-        A_19445_10.finish();
+        A_19445_11.finish();
     }
     A_19999.finish();
 
@@ -271,10 +273,9 @@ void ActivateTaskHandler::handleDigaRequest(PcSessionContext& session, Database:
 {
     const auto& evdgaPayload = cadesBesSignature.payload();
 
-    auto [responseStatus, evdgaBundle] =
-        prescriptionBundleFromXml<model::EvdgaBundle>(session, evdgaPayload);
+    auto evdgaBundle = prescriptionBundleFromXml<model::EvdgaBundle>(session, evdgaPayload);
 
-    handleGeneric(session, taskAndKey, cadesBesSignature, evdgaBundle, responseStatus, false, std::nullopt);
+    handleGeneric(session, taskAndKey, cadesBesSignature, evdgaBundle, false, std::nullopt);
 }
 
 void ActivateTaskHandler::setMvoExpiryAcceptDates(model::Task& task,
@@ -283,18 +284,18 @@ void ActivateTaskHandler::setMvoExpiryAcceptDates(model::Task& task,
 {
     if (mvoEndDate)
     {
-        A_19445_10.start("2. Task.ExpiryDate = "
+        A_19445_11.start("2. Task.ExpiryDate = "
                          "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
         task.setExpiryDate(model::Timestamp{date::sys_days{*mvoEndDate}});
-        A_19445_10.start("2. Task.AcceptDate = "
+        A_19445_11.start("2. Task.AcceptDate = "
                          "MedicationRequest.extension:Mehrfachverordnung.extension:Zeitraum.value[x]:valuePeriod.end");
         task.setAcceptDate(model::Timestamp{date::sys_days{*mvoEndDate}});
     }
     else
     {
-        A_19445_10.start("Task.ExpiryDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
+        A_19445_11.start("Task.ExpiryDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
         task.setExpiryDate(model::Timestamp{date::sys_days{signingDay} + date::days{365}});
-        A_19445_10.start("Task.AcceptDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
+        A_19445_11.start("Task.AcceptDate = <Datum der QES.Erstellung im Signaturobjekt> + 365 Kalendertage");
         task.setAcceptDate(model::Timestamp{date::sys_days{signingDay} + date::days{365}});
     }
 }
@@ -336,16 +337,11 @@ void ActivateTaskHandler::checkAuthoredOnEqualsSigningDate(const KbvOrEvdgaBundl
 }
 
 template<typename KbvOrEvdgaBundle>
-std::tuple<HttpStatus, KbvOrEvdgaBundle>
-ActivateTaskHandler::prescriptionBundleFromXml(SessionContext& sessionContext, std::string_view prescription)
+KbvOrEvdgaBundle ActivateTaskHandler::prescriptionBundleFromXml(SessionContext& sessionContext,
+                                                                std::string_view prescription)
 {
-    using namespace std::string_literals;
     using KbvBundleFactory = model::ResourceFactory<KbvOrEvdgaBundle>;
-    using OnUnknownExtension = Configuration::OnUnknownExtension;
-
-    const auto& config = Configuration::instance();
     const auto& xmlValidator = sessionContext.serviceContext.getXmlValidator();
-
     try
     {
         auto factory = KbvBundleFactory::fromXml(prescription, xmlValidator);
@@ -359,33 +355,7 @@ ActivateTaskHandler::prescriptionBundleFromXml(SessionContext& sessionContext, s
             }
         }
 
-        const auto onUnknownExtension = config.kbvValidationOnUnknownExtension();
-        factory.enableAdditionalValidation(false);
-        if (onUnknownExtension != OnUnknownExtension::ignore)
-        {
-            // downgrade to detail only as validateGeneric will be called later anyways
-            factory.genericValidationMode(model::GenericValidationMode::detail_only);
-        }
-        else
-        {
-            factory.genericValidationMode(model::GenericValidationMode::require_success);
-        }
-        const auto valOpts = Fhir::instance().defaultValidatorOptions(factory.profileType(),
-                                                                      value(factory.getValidationReferenceTimestamp()));
-        factory.validatorOptions(valOpts);
-        A_23384_03.start("E-Rezept-Fachdienst: Prüfung Gültigkeit Profilversionen");
-        const gsl::not_null view = factory.getValidationView();
-        TVLOG(1) << "using view " << view->id() << " for " <<  factory.getProfileName().value_or("UNKNOWN");
-        factory.validate(factory.profileType(), view);
-        A_23384_03.finish();
-        auto status = HttpStatus::OK;
-        if (onUnknownExtension != OnUnknownExtension::ignore)
-        {
-            status = checkExtensions(factory, onUnknownExtension, *view, valOpts);
-        }
-        std::tuple<HttpStatus, KbvOrEvdgaBundle> result{status, std::move(factory).getNoValidation()};
-        get<KbvOrEvdgaBundle>(result).additionalValidation();
-        return result;
+        return std::move(factory).getValidated(KbvOrEvdgaBundle::profileType);
     }
     catch (const model::ModelException& er)
     {
@@ -512,48 +482,6 @@ void ActivateTaskHandler::checkMultiplePrescription(const std::optional<model::K
 }
 
 template<typename KbvOrEvdgaBundle>
-HttpStatus ActivateTaskHandler::checkExtensions(const model::ResourceFactory<KbvOrEvdgaBundle>& factory,
-                                                Configuration::OnUnknownExtension onUnknownExtension,
-                                                const fhirtools::FhirStructureRepositoryView& fhirStructureRepo,
-                                                const fhirtools::ValidatorOptions& valOpts)
-{
-    using OnUnknownExtension = Configuration::OnUnknownExtension;
-    A_22927.start(" A_22927: E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
-    auto validationResult = factory.validateGeneric(fhirStructureRepo, valOpts, {});
-    auto highestSeverity = validationResult.highestSeverity();
-    if (highestSeverity >= fhirtools::Severity::error)
-    {
-#ifdef ENABLE_DEBUG_LOG
-        validationResult.dumpToLog();
-#endif
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "FHIR-Validation error", validationResult.summary());
-    }
-    bool haveUnslicedFailure = std::ranges::any_of(validationResult.results(), [](const fhirtools::ValidationError& err) {
-        const auto* extFailure = std::get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
-        return extFailure && get<fhirtools::ExtendedValidation>(*extFailure) == fhirtools::ExtendedValidation::unslicedExtension;
-    });
-    if (haveUnslicedFailure)
-    {
-        switch (onUnknownExtension)
-        {
-            case OnUnknownExtension::ignore:
-                return HttpStatus::OK;
-            case OnUnknownExtension::report:
-                return HttpStatus::Accepted;
-            case OnUnknownExtension::reject:
-                ErpFailWithDiagnostics(
-                    HttpStatus::BadRequest,
-                    "unintendierte Verwendung von Extensions an unspezifizierter Stelle im Verordnungsdatensatz",
-                    validationResult.summary(fhirtools::Severity::warning));
-        }
-        Fail2("Invalid value for OnUnknownExtension: " + std::to_string(static_cast<uintmax_t>(onUnknownExtension)),
-              std::logic_error);
-    }
-    A_22927.finish();
-    return HttpStatus::OK;
-}
-
-template<typename KbvOrEvdgaBundle>
 void ActivateTaskHandler::checkValidCoverage(const KbvOrEvdgaBundle& bundle,
                                              const model::PrescriptionType prescriptionType)
 {
@@ -605,20 +533,20 @@ bool ActivateTaskHandler::checkPractitioner(const KbvOrEvdgaBundle& bundle, PcSe
         auto anr = practitioner.anr();
         if (anr.has_value() && ! anr->validChecksum())
         {
-            A_23090_06.start("\"anr\": $anrvalue: Der Wert des Feldes identifier:ANR.value bei aufgetretenem "
+            A_23090_07.start("\"anr\": $anrvalue: Der Wert des Feldes identifier:ANR.value bei aufgetretenem "
                              "Prüfungsfehler gem. A_24032, Datentyp Integer");
             session.addOuterResponseHeaderField(Header::ANR, anr->id());
-            A_23090_06.finish();
+            A_23090_07.finish();
             return false;
         }
 
         auto zanr = practitioner.zanr();
         if (zanr.has_value() && ! zanr->validChecksum())
         {
-            A_23090_06.start("\"zanr\": $zanrvalue: Der Wert des Feldes identifier:ZANR.value bei aufgetretenem "
+            A_23090_07.start("\"zanr\": $zanrvalue: Der Wert des Feldes identifier:ZANR.value bei aufgetretenem "
                              "Prüfungsfehler gem. A_24032, Datentyp Integer");
             session.addOuterResponseHeaderField(Header::ZANR, zanr->id());
-            A_23090_06.finish();
+            A_23090_07.finish();
             return false;
         }
         A_23891.finish();
@@ -686,7 +614,7 @@ void ActivateTaskHandler::checkBundlePrescriptionId(const model::Task& task, con
     }
 }
 
-// GEMREQ-start A_20159-03#allowedProfessionOidsForQesSignature
+// GEMREQ-start A_20159-04#allowedProfessionOidsForQesSignature
 std::vector<std::string_view>
 ActivateTaskHandler::allowedProfessionOidsForQesSignature(model::PrescriptionType prescriptionType)
 {
@@ -706,7 +634,7 @@ ActivateTaskHandler::allowedProfessionOidsForQesSignature(model::PrescriptionTyp
     Fail("Invalid professionOID type: " + std::to_string(static_cast<uintmax_t>(prescriptionType)));
     return {};
 }
-// GEMREQ-end A_20159-03#allowedProfessionOidsForQesSignature
+// GEMREQ-end A_20159-04#allowedProfessionOidsForQesSignature
 
 bool ActivateTaskHandler::isPrescriptionEuRedeemable(const model::Task& task, const model::KbvBundle& bundle)
 {

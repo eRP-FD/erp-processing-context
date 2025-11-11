@@ -540,7 +540,7 @@ public:
     }
     ValidatorOptions validatorOptions() override
     {
-        return {.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable};
+        return {.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing};
     }
 };
 
@@ -558,7 +558,7 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
         // the following is caused by missing values set - ERP-10539
         {std::make_tuple(Severity::warning, "Cannot validate ValueSet binding: http://hl7.org/fhir/ValueSet/doc-typecodes|4.0.1"), "Bundle.entry[0].resource{Composition}.type"},
         {std::make_tuple(Severity::warning, "ValueSet contains no codes after expansion: http://hl7.org/fhir/ValueSet/doc-typecodes|4.0.1"), "Bundle.entry[0].resource{Composition}.type"},
-        {std::make_tuple(Severity::warning, ExtendedValidation::unslicedExtension), "Bundle.entry[0].resource{Composition}.extension[1]"},
+        {std::make_tuple(Severity::error, ExtendedValidation::unslicedExtension), "Bundle.entry[0].resource{Composition}.extension[1]"},
         {std::make_tuple(Severity::error, R"-(reference is not literal or invalid but must be resolvable: {"type": "Device", "identifier": {"system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer", "value": "X/000/1111/22/333"}})-"), "Bundle.entry[0].resource{Composition}.author[1]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.code.coding[0]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://snomed.info/sct, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.extension[3].valueCodeableConcept.coding[0]"},
@@ -604,7 +604,7 @@ public:
     ValidatorOptions validatorOptions() override
     {
         auto opt = SampleValidationTest::validatorOptions();
-        opt.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::enable;
+        opt.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing;
         return opt;
     }
 };

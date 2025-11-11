@@ -230,11 +230,11 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, demographicsOK)
         EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(serverResponse.getHeader().contentType(), std::string{ContentMimeType::fhirXmlUtf8});
 
-        testutils::bestEffortValidate(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody()));
 
         std::optional<model::Bundle> responseBundle;
         ASSERT_NO_THROW(responseBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()))
             << serverResponse.getBody();
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(value(responseBundle)));
         ASSERT_TRUE(responseBundle.has_value());
         EXPECT_EQ(responseBundle->getResourceCount(), 1);
         std::optional<model::KbvBundle> kbvBundle;
@@ -421,11 +421,11 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_list)
         EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(serverResponse.getHeader().contentType(), std::string{ContentMimeType::fhirXmlUtf8});
 
-        testutils::bestEffortValidate(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody()));
 
         std::optional<model::Bundle> responseBundle;
         ASSERT_NO_THROW(responseBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
         ASSERT_TRUE(responseBundle.has_value());
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*responseBundle));
         EXPECT_EQ(responseBundle->getResourceCount(), 3);
         std::vector<model::KbvBundle> kbvBundles;
         ASSERT_NO_THROW(kbvBundles = responseBundle->getResourcesByType<model::KbvBundle>());
@@ -475,11 +475,11 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_retrieval1)
         EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(serverResponse.getHeader().contentType(), std::string{ContentMimeType::fhirXmlUtf8});
 
-        testutils::bestEffortValidate(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody()));
 
         std::optional<model::Bundle> responseBundle;
         ASSERT_NO_THROW(responseBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
         ASSERT_TRUE(responseBundle.has_value());
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*responseBundle));
         EXPECT_EQ(responseBundle->getResourceCount(), 1);
         std::vector<model::KbvBundle> kbvBundles;
         ASSERT_NO_THROW(kbvBundles = responseBundle->getResourcesByType<model::KbvBundle>());
@@ -531,11 +531,11 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_retrieval2)
         EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(serverResponse.getHeader().contentType(), std::string{ContentMimeType::fhirXmlUtf8});
 
-        testutils::bestEffortValidate(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody()));
 
         std::optional<model::Bundle> responseBundle;
         ASSERT_NO_THROW(responseBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
         ASSERT_TRUE(responseBundle.has_value());
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*responseBundle));
         EXPECT_EQ(responseBundle->getResourceCount(), 3);
         std::vector<model::KbvBundle> kbvBundles;
         ASSERT_NO_THROW(kbvBundles = responseBundle->getResourcesByType<model::KbvBundle>());
@@ -590,11 +590,11 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_retrievalFilterStatus)
         EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
         EXPECT_EQ(serverResponse.getHeader().contentType(), std::string{ContentMimeType::fhirXmlUtf8});
 
-        testutils::bestEffortValidate(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody()));
 
         std::optional<model::Bundle> responseBundle;
         ASSERT_NO_THROW(responseBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
         ASSERT_TRUE(responseBundle.has_value());
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*responseBundle));
         EXPECT_EQ(responseBundle->getResourceCount(), 1);
         std::vector<model::KbvBundle> kbvBundles;
         ASSERT_NO_THROW(kbvBundles = responseBundle->getResourcesByType<model::KbvBundle>());

@@ -8,7 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_ERP_DATABASE_POSTGRESDATABASECOMMUNICATIONTEST_HXX
 #define ERP_PROCESSING_CONTEXT_TEST_ERP_DATABASE_POSTGRESDATABASECOMMUNICATIONTEST_HXX
 
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 
 
 class PostgresDatabaseCommunicationTest : public PostgresDatabaseTest, public testing::WithParamInterface<model::PrescriptionType>

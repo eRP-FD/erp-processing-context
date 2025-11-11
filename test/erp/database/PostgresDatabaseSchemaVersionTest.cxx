@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "shared/util/Version.hxx"
 
 

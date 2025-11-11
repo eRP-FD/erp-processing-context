@@ -37,8 +37,8 @@ class EuCloseTaskTest : public MedicationDispenseFixture,
                         public testing::WithParamInterface<MedicationDispenseFixture::BodyType>
 {
 protected:
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+    // no need to shift. We are addressing the correct view by passing whenHandedOver
+    testutils::ShiftFhirResourceViewsGuard shift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
 };
 
 TEST_F(EuCloseTaskTest, test1)
@@ -112,14 +112,16 @@ TEST_F(EuCloseTaskTest, test1)
 
         EXPECT_TRUE(std::get<0>(medicationsAndDispenses).medicationDispenses.size());
         const auto& md = std::get<0>(medicationsAndDispenses).medicationDispenses.front();
-        const auto& ref = std::string{md.performerReference()};
+
+        ASSERT_TRUE(md.performerReference().has_value());
+        const auto& ref = std::string{md.performerReference().value()};
 
         const Uuid urn{ref};
         const auto& id = urn.toString();
 
-        EXPECT_TRUE(std::get<1>(medicationsAndDispenses).has_value());
+        EXPECT_EQ(std::get<1>(medicationsAndDispenses).size(), 1);
 
-        const model::EuMedicationDispenseInfos& euInfos = std::get<1>(medicationsAndDispenses).value();
+        const model::EuMedicationDispenseInfos& euInfos = std::get<1>(medicationsAndDispenses).back();
 
         EXPECT_STREQ(std::string{euInfos.practitionerRole().getId().value()}.c_str(), id.c_str());
 

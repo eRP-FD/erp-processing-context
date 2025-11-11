@@ -98,7 +98,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
@@ -127,7 +127,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtPharamacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
@@ -156,7 +156,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
@@ -185,7 +185,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
 
@@ -268,7 +268,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
@@ -298,7 +298,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
@@ -328,7 +328,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
@@ -358,7 +358,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20259)//NOLINT(readability-funct
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
         ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_TRUE(innerResponse.getHeader().header(Header::Warning).value().find(timestampReceived.toXsDateTime()) != std::string::npos);
@@ -433,7 +433,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -459,7 +459,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -485,7 +485,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -511,7 +511,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -583,7 +583,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -610,7 +610,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -637,7 +637,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
@@ -664,7 +664,7 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
         auto outerResponse = client.send(encryptRequest(request, jwtRepresentative));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
 
         uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()

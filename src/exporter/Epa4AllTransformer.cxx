@@ -143,20 +143,21 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     // practitioner
     std::vector<fhirtools::ValueMapping> practitionerValueMappings = {};
     std::vector<FixedValue> practitionerFixedValues{};
-
+    const auto* backend = std::addressof(Fhir::instance().backend());
     auto repoView = getRepo(BundleProfile);
     const auto* bundleProfile = repoView->findStructure(BundleProfile);
     Expect(bundleProfile, "profile not found: " + to_string(BundleProfile));
-    auto erpElement = std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{},
+    auto erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{},
                                                    fhirtools::ProfiledElementTypeInfo{*bundleProfile},
                                                    &kbvBundle.jsonDocument(), nullptr);
     F_016.start(
         "resolve the Composition author reference, as there might be 1..2 practitioners (unordered) in the bundle.");
     const std::string expression =
         "Bundle.entry.resource.ofType(Composition).author.where(type='Practitioner').resolve()";
-    auto resolveReferenceExpression = fhirtools::FhirPathParser::parse(repoView.get(), expression);
+    auto resolveReferenceExpression = fhirtools::FhirPathParser::parse(backend, expression);
     Expect3(resolveReferenceExpression, "could not parse resolveReferenceExpression", std::logic_error);
-    auto resolvedReferenceCollection = resolveReferenceExpression->eval(fhirtools::EvaluationContext{erpElement}).collection;
+    auto resolvedReferenceCollection =
+        resolveReferenceExpression->eval(fhirtools::EvaluationContext{repoView, erpElement}).collection;
     Expect(resolvedReferenceCollection.size() == 1, expression + " could not be resolved");
     auto resolvedRef = resolvedReferenceCollection.single();
     Expect(resolvedRef != nullptr, expression + " could not be resolved");
@@ -503,6 +504,7 @@ model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(
     const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
     const std::vector<fhirtools::ValueMapping>& valueMappings, const std::vector<FixedValue>& fixedValues)
 {
+    const auto* backend = std::addressof(Fhir::instance().backend());
     auto repoView = getRepo(targetProfileKey);
     const auto* targetProfile = repoView->findStructure(targetProfileKey);
     Expect(targetProfile, "profile not found: " + to_string(targetProfileKey));
@@ -515,10 +517,9 @@ model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(
         targetResource.setValue(fixedValue.ptr, fixedValue.value);
     }
 
-    const auto elementId = targetProfile->typeId();
-    const auto baseTargetProfile = fhirtools::ProfiledElementTypeInfo{repoView, elementId};
+    const fhirtools::ProfiledElementTypeInfo baseTargetProfile{*targetProfile->baseType()};
 
-    auto erpElement = std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{},
+    auto erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{},
                                                    baseTargetProfile, &targetResource, &targetResource, nullptr);
 
     fhirtools::ResourceProfileTransformer::Options options;
@@ -530,17 +531,17 @@ model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(
 
     auto result = resourceProfileTransformer.applyMappings(*erpElement);
     Expect(result.success, result.summary());
-    erpElement = std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
+    erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
                                               &targetResource, &targetResource, nullptr);
 
     A_25948.start("generic mapping of fhir resources");
     A_25949.start("generic extension takeover");
-    result = resourceProfileTransformer.transform(*erpElement, targetProfileKey);
+    result = resourceProfileTransformer.transform(repoView, *erpElement, targetProfileKey);
     // we possibly need to do two rounds, because transformation can unmask other validation errors.
     // e.g. adding data-absent-reason to numerator unmasks the constraint violation rat-1 (missing denominator)
-    erpElement = std::make_shared<ErpElement>(repoView, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
+    erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
                                               &targetResource, &targetResource, nullptr);
-    result.merge(resourceProfileTransformer.transform(*erpElement, targetProfileKey));
+    result.merge(resourceProfileTransformer.transform(repoView, *erpElement, targetProfileKey));
     A_25949.finish();
     A_25948.finish();
 

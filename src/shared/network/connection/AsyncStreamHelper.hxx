@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_ASYNCSTREAMHELPER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_UTIL_ASYNCSTREAMHELPER_HXX
 
+#include "shared/util/ExceptionWrapper.hxx"
 #include "shared/util/HeaderLog.hxx"
 
 #include <boost/beast/ssl/ssl_stream.hpp>
@@ -97,14 +98,18 @@ private:
 
     static void waitForOperation(
         boost::asio::io_context& ioContext,
-        boost::beast::error_code& ec)
+        std::atomic_bool& completed)
     {
-        if (ioContext.stopped())
-        {
-            ioContext.restart();
+        auto timeoutAt = std::chrono::steady_clock::now() + std::chrono::minutes{5};
+        while(!ioContext.stopped() && !completed.load()) {
+            ioContext.run_one_for(std::chrono::milliseconds{100});
+            if (std::chrono::steady_clock::now() >= timeoutAt)
+            {
+                HeaderLog::error("Operation aborted due to emergency timeout");
+                throw ExceptionWrapper<boost::system::system_error>::create(
+                    {__FILE__, __LINE__}, make_error_code(boost::system::errc::timed_out));
+            }
         }
-
-        while(ioContext.run_one() > 0 && !ec) {}
     }
 };
 
@@ -116,17 +121,25 @@ boost::system::error_code AsyncStreamHelper::connect(
     boost::asio::io_context& ioContext,
     const boost::asio::ip::basic_resolver_results<boost::asio::ip::tcp>& resolverResults)
 {
+    if (! ioContext.stopped())
+    {
+        auto ec = make_error_code(boost::system::errc::operation_canceled);
+        std::atomic_bool completed{false};
+        stream.async_connect(resolverResults, [&ec, &completed](const boost::system::error_code& error,
+                                                                const boost::asio::ip::tcp::endpoint& endpoint) {
+            HeaderLog::vlog(2, [&] {
+                return std::ostringstream{} << "connected to: " << endpoint;
+            });
+            ec = error;
+            completed.store(true);
+        });
+
+        waitForOperation(ioContext, completed);
+
+        return ec;
+    }
     boost::system::error_code ec;
-    stream.async_connect(resolverResults,
-                         [&ec](const boost::system::error_code& error, const boost::asio::ip::tcp::endpoint& endpoint) {
-                             HeaderLog::vlog(2, [&] {
-                                 return std::ostringstream{} << "connected to: " << endpoint;
-                             });
-                             ec = error;
-                         });
-
-    waitForOperation(ioContext, ec);
-
+    stream.connect(resolverResults, ec);
     return ec;
 }
 
@@ -139,19 +152,25 @@ size_t AsyncStreamHelper::write_some (
     boost::beast::error_code& ec)
 {
     std::atomic<size_t> count = 0;
-    if (ioContext)
+    if (ioContext && !ioContext->stopped())
     {
+        std::atomic_bool completed{false};
         stream.async_write_some(
             buffers,
-            [&ec, &count](
+            [&ec, &count, &completed](
                 const boost::system::error_code& error,
                 std::size_t transferred) -> void
             {
               ec = error;
               count = transferred;
+              completed.store(true);
             });
 
-        waitForOperation(*ioContext, ec);
+        waitForOperation(*ioContext, completed);
+        if (!completed)
+        {
+            ec = make_error_code(boost::system::errc::operation_canceled);
+        }
     }
     else
     {
@@ -170,19 +189,25 @@ size_t AsyncStreamHelper::read_some(
     boost::beast::error_code& ec)
 {
     std::atomic<size_t> count = 0;
-    if (ioContext)
+    if (ioContext && !ioContext->stopped())
     {
+        std::atomic_bool completed{false};
         stream.async_read_some(
             buffer,
-            [&ec, &count](
+            [&ec, &count, &completed](
                 const boost::system::error_code& error,
                 std::size_t transferred) -> void
             {
               ec = error;
               count = transferred;
+              completed.store(true);
             });
 
-        waitForOperation(*ioContext, ec);
+        waitForOperation(*ioContext, completed);
+        if (!completed)
+        {
+            ec = make_error_code(boost::system::errc::operation_canceled);
+        }
     }
     else
     {

@@ -8,6 +8,7 @@
 #include "shared/enrolment/EnrolmentRequestHandler.hxx"
 #include "shared/server/BaseSessionContext.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/enrolment/PseudonameLogKeyPackage.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/hsm/ErpTypes.hxx"
@@ -911,5 +912,66 @@ EnrolmentModel DeleteVsdmHmacKey::doHandleRequest(EnrolmentSession& session)
     return {};
 }
 
+
+
+EnrolmentModel PostPseudoLogKey::doHandleRequest(EnrolmentSession& session)
+{
+    session.accessLog.setInnerRequestOperation("POST /Enrolment/PseudoLogKey");
+
+    try
+    {
+        EnrolmentModel requestData(session.request.getBody());
+        auto hsmPoolSession = session.baseServiceContext.getHsmPool().acquire();
+        auto& hsmSession = hsmPoolSession.session();
+
+        // extract the full package from the json request and validate the parameters
+        const auto blobGeneration =
+            gsl::narrow_cast<ErpBlob::GenerationId>(requestData.getInt64(requestBlobGeneration));
+        auto pseudoLogKeyPackageBlobData = requestData.getDecodedString(requestBlobData);
+        const ErpBlob logKeyPackageBlob{std::move(pseudoLogKeyPackageBlobData), blobGeneration};
+
+        ErpVector unwrappedEntry = hsmSession.unwrapPseudonameLogKeyPackage(logKeyPackageBlob);
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+        std::string_view pseudoLogKeyPackage{reinterpret_cast<const char*>(unwrappedEntry.data()), unwrappedEntry.size()};
+
+        // GEMREQ-start A_27392#store
+        A_27392_01.start("decrypt pseudonymization key and store it");
+        const PseudonameLogKeyPackage storedKeyPackage{pseudoLogKeyPackage};
+        const auto plainTextKey = storedKeyPackage.decryptPseudonameLogKey(hsmSession);
+        const auto pseudonameLogKeyData = ErpArray<Aes128Length>::create(plainTextKey);
+
+        auto blobCache = session.baseServiceContext.getBlobCache();
+        BlobDatabase::Entry pnLogKeyEntry;
+        A_27560.start("Only allow decrypted log key in TEE");
+        pnLogKeyEntry.blob = hsmSession.wrapPseudonameLogKey(pseudonameLogKeyData, blobGeneration);
+        A_27560.finish();
+        pnLogKeyEntry.type = BlobType::PseudonameLogKey;
+        pnLogKeyEntry.name = ErpVector::create("key_pn_log");
+        if (blobCache->hasValidBlobsOfType({BlobType::PseudonameLogKey}).front())
+        {
+            blobCache->deleteBlob(BlobType::PseudonameLogKey, pnLogKeyEntry.name);
+        }
+        blobCache->storeBlob(std::move(pnLogKeyEntry));
+        A_27392_01.finish();
+        // GEMREQ-end A_27392#store
+        session.response.setStatus(HttpStatus::Created);
+    }
+    catch (const ErpException& exception)
+    {
+        session.response.setStatus(exception.status());
+        if (exception.status() == HttpStatus::BadRequest)
+        {
+            session.accessLog.error("caught ErpException in PostVsdmHmacKey::doHandleRequest");
+            TVLOG(1) << "exception details: " << exception.what();
+
+            EnrolmentModel response;
+            response.set("/code", "INVALID");
+            response.set("/description", exception.what());
+            return response;
+        }
+        throw;
+    }
+    return {};
+}
 
 } // end of namespace enrolment

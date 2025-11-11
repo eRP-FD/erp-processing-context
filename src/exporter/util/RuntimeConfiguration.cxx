@@ -19,6 +19,11 @@ std::chrono::milliseconds RuntimeConfiguration::throttleValue() const
     return mThrottle;
 }
 
+RuntimeConfiguration::ThrottleMode RuntimeConfiguration::throttleMode() const
+{
+    return mThrottleMode;
+}
+
 void RuntimeConfiguration::pause()
 {
     mPause = true;
@@ -29,9 +34,10 @@ void RuntimeConfiguration::resume()
     mPause = false;
 }
 
-void RuntimeConfiguration::throttle(const std::chrono::milliseconds& throttle)
+void RuntimeConfiguration::throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle)
 {
     mThrottle = throttle;
+    mThrottleMode = throttleMode;
 }
 
 void RuntimeConfiguration::setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs)
@@ -65,6 +71,11 @@ std::chrono::milliseconds RuntimeConfiguration::Getter::throttleValue() const
     return mRuntimeConfiguration->throttleValue();
 }
 
+RuntimeConfiguration::ThrottleMode RuntimeConfiguration::Getter::throttleMode() const
+{
+    return mRuntimeConfiguration->throttleMode();
+}
+
 std::chrono::milliseconds RuntimeConfiguration::Getter::getMetricsLogThresholdMs(DurationCategory category) const
 {
     return mRuntimeConfiguration->getMetricsLogThresholdMs(category);
@@ -92,9 +103,9 @@ void RuntimeConfiguration::Setter::resume()
     mRuntimeConfiguration->resume();
 }
 
-void RuntimeConfiguration::Setter::throttle(const std::chrono::milliseconds& throttle)
+void RuntimeConfiguration::Setter::throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle)
 {
-    mRuntimeConfiguration->throttle(throttle);
+    mRuntimeConfiguration->throttle(throttleMode, throttle);
 }
 
 bool RuntimeConfiguration::Setter::isPaused() const
@@ -105,6 +116,11 @@ bool RuntimeConfiguration::Setter::isPaused() const
 std::chrono::milliseconds RuntimeConfiguration::Setter::throttleValue() const
 {
     return mRuntimeConfiguration->throttleValue();
+}
+
+RuntimeConfiguration::ThrottleMode RuntimeConfiguration::Setter::throttleMode() const
+{
+    return mRuntimeConfiguration->throttleMode();
 }
 
 void RuntimeConfiguration::Setter::setMetricsLogThresholdMs(DurationCategory category,

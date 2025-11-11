@@ -31,9 +31,9 @@ protected:
     fhirtools::ValidationResults validate(std::string_view sample, const fhirtools::ValidatorOptions& options)
     {
         auto doc = model::NumberAsStringParserDocument::fromJson(sample);
-        auto element = std::make_shared<ErpElement>(view, std::weak_ptr<ErpElement>{}, "Resource", &doc);
+        auto element = std::make_shared<ErpElement>(&repo, std::weak_ptr<ErpElement>{}, "Resource", &doc);
         return fhirtools::FhirPathValidator::validateWithProfiles(
-            element, "Resource", std::set{fhirtools::DefinitionKey{GetParam()}}, options);
+            view, element, "Resource", std::set{fhirtools::DefinitionKey{GetParam()}}, options);
     }
 };
 

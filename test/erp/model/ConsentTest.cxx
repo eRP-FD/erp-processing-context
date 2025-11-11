@@ -14,6 +14,7 @@
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <gtest/gtest.h>
 
 class ConsentTest : public testing::Test
@@ -54,17 +55,21 @@ TEST_F(ConsentTest, Construct)
 
 TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto jsonString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.json");
-
+    const model::Kvnr kvnr{"X123456788"};
+    auto timestamp = model::Timestamp::now();
+    auto jsonString = ResourceTemplates::consentJson({
+        .consentCategory = model::ConsentType::CHARGCONS,
+        .kvnr = kvnr.id(),
+        .timestamp = timestamp.toXsDateTime(),
+    });
     std::optional<model::Consent> optConsent;
     ASSERT_NO_THROW(optConsent = model::Consent::fromJson(jsonString, *StaticData::getJsonValidator()));
 
     auto& consent = optConsent.value();
 
     EXPECT_FALSE(consent.id().has_value());
-    const model::Kvnr kvnr{"X123456788"};
     EXPECT_EQ(consent.patientKvnr(), kvnr);
-    EXPECT_EQ(consent.dateTime().toXsDateTimeWithoutFractionalSeconds(), "2021-06-01T02:13:00+00:00");
+    EXPECT_EQ(consent.dateTime(), timestamp);
 
     EXPECT_TRUE(consent.isChargingConsent());
     EXPECT_NO_THROW(consent.fillId(model::ConsentType::CHARGCONS, kvnr));
@@ -83,9 +88,14 @@ TEST_F(ConsentTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
 
 TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-complexity)
 {
-    auto consent = model::Consent::fromXml(
-        ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml"),
-        *StaticData::getXmlValidator());
+    const auto& version = ResourceTemplates::Versions::GEM_ERPCHRG_current();
+    auto xmlString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml");
+    boost::replace_first(xmlString, "###VERSION###", version.renderVersion());
+    if (version >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
+    {
+        boost::replace_all(xmlString, "http://fhir.de/sid/pkv/kvid-10", "http://fhir.de/sid/gkv/kvid-10");
+    }
+    auto consent = model::Consent::fromXml( xmlString, *StaticData::getXmlValidator());
 
     EXPECT_FALSE(consent.id().has_value());
     const model::Kvnr kvnr{"X123456788"};

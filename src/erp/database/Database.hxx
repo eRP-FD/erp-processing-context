@@ -57,7 +57,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "37";
+    static constexpr const char* expectedSchemaVersion = "38";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -130,7 +130,7 @@ public:
     virtual uint64_t countAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
 
     // @return <medications, hasNextPage>
-    [[nodiscard]] virtual std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
+    [[nodiscard]] virtual std::tuple<model::MedicationsAndDispenses, std::list<model::EuMedicationDispenseInfos>>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) = 0;
     [[nodiscard]] virtual model::MedicationsAndDispenses
     retrieveMedicationDispense(const model::Kvnr& kvnr, const model::MedicationDispenseId& id) = 0;

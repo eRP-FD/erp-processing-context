@@ -8,6 +8,7 @@
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "erp/service/chargeitem/ChargeItemPutHandler.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Demangle.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
@@ -297,10 +298,15 @@ TEST_F(ChargeItemPutHandlerTest,
 {
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-
-    auto& resourceManager = ResourceManager::instance();
-    const auto chargeItemXml = resourceManager.getStringResource(
-        std::string{TEST_DATA_DIR} + "/validation/xml/pkv/chargeItem/ChargeItem_invalid_wrongVersion.xml");
+    const char* const pkvKvnr = "X500000056";
+    auto chargeItemXml = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .prescriptionId = pkvTaskId,
+        .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
+        .operation = OperationType::Put,
+    });
+    chargeItemXml = std::regex_replace(chargeItemXml, std::regex{R"(GEM_ERPCHRG_PR_ChargeItem\|[^"]+)"},
+                                       "GEM_ERPCHRG_PR_ChargeItem|0.1");
 
     auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
     inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
@@ -346,6 +352,9 @@ TEST_F(ChargeItemPutHandlerTest, PutNonPkvFails)
 
 TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(readability-function-cognitive-complexity)
 {
+    static const rapidjson::Pointer binaryProfilePtr{
+        model::resource::ElementName::path(model::resource::elements::contained, 0, model::resource::elements::meta,
+                                           model::resource::elements::profile, 0)};
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
@@ -356,12 +365,17 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(reada
     newDispenseBundle.setId(Uuid());
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
                                         newDispenseBundle.serializeToXmlString(), std::nullopt};
-    const auto chargeItemXml = ResourceTemplates::chargeItemXml(
-        {.kvnr = pkvKvnr,
-         .prescriptionId = pkvTaskId,
-         .dispenseBundleBase64 = cadesBesSignature.getBase64(),
-         .operation = OperationType::Put}, "charge_item_with_profile_PUT_template.xml");
-    auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+    const auto chargeItemXml = ResourceTemplates::chargeItemXml({
+        .kvnr = pkvKvnr,
+        .prescriptionId = pkvTaskId,
+        .dispenseBundleBase64 = cadesBesSignature.getBase64(),
+        .operation = OperationType::Put,
+    });
+    auto chargeItemJson = Fhir::instance().converter().xmlStringToJson(chargeItemXml);
+    chargeItemJson.setValue(binaryProfilePtr, "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Binary|" +
+                                                  ResourceTemplates::Versions::GEM_ERP_current().renderVersion());
+    auto inputChargeItem = model::ChargeItem::fromJson(std::move(chargeItemJson));
+
     inputChargeItem.setAccessCode(MockDatabase::mockAccessCode);
     const auto jwtPharmacy =
         JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
@@ -374,9 +388,25 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(reada
 
 TEST_F(ChargeItemPutHandlerTest, PutChargeItemErp23745)
 {
-    auto chargeItemStr = ResourceManager::instance().getStringResource("test/issues/ERP-23745/ChargeItem.xml");
+    auto timestamp = model::Timestamp::fromGermanDate("2024-10-29");
+    auto prescriptionId = model::PrescriptionId::fromString("200.000.000.050.000.33");
+    auto dispenseItem = ResourceTemplates::davDispenseItemXml({
+        .davPkvVersion = ResourceTemplates::Versions::DAV_PKV_1_2,
+        .prescriptionId = prescriptionId,
+        .whenHandenOver = timestamp,
+    });
+    auto signedItem = CryptoHelper::toCadesBesSignature(
+        dispenseItem, "test/generated_pki/sub_ca1_ec/certificates/apotheker/apotheker.pem", timestamp);
+
+    auto chargeItemStr = ResourceTemplates::chargeItemXml({
+        .kvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv},
+        .prescriptionId = prescriptionId,
+        .dispenseBundleBase64 = std::move(signedItem),
+        .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put,
+    });
     auto inputChargeItem = model::ChargeItem::fromXml(chargeItemStr, *StaticData::getXmlValidator());
     inputChargeItem.setAccessCode("b79e5bca8b072113f08c43ce22aa1dded4db61ef21571b37911b6dfc852004f6");
+    inputChargeItem.deleteSupportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
     const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(std::string("606358757"));
 
     auto pkvTaskId =

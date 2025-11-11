@@ -14,6 +14,7 @@
 #include "fhirtools/repository/FhirValueSet.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Utf8Helper.hxx"
+#include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
 #include "fhirtools/validator/internal/ValidationData.hxx"
@@ -105,7 +106,8 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         }
         std::ostringstream baseElementName;
         baseElementName << mDefPtr.element()->name() << '.' << name;
-        ProfiledElementTypeInfo basePtr(repo.shared_from_this(), baseElementName.str());
+        ProfiledElementTypeInfo basePtr(mDefPtr.element()->structureDefinition().repositoryBackend(),
+                                        baseElementName.str());
         if (! mSliceName.empty())
         {
             baseElementName << ':' << mSliceName;
@@ -121,7 +123,7 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
         result.emplace(std::move(key), std::move(validator));
         return result;
     }
-    const auto& subDefinitions = mDefPtr.subDefinitions(repo, name);
+    const auto& subDefinitions = mDefPtr.subDefinitions(name);
     for (const auto& defPtr : subDefinitions)
     {
         if (mDefPtr.profile()->kind() != FhirStructureDefinition::Kind::slice && mDefPtr.profile()->isSystemType())
@@ -152,32 +154,34 @@ ProfileValidator::Map ProfileValidator::subFieldValidators(const fhirtools::Fhir
     return result;
 }
 
-void fhirtools::ProfileValidator::typecast(const fhirtools::FhirStructureRepositoryView& repo,
-                                           const fhirtools::FhirStructureDefinition* structDef)
+void fhirtools::ProfileValidator::typecast(const fhirtools::FhirStructureDefinition* structDef)
 {
-    mDefPtr.typecast(repo, structDef);
+    mDefPtr.typecast(structDef);
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
 ProfileValidator::ProcessingResult ProfileValidator::process(const Element& element, std::string_view elementFullPath)
 {
-    checkConstraints(element, elementFullPath);
-    checkBinding(element, elementFullPath);
+    const auto& view = mSetValidator.get().fhirPathValidator().repositoryView();
+    checkConstraints(view, element, elementFullPath);
+    checkBinding(*view, element, elementFullPath);
     checkValue(element, elementFullPath);
     checkValueMaxLength(element, elementFullPath);
     checkValueMinValue(element, elementFullPath);
     checkValueMaxValue(element, elementFullPath);
-    checkCoding(element, elementFullPath);
+    checkCoding(*view, element, elementFullPath);
     checkValueNotEmpty(element, elementFullPath);
     const auto& slicing = mDefPtr.element()->slicing();
     if (slicing)
     {
+        const auto& options = mSetValidator.get().options();
         ProcessingResult result;
         for (const auto& slice : slicing->slices())
         {
-            auto condition = slice.condition(*element.getFhirStructureRepository(), slicing->discriminators());
+            auto condition =
+                slice.condition(std::addressof(element.getFhirStructureRepository()), slicing->discriminators());
             Expect(condition != nullptr, "couldn't get condition for slice: " + slice.name());
-            if (condition->test(element, mSetValidator.get().options()))
+            if (condition->test(view, element, options))
             {
                 const auto& profile = slice.profile();
                 static_assert(std::is_reference_v<decltype(slice.profile())>);
@@ -187,7 +191,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                 ProfileValidator profVal{profKey, mParentData, ptr, slice.name(), mSetValidator};
                 auto subSlices = profVal.process(element, elementFullPath);
                 Expect3(subSlices.sliceProfiles.empty(), "Slice rootElement cannot be sliced.", std::logic_error);
-                mData->add(Severity::debug, "detected slice: " + slice.name(), std::string{elementFullPath},
+                mData->add(options.levels.sliceDetection, "detected slice: " + slice.name(), std::string{elementFullPath},
                            ptr.profile());
                 if (! profile.rootElement()->profiles().empty())
                 {
@@ -195,7 +199,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
                     std::map<MapKey, std::shared_ptr<const ValidationData>> profilesKeys;
                     for (const auto& url : ptr.element()->profiles())
                     {
-                        const auto* prof = element.getFhirStructureRepository()->findStructure(DefinitionKey{url});
+                        const auto* prof = view->findStructure(DefinitionKey{url});
                         Expect3(prof != nullptr, "failed to resolve profile: " + url, std::logic_error);
                         ProfiledElementTypeInfo defPtr{*prof};
                         MapKey key{defPtr};
@@ -214,14 +218,16 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
     return {};
 }
 
-void fhirtools::ProfileValidator::checkConstraints(const fhirtools::Element& element, std::string_view elementFullPath)
+void fhirtools::ProfileValidator::checkConstraints(const std::shared_ptr<const FhirStructureRepositoryView>& view,
+                                                   const fhirtools::Element& element, std::string_view elementFullPath)
 {
     for (const auto& constraint : mDefPtr.element()->getConstraints())
     {
-        const auto& expression = constraint.parsedExpression(*element.getFhirStructureRepository());
+        const auto& expression = constraint.parsedExpression(std::addressof(element.getFhirStructureRepository()));
         try
         {
-            const auto evalResult = expression->eval(fhirtools::EvaluationContext{element.shared_from_this()}).collection;
+            const auto evalResult =
+                expression->eval(fhirtools::EvaluationContext{view, element.shared_from_this()}).collection;
 
             // the evaluation of the result of the expression is not so well-defined,
             // therefore follow the way the HAPI validator is doing it:
@@ -265,7 +271,7 @@ void ProfileValidator::checkValue(const Element& element, std::string_view eleme
 {
     if (const auto& fixed = mDefPtr.element()->fixed(); fixed)
     {
-        ValueElement fixedVal{element.getFhirStructureRepository(), fixed};
+        ValueElement fixedVal{std::addressof(element.getFhirStructureRepository()), fixed};
         if (!element.matches(fixedVal) || !fixedVal.matches(element))
         {
             std::ostringstream msg;
@@ -277,7 +283,7 @@ void ProfileValidator::checkValue(const Element& element, std::string_view eleme
     }
     if (const auto& pattern = mDefPtr.element()->pattern(); pattern)
     {
-        ValueElement patternVal{element.getFhirStructureRepository(), pattern};
+        ValueElement patternVal{std::addressof(element.getFhirStructureRepository()), pattern};
         if (! element.matches(patternVal))
         {
             std::ostringstream msg;
@@ -361,7 +367,8 @@ void ProfileValidator::checkValueMaxValue(const Element& element, std::string_vi
     }
 }
 
-void ProfileValidator::checkCoding(const Element& element, std::string_view elementFullPath)
+void ProfileValidator::checkCoding(const FhirStructureRepositoryView& view, const Element& element,
+                                   std::string_view elementFullPath)
 {
     if (! mDefPtr.element()->hasBinding() && mDefPtr.element()->typeId() == "Coding")
     {
@@ -369,8 +376,7 @@ void ProfileValidator::checkCoding(const Element& element, std::string_view elem
         const auto codeSubElement = element.subElements("code");
         if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
         {
-            const auto& codes = element.getFhirStructureRepository()->findCodeSystemCodes(
-                DefinitionKey{systemSubElement[0]->asString()});
+            const auto& codes = view.findCodeSystemCodes(DefinitionKey{systemSubElement[0]->asString()});
             if (codes)
             {
                 if (! codes->empty() && ! codes->synthesized())
@@ -402,7 +408,8 @@ void ProfileValidator::checkCoding(const Element& element, std::string_view elem
     }
 }
 
-void ProfileValidator::checkBinding(const Element& element, std::string_view elementFullPath)
+void ProfileValidator::checkBinding(const FhirStructureRepositoryView& view, const Element& element,
+                                    std::string_view elementFullPath)
 {
     if (mDefPtr.element() && mDefPtr.element()->hasBinding())
     {
@@ -411,7 +418,7 @@ void ProfileValidator::checkBinding(const Element& element, std::string_view ele
         {
             return;
         }
-        if (const auto& codes = element.getFhirStructureRepository()->findValueSetCodes(binding.key))
+        if (const auto& codes = view.findValueSetCodes(binding.key))
         {
             const auto& warning = codes->getWarnings();
             if (! warning.empty())

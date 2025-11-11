@@ -90,6 +90,7 @@ protected:
 
 private:
     std::string_view xmlDocument() const;
+    static std::string errorMessage(const fhirtools::ValidationResults& validationResults);
 
     mutable XmlDocCache mXmlDoc;
     Options mOptions;

@@ -18,10 +18,8 @@ EvaluationContext ExistenceEmpty::eval(const EvaluationContext& context) const
     return context.makeBoolElement(context.collection.empty());
 }
 
-UnaryExpression::UnaryExpression(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
-    : Expression(std::move(fhirStructureRepositoryView))
-    , mArg(std::move(arg))
+UnaryExpression::UnaryExpression(ExpressionPtr arg)
+    : mArg(std::move(arg))
 {
 }
 
@@ -33,8 +31,7 @@ EvaluationContext ExistenceExists::eval(const EvaluationContext& context) const
     {
         return context.makeBoolElement(!context.collection.empty());
     }
-    return ExistenceExists(fhirStructureRepository(), nullptr)
-        .eval(FilteringWhere(fhirStructureRepository(), mArg).eval(context));
+    return ExistenceExists(nullptr).eval(FilteringWhere(mArg).eval(context));
 }
 
 EvaluationContext ExistenceAll::eval(const EvaluationContext& context) const
@@ -124,8 +121,7 @@ EvaluationContext ExistenceDistinct::eval(const EvaluationContext& context) cons
 EvaluationContext ExistenceIsDistinct::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    return context.makeBoolElement(std::make_shared<ExistenceDistinct>(fhirStructureRepository())->eval(context).collection.size() ==
-                            context.collection.size());
+    return context.makeBoolElement(ExistenceDistinct{}.eval(context).collection.size() == context.collection.size());
 }
 
 EvaluationContext FilteringWhere::eval(const EvaluationContext& context) const
@@ -162,7 +158,7 @@ EvaluationContext FilteringOfType::eval(const EvaluationContext& context) const
     FPExpect(mArg, "type specifier not specified");
     const auto arg = mArg->eval(context).collection.singleOrEmpty();
     FPExpect(arg, "type not specified");
-    const auto* type = fhirStructureRepository()->findTypeById(arg->asString());
+    const auto* type = context.view->findTypeById(arg->asString());
     FPExpect(type, "could not resolve type " + arg->asString());
     auto ret = context();
     for (const auto& item : context.collection)
@@ -170,15 +166,14 @@ EvaluationContext FilteringOfType::eval(const EvaluationContext& context) const
         if (item->getStructureDefinition()->isSystemType() &&
             type->kind() == FhirStructureDefinition::Kind::primitiveType)
         {
-            if (item->getStructureDefinition()->isDerivedFrom(
-                    *fhirStructureRepository(), type->primitiveToSystemType(*fhirStructureRepository()).url()))
+            if (item->getStructureDefinition()->isDerivedFrom(type->primitiveToSystemType().url()))
             {
                 ret.collection.emplace_back(item);
             }
         }
         else
         {
-            if (item->getStructureDefinition()->isDerivedFrom(*fhirStructureRepository(), type->url()))
+            if (item->getStructureDefinition()->isDerivedFrom(type->url()))
             {
                 ret.collection.emplace_back(item);
             }
@@ -187,10 +182,8 @@ EvaluationContext FilteringOfType::eval(const EvaluationContext& context) const
     return ret;
 }
 
-SubsettingIndexer::SubsettingIndexer(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
-    ExpressionPtr rhs)
-    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
+SubsettingIndexer::SubsettingIndexer(ExpressionPtr lhs, ExpressionPtr rhs)
+    : BinaryExpression(std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }
@@ -225,9 +218,8 @@ EvaluationContext SubsettingTail::eval(const EvaluationContext& context) const
     return context.collection.empty() ? context() : context({context.collection.begin() + 1, context.collection.end()});
 }
 
-SubsettingIntersect::SubsettingIntersect(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
-    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
+SubsettingIntersect::SubsettingIntersect(ExpressionPtr arg)
+    : UnaryExpression(std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
@@ -247,10 +239,8 @@ EvaluationContext SubsettingIntersect::eval(const EvaluationContext& context) co
     return ret;
 }
 
-CombiningUnion::CombiningUnion(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr lhs,
-    ExpressionPtr rhs)
-    : BinaryExpression(std::move(fhirStructureRepositoryView), std::move(lhs), std::move(rhs))
+CombiningUnion::CombiningUnion(ExpressionPtr lhs, ExpressionPtr rhs)
+    : BinaryExpression(std::move(lhs), std::move(rhs))
 {
     FPExpect(mLhs && mRhs, "missing mandatory argument");
 }

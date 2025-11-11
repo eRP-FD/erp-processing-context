@@ -31,6 +31,14 @@ public:
 class SlicingSampleValidationTest : public test::SampleValidationTest<SlicingSampleValidationTest>
 {
 public:
+    ValidatorOptions validatorOptions() override
+    {
+        auto options = SampleValidationTest::validatorOptions();
+        options.levels.sliceDetection = Severity::info;
+        options.levels.resourceTypeDetection = Severity::info;
+        return options;
+    }
+
     static std::list<std::filesystem::path> fileList()
     {
         auto result = SampleValidationTest::fileList();
@@ -85,87 +93,96 @@ using Sample = fhirtools::test::Sample;
 INSTANTIATE_TEST_SUITE_P( samples, SlicingSampleValidationTest, ::testing::Values(
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_pattern.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "Sliceable.sliced[1]"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "Sliceable.sliced[1]"},
                 {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://erp.test/slice2/code, it has not been loaded."), "Sliceable.sliced[1].smallstructure.coding"},
                 {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://erp.test/slice1/code, it has not been loaded."), "Sliceable.sliced[0].smallstructure.coding"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_fixed.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "Sliceable.sliced[1]"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "Sliceable.sliced[1]"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_exists.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "Sliceable.sliced[1]"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "Sliceable.sliced[1]"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_ordered.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "Sliceable.sliced[1]"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "Sliceable.sliced[1]"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/invalid_slice_ordered.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "Sliceable.sliced[1]"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "Sliceable.sliced[1]"},
                 {std::make_tuple(Severity::error, "slicing out of order"), "Sliceable.sliced[1]"}
             }
         },
     Sample{"SliceByProfileBase", "test/fhir-path/slicing/samples/valid_slice_by_profile.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"), "SliceByProfileBase.sub[0]{Resource}"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"), "SliceByProfileBase.sub[1]{Resource}"},
-                {std::make_tuple(Severity::debug, "resource is: Resource"), "SliceByProfileBase.sub[0]{Resource}"},
-                {std::make_tuple(Severity::debug, "resource is: Resource"), "SliceByProfileBase.sub[1]{Resource}"},
+                {std::make_tuple(Severity::info, "detected slice: slice1"), "SliceByProfileBase.sub[0]{Resource}"},
+                {std::make_tuple(Severity::info, "detected slice: slice2"), "SliceByProfileBase.sub[1]{Resource}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "SliceByProfileBase.sub[0]{Resource}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "SliceByProfileBase.sub[1]{Resource}"},
             }
         },
     Sample{"Bundle", "test/fhir-path/slicing/samples/valid_slice_by_profile_field_resolve.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"),
+                {std::make_tuple(Severity::info, "detected slice: slice1"),
                         "Bundle.entry[0].resource{SliceByProfileFieldResolveBase}.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"),
+                {std::make_tuple(Severity::info, "detected slice: slice2"),
                         "Bundle.entry[0].resource{SliceByProfileFieldResolveBase}.sliced[1]"},
+                {std::make_tuple(Severity::info, "resource is: SliceByProfileFieldResolveBase"), "Bundle.entry[0].resource{SliceByProfileFieldResolveBase}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[1].resource{Resource}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[2].resource{Resource}"},
             }
         },
     Sample{"Bundle", "test/fhir-path/slicing/samples/valid_slice_by_profile_resolve.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"),
+                {std::make_tuple(Severity::info, "detected slice: slice1"),
                         "Bundle.entry[0].resource{SliceByProfileResolveBase}.subReference[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"),
+                {std::make_tuple(Severity::info, "detected slice: slice2"),
                         "Bundle.entry[0].resource{SliceByProfileResolveBase}.subReference[1]"},
+                {std::make_tuple(Severity::info, "resource is: SliceByProfileResolveBase"), "Bundle.entry[0].resource{SliceByProfileResolveBase}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[1].resource{Resource}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[2].resource{Resource}"},
             }
         },
     Sample{"Bundle", "test/fhir-path/slicing/samples/valid_slice_by_profile_resolve_field.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice1"),
+                {std::make_tuple(Severity::info, "detected slice: slice1"),
                         "Bundle.entry[0].resource{SliceByProfileResolveFieldBase}.subReference[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice2"),
+                {std::make_tuple(Severity::info, "detected slice: slice2"),
                         "Bundle.entry[0].resource{SliceByProfileResolveFieldBase}.subReference[1]"},
+                {std::make_tuple(Severity::info, "resource is: SliceByProfileResolveFieldBase"), "Bundle.entry[0].resource{SliceByProfileResolveFieldBase}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[1].resource{Resource}"},
+                {std::make_tuple(Severity::info, "resource is: Resource"), "Bundle.entry[2].resource{Resource}"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_primitive_binding.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[2]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[2]"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_coding_binding.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[2]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[2]"},
                 {std::make_tuple(Severity::error, "Code WrongCode is not part of CodeSystem http://erp.test/TestCodeSystem"), "Sliceable.sliced[3].smallstructure.coding"},
                 {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://erp.test/WrongCodeSystem, it has not been loaded."), "Sliceable.sliced[1].smallstructure.coding"},
             }
         },
     Sample{"Sliceable", "test/fhir-path/slicing/samples/valid_slice_by_codeable_concept_binding.json",
             {
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[0]"},
-                {std::make_tuple(Severity::debug, "detected slice: slice"), "Sliceable.sliced[2]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[0]"},
+                {std::make_tuple(Severity::info, "detected slice: slice"), "Sliceable.sliced[2]"},
                 {std::make_tuple(Severity::error, "Code WrongCode is not part of CodeSystem http://erp.test/TestCodeSystem"), "Sliceable.sliced[1].smallstructure.codeableConcept.coding[1]"},
                 {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://erp.test/WrongCodeSystem, it has not been loaded."), "Sliceable.sliced[3].smallstructure.codeableConcept.coding[0]"},
             }

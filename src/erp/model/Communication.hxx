@@ -34,6 +34,7 @@ public:
         ProfileType::GEM_ERP_PR_Communication_Representative,
         ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq,
         ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply,
+        ProfileType::GEM_ERP_PR_Communication_DiGA,
     };
     // GEMREQ-end A_19450-01#acceptedCommunications
     enum class MessageType : int8_t
@@ -43,7 +44,8 @@ public:
         DispReq = 2,
         Representative = 3,
         ChargChangeReq = 4,
-        ChargChangeReply = 5
+        ChargChangeReply = 5,
+        DiGA = 6
     };
     static std::string_view messageTypeToString(MessageType messageType);
     static int8_t messageTypeToInt(MessageType messageType);
@@ -67,7 +69,9 @@ public:
     static const rapidjson::Pointer identifierValuePointer;
 
     MessageType messageType() const;
+    bool isRequest() const;
     bool isReply() const;
+    bool requiresTask() const;
     std::string_view messageTypeAsString() const;
     std::string_view messageTypeAsProfileUrl() const;
     int8_t messageTypeAsInt() const;

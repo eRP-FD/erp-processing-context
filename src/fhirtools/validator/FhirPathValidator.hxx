@@ -33,9 +33,11 @@ class ReferenceContext;
 class FhirPathValidator
 {
 public:
-    [[nodiscard]] static ValidationResults validate(const std::shared_ptr<const Element>& element,
+    [[nodiscard]] static ValidationResults validate(std::shared_ptr<const FhirStructureRepositoryView> view,
+                                                    const std::shared_ptr<const Element>& element,
                                                     const std::string& elementFullPath, const ValidatorOptions& = {});
-    [[nodiscard]] static ValidationResults validateWithProfiles(const std::shared_ptr<const Element>& element,
+    [[nodiscard]] static ValidationResults validateWithProfiles(std::shared_ptr<const FhirStructureRepositoryView> view,
+                                                                const std::shared_ptr<const Element>& element,
                                                                 const std::string& elementFullPath,
                                                                 const std::set<DefinitionKey>& profileKeys,
                                                                 const ValidatorOptions& = {});
@@ -44,20 +46,21 @@ public:
     const ValidatorOptions& options() const;
     const ProfiledElementTypeInfo& extensionRootDefPtr() const;
     const ProfiledElementTypeInfo& metaRootDefPtr() const;
+    const std::shared_ptr<const FhirStructureRepositoryView>& repositoryView() const;
 
 private:
     FhirPathValidator(const ValidatorOptions& options, std::unique_ptr<ProfiledElementTypeInfo> initExtensionRootDefPtr,
                       std::unique_ptr<ProfiledElementTypeInfo> initMetaRootDefPtr,
-                      const std::shared_ptr<const FhirStructureRepositoryView>& repo);
-    static FhirPathValidator create(const ValidatorOptions&, const std::shared_ptr<const FhirStructureRepositoryView>&);
+                      std::shared_ptr<const FhirStructureRepositoryView> repo);
+    static FhirPathValidator create(const ValidatorOptions&, std::shared_ptr<const FhirStructureRepositoryView>);
     void validateInternal(const std::shared_ptr<const Element>& element,
                           std::set<ProfiledElementTypeInfo> extraProfiles, const std::string& elementFullPath);
 
     void validateAllSubElements(const std::shared_ptr<const Element>& element, ReferenceContext& referenceContext,
                                 ProfileSetValidator& elementInfo, const std::string& elementFullPath);
-    void processSubElements(const std::shared_ptr<const Element>& element, const std::string& subName,
-                            const std::vector<std::shared_ptr<const Element>>& subElements, ReferenceContext&,
-                            fhirtools::ProfileSetValidator& elementInfo, const std::string& subFullPathBase);
+    void processSubElements(const std::string& subName, const std::vector<std::shared_ptr<const Element>>& subElements,
+                            ReferenceContext&, fhirtools::ProfileSetValidator& elementInfo,
+                            const std::string& subFullPathBase);
     void validateElement(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,
                          const std::string& elementFullPath);
     void validateResource(const std::shared_ptr<const Element>& element, ReferenceContext&, ProfileSetValidator&,

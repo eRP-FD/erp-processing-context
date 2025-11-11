@@ -27,6 +27,8 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
+
 class CloseTaskTest : public MedicationDispenseFixture
 {
 protected:
@@ -84,12 +86,12 @@ protected:
     fhirtools::EvaluationContext runRequest(const fhirtools::FhirStructureRepositoryView& repo)
     {
         struct Element {
-            Element(const fhirtools::FhirStructureRepositoryView& repo, model::NumberAsStringParserDocument initDoc,
+            Element(const fhirtools::FhirStructureRepositoryBackend* repo, model::NumberAsStringParserDocument initDoc,
                     std::string elementId)
                 : mElementId{std::move(elementId)}
                 , mDocument{std::move(initDoc)}
-                , mElement{std::make_shared<ErpElement>(repo.shared_from_this(), std::weak_ptr<fhirtools::Element>{},
-                                                        mElementId, std::addressof(mDocument))}
+                , mElement{std::make_shared<ErpElement>(repo, std::weak_ptr<fhirtools::Element>{}, mElementId,
+                                                        std::addressof(mDocument))}
             {
             }
             std::string mElementId;
@@ -112,8 +114,10 @@ protected:
         BundleFactory::Options opt;
         auto doc = BundleFactory::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), opt)
                        .getValidated(model::ProfileType::GEM_ERP_PR_Bundle);
-        auto bundleElement = std::make_shared<Element>(repo, std::move(doc).jsonDocument(), "Bundle");
-        return fhirtools::EvaluationContext{std::shared_ptr<fhirtools::Element>(bundleElement, bundleElement->mElement.get())};
+        auto bundleElement = std::make_shared<Element>(std::addressof(Fhir::instance().backend()),
+                                                       std::move(doc).jsonDocument(), "Bundle");
+        return fhirtools::EvaluationContext{
+            repo.shared_from_this(), std::shared_ptr<fhirtools::Element>(bundleElement, bundleElement->mElement.get())};
     }
 
     fhirtools::Collection getPrescriptionDigest(const fhirtools::EvaluationContext& closeResponse)
@@ -123,8 +127,8 @@ protected:
         }();
 
         const gsl::not_null repo = Fhir::instance().backend().defaultView();
-        auto prescriptionDigestExpr =
-            fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.section.entry[0].resolve()");
+        auto prescriptionDigestExpr = fhirtools::FhirPathParser::parse(
+            std::addressof(Fhir::instance().backend()), "Bundle.entry[0].resource.section.entry[0].resolve()");
         auto prescriptionDigest = prescriptionDigestExpr->eval(closeResponse).collection;
         [&] {
             ASSERT_EQ(prescriptionDigest.size(), 1) << closeResponse.collection;
@@ -198,9 +202,9 @@ TEST_P(CloseTaskInputTest, CloseTask)
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
 
-        std::optional<model::ErxReceipt> receipt;
-        ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(serverResponse.getBody())));
-        const auto compositionResources = receipt->getResourcesByType<model::Composition>("Composition");
+        auto receipt = model::ErxReceipt::fromXmlNoValidation(serverResponse.getBody());
+        ASSERT_NO_FATAL_FAILURE(testutils::validate(receipt));
+        const auto compositionResources = receipt.getResourcesByType<model::Composition>("Composition");
         ASSERT_EQ(compositionResources.size(), 1);
         const auto& composition = compositionResources.front();
         EXPECT_NO_THROW(static_cast<void>(composition.id()));
@@ -214,17 +218,17 @@ TEST_P(CloseTaskInputTest, CloseTask)
         auto prescriptionDigestIdentifier = composition.prescriptionDigestIdentifier();
         ASSERT_TRUE(prescriptionDigestIdentifier.has_value());
 
-        const auto deviceResources = receipt->getResourcesByType<model::Device>("Device");
+        const auto deviceResources = receipt.getResourcesByType<model::Device>("Device");
         ASSERT_EQ(deviceResources.size(), 1);
         const auto& device = deviceResources.front();
         EXPECT_EQ(device.serialNumber(), ErpServerInfo::ReleaseVersion());
         EXPECT_EQ(device.version(), ErpServerInfo::ReleaseVersion());
         const auto& bundle = ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId});
         const auto digest = Base64::encode(ByteHelper::fromHex(Sha256::fromBin(bundle)));
-        const auto prescriptionDigest = receipt->prescriptionDigest();
+        const auto prescriptionDigest = receipt.prescriptionDigest();
         EXPECT_EQ(prescriptionDigest.data(), digest);
 
-        const auto signature = receipt->getSignature();
+        const auto signature = receipt.getSignature();
         ASSERT_TRUE(signature.has_value());
         EXPECT_TRUE(signature->when().has_value());
         EXPECT_TRUE(signature->data().has_value());
@@ -238,14 +242,14 @@ TEST_P(CloseTaskInputTest, CloseTask)
         auto certs = CertificateDirLoader::loadDir(cadesBesTrustedCertDir);
         const CadesBesSignature cms(certs, signatureData);
 
-        std::optional<model::ErxReceipt> receiptFromSignature;
-        ASSERT_NO_THROW(receiptFromSignature.emplace(testutils::getValidatedErxReceiptBundle(cms.payload())));
-        EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
+        auto receiptFromSignature = model::ErxReceipt::fromXmlNoValidation(cms.payload());
+        ASSERT_NO_FATAL_FAILURE(testutils::validate(receiptFromSignature));
+        EXPECT_FALSE(receiptFromSignature.getSignature().has_value());
 
         const std::string expectedFullUrl = "urn:uuid:" + std::string{composition.id()};
         const rapidjson::Pointer fullUrlPtr("/entry/0/fullUrl");
         std::optional<rapidjson::Document> originalFormatDocument;
-        ASSERT_TRUE(originalFormatDocument = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(receipt->jsonDocument()));
+        ASSERT_TRUE(originalFormatDocument = model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(receipt.jsonDocument()));
         ASSERT_TRUE(fullUrlPtr.Get(*originalFormatDocument));
         ASSERT_EQ(std::string{fullUrlPtr.Get(*originalFormatDocument)->GetString()}, expectedFullUrl);
 
@@ -438,7 +442,7 @@ TEST_F(CloseTaskTest, whenHandedOver)
     }
     // whenHandedOver during Workflow 1.4 period with Schlüsseltabellen Q2/2025 period
     {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_2025-01-15", today};
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_4_NON_FDV", today};
         dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
         bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
         bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
@@ -499,7 +503,8 @@ TEST_F(CloseTaskTest, NoEnvMetaVersionId)
     fhirtools::Collection prescriptionDigest;
     auto bundleContext = runRequest(*repo);
     ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
+    auto getMetaVersionId =
+        fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest)).collection;
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "1");
@@ -513,7 +518,8 @@ TEST_F(CloseTaskTest, SetMetaVersionId)
     fhirtools::Collection prescriptionDigest;
     auto bundleContext = runRequest(*repo);
     ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
+    auto getMetaVersionId =
+        fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest)).collection;
     ASSERT_EQ(metaVersionId.size(), 1);
     EXPECT_EQ(metaVersionId.front()->asString(), "isSet");
@@ -527,7 +533,8 @@ TEST_F(CloseTaskTest, NoMetaVersionEmptyEnv)
     fhirtools::Collection prescriptionDigest;
     auto bundleContext = runRequest(*repo);
     ASSERT_NO_FATAL_FAILURE(prescriptionDigest = getPrescriptionDigest(bundleContext));
-    auto getMetaVersionId = fhirtools::FhirPathParser::parse(repo.get().get(), "meta.versionId");
+    auto getMetaVersionId =
+        fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "meta.versionId");
     auto metaVersionId = getMetaVersionId->eval(bundleContext(prescriptionDigest));
     EXPECT_TRUE(metaVersionId.collection.empty());
 }
@@ -539,21 +546,21 @@ TEST_F(CloseTaskTest, prescriptionDigestRefTypeUUID)
     std::optional<fhirtools::EvaluationContext> bundleContext;
     ASSERT_NO_FATAL_FAILURE(bundleContext.emplace(runRequest(*repo)));
     ASSERT_EQ(bundleContext->collection.size(), 1);
-    auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.section.entry[0].reference");
+    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()),
+                                                                 "Bundle.entry[0].resource.section.entry[0].reference");
     auto refInComposition = refInCompositionExpr->eval(*bundleContext);
     ASSERT_EQ(refInComposition.collection.size(), 1) << bundleContext->collection;
     EXPECT_TRUE(refInComposition.collection.front()->asString().starts_with("urn:uuid:"));
-    auto binaryResourceExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry.resource.ofType(Binary)");
+    auto binaryResourceExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()),
+                                                               "Bundle.entry.resource.ofType(Binary)");
     auto binary = binaryResourceExpr->eval(*bundleContext);
     ASSERT_EQ(binary.collection.size(), 1) << bundleContext->collection;
-    fhirtools::EvaluationContext binaryEntry{binary.collection.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "fullUrl");
+    fhirtools::EvaluationContext binaryEntry{repo, binary.collection.front()->parent()};
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(binaryEntry).collection;
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), refInComposition.collection.front()->asString());
-    auto idExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "id");
+    auto idExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "id");
     auto id = idExpr->eval(binary).collection;
     ASSERT_EQ(id.size(), 1) << binary.collection;
     EXPECT_EQ("urn:uuid:" + id.front()->asString(), refInComposition.collection.front()->asString()) << binary.collection;
@@ -567,21 +574,22 @@ TEST_F(CloseTaskTest, deviceRefUuid)
     std::optional<fhirtools::EvaluationContext> bundleContext;
     ASSERT_NO_FATAL_FAILURE(bundleContext.emplace(runRequest(*repo)));
     ASSERT_EQ(bundleContext->collection.size(), 1);
-    auto refInCompositionExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry[0].resource.author.reference");
+    auto refInCompositionExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()),
+                                                                 "Bundle.entry[0].resource.author.reference");
     auto refInComposition = refInCompositionExpr->eval(*bundleContext).collection;
     ASSERT_EQ(refInComposition.size(), 1) << bundleContext->collection;
     EXPECT_TRUE(refInComposition.front()->asString().starts_with("urn:uuid:")) << bundleContext->collection;
-    auto deviceResourceExpr =
-        fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.entry.resource.ofType(Device)");
+    auto deviceResourceExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()),
+                                                               "Bundle.entry.resource.ofType(Device)");
     auto device = deviceResourceExpr->eval(*bundleContext);
     ASSERT_EQ(device.collection.size(), 1) << bundleContext->collection;
-    fhirtools::EvaluationContext deviceEntry{device.collection.front()->parent()};
-    auto fullUrlExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "fullUrl");
+    fhirtools::EvaluationContext deviceEntry{repo, device.collection.front()->parent()};
+    auto fullUrlExpr = fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "fullUrl");
     auto fullUrl = fullUrlExpr->eval(deviceEntry).collection;
     ASSERT_EQ(fullUrl.size(), 1);
     EXPECT_EQ(fullUrl.front()->asString(), refInComposition.front()->asString());
-    auto signatureWhoExpr = fhirtools::FhirPathParser::parse(repo.get().get(), "Bundle.signature.who.reference");
+    auto signatureWhoExpr =
+        fhirtools::FhirPathParser::parse(std::addressof(Fhir::instance().backend()), "Bundle.signature.who.reference");
     auto signatureWho = signatureWhoExpr->eval(*bundleContext).collection;
     ASSERT_EQ(signatureWho.size(), 1);
     EXPECT_EQ(signatureWho.front()->asString(), fullUrl.front()->asString());
@@ -847,6 +855,108 @@ TEST_F(CloseTaskTest, DigaRedeemCodeHeader1)
     ASSERT_TRUE(sessionContext.getOuterResponseHeaderFields().contains(Header::DigaRedeemCode));
     EXPECT_EQ(sessionContext.getOuterResponseHeaderFields().at(Header::DigaRedeemCode), "1");
 }
+
+TEST_F(CloseTaskTest, UnslicedExtensionAllow)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
+                                      (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
+    auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+        .medicationDispenses = {},
+        .medicationDispensesDiGA =
+            {
+                {
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .prescriptionId = prescriptionId.toString(),
+                    .withRedeemCode = true,
+                },
+            },
+    });
+    body = String::replaceAll(body, "<meta>",
+                              R"(<meta><extension url="subStatus"><valueBoolean value="true"/></extension>)");
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(mJwtBuilder->makeJwtKostentraeger());
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    serverRequest.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+    CloseTaskHandler handler({});
+    handler.handleRequest(sessionContext);
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+}
+
+TEST_F(CloseTaskTest, UnslicedExtensionReject)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
+                                      (model::Timestamp::now()).toGermanDate()};
+    auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+    auto body = ResourceTemplates::medicationDispenseOperationParametersXml({
+        .medicationDispenses = {},
+        .medicationDispensesDiGA =
+            {
+                {
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .prescriptionId = prescriptionId.toString(),
+                    .withRedeemCode = true,
+                },
+            },
+    });
+    boost::replace_first(body, "<meta>", R"(<meta><extension url="subStatus"><valueBoolean value="true"/></extension>)");
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(mJwtBuilder->makeJwtKostentraeger());
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    serverRequest.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+    CloseTaskHandler handler({});
+    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    {
+        std::string diagnostics =
+            "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
+            "http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); Parameters.meta.extension[0]: error: element "
+            "doesn't belong to any slice. (from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); "
+            "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.5.2); ";
+        EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
+            handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+            diagnostics);
+    }
+    else
+    {
+        std::string diagnostics =
+            "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
+            "http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); Parameters.meta.extension[0]: error: element "
+            "doesn't belong to any slice. (from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); "
+            "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.4); ";
+        EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
+            handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+            diagnostics);
+    }
+}
+
 
 TEST_F(CloseTaskTest, DigaRedeemCodeHeader0)
 {

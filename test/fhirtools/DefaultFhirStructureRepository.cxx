@@ -35,17 +35,23 @@ const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& DefaultFhir
     return view;
 }
 
-const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& DefaultFhirStructureRepository::getWithTest()
+const fhirtools::FhirStructureRepositoryBackend& DefaultFhirStructureRepository::getBackendWithTest()
 {
     static const fhirtools::FhirResourceGroupConst resourceGroupResolver{"test"};
-    auto getProfileList = [] {
+    static constexpr auto getProfileList = [] {
         auto profileList = defaultProfileFiles();
         profileList.emplace_back(ResourceManager::getAbsoluteFilename("test/fhir-path/structure-definition.xml"));
         return profileList;
     };
     static auto repo = create(getProfileList(), resourceGroupResolver);
+    return *repo;
+}
+
+const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& DefaultFhirStructureRepository::getWithTest()
+{
+    static auto& backend = getBackendWithTest();
     static std::shared_ptr<const fhirtools::FhirStructureRepositoryView> view =
-        fhirtools::FhirResourceViewGroupSet::create("test", resourceGroupResolver.findGroupById("test"), repo.get());
+        fhirtools::FhirResourceViewGroupSet::create("test", backend.allGroups().at("test"), &backend);
     return view;
 }
 

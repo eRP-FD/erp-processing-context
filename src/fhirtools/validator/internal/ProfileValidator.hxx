@@ -87,7 +87,7 @@ public:
         void merge(Map);
     };
     Map subFieldValidators(const FhirStructureRepositoryView&, std::string_view name);
-    void typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef);
+    void typecast(const FhirStructureDefinition* structDef);
     struct ProcessingResult
     {
         std::list<const FhirStructureDefinition*> sliceProfiles;
@@ -109,17 +109,19 @@ public:
 protected:
     ProfileValidator(MapKey mapKey, std::set<std::shared_ptr<ValidationData>> parentData,
                      ProfiledElementTypeInfo defPtr, std::string sliceName, const ProfileSetValidator&);
-    void checkBinding(const Element& element, std::string_view elementFullPath);
+    void checkBinding(const FhirStructureRepositoryView& view, const Element& element,
+                      std::string_view elementFullPath);
     void validateBinding(const fhirtools::Element& element, const FhirElement::Binding& binding,
                          const FhirValueSetCodes& boundCodes, std::string_view elementFullPath);
     void checkCodingBinding(const Element& codingElement, const FhirValueSetCodes& boundCodes,
                             std::string_view elementFullPath, Severity errorSeverity);
-    void checkConstraints(const Element& element, std::string_view elementFullPath);
+    void checkConstraints(const std::shared_ptr<const FhirStructureRepositoryView>& view, const Element& element,
+                          std::string_view elementFullPath);
     void checkValue(const Element& element, std::string_view elementFullPath);
     void checkValueMaxLength(const Element& element, std::string_view elementFullPath);
     void checkValueMinValue(const Element& element, std::string_view elementFullPath);
     void checkValueMaxValue(const Element& element, std::string_view elementFullPath);
-    void checkCoding(const Element& element, std::string_view elementFullPath);
+    void checkCoding(const FhirStructureRepositoryView& view, const Element& element, std::string_view elementFullPath);
     void checkValueNotEmpty(const Element& element, std::string_view elementFullPath);
 
 

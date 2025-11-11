@@ -9,6 +9,8 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Collection.hxx"
 #include "fhirtools/repository/FhirCodeSystem.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/views/FhirResourceViewGroupSet.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -193,30 +195,24 @@ std::string fhirtools::to_string(const Element::Identity& ri)
     return oss.str();
 }
 
-Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+Element::Element(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                  std::weak_ptr<const Element> parent, ProfiledElementTypeInfo definitionPointer)
-    : mFhirStructureRepository(fhirStructureRepositoryView)
+    : mFhirStructureRepository(fhirStructureRepository)
     , mDefinitionPointer(std::move(definitionPointer))
     , mParent(std::move(parent))
     , mSubElementLevel(mParent.lock() ? mParent.lock()->mSubElementLevel + 1 : 0)
-    , mType(getElementType(fhirStructureRepositoryView.get(), mDefinitionPointer))
+    , mType(getElementType(*fhirStructureRepository, mDefinitionPointer))
 {
-    Expect3(mFhirStructureRepository != nullptr, "FhirStructureRepositoryView must not be nullptr", std::logic_error);
 }
 
-Element::Element(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+Element::Element(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
                  std::weak_ptr<const Element> parent, const std::string& elementId)
-    : mFhirStructureRepository(fhirStructureRepositoryView)
-    , mDefinitionPointer(fhirStructureRepositoryView, elementId)
-    , mParent(std::move(parent))
-    , mSubElementLevel(mParent.lock() ? mParent.lock()->mSubElementLevel + 1 : 0)
-    , mType(getElementType(fhirStructureRepositoryView.get(), mDefinitionPointer))
+    : Element{fhirStructureRepository, std::move(parent), ProfiledElementTypeInfo{*fhirStructureRepository, elementId}}
 {
-    Expect3(mFhirStructureRepository != nullptr, "FhirStructureRepositoryView must not be nullptr", std::logic_error);
 }
 
 
-Element::Type Element::getElementType(const FhirStructureRepositoryView* fhirStructureRepositoryView,
+Element::Type Element::getElementType(const FhirStructureRepositoryBackend& fhirStructureRepository,
                                       const ProfiledElementTypeInfo& definitionPointer)
 {
     auto GetElementType = [](const FhirStructureDefinition* structureDefinition) {
@@ -261,19 +257,19 @@ Element::Type Element::getElementType(const FhirStructureRepositoryView* fhirStr
         const FhirStructureDefinition* typeStructure = nullptr;
         if (element->contentReference().empty())
         {
-            typeStructure = fhirStructureRepositoryView->findTypeById(element->typeId());
+            typeStructure = fhirStructureRepository.findTypeById(element->typeId());
         }
         else
         {
-            auto res = fhirStructureRepositoryView->resolveContentReference(
-                *definitionPointer.profile()->resourceGroup(), *element);
+            auto res = fhirStructureRepository.resolveContentReference(*definitionPointer.profile()->resourceGroup(),
+                                                                       *element);
             typeStructure = std::addressof(std::move(res).elementType);
         }
         if (element && typeStructure->kind() == FhirStructureDefinition::Kind::primitiveType)
         {
             auto value = typeStructure->findElement(element->typeId() + ".value");
             FPExpect(value, "value element not found for primitive type " + element->typeId());
-            const auto* valueTypeStructure = fhirStructureRepositoryView->findTypeById(value->typeId());
+            const auto* valueTypeStructure = fhirStructureRepository.findTypeById(value->typeId());
             FPExpect(valueTypeStructure, "structure definition not found for " + value->typeId());
             return GetElementType(valueTypeStructure);
         }
@@ -282,18 +278,18 @@ Element::Type Element::getElementType(const FhirStructureRepositoryView* fhirStr
     return GetElementType(definitionPointer.profile());
 }
 
-Element::Type Element::getElementType(const FhirStructureRepositoryView* fhirStructureRepositoryView,
+Element::Type Element::getElementType(const FhirStructureRepositoryBackend& fhirStructureRepository,
                                       const FhirStructureDefinition* structureDefinition, const std::string& elementId)
 {
     auto fhirElement = structureDefinition->findElement(elementId);
     FPExpect(fhirElement != nullptr, structureDefinition->urlAndVersion() + " no such element: " + elementId);
-    return getElementType(fhirStructureRepositoryView, ProfiledElementTypeInfo{fhirElement});
+    return getElementType(fhirStructureRepository, ProfiledElementTypeInfo{fhirElement});
 }
 
 
-const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& Element::getFhirStructureRepository() const
+const fhirtools::FhirStructureRepositoryBackend& Element::getFhirStructureRepository() const
 {
-    return mFhirStructureRepository;
+    return *mFhirStructureRepository;
 }
 
 const fhirtools::FhirStructureDefinition* Element::getStructureDefinition() const
@@ -407,7 +403,7 @@ Element::IdentityAndResult Element::resourceTypeIdIdentity() const
     const auto& idElement = subElements("id");
     if (idElement.empty())
     {
-        return {.identity{.pathOrId = resourceType}};
+        return {.identity{.pathOrId = resourceType + '/'}};
     }
     const auto& id = idElement[0]->asString();
     Identity result;
@@ -478,14 +474,12 @@ Element::IdentityAndResult Element::referenceTargetIdentity(IdentityAndResult re
     const size_t slashPos = reference.identity.pathOrId.find('/');
     if (slashPos != std::string::npos)
     {
-        const auto& resourceTypes =
-            mFhirStructureRepository->findCodeSystemCodes(DefinitionKey{constants::resourceTypesUrl});
-        FPExpect(resourceTypes != nullptr,
-                 "Resource Types CodeSystem not found: "s.append(constants::resourceTypesUrl));
-        const std::string_view resourceType{reference.identity.pathOrId.begin(),
-                                            reference.identity.pathOrId.begin() +
-                                                gsl::narrow<std::string_view::difference_type>(slashPos)};
-        if (resourceTypes->containsCode(resourceType))
+        const std::string resourceType{reference.identity.pathOrId.begin(),
+                                       reference.identity.pathOrId.begin() +
+                                           gsl::narrow<std::string_view::difference_type>(slashPos)};
+
+        if (const auto* fhirStructureDef = mFhirStructureRepository->findTypeById(resourceType);
+            fhirStructureDef && fhirStructureDef->kind() == FhirStructureDefinition::Kind::resource)
         {
             return relativeReferenceTargetIdentity(std::move(reference), resourceRoot, elementFullPath);
         }
@@ -583,7 +577,7 @@ Element::resolveReference(const Identity& reference, std::string_view elementFul
     if (reference.containedId.has_value())
     {
         std::shared_ptr<const Element> referencedContainer;
-        if (reference.pathOrId.empty())
+        if (!reference.scheme.has_value())
         {
             referencedContainer = containerResource();
         }
@@ -616,13 +610,21 @@ Element::resolveUrlReference(const Identity& urlIdentity, std::string_view eleme
     using namespace std::string_literals;
     auto fullTargetRef = referenceTargetIdentity({urlIdentity}, elementFullPath);
     std::tuple<std::shared_ptr<const Element>, ValidationResults> resolution;
-    if (auto containingBundle = this->containingBundle())
+    auto resourceRoot = this->resourceRoot();
+    if (resourceRoot->definitionPointer().profile()->typeId() == "Bundle")
     {
-        resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
+        resolution = resourceRoot->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
     }
-    else
+    if (!get<std::shared_ptr<const Element>>(resolution))
     {
-        resolution = documentRoot()->resolveGenericReference(fullTargetRef.identity, elementFullPath);
+        if (auto containingBundle = this->containingBundle())
+        {
+            resolution = containingBundle->resolveBundleReference(fullTargetRef.identity.url(), elementFullPath);
+        }
+        else
+        {
+            resolution = documentRoot()->resolveGenericReference(fullTargetRef.identity, elementFullPath);
+        }
     }
     if (get<std::shared_ptr<const Element>>(resolution))
     {
@@ -646,7 +648,7 @@ Element::resolveUrlReference(const Identity& urlIdentity, std::string_view eleme
             }
             return std::make_tuple(std::move(containerResource), ValidationResults{});
         }
-        return {resourceRoot(), {}};
+        return {resourceRoot, {}};
     }
     ValidationResults resultList;
     resultList.add(Severity::debug, "reference target not found: "s.append(to_string(urlIdentity)),
@@ -771,13 +773,11 @@ std::shared_ptr<const Element> fhirtools::Element::containerResource() const
     const auto& resourceRoot = this->resourceRoot();
     const auto& resourceParent = resourceRoot ? resourceRoot->parent() : nullptr;
     if (resourceParent && resourceParent->hasSubElement("contained") &&
-        resourceParent->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository,
-                                                                     constants::domainResourceUrl))
+        resourceParent->definitionPointer().profile()->isDerivedFrom(constants::domainResourceUrl))
     {
         return resourceParent->resourceRoot();
     }
-    if (resourceRoot->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository,
-                                                                   constants::domainResourceUrl))
+    if (resourceRoot->definitionPointer().profile()->isDerivedFrom(constants::domainResourceUrl))
     {
         return resourceRoot;
     }
@@ -792,7 +792,7 @@ std::shared_ptr<const Element> fhirtools::Element::containingBundle() const
     {
         return nullptr;
     }
-    if (resourceParent->definitionPointer().profile()->isDerivedFrom(*mFhirStructureRepository, constants::bundleUrl))
+    if (resourceParent->definitionPointer().profile()->isDerivedFrom(constants::bundleUrl))
     {
         return resourceParent->resourceRoot();
     }
@@ -1034,10 +1034,10 @@ bool Element::QuantityType::convertibleToUnit(const std::string& unit) const
 }
 
 PrimitiveElement::PrimitiveElement(
-    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView, Type type,
+    gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, Type type,
     ValueType&& value)
-    : Element(fhirStructureRepositoryView, {},
-              ProfiledElementTypeInfo{getStructureDefinition(fhirStructureRepositoryView.get(), type)})
+    : Element(fhirStructureRepository, {},
+              ProfiledElementTypeInfo{getStructureDefinition(*fhirStructureRepository, type)})
     , mValue(value)
 {
     using namespace std::string_literals;
@@ -1092,27 +1092,27 @@ PrimitiveElement::PrimitiveElement(
 }
 
 const fhirtools::FhirStructureDefinition&
-PrimitiveElement::getStructureDefinition(const FhirStructureRepositoryView* fhirStructureRepositoryView,
+PrimitiveElement::getStructureDefinition(const FhirStructureRepositoryBackend& fhirStructureRepository,
                                          Element::Type type)
 {
     switch (type)
     {
         case Type::Integer:
-            return *fhirStructureRepositoryView->systemTypeInteger();
+            return *fhirStructureRepository.systemTypeInteger();
         case Type::Decimal:
-            return *fhirStructureRepositoryView->systemTypeDecimal();
+            return *fhirStructureRepository.systemTypeDecimal();
         case Type::String:
-            return *fhirStructureRepositoryView->systemTypeString();
+            return *fhirStructureRepository.systemTypeString();
         case Type::Boolean:
-            return *fhirStructureRepositoryView->systemTypeBoolean();
+            return *fhirStructureRepository.systemTypeBoolean();
         case Type::Date:
-            return *fhirStructureRepositoryView->systemTypeDate();
+            return *fhirStructureRepository.systemTypeDate();
         case Type::DateTime:
-            return *fhirStructureRepositoryView->systemTypeDateTime();
+            return *fhirStructureRepository.systemTypeDateTime();
         case Type::Time:
-            return *fhirStructureRepositoryView->systemTypeTime();
+            return *fhirStructureRepository.systemTypeTime();
         case Type::Quantity:
-            return *fhirStructureRepositoryView->findTypeById("Quantity");
+            return *fhirStructureRepository.findTypeById("Quantity");
         case Type::Structured:
             break;
     }
@@ -1469,60 +1469,67 @@ std::ostream& fhirtools::operator<<(std::ostream& os, const Element& element)
 //NOLINTNEXTLINE(misc-no-recursion)
 std::ostream& Element::json(std::ostream& out) const
 {
-    switch (mType)
+    if (hasValue())
     {
-        using enum Type;
-        case Integer:
-        case Decimal:
-            return out << asRaw();
-        case Boolean:
-            return out << asString();
-        case Date:
-        case DateTime:
-        case Time:
-        case Quantity:
-        case String:
-            return out << '"' << asString() << '"';
-        case Structured: {
-            out << '{';
-            std::string_view fieldSep;
-            if (definitionPointer().isResource())
-            {
-                out << R"("resourceType": ")" << definitionPointer().profile()->typeId();
-                fieldSep = ", ";
-            }
-            for (const auto& name : subElementNames())
-            {
-                auto defPtrs = definitionPointer().subDefinitions(*getFhirStructureRepository(), name);
-                out << fieldSep;
-                fieldSep = ", ";
-                if (defPtrs.empty())
-                {
-                    out << "<no-def:" << definitionPointer() << '.' << name << ">";
-                    break;
-                }
-                auto subList = subElements(name);
-                if (defPtrs.front().element()->isArray() || subList.size() != 1)
-                {
-                    out << '"' << name << R"(": [)";
-                    std::string_view arrSep;
-                    for (auto& sub : subList)
-                    {
-                        out << arrSep;
-                        arrSep = ", ";
-                        sub->json(out);
-                    }
-                    out << ']';
-                }
-                else
-                {
-                    out << '"' << name << R"(": )";
-                    subList.back()->json(out);
-                }
-            }
-            out << '}';
-            return out;
+        switch (mType)
+        {
+            using enum Type;
+            case Integer:
+            case Decimal:
+                return out << asRaw();
+            case Boolean:
+                return out << asString();
+            case Date:
+            case DateTime:
+            case Time:
+            case Quantity:
+            case String:
+                return out << '"' << asString() << '"';
+            case Structured:
+                break;
         }
+    }
+    const auto& subElementNames = this->subElementNames();
+    if (!subElementNames.empty())
+    {
+        out << '{';
+        std::string_view fieldSep;
+        if (definitionPointer().isResource())
+        {
+            out << R"("resourceType": ")" << definitionPointer().profile()->typeId();
+            fieldSep = ", ";
+        }
+        for (const auto& name : subElementNames)
+        {
+            auto defPtrs = definitionPointer().subDefinitions(name);
+            out << fieldSep;
+            fieldSep = ", ";
+            if (defPtrs.empty())
+            {
+                out << "<no-def:" << definitionPointer() << '.' << name << ">";
+                break;
+            }
+            auto subList = subElements(name);
+            if (defPtrs.front().element()->isArray() || subList.size() != 1)
+            {
+                out << '"' << name << R"(": [)";
+                std::string_view arrSep;
+                for (auto& sub : subList)
+                {
+                    out << arrSep;
+                    arrSep = ", ";
+                    sub->json(out);
+                }
+                out << ']';
+            }
+            else
+            {
+                out << '"' << name << R"(": )";
+                subList.back()->json(out);
+            }
+        }
+        out << '}';
+        return out;
     }
     return out << "<error>";
 }

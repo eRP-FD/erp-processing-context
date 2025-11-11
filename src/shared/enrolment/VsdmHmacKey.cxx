@@ -77,7 +77,6 @@ SafeString VsdmHmacKey::decryptHmacKey(HsmSession& hsmSession, bool validate) co
     const auto clientPublicKey =
         ErpVector{clientPublicKeyPem.data(), clientPublicKeyPem.data() + clientPublicKeyPem.size()};
     SafeString aesKey;
-    SafeString plaintext;
     try
     {
         aesKey = SafeString{hsmSession.vauEcies128(clientPublicKey, false)};

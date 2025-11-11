@@ -10,6 +10,7 @@
 #include "fhirtools/model/MutableElement.hxx"
 
 #include <gsl/gsl-lite.hpp>
+#include <memory>
 #include <regex>
 #include <unordered_map>
 
@@ -47,7 +48,8 @@ public:
     ResourceProfileTransformer& map(const ValueMapping& valueMapping);
 
     Result applyMappings(const MutableElement& element) const;
-    Result transform(MutableElement& element, const DefinitionKey& targetProfileDefinitionKey) const;
+    Result transform(const std::shared_ptr<const FhirStructureRepositoryView>& view, MutableElement& element,
+                     const DefinitionKey& targetProfileDefinitionKey) const;
     void addDataAbsentExtension(const MutableElement& element, FhirStructureDefinition::Kind elementKind,
                                 const std::string_view& elementFullPath,
                                 const std::string_view& typeId,

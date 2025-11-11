@@ -64,35 +64,14 @@ void Resource<TDerivedModel>::additionalValidation() const
 {
 }
 
-template<class TDerivedModel>
-fhirtools::ValidationResults Resource<TDerivedModel>::genericValidate(
-    ProfileType profileType, const fhirtools::ValidatorOptions& options,
-    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView) const
+template<typename TDerivedModel>
+std::string_view model::Resource<TDerivedModel>::getResourceType() const
 {
-    std::string resourceTypeName;
-    if constexpr (std::is_same_v<TDerivedModel, UnspecifiedResource>)
+    if constexpr (!std::is_same_v<TDerivedModel, UnspecifiedResource>)
     {
-        resourceTypeName = FhirResourceBase::getResourceType();
+        return TDerivedModel::resourceTypeName;
     }
-    else
-    {
-        resourceTypeName = TDerivedModel::resourceTypeName;
-    }
-    auto fhirPathElement = std::make_shared<ErpElement>(repoView ? repoView : getValidationView().get(),
-                                                        std::weak_ptr<const fhirtools::Element>{}, resourceTypeName,
-                                                        &ResourceBase::jsonDocument());
-    std::set<fhirtools::DefinitionKey> profileKeys;
-    if (const auto& modelProfile = profile(profileType))
-    {
-        profileKeys.emplace(*modelProfile);
-    }
-    for (const auto& prof : fhirPathElement->profiles())
-    {
-        profileKeys.emplace(prof);
-    }
-    auto timer = timingLogTimer();
-
-    return fhirtools::FhirPathValidator::validateWithProfiles(fhirPathElement, resourceTypeName, profileKeys, options);
+    return FhirResourceBase::getResourceType();
 }
 
 template<class TDerivedModel>

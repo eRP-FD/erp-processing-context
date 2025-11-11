@@ -53,7 +53,7 @@ public:
     static constexpr auto NoProfile = NoProfileTag{};
     using Profile = ::std::variant<fhirtools::DefinitionKey, ProfileType, NoProfileTag>;
 
-    [[nodiscard]] std::string_view getResourceType() const;
+    [[nodiscard]] virtual std::string_view getResourceType() const;
     void setResourceType(std::string_view resourceType);
     void setMetaProfile0(std::string_view metaProfile);
 
@@ -61,6 +61,9 @@ public:
     virtual gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getValidationView() const = 0;
     virtual void prepare() {};
     virtual void additionalValidation() const = 0;
+    [[nodiscard]] fhirtools::ValidationResults
+    genericValidate(ProfileType profileType, const fhirtools::ValidatorOptions& options,
+                    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView = nullptr) const;
 
     [[nodiscard]] ProfileType getProfile() const;
     [[nodiscard]] std::optional<std::string_view> getProfileName() const;
@@ -112,6 +115,8 @@ template<class TDerivedModel>
 class Resource : public FhirResourceBase
 {
 public:
+    [[nodiscard]] std::string_view getResourceType() const override;
+
     [[nodiscard]] static TDerivedModel fromXmlNoValidation(std::string_view xml);
 
     [[nodiscard]] static TDerivedModel fromXml(std::string_view xml, const XmlValidator& validator)
@@ -122,10 +127,6 @@ public:
         requires FhirValidatable<TDerivedModel>;
     [[nodiscard]] static TDerivedModel fromJson(const rapidjson::Value& json);
     [[nodiscard]] static TDerivedModel fromJson(model::NumberAsStringParserDocument&& json);
-
-    [[nodiscard]] fhirtools::ValidationResults
-    genericValidate(ProfileType profileType, const fhirtools::ValidatorOptions& options,
-                    const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repoView = nullptr) const;
 
     gsl::not_null<std::shared_ptr<const fhirtools::FhirStructureRepositoryView>> getValidationView() const override;
 

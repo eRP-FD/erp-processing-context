@@ -74,38 +74,44 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                                                  {InnerRequestRole::patient, bde::GetTasksPatient_UC_3_1}});
     A_21558_01.finish();
 
-    A_19113_01.start("Register the allowed professionOIDs");
-    handlerManager.onGetDo("/Task/{id}",
-            std::make_unique<GetTaskHandler>(oids{
-                               oid_versicherter,
-                               oid_oeffentliche_apotheke,
-                               oid_krankenhausapotheke}))
+    A_19113_02.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19113
+    handlerManager
+        .onGetDo("/Task/{id}", std::make_unique<GetTaskHandler>(oids{oid_versicherter, oid_oeffentliche_apotheke,
+                                                                     oid_krankenhausapotheke, oid_kostentraeger}))
+    // GEMREQ-end A_19113
         .setErpUseCase(
             std::map<InnerRequestRole, bde::UseCase>{{InnerRequestRole::pharmacy, bde::GetTaskPharmacy_UC_4_8},
                                                      {InnerRequestRole::patient, bde::GetTaskPatient_UC_3_6}});
     // note: GetTaskPharmacySecretRecovery_UC_4_17 is set directly from GetTaskHandler::handleRequest
-    A_19113_01.finish();
+    A_19113_02.finish();
 
     // For POST /Task see gemSpec_FD_eRp_V1.1.1, 6.1.2
     // ... 6.1.2.1
-    A_19018.start("Register the allowed professionOIDs");
-    handlerManager.onPostDo("/Task/$create",
-            std::make_unique<CreateTaskHandler>(
-                    oids{oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut, oid_krankenhaus}))
+    A_19018_01.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19018
+    handlerManager
+        .onPostDo("/Task/$create", std::make_unique<CreateTaskHandler>(oids{oid_praxis_arzt, oid_zahnarztpraxis,
+                                                                            oid_praxis_psychotherapeut, oid_krankenhaus,
+                                                                            oid_institution_vorsorge_reha}))
+    // GEMREQ-end A_19018
         .setErpUseCase(bde::CreateTask_UC_2_1);
-    A_19018.finish();
+    A_19018_01.finish();
     // ... 6.1.2.2
-    A_19022.start("Register the allowed professionOIDs");
-    handlerManager.onPostDo("/Task/{id}/$activate",
-            std::make_unique<ActivateTaskHandler>(
-                    oids{oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut, oid_krankenhaus}))
+    A_19022_01.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19022
+    handlerManager
+        .onPostDo("/Task/{id}/$activate", std::make_unique<ActivateTaskHandler>(
+                                              oids{oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut,
+                                                   oid_krankenhaus, oid_institution_vorsorge_reha}))
+    // GEMREQ-end A_19022
         .setErpUseCase(std::map<model::PrescriptionType, bde::UseCase>{
             {model::PrescriptionType::apothekenpflichigeArzneimittel, bde::ActivateTask_UC_2_3_160},
             {model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, bde::ActivateTask_UC_2_3_200},
             {model::PrescriptionType::digitaleGesundheitsanwendungen, bde::ActivateTask_UC_2_3_162},
             {model::PrescriptionType::direkteZuweisung, bde::ActivateTask_UC_2_3_169},
             {model::PrescriptionType::direkteZuweisungPkv, bde::ActivateTask_UC_2_3_209}});
-    A_19022.finish();
+    A_19022_01.finish();
     // ... 6.1.2.3
     A_19166_01.start("Register the allowed professionOIDs");
     // GEMREQ-start A_19166-01
@@ -142,16 +148,19 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     // GEMREQ-end A_19230-01
     A_19230_01.finish();
     // ... 6.1.2.6
-    A_19026.start("Register the allowed professionOIDs");
-    handlerManager.onPostDo("/Task/{id}/$abort",
-            std::make_unique<AbortTaskHandler>(
-                    oids{oid_versicherter, oid_arzt, oid_zahnarzt, oid_praxis_arzt, oid_zahnarztpraxis, oid_praxis_psychotherapeut,
-                                     oid_krankenhaus, oid_oeffentliche_apotheke, oid_krankenhausapotheke}))
+    A_19026_01.start("Register the allowed professionOIDs");
+    // GEMREQ-start A_19026
+    handlerManager
+        .onPostDo("/Task/{id}/$abort", std::make_unique<AbortTaskHandler>(
+                                           oids{oid_versicherter, oid_praxis_arzt, oid_zahnarztpraxis,
+                                                oid_praxis_psychotherapeut, oid_krankenhaus, oid_oeffentliche_apotheke,
+                                                oid_krankenhausapotheke, oid_institution_vorsorge_reha}))
+    // GEMREQ-end A_19026
         .setErpUseCase(
             std::map<InnerRequestRole, bde::UseCase>{{InnerRequestRole::doctor, bde::AbortTaskDoctor_UC_2_5},
                                                      {InnerRequestRole::pharmacy, bde::AbortTaskPharmacy_UC_4_3},
                                                      {InnerRequestRole::patient, bde::AbortTaskPatient_UC_3_2}});
-    A_19026.finish();
+    A_19026_01.finish();
     // ... 6.1.2.7 C_11574
     // GEMREQ-start A_24279
     A_24279.start("Register the allowed professionOIDs");

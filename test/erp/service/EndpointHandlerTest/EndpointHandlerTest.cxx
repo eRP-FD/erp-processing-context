@@ -47,6 +47,7 @@
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <variant>
@@ -104,6 +105,7 @@ TEST_F(EndpointHandlerTest, GetTaskById)//NOLINT(readability-function-cognitive-
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
     auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_NO_THROW((void) model::Task::fromXml(tasks[0].serializeToXmlString(), *StaticData::getXmlValidator()));
@@ -143,6 +145,7 @@ TEST_F(EndpointHandlerTest, GetTaskById169NoAccessCode)//NOLINT(readability-func
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
     auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
     auto tasks = bundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
 
@@ -179,6 +182,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdPatientConfirmation)//NOLINT(readability-
 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(document, SchemaType::fhir));
     auto bundle = model::Bundle::fromJsonNoValidation(bodyActual);
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(bundle));
 
     auto prescriptions = bundle.getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(prescriptions.size(), 1);
@@ -248,6 +252,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingKVNR)//NOLINT(readability-functio
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(responseBundle));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
@@ -282,6 +287,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeUrl)//NOLINT(readabilit
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(responseBundle));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
@@ -321,6 +327,7 @@ TEST_F(EndpointHandlerTest, GetTaskByIdMatchingAccessCodeHeader)//NOLINT(readabi
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(responseBundle.jsonDocument()),
         SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(responseBundle));
     const auto tasks = responseBundle.getResourcesByType<model::Task>("Task");
     ASSERT_EQ(tasks.size(), 1);
     ASSERT_EQ(tasks[0].prescriptionId().toString(), "160.000.000.004.711.86");
@@ -1101,7 +1108,7 @@ TEST_F(EndpointHandlerTest, PostConsent)//NOLINT(readability-function-cognitive-
     EXPECT_EQ(resultConsent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, origKvnr2));
     EXPECT_EQ(resultConsent->patientKvnr(), origKvnr2);
     EXPECT_TRUE(resultConsent->isChargingConsent());
-    EXPECT_EQ(model::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
+    EXPECT_LE(model::Timestamp::fromXsDateTime(origDateTimeStr), resultConsent->dateTime());
 
     // Check kvnr mismatch
     A_22289.test("Kvnr of access token and Consent patient identifier must be identical");
@@ -1299,6 +1306,8 @@ void checkGetChargeItemByIdHandler(
         if(professionOIDClaim == profession_oid::oid_versicherter)
         {
             const model::Bundle chargeItemBundle = model::Bundle::fromJsonNoValidation(serverResponse.getBody());
+            EXPECT_NO_FATAL_FAILURE(testutils::validate(chargeItemBundle));
+
             const auto chargeItems = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
             ASSERT_EQ(chargeItems.size(), 1);
             const auto& chargeItem = chargeItems[0];
@@ -1328,10 +1337,9 @@ void checkGetChargeItemByIdHandler(
                 Uuid{chargeItem.prescriptionId()->deriveUuid(model::uuidFeaturePrescription)}.toUrn(),
                 chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::prescriptionItemBundle).value());
 
+            // already checked by testutils::validate(chargeItemBundle) above.
+            // Validation would fail because signature.who must be resolved from outer bundle
             const model::Bundle& receipt = bundleItems[2];
-            std::optional<model::ErxReceipt> checkedReceipt;
-            ASSERT_NO_THROW(checkedReceipt.emplace(
-                model::ErxReceipt::fromXml(receipt.serializeToXmlString(), *StaticData::getXmlValidator())));
 
             ASSERT_TRUE(
                 chargeItem.supportingInfoReference(model::ChargeItem::SupportingInfoType::receiptBundle).has_value());
@@ -1381,7 +1389,7 @@ void checkGetChargeItemByIdHandler(
                 ASSERT_NO_THROW(signatureDataBase64 = signature->data().value().data());
                 const CadesBesSignature cms(signatureDataBase64);
                 ASSERT_NO_THROW(cms.validateCounterSignature({serviceContext.getCFdSigErp()}));
-                ASSERT_NO_THROW((void)model::AbgabedatenPkvBundle::fromXmlNoValidation(cms.payload()));
+                ASSERT_NO_THROW((void)model::AbgabedatenPkvBundle::fromXml(cms.payload(), *StaticData::getXmlValidator()));
             }
         }
         // GEMREQ-end A_22127#validateBundle
@@ -1389,6 +1397,7 @@ void checkGetChargeItemByIdHandler(
         {
             A_22128_01.test("Check ChargeItem.supportingInformation for pharmacy");
             const model::Bundle chargeItemBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+            EXPECT_NO_FATAL_FAILURE(testutils::validate(chargeItemBundle));
             const auto chargeItems = chargeItemBundle.getResourcesByType<model::ChargeItem>("ChargeItem");
             ASSERT_EQ(chargeItems.size(), 1);
             const auto& chargeItem = chargeItems[0];
@@ -1850,6 +1859,7 @@ TEST_F(EndpointHandlerTest, GetAllAuditEvents_DefaultSort)
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle.jsonDocument()),
         SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(auditEventBundle));
     auto auditEvents = auditEventBundle.getResourcesByType<model::AuditEvent>("AuditEvent");
     ASSERT_EQ(auditEvents.size(), 4 + 1); // 4 added by this test, 1 by the MockDatabase.
     A_24438.test("Ensure audit events are received from oldest to most recent date.");

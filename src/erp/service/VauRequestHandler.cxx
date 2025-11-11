@@ -6,6 +6,7 @@
  */
 
 #include "erp/service/VauRequestHandler.hxx"
+#include "erp/crypto/DtbpPseudonymization.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
@@ -424,6 +425,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         auto sub = innerServerRequest->getAccessToken().stringForClaim(JWT::subClaim);
         Expect(sub.has_value(), "Missing Sub field in JWT claim");
 
+        // GEMREQ-start A_19992_01
         A_19992_01.start("Exclude NCPeH-FD requests");
         const auto professionOid = innerServerRequest->getAccessToken().stringForClaim(JWT::professionOIDClaim);
         const auto isNCPeHFDRequest = (professionOid.has_value() && professionOid == profession_oid::oid_ncpeh);
@@ -433,6 +435,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
             handleDosCheck(outerSession, sub, innerServerRequest->getAccessToken().intForClaim(JWT::expClaim).value());
         }
         A_19992_01.finish();
+        // GEMREQ-end A_19992_01
 
         auto&& PnPVerifier = outerSession.serviceContext.getPreUserPseudonymManager();
         CmacSignature preUserPseudonym{getPreUserPseudonym(PnPVerifier, upParam, *sub, outerSession)};
@@ -559,18 +562,37 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
             outerSession.response.setHeader(Header::InnerRequestRole,
                                        to_string(profession_oid::toInnerRequestRole(professionOIDClaim)));
 
+            const auto telematikId = innerServerRequest->getAccessToken().stringForClaim(JWT::idNumberClaim);
+            const bool hasTelematikId = telematikId.has_value() && professionOIDClaim != profession_oid::oid_versicherter;
             A_22698.start("#4,#5 Create LEI.Telematik-ID pseudonym for and set value in the outer header field.");
             A_22975.start("Use feature only if enabled in configuration");
-            if (Configuration::instance().getBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE) && professionOIDClaim != profession_oid::oid_versicherter)
+            if (Configuration::instance().getBoolValue(ConfigurationKey::REPORT_LEIPS_KEY_ENABLE) && hasTelematikId)
             {
-                const auto telematikId = innerServerRequest->getAccessToken().stringForClaim(JWT::idNumberClaim);
-                if (telematikId.has_value())
-                {
-                    outerSession.response.setHeader(Header::InnerRequestLeips, PseudonameKeyRefreshJob::hkdf(telematikId.value()));
-                }
+                outerSession.response.setHeader(Header::InnerRequestLeips, PseudonameKeyRefreshJob::hkdf(telematikId.value()));
             }
             A_22975.finish();
             A_22698.finish();
+
+            A_23090_07.start("If a pseudonymization log key is available, write pseuodnymized fields");
+            auto pseudonymizationKey =
+                outerSession.baseServiceContext.getHsmPool().acquire().session().getPseudonameLogKey();
+            if (pseudonymizationKey.has_value())
+            {
+                // NOLINTNEXTLINE(hicpp-move-const-arg,performance-move-const-arg)
+                const auto key = SafeString(std::move(*pseudonymizationKey));
+                if (hasTelematikId)
+                {
+                    outerSession.response.setHeader(Header::PnTelematikId,
+                                                    DtbpPseudonymization::encryptLogData(*telematikId, key));
+                }
+                const auto clientIp = outerSession.request.header().header(Header::XForwardedFor);
+                if (clientIp.has_value())
+                {
+                    outerSession.response.setHeader(Header::PnIpaddress,
+                                                    DtbpPseudonymization::encryptLogData(*clientIp, key));
+                }
+            }
+            A_23090_07.finish();
         }
     }
     catch (const std::exception& e)
@@ -616,10 +638,10 @@ bool VauRequestHandler::checkProfessionOID(
     A_19390.finish();
     auto optionalPathIdParameter = innerRequest->getPathParameter("id");
 
-    A_19018.start("Check if professionOID claim is allowed for this endpoint");
-    A_19022.start("Check if professionOID claim is allowed for this endpoint");
-    A_19026.start("Check if professionOID claim is allowed for this endpoint");
-    A_19113_01.start("Check if professionOID claim is allowed for this endpoint");
+    A_19018_01.start("Check if professionOID claim is allowed for this endpoint");
+    A_19022_01.start("Check if professionOID claim is allowed for this endpoint");
+    A_19026_01.start("Check if professionOID claim is allowed for this endpoint");
+    A_19113_02.start("Check if professionOID claim is allowed for this endpoint");
     A_19166_01.start("Check if professionOID claim is allowed for this endpoint WF-160/169/200/209");
     A_25993.start("Check if professionOID claim is allowed for this endpoint WF-162");
     A_19170_02.start("Check if professionOID claim is allowed for this endpoint");
@@ -636,10 +658,10 @@ bool VauRequestHandler::checkProfessionOID(
         TVLOG(1) << "endpoint is forbidden for professionOID: " << professionOIDClaim;
         fillErrorResponse(response, HttpStatus::Forbidden, innerRequest,
                           "endpoint is forbidden for professionOID " + professionOIDClaim, {}/*diagnostics*/);
-        A_19018.finish();
-        A_19022.finish();
-        A_19026.finish();
-        A_19113_01.finish();
+        A_19018_01.finish();
+        A_19022_01.finish();
+        A_19026_01.finish();
+        A_19113_02.finish();
         A_19166_01.finish();
         A_25993.finish();
         A_19170_02.finish();
@@ -861,9 +883,9 @@ void VauRequestHandler::transferResponseHeadersFromInnerSession(
     }
     if (prescriptionId)
     {
-        A_23090_06.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
+        A_23090_07.start("\"vnr\": $vorgangsnummer: Task-ID im Fachdienst, Datentyp String");
         outerSession.response.setHeader(Header::PrescriptionId, prescriptionId->toString());
-        A_23090_06.finish();
+        A_23090_07.finish();
         outerSession.response.setHeader(Header::InnerRequestFlowtype,
                                         std::to_string(magic_enum::enum_integer(prescriptionId->type())));
     }

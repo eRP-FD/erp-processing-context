@@ -6,6 +6,7 @@
 
 #include "exporter/EventProcessor.hxx"
 #include "exporter/BdeMessage.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/MedicationExporterMain.hxx"
 #include "exporter/database/CommitGuard.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
@@ -15,9 +16,11 @@
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
 #include "mock/EpaAccountLookupMock.hxx"
 #include "mock/crypto/MockCryptography.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "shared/util/Configuration.hxx"
 #include "test/exporter/database/PostgresDatabaseTest.hxx"
 #include "test/exporter/util/MedicationExporterStaticData.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <boost/beast/core/error.hpp>
 #include <gtest/gtest.h>
@@ -55,7 +58,8 @@ public:
         .kvnr = model::Kvnr{"X000000012"},
         .host = Configuration::instance().epaFQDNs().at(0).hostName,
         .port = Configuration::instance().epaFQDNs().at(0).port,
-        .lookupResult = EpaAccount::Code::allowed
+        .lookupResult = EpaAccount::Code::allowed,
+        .failingHosts = {}
     }
 };
 
@@ -155,6 +159,7 @@ TEST_F(EventProcessorTest, recentCachedHost)
 
 TEST_F(EventProcessorTest, process)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X000000012"};
     insertTaskKvnr(kvnr);
     insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
@@ -211,6 +216,7 @@ TEST_F(EventProcessorTest, process)
 
 TEST_F(EventProcessorTest, processOne)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X000000012"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
@@ -458,6 +464,7 @@ TEST_F(EventProcessorTest, calculateExponentialBackoffDelay)
 
 TEST_F(EventProcessorTest, processOne_Conflict)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X011300023"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
@@ -509,6 +516,7 @@ TEST_F(EventProcessorTest, processOne_Conflict)
 
 TEST_F(EventProcessorTest, processOne_Locked)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X011300022"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
@@ -548,6 +556,7 @@ TEST_F(EventProcessorTest, processOne_Locked)
 
 TEST_F(EventProcessorTest, processOne_retry_403)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X011999972"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
@@ -598,6 +607,7 @@ TEST_F(EventProcessorTest, processOne_retry_403)
 
 TEST_F(EventProcessorTest, epalookup_timeout)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X011300051"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
 
@@ -631,6 +641,7 @@ TEST_F(EventProcessorTest, epalookup_timeout)
 
 TEST_F(EventProcessorTest, processOne_retry_500)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     model::Kvnr kvnr{"X011999972"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
     insertTaskKvnr(kvnr);
@@ -836,6 +847,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry_first_event)
 
 TEST_F(EventProcessorTest, processOne_epa_timeout_retry_second_event)
 {
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
     /*
      * 2 Events for KVNR and Event1 Outcome 'success', Event2 Outcome 'Retry'
      * The 1st Event was transmitted and removed
@@ -1054,7 +1066,7 @@ TEST_F(EventProcessorTest, ePaAccountLookup_kvnrIsLogged)
     model::Kvnr kvnr{"X000000012"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
 
-    EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed};
+    EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed, {}};
 
 
     auto pharmacy = model::TelematikId{"3-SMC-B-Testkarte-883110000120312"};
@@ -1104,7 +1116,7 @@ TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
         originalEvent.getJwtDoctorProfessionOid(), std::move(const_cast<model::Bundle&>(originalEvent.getKbvBundle())),
         originalEvent.getLastModified()));
 
-    EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed};
+    EpaAccount epaAccount{kvnr, "", 9, EpaAccount::Code::allowed, {}};
     testing::internal::CaptureStderr();
     eventProcessor.processEpaAllowed(eventKvnr, epaAccount, events);
     std::string output = testing::internal::GetCapturedStderr();
@@ -1131,3 +1143,113 @@ TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
         transaction.commit();
     }
 }
+
+
+TEST_F(EventProcessorTest, process_bde_issuecode)
+{
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
+    model::Kvnr kvnr{"X011300021"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0);
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    testing::internal::CaptureStderr();
+    eventProcessor.process();
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("error_component":"NO_VALID_STRUCTURE")") != std::string::npos) << output;
+}
+
+
+TEST_F(EventProcessorTest, epalookup_bde_errorcode)
+{
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
+    model::Kvnr kvnr{"X011300999"};
+    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
+
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    model::ProvidePrescriptionTaskEvent taskEvent(
+        1, prescriptionId1, prescriptionId1.type(), kvnr, "hashed-kvnr-for-test",
+        model::TaskEvent::UseCase::providePrescription, model::TaskEvent::State::pending,
+        model::TelematikId{"qesDoctorId"}, model::TelematikId{"jwtDoctorId"}, "jwtDoctorOrganizationName",
+        "jwtDoctorProfessionOid", model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
+        model::Timestamp::fromGermanDate("2024-12-24"));
+
+    testing::internal::CaptureStderr();
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+
+    EpaAccountLookup epaAccountLookup(*serviceContext);
+    epaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
+    std::string output = testing::internal::GetCapturedStderr();
+    EXPECT_TRUE(output.find(R"("error_component":"statusMismatch")") != std::string::npos) << output;
+}
+
+TEST_F(EventProcessorTest, TrottleOnLookupEpaUnknown)
+{
+    A_25942.test("test with throttling enabled");
+    const EnvironmentVariableGuard envGuard{"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS", "1"};
+
+    const model::Kvnr failingKvnr{"X011999972"};
+    insertTaskKvnr(failingKvnr);
+    insertTaskEvent(failingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+    const model::Kvnr succeedingKvnr{"X000000012"};
+    insertTaskKvnr(succeedingKvnr);
+    insertTaskEvent(succeedingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+
+    (void)Fhir::instance();
+    testing::internal::CaptureStderr();
+    TLOG(INFO) << "before serve";
+    ASSERT_NO_FATAL_FAILURE(runLoop.serve(serviceContext, 1));
+
+    std::this_thread::sleep_for(3000ms);
+    runLoop.shutDown();
+
+    std::string output = testing::internal::GetCapturedStderr();
+    std::cerr << output << std::endl;
+    EXPECT_TRUE(output.find("Throttling active, value: 1000ms") != std::string::npos);
+    EXPECT_TRUE(output.find("Throttling inactive") != std::string::npos);
+}
+
+TEST_F(EventProcessorTest, NoTrottleOnLookupEpaUnknown)
+{
+    A_25942.test("test with throttling disabled");
+    const model::Kvnr failingKvnr{"X011999972"};
+    insertTaskKvnr(failingKvnr);
+    insertTaskEvent(failingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+    const model::Kvnr succeedingKvnr{"X000000012"};
+    insertTaskKvnr(succeedingKvnr);
+    insertTaskEvent(succeedingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+    // configured 0 -> no throttle
+    const EnvironmentVariableGuard envGuard{"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS", "0"};
+
+    (void)Fhir::instance();
+    testing::internal::CaptureStderr();
+    TLOG(INFO) << "before serve";
+    ASSERT_NO_FATAL_FAILURE(runLoop.serve(serviceContext, 1));
+
+    std::this_thread::sleep_for(3000ms);
+    runLoop.shutDown();
+
+    std::string output = testing::internal::GetCapturedStderr();
+    std::cerr << output << std::endl;
+    EXPECT_FALSE(output.find("Throttling active") != std::string::npos);
+    EXPECT_FALSE(output.find("Throttling inactive") != std::string::npos);
+}
+

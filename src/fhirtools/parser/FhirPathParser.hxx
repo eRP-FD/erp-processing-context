@@ -19,7 +19,8 @@ class FhirPathParser
 public:
     /// @brief parses and compiles one FHIRPath expression
     ///        and returns the pointer to root node in the compiled expression tree
-    [[nodiscard]] static ExpressionPtr parse(const FhirStructureRepositoryView* repository, std::string_view fhirPath);
+    [[nodiscard]] static ExpressionPtr parse(gsl::not_null<const FhirStructureRepositoryBackend*> repository,
+                                             std::string_view fhirPath);
 
     [[nodiscard]] static std::string unescapeStringLiteral(const std::string_view& str, char stringDelimiter);
 

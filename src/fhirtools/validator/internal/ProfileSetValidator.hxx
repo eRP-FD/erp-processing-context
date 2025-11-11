@@ -66,13 +66,12 @@ public:
 
     ProfiledElementTypeInfo rootPointer() const;
 
-    void typecast(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* structDef);
+    void typecast(const FhirStructureDefinition* structDef);
 
-    void addProfile(const FhirStructureRepositoryView& repo, const FhirStructureDefinition* profile);
-    void addProfiles(const FhirStructureRepositoryView& repo, const std::set<const FhirStructureDefinition*>& profiles);
+    void addProfile(const FhirStructureDefinition* profile);
+    void addProfiles(const std::set<const FhirStructureDefinition*>& profiles);
 
-    void requireOne(const fhirtools::FhirStructureRepositoryView& repo,
-                    const std::set<const FhirStructureDefinition*>& profiles, std::string_view elementFullPath,
+    void requireOne(const std::set<const FhirStructureDefinition*>& profiles, std::string_view elementFullPath,
                     const std::function<std::string()>& contextMessageGetter);
 
     void addTargetProfiles(const ReferenceContext::ReferenceInfo& target,
@@ -85,6 +84,7 @@ public:
     void process(const Element& element, std::string_view elementFullPath);
 
     const ProfileValidator& getValidator(const ProfileValidator::MapKey&) const;
+    const FhirPathValidator& fhirPathValidator() const;
 
     ValidationResults results() const;
 
@@ -103,8 +103,7 @@ private:
     void incrementCounters(const Element& element);
     void createSliceCheckersAndCounters();
     void createSliceCounters(const ProfileValidator& profVal, const FhirSlicing& slicing);
-    SolverDataValue createSolverDataValue(const fhirtools::FhirStructureRepositoryView& repo,
-                                          const FhirStructureDefinition* profile, std::string_view elementFullPath,
+    SolverDataValue createSolverDataValue(const FhirStructureDefinition* profile, std::string_view elementFullPath,
                                           const std::function<std::string()>& contextMessageGetter);
     SolverDataValue createErrorSolverData(const FhirStructureDefinition& profile, std::string message,
                                           std::string_view elementFullPath);

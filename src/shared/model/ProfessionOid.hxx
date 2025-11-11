@@ -50,7 +50,9 @@ namespace profession_oid
     constexpr static std::string_view oid_arztekammern               = "1.3.6.1.4.1.24796.4.11.1";
 
     // Tabelle 3: Tab_PKI_403-01 OID-Festlegung Institutionen im X.509-Zertifikat der SMC-B
+    // GEMREQ-start oid_praxis_arzt
     constexpr static std::string_view oid_praxis_arzt                        = "1.2.276.0.76.4.50";
+    // GEMREQ-end oid_praxis_arzt
     constexpr static std::string_view oid_zahnarztpraxis                     = "1.2.276.0.76.4.51";
     constexpr static std::string_view oid_praxis_psychotherapeut             = "1.2.276.0.76.4.52";
     constexpr static std::string_view oid_krankenhaus                        = "1.2.276.0.76.4.53";
@@ -152,7 +154,7 @@ namespace profession_oid
         }
         if (professionOid == oid_arzt || professionOid == oid_zahnarzt || professionOid == oid_praxis_arzt ||
             professionOid == oid_zahnarztpraxis || professionOid == oid_praxis_psychotherapeut ||
-            professionOid == oid_krankenhaus)
+            professionOid == oid_krankenhaus || professionOid == oid_institution_vorsorge_reha)
         {
             return InnerRequestRole::doctor;
         }

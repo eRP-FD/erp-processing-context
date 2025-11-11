@@ -40,14 +40,13 @@ private:
     template<typename KbvOrEvdgaBundle>
     static void handleGeneric(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
                               const SignedPrescription& cadesBesSignature, const KbvOrEvdgaBundle& kbvOrEvdgaBundle,
-                              HttpStatus responseCodeSoFar, bool isMvo,
+                              bool isMvo,
                               std::optional<model::KbvStatusKennzeichen> legalBasisCode);
     static void handleDigaRequest(PcSessionContext& session, Database::TaskAndKey& taskAndKey,
                                   const SignedPrescription& cadesBesSignature);
 
     template<typename KbvOrEvdgaBundle>
-    static std::tuple<HttpStatus, KbvOrEvdgaBundle> prescriptionBundleFromXml(SessionContext& sessionContext,
-                                                                              std::string_view prescription);
+    static KbvOrEvdgaBundle prescriptionBundleFromXml(SessionContext& sessionContext, std::string_view prescription);
     static void checkMultiplePrescription(const std::optional<model::KBVMultiplePrescription>& mPExt,
                                           const model::PrescriptionType prescriptionType,
                                           std::optional<model::KbvStatusKennzeichen> legalBasisCode,
@@ -60,11 +59,6 @@ private:
                                                  const model::Timestamp& signingTime);
     template<typename KbvOrEvdgaBundle>
     static bool checkPractitioner(const KbvOrEvdgaBundle& bundle, PcSessionContext& session);
-    template<typename KbvOrEvdgaBundle>
-    static HttpStatus checkExtensions(const model::ResourceFactory<KbvOrEvdgaBundle>& factory,
-                                      Configuration::OnUnknownExtension onUnknownExtension,
-                                      const fhirtools::FhirStructureRepositoryView& fhirStructureRepo,
-                                      const fhirtools::ValidatorOptions& valOpts);
     static void setMvoExpiryAcceptDates(model::Task& task, const std::optional<date::year_month_day>& mvoEndDate,
                                         const date::year_month_day& signingDay);
 

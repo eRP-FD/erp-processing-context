@@ -42,6 +42,8 @@ const std::string Header::KbvVerordnungsdaten = "KBV-Verordnungsdaten";
 const std::string Header::DavAbgabedaten = "DAV-Abgabedaten";
 const std::string Header::EUProfileWorkflow = "Gematik-EU-Workflow-Profil";
 const std::string Header::ErpUseCase = "ERP-Use-Case";
+const std::string Header::PnTelematikId = "pn_telematikID";
+const std::string Header::PnIpaddress = "pn_ipaddress";
 
 const std::string Header::Tee3::VauCid = "VAU-CID";
 const std::string Header::Tee3::XUserAgent = "x-useragent";
@@ -62,6 +64,7 @@ const std::string Header::WWWAuthenticate = "WWW-Authenticate";
 const std::string Header::Warning = "Warning";
 const std::string Header::XAccessCode = "X-AccessCode";
 const std::string Header::XRequestId = "X-Request-Id";
+const std::string Header::XForwardedFor = "X-Forwarded-For";
 
 const std::string Header::ConnectionClose = "close";
 const std::string Header::ConnectionKeepAlive = "keep-alive";
@@ -402,6 +405,7 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
         case model::ProfileType::CreateTaskParameters:
         case model::ProfileType::GEM_ERP_PR_AuditEvent:
         case model::ProfileType::GEM_ERP_PR_Binary:
+        case model::ProfileType::GEM_ERP_PR_Communication_DiGA:
         case model::ProfileType::GEM_ERP_PR_Communication_DispReq:
         case model::ProfileType::GEM_ERP_PR_Communication_InfoReq:
         case model::ProfileType::GEM_ERP_PR_Communication_Reply:
@@ -437,7 +441,7 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
         case model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input:
         case model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input:
         case model::ProfileType::GEM_ERPEU_PR_MedicationDispense:
-        case model::ProfileType::GEM_ERPEU_PR_PAR_Medication:
+        case model::ProfileType::GEM_ERPEU_PR_Medication:
         case model::ProfileType::GEM_ERPEU_PR_Practitioner:
         case model::ProfileType::GEM_ERPEU_PR_PractitionerRole:
         case model::ProfileType::GEM_ERPEU_PR_Organization:

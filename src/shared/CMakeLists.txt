@@ -24,6 +24,7 @@ add_library(erp-shared STATIC
     compression/ZStd.cxx
     compression/ZStdDictionary.cxx
     compression/ZStdDictionaryRepository.cxx
+    crypto/AesCbc.cxx
     crypto/AesGcm.cxx
     crypto/CMAC.cxx
     crypto/CadesBesSignature.cxx
@@ -59,6 +60,7 @@ add_library(erp-shared STATIC
     enrolment/EnrolmentModel.cxx
     enrolment/EnrolmentRequestHandler.cxx
     enrolment/EnrolmentServer.cxx
+    enrolment/PseudonameLogKeyPackage.cxx
     enrolment/VsdmHmacKey.cxx
     fhir/FhirCanonicalizer.cxx
     fhir/Fhir.cxx

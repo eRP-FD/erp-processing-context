@@ -365,6 +365,7 @@ std::string CommunicationJsonStringBuilder::senderIdentifierType() const
             }
         case Communication::MessageType::Reply:
         case Communication::MessageType::ChargChangeReply:
+        case Communication::MessageType::DiGA:
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::ChargChangeReq:
             if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
@@ -389,6 +390,7 @@ std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::Reply:
         case Communication::MessageType::Representative:
+        case Communication::MessageType::DiGA:
             if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current()) >=
                 ResourceTemplates::Versions::GEM_ERP_1_4)
             {

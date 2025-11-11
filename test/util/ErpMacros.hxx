@@ -70,7 +70,8 @@
         }                                                                                          \
     }
 
-#define EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(expression, diag)        \
+
+#define EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(expression, message, diag)        \
     {                                                                                              \
         try                                                                                        \
         {                                                                                          \
@@ -80,10 +81,10 @@
         catch (const ErpException& ex)                                                             \
         {                                                                                          \
             EXPECT_EQ(ex.status(), HttpStatus::BadRequest);                                        \
-            EXPECT_EQ(ex.what(), std::string_view{"FHIR-Validation error"}) << ex.what();          \
+            EXPECT_EQ(ex.what(), std::string_view{(message)}) << ex.what();          \
             ASSERT_TRUE(ex.diagnostics().has_value());                                             \
             std::vector<std::string> diagnosticsMessages = String::split(ex.diagnostics().value(), "; "); \
-            std::vector<std::string> fullDiagnosticsMessages = String::split(diag, "; ");          \
+            std::vector<std::string> fullDiagnosticsMessages = String::split((diag), "; ");          \
             std::set<std::string> diagnosticsMessagesSet(diagnosticsMessages.begin(), diagnosticsMessages.end()); \
             std::set<std::string> fullDiagnosticsMessagesSet(fullDiagnosticsMessages.begin(), fullDiagnosticsMessages.end()); \
             EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet) << std::endl << ex.diagnostics().value(); \
@@ -93,6 +94,9 @@
             FAIL() << "Expected ErpException, but wrong exception type was thrown";                \
         }                                                                                          \
     }
+
+#define EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(expression, diag) \
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(expression, "FHIR-Validation error", diag)
 
 #define ASSERT_NO_ERP_EXCEPTION(expression)                                                                            \
     {                                                                                                                  \

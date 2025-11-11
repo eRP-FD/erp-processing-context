@@ -142,6 +142,7 @@ enum class BlobType : int8_t
     ChargeItemKeyDerivation    = 12,
     PseudonameKey              = 13,
     VauAut                     = 14,
+    PseudonameLogKey           = 15,
 };
 // clang-format on
 

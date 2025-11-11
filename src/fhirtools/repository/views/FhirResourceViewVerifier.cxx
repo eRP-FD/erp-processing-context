@@ -330,7 +330,7 @@ void FhirResourceViewVerifier::verifySlicing(const FhirStructureDefinition& def,
         {
             try
             {
-                (void) disc.condition(*mView, profile);
+                (void) disc.condition(&mRepo, profile);
                 TVLOG(4) << "Verified " << def.url() << '|' << def.version() << ":" << element.originalName() << ":"
                          << slice.name() << " discriminator: " << magic_enum::enum_name(disc.type()) << '@'
                          << disc.path();
@@ -355,7 +355,7 @@ void FhirResourceViewVerifier::parseConstraints(const FhirStructureDefinition& d
     {
         try
         {
-            (void) constraint.parsedExpression(*mRepo.defaultView(), &mExpressionCache);
+            (void) constraint.parsedExpression(&mRepo, &mExpressionCache);
         }
         catch (const std::exception& ex)
         {
@@ -370,12 +370,12 @@ void FhirResourceViewVerifier::verifyFixedCodeSystems(const FhirElement& element
 {
     if (element.pattern() != nullptr)
     {
-        ValueElement valueElement(mRepo.defaultView(), element.pattern());
+        ValueElement valueElement(&mRepo, element.pattern());
         verifyFixedCodeSystems(element, valueElement, context);
     }
     if (element.fixed() != nullptr)
     {
-        ValueElement valueElement(mRepo.defaultView(), element.fixed());
+        ValueElement valueElement(&mRepo, element.fixed());
         verifyFixedCodeSystems(element, valueElement, context);
     }
 }

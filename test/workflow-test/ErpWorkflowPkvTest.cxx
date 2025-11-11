@@ -109,7 +109,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
 
     EXPECT_EQ(consent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
     EXPECT_EQ(consent->patientKvnr(), kvnr);
-    EXPECT_EQ(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
+    EXPECT_GE(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
 
     // Retrieve created consent
     std::vector<model::Consent> getConsent;
@@ -119,7 +119,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
     EXPECT_EQ(getConsent[0].id(), consent->id());
     EXPECT_EQ(consent->patientKvnr(), kvnr);
     EXPECT_EQ(consent->id(), model::Consent::createIdString(model::ConsentType::CHARGCONS, kvnr));
-    EXPECT_EQ(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
+    EXPECT_GE(consent->dateTime().toXsDateTimeWithoutFractionalSeconds(), startTime.toXsDateTimeWithoutFractionalSeconds());
 
     // Create a closed task:
     std::optional<model::PrescriptionId> prescriptionId;

@@ -18,8 +18,10 @@
 #include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
 #include "erp/model/eu/GemErpEuPrTaskInput.hxx"
 #include "erp/model/eu/GemErpEuPrMedication.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/model/GemErpEuPrMedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "test_config.h"
@@ -98,6 +100,7 @@ public:
             case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
             case GEM_ERP_PR_Communication_Reply:
             case GEM_ERP_PR_Communication_Representative:
+            case GEM_ERP_PR_Communication_DiGA:
                 // parseAndValidateRequestBody not used for Communication
                 break;
             case GEM_ERP_PR_MedicationDispense:
@@ -178,7 +181,7 @@ public:
             case GEM_ERPEU_PR_MedicationDispense:
                 testParseAndValidateRequestBodyT<model::MedicationDispense>(body, contentMimeType, expectFail, {profileType});
                 break;
-            case GEM_ERPEU_PR_PAR_Medication:
+            case GEM_ERPEU_PR_Medication:
                 testParseAndValidateRequestBodyT<model::GemErpEuPrMedication>(body, contentMimeType, expectFail);
                 break;
             case GEM_ERPEU_PR_Practitioner:
@@ -200,16 +203,15 @@ public:
 };
 
 struct SampleFile {
-    std::string_view xmlSample;
-    std::string_view jsonSample;
+    std::string filePrefix;
     model::ProfileType profileType;
     std::optional<std::string> skipReason = {};
 };
 
 static std::ostream& operator << (std::ostream& out, const SampleFile& sample)
 {
-    out << R"({ "xmlSample": ")" << sample.xmlSample;
-    out << R"(", "jsonSample": ")" << sample.jsonSample;
+    out << R"({ "filePrefix": ")" << sample.filePrefix;
+    out << R"(", "profileType": ")" << magic_enum::enum_name(sample.profileType);
     if (sample.skipReason)
     {
         out << R"(", "skipReason": ")" << sample.skipReason.value();
@@ -236,6 +238,16 @@ public:
     {
         mCaDerPathGuard.reset();
     }
+
+    std::optional<fhirtools::FhirVersion> renderVersion()
+    {
+        std::string urlString{value(model::profile(GetParam().profileType))};
+        fhirtools::DefinitionKey key{urlString, std::nullopt};
+        const auto view = Fhir::instance().structureRepository(model::Timestamp::now()).match(key);
+        const auto resultKey = view?view->findRenderVersion(key):std::nullopt;
+        return resultKey?resultKey->version:std::nullopt;
+    }
+
 };
 
 
@@ -245,14 +257,17 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesJSON)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
     }
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
-        FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" / GetParam().jsonSample),
-        ContentMimeType::fhirJsonUtf8, GetParam().profileType, false);
+    const auto ver = renderVersion();
+    ASSERT_TRUE(ver.has_value());
+    auto body = ResourceManager::instance().getStringResource("test/fhir/conversion/" + GetParam().filePrefix +
+                                                              to_string(*ver) + ".json");
+
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(body, ContentMimeType::fhirJsonUtf8,
+                                                                 GetParam().profileType, false);
 
     // check that it does not validate using wrong mime type
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
-        FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" / GetParam().jsonSample),
-        ContentMimeType::fhirXmlUtf8, GetParam().profileType, true);
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(body, ContentMimeType::fhirXmlUtf8,
+                                                                 GetParam().profileType, true);
 }
 
 TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesXML)
@@ -261,14 +276,17 @@ TEST_P(ErpRequestHandlerTest, validateRequestBodyReferenceSamplesXML)
     {
         GTEST_SKIP_(GetParam().skipReason->data());
     }
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
-        FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" / GetParam().xmlSample),
-        ContentMimeType::fhirXmlUtf8, GetParam().profileType, false);
+    const auto ver = renderVersion();
+    ASSERT_TRUE(ver.has_value());
+    auto body = ResourceManager::instance().getStringResource("test/fhir/conversion/" + GetParam().filePrefix +
+                                                              to_string(*ver) + ".xml");
+
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(body, ContentMimeType::fhirXmlUtf8,
+                                                                 GetParam().profileType, false);
 
     // check that it does not validate using wrong mime type
-    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(
-        FileHelper::readFileAsString(fs::path(TEST_DATA_DIR) / "fhir/conversion" / GetParam().xmlSample),
-        ContentMimeType::fhirJsonUtf8, GetParam().profileType, true);
+    mErpRequestHandlerUnderTest->testParseAndValidateRequestBody(body, ContentMimeType::fhirJsonUtf8,
+                                                                 GetParam().profileType, true);
 }
 
 using namespace std::string_view_literals;
@@ -278,12 +296,10 @@ using namespace std::string_view_literals;
 INSTANTIATE_TEST_SUITE_P(gematikExamples, ErpRequestHandlerTest,
                          ::testing::Values(
                              SampleFile{
-                                 "chargeItem_simplifier.xml",
-                                 "chargeItem_simplifier.json",
+                                 "chargeItem_simplifier_",
                                  model::ProfileType::GEM_ERPCHRG_PR_ChargeItem,
                              },
                              SampleFile{
-                                 "consent_simplifier.xml",
-                                 "consent_simplifier.json",
+                                 "consent_simplifier_",
                                  model::ProfileType::GEM_ERPCHRG_PR_Consent,
                              }));

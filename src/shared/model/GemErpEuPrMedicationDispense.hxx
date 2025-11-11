@@ -16,10 +16,15 @@ class GemErpEuPrMedicationDispense : public MedicationDispense
 {
 public:
     static constexpr auto profileType = ProfileType::GEM_ERPEU_PR_MedicationDispense;
+
+private:
+    explicit GemErpEuPrMedicationDispense(model::NumberAsStringParserDocument&& jsonTree);
+    friend Resource<GemErpEuPrMedicationDispense>;
 };
 
 // NOLINTBEGIN(bugprone-exception-escape)
-extern template class Resource<GemErpEuPrMedicationDispense>;
+extern template GemErpEuPrMedicationDispense
+Resource<GemErpEuPrMedicationDispense>::fromJson(NumberAsStringParserDocument&&);
 // NOLINTEND(bugprone-exception-escape)
 
 }// model

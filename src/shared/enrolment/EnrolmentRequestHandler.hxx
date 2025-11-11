@@ -298,6 +298,15 @@ class DeleteVsdmHmacKey : public EnrolmentRequestHandlerBase
 protected:
     EnrolmentModel doHandleRequest(EnrolmentSession& session) override;
 };
+
+
+class PostPseudoLogKey : public EnrolmentRequestHandlerBase
+{
+protected:
+    EnrolmentModel doHandleRequest(EnrolmentSession& session) override;
+};
+
+
 } // namespace enrolment
 
 

@@ -81,6 +81,7 @@ sgx.allowed_files = [
 "file:{type}/erp/bin/h03000001.bin",
 # ERP auxiliary configuration
 {custom}
+"file:{type}/erp/bin/001_fhir-resource-groups.config.json",
 "file:{type}/erp/bin/01_production.config.json",
 "file:{type}/erp/bin/01_production-medication-exporter.config.json"
 ]

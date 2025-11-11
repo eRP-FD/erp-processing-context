@@ -27,11 +27,10 @@ public:
 
 TEST_F(ConsentTableTest, createAndGet)
 {
-    auto startTime = model::Timestamp::now();
-    auto timestamp = model::Timestamp::fromFhirDateTime("2021-10-03");
+    model::Timestamp startTime{std::chrono::floor<std::chrono::seconds>(model::Timestamp::now().toChronoTimePoint())};
     { // scope
         auto db = database();
-        db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, timestamp});
+        db.storeConsent(model::Consent{model::ConsentType::CHARGCONS, kvnr1, startTime});
         db.commitTransaction();
     }
     auto endTime = model::Timestamp::now();

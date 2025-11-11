@@ -8,16 +8,17 @@
 #ifndef FHIR_TOOLS_FHIRCONSTRAINT_HXX
 #define FHIR_TOOLS_FHIRCONSTRAINT_HXX
 
+#include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/Severity.hxx"
 
-#include <string>
 #include <memory>
+#include <string>
 #include <unordered_map>
 
 namespace fhirtools {
 class Expression;
+class FhirStructureRepositoryBackend;
 class FhirStructureRepositoryView;
-
 /**
  * @brief Represents a single Constraint as provided by ElementDefinition.constraint
  * @see https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/81633
@@ -33,8 +34,8 @@ public:
     [[nodiscard]] Severity getSeverity() const;
     [[nodiscard]] const std::string& getHuman() const;
     [[nodiscard]] const std::string& getExpression() const;
-    [[nodiscard]] std::shared_ptr<const Expression> parsedExpression(const FhirStructureRepositoryView& repo,
-                                                                     ExpressionCache* cache = nullptr) const;
+    [[nodiscard]] std::shared_ptr<const Expression>
+    parsedExpression(gsl::not_null<const FhirStructureRepositoryBackend*> repo, ExpressionCache* cache = nullptr) const;
 
 
     std::strong_ordering operator <=> (const FhirConstraint&) const;

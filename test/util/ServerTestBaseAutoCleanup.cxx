@@ -8,7 +8,7 @@
 #include "test/util/ServerTestBaseAutoCleanup.hxx"
 #include "erp/model/Communication.hxx"
 #include "shared/util/TLog.hxx"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 
 using namespace model;

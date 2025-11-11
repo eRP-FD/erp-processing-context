@@ -43,7 +43,7 @@ namespace fhirtools
 class FhirPathParser::Impl : public fhirtools::fhirpathVisitor
 {
 public:
-    explicit Impl(const FhirStructureRepositoryView* repository);
+    explicit Impl(gsl::not_null<const FhirStructureRepositoryBackend*> repository);
 
     std::any visitIndexerExpression(fhirtools::fhirpathParser::IndexerExpressionContext* context) override;
     std::any visitPolarityExpression(fhirtools::fhirpathParser::PolarityExpressionContext* context) override;
@@ -99,16 +99,16 @@ private:
     template<class TOperator, typename TContext>
     std::any binaryOperator(TContext* context);
 
-    const std::shared_ptr<const FhirStructureRepositoryView> mRepository;
+    gsl::not_null<const FhirStructureRepositoryBackend*> mRepository;
 };
-FhirPathParser::Impl::Impl(const FhirStructureRepositoryView* repository)
-    : mRepository(repository->shared_from_this())
+FhirPathParser::Impl::Impl(gsl::not_null<const FhirStructureRepositoryBackend*> repository)
+    : mRepository(std::move(repository))
 {
 }
 template<typename TFun>
 std::any FhirPathParser::Impl::fun()
 {
-    return std::make_any<ExpressionPtr>(std::make_shared<TFun>(mRepository));
+    return std::make_any<ExpressionPtr>(std::make_shared<TFun>());
 }
 template<typename TFun>
 std::any FhirPathParser::Impl::unaryFun(fhirtools::fhirpathParser::FunctionContext* context)
@@ -117,12 +117,12 @@ std::any FhirPathParser::Impl::unaryFun(fhirtools::fhirpathParser::FunctionConte
     {
         FPExpect(context->paramList()->expression().size() == 1,
                  "wrong number of arguments for function " + std::string(TFun::IDENTIFIER));
-        return std::make_any<ExpressionPtr>(std::make_shared<TFun>(
-            mRepository, std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0)))));
+        return std::make_any<ExpressionPtr>(
+            std::make_shared<TFun>(std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0)))));
     }
     else
     {
-        return std::make_any<ExpressionPtr>(std::make_shared<TFun>(mRepository, nullptr));
+        return std::make_any<ExpressionPtr>(std::make_shared<TFun>(nullptr));
     }
 }
 template<typename TFun>
@@ -134,17 +134,17 @@ std::any FhirPathParser::Impl::binaryFun(fhirtools::fhirpathParser::FunctionCont
                  "wrong number of arguments for function " + std::string(TFun::IDENTIFIER));
         if (context->paramList()->expression().size() == 2)
         {
-            return std::make_any<ExpressionPtr>(std::make_shared<TFun>(
-                mRepository, std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))),
-                std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(1)))));
+            return std::make_any<ExpressionPtr>(
+                std::make_shared<TFun>(std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))),
+                                       std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(1)))));
         }
         else if (context->paramList()->expression().size() == 1)
         {
             return std::make_any<ExpressionPtr>(std::make_shared<TFun>(
-                mRepository, std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))), nullptr));
+                std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))), nullptr));
         }
     }
-    return std::make_any<ExpressionPtr>(std::make_shared<TFun>(mRepository, nullptr, nullptr));
+    return std::make_any<ExpressionPtr>(std::make_shared<TFun>(nullptr, nullptr));
 }
 template<class TOperator, typename TContext>
 std::any FhirPathParser::Impl::binaryOperator(TContext* context)
@@ -153,7 +153,7 @@ std::any FhirPathParser::Impl::binaryOperator(TContext* context)
              "wrong number of arguments for operator " + std::string(TOperator::IDENTIFIER));
     auto lhs = std::any_cast<ExpressionPtr>(visit(context->expression(0)));
     auto rhs = std::any_cast<ExpressionPtr>(visit(context->expression(1)));
-    return std::make_any<ExpressionPtr>(std::make_shared<TOperator>(mRepository, lhs, rhs));
+    return std::make_any<ExpressionPtr>(std::make_shared<TOperator>(lhs, rhs));
 }
 std::any FhirPathParser::Impl::visitIndexerExpression(fhirtools::fhirpathParser::IndexerExpressionContext* context)
 {
@@ -268,7 +268,7 @@ FhirPathParser::Impl::visitInvocationExpression(fhirtools::fhirpathParser::Invoc
     auto invocationExpression = std::any_cast<ExpressionPtr>(visit(context->invocation()));
     auto expressionExpression = std::any_cast<ExpressionPtr>(visit(context->expression()));
     return std::make_any<ExpressionPtr>(
-        std::make_shared<InvocationExpression>(mRepository, expressionExpression, invocationExpression));
+        std::make_shared<InvocationExpression>(expressionExpression, invocationExpression));
 }
 std::any FhirPathParser::Impl::visitEqualityExpression(fhirtools::fhirpathParser::EqualityExpressionContext* context)
 {
@@ -311,13 +311,13 @@ std::any FhirPathParser::Impl::visitTypeExpression(fhirtools::fhirpathParser::Ty
     if (op == TypesIsOperator::IDENTIFIER)
     {
         return std::make_any<ExpressionPtr>(
-            std::make_shared<TypesIsOperator>(mRepository, std::any_cast<ExpressionPtr>(visit(context->expression())),
+            std::make_shared<TypesIsOperator>(std::any_cast<ExpressionPtr>(visit(context->expression())),
                                               std::any_cast<std::string>(visit(context->typeSpecifier()))));
     }
     if (op == TypeAsOperator::IDENTIFIER)
     {
         return std::make_any<ExpressionPtr>(
-            std::make_shared<TypeAsOperator>(mRepository, std::any_cast<ExpressionPtr>(visit(context->expression())),
+            std::make_shared<TypeAsOperator>(*mRepository, std::any_cast<ExpressionPtr>(visit(context->expression())),
                                              std::any_cast<std::string>(visit(context->typeSpecifier()))));
     }
     FPFail("invalid operator: " + op);
@@ -346,7 +346,7 @@ std::any FhirPathParser::Impl::visitParenthesizedTerm(fhirtools::fhirpathParser:
 std::any FhirPathParser::Impl::visitNullLiteral(fhirtools::fhirpathParser::NullLiteralContext* context)
 {
     TRACE;
-    return std::make_any<ExpressionPtr>(std::make_shared<LiteralNullExpression>(mRepository));
+    return std::make_any<ExpressionPtr>(std::make_shared<LiteralNullExpression>());
 }
 std::any FhirPathParser::Impl::visitBooleanLiteral(fhirtools::fhirpathParser::BooleanLiteralContext* context)
 {
@@ -417,15 +417,15 @@ std::any FhirPathParser::Impl::visitExternalConstant(fhirtools::fhirpathParser::
     }
     else if (variable == "context")
     {
-        return std::make_any<ExpressionPtr>(std::make_shared<PercentContext>(mRepository));
+        return std::make_any<ExpressionPtr>(std::make_shared<PercentContext>());
     }
     else if (variable == "resource")
     {
-        return std::make_any<ExpressionPtr>(std::make_shared<PercentResource>(mRepository));
+        return std::make_any<ExpressionPtr>(std::make_shared<PercentResource>());
     }
     else if (variable == "rootResource")
     {
-        return std::make_any<ExpressionPtr>(std::make_shared<PercentRootResource>(mRepository));
+        return std::make_any<ExpressionPtr>(std::make_shared<PercentRootResource>());
     }
     FPFail("external constant not implemented: " + variable);
 }
@@ -433,7 +433,7 @@ std::any FhirPathParser::Impl::visitMemberInvocation(fhirtools::fhirpathParser::
 {
     TRACE;
     const auto identifier = std::any_cast<std::string>(visit(context->identifier()));
-    return std::make_any<ExpressionPtr>(std::make_shared<PathSelection>(mRepository, identifier));
+    return std::make_any<ExpressionPtr>(std::make_shared<PathSelection>(identifier));
 }
 std::any FhirPathParser::Impl::visitFunctionInvocation(fhirtools::fhirpathParser::FunctionInvocationContext* context)
 {
@@ -443,7 +443,7 @@ std::any FhirPathParser::Impl::visitFunctionInvocation(fhirtools::fhirpathParser
 std::any FhirPathParser::Impl::visitThisInvocation(fhirtools::fhirpathParser::ThisInvocationContext* context)
 {
     TRACE;
-    return std::make_any<ExpressionPtr>(std::make_shared<DollarThis>(mRepository));
+    return std::make_any<ExpressionPtr>(std::make_shared<DollarThis>());
 }
 std::any FhirPathParser::Impl::visitIndexInvocation(fhirtools::fhirpathParser::IndexInvocationContext* context)
 {
@@ -513,7 +513,6 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
         FPExpect(context->paramList()->expression().size() == 1,
                  "wrong number of arguments for function " + std::string(FilteringOfType::IDENTIFIER));
         return std::make_any<ExpressionPtr>(std::make_shared<FilteringOfType>(
-            mRepository,
             std::make_shared<LiteralStringExpression>(mRepository, context->paramList()->expression(0)->getText())));
     }
     else if (identifier == SubsettingFirst::IDENTIFIER)
@@ -549,7 +548,7 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
                             ? std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(2)))
                             : nullptr;
         return std::make_any<ExpressionPtr>(std::make_shared<ConversionIif>(
-            mRepository, std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))),
+            std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(0))),
             std::any_cast<ExpressionPtr>(visit(context->paramList()->expression(1))), thirdArg));
     }
     else if (identifier == ConversionToString::IDENTIFIER)
@@ -613,14 +612,14 @@ std::any FhirPathParser::Impl::visitFunction(fhirtools::fhirpathParser::Function
         FPExpect(context->paramList() && (context->paramList()->expression().size() == 1),
                  "wrong number of arguments for function: " + identifier);
         return std::make_any<ExpressionPtr>(
-            std::make_shared<TypeAsFunction>(mRepository, nullptr, context->paramList()->expression(0)->getText()));
+            std::make_shared<TypeAsFunction>(*mRepository, nullptr, context->paramList()->expression(0)->getText()));
     }
     else if (identifier == TypesIsOperator::IDENTIFIER)
     {
         FPExpect(context->paramList() && (context->paramList()->expression().size() == 1),
                  "wrong number of arguments for function: " + identifier);
         return std::make_any<ExpressionPtr>(
-            std::make_shared<TypesIsOperator>(mRepository, nullptr, context->paramList()->expression(0)->getText()));
+            std::make_shared<TypesIsOperator>(nullptr, context->paramList()->expression(0)->getText()));
     }
     else if (identifier == HasValue::IDENTIFIER)
     {
@@ -708,7 +707,8 @@ std::any FhirPathParser::Impl::visitIdentifier(fhirtools::fhirpathParser::Identi
 
 #undef TRACE
 
-fhirtools::ExpressionPtr FhirPathParser::parse(const FhirStructureRepositoryView* repository, std::string_view fhirPath)
+fhirtools::ExpressionPtr FhirPathParser::parse(gsl::not_null<const FhirStructureRepositoryBackend*> repository,
+                                               std::string_view fhirPath)
 {
     using namespace std::string_literals;
     fhirPath = FhirPathFixer::fixFhirPath(fhirPath);

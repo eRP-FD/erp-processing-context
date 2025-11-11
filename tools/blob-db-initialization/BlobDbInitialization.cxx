@@ -98,6 +98,7 @@ Blob types:
     tid|telematikIdHashKey
     vausig
     vauaut
+    pnlogkey
 )";
 
     if (message.empty())
@@ -143,6 +144,7 @@ struct BlobDescriptor
             case VauSig:
             case PseudonameKey:
             case VauAut:
+            case PseudonameLogKey:
                 return false;
         }
         Fail("Unexpected blob type");
@@ -151,19 +153,22 @@ struct BlobDescriptor
 
 // clang-format off
 static std::vector<BlobDescriptor> blobDescriptors = {
-    {BlobType::EndorsementKey,             "ek",     "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true, false, false },
-    {BlobType::AttestationPublicKey,       "ak",     "knownAk",                    "AKPub.bin",                "AKPub.bin",                    true,  false, false},
-    {BlobType::AttestationKeyPair,         "akpair", "knownAkKeyPair",             "",                         "",                             false, false, false},
-    {BlobType::Quote,                      "quote",  "knownQuote",                 "trustedQuoteSaved.blob",   "trustedQuoteSaved.blob",       true,  false, false},
-    {BlobType::EciesKeypair,               "ecies",  "eciesKeypair",               "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved. blob",      false, false, true },
-    {BlobType::TaskKeyDerivation,          "task",   "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
-    {BlobType::CommunicationKeyDerivation, "comm",   "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
-    {BlobType::AuditLogKeyDerivation,      "audit",  "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
-    {BlobType::ChargeItemKeyDerivation,    "charge", "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
-    {BlobType::KvnrHashKey,                "kvnr",   "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
-    {BlobType::TelematikIdHashKey,         "tid",    "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
-    {BlobType::VauSig,                     "vausig", "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false},
-    {BlobType::VauAut,                     "vauaut", "vauAut",                     "AUTKeyPairSaved.blob",     "AUTKeyPairSaved.blob",         false, false, false}};
+    {BlobType::EndorsementKey,             "ek",       "knownEk",                    "trustedEKSaved.blob",      "trustedEKSaved.blob",          true, false, false },
+    {BlobType::AttestationPublicKey,       "ak",       "knownAk",                    "AKPub.bin",                "AKPub.bin",                    true,  false, false},
+    {BlobType::AttestationKeyPair,         "akpair",   "knownAkKeyPair",             "",                         "",                             false, false, false},
+    {BlobType::Quote,                      "quote",    "knownQuote",                 "trustedQuoteSaved.blob",   "trustedQuoteSaved.blob",       true,  false, false},
+    {BlobType::EciesKeypair,               "ecies",    "eciesKeypair",               "ECIESKeyPairSaved.blob",   "eciesKeyPairSaved. blob",      false, false, true },
+    {BlobType::TaskKeyDerivation,          "task",     "taskDerivationKey",          "StaticDerivationKey.blob", "taskDerivationKeySaved.blob",  false, false, false},
+    {BlobType::CommunicationKeyDerivation, "comm",     "communicationDerivationKey", "StaticDerivationKey.blob", "commDerivationKeySaved.blob",  false, false, false},
+    {BlobType::AuditLogKeyDerivation,      "audit",    "auditLogDerivationKey",      "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
+    {BlobType::ChargeItemKeyDerivation,    "charge",   "chargeItemDerivationKey",    "StaticDerivationKey.blob", "auditDerivationKeySaved.blob", false, false, false},
+    {BlobType::KvnrHashKey,                "kvnr",     "kvnrHashKey",                "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
+    {BlobType::TelematikIdHashKey,         "tid",      "telematikIdHashKey",         "HashKeySaved.blob",        "hashKeySaved.blob",            false, false, false},
+    {BlobType::VauSig,                     "vausig",   "vauSig",                     "VAUSIGKeyPairSaved.blob",  "vausigKeyPairSaved.blob",      false, false, false},
+    {BlobType::VauAut,                     "vauaut",   "vauAut",                     "AUTKeyPairSaved.blob",     "AUTKeyPairSaved.blob",         false, false, false},
+    {BlobType::PseudonameLogKey,           "pnlogkey", "pnlogkey",                   "PseudonymizationLogKey.blob","PseudonymizationLogKey.blob",false, false, false},
+};
+
 // clang-format on
 
 struct VsdmKeyBlobDescriptor

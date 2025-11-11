@@ -17,9 +17,11 @@
 #include "fhirtools/repository/views/FhirResourceViewVerifier.hxx"
 #include "fhirtools/repository/views/VersionMappingView.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Configuration.hxx"
+#include "fhirtools/parser/FhirPathParser.hxx"
 
 #include <algorithm>
 #include <map>
@@ -125,18 +127,18 @@ template<config::ProcessType ProcessT>
 void FhirImpl<ProcessT>::load()
 {
     const auto& config = Configuration::instance();
-    auto filesAsString = config.getArray(ProcessT::FHIR_STRUCTURE_DEFINITIONS);
+    auto filesAsString = config.getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
     std::list<std::filesystem::path> files;
     std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
         return std::filesystem::path{str};
     });
     TLOG(INFO) << "Loading FHIR structure repository.";
     auto resolver = config.fhirResourceGroupConfiguration<ProcessT>();
-    for (const auto& [url, version] : config.synthesizeCodesystem<ProcessT>())
+    for (const auto& [url, version] : config.synthesizeCodesystem())
     {
         mBackend.synthesizeCodeSystem(url, version, resolver);
     }
-    for (const auto& [url, version] : config.synthesizeValuesets<ProcessT>())
+    for (const auto& [url, version] : config.synthesizeValuesets())
     {
         mBackend.synthesizeValueSet(url, version, resolver);
     }
@@ -194,19 +196,30 @@ void FhirImpl<ProcessT>::validateViews() const
     }
 }
 
+std::optional<model::Timestamp> fromGermanDateWithOffset(const std::string& date, date::days offset)
+{
+    if (date.empty())
+    {
+        return std::nullopt;
+    }
+    date::local_days day;
+    std::istringstream strm{date};
+    date::from_stream(strm, "%Y-%m-%d", day);
+    return model::Timestamp{model::Timestamp::GermanTimezone, day + offset};
+}
+
+
 template<config::ProcessType ProcessT>
 void FhirImpl<ProcessT>::validateProfileRequirements(const fhirtools::FhirResourceViewList& viewList,
                                                      const model::Timestamp& timestamp) const
 {
+    const date::days globalOffset{
+        Configuration::instance().getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS)};
     for (const auto& profileTypeReq : ProcessT::requiredProfiles)
     {
-        const auto onlyViews = [&](const auto& view) -> bool {
-            return profileTypeReq.second.onlyViews.contains(std::string{view->id()});
-        };
-        if (! profileTypeReq.second.onlyViews.empty() && std::ranges::none_of(viewList.all(), onlyViews))
-        {
-            continue;
-        }
+        auto from = fromGermanDateWithOffset(profileTypeReq.second.from, globalOffset);
+        auto until = fromGermanDateWithOffset(profileTypeReq.second.until, globalOffset);
+        const bool shouldExist = ((!until || timestamp <= *until) && (!from || timestamp >= *from));
         if (profileTypeReq.first != model::ProfileType::fhir)
         {
             std::optional<fhirtools::DefinitionKey> key;
@@ -221,9 +234,13 @@ void FhirImpl<ProcessT>::validateProfileRequirements(const fhirtools::FhirResour
                 TVLOG(3) << view->id() << " not found profile: "
                          << profile(profileTypeReq.first).value_or(magic_enum::enum_name(profileTypeReq.first));
             }
-            Expect3(key.has_value(),
+            Expect3(key.has_value() || !shouldExist,
                     "could not resolve " + std::string{magic_enum::enum_name(profileTypeReq.first)} +
                         " for date: " + timestamp.toGermanDate(),
+                    std::logic_error);
+            Expect3(!key.has_value() || shouldExist,
+                    std::string{magic_enum::enum_name(profileTypeReq.first)} +
+                    " should not be resolveable for date: " + timestamp.toGermanDate(),
                     std::logic_error);
         }
     }
@@ -264,26 +281,52 @@ FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
         {
             options.levels.invalidUrnUuidInUri.emplace(Severity::error);
         }
-    }
-    if (profileType == model::ProfileType::KBV_PR_ERP_Bundle || profileType == model::ProfileType::KBV_PR_EVDGA_Bundle)
-    {
-        options.allowNonLiteralAuthorReference =
-            config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAuthorRefMode::allow;
-        switch (config.kbvValidationOnUnknownExtension())
+        const auto fullUrlCheckFrom = model::Timestamp::fromGermanDate(
+            config.getStringValue(ConfigurationKey::FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM));
+        if (referenceTimestamp >= (fullUrlCheckFrom + globalOffset))
         {
-            using enum Configuration::OnUnknownExtension;
-            using ReportUnknownExtensionsMode = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode;
-            case ignore:
-                options.reportUnknownExtensions = ReportUnknownExtensionsMode::disable;
-                break;
-            case report:
-            case reject:
-                // unknown extensions in closed slicing will be reported as error
-                // open slices will be unslicedWarning
-                options.reportUnknownExtensions = ReportUnknownExtensionsMode::onlyOpenSlicing;
-                break;
+            A_26229_01.start("activate id check.");
+            options.levels.bundleFullUrlIdMissmatch.emplace(Severity::error);
+            A_26229_01.finish();
+            A_26233_01.start("activate fullUrl format check.");
+            options.levels.bundleFullUrlInvalidFormat.emplace(Severity::error);
+            A_26233_01.finish();
+            A_27648.start("activate missing id in bundled resource check");
+            options.levels.bundledResourceMissingId.emplace(Severity::error);
+            A_27648.finish();
+            A_27649.start("activate unresolveable references in bundle check");
+            options.levels.unresolveableReferenceInBundle.emplace(Severity::error);
+            A_27649.finish();
         }
-        return options;
+        const auto rejectUnslicedExtensionsFrom =
+            model::Timestamp::fromGermanDate(config.getStringValue(FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM));
+        const bool rejectUnslicedExtensions = referenceTimestamp >= (rejectUnslicedExtensionsFrom + globalOffset);
+        if (rejectUnslicedExtensions)
+        {
+            options.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing;
+        }
+        if (profileType == model::ProfileType::KBV_PR_ERP_Bundle ||
+            profileType == model::ProfileType::KBV_PR_EVDGA_Bundle)
+        {
+            options.allowNonLiteralAuthorReference =
+                config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAuthorRefMode::allow;
+            if (! rejectUnslicedExtensions)
+            {
+                switch (config.kbvValidationOnUnknownExtension())
+                {
+                    using enum Configuration::OnUnknownExtension;
+                    using ReportUnknownExtensionsMode = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode;
+                    case ignore:
+                        options.reportUnknownExtensions = ReportUnknownExtensionsMode::disable;
+                        break;
+                    case reject:
+                        // unknown extensions in closed slicing will be reported as error
+                        options.reportUnknownExtensions = ReportUnknownExtensionsMode::closeSlicing;
+                        break;
+                }
+            }
+            return options;
+        }
     }
     return options;
 }
@@ -304,6 +347,11 @@ const Fhir& Fhir::instance()
     Expect3(mInstance != nullptr, "Attempt to call Fhir::instance before init", std::logic_error);
     mInstance->ensureInitialized();
     return *mInstance;
+}
+
+fhirtools::ExpressionPtr Fhir::parseFhirPath(std::string_view fhirPath)
+{
+    return fhirtools::FhirPathParser::parse(std::addressof(instance().backend()), fhirPath);
 }
 
 template<config::ProcessType ProcessT>

@@ -40,6 +40,8 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::communicationChargChangeReq;
         case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
             return sd::communicationChargChangeReply;
+        case GEM_ERP_PR_Communication_DiGA:
+            return sd::communicationDiGA;
         case GEM_ERP_PR_Communication_Reply:
             return sd::communicationReply;
         case GEM_ERP_PR_Communication_Representative:
@@ -123,9 +125,9 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
         case GEM_ERPEU_PR_PAR_CloseOperation_Input:
             return sd::gem_erpeu_pr_par_closeoperation_input;
         case GEM_ERPEU_PR_MedicationDispense:
-            return sd::gem_erpeu_pr_par_medication_dispense;
-        case GEM_ERPEU_PR_PAR_Medication:
-            return sd::gem_erpeu_pr_par_medication;
+            return sd::gem_erpeu_pr_medication_dispense;
+        case GEM_ERPEU_PR_Medication:
+            return sd::gem_erpeu_pr_medication;
         case GEM_ERPEU_PR_Practitioner:
             return sd::gem_erpeu_pr_practitioner;
         case GEM_ERPEU_PR_PractitionerRole:
@@ -145,6 +147,7 @@ std::optional<model::ProfileType> model::ProfileInfo::findType()
     static const std::map<std::string_view, ProfileType> profileUrlToTypeMap{
         {sd::auditEvent, GEM_ERP_PR_AuditEvent},
         {sd::binary, GEM_ERP_PR_Binary},
+        {sd::communicationDiGA, GEM_ERP_PR_Communication_DiGA},
         {sd::communicationDispReq, GEM_ERP_PR_Communication_DispReq},
         {sd::communicationInfoReq, GEM_ERP_PR_Communication_InfoReq},
         {sd::communicationChargChangeReq, GEM_ERPCHRG_PR_Communication_ChargChangeReq},
@@ -182,8 +185,8 @@ std::optional<model::ProfileType> model::ProfileInfo::findType()
         {sd::kbv_pr_evdga_bundle, KBV_PR_EVDGA_Bundle},
         {sd::gem_erpeu_pr_consent, GEM_ERPEU_PR_Consent},
         {sd::gem_erpeu_pr_par_closeoperation_input, GEM_ERPEU_PR_PAR_CloseOperation_Input},
-        {sd::gem_erpeu_pr_par_medication, GEM_ERPEU_PR_PAR_Medication},
-        {sd::gem_erpeu_pr_par_medication_dispense, GEM_ERPEU_PR_MedicationDispense},
+        {sd::gem_erpeu_pr_medication, GEM_ERPEU_PR_Medication},
+        {sd::gem_erpeu_pr_medication_dispense, GEM_ERPEU_PR_MedicationDispense},
         {sd::gem_erpeu_pr_practitioner, GEM_ERPEU_PR_Practitioner},
         {sd::gem_erpeu_pr_practitionerrole, GEM_ERPEU_PR_PractitionerRole},
         {sd::gem_erpeu_pr_organization, GEM_ERPEU_PR_Organization},

@@ -95,8 +95,8 @@ FhirStructureRepositoryFixer::findParentSlicing(const ProfiledElementTypeInfo& p
     {
         return nullptr;
     }
-    for (auto parentPet = pet.typeInfoInParentStuctureDefinition(*mRepo.defaultView()); parentPet;
-         parentPet = parentPet->typeInfoInParentStuctureDefinition(*mRepo.defaultView()))
+    for (auto parentPet = pet.typeInfoInParentStuctureDefinition(); parentPet;
+         parentPet = parentPet->typeInfoInParentStuctureDefinition())
     {
         if (auto slicing = parentPet->element()->slicing(); slicing && !slicing->discriminators().empty())
         {

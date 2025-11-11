@@ -8,8 +8,8 @@
 #include "library/wrappers/OpenSsl.hxx"
 
 #include <memory>
-#include <stdexcept>
 
+#include "shared/util/Expect.hxx"
 #include "shared/util/Hash.hxx"
 
 namespace epa
@@ -26,10 +26,8 @@ namespace
      */
     void throwException(int operationResult)
     {
-        if (1 != operationResult)
-        {
-            throw std::runtime_error{"KDF error"};
-        }
+        // Keep the flow (throwing std::runtime_error) but log the problem with the macro
+        OpenSslExpect(1 == operationResult, "KDF error");
     }
 }
 
@@ -47,7 +45,10 @@ SensitiveDataGuard KeyDerivationUtils::performHkdfHmacSha256(
     throwException(
         EVP_PKEY_CTX_hkdf_mode(evpPkeyContext.get(), EVP_PKEY_HKDEF_MODE_EXTRACT_AND_EXPAND));
     throwException(EVP_PKEY_CTX_set_hkdf_md(evpPkeyContext.get(), EVP_sha256()));
-    throwException(EVP_PKEY_CTX_set1_hkdf_salt(evpPkeyContext.get(), nullptr, 0));
+
+    const int hashlen = EVP_MD_get_size(EVP_sha256());
+    std::vector<unsigned char> zeroSalt(static_cast<size_t>(hashlen), 0);
+    throwException(EVP_PKEY_CTX_set1_hkdf_salt(evpPkeyContext.get(), zeroSalt.data(), 0));
     throwException(EVP_PKEY_CTX_add1_hkdf_info(evpPkeyContext.get(), nullptr, 0));
     throwException(EVP_PKEY_CTX_set1_hkdf_key(evpPkeyContext.get(), key.data(), key.sizeAsInt()));
 

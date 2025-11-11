@@ -113,3 +113,10 @@ const Certificate& MockCryptography::getVauAutCertificate()
     static auto certificate = Certificate::createSelfSignedCertificateMock(privateKey);
     return certificate;
 }
+
+const SafeString& MockCryptography::getPseudonymizationLogKey()
+{
+    static const SafeString key(Base64::decode(
+        MockConfiguration::instance().getSafeStringValue(MockConfigurationKey::MOCK_PSEUDONYMIZATION_LOG_KEY)));
+    return key;
+}

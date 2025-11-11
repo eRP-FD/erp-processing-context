@@ -111,7 +111,7 @@ void EndpointErrorTest::testStatusCode (const uint32_t statusCode,
     auto outerResponse = client.send(encryptRequest(request));
 
     // Verify and decrypt the outer response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
 
     // Verify that the status code has been correctly returned.
     // Use a hard cast instead of fromBoostBeastStatus to also test this function as well.

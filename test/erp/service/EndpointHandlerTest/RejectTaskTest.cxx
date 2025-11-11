@@ -120,7 +120,7 @@ protected:
         ASSERT_NO_THROW(getTaskHandler.handleRequest(sessionContext));
         std::optional<model::UnspecifiedResource> unspec;
         ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody())));
-        ASSERT_NO_THROW(testutils::bestEffortValidate(*unspec));
+        ASSERT_NO_THROW(testutils::validate(*unspec));
         auto bundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument());
         auto tasks = bundle.getResourcesByType<model::Task>();
         ASSERT_EQ(tasks.size(), 1);

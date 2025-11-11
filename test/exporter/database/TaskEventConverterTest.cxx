@@ -115,7 +115,7 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEvent)
         EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "1-Arzt-1");
         EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
-        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
+        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.50");
         EXPECT_EQ(providePrescription.getMedicationRequestAuthoredOn().toGermanDate(),
                   model::Timestamp::now().toGermanDate());
     }
@@ -162,7 +162,7 @@ TEST_F(TaskEventConverterTest, convert_ProvidePrescriptionTaskEventNoQes)
         EXPECT_EQ(providePrescription.getQesDoctorId()->id(), "qes-from-lookup-80276883531000000202");
         EXPECT_EQ(providePrescription.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(providePrescription.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
-        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
+        EXPECT_EQ(providePrescription.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.50");
         EXPECT_EQ(providePrescription.getMedicationRequestAuthoredOn().toGermanDate(),
                   model::Timestamp::now().toGermanDate());
     }
@@ -333,7 +333,7 @@ TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent)
         EXPECT_EQ(provideDispensation.getQesDoctorId()->id(), "1-Arzt-1");
         EXPECT_EQ(provideDispensation.getJwtDoctorId(), "0123456789");
         EXPECT_EQ(provideDispensation.getJwtDoctorOrganizationName(), "Institutions- oder Organisations-Bezeichnung");
-        EXPECT_EQ(provideDispensation.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.30");
+        EXPECT_EQ(provideDispensation.getJwtDoctorProfessionOid(), "1.2.276.0.76.4.50");
         EXPECT_EQ(provideDispensation.getMedicationRequestAuthoredOn().toGermanDate(),
                   model::Timestamp::now().toGermanDate());
 

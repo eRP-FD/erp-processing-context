@@ -101,6 +101,7 @@ constexpr std::string_view communicationChargChangeReq = "https://gematik.de/fhi
 constexpr std::string_view communicationDispReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq";
 constexpr std::string_view communicationInfoReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq";
 constexpr std::string_view communicationLocation = "http://prescriptionserver.telematik/Communication/";
+constexpr std::string_view communicationDiGA = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DiGA";
 constexpr std::string_view communicationReply = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply";
 constexpr std::string_view communicationRepresentative = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative";
 constexpr std::string_view composition = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Composition";
@@ -175,9 +176,9 @@ constexpr std::string_view gem_erp_ex_eu_is_redeemable_by_properties =
     "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_EU_IS_REDEEMABLE_BY_PROPERTIES";
 constexpr std::string_view gem_erpeu_pr_par_closeoperation_input =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_CloseOperation_Input";
-constexpr std::string_view gem_erpeu_pr_par_medication_dispense =
+constexpr std::string_view gem_erpeu_pr_medication_dispense =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense";
-constexpr std::string_view gem_erpeu_pr_par_medication =
+constexpr std::string_view gem_erpeu_pr_medication =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication";
 constexpr std::string_view gem_erpeu_pr_practitioner =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Practitioner";

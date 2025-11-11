@@ -52,9 +52,9 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::GEM_ERP_PR_Composition, {}},
     {model::ProfileType::GEM_ERP_PR_Device, {}},
     {model::ProfileType::GEM_ERP_PR_Digest, {}},
-    {model::ProfileType::GEM_ERP_PR_Medication, {{"GEM_2025-01-15"}}},
-    {model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, {{"GEM_2025-01-15"}}},
-    {model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, {{"GEM_2025-01-15"}}},
+    {model::ProfileType::GEM_ERP_PR_Medication, {.from = "2025-01-15"}},
+    {model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, {.from = "2025-01-15"}},
+    {model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, {.from = "2025-01-15"}},
     {model::ProfileType::KBV_PR_ERP_Bundle, {}},
     {model::ProfileType::KBV_PR_ERP_Composition, {}},
     {model::ProfileType::KBV_PR_ERP_Medication_Compounding, {}},
@@ -63,16 +63,16 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::KBV_PR_ERP_Medication_PZN, {}},
     {model::ProfileType::KBV_PR_ERP_PracticeSupply, {}},
     {model::ProfileType::KBV_PR_ERP_Prescription, {}},
-    {model::ProfileType::KBV_PR_EVDGA_Bundle, {{"EVDGA_2025_01_15"}}},
-    {model::ProfileType::KBV_PR_EVDGA_HealthAppRequest, {{"EVDGA_2025_01_15"}}},
+    {model::ProfileType::KBV_PR_EVDGA_Bundle, {.from = "2025-01-15"}},
+    {model::ProfileType::KBV_PR_EVDGA_HealthAppRequest, { .from = "2025-01-15"}},
     {model::ProfileType::KBV_PR_FOR_Coverage, {}},
     {model::ProfileType::KBV_PR_FOR_Organization, {}},
     {model::ProfileType::KBV_PR_FOR_Patient, {}},
     {model::ProfileType::KBV_PR_FOR_Practitioner, {}},
     {model::ProfileType::KBV_PR_FOR_PractitionerRole, {}},
     {model::ProfileType::GEM_ERP_PR_MedicationDispense, {}},
-    {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, {{"GEM_2025-01-15"}}},
-    {model::ProfileType::MedicationDispenseBundle, {}},
+    {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, { .from = "2025-01-15"}},
+    {model::ProfileType::MedicationDispenseBundle, { .until = "2026-01-11" }},
     {model::ProfileType::GEM_ERP_PR_Bundle, {}},
     {model::ProfileType::GEM_ERP_PR_Task, {}},
     {model::ProfileType::GEM_ERPCHRG_PR_ChargeItem, {}},
@@ -81,18 +81,19 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle, {}},
     {model::ProfileType::Subscription, {}},
     {model::ProfileType::OperationOutcome, {}},
-    {model::ProfileType::GEM_ERPEU_PR_Consent, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_MedicationDispense, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_Medication, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_Practitioner, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_PractitionerRole, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPEU_PR_Organization, {{"EU_2025_10_01"}}},
-    {model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input, {{"GEM_WF_1_5_0"}}},
+    {model::ProfileType::GEM_ERPEU_PR_Consent, { .from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_MedicationDispense, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_Medication, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_Practitioner, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_PractitionerRole, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_Organization, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERP_PR_Communication_DiGA, { .from = "2025-10-01" }},
 };
 
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement>
@@ -300,18 +301,16 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
         lookupKey(pathPrefix, jsonPath);
     }
 
-    lookupKey("", std::string{ERP::fhirResourceGroups});
+    lookupKey("", std::string{Common::fhirResourceGroups});
+    lookupKey("", std::string{Common::synthesizeCodesystemPath});
+    lookupKey("", std::string{Common::synthesizeValuesetPath});
+
     lookupKey("", std::string{ERP::fhirResourceViews});
     lookupKey("", std::string{ERP::kbvSchluesseltabellen});
-    lookupKey("", std::string{ERP::synthesizeCodesystemPath});
-    lookupKey("", std::string{ERP::synthesizeValuesetPath});
     lookupKey("", std::string{ERP::versionMappingPath});
 
-    lookupKey("", std::string{MedicationExporter::fhirResourceGroups});
     lookupKey("", std::string{MedicationExporter::fhirResourceViews});
     lookupKey("", std::string{MedicationExporter::kbvSchluesseltabellen});
-    lookupKey("", std::string{MedicationExporter::synthesizeCodesystemPath});
-    lookupKey("", std::string{MedicationExporter::synthesizeValuesetPath});
     lookupKey("", std::string{MedicationExporter::versionMappingPath});
 }
 
@@ -424,12 +423,14 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::FEATURE_EU                                     , {"ERP_FEATURE_EU"                                     , "/erp/feature/eu", Flags::categoryFunctional, "Feature-toggle for the EU-Prescription feature"}},
     {ConfigurationKey::ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER          , {"ERP_ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER"          , "/erp/feature/enableCheckAusschlussKostentraeger", Flags::categoryFunctional, "Feature-toggle for enabling of Kostentraeger check"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
-    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/erp/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
+    {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE, {"ERP_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE", "/erp/fhir/validation/levels/missing-or-extra-meta-profile", Flags::categoryFunctionalStatic, "Expect exactly one meta.profile. Set severity level for missing or extra entry in meta.profile. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::FHIR_VALIDATION_URN_UUID_CHECK_FROM            , {"ERP_FHIR_VALIDATION_URN_UUID_CHECK_FROM"            , "/erp/fhir/validation/urnUuidCheckFrom", Flags::categoryFunctionalStatic, "date to start checking for invalid/non-lower-case UUID in field of type `uri` (or derived)"}},
+    {ConfigurationKey::FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM            , {"ERP_FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM"            , "/erp/fhir/validation/fullUrlAndBundleReferenceCheckFrom", Flags::categoryFunctionalStatic, "date to start checking for correct fullUrl and resolveable rererences in Bundles"}},
+    {ConfigurationKey::FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM, {"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM", "/erp/fhir/validation/rejectUnslicedExtensionsFrom", Flags::categoryFunctionalStatic, "date to start rejecting every extension that does not belong to a known slicing"}},
     {ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS,                 {"ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS"                , "/erp/fhir/reference-time-offset-days", Flags::categoryEnvironment, "Offset valid-from and valid-until for all fhir views"}},
     {ConfigurationKey::HSM_CACHE_REFRESH_SECONDS                      , {"ERP_HSM_CACHE_REFRESH_SECONDS"                      , "/erp/hsm/cache-refresh-seconds", Flags::categoryEnvironment, "Blob and VSDM++ Key Cache refresh time. Blobs and VSDM Keys are re-read from database in the given interval."}},
     {ConfigurationKey::HSM_DEVICE                                     , {"ERP_HSM_DEVICE"                                     , "/erp/hsm/device", Flags::categoryEnvironment, "Comma separated list of the HSM devices. Format: \"<port>@<IP address>,<port>@<IP address>,...\""}},
@@ -490,11 +491,11 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID"   , "/erp-medication-exporter/epa-account-lookup/erpSubmissionFunctionId", Flags::categoryEnvironment, "The name of the function ID for our consent decision"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN                  , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN"                  , "/erp-medication-exporter/epa-account-lookup/epaAsFqdn", Flags::categoryEnvironment|Flags::array, "List of EPA FQDN adresses and TEE connection count (default 8) in the format <host>`:`<port>[`+`<connections>] separated by semicolon"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN           , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN"           , "/erp-medication-exporter/epa-account-lookup/poolSizePerFqdn", Flags::categoryEnvironment, "Number of connections per ePA FQDN"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS             , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS"             , "/erp-medication-exporter/epa-account-lookup/throttleSeconds", Flags::categoryEnvironment, "Throttling value when at least one EPA is reporting errors, e.g. http-500"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES                       , {"MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES"                           , "/erp-medication-exporter/epa-conflict/epaConflictWaitMinutes", Flags::categoryEnvironment, "Minutes to wait before retry after EPA conflicts HTTP 409"}},
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER               , {"MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER"                   , "/erp-medication-exporter/retries/maximumRetriesBeforeDeadletter", Flags::categoryEnvironment, "Maximum retry attempts before moving task events to Deadlettter queue"}},
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS                , {"MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS"                    , "/erp-medication-exporter/retries/rescheduleDelaySeconds", Flags::categoryEnvironment, "Seconds to delay next processing of KVNR after moving events to Deadletter queue"}},
 
-    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS                      , {"ERP_MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS"                      , "/erp-medication-exporter/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation and transformation in medication-exporter"}},
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp-medication-exporter/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE", "/erp-medication-exporter/fhir/validation/levels/unreferenced-contained-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced contained resources in new profiles. Allowed values: debug, info, warning, error"}},
     {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE, {"ERP_MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE", "/erp-medication-exporter/fhir/validation/levels/mandatory-resolvable-reference-failure", Flags::categoryFunctionalStatic, "Set severity level for unresolvable references in bundles of type document, that must be resolvable in new profiles. Allowed values: debug, info, warning, error"}},
@@ -886,8 +887,8 @@ void Configuration::check(ProcessType processType) const
             (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE);
             (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
             (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
-            (void) synthesizeCodesystem<ConfigurationBase::ERP>();
-            (void) synthesizeValuesets<ConfigurationBase::ERP>();
+            (void) synthesizeCodesystem();
+            (void) synthesizeValuesets();
             (void) fhirVersionMapping<ConfigurationBase::ERP>();
             return;
         case ConfigurationBase::ProcessType::MedicationExporter:
@@ -896,8 +897,8 @@ void Configuration::check(ProcessType processType) const
             (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE);
             (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
             (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
-            (void) synthesizeCodesystem<ConfigurationBase::MedicationExporter>();
-            (void) synthesizeValuesets<ConfigurationBase::MedicationExporter>();
+            (void) synthesizeCodesystem();
+            (void) synthesizeValuesets();
             (void) fhirVersionMapping<ConfigurationBase::MedicationExporter>();
             for (const auto& epa : this->epaFQDNs())
             {
@@ -912,7 +913,7 @@ void Configuration::check(ProcessType processType) const
 Configuration::OnUnknownExtension Configuration::kbvValidationOnUnknownExtension() const
 {
     return getOptional<OnUnknownExtension>(ConfigurationKey::SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION,
-                                           OnUnknownExtension::report);
+                                           OnUnknownExtension::reject);
 }
 
 Configuration::NonLiteralAuthorRefMode Configuration::kbvValidationNonLiteralAuthorRef() const
@@ -930,7 +931,7 @@ template <config::ProcessType ProcessT>
 fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration() const
 {
     static const auto* groups =
-    getJsonValue(KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceGroups, .flags = 0, .description = ""});
+    getJsonValue(KeyData{.environmentVariable = "", .jsonPath = Common::fhirResourceGroups, .flags = 0, .description = ""});
     const auto mapper = std::make_shared<fhirtools::VersionMapper>(fhirVersionMapping<ProcessT>());
     return fhirtools::FhirResourceGroupConfiguration(groups, mapper);
 }
@@ -951,16 +952,14 @@ fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfigur
                                                     date::days{globalOffset}};
 }
 
-template <config::ProcessType ProcessT>
 std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem() const
 {
-    return resourceList(std::string{ProcessT::synthesizeCodesystemPath});
+    return resourceList(std::string{Common::synthesizeCodesystemPath});
 }
 
-template <config::ProcessType ProcessT>
 std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets() const
 {
-    return resourceList(std::string{ProcessT::synthesizeValuesetPath});
+    return resourceList(std::string{Common::synthesizeValuesetPath});
 }
 
 template<config::ProcessType ProcessT>
@@ -1049,12 +1048,8 @@ template fhirtools::Severity
 
 template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::ERP>() const;
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
-template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::ERP>() const;
-template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::ERP>() const;
 template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
 
 template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
-template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::MedicationExporter>() const;
-template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::MedicationExporter>() const;
 template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;

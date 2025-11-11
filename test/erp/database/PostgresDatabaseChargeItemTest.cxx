@@ -14,7 +14,7 @@
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/util/Uuid.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"

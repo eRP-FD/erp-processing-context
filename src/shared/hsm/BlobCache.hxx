@@ -60,6 +60,12 @@ public:
     Entry getBlob(::BlobType type);
 
     /**
+     * Return the latest blob for the given type, without performing
+     * a lookup on the database.
+     */
+    std::optional<Entry> getBlobFromCache(BlobType type);
+
+    /**
      * Return the requested blob which is identified by type and blob id. Throws an exception if
      * there is no blob for the given type and id
      *

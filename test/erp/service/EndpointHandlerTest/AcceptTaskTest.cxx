@@ -60,7 +60,7 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::UnspecifiedResource> unspec;
     ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody())));
-    ASSERT_NO_THROW(testutils::bestEffortValidate(*unspec)) << serverResponse.getBody();
+    ASSERT_NO_THROW(testutils::validate(*unspec)) << serverResponse.getBody();
     ASSERT_NO_THROW(resultBundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument()));
     ASSERT_EQ(resultBundle->getResourceCount(), numOfExpectedResources);
 

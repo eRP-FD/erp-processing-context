@@ -15,6 +15,12 @@
 #include <list>
 #include <string_view>
 
+namespace fhirtools
+{
+class Expression;
+using ExpressionPtr = std::shared_ptr<Expression>;
+}
+
 namespace model
 {
 class Timestamp;
@@ -41,6 +47,8 @@ public:
     static void init(Init init = Init::now);
 
     static const Fhir& instance();
+
+    static fhirtools::ExpressionPtr parseFhirPath(std::string_view fhirPath);
 
     virtual const FhirConverter& converter() const = 0;
 

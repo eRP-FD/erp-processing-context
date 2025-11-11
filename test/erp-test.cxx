@@ -43,7 +43,7 @@ int main(int argc, char** argv)
     std::optional<size_t> instance;
     for (std::string_view arg : args)
     {
-        if (arg.starts_with(erp_testdate))
+        if (arg.starts_with(erp_testdate) && arg.size() > erp_testdate.size())
         {
             testDate.emplace(arg.substr(erp_testdate.size()));
         }
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
         }
     }
-    else if (testDate)
+    else if (testDate && testDate != "today")
     {
         const auto testTimestamp = model::Timestamp::fromXsDate(*testDate, model::Timestamp::UTCTimezone);
         auto now = floor<std::chrono::days>(date::utc_clock::now());

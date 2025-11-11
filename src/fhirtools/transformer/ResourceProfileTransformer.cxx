@@ -67,16 +67,17 @@ ResourceProfileTransformer& ResourceProfileTransformer::map(const ValueMapping& 
 
 
 ResourceProfileTransformer::Result
-ResourceProfileTransformer::transform(MutableElement& element, const DefinitionKey& targetProfileDefinitionKey) const
+ResourceProfileTransformer::transform(const std::shared_ptr<const FhirStructureRepositoryView>& view,
+                                      MutableElement& element, const DefinitionKey& targetProfileDefinitionKey) const
 {
     Result result{};
     // run fhir validation to find missing mandatory elements and illegal elements that must be removed
     ValidatorOptions valOpts{.collectInfo = true};
     if (mOptions.removeUnknownExtensionsFromOpenSlicing)
     {
-        valOpts.reportUnknownExtensions = ValidatorOptions::ReportUnknownExtensionsMode::onlyOpenSlicing;
+        valOpts.reportUnknownExtensions = ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing;
     }
-    auto validationResult = FhirPathValidator::validateWithProfiles(element.shared_from_this(),
+    auto validationResult = FhirPathValidator::validateWithProfiles(view, element.shared_from_this(),
                                                                     element.definitionPointer().element()->name(),
                                                                     {targetProfileDefinitionKey}, valOpts);
     for (const auto& validationInfo : validationResult.infos())

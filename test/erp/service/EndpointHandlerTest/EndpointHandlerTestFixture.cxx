@@ -61,7 +61,7 @@ void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const 
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle.jsonDocument()),
         SchemaType::fhir));
-
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(auditEventBundle));
     auto auditEvents = auditEventBundle.getResourcesByType<model::AuditEvent>("AuditEvent");
     ASSERT_EQ(auditEvents.size(), 1);
 
@@ -123,7 +123,7 @@ EndpointHandlerTest::getMedicationDispenses(const std::string& kvnr, const model
         ASSERT_NO_THROW(handler.preHandleRequestHook(session));
         ASSERT_NO_THROW(handler.handleRequest(session));
         ASSERT_NO_THROW(result.emplace(model::UnspecifiedResource::fromJsonNoValidation(serverResponse.getBody())));
-        ASSERT_NO_THROW(testutils::bestEffortValidate(*result));
+        ASSERT_NO_FATAL_FAILURE(testutils::validate(*result));
     }();
     return result;
 }

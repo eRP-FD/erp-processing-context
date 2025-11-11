@@ -1312,3 +1312,61 @@ TEST_F(TslManagerTest, DISABLED_downloadBNAWithTSLStore)
     ASSERT_NE(nullptr, manager.getTslTrustedCertificateStore(TslMode::BNA, std::nullopt).getStore());
     manager.updateTrustStoresOnDemand();
 }
+
+
+TEST_F(TslManagerTest, requestOnInvalidResponse)//NOLINT(readability-function-cognitive-complexity)
+{
+    const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
+    X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
+
+    const Certificate certificateCA = getCACert(sub_ca1_ec);
+
+    const auto certPairValid = MockOcsp::CertificatePair{
+        .certificate = certificate,
+        .issuer = certificateCA,
+        .testMode = MockOcsp::CertificateOcspTestMode::SUCCESS
+    };
+
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>({}, {}, {{ocspUrl, {certPairValid}}});
+
+    OcspCertidPtr certId(OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()));
+
+    auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
+
+    checkDescriptor.mode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_INVALID;
+    auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
+    auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+    const auto fingerprint = x509Certificate.getSha256FingerprintHex();
+    // in this PROVIDED_OR_CACHE_REQUEST_IF_INVALID mode, an invalid provided ocsp response is allowed
+    // and falling back to the cache/ocsp request
+    for (auto testMode : magic_enum::enum_values<MockOcsp::CertificateOcspTestMode>())
+    {
+        manager->getTrustStore(TslMode::BNA).cleanCachedOcspData(fingerprint);
+        if (testMode == MockOcsp::CertificateOcspTestMode::REVOKED) {
+            continue;
+        }
+        auto certPairInvalid = certPairValid;
+        certPairInvalid.testMode = testMode;
+        auto response = MockOcsp::create(certId.get(), {certPairInvalid}, ocspCert, ocspKey).toDer();
+        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+        ASSERT_NE(checkDescriptor.providedOcspResponse, nullptr);
+
+        // first test with no cache
+        ASSERT_NO_THROW(
+            manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor));
+        // response is in cache
+        ASSERT_NO_THROW(
+            manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor));
+    }
+
+    // fail on revoked
+    {
+        auto certPairInvalid = certPairValid;
+        certPairInvalid.testMode = MockOcsp::CertificateOcspTestMode::REVOKED;
+        auto response = MockOcsp::create(certId.get(), {certPairInvalid}, ocspCert, ocspKey).toDer();
+        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+        EXPECT_THROW(
+            manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor),
+            TslError);
+    }
+}

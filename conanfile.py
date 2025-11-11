@@ -25,11 +25,12 @@ class ErpProcessingContext(ConanFile):
         'with_hsm_mock': [True, False],
         'with_sbom': [True, False],
         'with_warning_as_error': [True, False],
+        'test_binary_type': ["single", "shards", "both"]
     }
     default_options = {
         'boost/*:bzip2': False,
         'boost/*:header_only': True,
-        'date/*:use_system_tz_db': True,
+        'date/*:tz_db': 'system',
         'glog/*:with_gflags': False,
         'gtest/*:build_gmock': True,
         'gsl-lite/*:on_contract_violation': 'throw',
@@ -50,31 +51,31 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.19.0-DEVELOP",
+        'release_version': "1.20.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
         'with_sbom': False,
         'with_warning_as_error': False,
+        'test_binary_type': "single",
     }
     # generators = "CMakeToolchain", "CMakeDeps"
     exports_sources = "."
     requires = [
-        'antlr4-cppruntime/4.13.1',
-        'boost/1.87.0',
-        'botan/3.6.1',
-        'date/3.0.3',  # date can be removed as soon as we use C++20
+        'antlr4-cppruntime/4.13.2',
+        'boost/1.88.0',
+        'botan/3.9.0',
+        'date/3.0.4',  # date can be removed as soon as we use C++20
         'glog/0.7.1',
         'gsl-lite/0.41.0',
-        'gtest/1.16.0',
-        'hiredis/1.2.0',
+        'gtest/1.17.0',
         'libpqxx/7.10.1',
-        'libxml2/2.13.8',
+        'libxml2/2.14.5',
         'magic_enum/0.9.7',
-        'openssl/3.1.8+erp',
+        'openssl/3.0.18+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20230929',
-        'redis-plus-plus/1.3.13',
+        'redis-plus-plus/1.3.15',
         'xmlsec/1.3.7+erp',
         'zlib/1.3.1',
         'zstd/1.5.7'  # database compression
@@ -88,9 +89,10 @@ class ErpProcessingContext(ConanFile):
     def requirements(self):
         if self.options.with_hsm_tpm_production:
             self.requires('tpmclient/0.15.0-b40')
-            self.requires('hsmclient/2.13.0-b89')
+            self.requires('hsmclient/2.18.0-b96')
         self.requires('libunwind/1.8.1', override=True) # Conflict originates from glog/0.7.1
         self.requires('libpq/16.8', override=True) # Conflict originates from libpqxx/7.10.1
+        self.requires('hiredis/1.3.0', override=True) # Conflict originates from redis-plus-plus/1.3.15
 
     def build_requirements(self):
         self.tool_requires('xmlsec/1.3.7+erp', options={"shared": False})
@@ -128,6 +130,7 @@ class ErpProcessingContext(ConanFile):
         tc.cache_variables["ERP_WITH_HSM_MOCK"] = self.options.with_hsm_mock
         tc.cache_variables["ERP_WITH_HSM_TPM_PRODUCTION"] = self.options.with_hsm_tpm_production
         tc.cache_variables["ERP_WARNING_AS_ERROR"] = self.options.with_warning_as_error
+        tc.cache_variables["ERP_TEST_BINARY_TYPE"] = self.options.test_binary_type
         if self.options.with_ccache:
             tc.cache_variables["CMAKE_CXX_COMPILER_LAUNCHER"] = "ccache"
 

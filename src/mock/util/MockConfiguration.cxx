@@ -26,7 +26,8 @@ MockConfigurationKeyNames::MockConfigurationKeyNames()
         { MockConfigurationKey::MOCK_GENERATED_PKI_PATH,     {"MOCK_GENERATED_PKI_PATH",     "/mock/generated-pki-path", Flags::categoryDebug, ""} },
         { MockConfigurationKey::MOCK_VAU_AUT_PRIVATE_KEY,    {"MOCK_VAU_AUT_PRIVATE_KEY",    "/mock/vau.aut/private-key", Flags::categoryDebug, ""} },
         { MockConfigurationKey::MOCK_VAU_AUT_CERT,           {"MOCK_VAU_AUT_CERT",           "/mock/vau.aut/cert", Flags::categoryDebug, ""} },
-        { MockConfigurationKey::MOCK_VAU_AUT_SIGNER_CERT,    {"MOCK_VAU_AUT_PRIVATE_KEY",    "/mock/vau.aut/signer-cert", Flags::categoryDebug, ""} }
+        { MockConfigurationKey::MOCK_VAU_AUT_SIGNER_CERT,    {"MOCK_VAU_AUT_PRIVATE_KEY",    "/mock/vau.aut/signer-cert", Flags::categoryDebug, ""} },
+        { MockConfigurationKey::MOCK_PSEUDONYMIZATION_LOG_KEY, {"MOCK_PSEUDONYMIZATION_LOG_KEY", "/mock/pseudonymization-log-key", Flags::categoryDebug, ""} },
     });
     // clang-format on
 }

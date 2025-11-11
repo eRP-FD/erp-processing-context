@@ -7,7 +7,7 @@ vauSigCert: "/opt/epa-test-mock/tisim-pki/epa-vau-aut.der"
 isProduction: false
 ocspResponseVauSig: "/opt/epa-test-mock/tisim-pki/ocsp-response-vau-sig.der"
 ocspResponseValidForMinutes: 720
-ocspURI: "https://erp.lu2.erezepttest.net/ocspf"
+ocspURI: "https://erp.box2.erezepttest.net/ocspf"
 vauCert: "/opt/epa-test-mock/tisim-pki/epa-vau-aut.der"
 vauCA: "/opt/epa-test-mock/tisim-pki/ACLOS.FD-CA1.der"
 templatePath: "/lzconfig/templates"

@@ -65,7 +65,7 @@ TEST_F(A_19714_Test, getCommunicationById_failForMissingObject)
     auto outerResponse = client.send(encryptRequest(innerRequest));
 
     // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
     ASSERT_TRUE(innerResponse.getHeader().header(Header::ContentType).has_value()); // error response
     ASSERT_TRUE(innerResponse.getHeader().hasHeader(Header::ContentLength));

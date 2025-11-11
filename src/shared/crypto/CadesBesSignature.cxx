@@ -208,6 +208,25 @@ namespace
     }
 
 
+    void replaceOcspSignerInfo(CMS_ContentInfo& cmsContentInfo, const OCSP_RESPONSE& ocspResponse)
+    {
+        const int nidOcspResponseRevocationContainer = getOcspResponseRevocationNid();
+        OpenSslExpect(nidOcspResponseRevocationContainer != NID_undef, "Unable to get revocation Nid");
+        ASN1_OBJECT* formatObject = OBJ_nid2obj(nidOcspResponseRevocationContainer);
+        OpenSslExpect(formatObject != nullptr, "Failure by creation of ASN1 format object.");
+        const int index = CMS_get_anotherRevocationInfo_by_format(&cmsContentInfo, formatObject, -1);
+        Expect(index >= 0, "Unable to find revocation info from CMS_contentInfo");
+        ASN1_TYPE* ocspResponseAny = CMS_get0_anotherRevocationInfo(&cmsContentInfo, index);
+        OpenSslExpect(ocspResponseAny != nullptr, "Revocation info from cmsContent info not found");
+        Expect(ASN1_TYPE_get(ocspResponseAny) == V_ASN1_SEQUENCE, "Unexpected ASN1 type for ocsp response");
+        auto* packed = ASN1_TYPE_pack_sequence(
+            ASN1_ITEM_rptr(OCSP_RESPONSE),
+            const_cast<void*>(static_cast<const void*>(&ocspResponse)),// NOLINT(cppcoreguidelines-pro-type-const-cast)
+            &ocspResponseAny);
+        OpenSslExpect(packed != nullptr, "ASN1_TYPE_pack_sequence failed");
+    }
+
+
     void setSigningTimeToCms(CMS_ContentInfo& cmsContentInfo, const model::Timestamp& signingTime)
     {
         using namespace std::chrono;
@@ -299,7 +318,7 @@ namespace
     // GEMREQ-end A_22141#SMC-B
 
 
-    // GEMREQ-start A_22141#verifySignerCertificates, A_20159-03#verifySignerCertificates
+    // GEMREQ-start A_22141#verifySignerCertificates, A_20159-04#verifySignerCertificates
     /**
      * Verifies signer certificates ( it must be only one certificate ) of the provided CAdES-BES,
      * and embeds the missing in the package OCSP response for QES related packages.
@@ -325,7 +344,7 @@ namespace
         }
 
         OcspCheckDescriptor ocspCheckDescriptor{
-            OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,
+            OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE_REQUEST_IF_INVALID,
             {referenceTimePoint, gracePeriod},
             getOcspResponse(cmsContentInfo)};
 
@@ -337,25 +356,27 @@ namespace
 
         checkProfessionOids(certificate, professionOids);
 
-        // if no OCSP response is provided in CAdES-BES, the requested OCSP response should be attached,
-        // it must be done for both QES and non QES scenarios
+        // the certificate has been verified, make sure we put the same OCSP response
+        // into the binary
+        // no ocsp request should be triggered, the ocsp response should be provided from the cache
+        const OcspResponse requestedOcspResponseData =
+            tslManager.getCertificateOcspResponse(tslMode, certificate, certificateTypes, ocspCheckDescriptor);
+        const OcspResponsePtr requestedOcspResponse =
+            OcspHelper::stringToOcspResponse(requestedOcspResponseData.response);
+        OpenSslExpect(requestedOcspResponse != nullptr, "can not deserialize cached OCSP response");
         if (ocspCheckDescriptor.providedOcspResponse == nullptr)
         {
-            // no ocsp request should be triggered, the ocsp response should be provided from the cache
-            OcspResponse requestedOcspResponseData =
-                tslManager.getCertificateOcspResponse(
-                    tslMode, certificate, certificateTypes, ocspCheckDescriptor);
-            OcspResponsePtr requestedOcspResponse =
-                OcspHelper::stringToOcspResponse(requestedOcspResponseData.response);
-            OpenSslExpect(requestedOcspResponse != nullptr,
-                          "can not deserialize cached OCSP response");
             addOcspToSignerInfo(cmsContentInfo, *requestedOcspResponse);
         }
+        else
+        {
+            replaceOcspSignerInfo(cmsContentInfo, *requestedOcspResponse);
+        }
     }
-    // GEMREQ-end A_22141#verifySignerCertificates, A_20159-03#verifySignerCertificates
+    // GEMREQ-end A_22141#verifySignerCertificates, A_20159-04#verifySignerCertificates
 
 
-    // GEMREQ-start A_22141#cmsVerify, A_20159-03#cmsVerify
+    // GEMREQ-start A_22141#cmsVerify, A_20159-04#cmsVerify
     int cmsVerify(
         TslManager* tslManager,
         CMS_ContentInfo& cmsContentInfo,
@@ -379,7 +400,7 @@ namespace
                           &out,
                           CMS_NO_SIGNER_CERT_VERIFY | CMS_BINARY);
     }
-    // GEMREQ-end A_22141#cmsVerify, A_20159-03#cmsVerify
+    // GEMREQ-end A_22141#cmsVerify, A_20159-04#cmsVerify
 
 
     void handleExceptionByVerification(
@@ -455,7 +476,7 @@ void CadesBesSignature::internalInitialization(const std::string& base64Data,
 }
 // GEMREQ-end A_22141#internalInitialization
 
-// GEMREQ-start A_22141#CadesBesSignature, A_20159-03#CadesBesSignature
+// GEMREQ-start A_22141#CadesBesSignature, A_20159-04#CadesBesSignature
 CadesBesSignature::CadesBesSignature(const std::string& base64Data,
                                      TslManager& tslManager,
                                      bool allowNonQESCertificate,
@@ -477,7 +498,7 @@ CadesBesSignature::CadesBesSignature(const std::string& base64Data,
         HANDLE_EXCEPTION_BY_VERIFICATION;
     }
 }
-// GEMREQ-end A_22141#CadesBesSignature, A_20159-03#CadesBesSignature
+// GEMREQ-end A_22141#CadesBesSignature, A_20159-04#CadesBesSignature
 
 CadesBesSignature::CadesBesSignature(const std::string& base64Data)
 : mPayload{},

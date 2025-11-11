@@ -134,6 +134,7 @@ public:
     static const std::string Warning;
     static const std::string XAccessCode;
     static const std::string XRequestId;
+    static const std::string XForwardedFor;
 
     // header fields in the outer response that are evaluated by the proxy
     static const std::string VAUErrorCode;
@@ -157,6 +158,8 @@ public:
     static const std::string EUProfileWorkflow;
 
     static const std::string ErpUseCase;
+    static const std::string PnTelematikId;
+    static const std::string PnIpaddress;
 
     struct Tee3 {
         static const std::string VauCid;

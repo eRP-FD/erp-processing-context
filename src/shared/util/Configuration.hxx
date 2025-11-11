@@ -108,6 +108,8 @@ enum class ConfigurationKey
     FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
     FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE,
     FHIR_VALIDATION_URN_UUID_CHECK_FROM,
+    FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM,
+    FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM,
     FHIR_REFERENCE_TIME_OFFSET_DAYS,
     HSM_CACHE_REFRESH_SECONDS,
     HSM_DEVICE,
@@ -202,11 +204,11 @@ enum class ConfigurationKey
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN,
+    MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS,
     MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES,
     MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER,
     MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS,
 
-    MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS,
     MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE,
     MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE,
     MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_MANDATORY_RESOLVABLE_REFERENCE_FAILURE,
@@ -268,7 +270,8 @@ public:
     constexpr static const auto* ServerPortEnvVar = "ERP_SERVER_PORT";
 
     struct ProfileTypeRequirement {
-        std::set<std::string> onlyViews{};
+        std::string from{};
+        std::string until{};
     };
 
     enum class ProcessType {
@@ -276,14 +279,16 @@ public:
         MedicationExporter,
     };
 
+    struct Common
+    {
+        constexpr static std::string_view fhirResourceGroups = "/fhir/resource-groups";
+        constexpr static std::string_view synthesizeCodesystemPath = "/fhir/synthesize-codesystems";
+        constexpr static std::string_view synthesizeValuesetPath = "/fhir/synthesize-valuesets";
+    };
     struct ERP {
-        constexpr static std::string_view fhirResourceGroups = "/erp/fhir/resource-groups";
         constexpr static std::string_view fhirResourceViews = "/erp/fhir/resource-views";
         constexpr static std::string_view kbvSchluesseltabellen = "/erp/fhir/schluesseltabellen";
-        constexpr static std::string_view synthesizeCodesystemPath = "/erp/fhir/synthesize-codesystems";
-        constexpr static std::string_view synthesizeValuesetPath = "/erp/fhir/synthesize-valuesets";
         constexpr static std::string_view versionMappingPath = "/erp/fhir/version-mapping";
-        constexpr static ConfigurationKey FHIR_STRUCTURE_DEFINITIONS = ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
             ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
@@ -295,13 +300,9 @@ public:
         static const std::map<model::ProfileType, ProfileTypeRequirement> requiredProfiles;
     };
     struct MedicationExporter {
-        constexpr static std::string_view fhirResourceGroups = "/erp-medication-exporter/fhir/resource-groups";
         constexpr static std::string_view fhirResourceViews = "/erp-medication-exporter/fhir/resource-views";
         constexpr static std::string_view kbvSchluesseltabellen = "/erp-medication-exporter/fhir/schluesseltabellen";
-        constexpr static std::string_view synthesizeCodesystemPath = "/erp-medication-exporter/fhir/synthesize-codesystems";
-        constexpr static std::string_view synthesizeValuesetPath = "/erp-medication-exporter/fhir/synthesize-valuesets";
         constexpr static std::string_view versionMappingPath = "/erp-medication-exporter/fhir/version-mapping";
-        constexpr static ConfigurationKey FHIR_STRUCTURE_DEFINITIONS = ConfigurationKey::MEDICATION_EXPORTER_FHIR_STRUCTURE_DEFINITIONS;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
             ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
@@ -591,7 +592,6 @@ public:
     enum class OnUnknownExtension
     {
         ignore,
-        report,
         reject
     };
     enum class NonLiteralAuthorRefMode
@@ -614,9 +614,7 @@ public:
     [[nodiscard]] fhirtools::FhirResourceGroupConfiguration fhirResourceGroupConfiguration() const;
     template <config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration() const;
-    template <config::ProcessType ProcessT>
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeCodesystem() const;
-    template <config::ProcessType ProcessT>
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeValuesets() const;
     template<config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::VersionMapper::Config fhirVersionMapping() const;
@@ -647,14 +645,10 @@ extern template fhirtools::Severity
 
 extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::ERP>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
-extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::ERP>() const;
-extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::ERP>() const;
 extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
 
 extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
-extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeCodesystem<ConfigurationBase::MedicationExporter>() const;
-extern template std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthesizeValuesets<ConfigurationBase::MedicationExporter>() const;
 extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;
 
 

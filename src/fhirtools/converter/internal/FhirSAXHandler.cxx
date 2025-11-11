@@ -102,8 +102,8 @@ void FhirSaxHandler::Context::setResourceType(const FhirStructureRepositoryView&
     Expect3(value.IsObject(), "top item must be Object.", std::logic_error);
     const auto* resourceType = repo.findTypeById(std::string{resourceTypeName});
     ErpExpect(resourceType != nullptr, HttpStatus::BadRequest, "Unknown resourceType: "s.append(resourceTypeName));
-    ErpExpect(resourceType->isDerivedFrom(repo , mType->url()), HttpStatus::BadRequest,
-                "Resource " + resourceType->url() + " is not derived from " + mType->url());
+    ErpExpect(resourceType->isDerivedFrom(mType->url()), HttpStatus::BadRequest,
+              "Resource " + resourceType->url() + " is not derived from " + mType->url());
     value.AddMember("resourceType", parent.mResult.makeString(resourceTypeName), parent.mResult.GetAllocator());
     mType = resourceType;
     mElement = resourceType->findElement(resourceType->typeId());
@@ -389,11 +389,8 @@ void FhirSaxHandler::pushString(const std::string_view& name, const std::string_
 
 const FhirStructureDefinition& FhirSaxHandler::systemTypeFor(const FhirStructureDefinition& primitiveType) const
 {
-    return primitiveType.primitiveToSystemType(mStructureRepo);
+    return primitiveType.primitiveToSystemType();
 }
-
-
-
 
 void FhirSaxHandler::endElement(const xmlChar* localname, const xmlChar* prefix, const xmlChar* uri)
 {

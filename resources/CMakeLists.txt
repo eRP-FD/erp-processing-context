@@ -194,6 +194,10 @@ endif()
 add_dependencies(resources configuration resource_files)
 
 include(add_erp_config)
+add_erp_config(001_fhir-resource-groups.config
+        TEMPLATE "production/001_fhir-resource-groups.config.json.in"
+        COMPONENTS production blob-db-initialization
+)
 add_erp_config(01_production.config
         TEMPLATE "production/01_production.config.json.in"
         COMPONENTS production blob-db-initialization

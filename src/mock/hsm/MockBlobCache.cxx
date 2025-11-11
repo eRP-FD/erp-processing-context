@@ -215,6 +215,18 @@ void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
         entry.certificate = tpm::vauAutCertificate_base64;
         blobCache.storeBlob(std::move(entry));
     }
+
+    if (! isBlobTypeAlreadyInitialized(blobCache, BlobType::PseudonameLogKey))
+    {
+        auto blob = ErpBlob::fromCDump(tpm::pseudonymizationLogKey_base64);
+        {
+            BlobDatabase::Entry entry;
+            entry.type = BlobType::PseudonameLogKey;
+            entry.name = ErpVector::create("key_pn_log");
+            entry.blob = ErpBlob(blob);
+            blobCache.storeBlob(std::move(entry));
+        }
+    }
 }
 
 
@@ -294,6 +306,15 @@ void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
         entry.name = ErpVector::create("vau-aut");
         entry.blob = ErpBlob(std::string_view(MockCryptography::getVauAutPrivateKeyPem()), 11);
         entry.certificate = MockCryptography::getVauAutCertificate().toBase64Der();
+        blobCache.storeBlob(std::move(entry));
+    }
+
+    if (! isBlobTypeAlreadyInitialized(blobCache, BlobType::PseudonameLogKey))
+    {
+        BlobDatabase::Entry entry;
+        entry.type = BlobType::PseudonameLogKey;
+        entry.name = ErpVector::create("key_pn_log");
+        entry.blob = ErpBlob(std::string_view(MockCryptography::getPseudonymizationLogKey()), 11);
         blobCache.storeBlob(std::move(entry));
     }
 }

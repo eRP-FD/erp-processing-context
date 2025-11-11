@@ -95,7 +95,7 @@ TEST_F(KeepAliveTest, oneRequest_noKeepAlive)
     {
         // The first request is expected to be successful.
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     }
 }
@@ -109,7 +109,7 @@ TEST_F(KeepAliveTest, DISABLED_twoRequests_noKeepAlive)
     {
         // The first request is expected to be successful.
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     }
 
@@ -135,7 +135,7 @@ TEST_F(KeepAliveTest, twoRequests_keepAlive)
     {
         // The first request is expected to be successful.
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     }
     {
@@ -156,7 +156,7 @@ TEST_F(KeepAliveTest, clientClosesConnection_keepAlive)
         auto client = createClient();
         // The first request is expected to be successful.
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     }
 }
@@ -175,7 +175,7 @@ TEST_F(KeepAliveTest, manyRequests_noKeepAlive)
 
         auto client = createClient();
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
 
         const auto end = std::chrono::steady_clock::now();
@@ -217,7 +217,7 @@ TEST_F(KeepAliveTest, manyRequests_keepAlive)
         const auto start = std::chrono::steady_clock::now();
 
         const auto outerResponse = client.send(createSimpleRequest());
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
 
         const auto end = std::chrono::steady_clock::now();

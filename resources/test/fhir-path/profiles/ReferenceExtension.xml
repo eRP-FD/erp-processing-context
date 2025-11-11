@@ -102,6 +102,13 @@
       <fixedUrl value="http://erp.test/ReferenceExtension"/>
     </element>
     <element id="Extension.value[x]">
+      <slicing>
+        <discriminator>
+          <type value="type"/>
+          <path value="$this"/>
+        </discriminator>
+        <rules value="closed"/>
+      </slicing>
       <path value="Extension.value[x]"/>
       <min value="1"/>
       <max value="1"/>
@@ -279,6 +286,7 @@
       <path value="Extension.value[x]"/>
       <min value="1"/>
       <max value="1"/>
+      <sliceName value="valueReference"/>
       <base>
         <path value="Extension.value[x]"/>
         <min value="0"/>

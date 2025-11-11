@@ -2,7 +2,7 @@
   "resourceType": "Consent",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0"
+      "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|###VERSION###"
     ],
     "tag": [
       {

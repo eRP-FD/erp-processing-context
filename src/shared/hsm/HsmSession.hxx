@@ -54,6 +54,31 @@ public:
     ErpBlob wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGeneration);
     ErpVector unwrapRawPayload(const ErpBlob& wrappedRawPayload);
 
+    /**
+     * Wrap arbitrary data into a sealed blob. To unseal it, use
+     * unwrapPseudonameLogKeyPackage(). Requires setup permission.
+     */
+    [[nodiscard]] ErpBlob wrapPseudonameLogKeyPackage(const ErpVector& rawPayload, uint32_t blobGeneration);
+
+    /**
+     * Unwrap the sealed blob wrapped with wrapPseudonameLogKeyPackage()
+     * into clear text again.
+     */
+    [[nodiscard]] ErpVector unwrapPseudonameLogKeyPackage(const ErpBlob& wrappedRawPayload);
+
+    /**
+     * Encrypt the pseudoname 128 bit AES key into a sealed blob.
+     */
+    [[nodiscard]] ErpBlob wrapPseudonameLogKey(const ErpArray<Aes128Length>& aesKey, uint32_t blobGeneration);
+
+    /**
+     * Obtains the pseudoname blob key from the blob cache, and if
+     * present, unwraps the key using the HSM.
+     * If no key is present in the cache or database, will return
+     * nullopt.
+     */
+    std::optional<ErpArray<Aes128Length>> getPseudonameLogKey();
+
     void setTeeToken (const ErpBlob& teeToken);
 
     /**

@@ -116,24 +116,28 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
             {
                 case EpaAccount::Code::allowed:
                     // Workflow step 4a
-                        TVLOG(1) << "account lookup allowed with given kvnr";
-                processEpaAllowed(kvnr, epaAccount, events);
-                break;
+                    TVLOG(1) << "account lookup allowed with given kvnr";
+                    checkDeactivateThrottle(epaAccount.host);
+                    processEpaAllowed(kvnr, epaAccount, events);
+                    break;
                 case EpaAccount::Code::deny:
                     [[fallthrough]];
                 case EpaAccount::Code::notFound:
                     // Workflow step 4b - deny / not found -> Workflow step 14
-                        processEpaDeniedOrNotFound(kvnr);
-                break;
+                    checkDeactivateThrottle(epaAccount.host);
+                    processEpaDeniedOrNotFound(kvnr);
+                    break;
                 case EpaAccount::Code::conflict:
                     // Workflow step 4c
-                        processEpaConflict(kvnr);
-                break;
+                    checkDeactivateThrottle(epaAccount.host);
+                    processEpaConflict(kvnr);
+                    break;
                 case EpaAccount::Code::unknown:
                     // Workflow step 4d
-                        TVLOG(1) << "account lookup unknown with given kvnr";
-                processEpaUnknown(kvnr);
-                break;
+                    TVLOG(1) << "account lookup unknown with given kvnr";
+                    mergeFailingEpas(std::move(epaAccount.failingHosts));
+                    processEpaUnknown(kvnr);
+                    break;
             }
         }
         else
@@ -346,6 +350,24 @@ void EventProcessor::processEpaUnknown(const model::EventKvnr& kvnr)
 {
     jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
               << KeyValue("event", "Technical error occurred. Rescheduling KVNR");
+    auto configSetter = mServiceContext->getRuntimeConfigurationSetter();
+    switch (configSetter->throttleMode())
+    {
+        case exporter::RuntimeConfiguration::ThrottleMode::MANUAL:
+            if (configSetter->throttleValue() > 0ms)
+            {
+                // don't change
+                break;
+            }
+            [[fallthrough]];
+        case exporter::RuntimeConfiguration::ThrottleMode::AUTOMATIC_EPA_LOOKUP:
+            A_25942.start("enable throttling when lookup fails, currently no exponential backoff for simplicity");
+            configSetter->throttle(exporter::RuntimeConfiguration::ThrottleMode::AUTOMATIC_EPA_LOOKUP,
+                                   Configuration::instance().getIntValue(
+                                       ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS) *
+                                       1s);
+            break;
+    }
     scheduleRetryQueue(kvnr);
 }
 
@@ -367,6 +389,37 @@ void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollecto
         const auto typeinfo = util::demangle(typeid(exc).name());
         TVLOG(1) << "Error while storing audit data: " << typeinfo;
         TVLOG(1) << "Error reason:  " << exc.what();
+    }
+}
+
+void EventProcessor::mergeFailingEpas(std::set<std::string>&& failingEpas)
+{
+    const std::unique_lock lock(mFailingEpasMutex);
+    mFailingEpas.merge(std::move(failingEpas));
+}
+
+void EventProcessor::checkDeactivateThrottle(const std::string& hostNotFailing)
+{
+    TVLOG(1) << "checkDeactivateThrottle: " << hostNotFailing;
+    const std::unique_lock lock(mFailingEpasMutex);
+    if (mFailingEpas.empty())
+    {
+        return;
+    }
+    mFailingEpas.erase(hostNotFailing);
+    if (mFailingEpas.empty())
+    {
+        auto configSetter = mServiceContext->getRuntimeConfigurationSetter();
+        switch (configSetter->throttleMode())
+        {
+            case exporter::RuntimeConfiguration::ThrottleMode::MANUAL:
+                // don't change
+                break;
+            case exporter::RuntimeConfiguration::ThrottleMode::AUTOMATIC_EPA_LOOKUP:
+                A_25942.start("disable throttling when lookup succeeds for all EPAs");
+                configSetter->throttle(exporter::RuntimeConfiguration::ThrottleMode::AUTOMATIC_EPA_LOOKUP, 0ms);
+                break;
+        }
     }
 }
 

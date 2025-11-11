@@ -104,7 +104,7 @@ public:
 
 
 
-    [[nodiscard]] std::tuple<model::MedicationsAndDispenses, std::optional<model::EuMedicationDispenseInfos>>
+    [[nodiscard]] std::tuple<model::MedicationsAndDispenses, std::list<model::EuMedicationDispenseInfos>>
     retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
 
     [[nodiscard]] model::MedicationsAndDispenses

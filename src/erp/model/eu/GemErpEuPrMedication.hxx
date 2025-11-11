@@ -14,7 +14,7 @@ namespace model {
 class GemErpEuPrMedication : public Parameters<GemErpEuPrMedication>
 {
 public:
-    static constexpr auto profileType = ProfileType::GEM_ERPEU_PR_PAR_Medication;
+    static constexpr auto profileType = ProfileType::GEM_ERPEU_PR_Medication;
     using Parameters::Parameters;
     friend class Resource;
 };

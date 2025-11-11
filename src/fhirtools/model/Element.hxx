@@ -13,6 +13,7 @@
 #include "fhirtools/model/DecimalType.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
+#include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 
 #include <magic_enum/magic_enum.hpp>
@@ -77,9 +78,9 @@ public:
         auto operator==(const IdentityAndResult&) const = delete;
     };
 
-    Element(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+    Element(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
             std::weak_ptr<const Element> parent, ProfiledElementTypeInfo mDefinitionPointer);
-    Element(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView,
+    Element(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
             std::weak_ptr<const Element> parent, const std::string& elementId);
     virtual ~Element() = default;
 
@@ -113,13 +114,12 @@ public:
     [[nodiscard]] std::shared_ptr<const Element> parentResource() const;
     [[nodiscard]] std::shared_ptr<const Element> documentRoot() const;
 
-    [[nodiscard]] static Type getElementType(const FhirStructureRepositoryView* fhirStructureRepositoryView,
+    [[nodiscard]] static Type getElementType(const FhirStructureRepositoryBackend& fhirStructureRepository,
                                              const ProfiledElementTypeInfo& definitionPointer);
-    [[nodiscard]] static Type getElementType(const FhirStructureRepositoryView* fhirStructureRepositoryView,
+    [[nodiscard]] static Type getElementType(const FhirStructureRepositoryBackend& fhirStructureRepository,
                                              const FhirStructureDefinition* structureDefinition,
                                              const std::string& elementId);
-    [[nodiscard]] const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>&
-    getFhirStructureRepository() const;
+    [[nodiscard]] const fhirtools::FhirStructureRepositoryBackend& getFhirStructureRepository() const;
     [[nodiscard]] const FhirStructureDefinition* getStructureDefinition() const;
     [[nodiscard]] const ProfiledElementTypeInfo& definitionPointer() const;
 
@@ -168,7 +168,7 @@ private:
                                     const std::shared_ptr<const Element>& currentResoureRoot,
                                     std::string_view elementFullPath) const;
 
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mFhirStructureRepository;
+    gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> mFhirStructureRepository;
     const ProfiledElementTypeInfo mDefinitionPointer;
     std::weak_ptr<const Element> mParent;
     mutable size_t mSubElementLevel;
@@ -208,9 +208,8 @@ class PrimitiveElement : public Element
 {
 public:
     using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Date, DateTime, Time, QuantityType>;
-    explicit PrimitiveElement(
-        const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& fhirStructureRepositoryView, Type type,
-        ValueType&& value);
+    explicit PrimitiveElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
+                              Type type, ValueType&& value);
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
 
@@ -232,7 +231,7 @@ public:
 
 private:
     static const FhirStructureDefinition&
-    getStructureDefinition(const FhirStructureRepositoryView* fhirStructureRepositoryView, Type type);
+    getStructureDefinition(const FhirStructureRepositoryBackend& fhirStructureRepository, Type type);
 
     std::string decimalAsString(const DecimalType& dec) const;
 

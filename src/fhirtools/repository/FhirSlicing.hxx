@@ -42,7 +42,8 @@ public:
     class Condition
     {
     public:
-        virtual bool test(const Element&, const ValidatorOptions&) const = 0;
+        virtual bool test(const std::shared_ptr<const FhirStructureRepositoryView>& view, const Element&,
+                          const ValidatorOptions&) const = 0;
         virtual ~Condition() = default;
     };
 
@@ -87,7 +88,7 @@ public:
     class Builder;
     [[nodiscard]] const std::string& name() const;
     [[nodiscard]] const FhirStructureDefinition& profile() const;
-    std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepositoryView& repo,
+    std::shared_ptr<FhirSlicing::Condition> condition(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
                                                       const std::list<FhirSliceDiscriminator>& discriminators) const;
 
     FhirSlice();
@@ -117,32 +118,33 @@ public:
     };
     [[nodiscard]] const std::string& path() const;
     [[nodiscard]] DiscriminatorType type() const;
-    [[nodiscard]] std::shared_ptr<FhirSlicing::Condition> condition(const FhirStructureRepositoryView& repo,
-                                                                    const FhirStructureDefinition& def) const;
+    [[nodiscard]] std::shared_ptr<FhirSlicing::Condition>
+    condition(gsl::not_null<const FhirStructureRepositoryBackend*> repo, const FhirStructureDefinition& def) const;
 
 private:
-    static std::list<ProfiledElementTypeInfo> collect(const FhirStructureRepositoryView& repo,
+    static std::list<ProfiledElementTypeInfo> collect(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
                                                       const FhirStructureDefinition* def, std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectElements(const FhirStructureRepositoryView& repo,
+    static std::list<ProfiledElementTypeInfo> collectElements(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
                                                               const ProfiledElementTypeInfo& parentDef,
                                                               std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectSubElements(const FhirStructureRepositoryView& repo,
-                                                                 const ProfiledElementTypeInfo& parentDef,
-                                                                 std::string_view path);
+    static std::list<ProfiledElementTypeInfo>
+    collectSubElements(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
+                       const ProfiledElementTypeInfo& parentDef, std::string_view path);
 
     static std::shared_ptr<const FhirElement> collectElement(const FhirStructureDefinition* def, std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectFromValues(const FhirStructureRepositoryView& repo,
-                                                                const std::shared_ptr<const FhirElement>& element,
-                                                                std::string_view path);
+    static std::list<ProfiledElementTypeInfo>
+    collectFromValues(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
+                      const std::shared_ptr<const FhirElement>& element, std::string_view path);
     static std::list<std::shared_ptr<const ValueElement>> collectFromValues(std::shared_ptr<const ValueElement> element,
                                                                             std::string_view path);
-    static std::list<ProfiledElementTypeInfo> collectFromResolve(const FhirStructureRepositoryView& repo,
-                                                                 const ProfiledElementTypeInfo& parentDef,
-                                                                 std::string_view path);
+    static std::list<ProfiledElementTypeInfo>
+    collectFromResolve(gsl::not_null<const FhirStructureRepositoryBackend*> repo,
+                       const ProfiledElementTypeInfo& parentDef, std::string_view path);
 
     [[nodiscard]] std::shared_ptr<FhirSlicing::Condition>
-    valueishCondition(const FhirStructureRepositoryView& repo, std::list<ProfiledElementTypeInfo> elementInfos,
-                      const FhirStructureDefinition* def, ExpressionPtr) const;
+    valueishCondition(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> repo,
+                      std::list<ProfiledElementTypeInfo> elementInfos, const FhirStructureDefinition* def,
+                      ExpressionPtr) const;
 
     // For a slicing the returned bools indicate if that slicing has a pattern, fixed, or binding condition or a
     // combination of those.

@@ -399,6 +399,7 @@ protected:
             case OcspCheckDescriptor::PROVIDED_ONLY:
             case OcspCheckDescriptor::PROVIDED_OR_CACHE:
             case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED:
+            case OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_INVALID:
                 return true;
         }
         Fail("Invalid value for OcspCheckMode: " + std::to_string(static_cast<uintmax_t>(ocspCheckMode)));

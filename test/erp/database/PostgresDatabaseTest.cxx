@@ -5,42 +5,18 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "shared/crypto/CMAC.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/util/search/SearchParameter.hxx"
 #include "erp/util/search/UrlArguments.hxx"
-#include "mock/crypto/MockCryptography.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockRandom.hxx"
-#include "test/mock/RegistrationMock.hxx"
 
 
 using namespace model;
-
-PostgresDatabaseTest::PostgresDatabaseTest() :
-    mIdpPrivateKey(MockCryptography::getIdpPrivateKey()),
-    mJwtBuilder(mIdpPrivateKey),
-    mPharmacy(mJwtBuilder.makeJwtApotheke().stringForClaim(JWT::idNumberClaim).value()),
-    mConnection(nullptr),
-    mDatabase(nullptr),
-    mBlobCache(nullptr),
-    mHsmPool(nullptr),
-    mKeyDerivation(nullptr),
-    mDurationConsumerGuard(nullptr)
-{
-    mBlobCache = MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm);
-
-    auto blobCache = mBlobCache;
-    mHsmPool = std::make_unique<HsmPool>(
-        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(), std::move(blobCache)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
-    mKeyDerivation = std::make_unique<KeyDerivation>(*mHsmPool);
-    mDurationConsumerGuard = std::make_unique<DurationConsumerGuard>("PostgresDatabaseTest");
-}
-
 
 TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-cognitive-complexity)
 {

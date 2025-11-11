@@ -94,6 +94,7 @@ sgx.allowed_files = [
 "file:/var/config/erp/config/TSL_SSL_cert_chain.pem",
 "file:/var/config/erp/hsm/work-keyspec",
 "file:/var/config/haproxy/secrets/ca.crt",
+"file:{type}/erp/bin/001_fhir-resource-groups.config.json",
 "file:{type}/erp/bin/01_production.config.json",
 "file:{type}/erp/bin/01_production-medication-exporter.config.json"
 ]

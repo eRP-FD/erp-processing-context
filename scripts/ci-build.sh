@@ -140,11 +140,13 @@ conan_args+=(
     --options "&:with_hsm_tpm_production=True"
     --options "&:with_sbom=True"
     --options "&:with_warning_as_error=True"
+    --options "&:test_binary_type=shards"
     -c tools.cmake.cmaketoolchain:generator=Ninja
     -cc core:non_interactive=True
 )
 
 conan install "${source_folder}" "${conan_args[@]}"
+conan cache clean --source --build --download
 cmake "${source_folder}" --preset "conan-${build_type,,}"
 
 if [ "$skip_build" == "yes" ]; then

@@ -39,6 +39,7 @@ public:
     model::Timestamp mLastModified;
     std::string mError;
     std::optional<model::HashedKvnr> mHashedKvnr;
+    std::optional<std::string> mErrorCode;
 
     template <typename T>
     static void assignIfContains(const std::unordered_map<std::string, std::any>& data,

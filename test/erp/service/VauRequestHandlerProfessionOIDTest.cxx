@@ -151,6 +151,7 @@ public:
             , jwtBundeswehrapotheke(jwtWithProfessionOID(profession_oid::oid_bundeswehrapotheke))
             , jwtKostentraeger(jwtWithProfessionOID(profession_oid::oid_kostentraeger))
             , jwtNcpeh(jwtWithProfessionOID(profession_oid::oid_ncpeh))
+            , jwtInstitutionVorsorgeReha(jwtWithProfessionOID(profession_oid::oid_institution_vorsorge_reha))
         , teeProtocol()
             , mClient(createClient())
             , taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711).toString())
@@ -184,9 +185,10 @@ public:
     JWT jwtBundeswehrapotheke;
     JWT jwtKostentraeger;
     JWT jwtNcpeh;
+    JWT jwtInstitutionVorsorgeReha;
 
     ClientTeeProtocol teeProtocol;
-    HttpsClient mClient;
+    HttpsReconnectingClient mClient;
 
     std::string taskId;
     std::string taskIdNotFound;
@@ -218,20 +220,22 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksForbidden)
     testEndpoint(HttpMethod::GET, "/Task", jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, "/Task", jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
+// GEMREQ-start A_19113
 TEST_F(VauRequestHandlerProfessionOIDTest, GetTaskSuccess)
 {
-    A_19113_01.test("Valid professionOID claim in JWT");
+    A_19113_02.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskIdNotFound;
     testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::NotFound);
     testEndpoint(HttpMethod::GET, endpoint + "?secret=caffe", jwtOeffentliche_apotheke, HttpStatus::NotFound);
     testEndpoint(HttpMethod::GET, endpoint + "?secret=caffe", jwtKrankenhausapotheke, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::GET, endpoint + "?secret=caffe", jwtKostentraeger, HttpStatus::NotFound);
 }
-
 TEST_F(VauRequestHandlerProfessionOIDTest, GetTaskForbidden)
 {
-    A_19113_01.test("Invalid professionOID claim in JWT");
+    A_19113_02.test("Invalid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskId;
     testEndpoint(HttpMethod::GET, endpoint, jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
@@ -241,53 +245,61 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetTaskForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
+// GEMREQ-end A_19113
 
+// GEMREQ-start A_19018
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskCreateSuccess)
 {
-    A_19018.test("Valid professionOID claim in JWT");
+    A_19018_01.test("Valid professionOID claim in JWT");
     const std::string_view endpoint = "/Task/$create";
-    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::BadRequest);
-    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::BadRequest);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::BadRequest);
     testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::BadRequest);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::BadRequest);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::BadRequest);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::BadRequest);
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskCreateForbidden)
 {
-    A_19018.test("Invalid professionOID claim in JWT");
+    A_19018_01.test("Invalid professionOID claim in JWT");
     const std::string_view endpoint = "/Task/$create";
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
 }
+// GEMREQ-end A_19018
 
+// GEMREQ-start A_19022
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskActivateSuccess)
 {
-    A_19022.test("Valid professionOID claim in JWT");
+    A_19022_01.test("Valid professionOID claim in JWT");
     // We want to trigger a NotFound, that can be distinguished from Forbidden.
     // Not found means in this case that the professionOID test passes, but the task could not be found.
     const std::string endpoint = "/Task/" + taskIdNotFound + "/$activate";
-    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::NotFound);
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskActivateForbidden)
 {
-    A_19022.test("Invalid professionOID claim in JWT");
+    A_19022_01.test("Invalid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskId + "/$activate";
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
 }
+// GEMREQ-end A_19022
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAcceptSuccess)
 {
@@ -342,6 +354,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAcceptForbiddenWf162)
     testEndpoint(HttpMethod::POST, "/Task/162.000.000.000.001.45/$accept", jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, "/Task/162.000.000.000.001.45/$accept", jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, "/Task/162.000.000.000.001.45/$accept", jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, "/Task/162.000.000.000.001.45/$accept", jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskRejectSuccess)
@@ -365,6 +378,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskRejectForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 // GEMREQ-start A_24279
@@ -412,30 +426,34 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskCloseForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
+// GEMREQ-start A_19026
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAbortSuccess)
 {
-    A_19026.test("Valid professionOID claim in JWT");
+    A_19026_01.test("Valid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskIdNotFound + "/$abort";
     testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::NotFound);
-    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::NotFound);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::NotFound);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::NotFound);
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAbortForbidden)
 {
-    A_19026.test("Invalid professionOID claim in JWT");
+    A_19026_01.test("Invalid professionOID claim in JWT");
     const std::string endpoint = "/Task/" + taskId + "/$abort";
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtBundeswehrapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
 }
+// GEMREQ-end A_19026
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PatchTaskSuccess)
 {
@@ -467,6 +485,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PatchTaskForbidden)
     testEndpoint(HttpMethod::PATCH, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtBundeswehrapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     A_27549.finish();
 }
@@ -493,6 +513,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllMedicationDispensesForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_19405
 
@@ -517,6 +538,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllCommunicationForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetCommunicationSuccess)
@@ -540,6 +562,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetCommunicationForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostCommunicationSuccess)
@@ -563,6 +586,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostCommunicationForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteCommunicationSuccess)
@@ -586,6 +610,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteCommunicationForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllAuditEventsSuccess)
@@ -608,6 +633,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllAuditEventsForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAuditEventSuccess)
@@ -630,6 +656,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAuditEventForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetDeviceSuccess)
@@ -644,6 +671,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetDeviceSuccess)
     testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::OK);
 }
 
@@ -659,6 +688,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetMetadataSuccess)
     testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::OK);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::OK);
 }
 
@@ -682,6 +713,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteChargeItemForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22113
 
@@ -707,6 +739,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllChargeItemsForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22118
 
@@ -732,6 +765,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetChargeItemForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22124
 
@@ -757,6 +791,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostChargeItemForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22129
 
@@ -782,6 +817,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PutChargeItemForbidden)
     testEndpoint(HttpMethod::PUT, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PUT, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PUT, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22144
 
@@ -817,6 +853,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PatchChargeItemForbidden)
     testEndpoint(HttpMethod::PATCH, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::PATCH, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22875
 
@@ -835,6 +872,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 
 TEST_F(VauRequestHandlerProfessionOIDTest, DeleteConsentSuccess)
@@ -867,6 +905,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetConsentForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22159
 
@@ -892,6 +931,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostConsentForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_22161
 
@@ -920,6 +960,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostSubscriptionForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
     A_22362_01.finish();
 }
 
@@ -956,6 +997,8 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GrantEuAccessForbidden)
                  "endpoint is forbidden for professionOID 123");
     testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden,
                  "endpoint is forbidden for professionOID 1.2.276.0.76.4.292");
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden,
+                 "endpoint is forbidden for professionOID 1.2.276.0.76.4.257");
 }
 // GEMREQ-end A_27088
 
@@ -982,6 +1025,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, ReadEuAccessForbidden)
     testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_27086
 
@@ -1008,6 +1052,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, RevokeEuAccessForbidden)
     testEndpoint(HttpMethod::DELETE, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::DELETE, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_27084
 
@@ -1034,6 +1079,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, ReadEuPrescriptionsForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
 }
 // GEMREQ-end A_27059
 
@@ -1053,6 +1099,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, TaskEuCloseForbidden)
     testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
     testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
     A_27068.finish();
 }
 

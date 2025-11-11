@@ -39,6 +39,24 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& er
                 case ExtendedValidation::invalidUrnUuidInUri:
                     out << "value is not a valid lower-case urn:uuid.";
                     return;
+                case ExtendedValidation::bundleFullUrlMissing:
+                    out << "missing fullUrl for resource";
+                    return;
+                case ExtendedValidation::bundleFullUrlIdMissmatch:
+                    out << "ID provided in RESTful fullUrl doesn't match resource ID";
+                    return;
+                case ExtendedValidation::bundleFullUrlResourceTypeMissmatch:
+                    out << "Resource type provided in RESTful fullUrl doesn't match type of resource";
+                    return;
+                case ExtendedValidation::bundleFullUrlInvalidFormat:
+                    out << "Invalid format for fullUrl must be FHIR-RESTful or urn:uuid";
+                    return;
+                case ExtendedValidation::bundledResourceMissingId:
+                    out << "Bundled resource has no ID.";
+                    return;
+                case ExtendedValidation::unresolveableReferenceInBundle:
+                    out << "Unresolveable reference in bundle";
+                    return;
             }
             out << "unknown ExtendedValidation failure: " << static_cast<uintmax_t>(std::get<ExtendedValidation>(failure));
         };
@@ -111,7 +129,7 @@ void fhirtools::ValidationResults::add(fhirtools::Severity severity, std::string
 #ifdef NDEBUG
     // do not store severites in release builds
     // as merging the results can significantly slow down validation
-    if (severity < fhirtools::Severity::warning)
+    if (severity < fhirtools::Severity::info)
     {
         return;
     }
@@ -131,7 +149,7 @@ void fhirtools::ValidationResults::add(Severity severity, ExtendedValidation ext
 #ifdef NDEBUG
     // do not store severites in release builds
     // as merging the results can significantly slow down validation
-    if (severity < fhirtools::Severity::warning)
+    if (severity < fhirtools::Severity::info)
     {
         return;
     }

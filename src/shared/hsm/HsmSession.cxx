@@ -154,6 +154,57 @@ ErpBlob HsmSession::wrapRawPayload(const ErpVector& rawPayload, uint32_t blobGen
     });
 }
 
+ErpBlob HsmSession::wrapPseudonameLogKeyPackage(const ErpVector& rawPayload, uint32_t blobGeneration)
+{
+    return guardedRun<ErpBlob>(*this, [&] {
+        WrapPseudonameKeyPackageInput input;
+        input.generation = blobGeneration;
+        input.rawPayload = rawPayload;
+        markHsmCallTime();
+        return mClient.wrapPseudonameLogKeyPackage(*mRawSession, std::move(input));
+    });
+}
+
+ErpVector HsmSession::unwrapPseudonameLogKeyPackage(const ErpBlob& wrappedRawPayload)
+{
+   return guardedRun<ErpVector>(*this, [&] {
+        UnwrapRawPayloadInput input;
+        input.teeToken = getCachedTeeToken();
+        input.wrappedRawPayload = wrappedRawPayload;
+        markHsmCallTime();
+        return mClient.unwrapPseudonameLogKeyPackage(*mRawSession, std::move(input));
+    });
+}
+
+ErpBlob HsmSession::wrapPseudonameLogKey(const ErpArray<Aes128Length>& aesKey, uint32_t blobGeneration)
+{
+    return guardedRun<ErpBlob>(*this, [&] {
+        AES128KeyInput input;
+        input.teeToken = getCachedTeeToken();
+        input.generation = blobGeneration;
+        Expect(input.aesKey.size() == Aes128Length, "AES key has the wrong size");
+        std::ranges::copy(aesKey, input.aesKey.begin());
+        markHsmCallTime();
+        return mClient.wrapPseudonameLogKey(*mRawSession, std::move(input));
+    });
+}
+
+std::optional<ErpArray<Aes128Length>> HsmSession::getPseudonameLogKey()
+{
+    const auto logKey = mBlobCache.getBlobFromCache(BlobType::PseudonameLogKey);
+    if (! logKey.has_value())
+    {
+        return {};
+    }
+    return guardedRun<ErpArray<Aes128Length>>(*this, [&] {
+        UnwrapPseudonameLogKeyInput input;
+        input.teeToken = getCachedTeeToken();
+        input.pseudonameAesKey = logKey->blob;
+        markHsmCallTime();
+        return mClient.unwrapPseudonameLogKey(*mRawSession, std::move(input));
+    });
+}
+
 ErpBlob HsmSession::getTeeToken(const ErpBlob& nonce, const ErpVector& quoteData, const ErpVector& quoteSignature,
                                 const std::optional<ErpBlob>& knownQuote)
 {

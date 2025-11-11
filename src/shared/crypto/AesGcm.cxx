@@ -7,20 +7,16 @@
 
 #include "shared/crypto/AesGcm.hxx"
 
+#include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/util/Expect.hxx"
-
-#include <openssl/evp.h>
-#include <openssl/err.h>
 
 
 namespace {
-    using unique_cipher_context = std::unique_ptr<EVP_CIPHER_CTX,void(*)(EVP_CIPHER_CTX*)>;
 
-    unique_cipher_context createCipherContext (void)
+    EvpCipherCtxPtr createCipherContext()
     {
-        auto context =
-            std::unique_ptr<EVP_CIPHER_CTX, void (*)(EVP_CIPHER_CTX*)>(EVP_CIPHER_CTX_new(), EVP_CIPHER_CTX_free);
-        Expect3(context!=nullptr, "can't create cipher context for AES-GCM", AesGcmException);
+        auto context = EvpCipherCtxPtr(EVP_CIPHER_CTX_new());
+        Expect3(context != nullptr, "can't create cipher context for AES-GCM", AesGcmException);
         return context;
     }
 
@@ -41,7 +37,7 @@ namespace {
     private:
         int mOffset{0};
         std::string mCiphertext;
-        unique_cipher_context mCipherContext;
+        EvpCipherCtxPtr mCipherContext;
     };
 
 
@@ -63,7 +59,7 @@ namespace {
     private:
         int mOffset{0};
         SafeString mPlaintext;
-        unique_cipher_context mCipherContext;
+        EvpCipherCtxPtr mCipherContext;
     };
 }
 

@@ -62,10 +62,10 @@ TEST_P(ValueMatchingTest, run)
     boost::replace_all(resource, "###TYPE###", param.type);
     boost::replace_all(resource, "###VALUE###", param.value);
     const auto resourceDoc = model::NumberAsStringParserDocument::fromJson(resource);
-    const auto element =
-        std::make_shared<const ErpElement>(view, std::weak_ptr<const fhirtools::Element>{}, "Resource", &resourceDoc);
+    const auto element = std::make_shared<const ErpElement>(&backend, std::weak_ptr<const fhirtools::Element>{},
+                                                            "Resource", &resourceDoc);
     fhirtools::ValidationResults results;
-    EXPECT_NO_THROW(results = fhirtools::FhirPathValidator::validate(element, "Resource", {}));
+    EXPECT_NO_THROW(results = fhirtools::FhirPathValidator::validate(view, element, "Resource", {}));
     results.dumpToLog();
     if (param.expectSuccess)
     {

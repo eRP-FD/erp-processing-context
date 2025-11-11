@@ -21,6 +21,7 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ServerTestBase.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test_config.h"
 
 #include <chrono>
@@ -145,7 +146,7 @@ protected:
 
     //NOLINTNEXTLINE(readability-function-cognitive-complexity)
     void sendRequest(
-        HttpsClient& client,
+        ClientInterface& client,
         const model::Kvnr& kvnrPatient,
         std::vector<MedicationDispense>& medicationDispensesResponse,
         std::optional<std::vector<std::string>>&& filters = {},
@@ -202,18 +203,19 @@ protected:
         auto outerResponse = client.send(encryptRequest(request, jwt));
 
         // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         const std::string& responseBody = innerResponse.getBody();
         ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus));
 
         if (expectedHttpStatus == HttpStatus::OK)
         {
             Bundle responseBundle(BundleType::searchset, ::model::FhirResourceBase::NoProfile);
+            // already validated in verifyResponse(...)
             ASSERT_NO_FATAL_FAILURE(responseBundle = Bundle::fromJsonNoValidation(responseBody));
-            for (size_t idxResource = 0; idxResource < responseBundle.getResourceCount(); ++idxResource)
+            if (responseBundle.getResourceCount() > 0)
             {
-                ASSERT_NO_FATAL_FAILURE(medicationDispensesResponse.push_back(
-                    MedicationDispense::fromJson(responseBundle.getResource(idxResource))));
+                ASSERT_NO_THROW(medicationDispensesResponse =
+                                    responseBundle.getResourcesByType<model::MedicationDispense>());
             }
         }
     }
@@ -265,7 +267,7 @@ TEST_P(MedicationDispenseGetHandlerTest, OneTaskGetAllNoFilter)
     //-------------------------
 
     // Create a client
-    HttpsClient client = createClient();
+    auto client = createClient();
 
     std::vector<MedicationDispense> medicationDispenses;
     sendRequest(client, kvnrPatient, medicationDispenses);
@@ -734,7 +736,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters));
+        ASSERT_NO_FATAL_FAILURE(sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters)));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -752,7 +754,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters));
+        ASSERT_NO_FATAL_FAILURE(sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters)));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 
@@ -769,7 +771,7 @@ TEST_P(MedicationDispenseGetHandlerTest, ManyTasksGetAllSeveralFilters)//NOLINT(
             "whenprepared=gt" + whenPrepared };
         size_t expectedCount = 0;
         std::vector<MedicationDispense> medicationDispenses;
-        sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters));
+        ASSERT_NO_FATAL_FAILURE(sendRequest(client, model::Kvnr{kvnrPatient}, medicationDispenses, std::move(filters)));
         ASSERT_EQ(medicationDispenses.size(), expectedCount);
     }
 }

@@ -1,0 +1,17 @@
+{
+    "resourceType": "DomainResource",
+    "extension": [
+        {
+            "url": "http://erp.test/referencingElement",
+            "valueReference": {
+                "reference": "#contained1"
+            }
+        }
+    ],
+    "contained": [
+        {
+            "resourceType": "DomainResource",
+            "id": "contained1"
+        }
+    ]
+}

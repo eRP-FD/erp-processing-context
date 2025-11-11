@@ -78,14 +78,12 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     auto bundle = MedicationDispenseHandlerBase::createBundle(std::get<0>(medicationDispenses));
 
     const auto& euInfos = std::get<1>(medicationDispenses);
-    if (euInfos.has_value())
+    for (const auto& euInfo : euInfos)
     {
-        bundle.addEuResource(std::string{value(euInfos->practitioner().getId())},
-                             euInfos->practitioner().jsonDocument());
-        bundle.addEuResource(std::string{value(euInfos->practitionerRole().getId())},
-                             euInfos->practitionerRole().jsonDocument());
-        bundle.addEuResource(std::string{value(euInfos->organization().getId())},
-                             euInfos->organization().jsonDocument());
+        bundle.addEuResource(std::string{value(euInfo.practitioner().getId())}, euInfo.practitioner().jsonDocument());
+        bundle.addEuResource(std::string{value(euInfo.practitionerRole().getId())},
+                             euInfo.practitionerRole().jsonDocument());
+        bundle.addEuResource(std::string{value(euInfo.organization().getId())}, euInfo.organization().jsonDocument());
     }
 
     makeResponse(session, HttpStatus::OK, &bundle);

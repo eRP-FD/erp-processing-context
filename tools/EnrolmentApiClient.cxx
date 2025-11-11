@@ -23,6 +23,30 @@ auto rawEpochSeconds(const ::std::chrono::system_clock::time_point& timestamp)
     return ::std::chrono::duration_cast<::std::chrono::seconds>(timestamp.time_since_epoch()).count();
 }
 
+auto httpVerbForStoreBlob(BlobType type) {
+    switch (type)
+    {
+        case BlobType::EndorsementKey:
+        case BlobType::AttestationPublicKey:
+        case BlobType::AttestationKeyPair:
+        case BlobType::Quote:
+        case BlobType::EciesKeypair:
+        case BlobType::TaskKeyDerivation:
+        case BlobType::CommunicationKeyDerivation:
+        case BlobType::AuditLogKeyDerivation:
+        case BlobType::ChargeItemKeyDerivation:
+        case BlobType::KvnrHashKey:
+        case BlobType::TelematikIdHashKey:
+        case BlobType::PseudonameKey:
+            return HttpMethod::PUT;
+        case BlobType::VauSig:
+        case BlobType::VauAut:
+        case BlobType::PseudonameLogKey:
+            return HttpMethod::POST;
+    }
+    Fail("Unknown blob type");
+}
+
 }
 
 EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
@@ -69,6 +93,8 @@ EnrolmentApiClient::Header::Header(::HttpMethod method, ::BlobType type)
                                                        break;
                                                    case BlobType::VauAut:
                                                        return "/Enrolment/VauAut";
+                                                   case BlobType::PseudonameLogKey:
+                                                        return "/Enrolment/PseudoLogKey";
                                                }
                                                Fail("encountered unhandled blob type");
                                            }()}
@@ -208,9 +234,7 @@ void EnrolmentApiClient::storeBlob(::BlobType type, ::std::string_view id, const
         }
     }
 
-    const auto response = send(ClientRequest{
-        Header{(type == BlobType::VauSig || type == BlobType::VauAut) ? ::HttpMethod::POST : ::HttpMethod::PUT, type},
-        request.str()});
+    const auto response = send(ClientRequest{Header{httpVerbForStoreBlob(type), type}, request.str()});
     if (response.getHeader().status() != ::HttpStatus::Created)
     {
         ::std::string details;

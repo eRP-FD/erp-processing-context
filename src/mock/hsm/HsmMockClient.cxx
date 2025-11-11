@@ -281,6 +281,35 @@ ErpVector HsmMockClient::signWithVauAutKey(const HsmRawSession&, SignVauAutInput
     return ErpVector::create(rsBin);
 }
 
+ErpBlob HsmMockClient::wrapPseudonameLogKeyPackage(const HsmRawSession&, WrapPseudonameKeyPackageInput&& input)
+{
+    return ErpBlob{std::move(input.rawPayload), input.generation};
+}
+
+ErpVector HsmMockClient::unwrapPseudonameLogKeyPackage(const HsmRawSession&, UnwrapRawPayloadInput&& input)
+{
+    verifyTeeToken(input.teeToken);
+    return ErpVector::create(input.wrappedRawPayload.data);
+}
+
+ErpBlob HsmMockClient::wrapPseudonameLogKey(const HsmRawSession&, AES128KeyInput&& input)
+{
+    verifyTeeToken(input.teeToken);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    std::string_view key{reinterpret_cast<char*>(input.aesKey.data()), Aes128Length};
+    return ErpBlob{key, input.generation};
+}
+
+ErpArray<Aes128Length> HsmMockClient::unwrapPseudonameLogKey(const HsmRawSession&, UnwrapPseudonameLogKeyInput&& input)
+{
+    verifyTeeToken(input.teeToken);
+    Expect(input.pseudonameAesKey.data.size() == Aes128Length,
+           "key blob has the wrong size: " + std::to_string(input.pseudonameAesKey.data.size()));
+    ErpArray<Aes128Length> result;
+    std::ranges::copy(std::string_view{input.pseudonameAesKey.data}, result.data());
+    return result;
+}
+
 void HsmMockClient::reconnect (HsmRawSession&)
 {
     // Nothing to do for the mock client.

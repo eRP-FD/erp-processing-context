@@ -24,6 +24,8 @@ public:
     static std::list<std::filesystem::path> defaultProfileFiles();
 
     static const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& get();
+
+    static const fhirtools::FhirStructureRepositoryBackend& getBackendWithTest();
     static const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& getWithTest();
 
     static std::unique_ptr<const fhirtools::FhirStructureRepositoryBackend>

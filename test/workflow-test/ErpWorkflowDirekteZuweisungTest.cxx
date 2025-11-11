@@ -54,7 +54,7 @@ TEST_P(ErpWorkflowDirekteZuweisungTestP, PatientAbortOnlyCompletedTasks)//NOLINT
         checkTaskClose(prescriptionId.value(), kvnr, secret, lastModifiedDate, communications));
 
     // Abort is allowed for completed tasks
-    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(prescriptionId.value(), jwt, kvnr, accessCode, secret, {}));
+    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(prescriptionId.value(), jwt, kvnr, accessCode, secret, communications));
 }
 
 TEST_P(ErpWorkflowDirekteZuweisungTestP, TaskRetrievalProhibitedForProxyProhibited)//NOLINT(readability-function-cognitive-complexity)

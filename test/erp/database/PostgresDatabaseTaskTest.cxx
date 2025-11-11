@@ -27,7 +27,7 @@
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/Uuid.hxx"
 #include "test_config.h"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ErpMacros.hxx"

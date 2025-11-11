@@ -164,7 +164,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfPersonalData)//NOLINT(readability-functio
     ClientRequest request(
         createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort/?secret=" + std::string(secret.value()), jwtPharmacy), {});
     auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
 
     // Check database data after abort call
@@ -197,7 +197,7 @@ TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-funct
     const JWT jwtInsurant = mJwtBuilder.makeJwtVersicherter(insurant);
     ClientRequest request(createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort", jwtInsurant), {});
     auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
 
     // Check database data after abort call
@@ -243,7 +243,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_organization)
     ClientRequest request(
         createPostHeader("/Task/" + task.prescriptionId().toString() + "/$abort/?secret=" + std::string(secret.value()), jwtPharmacy), {});
     auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
 
     const auto prescriptionId = task.prescriptionId();
@@ -274,7 +274,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_representative)//NOLINT(re
     header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
     ClientRequest request(header, {});
     auto outerResponse = createClient().send(encryptRequest(request, jwtRepresentative));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
 
     const auto prescriptionId = task.prescriptionId();
@@ -302,7 +302,7 @@ TEST_F(TaskAbortHandlerTest, auditDataFromAccessToken_person)
     header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
     ClientRequest request(header, {});
     auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
-    auto innerResponse = verifyOuterResponse(outerResponse);
+    auto innerResponse = verifyResponse(outerResponse);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
 
     const auto prescriptionId = task.prescriptionId();
@@ -328,7 +328,7 @@ TEST_F(TaskAbortHandlerTest, checkAccessValidity)
         header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
         ClientRequest request(header, {});
         auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
     }
 
@@ -342,7 +342,7 @@ TEST_F(TaskAbortHandlerTest, checkAccessValidity)
         header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
         ClientRequest request(header, {});
         auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
     }
 
@@ -356,7 +356,7 @@ TEST_F(TaskAbortHandlerTest, checkAccessValidity)
         header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
         ClientRequest request(header, {});
         auto outerResponse = createClient().send(encryptRequest(request, jwtArzt));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
     }
 
@@ -370,7 +370,7 @@ TEST_F(TaskAbortHandlerTest, checkAccessValidity)
         header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
         ClientRequest request(header, {});
         auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
     }
 
@@ -384,7 +384,7 @@ TEST_F(TaskAbortHandlerTest, checkAccessValidity)
         header.addHeaderField("X-AccessCode", std::string(task.accessCode()));
         ClientRequest request(header, {});
         auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
-        auto innerResponse = verifyOuterResponse(outerResponse);
+        auto innerResponse = verifyResponse(outerResponse);
         ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
     }
 }

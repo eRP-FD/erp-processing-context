@@ -118,9 +118,9 @@ TModel ErpRequestHandler::parseAndValidateRequestBody(SessionContext& context,
         auto profileHeader = Header::profileVersionHeader(profileType);
         if (! profileHeader.empty() && profileVersion && profileVersion->version())
         {
-            A_23090_06.start("$gematikworkflowprofil, $gematikpatientenrechnung, $kbvverordnungsdaten, $davabgabedaten");
+            A_23090_07.start("$gematikworkflowprofil, $gematikpatientenrechnung, $kbvverordnungsdaten, $davabgabedaten");
             context.addOuterResponseHeaderField(profileHeader, *profileVersion->version());
-            A_23090_06.finish();
+            A_23090_07.finish();
         }
         else
         {

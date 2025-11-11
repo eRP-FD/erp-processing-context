@@ -10,13 +10,13 @@
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/util/Expect.hxx"
 
-// GEMREQ-start A_20159-03#fromBin
+// GEMREQ-start A_20159-04#fromBin
 SignedPrescription SignedPrescription::fromBin(const std::string& content, TslManager& tslManager,
                                                const std::vector<std::string_view>& professionOids)
 {
     return doUnpackCadesBesSignature(content, &tslManager, professionOids);
 }
-// GEMREQ-end A_20159-03#fromBin
+// GEMREQ-end A_20159-04#fromBin
 
 SignedPrescription SignedPrescription::fromBinNoVerify(const std::string& content)
 {
@@ -24,7 +24,7 @@ SignedPrescription SignedPrescription::fromBinNoVerify(const std::string& conten
 }
 
 
-// GEMREQ-start A_20159-03#doUnpackCadesBesSignature
+// GEMREQ-start A_20159-04#doUnpackCadesBesSignature
 SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::string& cadesBesSignatureFile,
                                                                  TslManager* tslManager,
                                                                  const std::vector<std::string_view>& professionOids)
@@ -34,9 +34,9 @@ SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::stri
         if (tslManager)
         {
             A_19025_03.start("verify the QES signature");
-            A_20159.start("verify HBA Signature Certificate ");
+            A_20159_04.start("verify HBA Signature Certificate ");
             return {cadesBesSignatureFile, *tslManager, false, professionOids};
-            A_20159.finish();
+            A_20159_04.finish();
             A_19025_03.finish();
         }
         else
@@ -93,4 +93,4 @@ SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::stri
     }
 }
 
-// GEMREQ-end A_20159-03#doUnpackCadesBesSignature
+// GEMREQ-end A_20159-04#doUnpackCadesBesSignature

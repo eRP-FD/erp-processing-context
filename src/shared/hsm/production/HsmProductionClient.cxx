@@ -10,7 +10,6 @@
 #include "shared/hsm/HsmIdentity.hxx"
 #include "shared/hsm/HsmSessionExpiredException.hxx"
 #include "shared/hsm/production/HsmRawSession.hxx"
-#include "shared/util/Base64.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/DurationConsumer.hxx"
@@ -346,7 +345,7 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
 
     HsmExpectSuccess(response, "ERP_UnwrapHashKey failed", timer);
 
-    return createErpArray<Aes256Length>(reinterpret_cast<const uint8_t*>(response.Key));
+    return createErpArray<Aes256Length>(response.Key);
 }
 
 ErpBlob HsmProductionClient::wrapRawPayload(const HsmRawSession& session, WrapRawPayloadInput&& input)
@@ -388,6 +387,60 @@ ErpVector HsmProductionClient::signWithVauAutKey(const HsmRawSession& session, S
     handleExpiredSession(response.returnCode);
     HsmExpectSuccess(response, "ERP_SignVAUAUTToken failed", timer);
     return createErpVector(response.signatureLength, response.signatureData);
+}
+
+ErpBlob HsmProductionClient::wrapPseudonameLogKeyPackage(const HsmRawSession& session,
+                                                         WrapPseudonameKeyPackageInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_wrappseudonamelogkeypackage");
+    hsmclient::RawPayloadInput requestInput;
+    requestInput.payloadLen = input.rawPayload.size();
+    setInput(requestInput.rawPayload, input.rawPayload);
+    requestInput.desiredGeneration = input.generation;
+    const auto response = hsmclient::ERP_WrapPseudonameLogKeyPackage(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_WrapPseudonameLogKeyPackage failed", timer);
+    return convertErpBlob(response.BlobOut);
+}
+
+ErpVector HsmProductionClient::unwrapPseudonameLogKeyPackage(const HsmRawSession& session,
+                                                             UnwrapRawPayloadInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_unwrappseudonamelogkeypackage");
+    hsmclient::WrappedPayloadInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.wrappedRawPayload, input.wrappedRawPayload);
+    const auto response = hsmclient::ERP_UnwrapPseudonameLogKeyPackage(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_UnwrapPseudonameLogKeyPackage failed", timer);
+    return createErpVector(response.payloadLen, response.rawPayload);
+}
+
+ErpBlob HsmProductionClient::wrapPseudonameLogKey(const HsmRawSession& session, AES128KeyInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_wrappseudonamelogkey");
+    hsmclient::AESKey128Input requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput<Aes128Length>(requestInput.AESKey, input.aesKey);
+    requestInput.desiredGeneration = input.generation;
+    const auto response = hsmclient::ERP_WrapPseudonameLogKey(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_WrapPseudonameLogKey failed", timer);
+    return convertErpBlob(response.BlobOut);
+}
+
+ErpArray<Aes128Length> HsmProductionClient::unwrapPseudonameLogKey(const HsmRawSession& session,
+                                                                   UnwrapPseudonameLogKeyInput&& input)
+{
+    auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_unwrappseudonamelogkey");
+    hsmclient::TwoBlobGetKeyInput requestInput;
+    setInput(requestInput.TEEToken, input.teeToken);
+    setInput(requestInput.Key, input.pseudonameAesKey);
+    const auto response = hsmclient::ERP_UnwrapPseudonameLogKey(session.rawSession, requestInput);
+    handleExpiredSession(response.returnCode);
+    HsmExpectSuccess(response, "ERP_UnwrapPseudonameLogKey failed", timer);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    return createErpArray<Aes128Length>(reinterpret_cast<const uint8_t*>(response.AESKey));
 }
 
 ::ParsedQuote HsmProductionClient::parseQuote(const ::ErpVector& quote) const

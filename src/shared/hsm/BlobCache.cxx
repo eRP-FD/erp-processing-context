@@ -87,6 +87,17 @@ BlobCache::Entry BlobCache::getBlob(const BlobType type, const BlobId id)
         .front();
 }
 
+std::optional<BlobCache::Entry> BlobCache::getBlobFromCache(const BlobType type)
+{
+    auto entries = findBlobs(mEntriesByType, type, defaultValidityChecker, 1);
+
+    if (entries.empty())
+    {
+        return std::nullopt;
+    }
+    return entries.front();
+}
+
 BlobCache::Entry BlobCache::getBlob(const BlobType type, const ErpVector& name)
 {
     return getBlobs(mEntriesByType, type,

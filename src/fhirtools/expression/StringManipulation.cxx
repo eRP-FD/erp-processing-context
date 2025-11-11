@@ -242,10 +242,10 @@ EvaluationContext StringManipSplit::eval(const EvaluationContext& context) const
 
 void fhirtools::StringManipSplit::split(EvaluationContext& result, std::string_view str, std::string_view delimiter) const
 {
+    const auto* repo = std::addressof(result.context->getFhirStructureRepository());
     if (str.empty())
     {
-        result.collection.emplace_back(
-            std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string{}));
+        result.collection.emplace_back(std::make_shared<PrimitiveElement>(repo, Element::Type::String, std::string{}));
         return;
     }
     if (delimiter.empty())
@@ -256,20 +256,20 @@ void fhirtools::StringManipSplit::split(EvaluationContext& result, std::string_v
     for (auto range = std::ranges::search(str, delimiter); range.begin() != str.end();
          range = std::ranges::search(str, delimiter))
     {
-        result.collection.emplace_back(std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String,
-                                                               std::string{str.begin(), range.begin()}));
+        result.collection.emplace_back(
+            std::make_shared<PrimitiveElement>(repo, Element::Type::String, std::string{str.begin(), range.begin()}));
         str = {range.end(), str.end()};
     }
-    result.collection.emplace_back(
-        std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string{str}));
+    result.collection.emplace_back(std::make_shared<PrimitiveElement>(repo, Element::Type::String, std::string{str}));
 }
 
 void fhirtools::StringManipSplit::chars(EvaluationContext& result, std::string_view str) const
 {
+    const auto* repo = std::addressof(result.context->getFhirStructureRepository());
     for (char c : str)
     {
         result.collection.emplace_back(
-            std::make_shared<PrimitiveElement>(fhirStructureRepository(), Element::Type::String, std::string(1, c)));
+            std::make_shared<PrimitiveElement>(repo, Element::Type::String, std::string(1, c)));
     }
 }
 

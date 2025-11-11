@@ -28,9 +28,9 @@ using namespace std::chrono_literals;
 using namespace model;
 
 
-std::set<int64_t> PostgresDatabaseMedicationDispenseTest::sTaskPrescriptionIdsToBeDeleted;
+std::set<int64_t> PostgresDatabaseMedicationDispenseTestBase::sTaskPrescriptionIdsToBeDeleted;
 
-void PostgresDatabaseMedicationDispenseTest::cleanup()
+void PostgresDatabaseMedicationDispenseTestBase::cleanup()
 {
     if (usePostgres())
     {
@@ -87,7 +87,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
         Task task = createAcceptedTask(kvnrPatient.id(), prescriptionType);
-        auto medicationDispenses = closeTask(task, pharmacy.id(), whenPrepared);
+        auto medicationDispenses = closeTask(task, pharmacy.id(), GetParam().numMedications, whenPrepared);
         ASSERT_FALSE(medicationDispenses.empty());
         const auto& medicationDispense = medicationDispenses[0];
 
@@ -139,7 +139,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
     }
 }
 
-UrlArguments PostgresDatabaseMedicationDispenseTest::createSearchArguments(ServerRequest::QueryParametersType&& queryParameters)
+UrlArguments PostgresDatabaseMedicationDispenseTestBase::createSearchArguments(ServerRequest::QueryParametersType&& queryParameters)
 {
     ServerRequest request = ServerRequest(Header());
     request.setQueryParameters(std::move(queryParameters));
@@ -157,7 +157,7 @@ UrlArguments PostgresDatabaseMedicationDispenseTest::createSearchArguments(Serve
     return searchArgs;
 }
 
-void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
+void PostgresDatabaseMedicationDispenseTestBase::checkMedicationDispensesXmlStrings(
     std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
     const std::vector<MedicationDispense>& medicationDispenses)
 {
@@ -174,7 +174,7 @@ void PostgresDatabaseMedicationDispenseTest::checkMedicationDispensesXmlStrings(
     }
 }
 
-void PostgresDatabaseMedicationDispenseTest::writeCurrentTestOutputFile(
+void PostgresDatabaseMedicationDispenseTestBase::writeCurrentTestOutputFile(
     const std::string& testOutput,
     const std::string& fileExtension,
     const std::string& marker) const
@@ -191,7 +191,7 @@ void PostgresDatabaseMedicationDispenseTest::writeCurrentTestOutputFile(
     FileHelper::writeFile(fileName, testOutput);
 }
 
-Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType)
+Task PostgresDatabaseMedicationDispenseTestBase::createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType)
 {
     Task task = createTask(prescriptionType);
     task.setKvnr(model::Kvnr{kvnrPatient, task.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
@@ -200,9 +200,10 @@ Task PostgresDatabaseMedicationDispenseTest::createAcceptedTask(const std::strin
     return task;
 }
 
-std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTask(
+std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTestBase::closeTask(
     Task& task,
     const std::string_view& telematicIdPharmacy,
+    size_t numMedications,
     const std::optional<Timestamp>& medicationWhenPrepared)
 {
     PrescriptionId prescriptionId = task.prescriptionId();
@@ -222,7 +223,7 @@ std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTas
     task.updateLastMedicationDispense();
 
     std::vector<model::MedicationDispense> medicationDispenses;
-    for(size_t i = 0; i < GetParam().numMedications; ++i)
+    for(size_t i = 0; i < numMedications; ++i)
     {
         medicationDispenses.emplace_back(
             createMedicationDispense(task, telematicIdPharmacy, completedTimestamp, medicationWhenPrepared));
@@ -241,7 +242,7 @@ std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTest::closeTas
     return medicationDispenses;
 }
 
-MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispense(
+MedicationDispense PostgresDatabaseMedicationDispenseTestBase::createMedicationDispense(
     Task& task,
     const std::string_view& telematicIdPharmacy,
     const Timestamp& whenHandedOver,
@@ -262,7 +263,7 @@ MedicationDispense PostgresDatabaseMedicationDispenseTest::createMedicationDispe
     return medicationDispense;
 }
 
-Task PostgresDatabaseMedicationDispenseTest::createTask(PrescriptionType prescriptionType)
+Task PostgresDatabaseMedicationDispenseTestBase::createTask(PrescriptionType prescriptionType)
 {
     const std::string accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
 
@@ -277,7 +278,7 @@ Task PostgresDatabaseMedicationDispenseTest::createTask(PrescriptionType prescri
     return task;
 }
 
-void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
+void PostgresDatabaseMedicationDispenseTestBase::activateTask(Task& task)
 {
     ASSERT_TRUE(task.kvnr().has_value());
 
@@ -322,7 +323,7 @@ void PostgresDatabaseMedicationDispenseTest::activateTask(Task& task)
     database().commitTransaction();
 }
 
-void PostgresDatabaseMedicationDispenseTest::acceptTask(model::Task& task)
+void PostgresDatabaseMedicationDispenseTestBase::acceptTask(model::Task& task)
 {
     task.setStatus(model::Task::Status::inprogress);
     const SafeString secret = SecureRandomGenerator::generate(32);
@@ -333,7 +334,7 @@ void PostgresDatabaseMedicationDispenseTest::acceptTask(model::Task& task)
     database().commitTransaction();
 }
 
-void PostgresDatabaseMedicationDispenseTest::deleteTaskByPrescriptionId(const int64_t prescriptionId)
+void PostgresDatabaseMedicationDispenseTestBase::deleteTaskByPrescriptionId(const int64_t prescriptionId)
 {
     auto transaction = createTransaction();
     const pqxx::result result = transaction.exec("DELETE FROM erp.task WHERE prescription_id = " + std::to_string(prescriptionId));
@@ -1101,4 +1102,49 @@ std::ostream& operator<<(std::ostream& os, const PostgresDatabaseMedicationDispe
 {
     os << "numMedications: " << params.numMedications << " type: " << params.type;
     return os;
+}
+
+TEST_F(PostgresDatabaseMedicationDispenseTestBase, ERP_30108)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+    cleanup(); // need empty tables
+    {
+        auto txn = createTransaction();
+        txn.exec("ALTER SEQUENCE erp.task_taskid_seq RESTART WITH 1;");
+        txn.exec("ALTER SEQUENCE erp.task_169_taskid_seq RESTART WITH 1;");
+        txn.commit();
+    }
+
+    Task task1 = createAcceptedTask(InsurantA, PrescriptionType::apothekenpflichigeArzneimittel);
+    closeTask(task1, "3-SMC-B-Testkarte-883110000120312", 1, std::nullopt);
+    Task task2 = createAcceptedTask(InsurantA, PrescriptionType::direkteZuweisung);
+    closeTask(task2, "3-SMC-B-Testkarte-883110000120312", 1, std::nullopt);
+
+    ASSERT_EQ(task1.prescriptionId().toDatabaseId(), task2.prescriptionId().toDatabaseId());// due to empty tables
+
+    // variant 1
+    {
+        const model::MedicationDispenseId id(model::PrescriptionId::fromString(task1.prescriptionId().toString()), 0);
+        std::optional<MedicationsAndDispenses> medicationsAndDispenses;
+        ASSERT_NO_THROW(medicationsAndDispenses = database().retrieveMedicationDispense(model::Kvnr{InsurantA}, id));
+        database().commitTransaction();
+        ASSERT_EQ(medicationsAndDispenses->medicationDispenses.size(), 1);
+    }
+
+    // variant 2:
+    {
+        ServerRequest::QueryParametersType queryParameters{
+            {"identifier",
+             std::string(model::resource::naming_system::prescriptionID) + "|" + task1.prescriptionId().toString()}};
+        UrlArguments searchArgs = createSearchArguments(std::move(queryParameters));
+        std::tuple<model::MedicationsAndDispenses, std::list<model::EuMedicationDispenseInfos>>
+            medicationsAndDispenses;
+        ASSERT_NO_THROW(medicationsAndDispenses =
+                            database().retrieveAllMedicationDispenses(model::Kvnr{InsurantA}, searchArgs));
+        database().commitTransaction();
+        ASSERT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 1);
+    }
 }

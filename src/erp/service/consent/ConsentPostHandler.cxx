@@ -46,6 +46,10 @@ void ConsentPostHandler::handleRequest(PcSessionContext& session)
     }
     A_22289.finish();
 
+    A_27143.start("store dateTime");
+    consent.setDateTime(model::Timestamp::now());
+    A_27143.finish();
+
     A_22162_01.start("Only single consent for the same Kvnr");
     A_22350.start("Persist consent");
     try

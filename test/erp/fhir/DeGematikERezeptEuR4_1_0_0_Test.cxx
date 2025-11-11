@@ -17,6 +17,7 @@
 #include "shared/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <list>
@@ -49,6 +50,7 @@ public:
 
 TEST_P(DeGematikERezeptEuR4_1_0_0_Test, success)
 {
+    testutils::ShiftFhirResourceViewsGuard unshift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     const auto& fhirInstance = Fhir::instance();
     auto viewList = fhirInstance.structureRepository(model::Timestamp::fromGermanDate("2025-10-01"));
     auto view = viewList.match(

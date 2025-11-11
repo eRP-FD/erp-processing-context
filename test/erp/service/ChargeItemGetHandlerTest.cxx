@@ -19,6 +19,7 @@
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/ServerTestBase.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <chrono>
@@ -73,7 +74,8 @@ protected:
             chargeItem.setAccessCode(accessCode);
             chargeItem.deleteContainedBinary();
 
-            const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+            const auto& dispenseItemXML =
+                ResourceTemplates::davDispenseItemXml({.prescriptionId = value(prescriptionId)});
             auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
             auto signedDispenseItem =
                 ::model::Binary{dispenseItem.getIdentifier().toString(),
@@ -116,7 +118,7 @@ protected:
     }
 
     void sendGetAllChargeItemsRequest( // NOLINT(readability-function-cognitive-complexity)
-        HttpsClient& client,
+        ClientInterface& client,
         JWT& jwt,
         std::vector<model::ChargeItem>& chargeItemsResponse,
         std::size_t& totalSearchMatches,
@@ -168,7 +170,7 @@ protected:
     }
 
     std::optional<model::Bundle> sendGetRequest(
-        HttpsClient& client,
+        ClientInterface& client,
         JWT& jwt,
         std::size_t& totalSearchMatches,
         std::string& argument,
@@ -182,7 +184,7 @@ protected:
     }
 
     void sendGetRequest(
-        HttpsClient& client,
+        ClientInterface& client,
         JWT& jwt,
         const std::string& argument,
         std::optional<model::Bundle>& chargeItemBundle,
@@ -193,7 +195,7 @@ protected:
 
         // Send the request.
         const auto outerResponse = client.send(encryptRequest(request, jwt));
-        const auto innerResponse = verifyOuterResponse(outerResponse);
+        const auto innerResponse = verifyResponse(outerResponse);
 
         ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
         ASSERT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, expectedHttpStatus,
@@ -211,6 +213,7 @@ protected:
             {
                 ASSERT_NO_FATAL_FAILURE(chargeItemBundle = model::Bundle::fromXmlNoValidation(innerResponse.getBody()));
             }
+            ASSERT_NO_FATAL_FAILURE(testutils::validate(value(chargeItemBundle)));
         }
     }
 
@@ -248,7 +251,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllInsurant)
     //-------------------------
 
     // Create a client
-    HttpsClient client = createClient();
+    auto client = createClient();
 
     std::vector<model::ChargeItem> chargeItems;
     std::size_t totalSearchMatches = 0;
@@ -298,7 +301,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacy)
     //-------------------------
 
     // Create a client
-    HttpsClient client = createClient();
+    auto client = createClient();
 
     std::vector<model::ChargeItem> chargeItems;
     std::size_t totalSearchMatches = 0;
@@ -701,7 +704,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetByIdPharmacy)//NOLINT(readability-
     //-------------------------
 
     // Create a client
-    HttpsClient client = createClient();
+    auto client = createClient();
     std::optional<model::Bundle> chargeItemBundle;
 
     // PharmacyA, InsurantA
@@ -885,7 +888,7 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGet_BAD)
     //-------------------------
 
     // Create a client
-    HttpsClient client = createClient();
+    auto client = createClient();
     std::optional<model::Bundle> chargeItemBundle;
 
     // Without id

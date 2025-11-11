@@ -282,9 +282,11 @@ std::string evdgaBundleXml(const EvdgaBundleOptions& options);
 
 struct ConsentOptions
 {
+    using VersionType = std::variant<std::monostate, Versions::GEM_ERPCHRG, Versions::GEM_ERPEU>;
     model::ConsentType consentCategory;
     std::string kvnr;
     std::string timestamp = model::Timestamp::now().toXsDateTime();
+    VersionType version{};
 };
 std::string consentJson(const ConsentOptions& options);
 

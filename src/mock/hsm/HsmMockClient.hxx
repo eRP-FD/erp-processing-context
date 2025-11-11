@@ -84,6 +84,11 @@ public:
         const HsmRawSession& session,
         SignVauAutInput&& input) override;
 
+    ErpBlob wrapPseudonameLogKeyPackage(const HsmRawSession& session, WrapPseudonameKeyPackageInput&& input) override;
+    ErpVector unwrapPseudonameLogKeyPackage(const HsmRawSession& session, UnwrapRawPayloadInput&& input) override;
+    ErpBlob wrapPseudonameLogKey(const HsmRawSession& session, AES128KeyInput&& input) override;
+    ErpArray<Aes128Length> unwrapPseudonameLogKey(const HsmRawSession& session, UnwrapPseudonameLogKeyInput&& input) override;
+
     void reconnect (HsmRawSession& session) override;
 
 private:

@@ -27,11 +27,11 @@ public:
 
 private:
     model::Identity validateSender(
-        model::Communication::MessageType messageType,
+        const model::Communication& communication,
         const std::string& professionOid,
         const std::string& sender) const;
     void validateRecipient(
-        model::Communication::MessageType messageType,
+        const model::Communication& communication,
         const model::Identity& recipient) const;
     void checkEligibilityOfInsurant(
         model::Communication::MessageType messageType,
@@ -42,7 +42,7 @@ private:
         const std::optional<std::string>& communicationAccessCode) const;
     void checkVerificationIdentitiesOfKvnrs(
         model::Communication::MessageType messageType,
-        const model::Kvnr& taskKvnr,
+        const std::optional<model::Kvnr>& taskKvnr,
         const model::Identity& sender,
         const model::Identity& recipient) const;
 

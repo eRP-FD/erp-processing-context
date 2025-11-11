@@ -72,6 +72,8 @@ spec:
               value: "9087"
             - name: ERP_ENROLMENT_ACTIVATE_FOR_PORT
               value: "9087"
+            - name: ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN
+              value: epa-as-1-mock.%NAMESPACE%.svc.cluster.local:443+5;epa-as-2-mock.%NAMESPACE%.svc.cluster.local:443+5
             - name: ERP_SERVER_THREAD_COUNT
               value: "10"
             - name: ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC

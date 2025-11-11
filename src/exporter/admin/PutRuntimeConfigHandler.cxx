@@ -60,7 +60,7 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
                 ErpExpect(idx == param.second.size(), HttpStatus::BadRequest,
                           "illegal throttle value: " + param.second);
                 TLOG(INFO) << "admin: throttle value: " << throttleValue;
-                runtimeConfig->throttle(std::chrono::milliseconds(throttleValue));
+                runtimeConfig->throttle(RuntimeConfiguration::ThrottleMode::MANUAL, std::chrono::milliseconds(throttleValue));
             }
             catch (const std::logic_error& re)
             {

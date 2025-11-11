@@ -46,6 +46,7 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToString
     { Communication::MessageType::ChargChangeReq,   "ChargChangeReq"   },
     { Communication::MessageType::ChargChangeReply, "ChargChangeReply" },
     { Communication::MessageType::Reply,            "Reply"            },
+    { Communication::MessageType::DiGA,             "DiGA"            },
     { Communication::MessageType::DispReq,          "DispReq"          },
     { Communication::MessageType::Representative,   "Representative"   }
 };
@@ -55,6 +56,7 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToProfil
     { Communication::MessageType::ChargChangeReq,   structure_definition::communicationChargChangeReq   },
     { Communication::MessageType::ChargChangeReply, structure_definition::communicationChargChangeReply },
     { Communication::MessageType::Reply,            structure_definition::communicationReply            },
+    { Communication::MessageType::DiGA,             structure_definition::communicationDiGA            },
     { Communication::MessageType::DispReq,          structure_definition::communicationDispReq          },
     { Communication::MessageType::Representative,   structure_definition::communicationRepresentative   }
 };
@@ -64,6 +66,7 @@ const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessage
     {structure_definition::communicationChargChangeReq,   Communication::MessageType::ChargChangeReq   },
     {structure_definition::communicationChargChangeReply, Communication::MessageType::ChargChangeReply },
     {structure_definition::communicationReply,            Communication::MessageType::Reply            },
+    {structure_definition::communicationDiGA,             Communication::MessageType::DiGA            },
     {structure_definition::communicationDispReq,          Communication::MessageType::DispReq          },
     {structure_definition::communicationRepresentative,   Communication::MessageType::Representative   }
 };
@@ -92,6 +95,7 @@ std::string retrievePrescriptionIdFromReference(
             }
             break;
             case Communication::MessageType::InfoReq:
+            case Communication::MessageType::DiGA:
             case Communication::MessageType::DispReq:
             case Communication::MessageType::Representative:
             case Communication::MessageType::Reply:
@@ -110,6 +114,7 @@ std::string retrievePrescriptionIdFromReference(
             case Communication::MessageType::ChargChangeReply:
                 ModelFail("Invalid reference for this message type");
             case Communication::MessageType::InfoReq:
+            case Communication::MessageType::DiGA:
             case Communication::MessageType::DispReq:
             case Communication::MessageType::Representative:
             case Communication::MessageType::Reply:
@@ -187,17 +192,19 @@ ProfileType Communication::messageTypeToProfileType(MessageType messageType)
 {
     switch (messageType)
     {
-    case model::Communication::MessageType::InfoReq:
+        case MessageType::InfoReq:
             return ProfileType::GEM_ERP_PR_Communication_InfoReq;
-    case model::Communication::MessageType::ChargChangeReq:
+        case MessageType::ChargChangeReq:
             return ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq;
-    case model::Communication::MessageType::ChargChangeReply:
+        case MessageType::ChargChangeReply:
             return ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply;
-    case model::Communication::MessageType::Reply:
+        case MessageType::Reply:
             return ProfileType::GEM_ERP_PR_Communication_Reply;
-    case model::Communication::MessageType::DispReq:
+        case MessageType::DiGA:
+            return ProfileType::GEM_ERP_PR_Communication_DiGA;
+        case MessageType::DispReq:
             return ProfileType::GEM_ERP_PR_Communication_DispReq;
-    case model::Communication::MessageType::Representative:
+        case MessageType::Representative:
             return ProfileType::GEM_ERP_PR_Communication_Representative;
     }
     ModelFail("Converting Communication::messageType to SchemaType failed");
@@ -207,75 +214,77 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
 {
     switch (profileType)
     {
-    case ProfileType::GEM_ERP_PR_Communication_InfoReq:
-            return model::Communication::MessageType::InfoReq;
-    case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
-            return  model::Communication::MessageType::ChargChangeReq;
-    case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
-            return model::Communication::MessageType::ChargChangeReply;
-    case ProfileType::GEM_ERP_PR_Communication_Reply:
-            return model::Communication::MessageType::Reply;
-    case ProfileType::GEM_ERP_PR_Communication_DispReq:
-            return model::Communication::MessageType::DispReq;
-    case ProfileType::GEM_ERP_PR_Communication_Representative:
-            return model::Communication::MessageType::Representative;
-    case ProfileType::ActivateTaskParameters:
-    case ProfileType::CreateTaskParameters:
-    case ProfileType::GEM_ERP_PR_AuditEvent:
-    case ProfileType::GEM_ERP_PR_Binary:
-    case ProfileType::fhir:
-    case ProfileType::GEM_ERP_PR_Composition:
-    case ProfileType::GEM_ERP_PR_Device:
-    case ProfileType::GEM_ERP_PR_Digest:
-    case ProfileType::GEM_ERP_PR_Medication:
-    case ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input:
-    case ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input:
-    case ProfileType::KBV_PR_ERP_Bundle:
-    case ProfileType::KBV_PR_ERP_Composition:
-    case ProfileType::KBV_PR_ERP_Medication_Compounding:
-    case ProfileType::KBV_PR_ERP_Medication_FreeText:
-    case ProfileType::KBV_PR_ERP_Medication_Ingredient:
-    case ProfileType::KBV_PR_ERP_Medication_PZN:
-    case ProfileType::KBV_PR_ERP_PracticeSupply:
-    case ProfileType::KBV_PR_ERP_Prescription:
-    case ProfileType::KBV_PR_EVDGA_Bundle:
-    case ProfileType::KBV_PR_EVDGA_HealthAppRequest:
-    case ProfileType::KBV_PR_FOR_Coverage:
-    case ProfileType::KBV_PR_FOR_Organization:
-    case ProfileType::KBV_PR_FOR_Patient:
-    case ProfileType::KBV_PR_FOR_Practitioner:
-    case ProfileType::KBV_PR_FOR_PractitionerRole:
-    case ProfileType::GEM_ERP_PR_MedicationDispense:
-    case ProfileType::GEM_ERP_PR_MedicationDispense_DiGA:
-    case ProfileType::MedicationDispenseBundle:
-    case ProfileType::GEM_ERP_PR_Bundle:
-    case ProfileType::GEM_ERP_PR_Task:
-    case ProfileType::GEM_ERPCHRG_PR_ChargeItem:
-    case ProfileType::GEM_ERPCHRG_PR_Consent:
-    case ProfileType::PatchChargeItemParameters:
-    case ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle:
-    case ProfileType::Subscription:
-    case ProfileType::OperationOutcome:
-    case ProfileType::ProvidePrescriptionErpOp:
-    case ProfileType::EPAOpRxPrescriptionERPOutputParameters:
-    case ProfileType::CancelPrescriptionErpOp:
-    case ProfileType::EPAOpRxDispensationERPOutputParameters:
-    case ProfileType::ProvideDispensationErpOp:
-    case ProfileType::OrganizationDirectory:
-    case ProfileType::EPAMedicationPZNIngredient:
-    case ProfileType::GEM_ERPEU_PR_Consent:
-    case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request:
-    case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response:
-    case ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input:
-    case ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input:
-    case ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input:
-    case ProfileType::GEM_ERPEU_PR_MedicationDispense:
-    case ProfileType::GEM_ERPEU_PR_PAR_Medication:
-    case ProfileType::GEM_ERPEU_PR_Practitioner:
-    case ProfileType::GEM_ERPEU_PR_PractitionerRole:
-    case ProfileType::GEM_ERPEU_PR_Organization:
-    case ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
-        ModelFail("Not a Communication Profile");
+        case ProfileType::GEM_ERP_PR_Communication_InfoReq:
+            return MessageType::InfoReq;
+        case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
+            return MessageType::ChargChangeReq;
+        case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
+            return MessageType::ChargChangeReply;
+        case ProfileType::GEM_ERP_PR_Communication_Reply:
+            return MessageType::Reply;
+        case ProfileType::GEM_ERP_PR_Communication_DiGA:
+            return MessageType::DiGA;
+        case ProfileType::GEM_ERP_PR_Communication_DispReq:
+            return MessageType::DispReq;
+        case ProfileType::GEM_ERP_PR_Communication_Representative:
+            return MessageType::Representative;
+        case ProfileType::ActivateTaskParameters:
+        case ProfileType::CreateTaskParameters:
+        case ProfileType::GEM_ERP_PR_AuditEvent:
+        case ProfileType::GEM_ERP_PR_Binary:
+        case ProfileType::fhir:
+        case ProfileType::GEM_ERP_PR_Composition:
+        case ProfileType::GEM_ERP_PR_Device:
+        case ProfileType::GEM_ERP_PR_Digest:
+        case ProfileType::GEM_ERP_PR_Medication:
+        case ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input:
+        case ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input:
+        case ProfileType::KBV_PR_ERP_Bundle:
+        case ProfileType::KBV_PR_ERP_Composition:
+        case ProfileType::KBV_PR_ERP_Medication_Compounding:
+        case ProfileType::KBV_PR_ERP_Medication_FreeText:
+        case ProfileType::KBV_PR_ERP_Medication_Ingredient:
+        case ProfileType::KBV_PR_ERP_Medication_PZN:
+        case ProfileType::KBV_PR_ERP_PracticeSupply:
+        case ProfileType::KBV_PR_ERP_Prescription:
+        case ProfileType::KBV_PR_EVDGA_Bundle:
+        case ProfileType::KBV_PR_EVDGA_HealthAppRequest:
+        case ProfileType::KBV_PR_FOR_Coverage:
+        case ProfileType::KBV_PR_FOR_Organization:
+        case ProfileType::KBV_PR_FOR_Patient:
+        case ProfileType::KBV_PR_FOR_Practitioner:
+        case ProfileType::KBV_PR_FOR_PractitionerRole:
+        case ProfileType::GEM_ERP_PR_MedicationDispense:
+        case ProfileType::GEM_ERP_PR_MedicationDispense_DiGA:
+        case ProfileType::MedicationDispenseBundle:
+        case ProfileType::GEM_ERP_PR_Bundle:
+        case ProfileType::GEM_ERP_PR_Task:
+        case ProfileType::GEM_ERPCHRG_PR_ChargeItem:
+        case ProfileType::GEM_ERPCHRG_PR_Consent:
+        case ProfileType::PatchChargeItemParameters:
+        case ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle:
+        case ProfileType::Subscription:
+        case ProfileType::OperationOutcome:
+        case ProfileType::ProvidePrescriptionErpOp:
+        case ProfileType::EPAOpRxPrescriptionERPOutputParameters:
+        case ProfileType::CancelPrescriptionErpOp:
+        case ProfileType::EPAOpRxDispensationERPOutputParameters:
+        case ProfileType::ProvideDispensationErpOp:
+        case ProfileType::OrganizationDirectory:
+        case ProfileType::EPAMedicationPZNIngredient:
+        case ProfileType::GEM_ERPEU_PR_Consent:
+        case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request:
+        case ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response:
+        case ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input:
+        case ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input:
+        case ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input:
+        case ProfileType::GEM_ERPEU_PR_MedicationDispense:
+        case ProfileType::GEM_ERPEU_PR_Medication:
+        case ProfileType::GEM_ERPEU_PR_Practitioner:
+        case ProfileType::GEM_ERPEU_PR_PractitionerRole:
+        case ProfileType::GEM_ERPEU_PR_Organization:
+        case ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
+            ModelFail("Not a Communication Profile");
     }
     Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +
               std::to_string(static_cast<intmax_t>(profileType)),
@@ -329,10 +338,55 @@ std::optional<Identity> Communication::sender() const
     return Kvnr{*senderValue, *senderSystem};
 }
 
+bool Communication::isRequest() const
+{
+    switch (messageType())
+    {
+        case MessageType::ChargChangeReq:
+        case MessageType::DispReq:
+        case MessageType::InfoReq:
+            return true;
+        case MessageType::ChargChangeReply:
+        case MessageType::DiGA:
+        case MessageType::Representative:
+        case MessageType::Reply:
+            break;
+    }
+    return false;
+}
+
 bool Communication::isReply() const
 {
-    const auto msgType = messageType();
-    return msgType == MessageType::Reply || msgType == MessageType::ChargChangeReply;
+    switch (messageType())
+    {
+        case MessageType::Reply:
+        case MessageType::ChargChangeReply:
+        case MessageType::DiGA:
+            return true;
+        case MessageType::InfoReq:
+        case MessageType::DispReq:
+        case MessageType::Representative:
+        case MessageType::ChargChangeReq:
+            break;
+    }
+    return false;
+}
+
+bool Communication::requiresTask() const
+{
+    switch (messageType())
+    {
+        case MessageType::InfoReq:
+        case MessageType::DiGA:
+        case MessageType::DispReq:
+        case MessageType::Reply:
+        case MessageType::Representative:
+            return true;
+        case MessageType::ChargChangeReply:
+        case MessageType::ChargChangeReq:
+            break;
+    }
+    return false;
 }
 
 void Communication::setSender(const Identity& sender)
@@ -496,6 +550,7 @@ std::optional<SchemaType> Communication::payloadSchema() const
     {
         case ChargChangeReq:
         case ChargChangeReply:
+        case DiGA:
         case InfoReq:
         case Representative:
             return std::nullopt;

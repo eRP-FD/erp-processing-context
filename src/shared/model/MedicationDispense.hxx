@@ -39,7 +39,7 @@ public:
     [[nodiscard]] MedicationDispenseId id() const;
     [[nodiscard]] std::string_view medicationReference() const;
     [[nodiscard]] std::optional<Timestamp> getValidationReferenceTimestamp() const override;
-    [[nodiscard]] std::string_view performerReference() const;
+    [[nodiscard]] std::optional<std::string_view> performerReference() const;
 
     void setId(const MedicationDispenseId& id);
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);

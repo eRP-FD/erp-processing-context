@@ -1,0 +1,13 @@
+{
+    "resourceType": "Bundle",
+    "id": "bundle_fullUrl",
+    "type": "collection",
+    "entry": [
+        {
+            "resource": {
+                "resourceType": "Basic",
+                "code": "DemoResource"
+            }
+        }
+    ]
+}

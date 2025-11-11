@@ -62,9 +62,14 @@ public:
     {
         ASSERT_NO_THROW((void) repo());
     }
+    [[nodiscard]] static gsl::not_null<const FhirStructureRepositoryBackend*> backend()
+    {
+        static std::unique_ptr instance = BaseT::makeBackend();
+        return std::to_address(instance);
+    }
     [[nodiscard]] const FhirStructureRepositoryView& repo()
     {
-        static std::shared_ptr instance = BaseT::makeRepo();
+        static std::shared_ptr instance = BaseT::makeRepo(*BaseT::backend());
         return *instance;
     }
 
@@ -88,21 +93,16 @@ protected:
         {
             doc.emplace(model::NumberAsStringParserDocument::fromJson(fileContent));
         }
-        auto rootElement = std::make_shared<ErpElement>(repo().shared_from_this(), std::weak_ptr<const ErpElement>{},
+        auto rootElement = std::make_shared<ErpElement>(backend(), std::weak_ptr<const ErpElement>{},
                                                         std::string{GetParam().type}, &doc.value());
-        auto validationResult =
-            FhirPathValidator::validate({rootElement}, std::string{GetParam().type}, validatorOptions()).results();
+        auto validationResult = FhirPathValidator::validate(repo().shared_from_this(), {rootElement},
+                                                            std::string{GetParam().type}, validatorOptions())
+                                    .results();
 
         for (const auto& expected : GetParam().expect)
         {
-#ifdef NDEBUG
-            // as in release builds severities below warning are log stored,
-            // we have to ignore them
-            if (expected.severity() < fhirtools::Severity::warning)
-            {
-                continue;
-            }
-#endif// NDEBUG
+            ASSERT_GE(expected.severity(), Severity::info)
+                << "Don't define `debug` assertions. They are not compiled into Release-like builds.";
             auto isExpected = [&](ValidationError ve) {
                 ve.profile = nullptr;
                 return ve == expected;
@@ -140,21 +140,23 @@ protected:
     ResourceManager& resourceManager = ResourceManager::instance();
 
 private:
-    static std::shared_ptr<FhirStructureRepositoryView> makeRepo()
+    static std::unique_ptr<fhirtools::FhirStructureRepositoryBackend> makeBackend()
     {
+        auto result = std::make_unique<fhirtools::FhirStructureRepositoryBackend>();
         std::list<std::filesystem::path> files = BaseT::fileList();
         std::list<std::filesystem::path> absolutfiles;
         std::ranges::transform(files, std::back_inserter(absolutfiles), &ResourceManager::getAbsoluteFilename);
-        struct RepoItems {
-            std::unique_ptr<FhirStructureRepositoryBackend> backend =
-                std::make_unique<FhirStructureRepositoryBackend>();
-            FhirResourceGroupConst resolver{"test"};
-            std::shared_ptr<FhirResourceViewGroupSet> view =
-                FhirResourceViewGroupSet::create("test", resolver.findGroupById("test"), backend.get());
-        };
-        auto result = std::make_shared<RepoItems>();
-        result->backend->load(absolutfiles, result->resolver);
-        return std::shared_ptr<FhirStructureRepositoryView>{result, result->view.get()};
+        FhirResourceGroupConst resolver{"test"};
+        result->load(absolutfiles, resolver);
+        return result;
+    }
+
+    static std::shared_ptr<FhirStructureRepositoryView>
+    makeRepo(const fhirtools::FhirStructureRepositoryBackend& backend)
+    {
+        std::set<gsl::not_null<std::shared_ptr<const FhirResourceGroup>>> allGroups;
+        std::ranges::copy(backend.allGroups() | std::views::values, inserter(allGroups, allGroups.begin()));
+        return FhirResourceViewGroupSet::create("test", std::move(allGroups), &backend);
     }
 };
 }

@@ -19,6 +19,7 @@
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <gtest/gtest.h>
 #include <regex>
 
@@ -101,8 +102,7 @@ protected:
         const auto& fileContent = resourceManager.getStringResource(resourcePath.native());
         auto doc = std::make_unique<JsonDoc>(JsonDoc::fromJson(fileContent));
         std::string resourceType{doc->getStringValueFromPointer(resourceTypePointer)};
-        auto result = std::make_shared<ResultHelper>(repo().shared_from_this(), std::weak_ptr<ErpElement>{},
-                                                     resourceType, doc.get());
+        auto result = std::make_shared<ResultHelper>(backend(), std::weak_ptr<ErpElement>{}, resourceType, doc.get());
         result->doc = std::move(doc);
         return result;
     }
@@ -115,12 +115,17 @@ protected:
                            mkres("test/fhir-path/profiles/ReferenceExtension.xml")});
         return profileList;
     }
-    static const FhirStructureRepositoryView& repo()
+    static const gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> backend()
     {
         static FhirResourceGroupConst resolver{"test"};
         static gsl::not_null backend = DefaultFhirStructureRepository::create(getProfileList(), resolver);
-        static auto view = FhirResourceViewGroupSet::create("test", resolver.findGroupById("test"),
-                                                                      std::addressof(*backend));
+        return std::to_address(backend);
+    }
+
+    static const FhirStructureRepositoryView& repo()
+    {
+        static FhirResourceGroupConst resolver{"test"};
+        static auto view = FhirResourceViewGroupSet::create("test", backend()->allGroups().at("test"), backend());
         return *view;
     }
     ResourceManager& resourceManager = ResourceManager::instance();
@@ -129,7 +134,8 @@ protected:
 TEST_F(ReferenceTest, invalidReferenced)
 {
     auto element = loadResource("test/fhir-path/samples/invalid_references_target_profile.json");
-    auto result = FhirPathValidator::validate(element, element->definitionPointer().element()->name());
+    auto result =
+        FhirPathValidator::validate(repo().shared_from_this(), element, element->definitionPointer().element()->name());
     const auto& resultList = result.results();
     auto match = std::ranges::any_of(resultList, [](const ValidationError& res) {
         return res.severity() == Severity::error && res.fieldName == "DomainResource.extension[0].valueReference" &&
@@ -183,8 +189,10 @@ protected:
 TEST_P(ReferenceFinderTest, run)
 {
     auto doc = loadResource(GetParam().file);
-    auto finderResult = ReferenceFinder::find(*doc, {}, {}, doc->definitionPointer().element()->name());
+    auto finderResult =
+        ReferenceFinder::find(repo().shared_from_this(), *doc, {}, {}, doc->definitionPointer().element()->name());
     finderResult.validationResults.dumpToLog();
+    finderResult.referenceContext.dumpToLog();
     for (const auto& resource : finderResult.referenceContext.resources())
     {
         for (const auto& refTargets : resource->referenceTargets)
@@ -374,10 +382,12 @@ class ReferenceFinderResourcesTest : public ReferenceTest, public ::testing::Wit
 TEST_P(ReferenceFinderResourcesTest, run)
 {
     auto resource = loadResource(GetParam().file);
-    fhirtools::FhirPathValidator::validate(resource, resource->resourceType()).dumpToLog();
-    auto finderResult = ReferenceFinder::find(*resource, {}, {}, resource->definitionPointer().element()->name());
+    fhirtools::FhirPathValidator::validate(repo().shared_from_this(), resource, resource->resourceType()).dumpToLog();
+    auto finderResult = ReferenceFinder::find(repo().shared_from_this(), *resource, {}, {},
+                                              resource->definitionPointer().element()->name());
     const auto& expects = GetParam().expected;
     std::vector<bool> foundExpected(expects.size(), false);
+    finderResult.referenceContext.dumpToLog();
     for (const auto& res : finderResult.referenceContext.resources())
     {
         bool ok = false;
@@ -391,7 +401,8 @@ TEST_P(ReferenceFinderResourcesTest, run)
             }
         }
         EXPECT_TRUE(ok) << *res;
-        TVLOG(0) << *res;
+        EXPECT_EQ(res->referenceRequirement & res->referencedByAnchor, res->referenceRequirement)
+            << "reference requirement not fulfilled: \n" << *res;
     }
     for (size_t expectIdx = 0; expectIdx < expects.size(); ++expectIdx)
     {
@@ -415,6 +426,7 @@ INSTANTIATE_TEST_SUITE_P(samples, ReferenceFinderResourcesTest,
                 .resourceFullUrl = "http://erp.test/DomainResource/0815",
                 .elementFullPath = "Bundle.entry[0].resource{DomainResource}",
                 .referenceTargets{"http://erp.test/DomainResource/4711"},
+                .anchorType = AnchorType::contained,
             },
             {
                 .resourceFullUrl = "http://erp.test/Bundle/4711",
@@ -440,6 +452,7 @@ INSTANTIATE_TEST_SUITE_P(samples, ReferenceFinderResourcesTest,
             {
                 .resourceFullUrl = "http://erp.test/Device/0",
                 .elementFullPath = "Bundle.entry[1].resource{Device}",
+                .anchorType = AnchorType::contained,
                 .referenceRequirement = AnchorType::composition
             }
         }
@@ -451,13 +464,13 @@ INSTANTIATE_TEST_SUITE_P(samples, ReferenceFinderResourcesTest,
             {
                 .resourceFullUrl = "DomainResource/root",
                 .elementFullPath = "DomainResource",
-                .referenceTargets{"DomainResource/root#contained1"}
+                .referenceTargets{"DomainResource/root#contained1"},
+                .anchorType = AnchorType::contained,
             },
             {
                 .resourceFullUrl = "DomainResource/root#contained1",
                 .elementFullPath = "DomainResource.contained[0]{DomainResource}",
                 .referenceTargets{"DomainResource/root#contained2"},
-                .anchorType = AnchorType::contained,
                 .referenceRequirement = AnchorType::contained,
             },
             {
@@ -467,7 +480,434 @@ INSTANTIATE_TEST_SUITE_P(samples, ReferenceFinderResourcesTest,
                 .referenceRequirement = AnchorType::contained,
             }
         }
+    },
+    BundleSample{
+        .file{"test/fhir-path/samples/references_contained_no_id.json"},
+        .expected
+        {
+            {
+                .resourceFullUrl = "DomainResource/",
+                .elementFullPath = "DomainResource",
+                .referenceTargets{"DomainResource/#contained1"},
+                .anchorType = AnchorType::contained,
+            },
+            {
+                .resourceFullUrl = "DomainResource/#contained1",
+                .elementFullPath = "DomainResource.contained[0]{DomainResource}",
+                .referenceRequirement = AnchorType::contained,
+            },
+        }
     }
 ));
 
+
 // clang-format on
+
+
+
+struct ReferenceResolutionTestParam
+{
+    struct Expectation
+    {
+        std::string element;
+        std::set<std::string> references;
+    };
+    std::string file;
+    std::list<Expectation> expected;
+
+};
+
+class ReferenceResolutionTest : public ReferenceTest, public testing::WithParamInterface<ReferenceResolutionTestParam>
+{
+
+};
+
+TEST_P(ReferenceResolutionTest, run)
+{
+    auto element = loadResource(GetParam().file);
+    auto refContext = fhirtools::ReferenceFinder::find(repo().shared_from_this(), *element, {}, {}, element->resourceType());
+    refContext.referenceContext.dumpToLog();
+}
+
+
+INSTANTIATE_TEST_SUITE_P(samples, ReferenceResolutionTest, testing::ValuesIn(std::list<ReferenceResolutionTestParam>{
+{
+    .file = "test/fhir-path/samples/bundle_fullUrl.json",
+    .expected =  {
+
+    },
+}
+}));
+
+
+struct BundleFullUrlTestParam {
+    std::string name;
+    std::optional<std::string> fullUrl;
+    std::optional<std::string> id;
+    ValidatorOptions::SeverityLevels levels{};
+    std::function<void(const fhirtools::ValidationResults&)> expect;
+};
+
+
+class BundleFullUrlTest : public ReferenceTest, public testing::WithParamInterface<BundleFullUrlTestParam>
+{
+};
+
+TEST_P(BundleFullUrlTest, run)
+{
+    namespace elements = model::resource::elements;
+    static rapidjson::Pointer entryFullUrlPtr{
+        model::resource::ElementName::path(elements::entry, 0, elements::fullUrl)};
+    static rapidjson::Pointer bundledResourceIdPtr{
+        model::resource::ElementName::path(elements::entry, 0, elements::resource, elements::id)};
+    std::string json = resourceManager.getStringResource("test/fhir-path/samples/bundle_fullUrl_template.json");
+    auto doc = model::NumberAsStringParserDocument::fromJson(json);
+    if (GetParam().fullUrl)
+    {
+        doc.setValue(entryFullUrlPtr, *GetParam().fullUrl);
+    }
+    if (GetParam().id)
+    {
+        doc.setValue(bundledResourceIdPtr, *GetParam().id);
+    }
+    auto element = std::make_shared<ErpElement>(backend(), std::weak_ptr<ErpElement>{}, "Bundle", &doc);
+    fhirtools::ValidatorOptions options{.levels = GetParam().levels};
+    auto result = FhirPathValidator::validate(repo().shared_from_this(), element, "Bundle", options);
+    if (result.highestSeverity() >= Severity::error)
+    {
+        result.dumpToLog();
+        auto finderResult = fhirtools::ReferenceFinder::find(repo().shared_from_this(), *element, {}, options, "Bundle");
+        finderResult.referenceContext.dumpToLog();
+        ADD_FAILURE() << "fhir validation failed: \n" << doc.serializeToJsonString();
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    warning, BundleFullUrlTest,
+    testing::ValuesIn(std::list<BundleFullUrlTestParam>{
+        {
+            .name = "fullUrlMissing",
+            .fullUrl = std::nullopt,
+            .id = "4711",
+            .levels =
+                {
+                    .bundleFullUrlMissing = fhirtools::Severity::warning,
+                },
+            .expect =
+                [](const fhirtools::ValidationResults& result) {
+                    EXPECT_TRUE(std::ranges::any_of(result.results(), [](const fhirtools::ValidationError& err) {
+                        const auto* reason = get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+                        return reason && std::get<fhirtools::ExtendedValidation>(*reason) ==
+                                             fhirtools::ExtendedValidation::bundleFullUrlMissing;
+                    }));
+                },
+        },
+        {
+            .name = "fullUrlDifferentID",
+            .fullUrl = "http://fhirtools.test/Basic/0815",
+            .id = "4711",
+            .levels =
+                {
+                    .bundleFullUrlIdMissmatch = fhirtools::Severity::warning,
+                },
+            .expect =
+                [](const fhirtools::ValidationResults& result) {
+                    EXPECT_TRUE(std::ranges::any_of(result.results(), [](const fhirtools::ValidationError& err) {
+                        const auto* reason = get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+                        return reason && std::get<fhirtools::ExtendedValidation>(*reason) ==
+                                             fhirtools::ExtendedValidation::bundleFullUrlIdMissmatch;
+                    }));
+                },
+        },
+        {
+            .name = "fullUrlDifferentResourceType",
+            .fullUrl = "http://fhirtools.test/TestReport/4711",
+            .id = "4711",
+            .levels =
+                {
+                    .bundleFullUrlResourceTypeMissmatch = fhirtools::Severity::warning,
+                },
+            .expect =
+                [](const fhirtools::ValidationResults& result) {
+                    EXPECT_TRUE(std::ranges::any_of(result.results(), [](const fhirtools::ValidationError& err) {
+                        const auto* reason = get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+                        return reason && std::get<fhirtools::ExtendedValidation>(*reason) ==
+                                             fhirtools::ExtendedValidation::bundleFullUrlResourceTypeMissmatch;
+                    }));
+                },
+        },
+        {
+            .name = "bundledResourceMissingId",
+            .fullUrl = "http://fhirtools.test/Basic/4711",
+            .id = std::nullopt,
+            .levels =
+                {
+                    .bundledResourceMissingId = fhirtools::Severity::warning,
+                },
+            .expect =
+                [](const fhirtools::ValidationResults& result) {
+                    EXPECT_TRUE(std::ranges::any_of(result.results(), [](const fhirtools::ValidationError& err) {
+                        const auto* reason = get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+                        return reason && std::get<fhirtools::ExtendedValidation>(*reason) ==
+                                             fhirtools::ExtendedValidation::bundledResourceMissingId;
+                    }));
+                },
+        },
+    }),
+    [](const testing::TestParamInfo<BundleFullUrlTestParam>& info) {
+        return info.param.name;
+    });
+
+INSTANTIATE_TEST_SUITE_P(ok, BundleFullUrlTest,
+                         testing::ValuesIn(std::list<BundleFullUrlTestParam>{
+                             {
+                                 .name = "goodFullUrl",
+                                 .fullUrl = "http://fhirtools.test/Basic/4711",
+                                 .id = "4711",
+                                 .levels =
+                                     {
+                                         .bundleFullUrlMissing = fhirtools::Severity::error,
+                                         .bundleFullUrlIdMissmatch = fhirtools::Severity::error,
+                                         .bundleFullUrlResourceTypeMissmatch = fhirtools::Severity::error,
+                                         .bundledResourceMissingId = fhirtools::Severity::error,
+                                     },
+                                 .expect =
+                                     [](const fhirtools::ValidationResults&) {
+                                     },
+                             },
+                         }),
+                         [](const testing::TestParamInfo<BundleFullUrlTestParam>& info) {
+                             return info.param.name;
+                         });
+
+
+struct UnresolveableReferenceInBundleTestParam {
+    std::string name;
+    std::string fileName;
+    std::string bundleType = "collection";
+    struct DomainResource {
+        std::string basePath;
+        std::optional<std::string> fullUrl = std::nullopt;
+        std::string id;
+        std::string reference;
+    };
+    std::vector<DomainResource> resources;
+    bool expectSuccess = true;
+};
+
+class UnresolveableReferenceInBundleTest : public ReferenceTest,
+                                           public testing::WithParamInterface<UnresolveableReferenceInBundleTestParam>
+{
+public:
+    using Param = UnresolveableReferenceInBundleTestParam;
+
+    static bool hasUnresolveableReferenceInBundle(const fhirtools::ValidationError& err)
+    {
+        const auto* extFail = get_if<fhirtools::ValidationError::ExtendedValidationFailure>(&err.reason);
+        return extFail && get<fhirtools::ExtendedValidation>(*extFail) ==
+                                fhirtools::ExtendedValidation::unresolveableReferenceInBundle;
+    };
+
+    static void set(model::NumberAsStringParserDocument& doc, const Param::DomainResource& param)
+    {
+        namespace elements = model::resource::elements;
+        using model::resource::ElementName;
+        rapidjson::Pointer fullUrlPtr{ElementName::path(param.basePath, elements::fullUrl)};
+        std::string basePath = param.basePath;
+        if (param.fullUrl)
+        {
+            basePath += "/resource";
+            doc.setValue(fullUrlPtr, *param.fullUrl);
+        }
+        rapidjson::Pointer idPtr{ElementName::path(basePath, elements::id)};
+        rapidjson::Pointer extensionUrlPtr{ElementName::path(basePath, elements::extension, elements::url)};
+        rapidjson::Pointer referencePtr{ElementName::path(basePath, elements::extension,
+                                                          ElementName{"valueReference"}, elements::reference)};
+        rapidjson::Pointer resourceTypePtr{ElementName::path(basePath, elements::resourceType)};
+
+        doc.setValue(resourceTypePtr, "DomainResource");
+        doc.setValue(idPtr, param.id);
+        doc.setValue(extensionUrlPtr, "http://erp.test/ReferenceExtension");
+        doc.setValue(referencePtr, param.reference);
+    }
+
+    static std::string name(const testing::TestParamInfo<UnresolveableReferenceInBundleTestParam>& info)
+    {
+        return info.param.name;
+    }
+};
+
+TEST_P(UnresolveableReferenceInBundleTest, run)
+{
+    static rapidjson::Pointer bundleTypePtr{"/type"};
+    std::string json = resourceManager.getStringResource(GetParam().fileName);
+    TVLOG(0) << json;
+
+    auto doc = model::NumberAsStringParserDocument::fromJson(json);
+    doc.setValue(bundleTypePtr, GetParam().bundleType);
+
+    for (const auto& res: GetParam().resources)
+    {
+        set(doc, res);
+    }
+    auto element = std::make_shared<ErpElement>(backend(), std::weak_ptr<ErpElement>{}, "Bundle", &doc);
+    fhirtools::ValidatorOptions options{
+        .levels =
+            {
+                .unresolveableReferenceInBundle = fhirtools::Severity::error,
+            },
+    };
+    fhirtools::ValidationResults results;
+    ASSERT_NO_THROW(results = FhirPathValidator::validate(repo().shared_from_this(), element, "Bundle", options))
+        << doc.serializeToJsonString();
+    bool foundUnresolved = std::ranges::any_of(results.results(), hasUnresolveableReferenceInBundle);
+    EXPECT_NE(foundUnresolved, GetParam().expectSuccess) << doc.serializeToJsonString();
+}
+
+INSTANTIATE_TEST_SUITE_P(success, UnresolveableReferenceInBundleTest,
+                         testing::ValuesIn(std::initializer_list<UnresolveableReferenceInBundleTestParam>{
+                             {
+                                 .name = "absoluteResolved",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                     {
+                                         {
+                                             .basePath = "entry/0",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/0",
+                                             .id = "0",
+                                             .reference = "DomainResource/0",
+                                         },
+                                         {
+                                             .basePath = "entry/1",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/1",
+                                             .id = "1",
+                                             .reference = "https://fhirtools.test/DomainResource/0",
+                                         },
+                                     },
+                                    .expectSuccess = true,
+                             },
+                             {
+                                 .name = "relativeResolved",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                     {
+                                         {
+                                             .basePath = "entry/0",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/0",
+                                             .id = "0",
+                                             .reference = "DomainResource/0",
+                                         },
+                                         {
+                                             .basePath = "entry/1",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/1",
+                                             .id = "1",
+                                             .reference = "DomainResource/0",
+                                         },
+                                     },
+                                    .expectSuccess = true,
+                             },
+                             {
+                                 .name = "resolvedInContained",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                 {
+                                     {
+                                         .basePath = "entry/0",
+                                         .fullUrl = "https://fhirtools1.test/DomainResource/0",
+                                         .id = "0",
+                                         .reference = "DomainResource/0",
+                                     },
+                                     {
+                                         .basePath = "entry/0/resource/contained/0",
+                                         .id = "1",
+                                         .reference = "DomainResource/0",
+                                     },
+                                 },
+                                 .expectSuccess = true,
+                             },
+                             {
+                                 .name = "referenceConatained",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                 {
+                                     {
+                                         .basePath = "entry/0",
+                                         .fullUrl = "https://fhirtools1.test/DomainResource/0",
+                                         .id = "0",
+                                         .reference = "#1",
+                                     },
+                                     {
+                                         .basePath = "entry/0/resource/contained/0",
+                                         .id = "1",
+                                         .reference = "DomainResource/0",
+                                     },
+                                 },
+                                 .expectSuccess = true,
+                             },
+
+                         }),
+                         &UnresolveableReferenceInBundleTest::name);
+
+INSTANTIATE_TEST_SUITE_P(failed, UnresolveableReferenceInBundleTest,
+                         testing::ValuesIn(std::initializer_list<UnresolveableReferenceInBundleTestParam>{
+                             {
+                                 .name = "relativeUnresolvedDifferentHost",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                     {
+                                         {
+                                             .basePath = "entry/0",
+                                             .fullUrl = "https://fhirtools1.test/DomainResource/0",
+                                             .id = "0",
+                                             .reference = "DomainResource/0",
+                                         },
+                                         {
+                                             .basePath = "entry/1",
+                                             .fullUrl = "https://fhirtools2.test/DomainResource/1",
+                                             .id = "1",
+                                             .reference = "DomainResource/0",
+                                         },
+                                     },
+                                .expectSuccess = false,
+                             },
+                             {
+                                 .name = "unresolvedInContained",
+                                 .fileName = "test/fhir-path/samples/references_bundled.json",
+                                 .resources =
+                                     {
+                                         {
+                                             .basePath = "entry/0",
+                                             .fullUrl = "https://fhirtools1.test/DomainResource/0",
+                                             .id = "0",
+                                             .reference = "DomainResource/0",
+                                         },
+                                         {
+                                             .basePath = "entry/0/resource/contained/0",
+                                             .id = "1",
+                                             .reference = "urn:uuid:edb2d973-da02-4e34-8910-4e3dc982f330",
+                                         },
+                                     },
+                                .expectSuccess = false,
+                             },
+                             {
+                                 .name = "notResolvedAcrossBundles",
+                                 .fileName = "test/fhir-path/samples/references_nested_bundle.json",
+                                 .resources =
+                                     {
+                                         {
+                                             .basePath = "entry/0",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/0",
+                                             .id = "0",
+                                             .reference = "DomainResource/0",
+                                         },
+                                         {
+                                             .basePath = "entry/1/resource/entry/0",
+                                             .fullUrl = "https://fhirtools.test/DomainResource/1",
+                                             .id = "1",
+                                             .reference = "https://fhirtools.test/DomainResource/0",
+                                         },
+                                     },
+                                .expectSuccess = false,
+                             },
+                         }),
+                         &UnresolveableReferenceInBundleTest::name);

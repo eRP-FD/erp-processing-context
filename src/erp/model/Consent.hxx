@@ -48,6 +48,7 @@ public:
 
     void fillId(ConsentType category, const Kvnr& kvnr);
     void fillCategory(ConsentType category);
+    void setDateTime(const model::Timestamp& dateTime);
 
     std::optional<Timestamp> getValidationReferenceTimestamp() const override;
 
@@ -56,7 +57,6 @@ private:
     explicit Consent(NumberAsStringParserDocument&& jsonTree);
 
     void setPatientKvnr(const model::Kvnr& kvnr);
-    void setDateTime(const model::Timestamp& dateTime);
 };
 
 // NOLINTNEXTLINE(bugprone-exception-escape)

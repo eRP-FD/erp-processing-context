@@ -115,10 +115,10 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
 
     if (isDiga(prescriptionId.type()))
     {
-        A_23090_06.start("header for diga redeem code (1=contained, 0=not contained)");
+        A_23090_07.start("header for diga redeem code (1=contained, 0=not contained)");
         session.addOuterResponseHeaderField(Header::DigaRedeemCode,
                                             medicationsAndDispenses.containsDigaRedeemCode() ? "1" : "0");
-        A_23090_06.finish();
+        A_23090_07.finish();
     }
 
     A_19233_05.start(
@@ -180,10 +180,6 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     const model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier);
     responseReceipt.setSignature(signature);
     A_19233_05.finish();
-
-    A_20513.start("Deletion of Communication resources referenced by Task");
-    databaseHandle->deleteCommunicationsForTask(prescriptionId);
-    A_20513.finish();
 
     // store in DB:
     A_19248_05.start("Save modified Task and MedicationDispense / Receipt objects");

@@ -6,6 +6,7 @@
  */
 
 #include "erp/ErpProcessingContext.hxx"
+#include "erp/crypto/DtbpPseudonymization.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/network/client/HttpClient.hxx"
 #include "shared/common/Constants.hxx"
@@ -379,7 +380,7 @@ TEST_F(VauRequestHandlerTestForceMockDB, BruteForceHeaderTaskActicate)
         // arzt
         auto encryptedRequest = makeEncryptedRequest(
             HttpMethod::POST, "/Task/160.000.000.004.713.80/$activate",
-            jwtWithProfessionOID(profession_oid::oid_arzt), "wrong_ac");
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt), "wrong_ac");
         auto response = client.send(encryptedRequest);
 
         ASSERT_TRUE(response.getHeader().hasHeader(Header::VAUErrorCode));
@@ -399,7 +400,7 @@ TEST_F(VauRequestHandlerTestForceMockDB, NoBruteForceHeaderTaskActicate)
         // arzt
         auto encryptedRequest = makeEncryptedRequest(
             HttpMethod::POST, "/Task/160.000.000.004.713.80/$activate",
-            jwtWithProfessionOID(profession_oid::oid_arzt), "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt), "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea");
         auto response = client.send(encryptedRequest);
 
         ASSERT_FALSE(response.getHeader().hasHeader(Header::VAUErrorCode));
@@ -570,7 +571,7 @@ TEST_F(VauRequestHandlerTestForceMockDB, InvalidPrescriptionHeaderTaskActivate)
 
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/160.000.000.004.713.80/$activate",
-                             jwtWithProfessionOID(profession_oid::oid_arzt),
+                             jwtWithProfessionOID(profession_oid::oid_praxis_arzt),
                              "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea",
                              std::make_pair(parameters, "application/fhir+xml"));
     auto response = client.send(encryptedRequest);
@@ -605,7 +606,7 @@ TEST_F(VauRequestHandlerTestForceMockDB, NoInvalidPrescriptionHeaderTaskActivate
 
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/160.000.000.004.713.80/$activate",
-                             jwtWithProfessionOID(profession_oid::oid_arzt),
+                             jwtWithProfessionOID(profession_oid::oid_praxis_arzt),
                              "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea",
                              std::make_pair(parameters, "application/fhir+xml"));
     auto response = client.send(encryptedRequest);
@@ -623,7 +624,7 @@ TEST_F(VauRequestHandlerTest, UnsupportedAcceptHeaderERP4620)
     auto client = createClient();
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create",
-            jwtWithProfessionOID(profession_oid::oid_arzt),{},
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt),{},
             std::make_pair(body, "application/fhir+xml"), {{Header::Accept, "application/jpeg"}});
     auto response = client.send(encryptedRequest);
     const ClientResponse decryptedResponse = mTeeProtocol.parseResponse(response);
@@ -640,7 +641,7 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirJson)
     auto client = createClient();
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create?_format=fhir%2Bjson",
-                             jwtWithProfessionOID(profession_oid::oid_arzt),{},
+                             jwtWithProfessionOID(profession_oid::oid_praxis_arzt),{},
                              std::make_pair(body, "application/fhir+xml"), {});
     auto response = client.send(encryptedRequest);
     const ClientResponse decryptedResponse = mTeeProtocol.parseResponse(response);
@@ -658,7 +659,7 @@ TEST_F(VauRequestHandlerTest, FormatRequestParameterFhirXml)
     auto client = createClient();
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create?_format=fhir%2Bxml",
-                             jwtWithProfessionOID(profession_oid::oid_arzt),{},
+                             jwtWithProfessionOID(profession_oid::oid_praxis_arzt),{},
                              std::make_pair(body, "application/fhir+xml"), {});
     auto response = client.send(encryptedRequest);
     const ClientResponse decryptedResponse = mTeeProtocol.parseResponse(response);
@@ -676,7 +677,7 @@ TEST_F(VauRequestHandlerTest, InvalidFormatRequestParameter)
     auto client = createClient();
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create?_format=jpeg",
-                             jwtWithProfessionOID(profession_oid::oid_arzt),{},
+                             jwtWithProfessionOID(profession_oid::oid_praxis_arzt),{},
                              std::make_pair(body, "application/fhir+xml"), {});
     auto response = client.send(encryptedRequest);
     const ClientResponse decryptedResponse = mTeeProtocol.parseResponse(response);
@@ -704,7 +705,7 @@ TEST_F(VauRequestHandlerTest, InvalidAcceptHeaderERP4620)
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             header + body,
-            jwtWithProfessionOID(profession_oid::oid_arzt)));
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt)));
     encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
 
     auto response = client.send(encryptedRequest);
@@ -733,7 +734,7 @@ TEST_F(VauRequestHandlerTest, EmptyAcceptHeaderERP4620)
         mTeeProtocol.createRequest(
             MockCryptography::getEciesPublicKeyCertificate(),
             header + body,
-            jwtWithProfessionOID(profession_oid::oid_arzt)));
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt)));
     encryptedRequest.setHeader(Header::ContentType, "application/octet-stream");
 
     auto response = client.send(encryptedRequest);
@@ -745,7 +746,7 @@ TEST_F(VauRequestHandlerTest, failForMissingTls)
 {
     auto encryptedRequest =
         makeEncryptedRequest(HttpMethod::POST, "/Task/$create",
-            jwtWithProfessionOID(profession_oid::oid_arzt),{},
+            jwtWithProfessionOID(profession_oid::oid_praxis_arzt),{},
             std::make_pair("", "application/fhir+xml"));
     const auto& config = Configuration::instance();
     auto client =
@@ -953,4 +954,57 @@ TEST_F(VauRequestHandlerTest, NoRateLimit_oid_ncpeh)//NOLINT(readability-functio
         {}, std::make_pair<std::string_view, std::string_view>(xmlStr, "application/fhir+xml;charset=utf-8"), {{Header::ContentType, ContentMimeType::fhirXmlUtf8}});
     client.send(encryptedRequest);
     EXPECT_FALSE(mContext->getRedisClient()->exists(key));
+}
+
+
+TEST_F(VauRequestHandlerTest, pnLogKeyPatient)//NOLINT(readability-function-cognitive-complexity)
+{
+    auto pseudonymizationKey = mHsmPool->acquire().session().getPseudonameLogKey();
+    ASSERT_TRUE(pseudonymizationKey.has_value());
+    const auto key = SafeString(std::move(*pseudonymizationKey));
+    const std::string claimString =
+        FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
+    rapidjson::Document claim;
+    ASSERT_NO_THROW(claim.Parse(claimString));
+    JWT token;
+    ASSERT_NO_THROW(token = mJwtBuilder.getJWT(claim));
+    auto client = createClient();
+    auto req = makeEncryptedRequest(HttpMethod::GET, "/Task", token);
+    req.setHeader(Header::XForwardedFor, "127.0.0.1");
+    auto response = client.send(req);
+    EXPECT_FALSE(response.getHeader().hasHeader(Header::VAUErrorCode));
+    // VauRequestHandler does not set the header field because
+    // GET /Task is performed with oid == versicherter:
+    EXPECT_FALSE(response.getHeader().hasHeader(Header::PnTelematikId));
+    ASSERT_TRUE(response.getHeader().hasHeader(Header::PnIpaddress));
+
+    const auto ipAddress =
+        DtbpPseudonymization::decryptLogData(response.getHeader().header(Header::PnIpaddress).value(), key);
+    EXPECT_EQ(ipAddress, "127.0.0.1");
+}
+
+
+TEST_F(VauRequestHandlerTest, pnLogKeyProfession)//NOLINT(readability-function-cognitive-complexity)
+{
+    auto pseudonymizationKey = mHsmPool->acquire().session().getPseudonameLogKey();
+    ASSERT_TRUE(pseudonymizationKey.has_value());
+    const auto key = SafeString(std::move(*pseudonymizationKey));
+    auto client = createClient();
+    // pharmacist
+    auto req = makeEncryptedRequest(
+        HttpMethod::POST,
+        "/Task/160.000.000.004.714.77/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea",
+        jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke));
+    req.setHeader(Header::XForwardedFor, "127.0.0.1");
+    auto response = client.send(req);
+    EXPECT_FALSE(response.getHeader().hasHeader(Header::VAUErrorCode));
+    ASSERT_TRUE(response.getHeader().hasHeader(Header::PnIpaddress));
+    ASSERT_TRUE(response.getHeader().hasHeader(Header::PnTelematikId));
+    const auto ipAddress =
+        DtbpPseudonymization::decryptLogData(response.getHeader().header(Header::PnIpaddress).value(), key);
+    EXPECT_EQ(ipAddress, "127.0.0.1");
+
+    const auto telematikId =
+        DtbpPseudonymization::decryptLogData(response.getHeader().header(Header::PnTelematikId).value(), key);
+    EXPECT_EQ(telematikId, "X020406082");
 }

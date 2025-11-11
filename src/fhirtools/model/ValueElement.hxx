@@ -22,9 +22,9 @@ class FhirStructureRepositoryView;
 class ValueElement : public Element
 {
 public:
-    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo,
+    ValueElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> repo,
                  std::shared_ptr<const FhirValue> value, std::weak_ptr<const Element> parent = {});
-    ValueElement(const std::shared_ptr<const fhirtools::FhirStructureRepositoryView>& repo,
+    ValueElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> repo,
                  std::weak_ptr<const Element> parent, std::shared_ptr<const FhirValue> value,
                  ProfiledElementTypeInfo defPtr);
 

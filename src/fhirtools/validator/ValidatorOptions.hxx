@@ -20,14 +20,10 @@ class ValidatorOptions
 {
 public:
     enum class ReportUnknownExtensionsMode {
-        /// don't report:
+        /// don't change slicing rules, closed stay closed, open stay open:
         disable,
-        /// always report as unslicedWarning - this will report unknown-Extensions as unslicedWarning
-        /// even if the slicing is closed, which would normally be an error.
-        /// effectively making validation less strict for closed slicings
-        enable,
-        /// enable unslicedWarning only for Extensions that are open - effectively making validation more strict
-        onlyOpenSlicing,
+        /// close all open extension slicings
+        closeSlicing,
     };
     /// detect Extensions, that are not defined for a given place in the Document and report with
     /// Severity::unslicedWarning
@@ -51,6 +47,19 @@ public:
         Severity missingOrExtraMetaProfile = Severity::debug;
         /// ERP-30000 - severity for invalid/non-lower-case UUID in field of type `uri` (or derived) - nullopt disables the check
         std::optional<Severity> invalidUrnUuidInUri = std::nullopt;
+        /// severity when meta.profile contains a Profile that is unknown or not in view
+        Severity unknownMetaProfile = Severity::error;
+        /// C_12219
+        std::optional<Severity> bundleFullUrlMissing = std::nullopt;
+        std::optional<Severity> bundleFullUrlIdMissmatch = std::nullopt;
+        std::optional<Severity> bundleFullUrlResourceTypeMissmatch = std::nullopt;
+        std::optional<Severity> bundleFullUrlInvalidFormat = std::nullopt; ///< check format is uuid, FHIR-RESTful
+        std::optional<Severity> bundledResourceMissingId = std::nullopt; ///< a Resource in a Bundle doesn't have an ID
+        std::optional<Severity> unresolveableReferenceInBundle = std::nullopt; ///< a Resource in a Bundle doesn't have an ID
+
+        Severity sliceDetection = Severity::debug;
+        Severity resourceTypeDetection = Severity::debug;
+
     };
     SeverityLevels levels{};
     // collect additional information, useful for FHIR-Transformer

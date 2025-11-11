@@ -35,9 +35,8 @@ EvaluationContext PercentRootResource::eval(const EvaluationContext& context) co
     return context();
 }
 
-ExtensionFunction::ExtensionFunction(
-    std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg)
-    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
+ExtensionFunction::ExtensionFunction(ExpressionPtr arg)
+    : UnaryExpression(std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
@@ -92,7 +91,7 @@ EvaluationContext HasValue::eval(const EvaluationContext& context) const
 EvaluationContext GetValue::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
-    if (HasValue(fhirStructureRepository()).eval(context).collection.boolean())
+    if (HasValue().eval(context).collection.boolean())
     {
         // return context unchanged
         return context;
@@ -116,9 +115,8 @@ EvaluationContext Resolve::eval(const EvaluationContext& context) const
     return result;
 }
 
-ConformsTo::ConformsTo(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                       ExpressionPtr arg)
-    : UnaryExpression(std::move(fhirStructureRepositoryView), std::move(arg))
+ConformsTo::ConformsTo(ExpressionPtr arg)
+    : UnaryExpression(std::move(arg))
 {
     FPExpect(mArg, "missing mandatory argument");
 }
@@ -132,7 +130,7 @@ EvaluationContext ConformsTo::eval(const EvaluationContext& context) const
     const auto element = context.collection.single();
     const auto profile = mArg->eval(context).collection.single()->asString();
     const auto result =
-        FhirPathValidator::validateWithProfiles(element, element->definitionPointer().element()->name(),
+        FhirPathValidator::validateWithProfiles(context.view, element, element->definitionPointer().element()->name(),
                                                 {DefinitionKey{profile}}, {.validateMetaProfiles = false});
     return context.makeBoolElement(result.highestSeverity() < Severity::error);
 }

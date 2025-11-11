@@ -85,7 +85,7 @@ TEST(JwtBuilderTest, OIDs)
     auto jwtVersicherter = testBuilder.makeJwtVersicherter("X987654326");
     // clang-format off
     EXPECT_EQ(jwtApotheke    .stringForClaim(JWT::professionOIDClaim), profession_oid::oid_oeffentliche_apotheke);
-    EXPECT_EQ(jwtArzt        .stringForClaim(JWT::professionOIDClaim), profession_oid::oid_arzt                 );
+    EXPECT_EQ(jwtArzt        .stringForClaim(JWT::professionOIDClaim), profession_oid::oid_praxis_arzt                 );
     EXPECT_EQ(jwtVersicherter.stringForClaim(JWT::professionOIDClaim), profession_oid::oid_versicherter         );
     // clang-format on
 }

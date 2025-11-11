@@ -179,6 +179,7 @@ public:
                           const std::string& expectedHcvUrlParam = "")
     {
         model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(taskBundle));
         const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
         A_23452_02.test("task.status=ready and task.for=kvnr");
         // see MockDatabase::fillWithStaticData() for the above KVNR with status ready
@@ -589,6 +590,7 @@ TEST_F(GetTasksByPharmacyTest, notExpired)
 
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(taskBundle));
     const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
     verifyTasksReady(serverResponse, 4);
 }
@@ -679,10 +681,20 @@ protected:
     {
         using namespace std::string_literals;
         GetTaskHandler handler({});
-        const auto jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(telematikId);
         Header requestHeader{HttpMethod::GET, "/Task/" + prescriptionId.toString(), 0, {}, HttpStatus::Unknown};
         ServerRequest serverRequest{std::move(requestHeader)};
-        serverRequest.setAccessToken(jwtPharmacy);
+        switch (prescriptionId.type())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::direkteZuweisung:
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisungPkv:
+                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
+                break;
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtKostentraeger(telematikId));
+                break;
+        }
         serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
         if (accessCode)
         {
@@ -710,14 +722,38 @@ protected:
                             HttpStatus::Unknown};
 
         ServerRequest serverRequest{requestHeader};
-        serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikID));
         serverRequest.setQueryParameters({{"secret", secret}});
         serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
-        serverRequest.setBody(ResourceTemplates::dispenseOrCloseTaskBodyXml({
-            .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
-            .version = ResourceTemplates::Versions::GEM_ERP_current(),
-            .medicationDispenses = {{.prescriptionId = prescriptionId, .telematikId = telematikID}},
-        }));
+        switch (prescriptionId.type())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::direkteZuweisung:
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisungPkv:
+                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikID));
+                serverRequest.setBody(ResourceTemplates::dispenseOrCloseTaskBodyXml({
+                    .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+                    .version = ResourceTemplates::Versions::GEM_ERP_current(),
+                    .medicationDispenses = {{.prescriptionId = prescriptionId, .telematikId = telematikID}},
+                }));
+                break;
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtKostentraeger(telematikID));
+                serverRequest.setBody(ResourceTemplates::medicationDispenseOperationParametersXml({
+                    .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
+                    .version = ResourceTemplates::Versions::GEM_ERP_current(),
+                    .medicationDispenses = {},
+                    .medicationDispensesDiGA =
+                        {
+                            {
+                                .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                                .prescriptionId = prescriptionId.toString(),
+                                .withRedeemCode = true,
+                            },
+                        },
+                }));
+                break;
+        }
         AccessLog accessLog;
         ServerResponse serverResponse;
         SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
@@ -759,6 +795,39 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
     ASSERT_EQ(prescriptionBinary.size(), 1) << bundle->serializeToJsonString();
     ASSERT_EQ(prescriptionBinary[0].id(), *prescriptionBinaryUuid);
 }
+
+TEST_F(GetTaskByIdByPharmacyTest, recoverSecretDiga)
+{
+    A_24176.test("Calling Pharmacy is owner");
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(model::PrescriptionId::fromDatabaseId(
+                                    model::PrescriptionType::digitaleGesundheitsanwendungen, 6002),
+                                telematikID, accessCode, std::nullopt, serverResponse););
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    std::optional<model::Bundle> bundle;
+    const gsl::not_null repoView = Fhir::instance()
+                                       .structureRepository(model::Timestamp::now())
+                                       .match(std::string{model::resource::structure_definition::task},
+                                              ResourceTemplates::Versions::GEM_ERP_current());
+    auto factory = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(), *StaticData::getXmlValidator(), {});
+    auto validationResults = factory.validateGeneric(*repoView, {}, {});
+    ASSERT_TRUE(validationResults.highestSeverity() < fhirtools::Severity::error) << serverResponse.getBody();
+    ASSERT_NO_THROW(bundle.emplace(std::move(factory).getNoValidation()));
+    auto tasks = bundle->getResourcesByType<model::Task>();
+    ASSERT_EQ(tasks.size(), 1);
+    A_24179.test("Returned Task has secret");
+    auto taskSecret = tasks[0].secret();
+    ASSERT_TRUE(taskSecret.has_value());
+    EXPECT_EQ(*taskSecret, secret);
+
+    A_24179.test("Returned Bundle contains prescription");
+    auto prescriptionBinaryUuid = tasks[0].healthCarePrescriptionUuid();
+    ASSERT_TRUE(prescriptionBinaryUuid.has_value());
+    auto prescriptionBinary = bundle->getResourcesByType<model::Binary>();
+    ASSERT_EQ(prescriptionBinary.size(), 1) << bundle->serializeToJsonString();
+    ASSERT_EQ(prescriptionBinary[0].id(), *prescriptionBinaryUuid);
+}
+
 
 
 TEST_F(GetTaskByIdByPharmacyTest, otherOwner)
@@ -886,10 +955,29 @@ TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecret)
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(prescriptionId, telematikID, accessCode, secret, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    std::optional<model::Bundle> bundle;
-    ASSERT_NO_THROW(bundle.emplace(
-        testutils::getValidatedErxReceiptBundle<model::Bundle>(serverResponse.getBody(), model::ProfileType::fhir)));
-    auto receiptBundle = bundle->getResourcesByType<model::ErxReceipt>();
+    auto bundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    ASSERT_NO_FATAL_FAILURE(testutils::validate(bundle));
+    auto receiptBundle = bundle.getResourcesByType<model::ErxReceipt>();
+    ASSERT_EQ(receiptBundle.size(), 1) << serverResponse.getBody();
+    auto profileName = receiptBundle.at(0).getProfileName();
+    ASSERT_TRUE(profileName.has_value());
+    std::string expectedProfileName{model::resource::structure_definition::receipt};
+    expectedProfileName += '|';
+    expectedProfileName += ResourceTemplates::Versions::GEM_ERP_current().renderVersion();
+    EXPECT_EQ(*profileName, expectedProfileName);
+}
+
+TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecretDiga)
+{
+    const auto prescriptionId =
+            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
+    ASSERT_NO_FATAL_FAILURE(closeTask(prescriptionId));
+    ServerResponse serverResponse;
+    ASSERT_NO_THROW(callHandler(prescriptionId, telematikID, accessCode, secret, serverResponse););
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    auto bundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    ASSERT_NO_FATAL_FAILURE(testutils::validate(bundle));
+    auto receiptBundle = bundle.getResourcesByType<model::ErxReceipt>();
     ASSERT_EQ(receiptBundle.size(), 1) << serverResponse.getBody();
     auto profileName = receiptBundle.at(0).getProfileName();
     ASSERT_TRUE(profileName.has_value());
@@ -1019,6 +1107,7 @@ TEST_F(GetTasksByPharmacyTest, Paging)
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
 
     model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(taskBundle));
     EXPECT_EQ(taskBundle.getBundleType(), model::BundleType::searchset);
     const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
     EXPECT_EQ(tasks.size(), 10);

@@ -40,6 +40,8 @@ public:
     std::shared_ptr<BlobCache> blobCache;
     std::shared_ptr<HsmFactory> factory;
     std::shared_ptr<HsmSession> session;
+    std::shared_ptr<HsmFactory> setupFactory;
+    std::shared_ptr<HsmSession> setupSession;
     std::string name;
     bool enabled{};
     MockBlobCache::MockTarget target{};
@@ -65,6 +67,22 @@ public:
     ParameterSet parameters;
 };
 
+class HsmProductionSetupFactory : public HsmFactory
+{
+public:
+    explicit HsmProductionSetupFactory(std::unique_ptr<HsmClient>&& hsmClient, std::shared_ptr<BlobCache> blobCache)
+        : HsmFactory(std::move(hsmClient), std::move(blobCache))
+    {
+    }
+
+    ~HsmProductionSetupFactory () override = default;
+
+    std::shared_ptr<HsmRawSession> rawConnect() override
+    {
+        return std::make_shared<HsmRawSession>(HsmProductionClient::connect(HsmIdentity::getSetupIdentity()));
+    }
+};
+
 namespace
 {
     ParameterSetFactory createSimulatedParameterSetFactory (void)
@@ -88,6 +106,10 @@ namespace
                 parameters.target = MockBlobCache::MockTarget::SimulatedHsm;
                 // ensure we have a valid TEE token.
                 parameters.session->setTeeToken(EnrolmentHelper::getTeeToken(*parameters.session, *parameters.blobCache));
+
+                parameters.setupFactory = std::make_unique<HsmProductionSetupFactory>(
+                    std::make_unique<HsmProductionClient>(), parameters.blobCache);
+                parameters.setupSession = parameters.setupFactory->connect();
 
                 return parameters;
             };
@@ -115,6 +137,7 @@ namespace
                 std::make_unique<HsmMockClient>(),
                 parameters.blobCache);
             parameters.session = parameters.factory->connect();
+            parameters.setupSession = parameters.session;
             parameters.enabled = true;
             parameters.target = MockBlobCache::MockTarget::MockedHsm;
             return parameters;
@@ -583,6 +606,29 @@ TEST_P(HsmSessionTest, getLatestTaskAuditLogId)
 
     ASSERT_EQ(latestId, id1);
     ASSERT_NE(latestId, id7);
+}
+
+TEST_P(HsmSessionTest, wrapAndUnwrapLogKeyPackage)
+{
+    const auto input = ErpVector::create("hello");
+    const auto wrappedInput = parameters.setupSession->wrapPseudonameLogKeyPackage(input, 0);
+    const auto unwrappedResult = parameters.session->unwrapPseudonameLogKeyPackage(wrappedInput);
+    ASSERT_EQ(input, unwrappedResult);
+}
+
+TEST_P(HsmSessionTest, wrapAndUnwrapLogKey)
+{
+    auto key = ErpArray<Aes128Length>::create(std::string_view("hello0123456789", Aes128Length));
+    {
+        const auto logKeyBlob = parameters.session->wrapPseudonameLogKey(key, 0);
+        BlobDatabase::Entry logKeyEntry;
+        logKeyEntry.type = BlobType::PseudonameLogKey;
+        logKeyEntry.name = ErpVector::create("pnl_key");
+        logKeyEntry.blob = logKeyBlob;
+        parameters.blobCache->storeBlob(std::move(logKeyEntry));
+    }
+    const auto unwrappedKey = parameters.session->getPseudonameLogKey();
+    ASSERT_EQ(key, unwrappedKey);
 }
 
 

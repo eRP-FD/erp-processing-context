@@ -12,6 +12,7 @@
 #include "erp/database/ErpDatabaseBackend.hxx"
 #include "erp/model/Communication.hxx"
 #include "shared/crypto/CMAC.hxx"
+#include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/database/DatabaseCodec.hxx"
 #include "shared/database/DatabaseModel.hxx"
 #include "shared/hsm/KeyDerivation.hxx"
@@ -28,6 +29,8 @@
 #include <map>
 #include <mutex>
 
+class CadesBesSignature;
+class Certificate;
 class Database;
 
 class MockDatabase : public ErpDatabaseBackend
@@ -279,6 +282,9 @@ private:
     SafeString getMedicationDispenseKey(const db_model::HashedKvnr& kvnr, BlobId blobId);
 
     SafeString getAuditEventKey(const db_model::HashedKvnr& kvnr, BlobId& blobId);
+    std::string receiptJson(const model::Task& task, const std::string& telematikId, const CadesBesSignature& prescription);
+    static std::tuple<Certificate, shared_EVP_PKEY>
+    certAndKey(const std::optional<std::string>& certPemFilename = std::nullopt);
 
     std::mutex mutex;
 

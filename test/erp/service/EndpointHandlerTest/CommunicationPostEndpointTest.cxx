@@ -28,6 +28,7 @@ struct CommunicationPostEndpointTestOptions {
     std::optional<std::string> message = std::nullopt;
     std::optional<std::string> diagnostics = std::nullopt;
     JWT accessToken = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    ContentMimeType contentType{ContentMimeType::fhirJsonUtf8};
 };
 
 class CommunicationPostEndpointTest : public EndpointHandlerTest
@@ -42,7 +43,7 @@ protected:
         Header requestHeader{HttpMethod::POST,
                              "/Communication",
                              0,
-                             {{Header::ContentType, ContentMimeType::fhirJsonUtf8}},
+                             {{Header::ContentType, opt.contentType}},
                              HttpStatus::Unknown};
         ServerRequest serverRequest{std::move(requestHeader)};
         serverRequest.setAccessToken(opt.accessToken);
@@ -111,6 +112,7 @@ TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfil
                                .supportedVersions({
                                    // std::string{model::resource::structure_definition::communicationInfoReq},
                                    std::string{model::resource::structure_definition::communicationReply},
+                                   std::string{model::resource::structure_definition::communicationDiGA},
                                    std::string{model::resource::structure_definition::communicationDispReq},
                                    std::string{model::resource::structure_definition::communicationRepresentative},
                                    std::string{model::resource::structure_definition::communicationChargChangeReq},
@@ -127,6 +129,55 @@ TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfil
         "test/EndpointHandlerTest/ERP-13187-POST_Communication_InvalidProfile.json");
     ASSERT_NO_FATAL_FAILURE(test(
         std::move(body), {.expectedResult = HttpStatus::BadRequest, .message = message, .diagnostics = diagnostics}));
+}
+
+TEST_F(CommunicationPostEndpointTest, UnslicedExtensionAllow)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
+                                     (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
+    auto body = CommunicationJsonStringBuilder{model::Communication::MessageType::Reply}
+    .setPrescriptionId(model::PrescriptionId::fromDatabaseId(
+                           model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
+                           .toString())
+    .setSender(ActorRole::Pharmacists, "telematik-id")
+    .setRecipient(ActorRole::Insurant, kvnr)
+    .setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60")
+    .setPayload(R"({"version":1, "supplyOptionsType": "onPremise"})")
+    .createXmlString();
+
+    body = String::replaceAll(body, "<sender>",
+                          R"(<sender><extension url="subStatus"><valueBoolean value="true"/></extension>)");
+
+    ASSERT_NO_FATAL_FAILURE(test(std::move(body), {.accessToken = JwtBuilder::testBuilder().makeJwtApotheke(),
+                                                   .contentType = ContentMimeType::fhirXmlUtf8}));
+}
+
+TEST_F(CommunicationPostEndpointTest, UnslicedExtensionReject)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
+                                      (model::Timestamp::now()).toGermanDate()};
+    auto body = CommunicationJsonStringBuilder{model::Communication::MessageType::Reply}
+                    .setPrescriptionId(model::PrescriptionId::fromDatabaseId(
+                                           model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
+                                           .toString())
+                    .setSender(ActorRole::Pharmacists, "telematik-id")
+                    .setRecipient(ActorRole::Insurant, kvnr)
+                    .setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60")
+                    .setPayload(R"({"version":1, "supplyOptionsType": "onPremise"})")
+                    .createXmlString();
+
+    body = String::replaceAll(body, "<sender>",
+                              R"(<sender><extension url="subStatus"><valueBoolean value="true"/></extension>)");
+
+    ASSERT_NO_FATAL_FAILURE(
+        test(std::move(body), {.expectedResult = HttpStatus::BadRequest,
+                               .message = "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+                               .accessToken = JwtBuilder::testBuilder().makeJwtApotheke(),
+                               .contentType = ContentMimeType::fhirXmlUtf8}));
 }
 
 struct CommunicationPostEndpointTestParams {
@@ -183,6 +234,35 @@ public:
             {accept, "2025-04-16", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
             {accept, "2025-04-16", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
             {accept, "2025-04-16", Reply, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {reject, "2025-04-16", DiGA, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {accept, "2025-10-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2025-10-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2025-10-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2025-10-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2025-10-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2025-10-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+
+            {accept, "2026-01-12", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
+            {reject, "2026-01-12", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
+            {accept, "2026-01-12", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {accept, "2026-01-12", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {reject, "2026-01-12", Reply, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {accept, "2026-01-12", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2026-01-12", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2026-01-12", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-01-12", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-01-12", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-01-12", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+
+            {reject, "2026-04-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
+            {reject, "2026-04-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {reject, "2026-04-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
+            {accept, "2026-04-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2026-04-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2026-04-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-04-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-04-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-04-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
         };
     }
 
@@ -231,6 +311,13 @@ TEST_P(CommunicationPostEndpointTestP, ProfileValidity)
             builder.setPrescriptionId(gkvPrescriptionId.toString());
             builder.setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60");
             opts.accessToken = JwtBuilder::testBuilder().makeJwtApotheke("A-Pharmacy");
+            break;
+        case DiGA:
+            builder.setSender(ActorRole::Pharmacists, "A-Kostentraeger").setRecipient(ActorRole::Insurant, kvnr);
+            builder.setPrescriptionId(gkvPrescriptionId.toString());
+            builder.setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60");
+            opts.accessToken = JwtBuilder::testBuilder().makeJwtApotheke("A-Kostentraeger");
+            break;
     }
     switch (GetParam().result)
     {

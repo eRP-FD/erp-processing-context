@@ -94,4 +94,14 @@ void BDEMessage::publish()
     {
        log << *mHashedKvnr;
     }
+    if (mErrorCode)
+    {
+        std::string str = *mErrorCode;
+        static const std::string prefix = "MEDICATIONSVC_";
+        if (str.starts_with(prefix))
+        {
+            str = str.substr(prefix.size());
+        }
+        log.keyValue("error_component", str);
+    }
 }

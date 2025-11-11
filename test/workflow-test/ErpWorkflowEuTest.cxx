@@ -239,14 +239,16 @@ public:
         ASSERT_NO_FATAL_FAILURE(outTask = model::Task::fromJsonNoValidation(serverResponse.getBody()));
     }
 
-    std::optional<model::Bundle> postGetEuPrescriptions(const ResourceTemplates::EuPostGetPrescriptionsOptions& options)
+    [[nodiscard]]
+    std::unique_ptr<model::FhirResourceBase>
+    postGetEuPrescriptions(const ResourceTemplates::EuPostGetPrescriptionsOptions& options)
     {
-        std::optional<model::Bundle> result;
+        std::unique_ptr<model::FhirResourceBase> result;
         postGetEuPrescriptionsInternal(options, result);
         return result;
     }
     void postGetEuPrescriptionsInternal(const ResourceTemplates::EuPostGetPrescriptionsOptions& options,
-                                        std::optional<model::Bundle>& result)
+                                        std::unique_ptr<model::FhirResourceBase>& result)
     {
         ClientResponse serverResponse;
         ClientResponse outerResponse;
@@ -287,7 +289,8 @@ public:
                     .withExpectedBdeUseCase(getUseCase())));
 
         EXPECT_FALSE(serverResponse.getBody().empty());
-        ASSERT_NO_FATAL_FAILURE(result = model::Bundle::fromXmlNoValidation(serverResponse.getBody()));
+        ASSERT_NO_FATAL_FAILURE(result = testutils::createResource(serverResponse.getBody()));
+        ASSERT_NE(result, nullptr);
     }
 
     void postEuClose(const ResourceTemplates::EuCloseTaskOptions& options)
@@ -403,7 +406,7 @@ TEST_P(ErpWorkflowEuTestP, GetConsentBothFiltered)
 TEST_P(ErpWorkflowEuTestP, DeleteConsent)
 {
     const auto startTime = model::Timestamp::now();
-    A_27131.test("Consent löschen - EUDISPCONS - Löschen Zugriffsberechtigung");
+    A_22158.test("Consent löschen - Löschen der Consent");
     auto expectedStatus = GetParam().expectedSuccess ? HttpStatus::NotFound : HttpStatus::MethodNotAllowed;
     std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode =
         GetParam().expectedSuccess ? model::OperationOutcome::Issue::Type::not_found
@@ -532,6 +535,27 @@ TEST_P(ErpWorkflowEuTestP, EuAccessPermission)
     {
         testBase.checkAuditEvents(std::vector<std::optional<std::string>>{}, kvnr.id(), "de", startTime, {}, {}, {});
     }
+}
+
+TEST_P(ErpWorkflowEuTestP, EuAccessPermissionRemovedOnDeleteConsent)
+{
+    A_27131.test("Consent löschen - EUDISPCONS - Löschen Zugriffsberechtigung");
+    testPostConsent();
+    std::optional<model::GemErpEuPrParAccessAuthorizationResponse> euAccessPermission;
+    auto expectedStatus = GetParam().expectedSuccess ? HttpStatus::Created : HttpStatus::MethodNotAllowed;
+    ASSERT_NO_FATAL_FAILURE(euAccessPermission =
+                                postEuAccessPermission(ResourceTemplates::EuAccessPermissionOptions{}, expectedStatus));
+    ASSERT_EQ(euAccessPermission.has_value(), GetParam().expectedSuccess);
+
+    expectedStatus = GetParam().expectedSuccess ? HttpStatus::NoContent : HttpStatus::MethodNotAllowed;
+    auto expectedErrorCode = GetParam().expectedSuccess ? std::make_optional<model::OperationOutcome::Issue::Type>()
+                                                        : model::OperationOutcome::Issue::Type::not_supported;
+    ASSERT_NO_FATAL_FAILURE(
+        testBase.consentDelete(model::ConsentType::EUDISPCONS, kvnr.id(), expectedStatus, expectedErrorCode));
+
+    expectedStatus = GetParam().expectedSuccess ? HttpStatus::NotFound : HttpStatus::MethodNotAllowed;
+    ASSERT_NO_FATAL_FAILURE(euAccessPermission = readEuAccessPermission(expectedStatus));
+    ASSERT_FALSE(euAccessPermission.has_value());
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -705,10 +729,20 @@ TEST_P(ErpWorkflowEuTestGetPrescriptionsP, Demographics)
         .accessCode = accessCode.toString().c_str(),
         .countryCode = "FR",
         .prescriptionIds = {}};
-
-    auto response = postGetEuPrescriptions(options);
-    ASSERT_TRUE(response.has_value());
-    ASSERT_EQ(response->getResourceCount(), GetParam().expectedSuccess ? 1 : 0);
+    std::shared_ptr<model::FhirResourceBase> response;
+    ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+    ASSERT_NE(response, nullptr);
+    if (GetParam().expectedSuccess)
+    {
+        auto bundle = dynamic_pointer_cast<model::Bundle>(response);
+        const auto& responseRef = *response;
+        ASSERT_NE(bundle, nullptr) << typeid(responseRef).name();
+        ASSERT_EQ(bundle->getResourceCount(), 1);
+    }
+    else
+    {
+        ASSERT_EQ(response->getProfile(), model::ProfileType::OperationOutcome);
+    }
     checkAuditEvents({std::nullopt}, {ncpehId}, {0}, {model::AuditEvent::SubType::read});
 }
 
@@ -725,9 +759,19 @@ TEST_P(ErpWorkflowEuTestGetPrescriptionsP, PrescriptionsList)
         .countryCode = "FR",
         .prescriptionIds = {}};
 
-    auto response = postGetEuPrescriptions(options);
-    ASSERT_TRUE(response.has_value());
-    ASSERT_EQ(response->getResourceCount(), GetParam().expectedSuccess ? 3 : 0);
+    std::shared_ptr<model::FhirResourceBase> response;
+    ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+    ASSERT_NE(response, nullptr);
+    if (GetParam().expectedSuccess)
+    {
+        auto bundle = dynamic_pointer_cast<model::Bundle>(response);
+        ASSERT_NE(bundle, nullptr);
+        ASSERT_EQ(bundle->getResourceCount(), 3);
+    }
+    else
+    {
+        ASSERT_EQ(response->getProfile(), model::ProfileType::OperationOutcome);
+    }
 
     checkAuditEvents({std::nullopt}, {ncpehId}, {0}, {model::AuditEvent::SubType::read});
 
@@ -750,9 +794,19 @@ TEST_P(ErpWorkflowEuTestGetPrescriptionsP, PrescriptionsRetrieval)
         .countryCode = "FR",
         .prescriptionIds = {id1.toString(), id2.toString()}};
 
-    auto response = postGetEuPrescriptions(options);
-    ASSERT_TRUE(response.has_value());
-    ASSERT_EQ(response->getResourceCount(), GetParam().expectedSuccess ? 2 : 0);
+    std::shared_ptr<model::FhirResourceBase> response;
+    ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+    ASSERT_NE(response, nullptr);
+    if (GetParam().expectedSuccess)
+    {
+        auto bundle = dynamic_pointer_cast<model::Bundle>(response);
+        ASSERT_TRUE(bundle);
+        ASSERT_EQ(bundle->getResourceCount(), 2);
+    }
+    else
+    {
+        ASSERT_EQ(response->getProfile(), model::ProfileType::OperationOutcome);
+    }
 
     checkAuditEvents({std::nullopt}, {ncpehId}, {0}, {model::AuditEvent::SubType::update});
 
@@ -790,14 +844,38 @@ public:
             .countryCode = "FR",
             .prescriptionIds = {tasks[0].prescriptionId().toString(), tasks[1].prescriptionId().toString(),
                                 tasks[2].prescriptionId().toString()}};
-        auto response = postGetEuPrescriptions(options);
-        ASSERT_TRUE(response.has_value());
-        ASSERT_EQ(response->getResourceCount(), GetParam().expectedSuccess ? 3 : 0);
+        std::shared_ptr<model::FhirResourceBase> response;
+        ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+        ASSERT_NE(response, nullptr);
+        if (GetParam().expectedSuccess)
+        {
+            auto bundle = dynamic_pointer_cast<model::Bundle>(response);
+            ASSERT_NE(bundle, nullptr);
+            ASSERT_EQ(bundle->getResourceCount(), 3);
+        }
+        else
+        {
+            ASSERT_EQ(response->getProfile(), model::ProfileType::OperationOutcome);
+        }
     }
 };
 
 TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask)
 {
+    const auto getTask = [this] (const model::PrescriptionId& prescriptionId, const std::string& kvnr) -> std::pair<model::Bundle, model::Task> {
+        std::optional<model::Bundle> taskBundle;
+        EXPECT_NO_THROW(taskBundle = testBase.taskGetId(prescriptionId, kvnr));
+        EXPECT_TRUE(taskBundle.has_value());
+        EXPECT_GE(taskBundle->getResourceCount(), 1u); // At least one task resource.
+
+        std::optional<model::Task> task;
+        testBase.getTaskFromBundle(task, *taskBundle);
+        EXPECT_TRUE(task.has_value());
+
+        return std::make_pair<model::Bundle, model::Task>(std::move(taskBundle.value()), std::move(*task));
+    };
+    const auto lastModifiedDateBeforeClose = getTask(tasks[0].prescriptionId(), kvnr.id()).second.lastModifiedDate();
+
     const auto beforeClose = model::Timestamp::now() - model::Timestamp::duration_t(1h);
     ASSERT_NO_FATAL_FAILURE(postEuClose({.kvnr = kvnr.id(),
                                          .prescriptionId = tasks[0].prescriptionId().toString(),
@@ -805,26 +883,27 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask)
                                          .accessCode = accessCode.toString().c_str(),
                                          .countryCode = "FR"}));
 
+    // retrieve (done in test setup), read (getTask) and then eu-close:
+    checkAuditEvents({std::nullopt, tasks[0].prescriptionId().toString(), tasks[0].prescriptionId().toString()},
+                     {ncpehId, kvnr.id(), ncpehId},
+                     {0, 2},
+                     {model::AuditEvent::SubType::update, model::AuditEvent::SubType::read, model::AuditEvent::SubType::update});
 
-    // retrieve and then close:
-    checkAuditEvents({std::nullopt, tasks[0].prescriptionId().toString()}, {ncpehId, ncpehId}, {0, 1},
-                     {model::AuditEvent::SubType::update, model::AuditEvent::SubType::update});
-
-    std::optional<model::Bundle> taskBundle;
-    ASSERT_NO_THROW(taskBundle = testBase.taskGetId(tasks[0].prescriptionId(), kvnr.id()));
-    ASSERT_TRUE(taskBundle.has_value());
-    ASSERT_EQ(taskBundle->getResourceCount(), 2u); // 0: task, 1: bundle (composition, patient, practitioner, organization, medication, coverage, medicationrequest)
-    std::optional<model::Task> task;
-    testBase.getTaskFromBundle(task, *taskBundle);
-    ASSERT_TRUE(task.has_value());
-    EXPECT_EQ(task->status(), GetParam().expectedSuccess ? model::Task::Status::completed : model::Task::Status::ready);
-    ASSERT_EQ(task->lastMedicationDispense().has_value(), GetParam().expectedSuccess);
+    auto taskAndBundle = getTask(tasks[0].prescriptionId(), kvnr.id());
+    ASSERT_EQ(taskAndBundle.first.getResourceCount(), 2u); // 0: task, 1: bundle (composition, patient, practitioner, organization, medication, coverage, medicationrequest)
+    EXPECT_EQ(taskAndBundle.second.status(), GetParam().expectedSuccess ? model::Task::Status::completed : model::Task::Status::ready);
+    ASSERT_EQ(taskAndBundle.second.lastMedicationDispense().has_value(), GetParam().expectedSuccess);
     if (GetParam().expectedSuccess)
     {
-        EXPECT_GE(*task->lastMedicationDispense(), beforeClose);
+        EXPECT_GE(taskAndBundle.second.lastMedicationDispense(), beforeClose);
+    }
+
+    if (GetParam().expectedSuccess)
+    {
+        const auto lastModifiedAfterClose = taskAndBundle.second.lastModifiedDate();
+        EXPECT_TRUE(lastModifiedDateBeforeClose.toChronoTimePoint() < lastModifiedAfterClose.toChronoTimePoint());
     }
 }
-
 
 
 TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask_allDispensations)
@@ -877,6 +956,7 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask_allDispensations)
     ASSERT_NO_THROW(StaticData::getJsonValidator()->validate(copyToOriginalFormat(
                                                                  medicationDispenseBundle->jsonDocument()),
                                                              SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(*medicationDispenseBundle));
     std::vector<model::MedicationDispense> medicationDispenses;
     if (medicationDispenseBundle->getResourceCount() > 0)
     {
@@ -898,7 +978,9 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask_allDispensations)
             const auto& practitioner = practitioners.front();
             const auto& organization = organizations.front();
 
-            const auto& practitionerRoleId = Uuid{md.performerReference()}.toString();
+            ASSERT_TRUE(md.performerReference().has_value());
+
+            const auto& practitionerRoleId = Uuid{md.performerReference().value()}.toString();
             const auto& practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
             const auto& organizationId = Uuid{practitionerRole.organizationReference()}.toString();
 
@@ -907,6 +989,139 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask_allDispensations)
             EXPECT_STREQ(std::string{organization.getId().value_or("")}.c_str(), organizationId.c_str());
 
         }
+    }
+}
+
+TEST_P(ErpWorkflowEuTestCloseTaskP, closeTasks_multipleDispensations)
+{
+    using namespace std::string_literals;
+    constexpr auto copyToOriginalFormat = &model::NumberAsStringParserDocumentConverter::copyToOriginalFormat;
+
+    const auto &kvnr = this->kvnr;
+    auto &testBase = this->testBase;
+
+    auto closeOperation = [&kvnr, &testBase]() {
+        // Create task
+        std::optional<model::Task> task;
+        ASSERT_NO_FATAL_FAILURE(task = testBase.taskCreate());
+        ASSERT_TRUE(task.has_value());
+        std::string accessCode{task->accessCode()};
+        auto prescriptionId{task->prescriptionId()};
+        // Activate task
+        const auto [qesBundle, _] = testBase.makeQESBundle(kvnr.id(), prescriptionId, model::Timestamp::now());
+        ASSERT_NO_FATAL_FAILURE(testBase.taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
+        // Accept task
+        std::optional<model::Bundle> bundle;
+        ASSERT_NO_FATAL_FAILURE(bundle = testBase.taskAccept(prescriptionId, accessCode));
+        ASSERT_TRUE(bundle.has_value());
+        auto tasksFromBundle = bundle->getResourcesByType<model::Task>("Task");
+        ASSERT_EQ(tasksFromBundle.size(), 1);
+        task.emplace(std::move(tasksFromBundle.front()));
+        auto secret = task->secret();
+        ASSERT_TRUE(secret.has_value());
+        // Close task
+        ASSERT_NO_FATAL_FAILURE(testBase.taskClose(prescriptionId, std::string{*secret}, kvnr.id()));
+    };
+
+    auto medicationDispenseOperation = [&kvnr, &testBase] (std::optional<model::Bundle>& medicationDispenseBundle) -> void {
+        const auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+        const ErpWorkflowTestBase::RequestArguments args{};
+        const auto requestArguments =
+            ErpWorkflowTestBase::RequestArguments{args}
+                .withHttpMethod(HttpMethod::GET)
+                .withVauPath("/MedicationDispense/")
+                .withContentType(ContentMimeType::fhirJsonUtf8)
+                .withJwt(jwt)
+                .withHeader(Header::Authorization, testBase.getAuthorizationBearerValueForJwt(jwt))
+                .withExpectedInnerStatus(HttpStatus::OK)
+                .withExpectedBdeUseCase(bde::GetMedicationDispense_UC_3_9);
+
+        ClientResponse serverResponse;
+        EXPECT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = testBase.send(requestArguments));
+        EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+        medicationDispenseBundle =
+            model::Bundle::fromJsonNoValidation(serverResponse.getBody());
+        ASSERT_TRUE(medicationDispenseBundle);
+        EXPECT_NO_THROW(StaticData::getJsonValidator()->validate(
+            copyToOriginalFormat(medicationDispenseBundle->jsonDocument()), SchemaType::fhir));
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*medicationDispenseBundle));
+    };
+
+    // CLOSE
+    closeOperation();
+
+    // GET and CHECK MedicationDispensations
+    std::optional<model::Bundle> bundle1;
+    medicationDispenseOperation(bundle1);
+    ASSERT_EQ(bundle1->getResourceCount(), 2);// MedicationDispense, Medication
+    std::vector<model::MedicationDispense> medicationDispenses1 =
+        bundle1->getResourcesByType<model::MedicationDispense>("MedicationDispense");
+    ASSERT_EQ(medicationDispenses1.size(), 1);
+    std::vector<model::GemErpPrMedication> medications1 =
+        bundle1->getResourcesByType<model::GemErpPrMedication>("Medication");
+    ASSERT_EQ(medications1.size(), 1);
+
+    // EU-CLOSE
+    ASSERT_NO_FATAL_FAILURE(postEuClose({.kvnr = kvnr.id(),
+                                          .prescriptionId = tasks[0].prescriptionId().toString(),
+                                          .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                                          .accessCode = accessCode.toString().c_str(),
+                                          .countryCode = "FR"}));
+
+    std::optional<model::Bundle> bundle2;
+    medicationDispenseOperation(bundle2);
+    const auto l = bundle2->getResourceCount();
+    if (GetParam().expectedSuccess)
+    {
+        ASSERT_EQ(l, 7);
+    }
+    else
+    {
+        ASSERT_EQ(l, 2);
+    }
+
+    const auto& practitionerRoles =
+        bundle2->getResourcesByType<model::GemErpEuPrPractitionerRole>();
+    const auto& practitioners = bundle2->getResourcesByType<model::GemErpEuPrPractitioner>();
+    const auto& organizations = bundle2->getResourcesByType<model::GemErpEuPrOrganization>();
+    const auto& medicationDispenses = bundle2->getResourcesByType<model::MedicationDispense>();
+    const auto& medications = bundle2->getResourcesByType<model::GemErpPrMedication>();
+
+    if (GetParam().expectedSuccess)
+    {
+        ASSERT_EQ(medicationDispenses.size(), 2);
+        ASSERT_EQ(medications.size(), 2);
+
+        ASSERT_EQ(practitionerRoles.size(), 1);
+        ASSERT_EQ(practitioners.size(), 1);
+        ASSERT_EQ(organizations.size(), 1);
+
+        const auto& practitionerRole = practitionerRoles.front();
+        const auto& practitioner = practitioners.front();
+        const auto& organization = organizations.front();
+
+        const auto& practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
+        const auto& organizationId = Uuid{practitionerRole.organizationReference()}.toString();
+
+        for (const auto& md : medicationDispenses)
+        {
+            if (md.performerReference())
+            {
+                const auto& practitionerRoleId = Uuid{md.performerReference().value()}.toString();
+                EXPECT_STREQ(std::string{practitionerRole.getId().value_or("")}.c_str(), practitionerRoleId.c_str());
+                EXPECT_STREQ(std::string{practitioner.getId().value_or("")}.c_str(), practitionerId.c_str());
+                EXPECT_STREQ(std::string{organization.getId().value_or("")}.c_str(), organizationId.c_str());
+            }
+        }
+    }
+    else
+    {
+        ASSERT_EQ(medicationDispenses.size(), 1);
+        ASSERT_EQ(medications.size(), 1);
+
+        ASSERT_EQ(practitionerRoles.size(), 0);
+        ASSERT_EQ(practitioners.size(), 0);
+        ASSERT_EQ(organizations.size(), 0);
     }
 }
 

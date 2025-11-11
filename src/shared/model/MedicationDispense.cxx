@@ -181,9 +181,10 @@ std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() c
     return whenHandedOver();
 }
 
-std::string_view MedicationDispense::performerReference() const
+std::optional<std::string_view> MedicationDispense::performerReference() const
 {
-    return getStringValue(performerReferencePointer);
+    // This pointer is only available for EuMedicationDispense resources.
+    return getOptionalStringValue(performerReferencePointer);
 }
 
 template class Extension<GemErpExRedeemCode>;

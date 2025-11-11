@@ -8,6 +8,7 @@
 #include "FhirStructureDefinition.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/FhirSlicing.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroup.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
@@ -258,13 +259,12 @@ fhirtools::FhirStructureDefinition::findElementAndIndex(std::string_view element
     return {nullptr, 0};
 }
 
-const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStructureRepositoryView& repo) const
+const FhirStructureDefinition* FhirStructureDefinition::parentType() const
 {
     const FhirStructureDefinition* parent{};
     if (kind() == Kind::slice)
     {
-        ProfiledElementTypeInfo pet{repo.shared_from_this(), typeId()};
-        parent = repo.findTypeById(pet.element()->typeId());
+        parent = mRepositoryBackend->findTypeById(mElements.at(0)->typeId());
         Expect3(parent != nullptr, "base type for slice '" + url() + "' not found: " + typeId(), std::logic_error);
     }
     else
@@ -272,22 +272,20 @@ const FhirStructureDefinition* FhirStructureDefinition::parentType(const FhirStr
         auto parentKey = mResourceGroup->find(DefinitionKey{baseDefinition()}).first;
         FPExpect3(parentKey.version.has_value(), "basetype for " + urlAndVersion() + " not found: " + baseDefinition(),
                   std::logic_error);
-        parent = repo.findStructure(parentKey);
+        parent = mRepositoryBackend->findDefinition(parentKey.url, *parentKey.version);
         Expect3(parent != nullptr, "base definition not found for '" + url() + "': " + baseDefinition(),
                 std::logic_error);
     }
     return parent;
 }
 
-bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureRepositoryView& repo,
-                                            const fhirtools::FhirStructureDefinition& baseProfile) const
+bool FhirStructureDefinition::isDerivedFrom(const fhirtools::FhirStructureDefinition& baseProfile) const
 {
-    return isDerivedFrom(repo, baseProfile.urlAndVersion());
+    return isDerivedFrom(baseProfile.urlAndVersion());
 }
 
 //NOLINTNEXTLINE [misc-no-recursion]
-bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepositoryView& repo,
-                                            const std::string_view& baseUrl) const
+bool FhirStructureDefinition::isDerivedFrom(const std::string_view& baseUrl) const
 {
     if (url() == baseUrl || urlAndVersion() == baseUrl)
     {
@@ -297,21 +295,20 @@ bool FhirStructureDefinition::isDerivedFrom(const FhirStructureRepositoryView& r
     {
         return false;
     }
-    return parentType(repo)->isDerivedFrom(repo, baseUrl);
+    return parentType()->isDerivedFrom(baseUrl);
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)
-const FhirStructureDefinition* FhirStructureDefinition::baseType(const FhirStructureRepositoryView& repo) const
+const FhirStructureDefinition* FhirStructureDefinition::baseType() const
 {
     if (derivation() != Derivation::constraint)
     {
         return this;
     }
-    return parentType(repo)->baseType(repo);
+    return parentType()->baseType();
 }
 
-const FhirStructureDefinition&
-FhirStructureDefinition::primitiveToSystemType(const FhirStructureRepositoryView& repo) const
+const FhirStructureDefinition& FhirStructureDefinition::primitiveToSystemType() const
 {
     if (isSystemType())
     {
@@ -321,7 +318,7 @@ FhirStructureDefinition::primitiveToSystemType(const FhirStructureRepositoryView
             "systemTypeFor called with structure of kind: " + to_string(kind()), std::logic_error);
     const auto valueElement = findElement(typeId() + ".value");
     Expect3(valueElement != nullptr, "Primitive type has no value element.", std::logic_error);
-    const auto* valueType = repo.findTypeById(valueElement->typeId());
+    const auto* valueType = mRepositoryBackend->findTypeById(valueElement->typeId());
     Expect3(valueType != nullptr, "Type not found: " + valueElement->typeId(), std::logic_error);
     Expect3(valueType->isSystemType(), "Value attribute of " + url() + " is not a system type", std::logic_error);
     return *valueType;

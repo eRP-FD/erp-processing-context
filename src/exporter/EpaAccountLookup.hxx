@@ -12,7 +12,7 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <cstdint>
-#include <list>
+#include <set>
 #include <string>
 
 struct EpaAccount {
@@ -28,6 +28,7 @@ struct EpaAccount {
     std::string host;
     uint16_t port;
     Code lookupResult;
+    std::set<std::string> failingHosts;
 };
 
 class IEpaAccountLookup // NOLINT(cppcoreguidelines-special-member-functions)

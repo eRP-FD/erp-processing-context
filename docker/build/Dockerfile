@@ -12,38 +12,42 @@ RUN apt-get update --fix-missing && \
     apt-get install -y software-properties-common wget && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -  && \
     add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-16 main && \
-    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y  \
-    openjdk-11-jre-headless \
-    gcc-12 g++-12 \
-    jq \
-    wget \
-    libgtest-dev \
-    git \
-    ninja-build \
-    python3 \
-    python3-pip \
-    pkg-config \
-    uuid-runtime \
-    xz-utils \
-    curl \
-    automake \
-    libefiboot-dev \
-    libefivar-dev \
-    ca-certificates \
-    xxd \
-    xmlsec1 \
-    xsltproc \
-    clang-tidy-16 \
-    clang-tidy-19 \
-    tzdata \
-    ccache \
-    openjdk-17-jdk \
-    && rm -rf /var/lib/apt/lists/*
+    add-apt-repository -y -S deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main && \
+    wget -O - http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | tee /etc/apt/keyrings/ACCC4CF8-postgres.asc && \
+    echo 'deb [signed-by=/etc/apt/keyrings/ACCC4CF8-postgres.asc] https://apt.postgresql.org/pub/repos/apt jammy-pgdg main' > /etc/apt/sources.list.d/pgdg.list && \
+    apt-get update --fix-missing && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y  \
+        openjdk-11-jre-headless \
+        gcc-12 g++-12 \
+        jq \
+        wget \
+        libgtest-dev \
+        git \
+        ninja-build \
+        python3 \
+        python3-pip \
+        pkg-config \
+        uuid-runtime \
+        xz-utils \
+        curl \
+        automake \
+        libefiboot-dev \
+        libefivar-dev \
+        postgresql-client-16 \
+        ca-certificates \
+        xxd \
+        xmlsec1 \
+        xsltproc \
+        clang-tidy-16 \
+        clang-tidy-19 \
+        tzdata \
+        ccache \
+        openjdk-17-jdk && \
+    rm -rf /var/lib/apt/lists/*
 
 # Update certificates and install latest version of cmake
 RUN update-ca-certificates && \
-    pip install --upgrade cmake 'conan'
+    pip install --no-cache-dir --upgrade cmake 'conan'
 
 # Tool for converting json sbom to xml
 RUN wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.27.2/cyclonedx-linux-x64 -O /usr/bin/cyclonedx && \

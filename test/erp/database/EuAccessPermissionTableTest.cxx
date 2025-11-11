@@ -3,7 +3,7 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "erp/model/eu/EuAccessPermission.hxx"
-#include "test/erp/database/PostgresDatabaseTest.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 class EuAccessPermissionTableTest : public PostgresDatabaseTest
 {
     void SetUp() override

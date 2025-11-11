@@ -47,9 +47,10 @@ TEST_F(ChargeItemGetEndpointTest, GetByIdNonPkvFails)
 TEST_F(ChargeItemGetEndpointTest, SignatureWho)
 {
     using namespace std::string_literals;
+    const auto* backend = std::addressof(Fhir::instance().backend());
     gsl::not_null defaultView = Fhir::instance().defaultView();
-    const auto parse = [&defaultView](std::string_view expr) {
-        return fhirtools::FhirPathParser::parse(defaultView.get().get(), expr);
+    const auto parse = [&backend](std::string_view expr) {
+        return fhirtools::FhirPathParser::parse(backend, expr);
     };
     auto linkBase = Configuration::instance().getStringValue(ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL);
     auto expectFullUrl = linkBase + "/Device/1";
@@ -68,11 +69,12 @@ TEST_F(ChargeItemGetEndpointTest, SignatureWho)
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::UnspecifiedResource> unspec;
     ASSERT_NO_THROW(unspec.emplace(model::UnspecifiedResource::fromJsonNoValidation(serverResponse.getBody()))) << serverResponse.getBody();
-    ASSERT_NO_THROW(testutils::bestEffortValidate(unspec.value())) << serverResponse.getBody();
+    ASSERT_NO_THROW(testutils::validate(unspec.value())) << serverResponse.getBody();
     const auto bundle = model::Bundle::fromJson(std::move(unspec).value().jsonDocument());
 
-    fhirtools::EvaluationContext bundleContext{std::make_shared<ErpElement>(
-        defaultView, std::weak_ptr<fhirtools::Element>{}, "Bundle", std::addressof(bundle.jsonDocument()))};
+    fhirtools::EvaluationContext bundleContext{
+        defaultView, std::make_shared<ErpElement>(backend, std::weak_ptr<fhirtools::Element>{}, "Bundle",
+                                                  std::addressof(bundle.jsonDocument()))};
     const auto supportingInformationExpr = parse("Bundle.entry.resource.ofType(ChargeItem).supportingInformation");
     const auto supportingInformation = supportingInformationExpr->eval(bundleContext);
     ASSERT_EQ(supportingInformation.collection.size(), 3);

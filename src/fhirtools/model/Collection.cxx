@@ -46,8 +46,8 @@ Collection::value_type Collection::boolean() const
         // http://hl7.org/fhirpath/#singleton-evaluation-of-collections
         // ELSE IF the collection contains a single node AND the expected input type is Boolean THEN
         //  The collection evaluates to true
-        return {std::make_shared<PrimitiveElement>(singleElement->getFhirStructureRepository(), Element::Type::Boolean,
-                                                   true)};
+        return {std::make_shared<PrimitiveElement>(std::addressof(singleElement->getFhirStructureRepository()),
+                                                   Element::Type::Boolean, true)};
     }
     return {};
 }

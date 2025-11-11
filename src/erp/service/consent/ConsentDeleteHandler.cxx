@@ -48,12 +48,10 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
 
     auto* databaseHandle = session.database();
 
-    A_22158.start("Delete the consent matched by the KVNR from the ACCESS_TOKEN (CHARGCONS)");
-    A_27131.start("Delete the consent matched by the KVNR from the ACCESS_TOKEN (EUDISPCONS)");
+    A_22158.start("Delete the consent matched by ?category and the KVNR from the ACCESS_TOKEN");
     ErpExpect(databaseHandle->clearConsent(kvnr, *category),
               HttpStatus::NotFound,
               "Could not find any consent for given KVNR ");
-    A_27131.finish();
     A_22158.finish();
 // GEMREQ-end A_22158
 
@@ -66,6 +64,9 @@ void ConsentDeleteHandler::handleRequest(PcSessionContext& session)
             A_22157.finish();
             break;
         case model::ConsentType::EUDISPCONS:
+            A_27131.start("Delete all eu-access-permission");
+            databaseHandle->deleteEuAccessPermission(kvnr);
+            A_27131.finish();
             break;
     }
 // GEMREQ-end A_22157

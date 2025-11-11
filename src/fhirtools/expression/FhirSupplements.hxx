@@ -35,8 +35,7 @@ class ExtensionFunction : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "extension";
-    explicit ExtensionFunction(
-        std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView, ExpressionPtr arg);
+    explicit ExtensionFunction(ExpressionPtr arg);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 
@@ -87,8 +86,7 @@ class ConformsTo : public UnaryExpression
 {
 public:
     static constexpr auto IDENTIFIER = "conformsTo";
-    explicit ConformsTo(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> fhirStructureRepositoryView,
-                        ExpressionPtr arg);
+    explicit ConformsTo(ExpressionPtr arg);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
 };
 

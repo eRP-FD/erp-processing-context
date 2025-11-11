@@ -28,6 +28,8 @@ public:
     [[nodiscard]] const GemErpEuPrPractitionerRole& practitionerRole() const;
     [[nodiscard]] const GemErpEuPrOrganization& organization() const;
 
+    EuMedicationDispenseInfos(EuMedicationDispenseInfos&&) = default;
+
 private:
     EuMedicationDispenseInfos(GemErpEuPrPractitioner&& practitioner, GemErpEuPrPractitionerRole&& practitionerRole,
                               GemErpEuPrOrganization&& organization);

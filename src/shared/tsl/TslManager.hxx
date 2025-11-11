@@ -155,6 +155,7 @@ private:
 #ifdef FRIEND_TEST
 
     friend class TslTestHelper;
+    FRIEND_TEST(TslManagerTest, requestOnInvalidResponse);
 
 #endif
 

@@ -29,6 +29,11 @@ CommunicationTest::CommunicationTest() :
 
 TEST_F(CommunicationTest, CreateInfoReqFromJson)//NOLINT(readability-function-cognitive-complexity)
 {
+    if (std::ranges::find(model::Communication::acceptedCommunications, model::ProfileType::GEM_ERP_PR_Communication_InfoReq) ==
+        model::Communication::acceptedCommunications.end())
+    {
+        GTEST_SKIP_("GEM_ERP_PR_Communication_InfoReq not supported");
+    }
     const auto& gemErpVersion = ResourceTemplates::Versions::GEM_ERP_current();
     if (gemErpVersion >= ResourceTemplates::Versions::GEM_ERP_1_5_2)
     {
@@ -1063,8 +1068,10 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
             break;
         case Reply:
         case ChargChangeReply:
+        case DiGA:
             builder.setSender(ActorRole::Pharmacists, "SMC-B-0815-4711")
                 .setRecipient(ActorRole::Insurant, "X555000111");
+            break;
     }
 
     std::string body = builder.createJsonString();

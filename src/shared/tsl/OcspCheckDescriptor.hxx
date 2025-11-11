@@ -46,6 +46,13 @@ public:
         PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
 
         /**
+         * Identical to PROVIDED_OR_CACHE, with the difference that
+         * an invalid provided response does not cause an immediate failure
+         * and will cause a cache lookup or OCSP request.
+         */
+        PROVIDED_OR_CACHE_REQUEST_IF_INVALID,
+
+        /**
          * Return cached OCSP response.
          * If no Response is cached return an error
          **/

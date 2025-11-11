@@ -81,7 +81,7 @@ bool fhirtools::FhirElement::isA(const std::string& typeId) const
     const auto& repo = mStructureDefinition->repositoryBackend();
     const auto* typeDef = repo.findTypeById(typeId);
     Expect3(typeDef != nullptr, "Type `" + typeId + "` is not defined.", std::logic_error);
-    return mStructureDefinition->isDerivedFrom(*repo.defaultView(), *typeDef);
+    return mStructureDefinition->isDerivedFrom(*typeDef);
 }
 
 const std::shared_ptr<const fhirtools::FhirSlicing>& FhirElement::slicing() const

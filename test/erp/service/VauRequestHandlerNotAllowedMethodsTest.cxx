@@ -96,7 +96,7 @@ public:
     JWT jwtVersicherter;
 
     ClientTeeProtocol teeProtocol;
-    HttpsClient mClient;
+    HttpsReconnectingClient mClient;
 
     std::string taskId;
 };

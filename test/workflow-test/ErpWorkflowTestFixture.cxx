@@ -413,10 +413,10 @@ void ErpWorkflowTestBase::checkTaskClose(
     // Check receipt bundle saved during /Task/Close
     const auto bundles = taskBundle->getResourcesByType<model::Bundle>("Bundle");
     ASSERT_EQ(bundles.size(), 1);  // 1.: Receipt bundle
-    std::optional<model::ErxReceipt> receipt;
-    ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(bundles.back().serializeToXmlString())));
+    auto receipt = model::ErxReceipt::fromJson(bundles[0].jsonDocument());
+    ASSERT_NO_FATAL_FAILURE(testutils::validate(receipt));
     // Must be the same as the result from the service call:
-    EXPECT_EQ(canonicalJson(receipt->serializeToJsonString()), canonicalJson(closeReceipt->serializeToJsonString()));
+    EXPECT_EQ(canonicalJson(receipt.serializeToJsonString()), canonicalJson(closeReceipt->serializeToJsonString()));
 
     // Check medication dispense saved during /Task/Close
     ASSERT_TRUE(task->kvnr().has_value());
@@ -445,9 +445,6 @@ void ErpWorkflowTestBase::checkTaskClose(
                      "from $dispense");
         EXPECT_LT(*task->lastMedicationDispense(), lastMedicationDispenseReferenceTimestamp);
     }
-
-    // Check deletion of task related communication objects:
-    checkCommunicationsDeleted(prescriptionId, kvnr, communications);
 }
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -533,8 +530,8 @@ void ErpWorkflowTestBase::checkCommunicationsDeleted(
             jwt2 = JwtBuilder::testBuilder().makeJwtApotheke(model::getIdentityString(communication.recipient()));
             break;
         case model::Communication::MessageType::Reply:
-            [[fallthrough]];
         case model::Communication::MessageType::ChargChangeReply:
+        case model::Communication::MessageType::DiGA:
             jwt1 = JwtBuilder::testBuilder().makeJwtApotheke(model::getIdentityString(communication.sender().value()));
             jwt2 = JwtBuilder::testBuilder().makeJwtVersicherter(model::getIdentityString(communication.recipient()));
             break;
@@ -1150,6 +1147,7 @@ void ErpWorkflowTestBase::medicationDispenseGetAllInternal(std::optional<model::
     ASSERT_NO_THROW(getJsonValidator()->validate(copyToOriginalFormat(
                                                     medicationDispenseBundle->jsonDocument()),
                                                     SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(*medicationDispenseBundle));
     std::vector<model::MedicationDispense> medicationDispenses;
     if (medicationDispenseBundle->getResourceCount() > 0)
     {
@@ -1222,6 +1220,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         ASSERT_NO_THROW(getJsonValidator()->validate(
             model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(taskBundle->jsonDocument()),
             SchemaType::fhir));
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*taskBundle));
         if (taskBundle->getResourceCount() > 0)
         {
             const auto tasks = taskBundle->getResourcesByType<model::Task>("Task");
@@ -1307,6 +1306,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
         ASSERT_NO_THROW(getJsonValidator()->validate(
             model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(taskBundle->jsonDocument()),
             SchemaType::fhir));
+        EXPECT_NO_FATAL_FAILURE(testutils::validate(*taskBundle));
         if (taskBundle->getResourceCount() > 0)
         {
             auto tasks = taskBundle->getResourcesByType<model::Task>("Task");
@@ -1319,7 +1319,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
             {
                 if (!isPatient)
                 {
-                    ASSERT_NO_THROW((void) testutils::getValidatedErxReceiptBundle(patientConfirmationOrReceipt[0].serializeToXmlString()));
+                    ASSERT_NO_FATAL_FAILURE(testutils::validate(patientConfirmationOrReceipt[0]));
                     ASSERT_FALSE(tasks[0].healthCarePrescriptionUuid().has_value());
                     ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
                     if (tasks[0].status() == model::Task::Status::completed)
@@ -1503,14 +1503,14 @@ ResourceTemplates::Versions::GEM_ERP ErpWorkflowTestBase::serverGematikProfileVe
     }
     auto metaData = metaDataGet(ContentMimeType::fhirJsonUtf8);
     Expect3(metaData.has_value(), "failed to retrieve meta data.", std::logic_error);
-    auto repoView = Fhir::instance().backend().defaultView();
+    const auto* backend = std::addressof(Fhir::instance().backend());
+    auto repoView = backend->defaultView();
     Expect3(repoView != nullptr, "failed to get repository view.", std::logic_error);
-    auto element = std::make_shared<ErpElement>(repoView, std::weak_ptr<ErpElement>{}, "CapabilityStatement",
+    auto element = std::make_shared<ErpElement>(backend, std::weak_ptr<ErpElement>{}, "CapabilityStatement",
                                                 std::addressof(metaData->jsonDocument()));
-    static auto findTask =
-        fhirtools::FhirPathParser::parse(repoView.get(), "rest.resource.where(type = 'Task').profile");
+    static auto findTask = fhirtools::FhirPathParser::parse(backend, "rest.resource.where(type = 'Task').profile");
     Expect3(findTask != nullptr, "failed to parse find task expression", std::logic_error);
-    auto profile = findTask->eval(fhirtools::EvaluationContext{element}).collection.single();
+    auto profile = findTask->eval(fhirtools::EvaluationContext{repoView, element}).collection.single();
     Expect3(profile != nullptr, "task profile not found in CapabilityStatement", std::logic_error);
     fhirtools::DefinitionKey key{profile->asString()};
     Expect3(key.version.has_value(), "failed to extract version from profile", std::logic_error);
@@ -1614,7 +1614,8 @@ void ErpWorkflowTestBase::taskCloseInternal(
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
     if(expectedInnerStatus == HttpStatus::OK)
     {
-        ASSERT_NO_THROW(receipt.emplace(testutils::getValidatedErxReceiptBundle(serverResponse.getBody())));
+        receipt.emplace(model::ErxReceipt::fromXmlNoValidation(serverResponse.getBody()));
+        ASSERT_NO_FATAL_FAILURE(testutils::validate(*receipt));
     }
     else
     {
@@ -1647,7 +1648,7 @@ void ErpWorkflowTestBase::taskAcceptInternal(std::optional<model::Bundle>& bundl
     if(expectedInnerStatus == HttpStatus::OK)
     {
         auto unspec = model::UnspecifiedResource::fromXmlNoValidation(serverResponse.getBody());
-        ASSERT_NO_THROW(testutils::bestEffortValidate(unspec)) << serverResponse.getBody();
+        ASSERT_NO_THROW(testutils::validate(unspec)) << serverResponse.getBody();
         bundle = model::Bundle::fromJson(std::move(unspec).jsonDocument());
     }
     else
@@ -1742,9 +1743,15 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     using namespace std::string_view_literals;
     using model::Task;
     using model::Timestamp;
+    std::string profile = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4";
+    if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_5_2)
+    {
+        // GEM_ERP_PR_PAR_CreateOperation_Input has been removed in 1.5
+        profile = "http://hl7.org/fhir/StructureDefinition/Parameters";
+    }
     std::string create = "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
                          "  <meta>\n"
-                         "    <profile value=\"https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4\"/>\n"
+                         "    <profile value=\"" + profile + "\"/>\n"
                          "  </meta>\n"
                          "  <parameter>\n"
                          "    <name value=\"workflowType\"/>\n"
@@ -1831,6 +1838,7 @@ void ErpWorkflowTestBase::auditEventGetInternal(
     ASSERT_NO_THROW(getJsonValidator()->validate(
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle->jsonDocument()),
         SchemaType::fhir));
+    EXPECT_NO_FATAL_FAILURE(testutils::validate(*auditEventBundle));
     if (auditEventBundle->getResourceCount() > 0)
     {
         auto auditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
@@ -2291,10 +2299,10 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                 std::string signatureData;
                 ASSERT_NO_THROW(signatureData = signature->data().value().data());
                 auto cms = runsInCloudEnv() ? CadesBesSignature(signatureData) : CadesBesSignature(certs, signatureData);
-                std::optional<model::ErxReceipt> receiptFromSignature;
-                ASSERT_NO_THROW(receiptFromSignature.emplace(testutils::getValidatedErxReceiptBundle(cms.payload())));
-                EXPECT_FALSE(receiptFromSignature->getSignature().has_value());
-                EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature->serializeToJsonString());
+                auto receiptFromSignature = model::ErxReceipt::fromXmlNoValidation(cms.payload());
+                ASSERT_NO_FATAL_FAILURE(testutils::validate(receiptFromSignature));
+                EXPECT_FALSE(receiptFromSignature.getSignature().has_value());
+                EXPECT_EQ(expectedReceipt->serializeToJsonString(), receiptFromSignature.serializeToJsonString());
             }
             {
                 // dispenseItemBundle
@@ -2313,7 +2321,7 @@ void ErpWorkflowTestBase::chargeItemGetIdInternal(
                     auto cert = Certificate::fromPem(CFdSigErpTestHelper::cFdSigErp());
                     ASSERT_NO_THROW(cms->validateCounterSignature(cert));
                 }
-                ASSERT_NO_THROW((void)model::AbgabedatenPkvBundle::fromXmlNoValidation(cms->payload()));
+                ASSERT_NO_THROW((void)model::AbgabedatenPkvBundle::fromXml(cms->payload(), *StaticData::getXmlValidator()));
             }
         }
     }
@@ -2611,7 +2619,7 @@ void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)
     }
     if (resourceForValidation.has_value())
     {
-        ASSERT_NO_FATAL_FAILURE(testutils::bestEffortValidate(*resourceForValidation)) << innerResponse.getBody();
+        ASSERT_NO_FATAL_FAILURE(testutils::validate(*resourceForValidation)) << innerResponse.getBody();
     }
 }
 

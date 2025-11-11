@@ -35,6 +35,34 @@ std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt)
 std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt);
 
 class MockDatabase;
+
+class HttpsReconnectingClient : public ClientInterface
+{
+public:
+    explicit HttpsReconnectingClient(ConnectionParameters parameters)
+    : mParameters{std::move(parameters)}
+    , mClient{std::make_unique<HttpsClient>(mParameters)}
+    {}
+    ClientResponse send (const ClientRequest& clientRequest) override
+    {
+        try {
+            return mClient->send(clientRequest);
+        }
+        catch (const boost::system::system_error& ex)
+        {
+            if (ex.code() != boost::asio::ssl::error::stream_truncated)
+            {
+                Fail("send failed: " + ex.code().message());
+            }
+            mClient = std::make_unique<HttpsClient>(mParameters);
+            return mClient->send(clientRequest);
+        }
+    }
+private:
+    ConnectionParameters mParameters;
+    std::unique_ptr<HttpsClient> mClient;
+};
+
 /**
  * You can use this base class for tests that require a running server.
  */
@@ -60,7 +88,7 @@ public:
     void SetUp (void) override;
     void TearDown (void) override;
 
-    HttpsClient createClient (void);
+    HttpsReconnectingClient createClient (void);
 
     // T can be JWT or std::string, auto-resolved.
     template <typename T>
@@ -75,7 +103,7 @@ public:
     virtual Header createGetHeader (const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
     virtual Header createDeleteHeader(const std::string& path, const std::optional<const JWT>& jwtToken = {}) const;
     virtual ClientRequest encryptRequest (const ClientRequest& innerRequest, const std::optional<const JWT>& jwtToken = {});
-    virtual ClientResponse verifyOuterResponse (const ClientResponse& outerResponse);
+    virtual ClientResponse verifyResponse (const ClientResponse& outerResponse);
     void validateInnerResponse(const ClientResponse& innerResponse) const;
     virtual void verifyGenericInnerResponse (
         const ClientResponse& innerResponse,
@@ -147,7 +175,7 @@ public:
     std::unique_ptr<HttpsServer> mServer;
 
 protected:
-    model::MedicationDispense createMedicationDispense(
+    std::pair<model::MedicationDispense, model::GemErpPrMedication> createMedicationDispense(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,
         const model::Timestamp& whenHandedOver = model::Timestamp::now(),

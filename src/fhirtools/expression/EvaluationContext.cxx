@@ -14,29 +14,32 @@
 namespace fhirtools
 {
 
-EvaluationContext::EvaluationContext(Collection initCollection, std::shared_ptr<const Element> initContext)
+EvaluationContext::EvaluationContext(std::shared_ptr<const FhirStructureRepositoryView> initView,
+                                     Collection initCollection, std::shared_ptr<const Element> initContext)
     : collection{std::move(initCollection)}
     , context{std::move(initContext)}
+    , view{std::move(initView)}
 {
 }
 
-EvaluationContext::EvaluationContext(std::shared_ptr<const Element> element)
+EvaluationContext::EvaluationContext(std::shared_ptr<const FhirStructureRepositoryView> initView,
+                                     std::shared_ptr<const Element> element)
     : collection{element}
     , context{std::move(element)}
+    , view{std::move(initView)}
 {
 }
 
 EvaluationContext EvaluationContext::makeElement(std::shared_ptr<Element> element) const
 {
-    return EvaluationContext{{std::move(element)}, context};
-
+    return EvaluationContext{view, {std::move(element)}, context};
 }
 
 template<typename ValueT>
 EvaluationContext EvaluationContext::makeElement(Element::Type type, ValueT&& value) const
 {
-    return makeElement(
-        std::make_shared<PrimitiveElement>(context->getFhirStructureRepository(), type, std::forward<ValueT>(value)));
+    return makeElement(std::make_shared<PrimitiveElement>(std::addressof(context->getFhirStructureRepository()), type,
+                                                          std::forward<ValueT>(value)));
 }
 
 EvaluationContext EvaluationContext::makeBoolElement(bool value) const
@@ -87,18 +90,18 @@ EvaluationContext EvaluationContext::makeQuantityElement(const Element::Quantity
 
 EvaluationContext EvaluationContext::operator()() const
 {
-    return {{}, context};
+    return {view, {}, context};
 }
 
 EvaluationContext EvaluationContext::operator()(Collection collection) const
 {
-    return {std::move(collection), context};
+    return {view, std::move(collection), context};
 }
 
 EvaluationContext EvaluationContext::operator()(std::shared_ptr<const Element> element) const
 {
     FPExpect(element != nullptr, "element must not be nullptr.");
-    return {{std::move(element)}, context};
+    return {view, {std::move(element)}, context};
 }
 
 }

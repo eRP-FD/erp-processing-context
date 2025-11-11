@@ -8,12 +8,13 @@
 #ifndef ERP_PROCESSING_CONTEXT_TEST_UTILS
 #define ERP_PROCESSING_CONTEXT_TEST_UTILS
 
-#include "shared/model/ProfileType.hxx"
-#include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/model/DateTime.hxx"
+#include "fhirtools/validator/ValidationResult.hxx"
+#include "shared/model/ProfileType.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
+#include <memory>
 #include <thread>
 #include <vector>
 
@@ -21,7 +22,8 @@ namespace model
 {
 class Bundle;
 class ErxReceipt;
-class UnspecifiedResource;
+class FhirResourceBase;
+class NumberAsStringParserDocument;
 }
 
 namespace testutils
@@ -45,16 +47,11 @@ static void waitFor(T predicate, const std::chrono::milliseconds& timeout = std:
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
 
-void bestEffortValidateJson(const std::string& json);
-void bestEffortValidate(const model::UnspecifiedResource& res);
-
-template<typename BundleT = model::ErxReceipt>
-[[nodiscard]] BundleT
-getValidatedErxReceiptBundle(std::string_view xmlDoc,
-                             model::ProfileType profileType = model::ProfileType::GEM_ERP_PR_Bundle);
-
-extern template model::Bundle getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
-extern template model::ErxReceipt getValidatedErxReceiptBundle(std::string_view xmlDoc, model::ProfileType profileType);
+void validate(const model::FhirResourceBase& resource);
+std::unique_ptr<model::FhirResourceBase> createResource(model::NumberAsStringParserDocument doc);
+std::unique_ptr<model::FhirResourceBase> createResourceFromJson(std::string_view jsonStr);
+std::unique_ptr<model::FhirResourceBase> createResourceFromXml(std::string_view xmlStr);
+std::unique_ptr<model::FhirResourceBase> createResource(std::string_view doc);
 
 std::string shiftDate(const std::string& realDate);
 

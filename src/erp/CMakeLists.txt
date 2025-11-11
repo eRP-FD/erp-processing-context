@@ -34,6 +34,7 @@ list(
         ErpProcessingContext.cxx
         admin/AdminServer.cxx
         admin/PutRuntimeConfigHandler.cxx
+        crypto/DtbpPseudonymization.cxx
         crypto/VsdmProof.cxx
         database/Database.cxx
         database/DatabaseConnectionTimer.cxx

@@ -677,8 +677,13 @@ TEST_F(ActivateTaskTest, ThreeMonthExpiry)
 
 TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
 {
+    A_22927_01.test("Task aktivieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard onUnknownExtensionGuard{
-            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "report"};
+            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "reject"};
+    // not yet active:
+    EnvironmentVariableGuard onUnknownExtensionGuard2{
+        "ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM", "2022-07-26"};
     const auto timestamp = model::Timestamp::fromXsDate("2022-07-25", model::Timestamp::UTCTimezone);
     const auto* kvnr = "Y229270213";
     const auto prescriptionId =
@@ -695,8 +700,63 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
                   R"(><extension url="subStatus"><valueBoolean value="true"/></extension></status>)");
     auto taskJson = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    std::exception_ptr exception;
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, bundle, kvnr,
-                            {.expectedStatus = HttpStatus::Accepted, .signingTime = timestamp, .insertTask = true}));
+                                              {.expectedStatus = HttpStatus::BadRequest,
+                                               .signingTime = timestamp,
+                                               .insertTask = true,
+                                               .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    std::string diagnostics =
+        "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
+        "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
+        "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
+        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1); ";
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+        diagnostics);
+}
+
+TEST_F(ActivateTaskTest, UnslicedExtension)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard onUnknownExtensionGuard{
+            "ERP_SERVICE_TASK_ACTIVATE_KBV_VALIDATION_ON_UNKNOWN_EXTENSION", "ignore"};
+    // now active:
+    EnvironmentVariableGuard onUnknownExtensionGuard2{
+        "ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM", "2022-07-25"};
+    const auto timestamp = model::Timestamp::fromXsDate("2022-07-25", model::Timestamp::UTCTimezone);
+    const auto* kvnr = "Y229270213";
+    const auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 429);
+    const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(timestamp);
+    auto bundle = ResourceTemplates::kbvBundleXml(
+        {.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr, .kbvVersion = kbvVersion});
+    // intent is only used for medication request and immediately after status, where we want to insert the extension
+    auto extraStatusPos = bundle.find(R"(<intent value="order")");
+    ASSERT_NE(extraStatusPos, std::string::npos);
+    extraStatusPos = bundle.rfind("/>", extraStatusPos);
+    ASSERT_NE(extraStatusPos, std::string::npos);
+    bundle.replace(extraStatusPos, 2,
+                  R"(><extension url="subStatus"><valueBoolean value="true"/></extension></status>)");
+    auto taskJson = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = timestamp, .kvnr = kvnr});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, bundle, kvnr,
+                                              {.expectedStatus = HttpStatus::BadRequest,
+                                               .signingTime = timestamp,
+                                               .insertTask = true,
+                                               .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    std::string diagnostics =
+        "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
+        "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
+        "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
+        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1); ";
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
+        std::rethrow_exception(exception), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+        diagnostics);
 }
 
 
@@ -1155,8 +1215,10 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
 
 TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
 {
+    auto version = ResourceTemplates::Versions::KBV_ERP_current();
+    auto renderVersion = version.renderVersion();
     auto kbvBundleXml = ResourceManager::instance().getStringResource(
-        "test/issues/ERP-17605/Bundle_invalid_MedicationCompounding_missing_ingredient_array.xml");
+        "test/issues/ERP-17605/Bundle_invalid_MedicationCompounding_missing_ingredient_array_" + renderVersion +".xml");
     const auto taskId =
         model::PrescriptionId::fromString("160.100.000.000.051.83");
     const auto taskJson =
@@ -1173,7 +1235,7 @@ TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
         "Bundle.entry[2].resource{Medication}.ingredient[*]: error: missing mandatory element (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|1.1.0); ");
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|" + to_string(version) + "); ");
 }
 
 class DigaNoAlternativeIdAllowed : public ActivateTaskTest,
@@ -1440,7 +1502,7 @@ TEST_P(ProzessParameterFlowtype, samples)
     testutils::ShiftFhirResourceViewsGuard shiftView(
         "EVDGA_2025_01_15", date::year_month_day{date::year(2020), date::month(02), date::day(01)});
 
-    A_19445_10.test("Prozessparameter - Flowtype");
+    A_19445_11.test("Prozessparameter - Flowtype");
     //using namespace model::resource;
     const auto& [params, prescriptionId] = GetParam();
     auto signingTime = model::Timestamp::fromGermanDate(std::string{params.signingTime});
@@ -1528,6 +1590,8 @@ class ActivateTaskTestPatchTest : public ActivateTaskTest,
 
 TEST_P(ActivateTaskTestPatchTest, ValidateAfterPatch)
 {
+    testutils::ShiftFhirResourceViewsGuard guard{
+        "KBV_2023-07-01", std::chrono::floor<std::chrono::days>(std::chrono::system_clock::now())};
     auto kbvBundleXml = ResourceManager::instance().getStringResource(
         "test/validation/xml/v_2023_07_01/kbv/bundle_1_1_2/" + GetParam().testling);
 
@@ -1625,6 +1689,7 @@ TEST_P(ActivateTaskUuidValidationTest, run)
 {
     using namespace model::resource::elements;
     using model::resource::ElementName;
+    testutils::ShiftFhirResourceViewsGuard noShift(testutils::ShiftFhirResourceViewsGuard::asConfigured);
     EnvironmentVariableGuard guard{ConfigurationKey::FHIR_VALIDATION_URN_UUID_CHECK_FROM, GetParam().urnUuidCheckFrom};
     static rapidjson::Pointer fullUrlPtr{ElementName::path(entry, 1, fullUrl)};
     static rapidjson::Pointer subjectReferencePtr{ElementName::path(entry, 0, resource, subject, reference)};
@@ -1662,10 +1727,7 @@ TEST_P(ActivateTaskUuidValidationTest, run)
 std::list<ActivateTaskUuidValidationTestParameters> ActivateTaskUuidValidationTest::parameters()
 {
     using namespace std::chrono_literals;
-    const date::days globalOffset{
-        Configuration::instance().getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS)};
-
-    auto now = date::make_zoned(model::Timestamp::GermanTimezone, std::chrono::system_clock::now() - globalOffset);
+    auto now = date::make_zoned(model::Timestamp::GermanTimezone, std::chrono::system_clock::now());
     model::Timestamp today{model::Timestamp::GermanTimezone, date::floor<std::chrono::days>(now.get_local_time())};
     model::Timestamp yesterday{model::Timestamp::GermanTimezone,
                                date::floor<std::chrono::days>(now.get_local_time() - 24h)};
@@ -1678,9 +1740,150 @@ std::list<ActivateTaskUuidValidationTestParameters> ActivateTaskUuidValidationTe
         {yesterday.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", false},
         {today.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", false},
         {tomorrow.toGermanDate(), "urn:uuid:16FA9DD1-A702-4627-8405-CD22F01A09C7", true},
-
     };
 }
 
 INSTANTIATE_TEST_SUITE_P(parameters, ActivateTaskUuidValidationTest,
                          testing::ValuesIn(ActivateTaskUuidValidationTest::parameters()));
+
+
+struct ActivateTaskFullUrlTestParam {
+    std::string name;
+    std::optional<std::string> fullUrl;
+    std::optional<std::string> resourceId;
+    std::string message{};
+    std::string diagnostics{};
+};
+
+class ActivateTaskFullUrlTest : public ActivateTaskTest, public ::testing::WithParamInterface<ActivateTaskFullUrlTestParam>
+{
+public:
+    SessionContext prepareCreateTask()
+    {
+        using namespace model::resource::elements;
+        using model::resource::ElementName;
+        static const ElementName section{"section"};
+        static const ElementName beneficiary{"beneficiary"};
+        static rapidjson::Pointer fullUrlPtr{ElementName::path(entry, 1, fullUrl)};
+        static rapidjson::Pointer resourceIdPtr{ElementName::path(entry, 1, resource, id)};
+        static rapidjson::Pointer coverageBeneficiaryPtr{ElementName::path(entry, 5, resource, beneficiary)};
+        static rapidjson::Pointer coverageBeneficiaryRefPtr{ElementName::path(entry, 5, resource, beneficiary, reference)};
+        struct Entry {
+            int index;
+            rapidjson::Pointer subjectPtr{ElementName::path(entry, index, resource, subject)};
+            rapidjson::Pointer subjectRefPtr{ElementName::path(entry, index, resource, subject, reference)};
+        };
+        static const Entry composition{0};
+        static const Entry medicationRequest{6};
+
+        const auto& converter = Fhir::instance().converter();
+        auto authoredOn = model::Timestamp::now();
+        const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+        auto kbvBundle = model::UnspecifiedResource::fromXmlNoValidation(
+            ResourceTemplates::kbvBundleXml({.prescriptionId = taskId, .authoredOn = authoredOn}))
+        .jsonDocument();
+        if (GetParam().fullUrl)
+        {
+            kbvBundle.setValue(fullUrlPtr, *GetParam().fullUrl);
+            kbvBundle.setValue(composition.subjectRefPtr, *GetParam().fullUrl);
+            kbvBundle.setValue(medicationRequest.subjectRefPtr, *GetParam().fullUrl);
+            kbvBundle.setValue(coverageBeneficiaryRefPtr, *GetParam().fullUrl);
+        }
+        else
+        {
+            fullUrlPtr.Erase(kbvBundle);
+            composition.subjectPtr.Erase(kbvBundle);
+            medicationRequest.subjectPtr.Erase(kbvBundle);
+            coverageBeneficiaryPtr.Erase(kbvBundle);
+        }
+        if (GetParam().resourceId)
+        {
+            kbvBundle.setValue(resourceIdPtr, *GetParam().resourceId);
+        }
+        else
+        {
+            resourceIdPtr.Erase(kbvBundle);
+        }
+        const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
+        mServerRequest = serverRequest(taskJson, converter.jsonToXmlString(kbvBundle), authoredOn);
+        mServerRequest.setAccessToken(mJwtBuilder->makeJwtArzt());
+        return SessionContext{mServiceContext, mServerRequest, mServerResponse, mAccessLog};
+    }
+
+    static const std::string& name(const testing::TestParamInfo<ActivateTaskFullUrlTestParam>& p)
+    {
+        return p.param.name;
+    }
+
+    testutils::ShiftFhirResourceViewsGuard noShift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    ServerRequest mServerRequest{{}};
+    ServerResponse mServerResponse;
+    AccessLog mAccessLog;
+};
+
+
+TEST_P(ActivateTaskFullUrlTest, checkDisabled)
+{
+    EnvironmentVariableGuard checkDisabled{ConfigurationKey::FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM, "2099-01-01"};
+    auto sessionContext = prepareCreateTask();
+    ActivateTaskHandler handler({});
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    try {
+        handler.handleRequest(sessionContext);
+    }
+    catch (const ErpException& ex)
+    {
+        // should get a different message, when the check ist disabled
+        EXPECT_NE(ex.what(), GetParam().message);
+    }
+    catch (const std::exception& ex)
+    {
+        FAIL() << "unexpected exception of type " << typeid(ex).name() << ": " << ex.what();
+    }
+}
+
+TEST_P(ActivateTaskFullUrlTest, checkEnabled)
+{
+    EnvironmentVariableGuard checkEnabled{ConfigurationKey::FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM, "2000-01-01"};
+    auto sessionContext = prepareCreateTask();
+    ActivateTaskHandler handler({});
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    try {
+        handler.handleRequest(sessionContext);
+        FAIL() << "expected exception not thrown";
+    }
+    catch (const ErpException& ex)
+    {
+        EXPECT_EQ(ex.what(), GetParam().message) << mServerRequest.getBody();
+    }
+    catch (const std::exception& ex)
+    {
+        FAIL() << "unexpected exception of type " << typeid(ex).name() << ": " << ex.what();
+    }
+}
+
+
+INSTANTIATE_TEST_SUITE_P(reject, ActivateTaskFullUrlTest,
+                         ::testing::ValuesIn(std::initializer_list<ActivateTaskFullUrlTestParam>{
+                             {
+                                 .name = "bundledResourceMissingId",
+                                 .fullUrl = "http://pvs.praxis.local/fhir/Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7",
+                                 .resourceId = std::nullopt,
+                                 .message = "Die ID einer Ressource im Bundle ist nicht vorhanden",
+                             },
+                             {
+                                 .name = "bundleFullUrlIdMissmatch",
+                                 .fullUrl = "http://pvs.praxis.local/fhir/Patient/16fa9dd1-a702-4627-8405-cd22f01a09c7",
+                                 .resourceId = "Impatient",
+                                 .message = "Die ID einer Ressource und die ID der zugehörigen fullUrl stimmen nicht überein.",
+                             },
+                             {
+                                 .name = "bundleFullUrlInvalidFormat",
+                                 .fullUrl = "urn:oid:0.8.15.47.11",
+                                 .resourceId = "16fa9dd1-a702-4627-8405-cd22f01a09c7",
+                                 .message = "Format der fullUrl ist ungültig.",
+                             },
+                         }),
+                         &ActivateTaskFullUrlTest::name);

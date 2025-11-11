@@ -59,12 +59,17 @@ private:
     void removeEuMedicationDispenseEvents(const model::EventKvnr &kvnr, std::vector<std::unique_ptr<model::TaskEvent>>& events);
 
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
+    void mergeFailingEpas(std::set<std::string>&& failingEpas);
+    void checkDeactivateThrottle(const std::string& hostNotFailing);
+
     std::function<JsonLog()> jsonLog;
     const std::shared_ptr<MedicationExporterServiceContext>& mServiceContext;
     IEpaAccountLookup& mEpaAccountLookup;
     std::chrono::seconds mRetryDelaySeconds;
     std::chrono::minutes mHealthRecordRelocationWaitMinutes;
     int mMaxRetryAttempts;
+    std::mutex mFailingEpasMutex;
+    std::set<std::string> mFailingEpas;
 };
 
 #endif//#ifndef ERP_PROCESSING_CONTEXT_EXPORTER_EVENTPROCESSOR_HXX

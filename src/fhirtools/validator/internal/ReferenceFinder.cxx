@@ -6,6 +6,8 @@
 #include "fhirtools/validator/internal/ReferenceFinder.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/Element.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
+#include "fhirtools/repository/groups/FhirResourceGroup.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
@@ -17,10 +19,10 @@ void ReferenceFinder::FinderResult::merge(ReferenceFinder::FinderResult&& source
     validationResults.merge(std::move(source.validationResults));
     referenceContext.merge(std::move(source.referenceContext));
 }
-fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const fhirtools::Element& element,
-                                                                          std::set<ProfiledElementTypeInfo> profiles,
-                                                                          const fhirtools::ValidatorOptions& options,
-                                                                          std::string_view elementFullPath)
+fhirtools::ReferenceFinder::FinderResult
+fhirtools::ReferenceFinder::find(const std::shared_ptr<const FhirStructureRepositoryView>& view,
+                                 const fhirtools::Element& element, std::set<ProfiledElementTypeInfo> profiles,
+                                 const fhirtools::ValidatorOptions& options, std::string_view elementFullPath)
 {
     if (profiles.empty())
     {
@@ -29,11 +31,14 @@ fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const 
     const bool isResource = element.isResource();
     const bool isBundle = isResource && element.definitionPointer().profile()->url() == constants::bundleUrl;
     auto [resourceId, resultList] = element.resourceIdentity(elementFullPath);
-    auto resourceInfo = std::make_shared<ResourceInfo>(ResourceInfo{.identity{std::move(resourceId)},
-                                                                    .elementFullPath{std::string{elementFullPath}},
-                                                                    .resourceRoot{element.shared_from_this()},
-                                                                    .anchorType = ReferenceContext::AnchorType::none});
-    ReferenceFinder finder{profiles, resourceInfo, true, isDocumentBundle(isBundle, element), 0, options};
+    auto resourceInfo = std::make_shared<ResourceInfo>(ResourceInfo{
+        .identity{std::move(resourceId)},
+        .elementFullPath{std::string{elementFullPath}},
+        .resourceRoot{element.shared_from_this()},
+        .anchorType = anchorType(element, ResourceHandling::other, false),
+        .parent = {},
+    });
+    ReferenceFinder finder{view, profiles, resourceInfo, true, isDocumentBundle(isBundle, element), 0, options};
     finder.mResult.validationResults.merge(std::move(resultList));
     if (isResource)
     {
@@ -48,10 +53,12 @@ fhirtools::ReferenceFinder::FinderResult fhirtools::ReferenceFinder::find(const 
     return std::move(finder.mResult);
 }
 
-ReferenceFinder::ReferenceFinder(std::set<ProfiledElementTypeInfo> profiles,
+ReferenceFinder::ReferenceFinder(std::shared_ptr<const FhirStructureRepositoryView> view,
+                                 std::set<ProfiledElementTypeInfo> profiles,
                                  std::shared_ptr<ResourceInfo> currentResource, bool followBundleEntry,
                                  bool isDocumentBundle, size_t bundleIndex, const ValidatorOptions& options)
-    : mProfiledElementTypes{std::move(profiles)}
+    : mView{std::move(view)}
+    , mProfiledElementTypes{std::move(profiles)}
     , mCurrentResource{std::move(currentResource)}
     , mFollowBundleEntry{followBundleEntry}
     , mIsDocumentBundle{isDocumentBundle}
@@ -65,7 +72,6 @@ void ReferenceFinder::findInternal(const Element& element, std::string_view elem
                                    const std::string& resourcePath)
 {
     using namespace std::string_literals;
-    const auto& repo = *element.getFhirStructureRepository();
     addSliceProfiles(element, elementFullPath);
     if (element.definitionPointer().element()->typeId() == "Reference")
     {
@@ -73,59 +79,82 @@ void ReferenceFinder::findInternal(const Element& element, std::string_view elem
     }
     for (const auto& subName : element.subElementNames())
     {
-        const auto& subDef = element.definitionPointer().subField(subName);
-        if (! subDef)
+        processSubElements(element, subName, elementFullPath, resourcePath);
+    }
+}
+
+// NOLINTNEXTLINE(misc-no-recursion)
+void fhirtools::ReferenceFinder::processSubElements(const Element& element, const std::string& subName,
+                                                    std::string_view elementFullPath, const std::string& resourcePath)
+{
+    const auto& subDef = element.definitionPointer().subField(subName);
+    if (! subDef)
+    {
+        mResult.validationResults.add(Severity::debug, "undefined subfield: " + subName,
+                                      std::string{elementFullPath}, element.definitionPointer().profile());
+        return;
+    }
+    const auto elementType = getElementType(*subDef);
+    if (! mFollowBundleEntry && elementType == ElementType::bundledResource)
+    {
+        return;
+    }
+    const bool isArray = subDef->element()->isArray();
+    std::ostringstream subFullPathBase;
+    subFullPathBase << elementFullPath << '.' << subName;
+    const auto& commonSubPets = subProfiledElementTypes(*mView, subName, subFullPathBase.view());
+    size_t idx = 0;
+    for (const auto& subElement : element.subElements(subName))
+    {
+        std::ostringstream subElementFullPath;
+        subElementFullPath << subFullPathBase.view();
+        if (isArray)
         {
-            mResult.validationResults.add(Severity::debug, "undefined subfield: " + subName,
-                                          std::string{elementFullPath}, element.definitionPointer().profile());
-            continue;
+            subElementFullPath << '[' << idx << ']';
+            ++idx;
         }
-        const auto elementType = getElementType(repo, *subDef);
-        if (! mFollowBundleEntry && elementType == ElementType::bundledResource)
+        if (subElement->isResource())
         {
-            continue;
+            processResource(*subElement, commonSubPets, elementType, std::move(subElementFullPath));
         }
-        const bool isArray = subDef->element()->isArray();
-        std::ostringstream subFullPathBase;
-        subFullPathBase << elementFullPath << '.' << subName;
-        const auto& commonSubPets = subProfiledElementTypes(repo, subName, subFullPathBase.view());
-        size_t idx = 0;
-        for (const auto& subElement : element.subElements(subName))
+        else
         {
-            std::ostringstream subElementFullPath;
-            subElementFullPath << subFullPathBase.view();
-            if (isArray)
-            {
-                subElementFullPath << '[' << idx << ']';
-                ++idx;
-            }
-            if (subElement->isResource())
-            {
-                processResource(*subElement, commonSubPets, elementType, std::move(subElementFullPath));
-            }
-            else
-            {
-                ReferenceFinder subFinder{commonSubPets,     mCurrentResource, mFollowBundleEntry,
-                                          mIsDocumentBundle, mBundleIndex,     mOptions};
+            ReferenceFinder subFinder{
+                mView,        commonSubPets, mCurrentResource, mFollowBundleEntry, mIsDocumentBundle,
+                mBundleIndex, mOptions};
+                if (elementType== ElementType::bundleEntry)
+                {
+                    subFinder.mFullUrl = fullUrlFromEntry(*subElement);
+                }
                 std::ostringstream subResourcePath;
                 subResourcePath << resourcePath << '.' << subName;
                 subFinder.findInternal(*subElement, subElementFullPath.view(), subResourcePath.str());
                 mResult.merge(std::move(subFinder.mResult));
-                if (elementType == ElementType::bundleEntry)
+                switch (elementType)
                 {
-                    ++mBundleIndex;
+                    using enum ElementType;
+                    case bundleEntry:
+                        ++mBundleIndex;
+                        break;
+                    case resourceId:
+                        mCurrentResource->id = subElement->asString();
+                        break;
+                    case bundle:
+                    case bundledResource:
+                    case containedResource:
+                    case other:
+                        break;
                 }
-            }
         }
     }
 }
+
 
 // NOLINTNEXTLINE(misc-no-recursion, performance-unnecessary-value-param)
 void ReferenceFinder::processResource(const Element& element, std::set<ProfiledElementTypeInfo> allSubPets,
                                       ElementType elementType, std::ostringstream&& elementFullPath)
 {
-    using AnchorType = ReferenceContext::AnchorType;
-    const auto& repo = *element.getFhirStructureRepository();
+    const auto& repo = element.getFhirStructureRepository();
     const auto& resourceType = element.resourceType();
     elementFullPath << '{' << resourceType << '}';
     const auto* resourceDef = repo.findTypeById(resourceType);
@@ -138,7 +167,7 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
     std::set<ProfiledElementTypeInfo> resourcePets;
     for (auto& pet : allSubPets)//NOLINT(readability-qualified-auto)
     {
-        if (! pet.element()->isRoot() || resourceDef->isDerivedFrom(repo, *pet.profile()))
+        if (! pet.element()->isRoot() || resourceDef->isDerivedFrom(*pet.profile()))
         {
             continue;
         }
@@ -160,22 +189,21 @@ void ReferenceFinder::processResource(const Element& element, std::set<ProfiledE
     }
 
     const bool followBundleEntry = mFollowBundleEntry && ! isBundle;
-    const bool isAnchor = resourceHandling == ResourceHandling::expectedComposition && isComposition;
     auto [resourceId, resultList] = element.resourceIdentity(elementFullPath.view());
-    auto resourceInfo =
-        std::make_shared<ResourceInfo>(ResourceInfo{.identity{std::move(resourceId)},
-                                                    .elementFullPath{elementFullPath.str()},
-                                                    .resourceRoot{element.shared_from_this()},
-                                                    .anchorType = isAnchor ? AnchorType::composition : AnchorType::none,
-                                                    .referenceRequirement = referenceRequirement(resourceHandling)});
-    ReferenceFinder subFinder{resourcePets, resourceInfo, followBundleEntry, isDocumentBundle(isBundle, element), 0,
-                              mOptions};
+    auto resourceInfo = std::make_shared<ResourceInfo>(ResourceInfo{
+        .identity{std::move(resourceId)},
+        .fullUrl = mFullUrl,
+        .elementFullPath{elementFullPath.str()},
+        .resourceRoot{element.shared_from_this()},
+        .anchorType = anchorType(element, resourceHandling, isComposition),
+        .referenceRequirement = referenceRequirement(resourceHandling),
+        .parent = mCurrentResource,
+    });
+    ReferenceFinder subFinder{mView, resourcePets, resourceInfo, followBundleEntry, isDocumentBundle(isBundle, element),
+                              0,     mOptions};
     subFinder.findInternal(element, elementFullPath.view(), std::string{});
     mResult.merge(std::move(subFinder.mResult));
-    if (resourceHandling == ResourceHandling::contained)
-    {
-        mCurrentResource->contained.emplace_back(resourceInfo);
-    }
+    mCurrentResource->children.emplace_back(resourceInfo);
     mResult.referenceContext.addResource(std::move(resourceInfo));
 }
 
@@ -187,7 +215,7 @@ std::set<ProfiledElementTypeInfo> ReferenceFinder::subProfiledElementTypes(const
     std::set<ProfiledElementTypeInfo> result;
     for (const auto& pet : mProfiledElementTypes)
     {
-        const auto& petSubDefs = pet.subDefinitions(repoView, subFieldName);
+        const auto& petSubDefs = pet.subDefinitions(subFieldName);
         result.insert(petSubDefs.begin(), petSubDefs.end());
         const auto& petSubField = pet.subField(subFieldName);
         if (petSubField)
@@ -203,17 +231,17 @@ fhirtools::ReferenceFinder::sliceProfiledElementTypes(const fhirtools::Element& 
                                                       const fhirtools::ProfiledElementTypeInfo& profiledElementTypeInfo)
 {
     std::set<ProfiledElementTypeInfo> result;
+    const auto* repo = std::addressof(element.getStructureDefinition()->repositoryBackend());
     const auto& fhirElement = profiledElementTypeInfo.element();
     const auto& slicing = fhirElement->slicing();
     if (slicing == nullptr)
     {
         return {};
     }
-    const auto& repo = *element.getFhirStructureRepository();
     for (const auto& slice : slicing->slices())
     {
         const auto& condition = slice.condition(repo, slicing->discriminators());
-        if (condition->test(element, mOptions))
+        if (condition->test(mView, element, mOptions))
         {
             static_assert(std::is_reference_v<decltype(slice.profile())>,
                           "slice.profile() must return reference to allow taking the address");
@@ -229,10 +257,13 @@ std::set<ProfiledElementTypeInfo> fhirtools::ReferenceFinder::profilesFromResour
 {
     using namespace std::string_literals;
     std::set<ProfiledElementTypeInfo> result;
-    const auto& repo = *element.getFhirStructureRepository();
+    const auto& repo = element.getFhirStructureRepository();
+    const auto& group = element.getStructureDefinition()->resourceGroup();
     for (const auto& profileUrl : element.profiles())
     {
-        const auto* profile = repo.findStructure(DefinitionKey{profileUrl});
+        DefinitionKey profileKey{profileUrl};
+        auto version = group->findVersion(profileKey).first;
+        const auto* profile = version ? repo.findDefinition(profileKey.url, *version) : nullptr;
         if (! profile)
         {
             mResult.validationResults.add(Severity::debug, "undefined profile: "s.append(profileUrl),
@@ -250,7 +281,6 @@ std::set<ProfiledElementTypeInfo> fhirtools::ReferenceFinder::profilesFromResour
 void ReferenceFinder::processReference(const Element& element, std::string_view elementFullPath,
                                        std::string resourcePath)
 {
-    const auto& repo = *element.getFhirStructureRepository();
     auto [referenceId, resultList] = element.referenceTargetIdentity(elementFullPath);
     mResult.validationResults.merge(std::move(resultList));
     ReferenceContext::ReferenceInfo refInfo{.identity = std::move(referenceId),
@@ -258,7 +288,7 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
                                             .localPath = std::move(resourcePath),
                                             .referencingElement{element.shared_from_this()},
                                             .targetProfileSets{}};
-    const FhirStructureDefinition* type = getTypeFromReferenceElement(repo, element, elementFullPath);
+    const FhirStructureDefinition* type = getTypeFromReferenceElement(*mView, element, elementFullPath);
     for (const auto& pet : mProfiledElementTypes)
     {
         std::set<const FhirStructureDefinition*> profileSet;
@@ -269,7 +299,7 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
         bool referenceTargetsOk = referenceTargetProfiles.empty();
         for (const auto& profileUrl : pet.element()->referenceTargetProfiles())
         {
-            const auto* profile = repo.findStructure(DefinitionKey{profileUrl});
+            const auto* profile = mView->findStructure(DefinitionKey{profileUrl});
             if (! profile)
             {
                 mResult.validationResults.add(Severity::debug, "profile not found: " + profileUrl,
@@ -278,7 +308,7 @@ void ReferenceFinder::processReference(const Element& element, std::string_view 
                 referenceTargetsOk = true;
                 continue;
             }
-            if (type != nullptr && ! (profile->isDerivedFrom(repo, *type) || type->isDerivedFrom(repo, *profile)))
+            if (type != nullptr && ! (profile->isDerivedFrom(*type) || type->isDerivedFrom(*profile)))
             {
                 continue;
             }
@@ -329,39 +359,88 @@ ReferenceFinder::ResourceHandling ReferenceFinder::getResourceHandling(ElementTy
     return elementType == ElementType::containedResource ? contained : other;
 }
 
-ReferenceFinder::ElementType ReferenceFinder::getElementType(const FhirStructureRepositoryView& repo,
-                                                             const ProfiledElementTypeInfo& elementInfo)
+ReferenceFinder::ElementType ReferenceFinder::getElementType(const ProfiledElementTypeInfo& elementInfo)
 {
     using namespace std::string_view_literals;
-    if (elementInfo.profile()->kind() == FhirStructureDefinition::Kind::resource)
+    if (elementInfo.profile()->kind() != FhirStructureDefinition::Kind::resource)
     {
-        static constexpr std::string_view entry{"entry"};
-        if (elementInfo.profile()->typeId() == "Bundle"sv)
+        return ElementType::other;
+    }
+    const auto& elementPath = elementInfo.elementPath();
+    if (elementPath == "id"sv)
+    {
+        return ElementType::resourceId;
+    }
+    // typeId must be resourceType, as kind() == resource
+    const auto& resourceType = elementInfo.profile()->typeId();
+    if (resourceType == "Bundle"sv)
+    {
+        return getBundleElementType(elementInfo, elementPath);
+    }
+    if (elementPath == "contained"sv &&
+                elementInfo.profile()->isDerivedFrom(constants::domainResourceUrl))
+    {
+        return ElementType::containedResource;
+    }
+    return ElementType::other;
+}
+
+ReferenceFinder::ElementType
+fhirtools::ReferenceFinder::getBundleElementType(const ProfiledElementTypeInfo& elementInfo,
+                                                 std::string_view elementPath)
+{
+    using namespace std::string_view_literals;
+    static constexpr std::string_view entry{"entry"};
+    if (elementInfo.element()->isRoot())
+    {
+        return ElementType::bundle;
+    }
+    if (elementPath.starts_with(entry))
+    {
+        if (elementPath.size() == entry.size())
         {
-            if (elementInfo.element()->isRoot())
-            {
-                return ElementType::bundle;
-            }
-            const auto& elementPath = elementInfo.elementPath();
-            if (elementPath.starts_with(entry))
-            {
-                if (elementPath.size() == entry.size())
-                {
-                    return ElementType::bundleEntry;
-                }
-                if (elementPath.compare(entry.size(), std::string_view::npos, ".resource"sv) == 0)
-                {
-                    return ElementType::bundledResource;
-                }
-            }
+            return ElementType::bundleEntry;
         }
-        else if (elementInfo.elementPath() == "contained" &&
-                 elementInfo.profile()->isDerivedFrom(repo, constants::domainResourceUrl))
+        if (elementPath.compare(entry.size(), std::string_view::npos, ".resource"sv) == 0)
         {
-            return ElementType::containedResource;
+            return ElementType::bundledResource;
         }
     }
     return ElementType::other;
+}
+
+std::optional<std::string> fhirtools::ReferenceFinder::fullUrlFromEntry(const Element& bundleEntry)
+{
+    std::ostringstream oss;
+    bundleEntry.json(oss);
+    auto fullUrls = bundleEntry.subElements("fullUrl");
+    if (fullUrls.empty())
+    {
+        return std::nullopt;
+    }
+    const auto& fullUrl = fullUrls[0];
+    if (!fullUrl->hasValue() || fullUrl->type() != Element::Type::String)
+    {
+        return std::nullopt;
+    }
+    return fullUrl->asString();
+}
+
+ReferenceContext::AnchorType fhirtools::ReferenceFinder::anchorType(const Element& element,
+                                                                    ResourceHandling resourceHandling,
+                                                                    bool isComposition)
+{
+    using AnchorType = ReferenceContext::AnchorType;
+    if (resourceHandling == ResourceHandling::expectedComposition && isComposition)
+    {
+        return AnchorType::composition;
+    }
+    if (resourceHandling != ResourceHandling::contained &&
+        element.definitionPointer().profile()->isDerivedFrom(constants::domainResourceUrl))
+    {
+        return AnchorType::contained;
+    }
+    return AnchorType::none;
 }
 
 ReferenceContext::AnchorType ReferenceFinder::referenceRequirement(ReferenceFinder::ResourceHandling elementType)
@@ -424,7 +503,7 @@ void fhirtools::ReferenceFinder::addSliceProfiles(const Element& element, std::s
             sliceProfiles.merge(sliceProfiledElementTypes(element, pet));
         }
     }
-    addProfiles(*element.getFhirStructureRepository(), sliceProfiles, elementFullPath);
+    addProfiles(*mView, sliceProfiles, elementFullPath);
 }
 
 // NOLINTNEXTLINE(misc-no-recursion)

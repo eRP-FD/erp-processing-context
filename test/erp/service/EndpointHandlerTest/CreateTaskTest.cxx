@@ -179,3 +179,80 @@ TEST_F(CreateTaskTest, invalidERP27183)
     EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
                                           "error getting workFlowType from parameters", "stoi");
 }
+
+TEST_F(CreateTaskTest, UnslicedExtensionReject)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{
+        "ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM", model::Timestamp::now().toGermanDate()};
+
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <meta>
+      <extension url="subStatus"><valueBoolean value="true"/></extension>
+      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4"/>
+   </meta>
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    CreateTaskHandler handler({});
+    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
+                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
+    request.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    handler.preHandleRequestHook(sessionContext);
+    std::string diagnostics = "Parameters.meta.extension[0]: error: element doesn't belong to any slice. "
+                              "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
+                              "Parameters.meta.extension[0]: error: element doesn't belong to any slice. "
+                              "(from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); ";
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
+        handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
+        diagnostics);
+}
+
+TEST_F(CreateTaskTest, UnslicedExtensionAllow)
+{
+    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
+                                      (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
+
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <meta>
+      <extension url="subStatus"><valueBoolean value="true"/></extension>
+      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4"/>
+   </meta>
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    CreateTaskHandler handler({});
+    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
+                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
+    request.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    handler.preHandleRequestHook(sessionContext);
+    EXPECT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
+}
+
+
