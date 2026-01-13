@@ -31,7 +31,7 @@ public:
     {
         const auto view =
         Fhir::instance().allViews().match({std::string{model::resource::structure_definition::kbv_pr_evdga_bundle},
-                                          ResourceTemplates::Versions::KBV_EVDGA_1_2_0});
+                                          ResourceTemplates::Versions::KBV_EVDGA_1_2_2});
         ASSERT_NE(view, nullptr);
         using ResourceFactory = model::ResourceFactory<model::EvdgaBundle>;
         auto resourceFactory = ResourceFactory::fromXml(content, *StaticData::getXmlValidator());
@@ -49,6 +49,6 @@ public:
 TEST_F(KbvItvEvdga_1_2_1_Test, kbvBundleXml)
 {
     ASSERT_NO_FATAL_FAILURE(
-        validateKbv(ResourceTemplates::evdgaBundleXml({.version = ResourceTemplates::Versions::KBV_EVDGA_1_2_0})));
+        validateKbv(ResourceTemplates::evdgaBundleXml({.version = ResourceTemplates::Versions::KBV_EVDGA_1_2_2})));
 }
 

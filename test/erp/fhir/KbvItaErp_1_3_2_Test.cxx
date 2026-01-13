@@ -32,7 +32,7 @@ public:
     {
         const auto view =
             Fhir::instance().allViews().match({std::string{model::resource::structure_definition::prescriptionItem},
-                                               ResourceTemplates::Versions::KBV_ERP_1_3_2});
+                                               ResourceTemplates::Versions::KBV_ERP_1_3_3});
         ASSERT_NE(view, nullptr);
         using ResourceFactory = model::ResourceFactory<model::KbvBundle>;
         auto resourceFactory = ResourceFactory::fromXml(content, *StaticData::getXmlValidator());
@@ -50,20 +50,20 @@ public:
 TEST_F(KbvItaErp_1_3_2_Test, kbvBundleXml)
 {
     ASSERT_NO_FATAL_FAILURE(
-        validateKbv(ResourceTemplates::kbvBundleXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_2})));
+        validateKbv(ResourceTemplates::kbvBundleXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3})));
 }
 
 TEST_F(KbvItaErp_1_3_2_Test, kbvBundleMvoXml)
 {
     ASSERT_NO_FATAL_FAILURE(
-        validateKbv(ResourceTemplates::kbvBundleMvoXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_2})));
+        validateKbv(ResourceTemplates::kbvBundleMvoXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3})));
 }
 
 TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_pkvKvnr)
 {
     ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
         .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::pkv},
-        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_2},
+        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
     })));
 }
 
@@ -71,7 +71,7 @@ TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_gkvKvnr)
 {
     ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
         .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::gkv},
-        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_2},
+        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
     })));
 }
 
@@ -79,6 +79,6 @@ TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_unspecKvnr)
 {
     ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
         .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::unspecified},
-        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_2},
+        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
     })));
 }

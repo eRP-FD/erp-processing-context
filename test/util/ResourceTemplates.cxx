@@ -133,12 +133,12 @@ std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
 
 std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
     Versions::KBV_ERP_1_1_0,
-    Versions::KBV_ERP_1_3_2,
+    Versions::KBV_ERP_1_3_3,
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
     Versions::KBV_EVDGA_1_1,
-    Versions::KBV_EVDGA_1_2_0,
+    Versions::KBV_EVDGA_1_2_2,
 };
 
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
@@ -268,7 +268,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
             break;
     }
     const std::string coverageInsuranceType{bundleOptions.coverageInsuranceType.value_or(insuranceType)};
-    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_3_2)
+    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_3_3)
     {
         insuranceType = "KVZ10";
         kvid10Ns = model::resource::naming_system::gkvKvid10;

@@ -127,19 +127,19 @@
         {
           "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*",
           "versionRegex": "1\\.2",
-          "realVersion": "1.2.0",
+          "realVersion": "1.2.1",
           "renderVersion": "1.2"
         },
         {
           "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_.*",
           "versionRegex": "1\\.3",
-          "realVersion": "1.3.2",
+          "realVersion": "1.3.3",
           "renderVersion": "1.3"
         },
         {
           "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_.*",
           "versionRegex": "1\\.2",
-          "realVersion": "1.2.0",
+          "realVersion": "1.2.2",
           "renderVersion": "1.2"
         },
         {

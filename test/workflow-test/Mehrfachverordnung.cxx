@@ -509,7 +509,7 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
 {
     TestStep(A_23537, "ERP-A_23537.01: Task aktivieren - Mehrfachverordnung - Startdatum vor Ausstellungsdatum");
     const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
-    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_2;
+    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_3;
     const auto startDate = authoredOn - date::days{3};
     auto endDate = authoredOn + date::days{3};
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
@@ -535,12 +535,13 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
     }
     else
     {
+        const auto ver = to_string(kbvVersion);
         // clang-format off
         ASSERT_NO_FATAL_FAILURE(validateOperationOutcome(outcome, model::OperationOutcome::Issue::Type::invalid,
             "FHIR-Validation error",
             "Bundle: error: "
                 "-erp-multiplePrescriptionEinloesefristBeginn: Der Beginn der Einlösefrist darf nicht vor dem Ausstellungsdatum liegen. "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); "));
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); "));
         // clang-format on
     }
 }
@@ -636,7 +637,7 @@ TEST_F(MVO_A_24901Test, InvalidMvoIdCheckEnabled)
     using namespace std::chrono_literals;
     const auto today = authoredOn;
     const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
-    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_2;
+    const bool expectFHIRvalid = kbvVersion < ResourceTemplates::Versions::KBV_ERP_1_3_3;
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = authoredOn,
                                                   .kbvVersion = kbvVersion,

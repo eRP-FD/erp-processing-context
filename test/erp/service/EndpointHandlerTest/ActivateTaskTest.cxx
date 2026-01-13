@@ -194,7 +194,7 @@ protected:
 
     std::string_view pkvInsuranceType(const ResourceTemplates::Versions::KBV_ERP& ver)
     {
-        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_3)
         {
             return "KVZ10";
         }
@@ -202,7 +202,7 @@ protected:
     }
     std::string_view gkvInsuranceType(const ResourceTemplates::Versions::KBV_ERP& ver)
     {
-        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_3)
         {
             return "KVZ10";
         }
@@ -210,7 +210,7 @@ protected:
     }
     std::string_view pkvKvid10Ns(const ResourceTemplates::Versions::KBV_ERP& ver)
     {
-        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        if (ver >= ResourceTemplates::Versions::KBV_ERP_1_3_3)
         {
             return model::resource::naming_system::gkvKvid10;
         }
@@ -523,7 +523,7 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
     }
     catch (const ErpException& ex)
     {
-        if (currentKbv < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+        if (currentKbv < ResourceTemplates::Versions::KBV_ERP_1_3_3)
         {
             EXPECT_EQ(std::string(ex.what()),
                     "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.")
@@ -531,11 +531,12 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
         }
         else
         {
+            auto ver = to_string(currentKbv);
             EXPECT_STREQ(ex.what(), "FHIR-Validation error");
             EXPECT_EQ(ex.diagnostics(),
                       "Bundle: error: -erp-angabeKVKVersichertennummerVerbot: In der Ressource vom Typ Patient ist "
                       "eine KVK-Versichertennummer vorhanden, diese darf nicht angegeben werden. (from profile: "
-                      "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); ");
+                      "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); ");
         }
     }
     catch (...)
@@ -568,6 +569,8 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientIdentifierSystem)
                                                .expectedExpiry = std::nullopt,
                                                .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
+    auto forVer = ResourceTemplates::Versions::latest("https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient");
+    ASSERT_TRUE(forVer.version.has_value());
     // clang-format off
     std::string diagnostics =
         "Bundle.entry[1].resource{Patient}.identifier[0].system: "
@@ -575,7 +578,7 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientIdentifierSystem)
                 "(from profile: http://fhir.de/StructureDefinition/identifier-kvid-10|1.5.2); "
         "Bundle.entry[1].resource{Patient}.identifier[0].system: "
             "error: value must match fixed value: \"http://fhir.de/sid/gkv/kvid-10\" (but is \"http://fhir.de/sid/pkv/kvid-10\") "
-                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient:versichertenId|1.2.0); ";
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient:versichertenId|" + to_string(*forVer.version) + "); ";
     if (currentKbv <= ResourceTemplates::Versions::KBV_ERP_1_1_0)
     {
         diagnostics =
@@ -887,6 +890,7 @@ TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
 TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
 {
     std::string_view kvnr{"X123456788"};
+    const auto KBV_ERP_current = ResourceTemplates::Versions::KBV_ERP_current();
     auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
     auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.redeemPeriodEnd = "2021-01-02T23:59:59.999+01:00"});
     std::exception_ptr exception;
@@ -894,7 +898,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    if (KBV_ERP_current < ResourceTemplates::Versions::KBV_ERP_1_3_3)
     {
         EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
             std::rethrow_exception(exception),
@@ -911,21 +915,22 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
     }
     else
     {
+        auto ver = to_string(KBV_ERP_current);
         EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
             std::rethrow_exception(exception),
             // clang-format off
             "Bundle.entry[1].resource{MedicationRequest}.extension[2]: error: "
                 "-erp-multiplePrescriptionEinloesefristEnde: Das Ende der Einlösefrist darf nicht vor dem Beginn der Einlösefrist liegen. "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription|1.3.2); "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription|" + ver + "); "
             "Bundle.entry[1].resource{MedicationRequest}.extension[2]: error: "
                 "-erp-multiplePrescriptionEinloesefristEnde: Das Ende der Einlösefrist darf nicht vor dem Beginn der Einlösefrist liegen. "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung|1.3.2); "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung|" + ver + "); "
             "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                 "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.3.2); "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|" + ver + "); "
             "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                 "-erp-begrenzungDateEnd: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.3.2); "
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|" + ver + "); "
             "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                 "per-1: If present, start SHALL have a lower value than end "
                     "(from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1); "
@@ -937,6 +942,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
 TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
 {
     std::string_view kvnr{"X123456788"};
+    const auto KBV_ERP_current = ResourceTemplates::Versions::KBV_ERP_current();
     auto task = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .kvnr = kvnr});
     auto kbvBundle = ResourceTemplates::kbvBundleMvoXml({.redeemPeriodStart = "2021-01-02T23:59:59.999+01:00"});
     std::exception_ptr exception;
@@ -944,7 +950,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
         checkActivateTask(mServiceContext, task, kbvBundle, kvnr,
                           {.expectedStatus = HttpStatus::BadRequest, .outExceptionPtr = exception}));
     ASSERT_TRUE(exception);
-    if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    if (KBV_ERP_current < ResourceTemplates::Versions::KBV_ERP_1_3_3)
     {
         EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
             std::rethrow_exception(exception),
@@ -958,18 +964,19 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
     }
     else
     {
+        auto ver = to_string(KBV_ERP_current);
         EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
             std::rethrow_exception(exception),
             // clang-format off
                 "Bundle: error: "
                     "-erp-multiplePrescriptionEinloesefristBeginn: Der Beginn der Einlösefrist darf nicht vor dem Ausstellungsdatum liegen. "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.3.2); "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); "
                 "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                     "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|1.3.2); "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|" + ver + "); "
                 "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                     "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.3.2); "
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|" + ver + "); "
             // clang-format on
         );
     }
@@ -1205,7 +1212,7 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(
         mServiceContext, taskJson, kbvBundleXml, kvnr.id(),
         {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
-    std::string suffix =(kbvVersion >= ResourceTemplates::Versions::KBV_ERP_1_3_2)?"pzn|1.3.2":"pznCode|1.1.0";
+    std::string suffix =(kbvVersion >= ResourceTemplates::Versions::KBV_ERP_1_3_3)?"pzn|" + to_string(kbvVersion):"pznCode|1.1.0";
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
         "Bundle.entry[4].resource{Medication}.code.coding[0]: "

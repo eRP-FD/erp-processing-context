@@ -4,11 +4,11 @@
 | Package                                        | Version    | Download-Link                                                                  |
 |------------------------------------------------|------------|--------------------------------------------------------------------------------|
 | kbv.ita.erp                                    | 1.1.2      | https://simplifier.net/packages/kbv.ita.erp/1.1.2                              |
-| kbv.ita.erp                                    | 1.3.2      | https://simplifier.net/packages/kbv.ita.erp/1.3.2                              |
+| kbv.ita.erp                                    | 1.3.3      | https://simplifier.net/packages/kbv.ita.erp/1.3.3                              |
 | kbv.ita.for                                    | 1.1.0      | https://simplifier.net/packages/kbv.ita.for/1.1.0                              |
-| kbv.ita.for                                    | 1.2.0      | https://simplifier.net/packages/kbv.ita.for/1.2.0                              |
+| kbv.ita.for                                    | 1.2.1      | https://simplifier.net/packages/kbv.ita.for/1.2.1                              |
 | kbv.itv.egdva*                                 | 1.1.1      | https://simplifier.net/packages/kbv.itv.evdga/1.1.1                           |
-| kbv.itv.egdva                                  | 1.2.1      | https://simplifier.net/packages/kbv.itv.evdga/1.2.1                           |
+| kbv.itv.egdva                                  | 1.2.2      | https://simplifier.net/packages/kbv.itv.evdga/1.2.2                           |
 | kbv.basis                                      | 1.3.0      | https://simplifier.net/packages/kbv.basis/1.3.0                               |
 | kbv.basis                                      | 1.7.0      | https://simplifier.net/packages/kbv.basis/1.7.0                               |
 | de.basisprofil.r4                              | 1.3.2      | https://simplifier.net/packages/de.basisprofil.r4/1.3.2                      |

@@ -931,7 +931,7 @@ TEST_F(CloseTaskTest, UnslicedExtensionReject)
     AccessLog accessLog;
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
     CloseTaskHandler handler({});
-    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_3_2)
+    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_3_3)
     {
         std::string diagnostics =
             "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "

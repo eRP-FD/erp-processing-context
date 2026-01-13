@@ -19,7 +19,7 @@ TEST(KbvBundleTest, PatientIdentifierSystem)
     A_23936.test("A_23936 / ANFERP-3322 Anpassung Regel für kbv 1.3.0 Profile");
     using namespace std::string_literals;
     auto kbvBundle = model::KbvBundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml({
-        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_2,
+        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3,
         .forceKvid10Ns = model::resource::naming_system::pkvKvid10,
     }));
     auto message = "Patient.identifier.system must be "s.append(model::resource::naming_system::gkvKvid10);
