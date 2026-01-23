@@ -20,7 +20,7 @@
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.3/package",
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.0.6-2/package",
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.epa.medication-1.1.5/package",
-      "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept.eu-1.0.0/package",
+      "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept.eu-1.1.1/package",
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4/package",
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-patientenrechnung.r4-1.1.0/package",
       "@ERP_FHIR_RESOURCE_DIR@profiles/de.gematik.erezept-workflow.r4-1.2.0/package",
@@ -722,10 +722,10 @@
         ]
       },
       {
-        "id": "de.gematik.erezept.eu-1.0.0",
+        "id": "de.gematik.erezept.eu-1.1.1",
         "include": [ "de.gematik.epa.medication-1.1.5" ],
         "match": [
-          {"file": ".*profiles/de.gematik.erezept.eu-1.0.0.*" }
+          {"file": ".*profiles/de.gematik.erezept.eu-1.1.1.*" }
         ]
 
       },

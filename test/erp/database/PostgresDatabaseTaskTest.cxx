@@ -1244,7 +1244,7 @@ TEST_P(PostgresDatabaseTaskTest, setRedeemableByPatientAuthorization_Validate_tr
     const std::string xml = R"(<?xml version="1.0" encoding="UTF-8"?>
 <Parameters xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.0"/>
+    <profile value="https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.1"/>
   </meta>
   <parameter>
     <name value="eu-isRedeemableByPatientAuthorization"/>

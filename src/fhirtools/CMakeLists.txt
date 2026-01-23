@@ -97,6 +97,7 @@ target_sources(fhirtools
         util/XmlMemory.cxx
         typemodel/ProfiledElementTypeInfo.cxx
         validator/FhirPathValidator.cxx
+        validator/internal/CodeChecker.cxx
         validator/internal/ProfileSetValidator.cxx
         validator/internal/ProfileSolver.cxx
         validator/internal/ProfileValidator.cxx

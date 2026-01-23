@@ -3,7 +3,7 @@
   "id": "Medication-Without-Strength-Numerator",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication|1.0"
+      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication|1.1"
     ]
   },
   "code": {

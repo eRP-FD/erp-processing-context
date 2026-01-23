@@ -74,7 +74,7 @@ struct Versions {
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
     static inline DAV_PKV DAV_PKV_1_4_0{"1.4.0"};
-    static inline GEM_ERPEU GEM_ERPEU_1_0{"1.0"};
+    static inline GEM_ERPEU GEM_ERPEU_1_1{"1.1"};
 
     static fhirtools::DefinitionKey latest(std::string_view profileUrl,
                                            const model::Timestamp& reference = model::Timestamp::now());

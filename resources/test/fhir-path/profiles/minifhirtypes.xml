@@ -138,6 +138,59 @@
     </resource>
   </entry>
   <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/code"/>
+    <resource>
+      <StructureDefinition>
+        <id value="url"/>
+        <url value="http://fhir-tools.test/minifhirtypes/code"/>
+        <version value="4.0.1"/>
+        <name value="code"/>
+        <status value="draft"/>
+        <kind value="primitive-type"/>
+        <abstract value="false"/>
+        <type value="code"/>
+        <snapshot>
+          <element id="code">
+            <path value="code"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="code"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="code.extension">
+            <path value="code.extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="code.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="code.value">
+            <path value="code.value"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="code.value"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
     <fullUrl value="http://fhir-tools.test/minifhirtypes/uri"/>
     <resource>
       <StructureDefinition>
@@ -264,7 +317,7 @@
               <max value="1"/>
             </base>
             <type>
-              <code value="string"/>
+              <code value="code"/>
             </type>
           </element>
         </snapshot>
@@ -493,6 +546,9 @@
             </type>
             <type>
               <code value="url"/>
+            </type>
+            <type>
+              <code value="code"/>
             </type>
           </element>
         </snapshot>

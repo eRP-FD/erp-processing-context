@@ -123,6 +123,7 @@ protected:
     void checkValueMaxValue(const Element& element, std::string_view elementFullPath);
     void checkCoding(const FhirStructureRepositoryView& view, const Element& element, std::string_view elementFullPath);
     void checkValueNotEmpty(const Element& element, std::string_view elementFullPath);
+    void checkBaseType(const FhirStructureRepositoryView& view, const Element& element, std::string_view elementFullPath);
 
 
     std::shared_ptr<ValidationData> mData;

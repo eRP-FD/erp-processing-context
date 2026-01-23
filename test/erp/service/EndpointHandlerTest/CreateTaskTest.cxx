@@ -191,7 +191,6 @@ TEST_F(CreateTaskTest, UnslicedExtensionReject)
 <Parameters xmlns="http://hl7.org/fhir">
    <meta>
       <extension url="subStatus"><valueBoolean value="true"/></extension>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4"/>
    </meta>
    <parameter>
       <name value="workflowType"/>
@@ -231,7 +230,6 @@ TEST_F(CreateTaskTest, UnslicedExtensionAllow)
 <Parameters xmlns="http://hl7.org/fhir">
    <meta>
       <extension url="subStatus"><valueBoolean value="true"/></extension>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4"/>
    </meta>
    <parameter>
       <name value="workflowType"/>

@@ -1961,7 +1961,7 @@ void ErpWorkflowTestBase::consentGetInternal(
         std::optional<model::Bundle> consentBundle;
 
         const auto& allGroups = Fhir::instance().backend().allGroups();
-        ASSERT_TRUE(allGroups.contains("de.gematik.erezept.eu-1.0.0"))
+        ASSERT_TRUE(allGroups.contains("de.gematik.erezept.eu-1.1.1"))
             << "please craft a new view containing all consent resources";
         ASSERT_TRUE(allGroups.contains("KBV-Schluesseltabellen-Q2/25"))
             << "please craft a new view containing all consent resources";
@@ -1973,7 +1973,7 @@ void ErpWorkflowTestBase::consentGetInternal(
         ASSERT_EQ(def->typeId(), "Consent");
 
         std::set<fhirtools::FhirResourceViewGroupSet::GroupSharedRef> groups{
-            allGroups.at("de.gematik.erezept.eu-1.0.0"),
+            allGroups.at("de.gematik.erezept.eu-1.1.1"),
             allGroups.at("KBV-Schluesseltabellen-Q2/25"),
             def->resourceGroup(),
         };

@@ -1,0 +1,10 @@
+{
+    "resourceType": "Resource",
+    "id": "ERP-33234-Invalid-Codes",
+    "extension": [
+        {
+            "url": "CodeMustNotHaveLeadingSpace",
+            "valueCode": " 012345"
+        }
+    ]
+}

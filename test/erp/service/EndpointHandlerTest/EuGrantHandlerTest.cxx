@@ -89,7 +89,7 @@ TEST_F(EuGrantHandlerTest, badAccessCode)
     ASSERT_NO_THROW(grantHandler.preHandleRequestHook(sessionContext));
     A_27091.test("test with bad access code");
     EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(grantHandler.handleRequest(sessionContext), HttpStatus::BadRequest,
-    "FHIR-Validation error", "Parameters.parameter[1].valueIdentifier.value: error: workflow-eu-access-code-1: Format of the AccessCode must be a 6-digit code in the Form [a-z, A-Z, 0-9]. (from profile: https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Access_Code|1.0.0); ");
+    "FHIR-Validation error", "Parameters.parameter[1].valueIdentifier.value: error: workflow-eu-access-code-1: Format of the AccessCode must be a 6-digit code in the Form [a-z, A-Z, 0-9]. (from profile: https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Access_Code|1.1.1); ");
 }
 
 TEST_F(EuGrantHandlerTest, success)

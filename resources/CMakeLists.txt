@@ -24,6 +24,8 @@ set(ZDICT_FILES
 
 find_package(Patch REQUIRED)
 
+find_program(jq_EXECUTABLE jq REQUIRED)
+
 list(TRANSFORM ERP_HL7_ORG_DEFINITIONS_FILES PREPEND "${CMAKE_BINARY_DIR}/bin/resources/")
 
 set(ERP_FHIR_REPOSITORY_DIR "${CMAKE_BINARY_DIR}/fhir_package_tmp")
@@ -88,7 +90,12 @@ fhir_install(de.abda.erezeptabgabedatenbasis 1.5.0)
 
 # Main packages:
 fhir_install(de.abda.erezeptabgabedatenpkv 1.4.0)
-fhir_install(de.gematik.erezept.eu 1.0.0)
+fhir_install(de.gematik.erezept.eu 1.1.1
+        PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.erezept.eu-fix-part-type.cmake"
+        "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+        DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+)
 fhir_install(de.gematik.erezept-patientenrechnung.r4 1.1.0)
 fhir_install(de.gematik.erezept-workflow.r4 1.5.2)
 fhir_install(kbv.ita.erp 1.3.3)

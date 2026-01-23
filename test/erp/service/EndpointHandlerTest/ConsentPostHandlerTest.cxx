@@ -214,7 +214,7 @@ INSTANTIATE_TEST_SUITE_P(success, ConsentPostValidityTest,
                              },
                              {
                                  .date = "2025-10-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                              {
@@ -229,7 +229,7 @@ INSTANTIATE_TEST_SUITE_P(success, ConsentPostValidityTest,
                              },
                              {
                                  .date = "2026-03-31",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                              {
@@ -239,7 +239,7 @@ INSTANTIATE_TEST_SUITE_P(success, ConsentPostValidityTest,
                              },
                              {
                                  .date = "2026-04-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                          }));
@@ -247,7 +247,7 @@ INSTANTIATE_TEST_SUITE_P(fail, ConsentPostValidityTest,
                          testing::ValuesIn(std::list<ConsentPostValidityTestParam>{
                              {
                                  .date = "2025-09-30",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
                                  .consentType = model::ConsentType::EUDISPCONS,
                                  .expectSuccess = false,
                              },

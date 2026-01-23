@@ -108,9 +108,9 @@
       "version-mapping": [
         {
           "urlRegex": "https://gematik\\.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_.*",
-          "versionRegex": "1\\.0",
-          "realVersion": "1.0.0",
-          "renderVersion": "1.0"
+          "versionRegex": "1\\.1",
+          "realVersion": "1.1.1",
+          "renderVersion": "1.1"
         },
         {
           "urlRegex": "https://gematik\\.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*",
@@ -246,7 +246,7 @@
           "id": "EU_2025_10_01",
           "valid-from": "2025-10-01",
           "groups": [
-            "de.gematik.erezept.eu-1.0.0"
+            "de.gematik.erezept.eu-1.1.1"
           ]
         },
         {

@@ -1,0 +1,17 @@
+{
+    "resourceType": "Resource",
+    "id": "ERP-33234-Invalid-Codes",
+    "extension": [
+        {
+            "url": "CodeMustNotHaveLeadingSpace",
+            "_valueCode": {
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+                        "valueCode": "unknown"
+                    }
+                ]
+            }
+        }
+    ]
+}

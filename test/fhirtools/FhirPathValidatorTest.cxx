@@ -1093,7 +1093,7 @@ INSTANTIATE_TEST_SUITE_P(
     ::testing::ValuesIn(std::list<fhirtools::test::Sample>{
         {"Resource", "test/fhir-path/samples/valid_IndirectAlternativeProfiles1.json"},
         {"Resource", "test/fhir-path/samples/valid_IndirectAlternativeProfiles2.json"},
-        Sample{
+        {
             "Resource",
             "test/fhir-path/samples/invalid_IndirectAlternativeProfiles.json",
             {
@@ -1108,4 +1108,11 @@ INSTANTIATE_TEST_SUITE_P(
             },
         },
         { "Resource", "test/fhir-path/issues/ERP-26128-ValueUrlExtension.xml"},
+        { "Resource", "test/fhir-path/issues/ERP-33234-Invalid-Codes-data-absent.json"},
+        { "Resource", "test/fhir-path/issues/ERP-33234-Invalid-Codes.json",
+            {
+            {{ Severity::error, R"(code must not start with whitespace.)"}, "Resource.extension[0].valueCode"}
+            }
+        },
     }));
+

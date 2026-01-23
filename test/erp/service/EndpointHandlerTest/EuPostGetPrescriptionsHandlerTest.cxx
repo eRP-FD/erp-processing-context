@@ -103,7 +103,7 @@ public:
         auto db = mServiceContext.databaseFactory();
         auto taskAndKey = db->retrieveTaskForUpdate(prescriptionId);
         auto patchParam = model::GemErpEuPrTaskInput::fromJsonNoValidation(
-            R"({"resourceType": "Parameters", "id": "Example-PATCH-Task-Single-Input-Request-True", "meta": {"profile":  ["https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.0"]}, "parameter":  [{"name": "eu-isRedeemableByPatientAuthorization", "valueBoolean": true}]})");
+            R"({"resourceType": "Parameters", "id": "Example-PATCH-Task-Single-Input-Request-True", "meta": {"profile":  ["https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_PATCH_Task_Input|1.1"]}, "parameter":  [{"name": "eu-isRedeemableByPatientAuthorization", "valueBoolean": true}]})");
         taskAndKey->task.updateLastUpdate();
         db->setTaskEuRedeemableByPatient(taskAndKey->task, patchParam);
         db->commitTransaction();

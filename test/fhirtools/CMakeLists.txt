@@ -25,6 +25,7 @@ add_executable(fhirtools-test
         issues/ERP-12159-RefereceTypeCheck.cxx
         MandatoryMetaProfileTest.cxx
         ReferenceTest.cxx
+        PrimitiveTypeTest.cxx
         SlicingValidationTest.cxx
         UriValidationTest.cxx
         ValueMatchingTest.cxx

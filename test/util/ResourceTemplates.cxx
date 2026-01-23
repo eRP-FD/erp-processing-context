@@ -153,7 +153,7 @@ std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
 };
 
 std::initializer_list<Versions::GEM_ERPEU> Versions::GEM_ERPEU_all{
-    Versions::GEM_ERPEU_1_0,
+    Versions::GEM_ERPEU_1_1,
 };
 
 
@@ -206,7 +206,7 @@ Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Time
 
 Versions::GEM_ERPEU Versions::GEM_ERPEU_current(const model::Timestamp& reference [[maybe_unused]])
 {
-    return GEM_ERPEU_1_0;
+    return GEM_ERPEU_1_1;
 }
 
 std::string Versions::KBV_ERP::renderVersion() const

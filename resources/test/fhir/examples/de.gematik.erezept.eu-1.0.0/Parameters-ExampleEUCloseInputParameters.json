@@ -3,7 +3,7 @@
   "id": "ExampleEUCloseInputParameters",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_CloseOperation_Input|1.0"
+      "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PAR_CloseOperation_Input|1.1"
     ]
   },
   "parameter": [
@@ -17,7 +17,7 @@
             "id": "Example-MedicationDispense-EU",
             "meta": {
               "profile": [
-                "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense|1.0"
+                "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_MedicationDispense|1.1"
               ]
             },
             "identifier": [
@@ -53,7 +53,7 @@
             "id": "SumatripanMedication",
             "meta": {
               "profile": [
-                "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication|1.0"
+                "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Medication|1.1"
               ]
             },
             "extension": [
@@ -169,7 +169,7 @@
         "id": "Example-EU-Practitioner",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Practitioner|1.0"
+            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Practitioner|1.1"
           ]
         },
         "identifier": [
@@ -195,7 +195,7 @@
         "id": "Example-EU-Organization",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Organization|1.0"
+            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Organization|1.1"
           ]
         },
         "identifier": [
@@ -238,7 +238,7 @@
         "id": "Example-EU-PractitionerRole",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PractitionerRole|1.0"
+            "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PractitionerRole|1.1"
           ]
         },
         "practitioner": {

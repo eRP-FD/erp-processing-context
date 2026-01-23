@@ -616,7 +616,7 @@ TEST_P(ErpWorkflowEuTestPatchTaskP, PatchTask)
     }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PatchTask, ErpWorkflowEuTestPatchTaskP,
     testing::Values(ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichigeArzneimittel, true, true},
                     ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true},

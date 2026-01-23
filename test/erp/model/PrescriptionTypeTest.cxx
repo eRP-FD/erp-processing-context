@@ -76,5 +76,5 @@ TEST(PrescriptionTypeTest, isDirectAssignment_badValueThrows)
     EXPECT_THROW(isDirectAssignment(prescriptionType), std::exception);
 }
 
-INSTANTIATE_TEST_CASE_P(PrescriptionType, PrescriptionTypeTest,
+INSTANTIATE_TEST_SUITE_P(PrescriptionType, PrescriptionTypeTest,
                         ::testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));

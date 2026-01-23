@@ -48,6 +48,7 @@ function(fhir_install package version)
         set(script_arguments ${arg_PACKAGE_FIX_SCRIPT})
         set(package_fix_arguments
             COMMAND "${CMAKE_COMMAND}"
+                    "-Dcmake_EXECUTABLE=${CMAKE_COMMAND}"
                     "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}"
                     "-DBINARY_DIR=${CMAKE_BINARY_DIR}"
                     "-DCURRENT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}"

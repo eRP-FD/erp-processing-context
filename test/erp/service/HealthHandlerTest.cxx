@@ -342,7 +342,7 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.OSIG");
-    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2025-12-31T23:00:00.000+00:00");
+    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2027-02-26T23:00:00.000+00:00");
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::up));
@@ -495,7 +495,7 @@ TEST_F(HealthHandlerTest, CFdSigErpDown)//NOLINT(readability-function-cognitive-
     EXPECT_EQ(std::string(cFdSigErpPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_NE(std::string(cFdSigErpTimestampPointer.Get(healthDocument)->GetString()), "never successfully validated");
     EXPECT_EQ(std::string(cFdSigErpPolicyPointer.Get(healthDocument)->GetString()), "C.FD.OSIG");
-    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2025-12-31T23:00:00.000+00:00");
+    EXPECT_EQ(std::string(cFdSigErpExpiryPointer.Get(healthDocument)->GetString()), "2027-02-26T23:00:00.000+00:00");
     verifyRootCause(healthDocument, cFdSigErpRootCausePointer, "no successful validation available");
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
 }

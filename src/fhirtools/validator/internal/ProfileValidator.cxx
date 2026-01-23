@@ -16,6 +16,7 @@
 #include "fhirtools/util/Utf8Helper.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "fhirtools/validator/internal/CodeChecker.hxx"
 #include "fhirtools/validator/internal/ProfileSetValidator.hxx"
 #include "fhirtools/validator/internal/ValidationData.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
@@ -169,8 +170,7 @@ ProfileValidator::ProcessingResult ProfileValidator::process(const Element& elem
     checkValueMaxLength(element, elementFullPath);
     checkValueMinValue(element, elementFullPath);
     checkValueMaxValue(element, elementFullPath);
-    checkCoding(*view, element, elementFullPath);
-    checkValueNotEmpty(element, elementFullPath);
+    checkBaseType(*view, element, elementFullPath);
     const auto& slicing = mDefPtr.element()->slicing();
     if (slicing)
     {
@@ -517,6 +517,17 @@ void ProfileValidator::checkValueNotEmpty(const Element& element, std::string_vi
             mData->add(Severity::error, "Attribute value must not be empty", std::string{elementFullPath},
                        mDefPtr.profile());
         }
+    }
+}
+
+void fhirtools::ProfileValidator::checkBaseType(const FhirStructureRepositoryView& view, const Element& element, std::string_view elementFullPath)
+{
+    checkValueNotEmpty(element, elementFullPath);
+    checkCoding(view, element, elementFullPath);
+    if (mDefPtr.profile()->typeId() == "code" && element.hasValue())
+    {
+        auto code = element.asString();
+        mData->append(CodeChecker::checkCode(code, elementFullPath));
     }
 }
 
