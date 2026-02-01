@@ -72,7 +72,7 @@ class ErpProcessingContext(ConanFile):
         'libpqxx/7.10.1',
         'libxml2/2.14.5',
         'magic_enum/0.9.7',
-        'openssl/3.0.18+erp',
+        'openssl/3.0.19+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20230929',
         'redis-plus-plus/1.3.15',

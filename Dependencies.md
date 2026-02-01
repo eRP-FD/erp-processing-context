@@ -14,17 +14,17 @@
 | libunwind       | 1.8.1        | MIT          | https://github.com/libunwind/libunwind/releases/tag/v1.8.1           |
 | libxml2         | 2.14.5       | MIT          | https://github.com/GNOME/libxml2/tree/v2.14.5                        |
 | magic_enum      | 0.9.7        | MIT          | https://github.com/Neargye/magic_enum/releases/tag/v0.9.7            |
-| openssl*        | 3.0.18       | OpenSSL      | https://github.com/openssl/openssl/tree/openssl-3.0.18               |
+| openssl*        | 3.0.19       | OpenSSL      | https://github.com/openssl/openssl/tree/openssl-3.0.19               |
 | prometheus-cpp  | 1.3.0        | MIT          | https://github.com/jupp0r/prometheus-cpp/releases/tag/v1.3.0         |
 | rapidjson       | cci.20230929 | MIT          | https://github.com/Tencent/rapidjson                                 |
 | redis-plus-plus | 1.3.15       | Apache-2.0   | https://github.com/sewenew/redis-plus-plus/releases/tag/1.3.15       |
 | zlib            | 1.3.1        | Zlib License | https://github.com/madler/zlib/tree/v1.3.1                           |
 | zstd            | 1.5.7        | BSD-3-Clause | https://github.com/facebook/zstd/tree/v1.5.7                         |
 
-\* openssl 3.0.18: The openssl 3.0.18 is based on the version provided by conan-center (https://conan.io/center/)
+\* openssl 3.0.19: The openssl 3.0.19 is based on the version provided by conan-center (https://conan.io/center/)
 additionally a patch has been applied to access the embedded OCSP response.
 The changed package recipes and the patch are located in the subfolder `conan-recipes/openssl`
 
-\* openssl 3.0.18: Die verwendete openssl 3.0.18 basiert auf der auf conan-center (https://conan.io/center/) verfügbaren.
+\* openssl 3.0.19: Die verwendete openssl 3.0.19 basiert auf der auf conan-center (https://conan.io/center/) verfügbaren.
 zusätzlich wird ein weiterer Patch angewandt, der den Zugriff auf die eingebettete OCSP-Response ermöglicht.
 Das geänderte Conan-Rezept und der Patch befinden sich im Unterordner `conan-recipes/openssl`

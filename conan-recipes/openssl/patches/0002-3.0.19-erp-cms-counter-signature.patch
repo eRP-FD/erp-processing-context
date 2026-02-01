@@ -1,39 +1,38 @@
-From 7b76c3c5427708f06d1be3d20de60679f7cc2097 Mon Sep 17 00:00:00 2001
+From 0500e2f930ea4505ab22a625af4949d23e7e78b1 Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
-Date: Wed, 1 Oct 2025 12:45:25 +0200
-Subject: [PATCH 2/2] 3.0.18-erp-cms-counter-signature.patch
+Date: Wed, 28 Jan 2026 16:01:13 +0100
+Subject: [PATCH 2/2] 3.0.19-erp-cms-counter-signature.patch
 
 ---
- crypto/cms/cms_att.c     |   3 +-
- crypto/cms/cms_sd.c      | 237 ++++++++++++++++++++++++++++++++++-----
+ crypto/cms/cms_att.c     |   2 +-
+ crypto/cms/cms_sd.c      | 233 +++++++++++++++++++++++++++++++++++----
  include/openssl/cms.h.in |   5 +
- 3 files changed, 217 insertions(+), 28 deletions(-)
+ 3 files changed, 217 insertions(+), 23 deletions(-)
 
 diff --git a/crypto/cms/cms_att.c b/crypto/cms/cms_att.c
-index 64acda7..18ae55c 100644
+index 86852af..cbe760c 100644
 --- a/crypto/cms/cms_att.c
 +++ b/crypto/cms/cms_att.c
-@@ -43,8 +43,7 @@ static const struct {
+@@ -41,7 +41,7 @@ static const struct {
+     int flags;
+ } cms_attribute_properties[] = {
      /* See RFC Section 11 */
-     { NID_pkcs9_contentType, CMS_ATTR_F_SIGNED
-                              | CMS_ATTR_F_ONLY_ONE
--                             | CMS_ATTR_F_ONE_ATTR_VALUE
--                             | CMS_ATTR_F_REQUIRED_COND },
-+                             | CMS_ATTR_F_ONE_ATTR_VALUE },
-     { NID_pkcs9_messageDigest, CMS_ATTR_F_SIGNED
-                                | CMS_ATTR_F_ONLY_ONE
-                                | CMS_ATTR_F_ONE_ATTR_VALUE
+-    { NID_pkcs9_contentType, CMS_ATTR_F_SIGNED | CMS_ATTR_F_ONLY_ONE | CMS_ATTR_F_ONE_ATTR_VALUE | CMS_ATTR_F_REQUIRED_COND },
++    { NID_pkcs9_contentType, CMS_ATTR_F_SIGNED | CMS_ATTR_F_ONLY_ONE | CMS_ATTR_F_ONE_ATTR_VALUE },
+     { NID_pkcs9_messageDigest, CMS_ATTR_F_SIGNED | CMS_ATTR_F_ONLY_ONE | CMS_ATTR_F_ONE_ATTR_VALUE | CMS_ATTR_F_REQUIRED_COND },
+     { NID_pkcs9_signingTime, CMS_ATTR_F_SIGNED | CMS_ATTR_F_ONLY_ONE | CMS_ATTR_F_ONE_ATTR_VALUE },
+     { NID_pkcs9_countersignature, CMS_ATTR_F_UNSIGNED },
 diff --git a/crypto/cms/cms_sd.c b/crypto/cms/cms_sd.c
-index 4758d04..7016ea2 100644
+index e6ba17c..c562976 100644
 --- a/crypto/cms/cms_sd.c
 +++ b/crypto/cms/cms_sd.c
-@@ -302,23 +302,15 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
+@@ -299,23 +299,15 @@ static int ossl_cms_add1_signing_cert_v2(CMS_SignerInfo *si,
      return ret;
  }
 
 -CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
--                                X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
--                                unsigned int flags)
+-    X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
+-    unsigned int flags)
 +/* Creates and partially initializes a new signer info and adjusts signed data in CMS,
 + * but still do not add it to CMS directly */
 +CMS_SignerInfo *cms_SignerInfo_init(CMS_SignedData *sd,
@@ -57,7 +56,7 @@ index 4758d04..7016ea2 100644
      si = M_ASN1_new_of(CMS_SignerInfo);
      if (!si)
          goto merr;
-@@ -352,7 +344,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+@@ -349,7 +341,7 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
      if (!ossl_cms_set1_SignerIdentifier(si->sid, signer, type, ctx))
          goto err;
 
@@ -66,8 +65,8 @@ index 4758d04..7016ea2 100644
          int def_nid;
 
          if (EVP_PKEY_get_default_digest_nid(pk, &def_nid) <= 0) {
-@@ -360,25 +352,42 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
-                            "pkey nid=%d", EVP_PKEY_get_id(pk));
+@@ -357,25 +349,46 @@ CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
+                 "pkey nid=%d", EVP_PKEY_get_id(pk));
              goto err;
          }
 -        md = EVP_get_digestbynid(def_nid);
@@ -75,7 +74,7 @@ index 4758d04..7016ea2 100644
 +        *md = EVP_get_digestbynid(def_nid);
 +        if (*md == NULL) {
              ERR_raise_data(ERR_LIB_CMS, CMS_R_NO_DEFAULT_DIGEST,
-                            "default md nid=%d", def_nid);
+                 "default md nid=%d", def_nid);
              goto err;
          }
      }
@@ -87,10 +86,10 @@ index 4758d04..7016ea2 100644
 +    X509_ALGOR_set_md(si->digestAlgorithm, *md);
 +    return si;
 
--    if (md == NULL) {
--        ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
--        goto err;
--    }
+     if (md == NULL) {
+         ERR_raise(ERR_LIB_CMS, CMS_R_NO_DIGEST_SET);
+         goto err;
+     }
 + merr:
 +    ERR_raise(ERR_LIB_CMS, ERR_R_MALLOC_FAILURE);
 + err:
@@ -120,7 +119,7 @@ index 4758d04..7016ea2 100644
 
      /* See if digest is present in digestAlgorithms */
      for (i = 0; i < sk_X509_ALGOR_num(sd->digestAlgorithms); i++) {
-@@ -1114,3 +1123,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
+@@ -1112,3 +1125,179 @@ int CMS_add_standard_smimecap(STACK_OF(X509_ALGOR) **smcap)
          return 0;
      return 1;
  }
@@ -301,27 +300,27 @@ index 4758d04..7016ea2 100644
 +
 +}
 diff --git a/include/openssl/cms.h.in b/include/openssl/cms.h.in
-index cb24d82..18c3e14 100644
+index c3c2cca..60a425a 100644
 --- a/include/openssl/cms.h.in
 +++ b/include/openssl/cms.h.in
-@@ -50,6 +50,7 @@ typedef struct CMS_OtherKeyAttribute_st CMS_OtherKeyAttribute;
- -}
+@@ -54,6 +54,7 @@ typedef struct CMS_OtherKeyAttribute_st CMS_OtherKeyAttribute;
+ /* clang-format on */
 
  DECLARE_ASN1_FUNCTIONS(CMS_ContentInfo)
 +DECLARE_ASN1_FUNCTIONS(CMS_SignerInfo)
  DECLARE_ASN1_FUNCTIONS(CMS_ReceiptRequest)
  DECLARE_ASN1_PRINT_FUNCTION(CMS_ContentInfo)
 
-@@ -391,6 +392,10 @@ int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms,
+@@ -395,6 +396,10 @@ int CMS_RecipientInfo_kari_decrypt(CMS_ContentInfo *cms,
  int CMS_SharedInfo_encode(unsigned char **pder, X509_ALGOR *kekalg,
-                           ASN1_OCTET_STRING *ukm, int keylen);
+     ASN1_OCTET_STRING *ukm, int keylen);
 
 +int CMS_add1_counter_signature(CMS_SignerInfo *si, CMS_ContentInfo* cms,
 +                               X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 +                               unsigned int flags);
 +
  /* Backward compatibility for spelling errors. */
- # define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
- # define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
+ #define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
+ #define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
 --
-2.43.0
+2.51.0
