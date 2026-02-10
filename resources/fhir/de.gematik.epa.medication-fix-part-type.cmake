@@ -1,3 +1,10 @@
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2025
+# (C) Copyright IBM Corp. 2021, 2025
+#
+# non-exclusively licensed to gematik GmbH
+#
+
 set(files
     package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
     package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
@@ -7,26 +14,16 @@ set(files
     package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
 )
 
-set(patch_file "${CURRENT_SOURCE_DIR}/fhir/de.gematik.epa.medication-${FHIR_PACKAGE_VERSION}-fix-part-type.patch")
+if ("${FHIR_PACKAGE_VERSION}" VERSION_GREATER_EQUAL "1.2.0")
+    list(APPEND files package/StructureDefinition-epa-op-add-emp-entry-input-parameters.json)
+endif()
 
 list(TRANSFORM files PREPEND "${FHIR_CURRENT_PACKAGE_DIR}/")
 
-foreach(file ${files})
-    file(REMOVE "${file}.orig")
-    file(RENAME "${file}" "${file}.orig")
-    file(READ "${file}.orig" content NEWLINE_CONSUME)
-    string(REPLACE "}," "},\n" with_newlines "${content}")
-    file(WRITE "${file}.nl" "${with_newlines}")
-    file(WRITE "${file}" "${with_newlines}")
-    #file(REMOVE "${file}.nl")
-endforeach()
+include("${CURRENT_SOURCE_DIR}/fhir/fix-Parameters.parameter.part-type.cmake")
 
-execute_process(
-    COMMAND "${Patch_EXECUTABLE}" "--quiet" "-d" "${FHIR_CURRENT_PACKAGE_DIR}/package" "-i" "${patch_file}"
-    RESULT_VARIABLE result
-)
-if (result GREATER 0)
-    message(FATAL_ERROR "patching failed")
-endif()
+foreach(file ${files})
+    fix_parameters_part_type(${file})
+endforeach()
 
 

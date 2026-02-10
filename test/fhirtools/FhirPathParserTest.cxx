@@ -7,11 +7,13 @@
 
 
 #include "erp/model/Communication.hxx"
-#include "fhirtools/expression/Expression.hxx"
+#include "fhirtools/converter/internal/FhirSAXHandler.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "fhirtools/expression/Expression.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/parser/FhirPathParser.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "shared/model/KbvBundle.hxx"
 #include "test/fhirtools/DefaultFhirStructureRepository.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -39,6 +41,18 @@ public:
         ASSERT_EQ(result[0]->type(), Element::Type::Boolean);
         ASSERT_EQ(result[0]->asBool(), expected) << result;
     }
+    void checkDecimalResult(const Collection& result, DecimalType expected)
+    {
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result[0]->type(), Element::Type::Decimal);
+        ASSERT_EQ(result[0]->asDecimal(), expected) << result;
+    }
+    void checkIntegerResult(const Collection& result, int32_t expected)
+    {
+        ASSERT_EQ(result.size(), 1);
+        ASSERT_EQ(result[0]->type(), Element::Type::Integer);
+        ASSERT_EQ(result[0]->asInt(), expected) << result;
+    }
     const FhirStructureRepositoryBackend* backend =
         std::addressof(DefaultFhirStructureRepository::getBackendWithTest());
     std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mRepo = DefaultFhirStructureRepository::getWithTest();
@@ -51,8 +65,7 @@ class FhirPathParserTestCommunication : public FhirPathParserTest
 {
 public:
     FhirPathParserTestCommunication()
-        : communicationResource(model::Communication::fromXmlNoValidation(
-              ResourceManager::instance().getStringResource("test/fhir/conversion/communication_info_req.xml")))
+        : communicationResource(createCommunicationResource())
     {
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testCommDoc = communicationResource.jsonDocument();
@@ -61,14 +74,19 @@ public:
     }
     model::Communication communicationResource;
     std::shared_ptr<ErpElement> communicationElement;
+private:
+    model::Communication createCommunicationResource()
+    {
+        const auto& doc = ResourceManager::instance().getStringResource("test/fhir/conversion/communication_info_req.xml");
+        return model::Communication::fromJson(FhirSaxHandler::parseXMLintoJSON(*backend->defaultView(), doc, nullptr));
+    }
 };
 
 class FhirPathParserTestBundle : public FhirPathParserTest
 {
 public:
     FhirPathParserTestBundle()
-        : bundleResource(model::KbvBundle::fromXmlNoValidation(ResourceManager::instance().getStringResource(
-              "test/validation/xml/kbv/bundle/Bundle_valid_fromErp5822.xml")))
+        : bundleResource(createBundleResource())
     {
         //NOLINTNEXTLINE(readability-qualified-auto) - make sure the return type is reference
         auto& testDoc = bundleResource.jsonDocument();
@@ -76,6 +94,12 @@ public:
     }
     model::KbvBundle bundleResource;
     std::shared_ptr<ErpElement> bundleElement;
+private:
+     model::KbvBundle createBundleResource()
+    {
+        const auto& doc = ResourceManager::instance().getStringResource("test/validation/xml/kbv/bundle/Bundle_valid_fromErp5822.xml");
+        return  model::KbvBundle::fromJson(FhirSaxHandler::parseXMLintoJSON(*backend->defaultView(), doc, nullptr));
+    }
 };
 
 TEST_F(FhirPathParserTest, exists)
@@ -228,6 +252,68 @@ TEST_F(FhirPathParserTest, contains)
         ASSERT_TRUE(expressions);
         auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
         EXPECT_NO_FATAL_FAILURE(checkBoolResult(result, false));
+    }
+}
+
+TEST_F(FhirPathParserTest, modOperator)
+{
+    {
+        auto expressions = FhirPathParser::parse(backend, "2 mod dec");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("0.8")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "1.2 mod dec");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("0")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "1.1 mod dec");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("1.1")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "dec mod num");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("1.2")));
+    }
+}
+
+TEST_F(FhirPathParserTest, multiplicationOperator)
+{
+    {
+        auto expressions = FhirPathParser::parse(backend, "2 * dec");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("2.4")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "1.1 * dec");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("1.32")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "dec * num");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("14.4")));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "5 * 7");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkIntegerResult(result, 35));
+    }
+    {
+        auto expressions = FhirPathParser::parse(backend, "5.1234 * 0.0");
+        ASSERT_TRUE(expressions);
+        auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
+        EXPECT_NO_FATAL_FAILURE(checkDecimalResult(result, DecimalType("0")));
     }
 }
 

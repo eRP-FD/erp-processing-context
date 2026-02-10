@@ -16,6 +16,7 @@
 #include <rapidjson/writer.h>
 #include <unordered_set>
 
+
 std::string ConfigurationFormatter::formatAsJson(const Configuration& config, int flags)
 {
     OpsConfigKeyNames confNames;
@@ -69,6 +70,10 @@ std::string ConfigurationFormatter::formatAsJson(const Configuration& config, in
     if ((KeyData::ConfigurationKeyFlags::categoryRuntime & flags) != 0)
     {
         appendRuntimeConfiguration(document);
+    }
+    if ((KeyData::ConfigurationKeyFlags::categoryFhirPackages & flags) != 0)
+    {
+        appendFhirPackagesConfiguration(document);
     }
     rapidjson::StringBuffer buffer;
     rapidjson::Writer writer(buffer);
@@ -146,4 +151,54 @@ std::string ConfigurationFormatter::getCategoryPath(int flags)
         return "debug/";
     }
     return {};
+}
+
+void ConfigurationFormatter::appendFhirPackagesConfiguration(rapidjson::Document& document,
+                                                             const fhirtools::FhirResourceViewConfiguration& config)
+{
+    const std::string rootPath = "/fhirPackagesDates";
+    auto rootValuePtr = rapidjson::Pointer(rapidjson::StringRef(rootPath.data(), rootPath.size()));
+    auto& rootValues = rootValuePtr.Create(document).SetArray();
+
+    const auto& keyConfigs = config.kbvSchluesseltabellenConfiguration();
+    const auto keyConfigsSubset = keyConfigs.entriesWithin({}, {});
+    std::set<std::string> allKeys;
+    for (const auto& entry : keyConfigsSubset)
+    {
+        allKeys.emplace(entry.id);
+    }
+
+    for (const auto& conf : config.allViews())
+    {
+        const auto startStr = conf->mStart.has_value() ? date::format("%Y-%m-%d", conf->mStart.value()) : "";
+        const auto endStr = conf->mEnd.has_value() ? date::format("%Y-%m-%d", conf->mEnd.value()) : "";
+
+        // Strip any date appendixes from the key name so that they remain fixed in the generated output.
+        std::string k = conf->mId;
+        for (const auto& entry : allKeys)
+        {
+            const std::string pat = "_" + entry;
+            const auto pos = k.rfind(pat);
+            if (pos != std::string::npos)
+            {
+                k.erase(pos, pat.length());
+                break;
+            }
+        }
+
+        auto& alloc = document.GetAllocator();
+
+        rapidjson::Value obj(rapidjson::kObjectType);
+        obj.AddMember("name", k, alloc);
+        obj.AddMember("from", startStr, alloc);
+        obj.AddMember("until", endStr, alloc);
+        std::string groups{};
+        for (const auto& groupName : conf->mGroups)
+        {
+            groups += groupName + ";";
+        }
+        obj.AddMember("groups", groups, alloc);
+
+        rootValues.PushBack(rapidjson::Value(obj, alloc), alloc);
+    }
 }

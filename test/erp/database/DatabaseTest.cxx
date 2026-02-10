@@ -49,7 +49,7 @@ public:
         std::optional<model::PrescriptionId> id;
         ASSERT_NO_THROW(id.emplace(db.storeTask(task)));
         task.setPrescriptionId(*id);
-        task.setKvnr(model::Kvnr{insurant, id->isPkv() ?  model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+        task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::pkv});
         task.setExpiryDate(model::Timestamp::now());
         task.setAcceptDate(model::Timestamp::now());
 
@@ -80,6 +80,7 @@ public:
         receiptJson = String::replaceAll(receiptJson, "##PRESCRIPTION_ID##", id->toString());
         auto receipt = ::model::Bundle::fromJsonNoValidation(receiptJson);
 
+        task.setIsPkv(true);
         ASSERT_NO_THROW(db.activateTask(task, signedPrescription, JwtBuilder::testBuilder().makeJwtArzt()));
         ASSERT_NO_THROW(db.storeChargeInformation(::model::ChargeInformation{
             ::std::move(chargeItem), ::std::move(signedPrescription), ::std::move(prescription),
@@ -220,5 +221,4 @@ TEST_P(DatabaseTest, chargeItem_search_by_insurant)//NOLINT(readability-function
 }
 
 INSTANTIATE_TEST_SUITE_P(DatabaseTestInst, DatabaseTest,
-                         testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(testutils::pkvPrescriptionTypes()));

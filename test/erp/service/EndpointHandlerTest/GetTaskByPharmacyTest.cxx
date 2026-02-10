@@ -253,7 +253,9 @@ public:
             .kvnr = kvnr.id(),
         };
         auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
-        mockDatabase->insertTask(model::Task::fromJson(doc));
+        auto task = model::Task::fromJson(doc);
+        task.setIsPkv(!model::canBeGkv(prescriptionType));
+        mockDatabase->insertTask(task);
         TLOG(INFO) << "inserted task with expiry date " << taskOpts.expirydate;
     }
 
@@ -676,6 +678,7 @@ protected:
     static constexpr const char accessCode[] = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
     static constexpr const char secret[] = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
     static constexpr const char telematikID[] = "3-SMC-B-Testkarte-883110000120312";
+    static constexpr const char telematikIDDiga[] = "8-SMC-B-Testkarte-883110000120312";
     void callHandler(const model::PrescriptionId& prescriptionId, const std::string& telematikId,
                      std::optional<std::string> accessCode, std::optional<std::string> secret, ServerResponse& serverResponse)
     {
@@ -689,6 +692,7 @@ protected:
             case model::PrescriptionType::direkteZuweisung:
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             case model::PrescriptionType::direkteZuweisungPkv:
+            case model::PrescriptionType::tRezept:
                 serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikId));
                 break;
             case model::PrescriptionType::digitaleGesundheitsanwendungen:
@@ -730,6 +734,7 @@ protected:
             case model::PrescriptionType::direkteZuweisung:
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             case model::PrescriptionType::direkteZuweisungPkv:
+            case model::PrescriptionType::tRezept:
                 serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke(telematikID));
                 serverRequest.setBody(ResourceTemplates::dispenseOrCloseTaskBodyXml({
                     .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
@@ -738,7 +743,7 @@ protected:
                 }));
                 break;
             case model::PrescriptionType::digitaleGesundheitsanwendungen:
-                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtKostentraeger(telematikID));
+                serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtKostentraeger(telematikIDDiga));
                 serverRequest.setBody(ResourceTemplates::medicationDispenseOperationParametersXml({
                     .profileType = model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input,
                     .version = ResourceTemplates::Versions::GEM_ERP_current(),
@@ -865,7 +870,9 @@ TEST_F(GetTaskByIdByPharmacyTest, taskHasNoOwner)
     auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
     static const rapidjson::Pointer owner{"/owner"};
     owner.Erase(doc);
-    mockDatabase->insertTask(model::Task::fromJson(doc));
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(false);
+    mockDatabase->insertTask(task);
     try
     {
         callHandler(
@@ -896,7 +903,9 @@ TEST_F(GetTaskByIdByPharmacyTest, wrongAccessCode)
     auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
     static const rapidjson::Pointer owner{"/owner"};
     owner.Erase(doc);
-    mockDatabase->insertTask(model::Task::fromJson(doc));
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(false);
+    mockDatabase->insertTask(task);
     try
     {
         callHandler(
@@ -928,7 +937,9 @@ TEST_F(GetTaskByIdByPharmacyTest, wrongTaskStatus)
     auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
     rapidjson::Pointer statusPtr{"/status"};
     statusPtr.Set(doc, "$ready");
-    mockDatabase->insertTask(model::Task::fromJson(doc));
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(false);
+    mockDatabase->insertTask(task);
     try
     {
         callHandler(
@@ -973,7 +984,7 @@ TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecretDiga)
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6002);
     ASSERT_NO_FATAL_FAILURE(closeTask(prescriptionId));
     ServerResponse serverResponse;
-    ASSERT_NO_THROW(callHandler(prescriptionId, telematikID, accessCode, secret, serverResponse););
+    ASSERT_NO_THROW(callHandler(prescriptionId, telematikIDDiga, accessCode, secret, serverResponse););
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     auto bundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
     ASSERT_NO_FATAL_FAILURE(testutils::validate(bundle));

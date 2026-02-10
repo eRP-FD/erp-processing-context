@@ -8,6 +8,7 @@
 #ifndef TEST_UTIL_RESOURCETEMPLATES_HXX
 #define TEST_UTIL_RESOURCETEMPLATES_HXX
 
+#include "TestUtils.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/Lanr.hxx"
 #include "erp/model/eu/GemErpEuPrParGetPrescriptionInput.hxx"
@@ -59,14 +60,25 @@ struct Versions {
         using FhirVersion::FhirVersion;
         std::string renderVersion() const;
     };
+    struct GEM_ERP_TREZEPT : fhirtools::FhirVersion {
+        using FhirVersion::FhirVersion;
+        std::string renderVersion() const;
+    };
+    struct KBV_FOR : fhirtools::FhirVersion {
+        using FhirVersion::FhirVersion;
+        explicit KBV_FOR(FhirVersion ver);
+        std::string renderVersion() const;
+    };
 
 
     static inline GEM_ERP GEM_ERP_1_2{"1.2"};
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
     static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline GEM_ERP GEM_ERP_1_5_2{"1.5.2"};
+    static inline GEM_ERP GEM_ERP_1_6_0{"1.6.0"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
     static inline KBV_ERP KBV_ERP_1_3_3{"1.3.3"};
+    static inline KBV_ERP KBV_ERP_1_4_0{"1.4.0"};
     static inline KBV_EVDGA KBV_EVDGA_1_1{"1.1"};
     static inline KBV_EVDGA KBV_EVDGA_1_2_2{"1.2.2"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
@@ -75,6 +87,8 @@ struct Versions {
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
     static inline DAV_PKV DAV_PKV_1_4_0{"1.4.0"};
     static inline GEM_ERPEU GEM_ERPEU_1_1{"1.1"};
+    static inline GEM_ERP_TREZEPT GEM_ERP_TREZEPT_1_1{"1.1"};
+    static inline KBV_FOR KBV_FOR_1_3_0{"1.3.0"};
 
     static fhirtools::DefinitionKey latest(std::string_view profileUrl,
                                            const model::Timestamp& reference = model::Timestamp::now());
@@ -84,6 +98,7 @@ struct Versions {
     static GEM_ERPCHRG GEM_ERPCHRG_current(const model::Timestamp& reference = model::Timestamp::now());
     static DAV_PKV DAV_PKV_current(const model::Timestamp& reference = model::Timestamp::now());
     static GEM_ERPEU GEM_ERPEU_current(const model::Timestamp& reference = model::Timestamp::now());
+    static KBV_FOR KBV_FOR_current(const model::Timestamp& reference = model::Timestamp::now());
 
     static std::initializer_list<GEM_ERP> GEM_ERP_all;
     static std::initializer_list<KBV_ERP> KBV_ERP_all;
@@ -106,6 +121,7 @@ struct KbvBundleMvoOptions
     std::optional<std::string> redeemPeriodStart = authoredOn.toGermanDate();
     std::optional<std::string> redeemPeriodEnd = getRedeemPeriodEnd(authoredOn, redeemPeriodStart);
     std::string mvoId = "urn:uuid:24e2e10d-e962-4d1c-be4f-8760e690a5f0";
+    std::string coPaymentValue = "0";
 
 private:
     static std::string getRedeemPeriodEnd(model::Timestamp authoredOn, std::optional<std::string> redeemPeriodStart);
@@ -130,7 +146,7 @@ struct MedicationOptions {
     std::string templatePrefix = PZN;
     std::optional<std::string> id = std::nullopt;
     std::string darreichungsform = "TAB";
-    std::string_view medicationCategory = "00";
+    std::optional<std::string_view> medicationCategory{};
     model::Pzn pzn = model::Pzn{"04773414"};
 };
 
@@ -172,7 +188,7 @@ struct MedicationDispenseDiGAOptions {
     Versions::GEM_ERP version = Versions::GEM_ERP_current(model::Timestamp::fromGermanDate(whenHandedOver));
     std::string prescriptionId = "162.000.033.491.280.78";
     std::string kvnr = "X234567891";
-    std::string telematikId = "3-SMC-B-Testkarte-883110000120312";
+    std::string telematikId = "8-SMC-B-Testkarte-883110000120312";
     bool withRedeemCode = true;
 };
 std::string medicationDispenseDigaXml(const MedicationDispenseDiGAOptions& options);
@@ -196,6 +212,8 @@ struct KbvBundleOptions
     std::optional<std::string_view> forceKvid10Ns = std::nullopt;
     std::string_view patientIdentifierTypeSystem = "http://fhir.de/CodeSystem/identifier-type-de-basis";
     MedicationOptions medicationOptions{.version = kbvVersion};
+    bool tRezeptIsPkv = false;
+    bool generateNewId = false;
 };
 
 std::string kbvBundleXml(const KbvBundleOptions& bundleOptions = {});
@@ -216,6 +234,7 @@ struct TaskOptions
     model::Timestamp expirydate = model::Timestamp::now() + 48h;
     std::string_view kvnr = "X234567891";
     std::string_view owningPharmacy = "3-SMC-B-Testkarte-883110000120312";
+    std::optional<std::string_view> kvnrNamingSystem{};
 };
 
 
@@ -326,6 +345,19 @@ struct EuCloseTaskOptions
     std::string medicationDispenseId = "Example-MedicationDispense-EU";
 };
 std::string euCloseTaskXml(const EuCloseTaskOptions& options);
+
+struct VZDFhirBundleOptions
+{
+    std::string name = "Apotheke_Test_Inland_SMCB";
+    std::string addressText = "Hauptstr. 67, 70477, Stuttgart";
+};
+std::string vzdFhirBundleJson(const VZDFhirBundleOptions& options = {});
+
+struct VzdSearchSetOptions
+{
+    std::string telematikId = "9-2.054.12345679";
+};
+std::string vzdSearchSetJson(const std::string_view path = "test/EndpointHandlerTest/ERP_TPrescription_VZD_SearchSet_template_1.0.json", const VzdSearchSetOptions& options = {});
 
 } // namespace ResourceTemplates
 

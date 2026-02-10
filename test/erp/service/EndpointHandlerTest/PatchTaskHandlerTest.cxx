@@ -40,9 +40,6 @@ public:
     const std::string taskJson = ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId});
     const std::string kbvBundle = ResourceTemplates::kbvBundleXml();
     const std::string validAccessCode = "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea";
-
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
 };
 
 TEST_F(PatchTaskHandlerTest, MissingTaskId_Throws_Success)

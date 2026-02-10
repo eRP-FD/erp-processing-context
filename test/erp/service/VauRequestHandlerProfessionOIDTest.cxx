@@ -303,10 +303,11 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskActivateForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAcceptSuccess)
 {
-    A_19166_01.test("Valid professionOID claim in JWT");
+    A_19166_02.test("Valid professionOID claim in JWT");
     std::set<model::PrescriptionType> allowedTypes{
-        model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::direkteZuweisung,
-        model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, model::PrescriptionType::direkteZuweisungPkv};
+        model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::tRezept,
+        model::PrescriptionType::direkteZuweisung, model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+        model::PrescriptionType::direkteZuweisungPkv};
     testEndpointsWf(HttpMethod::POST, "/Task/", allowedTypes, "/$accept?ac=access_code", jwtOeffentliche_apotheke,
                     HttpStatus::NotFound);
     testEndpointsWf(HttpMethod::POST, "/Task/", allowedTypes, "/$accept?ac=access_code", jwtKrankenhausapotheke,
@@ -314,12 +315,13 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAcceptSuccess)
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAcceptForbidden)
 {
-    A_19166_01.test("Invalid professionOID claim in JWT");
+    A_19166_02.test("Invalid professionOID claim in JWT");
     std::set<model::PrescriptionType> allTypes{magic_enum::enum_values<model::PrescriptionType>().begin(),
                                                magic_enum::enum_values<model::PrescriptionType>().end()};
     std::set<model::PrescriptionType> allowedTypes{
-        model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::direkteZuweisung,
-        model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, model::PrescriptionType::direkteZuweisungPkv};
+        model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::tRezept,
+        model::PrescriptionType::direkteZuweisung, model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+        model::PrescriptionType::direkteZuweisungPkv};
     testEndpointsWf(HttpMethod::POST, "/Task/", allTypes, "/$accept", jwtArzt, HttpStatus::Forbidden);
     testEndpointsWf(HttpMethod::POST, "/Task/", allTypes, "/$accept", jwtZahnArzt, HttpStatus::Forbidden);
     testEndpointsWf(HttpMethod::POST, "/Task/", allTypes, "/$accept", jwtPraxisArzt, HttpStatus::Forbidden);
@@ -457,8 +459,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PostTaskAbortForbidden)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PatchTaskSuccess)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const auto presc = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711).toString();
     const std::string endpoint = "/Task/" + presc;
     const auto jwt = mJwtBuilder.makeJwtVersicherter("X123456788");
@@ -471,8 +471,6 @@ TEST_F(VauRequestHandlerProfessionOIDTest, PatchTaskSuccess)
 
 TEST_F(VauRequestHandlerProfessionOIDTest, PatchTaskForbidden)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const std::string endpoint = "/Task/" + taskId;
     A_27549.test("Only registered professionOIDs are allowed to call this service.");
     testEndpoint(HttpMethod::PATCH, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);

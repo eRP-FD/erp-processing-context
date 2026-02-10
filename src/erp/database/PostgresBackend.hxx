@@ -64,7 +64,7 @@ public:
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
                       const db_model::EncryptedBlob& doctorIdentity,
                       const model::Timestamp& lastStatusUpdate,
-                      bool euRedeemable) override;
+                      bool euRedeemable, bool isPkv) override;
     void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                            const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
                            const db_model::EncryptedBlob& pharmacyIdentity,
@@ -163,7 +163,7 @@ public:
 
     std::vector<Uuid> retrieveCommunicationIds (const db_model::HashedId& recipient) override;
 
-    std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    std::optional<Uuid>
     deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender) override;
 
     void markCommunicationsAsRetrieved (
@@ -213,6 +213,7 @@ private:
 
     PostgresBackendTask mBackendTask;
     PostgresBackendTask mBackendTask162;
+    PostgresBackendTask mBackendTask166;
     PostgresBackendTask mBackendTask169;
     PostgresBackendTask mBackendTask200;
     PostgresBackendTask mBackendTask209;

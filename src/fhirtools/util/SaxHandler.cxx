@@ -11,7 +11,9 @@
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/util/XmlHelper.hxx"
 #include "fhirtools/util/XmlMemory.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
+#include "shared/util/NoDeprecated.hxx"
 #include "shared/util/String.hxx"
 
 #include <libxml/parserInternals.h>
@@ -72,11 +74,11 @@ typename decltype(toCallbackClass(memberFunctionPointer))::Type makeCallback()
     return &CallbackFunctionMakerClass::cStyleCallbackFunction;
 }
 
-void failMaybeWithDiagnostics(const std::string& message, const xmlError& error)
+void failMaybeWithDiagnostics(const std::string& message, const xmlError* error)
 {
-    if (error.message)
+    if (error)
     {
-        std::string errorMessage = error.message;
+        std::string errorMessage = error->message;
         if (errorMessage.back() == '\n')// remove trailing line feed contained in message from libxml2;
             errorMessage = errorMessage.substr(0, errorMessage.size() - 1);
         ErpFailWithDiagnostics(HttpStatus::BadRequest, message, errorMessage);
@@ -243,7 +245,8 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
                                   });
     Expect(mContext != nullptr, "Could not create xmlParserCtxtPtr");
 
-    {// from xmlDetectSAX2
+    BEGIN_NO_DEPRECATED_WARNINGS
+    {// from xmlCtxtInitializeLate
         mContext->sax2 = 1;
         mContext->str_xml = xmlDictLookup(mContext->dict, BAD_CAST "xml", 3);
         Expect(mContext->str_xml != nullptr, "Could not lookup ctxt->str_xml");
@@ -252,8 +255,12 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
         mContext->str_xml_ns = xmlDictLookup(mContext->dict, XML_XML_NAMESPACE, 36);
         Expect(mContext->str_xml_ns != nullptr, "Could not lookup str_xml_ns");
     }
+    END_NO_DEPRECATED_WARNINGS
 
     mContext->userData = userData;
+
+    A_28427.start("enforce and validate UTF-8 encoding");
+    xmlSwitchEncoding(mContext.get(), XML_CHAR_ENCODING_UTF8);
 
     if (mContext->sax)
     {
@@ -291,18 +298,20 @@ void SaxHandler::parseStringViewInternal(xmlSAXHandler& handler, const std::stri
         std::rethrow_exception(mExceptionPtr);
     }
 
-    if (mContext->errNo != 0 && mContext->lastError.level > XML_ERR_WARNING)
+    const auto* lastError = xmlCtxtGetLastError(mContext.get());
+
+    if (lastError && lastError->level > XML_ERR_WARNING)
     {
         TVLOG(1) << "libxml2 ctxt->errNo: " << mContext->errNo;
-        failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
+        failMaybeWithDiagnostics("Error from xmlParseDocument", lastError);
     }
     if (parseResult != 0)
     {
-        failMaybeWithDiagnostics("Error from xmlParseDocument", mContext->lastError);
+        failMaybeWithDiagnostics("Error from xmlParseDocument", lastError);
     }
-    if (! mContext->wellFormed)
+    if (mContext->wellFormed == 0)
     {
-        failMaybeWithDiagnostics("Error from xmlParseDocument: !ctxt->wellFormed", mContext->lastError);
+        failMaybeWithDiagnostics("Error from xmlParseDocument: !ctxt->wellFormed", lastError);
     }
 }
 

@@ -9,7 +9,6 @@
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "fhirtools/validator/internal/ReferenceContext.hxx"
 
-#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -79,7 +78,7 @@ private:
                                                                 const ProfiledElementTypeInfo& profiledElementTypeInfo);
     std::set<ProfiledElementTypeInfo> profilesFromResource(const Element&, std::string_view elementFullPath);
     void addSliceProfiles(const Element& element, std::string_view elementFullPath);
-    void addProfiles(const FhirStructureRepositoryView& repo, const std::list<std::string>& newProfileUrls,
+    void addProfiles(const FhirStructureRepositoryView& repo, const std::set<std::string>& newProfileUrls,
                      std::string_view elementFullPath, const FhirStructureDefinition* sourceProfile);
     void addProfiles(const fhirtools::FhirStructureRepositoryView& repo,
                      const std::set<fhirtools::ProfiledElementTypeInfo>& newProfiles, std::string_view elementFullPath);

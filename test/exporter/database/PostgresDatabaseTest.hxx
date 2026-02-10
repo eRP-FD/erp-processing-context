@@ -119,6 +119,17 @@ public:
         return db_model::postgres_bytea(encryptedBlobPrescription.binarystring());
     }
 
+    std::string getTRezeptEventState();
+    std::int32_t getTRezeptEventRetryCount();
+
+    model::TaskEvent::id_t insertTRezeptEvent(const model::Kvnr& kvnr, std::string_view prescription_id,
+                                       model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
+                                       std::optional<std::string> healthcareProviderPrescription,
+                                       std::optional<std::string> medicationDispense,
+                                       std::optional<std::string> doctorIdentity,
+                                       std::optional<std::string> pharmacyIdentity,
+                                       int retryCount = 0);
+
     model::TaskEvent::id_t insertTaskEvent(const model::Kvnr& kvnr, std::string_view prescription_id,
                                            model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
                                            std::optional<std::string> healthcareProviderPrescription,
@@ -168,19 +179,19 @@ public:
                 mCodec.encode(*pharmacyIdentity, key, Compression::DictionaryUse::Default_json).binarystring();
         }
         auto id = gsl::narrow<model::TaskEvent::id_t>(++mEventIdCounter);
-        txn.exec_params(
-            "INSERT INTO erp_event.task_event "
-            "(id, prescription_type, prescription_id, kvnr, kvnr_hashed, status, usecase, state, salt, "
-            "task_key_blob_id, "
-            " healthcare_provider_prescription, medication_dispense_blob_id, medication_dispense_salt, "
-            "medication_dispense_bundle, doctor_identity, pharmacy_identity)"
-            " VALUES "
-            "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
-            id, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
-            prescriptionId.toDatabaseId(), encrypedKvnr.binarystring(), kvnr_hashed, 1, magic_enum::enum_name(usecase),
-            magic_enum::enum_name(state), salt.binarystring(), std::to_string(derivationData.blobId),
-            optHealthcareProviderPrescription, optBlobIdMedicationDispense, optSaltMedicationDispense,
-            optMedicationDispense, optDoctorIdentity, optPharmacyIdentity);
+        txn.exec("INSERT INTO erp_event.task_event "
+                 "(id, prescription_type, prescription_id, kvnr, kvnr_hashed, status, usecase, state, salt, "
+                 "task_key_blob_id, "
+                 " healthcare_provider_prescription, medication_dispense_blob_id, medication_dispense_salt, "
+                 "medication_dispense_bundle, doctor_identity, pharmacy_identity)"
+                 " VALUES "
+                 "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)",
+                 pqxx::params{id, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
+                              prescriptionId.toDatabaseId(), encrypedKvnr.binarystring(), kvnr_hashed, 1,
+                              magic_enum::enum_name(usecase), magic_enum::enum_name(state), salt.binarystring(),
+                              std::to_string(derivationData.blobId), optHealthcareProviderPrescription,
+                              optBlobIdMedicationDispense, optSaltMedicationDispense, optMedicationDispense,
+                              optDoctorIdentity, optPharmacyIdentity});
         txn.commit();
         return id;
     }

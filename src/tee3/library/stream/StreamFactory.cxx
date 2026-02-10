@@ -16,11 +16,12 @@
 #include "library/stream/implementation/ProcessingStreamImplementation.hxx"
 #include "library/util/Assert.hxx"
 #include "library/util/ByteHelper.hxx"
-#include "library/wrappers/OpenSsl.hxx"
 
 #include <cstring>
 
 #include "shared/util/Base64.hxx"
+#include <botan/hash.h>
+#include <botan/hex.h>
 
 namespace epa
 {
@@ -199,44 +200,34 @@ Stream StreamFactory::Base64::makeDecodingStream(Stream input)
 
 namespace
 {
-    template<
-        typename ShaContext,
-        int (*initContext)(ShaContext*),
-        int (*digestUpdate)(ShaContext*, const void*, size_t),
-        int (*finalizeDigest)(unsigned char*, ShaContext*),
-        const size_t DIGEST_LENGTH>
     Stream makeHashingStream(
         Stream input,
+        std::string_view algorithm,
         std::function<void(const std::string&)> hashHandlingFunction)
     {
-        auto hashfunction = [readPosition = size_t(0),
-                             shaContext = ShaContext{},
+        const auto hash = std::shared_ptr<Botan::HashFunction>(Botan::HashFunction::create_or_throw(algorithm));
+
+        auto hashfunction = [hash = hash,
                              hashHandlingFunction = std::move(hashHandlingFunction)](
                                 StreamBuffers buffers) mutable -> StreamBuffers {
-            if (readPosition == 0)
-            {
-                initContext(&shaContext);
-            }
 
             for (const auto& buffer : buffers)
             {
-                digestUpdate(&shaContext, buffer.data(), buffer.size());
-                readPosition += buffer.size();
+                hash->update(
+                    std::span{reinterpret_cast<const uint8_t*>(buffer.data()), buffer.size()});
             }
 
             if (buffers.isLast())
             {
-                unsigned char shaDigest[DIGEST_LENGTH];
-                finalizeDigest(shaDigest, &shaContext);
-                const std::string encodedSha1 =
-                    ByteHelper::toHex(BinaryView{shaDigest, DIGEST_LENGTH});
-                hashHandlingFunction(encodedSha1);
+                const std::string encodedDigest = Botan::hex_encode(hash->final(), false);
+                hashHandlingFunction(encodedDigest);
             }
 
             return buffers;
         };
-        return Stream(std::make_unique<ProcessingStreamImplementation>(
-            std::move(input), hashfunction, hashfunction));
+        return Stream(
+            std::make_unique<ProcessingStreamImplementation>(
+                std::move(input), hashfunction, hashfunction));
     }
 }
 
@@ -245,8 +236,7 @@ Stream StreamFactory::Hash::makeSha1CalculatingStream(
     Stream input,
     std::function<void(const std::string&)> sha1HandlingFunction)
 {
-    return makeHashingStream<SHA_CTX, SHA1_Init, SHA1_Update, SHA1_Final, SHA_DIGEST_LENGTH>(
-        std::move(input), std::move(sha1HandlingFunction));
+    return makeHashingStream(std::move(input), "SHA-1", std::move(sha1HandlingFunction));
 }
 
 
@@ -254,12 +244,7 @@ Stream StreamFactory::Hash::makeSha256CalculatingStream(
     Stream input,
     std::function<void(const std::string&)> sha256HandlingFunction)
 {
-    return makeHashingStream<
-        SHA256_CTX,
-        SHA256_Init,
-        SHA256_Update,
-        SHA256_Final,
-        SHA256_DIGEST_LENGTH>(std::move(input), std::move(sha256HandlingFunction));
+    return makeHashingStream(std::move(input), "SHA-256", std::move(sha256HandlingFunction));
 }
 
 

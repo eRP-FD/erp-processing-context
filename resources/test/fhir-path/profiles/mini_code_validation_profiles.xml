@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+  <id value="CodeValidationTest"/>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/CodeSystem/CodeValidationTest/complete"/>
+    <resource>
+      <CodeSystem>
+        <id value="CodeValidationTestCodeSystem"/>
+        <url value="http://fhir-tools.test/minifhirtypes/CodeSystem/CodeValidationTest/complete"/>
+        <version value="0.0.9"/>
+        <name value="CodeValidationTestCodeSystem"/>
+        <status value="active"/>
+        <content value="complete"/>
+        <count value="2"/>
+        <concept>
+          <code value="Test_0"/>
+        </concept>
+        <concept>
+          <code value="Test_1"/>
+        </concept>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/CodeSystem/CodeValidationTest/not-present"/>
+    <resource>
+      <CodeSystem>
+        <id value="CodeValidationTestCodeSystem"/>
+        <url value="http://fhir-tools.test/minifhirtypes/CodeSystem/CodeValidationTest/not-present"/>
+        <version value="0.0.9"/>
+        <name value="CodeValidationTestCodeSystem"/>
+        <status value="active"/>
+        <content value="not-present"/>
+      </CodeSystem>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/ValueSet/CodeValidationTest"/>
+    <resource>
+      <ValueSet>
+        <id value="CodeValidationTestValueSet"/>
+        <url value="http://fhir-tools.test/minifhirtypes/ValueSet/CodeValidationTest"/>
+        <version value="0.0.9"/>
+        <name value="CodeValidationTestValueSet"/>
+        <status value="active"/>
+        <compose>
+          <include>
+            <system value="http://fhir-tools.test/minifhirtypes/CodeSystem/CodeValidationTest/complete"/>
+          </include>
+        </compose>
+      </ValueSet>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Extension"/>
+    <resource>
+      <StructureDefinition>
+        <id value="CodeValidationTestExtension"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Extension/CodeValidationTest"/>
+        <version value="4.0.1"/>
+        <name value="Extension"/>
+        <status value="draft"/>
+        <kind value="complex-type"/>
+        <abstract value="false"/>
+        <type value="Extension"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Extension"/>
+        <snapshot>
+          <element id="Extension">
+            <path value="Extension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Extension.url">
+            <path value="Extension.url"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Extension.url"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <fixedUri value="http://fhir-tools.test/minifhirtypes/Extension/CodeValidationTest"/>
+          </element>
+          <element id="Extension.extension">
+            <path value="Extension.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="open"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Extension.extension"/>
+              <min value="1"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Extension.value[x]">
+            <path value="Extension.value[x]"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Extension.value[x]"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+            <type>
+              <code value="decimal"/>
+            </type>
+            <type>
+              <code value="url"/>
+            </type>
+            <type>
+              <code value="Quantity"/>
+            </type>
+            <type>
+              <code value="Coding"/>
+            </type>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+            <binding>
+              <strength value="required"/>
+              <valueSet value="http://fhir-tools.test/minifhirtypes/ValueSet/CodeValidationTest"/>
+            </binding>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
+    <fullUrl value="http://fhir-tools.test/minifhirtypes/Resource/CodeValidationTest"/>
+    <resource>
+      <StructureDefinition>
+        <id value="CodeValidationTestResource"/>
+        <url value="http://fhir-tools.test/minifhirtypes/Resource/CodeValidationTest"/>
+        <version value="4.0.1"/>
+        <name value="Resource"/>
+        <status value="draft"/>
+        <kind value="resource"/>
+        <abstract value="true"/>
+        <type value="Resource"/>
+        <derivation value="constraint"/>
+        <baseDefinition value="http://fhir-tools.test/minifhirtypes/Resource"/>
+        <snapshot>
+          <element id="Resource">
+            <path value="Resource"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Resource.id">
+            <path value="Resource.id"/>
+            <representation value="xmlAttr"/>
+            <min value="1"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.id"/>
+              <min value="1"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="http://hl7.org/fhirpath/System.String"/>
+            </type>
+          </element>
+          <element id="Resource.meta">
+            <path value="Resource.meta"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Resource.meta"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="Meta"/>
+            </type>
+          </element>
+          <element id="Resource.extension">
+            <path value="Resource.extension"/>
+            <slicing>
+              <discriminator>
+                <type value="value"/>
+                <path value="url"/>
+              </discriminator>
+              <rules value="closed"/>
+            </slicing>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+            </type>
+          </element>
+          <element id="Resource.extension:CodeValidationTestExtension">
+            <path value="Resource.extension"/>
+            <sliceName value="CodeValidationTestExtension"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.extension"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Extension"/>
+              <profile value="http://fhir-tools.test/minifhirtypes/Extension/CodeValidationTest"/>
+            </type>
+          </element>
+          <element id="Resource.contained">
+            <path value="Resource.contained"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Resource.contained"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+            <type>
+              <code value="Resource"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+</Bundle>

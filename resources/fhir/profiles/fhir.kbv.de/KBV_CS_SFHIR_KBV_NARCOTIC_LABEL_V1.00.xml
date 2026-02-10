@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<CodeSystem xmlns="http://hl7.org/fhir" xmlns:ns2="http://www.w3.org/1999/xhtml">
+    <id value="KBV-CS-SFHIR-KBV-NARCOTIC-LABEL"/>
+    <url value="https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NARCOTIC_LABEL"/>
+    <identifier>
+        <system value="urn:ietf:rfc:3986"/>
+        <value value="urn:oid:1.2.276.0.76.3.1.1.5.2.119"/>
+    </identifier>
+    <version value="1.00"/>
+    <name value="KBV_CS_SFHIR_KBV_NARCOTIC_LABEL"/>
+    <status value="active"/>
+    <date value="2026-07-01"/>
+    <publisher value="Kassenärztliche Bundesvereinigung"/>
+    <contact>
+        <telecom>
+            <system value="url"/>
+            <value value="http://www.kbv.de"/>
+        </telecom>
+    </contact>
+    <description value="Diese Schlüsseltabelle beinhaltet die Kennzeichen (Buchstaben) nach § 9 Abs. 1 Nr. 6 BtMVV, die in besonderen Fällen bei einer BtM-Verordnung anzugeben sind."/>
+    <copyright value="Kassenärztliche Bundesvereinigung"/>
+    <caseSensitive value="true"/>
+    <content value="complete"/>
+    <concept>
+        <code value="K"/>
+        <display value="Nachreichen einer Verschreibung für Kauffahrteischiffe"/>
+    </concept>
+    <concept>
+        <code value="N"/>
+        <display value="Nachreichen einer notfallbedingten Verschreibung"/>
+    </concept>
+    <concept>
+        <code value="S"/>
+        <display value="Verschreibung eines Substitutionsmittels"/>
+    </concept>
+    <concept>
+        <code value="ST"/>
+        <display value="Verschreibung eines Substitutionsmittels im Rahmen der Take-Home-Regelung"/>
+    </concept>
+</CodeSystem>

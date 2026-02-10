@@ -686,6 +686,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::tRezept:
             break;
         case model::PrescriptionType::direkteZuweisung:
         case model::PrescriptionType::direkteZuweisungPkv:

@@ -117,9 +117,9 @@ std::optional<db_model::Blob> CommonPostgresBackend::insertOrReturnAccountSalt(c
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "insertorreturnaccountsalt");
 
-    auto result =
-        mTransaction->exec_params(::insertOrReturnAccountSalt.query, accountId.binarystring(),
-                                  gsl::narrow<int>(masterKeyType), gsl::narrow<int32_t>(blobId), salt.binarystring());
+    auto result = mTransaction->exec(::insertOrReturnAccountSalt.query,
+                                     pqxx::params{accountId.binarystring(), gsl::narrow<int>(masterKeyType),
+                                                  gsl::narrow<int32_t>(blobId), salt.binarystring()});
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() == 1, "Expected exactly one row.");
     Expect(result.front().size() == 1, "Expected exactly one column.");
@@ -139,8 +139,9 @@ std::optional<db_model::Blob> CommonPostgresBackend::retrieveSaltForAccount(cons
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievesaltforaccount");
 
-    auto result = mTransaction->exec_params(::retrieveSaltForAccount.query, accountId.binarystring(),
-                                            gsl::narrow<int>(masterKeyType), gsl::narrow<int32_t>(blobId));
+    auto result = mTransaction->exec(
+        ::retrieveSaltForAccount.query,
+        pqxx::params{accountId.binarystring(), gsl::narrow<int>(masterKeyType), gsl::narrow<int32_t>(blobId)});
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Expected at most one salt");
     if (result.empty())
@@ -160,17 +161,19 @@ std::string CommonPostgresBackend::storeAuditEventData(db_model::AuditData& audi
     const std::string actionString(1, static_cast<char>(auditData.action));
     const auto recorded = model::Timestamp::now();
 
-    const pqxx::result result = mTransaction->exec_params(
-        insertAuditEventData.query, recorded.toXsDateTime(), auditData.insurantKvnr.binarystring(),
-        static_cast<std::int16_t>(auditData.eventId), actionString, static_cast<std::int16_t>(auditData.agentType),
-        auditData.deviceId,
-        auditData.prescriptionId.has_value() ? auditData.prescriptionId->toDatabaseId() : std::optional<int64_t>(),
-        auditData.prescriptionId.has_value()
-            ? static_cast<int16_t>(magic_enum::enum_integer(auditData.prescriptionId->type()))
-            : std::optional<int16_t>(),
-        auditData.metaData.has_value() ? auditData.metaData->binarystring()
-                                       : std::optional<db_model::postgres_bytea_view>(),
-        auditData.blobId);
+    const pqxx::result result = mTransaction->exec(
+        insertAuditEventData.query,
+        pqxx::params{recorded.toXsDateTime(), auditData.insurantKvnr.binarystring(),
+                     static_cast<std::int16_t>(auditData.eventId), actionString,
+                     static_cast<std::int16_t>(auditData.agentType), auditData.deviceId,
+                     auditData.prescriptionId.has_value() ? auditData.prescriptionId->toDatabaseId()
+                                                          : std::optional<int64_t>(),
+                     auditData.prescriptionId.has_value()
+                         ? static_cast<int16_t>(magic_enum::enum_integer(auditData.prescriptionId->type()))
+                         : std::optional<int16_t>(),
+                     auditData.metaData.has_value() ? auditData.metaData->binarystring()
+                                                    : std::optional<db_model::postgres_bytea_view>(),
+                     auditData.blobId});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.size() == 1 && result.front().size() == 1, "Expected one result");

@@ -51,7 +51,7 @@ public:
 
     // For creation from database entry
     explicit Task(const PrescriptionId& id, PrescriptionType prescriptionType, model::Timestamp lastModified,
-                  model::Timestamp authoredOn, Status status, Timestamp lastStatusChange);
+                  model::Timestamp authoredOn, Status status, Timestamp lastStatusChange, std::optional<bool> isPkv);
 
     [[nodiscard]] Status status() const;
     [[nodiscard]] std::optional<Kvnr> kvnr() const;
@@ -72,6 +72,7 @@ public:
     [[nodiscard]] const Timestamp& lastStatusChangeDate() const;
     [[nodiscard]] bool isEuRedeemableByProperties() const;
     [[nodiscard]] bool isEuRedeemableByPatientAuthorization() const;
+    [[nodiscard]] bool isPkv() const;
 
     void setPrescriptionId (const model::PrescriptionId& prescriptionId);
     void setStatus(Status newStatus);
@@ -92,6 +93,7 @@ public:
     void setSecret(std::string_view secret);
     void setAccessCode(std::string_view accessCode);
     void setOwner(std::string_view owner);
+    void setIsPkv(bool isPkv);
 
     void deleteAccessCode();
     void deleteSecret();
@@ -119,6 +121,7 @@ private:
     void setStatus(Status newStatus, model::Timestamp lastStatusChange);
 
     model::Timestamp mLastStatusChange;
+    std::optional<bool> mIsPkv;
 };
 
 // NOLINTNEXTLINE(bugprone-exception-escape)

@@ -7,6 +7,7 @@
 
 #include "shared/deprecated/Timer.hxx"
 #include "shared/util/TLog.hxx"
+#include "test/util/ErpMacros.hxx"
 
 #include <gtest/gtest.h>
 #include <array>
@@ -226,25 +227,30 @@ TEST_F(TimerTest, cancel_repeatingJob)
 
 TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
 {
-    LocalTimer timer;
-    SharedValue value;
+    bool hadError = true;
+    for (int repeat = 10; repeat > 0 && hadError; --repeat)
+    {
+        hadError = false;
+        LocalTimer timer;
+        SharedValue value;
 
-    const auto token = timer.runRepeating(
-        std::chrono::milliseconds(150),
-        std::chrono::milliseconds(700),
-        [&value]{value.append("test"); });
+        const auto token = timer.runRepeating(
+            std::chrono::milliseconds(150),
+            std::chrono::milliseconds(700),
+            [&value]{value.append("test"); });
 
-    EXPECT_EQ(value.updateCount(), 0);
+        EXPECT_EQ(value.updateCount(), 0);
 
-    // Wait for the job to be executed once.
-    value.waitForUpdateCount(std::chrono::milliseconds(350), 1);
-    EXPECT_EQ(value.updateCount(), 1);
+        // Wait for the job to be executed once.
+        value.waitForUpdateCount(std::chrono::milliseconds(350), 1);
+        EXPECT_EQ(value.updateCount(), 1);
 
-    // Now cancel to prevent a second trigger.
-    timer.cancel(token);
+        // Now cancel to prevent a second trigger.
+        timer.cancel(token);
 
-    // Give the job time too be triggered again but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(1000), 2);
-    ASSERT_EQ(value.updateCount(), 1);
-    ASSERT_EQ(value.get(), "test");
+        // Give the job time too be triggered again but note that that is expected not to happen.
+        value.waitForUpdateCount(std::chrono::milliseconds(1000), 2);
+        SOFT_EXPECT_TRUE(value.updateCount() == 1, repeat > 1, hadError);
+        SOFT_EXPECT_TRUE(value.get() == "test", repeat > 1, hadError);
+    }
 }

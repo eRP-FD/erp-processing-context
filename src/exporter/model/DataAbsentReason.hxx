@@ -19,7 +19,7 @@ class DataAbsentReason : public Extension<DataAbsentReason>
 public:
     static constexpr auto url = model::resource::structure_definition::dataAbsentReason;
     using Extension::Extension;
-    DataAbsentReason();
+    explicit DataAbsentReason(std::string_view valueCode);
     template<typename T>
     friend class Parameters;
 };

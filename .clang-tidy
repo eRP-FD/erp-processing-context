@@ -49,7 +49,8 @@ Checks: >-
   -readability-magic-numbers,
   -readability-identifier-length,
   -modernize-use-nodiscard,
-  -misc-non-private-member-variables-in-classes
+  -misc-non-private-member-variables-in-classes,
+  -portability-avoid-pragma-once
 HeaderFilterRegex: '(src|test)/.*'
 CheckOptions:
   - { key: cppcoreguidelines-avoid-c-arrays.AllowStringArrays,     value: true       }

@@ -76,9 +76,9 @@ MedicationDispenseOperationParameters::getValidationView() const
     std::string profiles{*profileName};
     ModelExpect(myKey.version.has_value(), "missing profile version in meta.profile");
     const auto& fhirInstance = Fhir::instance();
-    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    A_23384_05.start("Use maximum of whenHandedOver as reference timestamp for validation.");
     auto views = fhirInstance.structureRepository(maxWhenHandedOver());
-    A_23384_03.finish();
+    A_23384_05.finish();
     views = views.matchAll(myKey.url, *myKey.version);
     // we cannot use `findParameter` because `rxDispensation` might appear more than once
     const auto* parameterArrayValue = parameterArrayPointer.Get(jsonDocument());
@@ -120,9 +120,9 @@ Timestamp model::MedicationDispenseOperationParameters::maxWhenHandedOver() cons
 
 std::optional<model::Timestamp> model::MedicationDispenseOperationParameters::getValidationReferenceTimestamp() const
 {
-    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    A_23384_05.start("Use maximum of whenHandedOver as reference timestamp for validation.");
     auto result = maxWhenHandedOver();
-    A_23384_03.finish();
+    A_23384_05.finish();
     return result;
 }
 
@@ -152,12 +152,12 @@ model::MedicationDispenseOperationParameters::medicationDispenses() const
         const auto profileType = medicationDispense.profileType();
         if (profileType != ProfileType::GEM_ERPEU_PR_MedicationDispense)
         {
-            A_26002.start("Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
+            A_26002_02.start("Task schließen - Flowtype 160/166/169/200/209 - Profilprüfung MedicationDispense");
             ErpExpect(profileType == ProfileType::GEM_ERP_PR_MedicationDispense,
                       HttpStatus::BadRequest,
                       "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für "
                       "Arzneimittel zulässig.");
-            A_26002.finish();
+            A_26002_02.finish();
         }
         ModelExpect(medication.has_value(), "missing medication part in Parameters.parameter");
         result.emplace_back(std::move(medicationDispense), std::move(*medication));

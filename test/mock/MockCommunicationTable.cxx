@@ -147,7 +147,7 @@ std::vector<Uuid> MockCommunicationTable::retrieveCommunicationIds(const db_mode
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+std::optional<Uuid>
 MockCommunicationTable::deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender)
 {
     std::lock_guard lock(mutex);
@@ -157,9 +157,8 @@ MockCommunicationTable::deleteCommunication(const Uuid& communicationId, const d
     {
         if (communication->second.sender == sender)
         {
-            auto timeReceived = communication->second.received;
             mCommunications.erase(communication);
-            return std::make_tuple(communicationId, timeReceived);
+            return communicationId;
         }
     }
     return {};

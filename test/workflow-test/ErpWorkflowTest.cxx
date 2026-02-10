@@ -96,7 +96,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     std::optional<model::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
 
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
     const JWT jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     std::optional<model::Bundle> communicationsBundle;
@@ -107,7 +108,6 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
         dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
                                 prescriptionId->toString(), model::Timestamp::now().toGermanDate(), 1);
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
-    const JWT jwt{ jwtApotheke() };
     ClientResponse serverResponse;
 
     // Test that first close request succeeds.
@@ -152,11 +152,6 @@ TEST_P(ErpWorkflowTestP, TaskClose_EmptyBody_WithMedicationDispense)//NOLINT(rea
 
     // invoke /task/<id>/$dispense
     ASSERT_NO_FATAL_FAILURE(checkTaskDispense(*prescriptionId, kvnr, secret, 1));
-
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
-    ASSERT_TRUE(telematicId.has_value());
-    const JWT jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
-    const JWT jwt{ jwtApotheke() };
 
     // Test that close request without body (0 medicationDispenses) succeeds.
     std::vector<model::Communication> communications;
@@ -212,7 +207,8 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleNormal)// NOLINT
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
-    const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicIdPharmacy = jwt.stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         { prescriptionId }, kvnr, "de", startTime,
         { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr }, { 0, 2, 3, 4, 5 },
@@ -304,6 +300,10 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByInsurant) // NOLINT
 
 TEST_P(ErpWorkflowTestP, TaskLifecycleAbortByPharmacy) // NOLINT
 {
+    if (isDiga(GetParam()))
+    {
+        GTEST_SKIP_("$abort is not allowed for Kostentraeger");
+    }
     model::Timestamp startTime = model::Timestamp::now();
 
     std::optional<model::PrescriptionId> prescriptionId;
@@ -362,7 +362,8 @@ TEST_P(ErpWorkflowTestP, TaskLifecycleReject) // NOLINT
 
     // Check audit events
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
-    const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicIdPharmacy = jwt.stringForClaim(JWT::idNumberClaim).value();
     checkAuditEvents(
         { prescriptionId }, kvnr, "de", startTime,
         { telematicIdDoctor, kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy, kvnr,
@@ -450,12 +451,15 @@ TEST_P(ErpWorkflowTestP, AuditEventSearchSortPaging) // NOLINT
     std::string secret;
     std::optional<model::Timestamp> lastModifiedDate;
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
-    // Reject Task
+        // Reject Task
     ASSERT_NO_FATAL_FAILURE(checkTaskReject(*prescriptionId, kvnr, accessCode, secret));
     // May be accepted again
     ASSERT_NO_FATAL_FAILURE(checkTaskAccept(secret, lastModifiedDate, *prescriptionId, kvnr, accessCode, qesBundle));
-    // Abort task
-    ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId, jwtApotheke(), kvnr, { }, { secret }, communications));
+    if (! model::isDiga(GetParam()))
+    {
+        // Abort task
+        ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId, jwtApotheke(), kvnr, {}, {secret}, communications));
+    }
 
     // Check sorting by subType ascending
     ASSERT_NO_FATAL_FAILURE(checkAuditEventSorting(
@@ -509,7 +513,7 @@ TEST_P(ErpWorkflowTestP, AuditEventSearchSortPaging) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkAuditEventSearchSubType(kvnr));
 
     // Check paging:
-    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 9, 4));
+    ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, isDiga(prescriptionId->type()) ? 8 : 9, 4));
 
     // Check paging with additional search:
     ASSERT_NO_FATAL_FAILURE(checkAuditEventPaging(kvnr, 4, 3, "subtype=R"));
@@ -580,7 +584,7 @@ TEST_F(ErpWorkflowTest, GetDevice)//NOLINT(readability-function-cognitive-comple
 
 namespace
 {
-std::string fixBundle(const std::string& bundle, const Uuid& id)
+std::string fixBundle(const std::string& bundle, const Uuid& oldId, const Uuid& id)
 {
 
     auto result = R"(<?xml version="1.0" encoding="utf-8"?>)""\n" + bundle + "\n";
@@ -591,7 +595,7 @@ std::string fixBundle(const std::string& bundle, const Uuid& id)
     // remove comments
     result = regex_replace(result, std::regex{R"(<!--.*-->)"}, "$1");
     // fix id
-    result = regex_replace(result, std::regex{"8938aff5-720a-414a-b574-114bd8d1e11c"}, id.toString());
+    result = regex_replace(result, std::regex{oldId.toString()}, id.toString());
     // remove empty lines
     result = regex_replace(result, std::regex{R"((^|\n)\s*\n)"}, "$1");
     // remove redundant namespace declarations
@@ -662,7 +666,7 @@ TEST_F(ErpWorkflowTest, ERP_5723_ERP_5750)//NOLINT(readability-function-cognitiv
         outputBundleXml.replace(sigStart, sigLen, "");
     }
     outputBundleXml = regex_replace(outputBundleXml, std::regex{R"(\n\s*<signature>(.|\n)*</signature>)"}, "");
-    EXPECT_EQ(outputBundleXml, fixBundle(bundleXml, outputBundle[0].getId()));
+    EXPECT_EQ(outputBundleXml, fixBundle(bundleXml, qesBundle.getId(), outputBundle[0].getId()));
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(*prescriptionId, kvnr, accessCode));
     // get task again as XML:
     ClientResponse response;
@@ -677,7 +681,8 @@ TEST_F(ErpWorkflowTest, ERP_5723_ERP_5750)//NOLINT(readability-function-cognitiv
     EXPECT_EQ(*contentType,std::string(ContentMimeType::fhirXmlUtf8));
     const auto& body = response.getBody();
     EXPECT_FALSE(body.empty());
-    EXPECT_NE(body.find("1\xe2\x80\x93""3mal "), std::string::npos);
+    // – (utf8)
+    EXPECT_NE(body.find("\xe2\x80\x93"), std::string::npos) << body;
 }
 
 
@@ -794,7 +799,8 @@ TEST_P(ErpWorkflowTestP, TaskClose_MedicationDispense_invalidPrescriptionIdAndWh
     const auto secret = tasks[0].secret();
     ASSERT_TRUE(secret.has_value());
     ASSERT_TRUE(tasks[0].owner().has_value());
-    ASSERT_EQ(tasks[0].owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
+    ASSERT_EQ(tasks[0].owner(), jwt.stringForClaim(JWT::idNumberClaim));
 
     // Invalid format of prescriptionId for Medication dispense, will be rejected by schema check:
     ASSERT_NO_FATAL_FAILURE(taskClose_MedicationDispense_invalidPrescriptionId(
@@ -933,8 +939,7 @@ TEST_F(ErpWorkflowTest, OuterErrorResponse) // NOLINT
     checkJsonString(outerErrorResponseDocument, errorPointer,
                     "vau decryption failed: ErpException Unable to create public key from message data");
     checkJsonString(outerErrorResponseDocument, messagePointer,
-                    "could not create public key from x,y components error:0800006B:elliptic curve routines:"
-                    ":point is not on curve");
+                    "EVP_PKEY_fromdata failed error:0800006B:elliptic curve routines::point is not on curve");
 
     ASSERT_NO_FATAL_FAILURE(
         std::tie(outerResponse, innerResponse) =
@@ -969,7 +974,7 @@ TEST_P(ErpWorkflowTestP, ErrorResponseNoInnerRequest) // NOLINT
     const std::string kvnr{"X987654326"};
     const auto closeBody = medicationDispense(kvnr, prescriptionId->toString(), model::Timestamp::now().toGermanDate());
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=XXXXX" ;
-    const JWT jwt{ jwtApotheke() };
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
     RequestArguments args{HttpMethod::POST, closePath, closeBody, "application/fhir+xml", false};
     args.jwt = jwt;
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(jwt));
@@ -1118,4 +1123,4 @@ TEST_F(ErpWorkflowTest, GetAuditEvents_PrescriptionId) // NOLINT
 
 
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

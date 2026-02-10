@@ -5,15 +5,16 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
-#include "shared/crypto/CMAC.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/pc/telematic_pseudonym/TelematicPseudonymManager.hxx"
 #include "erp/util/search/SearchParameter.hxx"
 #include "erp/util/search/UrlArguments.hxx"
+#include "shared/crypto/CMAC.hxx"
+#include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockRandom.hxx"
+#include "test/util/TestUtils.hxx"
 
 
 using namespace model;
@@ -39,7 +40,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-co
     { // scope
         pqxx::result result;
         auto&& txn = createTransaction();
-        ASSERT_NO_THROW(result = txn.exec_prepared(retrieveCmac.name, todayStr));
+        ASSERT_NO_THROW(result = txn.exec(pqxx::prepped{retrieveCmac.name}, pqxx::params{todayStr}));
         ASSERT_TRUE(result.empty());
         txn.commit();
     }
@@ -58,7 +59,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-co
         {
             auto&& txn = createTransaction();
             pqxx::result result;
-            ASSERT_NO_THROW(result = txn.exec_prepared(retrieveCmac.name, todayStr));
+            ASSERT_NO_THROW(result = txn.exec(pqxx::prepped{retrieveCmac.name}, pqxx::params{todayStr}));
             ASSERT_FALSE(result.empty());
             EXPECT_EQ(result.size(), 1);
             auto CmacDirectDB = result.front().at(0).as<db_model::postgres_bytea>();
@@ -125,7 +126,7 @@ TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-co
         {// scope
             pqxx::result result;
             auto&& txn = createTransaction();
-            ASSERT_NO_THROW(result = txn.exec_prepared(retrieveCmac.name));
+            ASSERT_NO_THROW(result = txn.exec(pqxx::prepped(retrieveCmac.name)));
             txn.commit();
             EXPECT_EQ(result.size(), 2);
         }
@@ -162,7 +163,7 @@ TEST_F(PostgresDatabaseTest, swapCMAC)//NOLINT(readability-function-cognitive-co
         {// scope
             pqxx::result result;
             auto&& txn = createTransaction();
-            ASSERT_NO_THROW(result = txn.exec_prepared(retrieveCmac.name));
+            ASSERT_NO_THROW(result = txn.exec(pqxx::prepped{retrieveCmac.name}));
             txn.commit();
             EXPECT_EQ(result.size(), 3);
         }
@@ -194,8 +195,8 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
     for (auto prescType : allTypes)
     {
         auto txn = createTransaction();
-        txn.exec_params("DELETE FROM " + taskTableName(prescType) + " WHERE kvnr_hashed = $1",
-                        kvnrHashed.binarystring());
+        txn.exec("DELETE FROM " + taskTableName(prescType) + " WHERE kvnr_hashed = $1",
+                 pqxx::params{kvnrHashed.binarystring()});
         txn.commit();
     }
     ASSERT_EQ(taskCount(), 0);
@@ -208,20 +209,21 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
         task.setKvnr(kvnr);
         task.setAcceptDate(model::Timestamp::now());
         task.setExpiryDate(model::Timestamp::now() + std::chrono::days(30));
+        task.setIsPkv(!model::canBeGkv(prescType));
         auto prescriptionDummy = model::Binary(Uuid().toString(), "{}");
         database().activateTask(task, prescriptionDummy, mJwtBuilder.makeJwtArzt());
     }
     database().commitTransaction();
-    EXPECT_EQ(taskCount(), 5);
+    EXPECT_EQ(taskCount(), 6);
     UrlArguments ready{{paramStatus}};
     ready.parse({{"status", "ready"}}, getKeyDerivation());
-    EXPECT_EQ(taskCount(ready), 5);
+    EXPECT_EQ(taskCount(ready), 6);
     auto& task = tasks.front();
     task.setStatus(model::Task::Status::inprogress);
     task.setSecret("secret");
     database().updateTaskStatusAndSecret(task);
-    EXPECT_EQ(taskCount(), 5);
-    EXPECT_EQ(taskCount(ready), 4);
+    EXPECT_EQ(taskCount(), 6);
+    EXPECT_EQ(taskCount(ready), 5);
 }
 
 TEST_F(PostgresDatabaseTest, predefinedExpiryDate_notOverwritten)

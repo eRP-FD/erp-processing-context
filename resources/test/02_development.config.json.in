@@ -46,6 +46,13 @@
     "serno2tid": {
       "path": "@CMAKE_BINARY_DIR@/test/telematiklookup/empty.csv",
       "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "fhir-vzd-client": {
+      "tokenUrl": "no-token-url-configured",
+      "apiUrl": "no-api-url-configured"
+    },
+    "bfarm-client": {
+      "url": "no-url-configured"
     }
   },
   "debug": {

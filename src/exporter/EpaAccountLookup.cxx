@@ -85,13 +85,12 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
                 break;
         }
     }
+    A_25951.finish();
     return EpaAccount{.kvnr = kvnr,
                       .host = {},
                       .port = 0,
                       .lookupResult = allNotFound ? EpaAccount::Code::notFound : EpaAccount::Code::unknown,
-                      .failingHosts = failingHosts
-};
-    A_25951.finish();
+                      .failingHosts = failingHosts};
 }
 
 EpaAccount::Code EpaAccountLookup::checkConsent(const std::string& xRequestId, const model::Kvnr& kvnr,

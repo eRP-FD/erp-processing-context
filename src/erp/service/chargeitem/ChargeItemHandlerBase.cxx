@@ -49,8 +49,6 @@ model::PrescriptionId ChargeItemHandlerBase::parseIdFromPath(
     const std::string& paramName)
 {
     auto prescriptionId = ::parseId(request.getPathParameter(paramName), accessLog, paramName);
-    ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest,
-              "Attempt to access charge item for non-PKV Prescription.");
     return prescriptionId;
 }
 

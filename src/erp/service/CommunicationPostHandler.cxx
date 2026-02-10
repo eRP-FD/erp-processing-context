@@ -139,7 +139,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         session.accessLog.prescriptionId(prescriptionId);
 
         // Check for valid format of KNVR of recipient or Telematic ID
-        validateRecipient(communication, recipient);
+        validateRecipient(communication, recipient, prescriptionId.type());
 
         A_20229_01.start("limit KVNR -> KVNR messages to 10 per task");
         if (messageType == Communication::MessageType::Representative)
@@ -204,11 +204,13 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         // GEMREQ-start A_19450-01#callVerifyPayload
         A_19450_01.start("do not allow malicious code in payload");
-        A_23878.start("verify json payload of DispReq");
+        A_23878_01.start("verify json payload of DispReq");
         A_23879.start("verify json payload of Reply");
         communication.verifyPayload(session.serviceContext.getJsonValidator());
+        A_23878_01.start("for flowtype 166 only onPremise und delivery are allowed");
+        communication.verifySupplyOptionsType(prescriptionId.type());
         A_23879.finish();
-        A_23878.finish();
+        A_23878_01.finish();
         A_19450_01.finish();
         // GEMREQ-end A_19450-01#callVerifyPayload
 
@@ -246,7 +248,6 @@ void CommunicationPostHandler::checkForChargeItemReference(const PrescriptionId&
     if (messageType == Communication::MessageType::ChargChangeReq ||
         messageType == Communication::MessageType::ChargChangeReply)
     {
-        ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest, "Reference charge item ID is not of type PKV");
         A_22734.start("check existence of charge item");
         try
         {
@@ -290,16 +291,38 @@ model::Identity CommunicationPostHandler::validateSender(
     }
 }
 
-void CommunicationPostHandler::validateRecipient(
-    const model::Communication& communication,
-    const model::Identity& recipient) const
+void CommunicationPostHandler::validateRecipient(const model::Communication& communication,
+                                                 const model::Identity& recipient, PrescriptionType flowType)
 {
     if (communication.isRequest())
     {
         ErpExpect(std::holds_alternative<model::TelematikId>(recipient), HttpStatus::BadRequest,
                   "Expected TelematikId, got KVNR");
-        ErpExpect(std::get<model::TelematikId>(recipient).validFormat(), HttpStatus::BadRequest,
+        const auto& telematikId = std::get<model::TelematikId>(recipient);
+        ErpExpect(telematikId.validFormat(), HttpStatus::BadRequest,
             "A valid Telematic ID must contain at least one \"-\"");
+
+        A_27767_01.start("check Präfix der Telematik-ID");
+        switch (flowType)
+        {
+            case PrescriptionType::apothekenpflichigeArzneimittel:
+            case PrescriptionType::tRezept:
+            case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+                ErpExpect(! communication.isDispenseRequest() || telematikId.isOeffentlicheApotheke() ||
+                              telematikId.isKrankenhausApotheke(),
+                          HttpStatus::Forbidden,
+                          "Der Empfänger darf den " + std::string{PrescriptionTypeDisplay.at(flowType)} +
+                              " nicht empfangen");
+                break;
+            case PrescriptionType::digitaleGesundheitsanwendungen:
+                ErpExpect(! communication.isDispenseRequest() || telematikId.isKostentraeger(), HttpStatus::Forbidden,
+                          "Der Empfänger darf den " + std::string{PrescriptionTypeDisplay.at(flowType)} +
+                              " nicht empfangen");
+                break;
+            case PrescriptionType::direkteZuweisung:
+            case PrescriptionType::direkteZuweisungPkv:
+                break;
+        }
     }
     else
     {

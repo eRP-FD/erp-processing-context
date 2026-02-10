@@ -3,6 +3,7 @@ add_executable(exporter-test
         BDEMessageTest.cxx
         Epa4AllTransformerTest.cxx
         Epa4AllTransformerGematikTestdata.cxx
+        TRezeptTransformerTest.cxx
         admin/AdminRequestHandlerTest.cxx
         admin/PutRuntimeConfigHandlerTest.cxx
         database/CommitGuardTest.cxx
@@ -11,19 +12,24 @@ add_executable(exporter-test
         eventprocessing/CancelPrescriptionTest.cxx
         eventprocessing/ProvideDispensationTest.cxx
         eventprocessing/ProvidePrescriptionTest.cxx
+        fhir/DeGematikErpT-PrescriptionTest.cxx
         mock/EpaAccountLookupClientMock.cxx
         mock/EpaAccountLookupMock.cxx
         mock/EpaMedicationClientMock.cxx
+        mock/FhirVZDClientMock.cxx
         mock/MedicationExporterDatabaseFrontendMock.cxx
         model/ConsentDecisionResponseTypeTest.cxx
+        model/HealthcareServiceDirectoryTest.cxx
         pc/MedicationExporterServiceContextTest.cxx
         util/MedicationExporterStaticData.cxx
         EpaAccountLookupTest.cxx
         EventProcessorTest.cxx
         ExporterConfigurationTest.cxx
         VauAutTokenSignerTest.cxx
+        TRezeptEventProcessorTest.cxx
         TelematikLookupTest.cxx
         it/EpaAccountLookupIt.cxx
+        FhirVZDClientTest.cxx
 )
 
 target_link_libraries(

@@ -1,0 +1,14 @@
+{
+    "resourceType": "Resource",
+    "id": "conversion-resourceArray",
+    "contained": [
+        {
+            "resourceType": "Resource",
+            "id": "contained1"
+        },
+        {
+            "resourceType": "Resource",
+            "id": "contained2"
+        }
+    ]
+}

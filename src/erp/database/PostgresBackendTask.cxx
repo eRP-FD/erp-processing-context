@@ -19,34 +19,34 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
 #define QUERY(name, query) mQueries.name = {#name, query};
 
     QUERY(retrieveTaskById, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, secret, owner, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, secret, owner, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         )--")
 
     QUERY(retrieveTaskByIdPlusReceipt, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            secret, owner, receipt, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            secret, owner, receipt, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         )--")
 
     QUERY(retrieveTaskByIdForUpdatePlusPrescription, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, secret, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, secret, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         FOR UPDATE
         )--")
 
     QUERY(retrieveTaskByIdPlusPrescription, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         FOR UPDATE
@@ -54,18 +54,18 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
 
 
     QUERY(retrieveTaskWithSecretByIdPlusPrescription, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, secret, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, secret, owner, healthcare_provider_prescription, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
     )--")
 
     // GEMREQ-start A_22135-01#query, A_22134#query
     QUERY(retrieveTaskByIdPlusPrescriptionPlusReceipt, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, secret, owner, healthcare_provider_prescription, receipt, EXTRACT(EPOCH from last_medication_dispense), eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, secret, owner, healthcare_provider_prescription, receipt, EXTRACT(EPOCH from last_medication_dispense) as last_medication_dispense, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE prescription_id = $1
         FOR UPDATE
@@ -74,21 +74,21 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
 
     // GEMREQ-start A_23452-02#query
     QUERY(retrieveAllTasksByKvnrWithAccessCode, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id,
-            access_code, eu_redeemable_patient, eu_redeemable
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
+            access_code, eu_redeemable_patient, eu_redeemable, is_pkv
         FROM )--" + taskTableName() + R"--(
         WHERE kvnr_hashed = $1
         )--")
     // GEMREQ-end A_23452-02#query
 
     QUERY(getTaskKeyData, R"--(
-        SELECT task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on)
+        SELECT task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on) as authored_on
         FROM )--" + taskTableName() + R"--( WHERE prescription_id = $1 FOR UPDATE)--")
 
     QUERY(createTask, R"--(
         INSERT INTO )--" + taskTableName() + R"--( (last_modified, authored_on, status, last_status_update) VALUES ($1, $2, $3, $4)
-            RETURNING prescription_id, EXTRACT(EPOCH FROM authored_on))--")
+            RETURNING prescription_id, EXTRACT(EPOCH FROM authored_on) as authored_on)--")
 
     QUERY(updateTask, R"--(
         UPDATE )--" + taskTableName() + R"--( SET task_key_blob_id = $2, salt = $3, access_code = $4 WHERE prescription_id = $1
@@ -102,7 +102,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
     QUERY(updateTask_activateTask, R"--(
         UPDATE )--" + taskTableName() + R"--(
         SET kvnr = $2, kvnr_hashed = $3, last_modified = $4, expiry_date = $5, accept_date = $6, status = $7,
-            healthcare_provider_prescription = $8, doctor_identity = $9, last_status_update = $10, eu_redeemable = $11
+            healthcare_provider_prescription = $8, doctor_identity = $9, last_status_update = $10, eu_redeemable = $11, is_pkv = $12
         WHERE prescription_id = $1
         )--")
 
@@ -172,6 +172,8 @@ std::string PostgresBackendTask::taskTableName() const
             return TASK_160_TABLE_NAME;
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
             return TASK_162_TABLE_NAME;
+        case model::PrescriptionType::tRezept:
+            return TASK_166_TABLE_NAME;
         case model::PrescriptionType::direkteZuweisung:
             return TASK_169_TABLE_NAME;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -193,8 +195,10 @@ PostgresBackendTask::createTask(pqxx::transaction_base& transaction, model::Task
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "createtask");
 
     const auto status = gsl::narrow<int>(model::Task::toNumericalStatus(taskStatus));
-    auto result = transaction.exec_params1(mQueries.createTask.query, lastUpdated.toXsDateTime(),
-                                           created.toXsDateTime(), status, lastStatusUpdate.toXsDateTime());
+    auto result = transaction
+                      .exec(mQueries.createTask.query, pqxx::params{lastUpdated.toXsDateTime(), created.toXsDateTime(),
+                                                                    status, lastStatusUpdate.toXsDateTime()})
+                      .one_row();
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.size() == 2, "Expected Prescription Id and authored on as returned values.");
@@ -214,8 +218,9 @@ void PostgresBackendTask::updateTask(pqxx::transaction_base& transaction, const 
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "updatetask");
 
-    auto result = transaction.exec_params(mQueries.updateTask.query, taskId.toDatabaseId(), blobId, salt.binarystring(),
-                                          accessCode.binarystring());
+    auto result =
+        transaction.exec(mQueries.updateTask.query,
+                         pqxx::params{taskId.toDatabaseId(), blobId, salt.binarystring(), accessCode.binarystring()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "No result rows expected");
@@ -229,7 +234,7 @@ PostgresBackendTask::getTaskKeyData(pqxx::transaction_base& transaction, const m
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "gettaskkeydata");
 
-    auto result = transaction.exec_params(mQueries.getTaskKeyData.query, taskId.toDatabaseId());
+    auto result = transaction.exec(mQueries.getTaskKeyData.query, pqxx::params{taskId.toDatabaseId()});
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() == 1, "Expected exactly one set of key data");
     const auto blobId = result.front().at(0).as<int64_t>();
@@ -264,10 +269,10 @@ void PostgresBackendTask::updateTaskStatusAndSecret(pqxx::transaction_base& tran
     }
 
     TVLOG(2) << mQueries.updateTask_secret.query;
-    const pqxx::result result =
-        transaction.exec_params(mQueries.updateTask_secret.query, taskId.toDatabaseId(),
-                                static_cast<int>(model::Task::toNumericalStatus(status)),
-                                lastModifiedDate.toXsDateTime(), secretBin, ownerBin, lastStatusUpdate.toXsDateTime());
+    const pqxx::result result = transaction.exec(
+        mQueries.updateTask_secret.query,
+        pqxx::params{taskId.toDatabaseId(), static_cast<int>(model::Task::toNumericalStatus(status)),
+                     lastModifiedDate.toXsDateTime(), secretBin, ownerBin, lastStatusUpdate.toXsDateTime()});
     // GEMREQ-end A_24174#call-sql
     TVLOG(2) << "got " << result.size() << " results";
 
@@ -283,7 +288,7 @@ void PostgresBackendTask::activateTask(pqxx::transaction_base& transaction, cons
                                        const db_model::EncryptedBlob& healthCareProviderPrescription,
                                        const db_model::EncryptedBlob& doctorIdentity,
                                        const model::Timestamp& lastStatusUpdate,
-                                       bool euRedeemable) const
+                                       bool euRedeemable, bool isPkv) const
 {
     TVLOG(2) << mQueries.updateTask_activateTask.query;
     const auto timerKeepAlive =
@@ -291,11 +296,11 @@ void PostgresBackendTask::activateTask(pqxx::transaction_base& transaction, cons
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
 
-    const pqxx::result result = transaction.exec_params(
-        mQueries.updateTask_activateTask.query, taskId.toDatabaseId(), encryptedKvnr.binarystring(),
+    const pqxx::result result = transaction.exec(
+        mQueries.updateTask_activateTask.query, {taskId.toDatabaseId(), encryptedKvnr.binarystring(),
         hashedKvnr.binarystring(), lastModified.toXsDateTime(), expiryDate.toGermanDate(), acceptDate.toGermanDate(),
         static_cast<int>(status), healthCareProviderPrescription.binarystring(), doctorIdentity.binarystring(),
-        lastStatusUpdate.toXsDateTime(), euRedeemable);
+        lastStatusUpdate.toXsDateTime(), euRedeemable, isPkv}).no_rows();
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "Expected an empty result");
@@ -312,9 +317,10 @@ void PostgresBackendTask::updateTaskReceipt(pqxx::transaction_base& transaction,
     const auto timerKeepAlive =
     DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "updatetaskreceipt");
     const auto status = model::Task::toNumericalStatus(taskStatus);
-    const pqxx::result result = transaction.exec_params(
-        mQueries.updateTask_receipt.query, taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
-        receipt.binarystring(), pharmacyIdentity.binarystring(), lastStatusUpdate.toXsDateTime());
+    const pqxx::result result = transaction.exec(
+        mQueries.updateTask_receipt.query,
+        pqxx::params{taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
+                     receipt.binarystring(), pharmacyIdentity.binarystring(), lastStatusUpdate.toXsDateTime()});
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.empty(), "Expected an empty result");
 }
@@ -332,24 +338,26 @@ void PostgresBackendTask::updateTaskMedicationDispense(
 
     if (taskStatus.has_value()) {
         const auto status = model::Task::toNumericalStatus(*taskStatus);
-        const pqxx::result result = transaction.exec_params(
-            mQueries.updateTask_medicationDispenseAndStatus.query, taskId.toDatabaseId(),
-            lastModified.toXsDateTime(), medicationDispense.binarystring(), gsl::narrow<int32_t>(medicationDispenseBlobId),
-            whenHandedOver.toXsDateTime(), whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
-            telematikId.binarystring(),
-            lastMedicationDispense.toXsDateTime(), medicationDispenseSalt.binarystring(), static_cast<int>(status));
+        const pqxx::result result = transaction.exec(
+            mQueries.updateTask_medicationDispenseAndStatus.query,
+            pqxx::params{taskId.toDatabaseId(), lastModified.toXsDateTime(), medicationDispense.binarystring(),
+                         gsl::narrow<int32_t>(medicationDispenseBlobId), whenHandedOver.toXsDateTime(),
+                         whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
+                         telematikId.binarystring(), lastMedicationDispense.toXsDateTime(),
+                         medicationDispenseSalt.binarystring(), static_cast<int>(status)});
         TVLOG(2) << "got " << result.size() << " results";
 
         Expect(result.empty(), "Expected an empty result");
     }
     else
     {
-        const pqxx::result result = transaction.exec_params(
-            mQueries.updateTask_medicationDispense.query, taskId.toDatabaseId(),
-            lastModified.toXsDateTime(), medicationDispense.binarystring(), gsl::narrow<int32_t>(medicationDispenseBlobId),
-            whenHandedOver.toXsDateTime(), whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
-            telematikId.binarystring(),
-            lastMedicationDispense.toXsDateTime(), medicationDispenseSalt.binarystring());
+        const pqxx::result result = transaction.exec(
+            mQueries.updateTask_medicationDispense.query,
+            pqxx::params{taskId.toDatabaseId(), lastModified.toXsDateTime(), medicationDispense.binarystring(),
+                         gsl::narrow<int32_t>(medicationDispenseBlobId), whenHandedOver.toXsDateTime(),
+                         whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
+                         telematikId.binarystring(), lastMedicationDispense.toXsDateTime(),
+                         medicationDispenseSalt.binarystring()});
         TVLOG(2) << "got " << result.size() << " results";
 
         Expect(result.empty(), "Expected an empty result");
@@ -371,13 +379,15 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
         DurationCategory::postgres, "updatetaskmedicationdispensereceipt");
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
-    const pqxx::result result = transaction.exec_params(
-        mQueries.updateTask_medicationDispenseReceipt.query, taskId.toDatabaseId(), static_cast<int>(status),
-        lastModified.toXsDateTime(), medicationDispense.binarystring(), gsl::narrow<int32_t>(medicationDispenseBlobId),
-        receipt.binarystring(), whenHandedOver.toXsDateTime(),
-        whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt, telematikId.binarystring(),
-        lastMedicationDispense.toXsDateTime(), medicationDispenseSalt.binarystring(), pharmacyIdentity.binarystring(),
-        lastStatusUpdate.toXsDateTime());
+    const pqxx::result result =
+        transaction.exec(mQueries.updateTask_medicationDispenseReceipt.query,
+                         pqxx::params{taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
+                                      medicationDispense.binarystring(), gsl::narrow<int32_t>(medicationDispenseBlobId),
+                                      receipt.binarystring(), whenHandedOver.toXsDateTime(),
+                                      whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
+                                      telematikId.binarystring(), lastMedicationDispense.toXsDateTime(),
+                                      medicationDispenseSalt.binarystring(), pharmacyIdentity.binarystring(),
+                                      lastStatusUpdate.toXsDateTime()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "Expected an empty result");
@@ -393,9 +403,8 @@ void PostgresBackendTask::updateTaskDeleteMedicationDispense(pqxx::transaction_b
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "updatetaskdeletemedicationdispense");
 
-    const pqxx::result result =
-        transaction.exec_params(mQueries.updateTask_deleteMedicationDispense.query, taskId.toDatabaseId(),
-                                lastModified.toXsDateTime());
+    const pqxx::result result = transaction.exec(mQueries.updateTask_deleteMedicationDispense.query,
+                                                 pqxx::params{taskId.toDatabaseId(), lastModified.toXsDateTime()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "Expected an empty result");
@@ -416,8 +425,9 @@ void PostgresBackendTask::updateTaskClearPersonalData(pqxx::transaction_base& tr
     const auto status = model::Task::toNumericalStatus(taskStatus);
 
     const pqxx::result result =
-        transaction.exec_params(mQueries.updateTask_deletePersonalData.query, taskId.toDatabaseId(),
-                                static_cast<int>(status), lastModified.toXsDateTime(), lastStatusUpdate.toXsDateTime());
+        transaction.exec(mQueries.updateTask_deletePersonalData.query,
+                         pqxx::params{taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
+                                      lastStatusUpdate.toXsDateTime()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "Expected an empty result");
@@ -452,17 +462,13 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskForUpdate(pqxx::t
     std::string query(mQueries.retrieveTaskById.query);
     query.append("    FOR UPDATE");
     TVLOG(2) << query;
-    const pqxx::result result = transaction.exec_params(query, taskId.toDatabaseId());
+    const pqxx::result result = transaction.exec(query, pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        TaskQueryIndexes indexes;
-        indexes.lastMedicationDispenseIndex = 13;
-        indexes.euRedeemableByPatientIndex = 14;
-        indexes.euRedeemableIndex = 15;
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
     return {};
 }
@@ -477,20 +483,14 @@ PostgresBackendTask::retrieveTaskForUpdateAndPrescription(::pqxx::transaction_ba
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "retrievetaskforupdateandprescription");
 
-    const auto result =
-        transaction.exec_params(mQueries.retrieveTaskByIdForUpdatePlusPrescription.query, taskId.toDatabaseId());
+    const auto result = transaction.exec(mQueries.retrieveTaskByIdForUpdatePlusPrescription.query,
+                                                pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        TaskQueryIndexes indexes;
-        indexes.healthcareProviderPrescriptionIndex = 13;
-        indexes.lastMedicationDispenseIndex = 14;
-        indexes.euRedeemableByPatientIndex = 15;
-        indexes.euRedeemableIndex = 16;
-
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
 
     return {};
@@ -505,23 +505,15 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndReceipt(pqxx::
                                                                         "retrievetaskandreceipt");
 
     const pqxx::result result =
-        transaction.exec_params(mQueries.retrieveTaskByIdPlusReceipt.query, taskId.toDatabaseId());
+        transaction.exec(mQueries.retrieveTaskByIdPlusReceipt.query, pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        Expect(result.front().size() == 16,
+        Expect(result.front().size() == 17,
                "Invalid number of fields in result row: " + std::to_string(result.front().size()));
-        TaskQueryIndexes indexes;
-        indexes.accessCodeIndex.reset();
-        indexes.secretIndex = 10;
-        indexes.ownerIndex = 11;
-        indexes.receiptIndex = 12;
-        indexes.lastMedicationDispenseIndex = 13;
-        indexes.euRedeemableByPatientIndex = 14;
-        indexes.euRedeemableIndex = 15;
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
     return {};
 }
@@ -535,22 +527,15 @@ std::optional<db_model::Task> PostgresBackendTask::retrieveTaskAndPrescription(p
                                                                         "retrievetaskandprescription");
 
     const pqxx::result result =
-        transaction.exec_params(mQueries.retrieveTaskByIdPlusPrescription.query, taskId.toDatabaseId());
+        transaction.exec(mQueries.retrieveTaskByIdPlusPrescription.query, pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        Expect(result.front().size() == 16,
+        Expect(result.front().size() == 17,
                "Invalid number of fields in result row: " + std::to_string(result.front().size()));
-        TaskQueryIndexes indexes;
-        indexes.secretIndex.reset();
-        indexes.ownerIndex = 11;
-        indexes.healthcareProviderPrescriptionIndex = 12;
-        indexes.lastMedicationDispenseIndex = 13;
-        indexes.euRedeemableByPatientIndex = 14;
-        indexes.euRedeemableIndex = 15;
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
     return {};
 }
@@ -563,22 +548,16 @@ PostgresBackendTask::retrieveTaskWithSecretAndPrescription(pqxx::transaction_bas
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "retrievetaskwithsecretandprescription");
 
-    const pqxx::result result =
-    transaction.exec_params(mQueries.retrieveTaskWithSecretByIdPlusPrescription.query, taskId.toDatabaseId());
+    const pqxx::result result = transaction.exec(mQueries.retrieveTaskWithSecretByIdPlusPrescription.query,
+                                                 pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        Expect(result.front().size() == 17,
+        Expect(result.front().size() == 18,
                "Invalid number of fields in result row: " + std::to_string(result.front().size()));
-        TaskQueryIndexes indexes {
-            .healthcareProviderPrescriptionIndex = 13,
-            .lastMedicationDispenseIndex = 14,
-            .euRedeemableByPatientIndex = 15,
-            .euRedeemableIndex = 16
-        };
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
     return {};
 }
@@ -593,23 +572,16 @@ PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::transaction_b
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "retrievetaskbyidplusprescriptionplusreceipt");
 
-    const auto result =
-        transaction.exec_params(mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query, taskId.toDatabaseId());
+    const auto result = transaction.exec(mQueries.retrieveTaskByIdPlusPrescriptionPlusReceipt.query,
+                                         pqxx::params{taskId.toDatabaseId()});
 
     TVLOG(2) << "got " << result.size() << " results";
     Expect(result.size() <= 1, "Too many results in result set.");
     if (! result.empty())
     {
-        Expect(result.front().size() == 18,
+        Expect(result.front().size() == 19,
                "Invalid number of fields in result row: " + std::to_string(result.front().size()));
-        TaskQueryIndexes indexes;
-        indexes.healthcareProviderPrescriptionIndex = 13;
-        indexes.receiptIndex = 14;
-        indexes.lastMedicationDispenseIndex = 15;
-        indexes.euRedeemableByPatientIndex = 16;
-        indexes.euRedeemableIndex = 17;
-
-        return taskFromQueryResultRow(result.front(), indexes, mPrescriptionType);
+        return taskFromQueryResultRow(result.front(), mPrescriptionType);
     }
 
     return {};
@@ -631,91 +603,239 @@ PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::transaction_base& tr
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "retrievealltasksbykvnrwithaccesscode");
 
-    const auto results = transaction.exec_params(query, kvnrHashed.binarystring());
-
-    PostgresBackendTask::TaskQueryIndexes indexes;
-    indexes.secretIndex.reset();
-    indexes.ownerIndex.reset();
-    indexes.euRedeemableByPatientIndex = 11;
-    indexes.euRedeemableIndex = 12;
+    const auto results = transaction.exec(query, pqxx::params{kvnrHashed.binarystring()});
 
     TVLOG(2) << "got " << results.size() << " results";
-    std::vector<db_model::Task> resultSet;
-    resultSet.reserve(gsl::narrow<size_t>(results.size()));
-
-    for (const auto& res : results)
+    if (!results.empty())
     {
-        Expect(res.size() == 13, "Invalid number of fields in result row: " + std::to_string(res.size()));
-        resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(res, indexes, mPrescriptionType));
+        Expect(results.front().size() == 14,
+               "Invalid number of fields in result row: " + std::to_string(results.front().size()));
     }
-    return resultSet;
+    return tasksFromQueryResult(results, mPrescriptionType);
 }
 
-
+struct TaskQueryIndexes {
+    std::optional<pqxx::row::size_type> prescriptionIdIndex;
+    std::optional<pqxx::row::size_type> prescriptionTypeIndex;
+    std::optional<pqxx::row::size_type> kvnrIndex;
+    std::optional<pqxx::row::size_type> lastModifiedIndex;
+    std::optional<pqxx::row::size_type> authoredOnIndex;
+    std::optional<pqxx::row::size_type> expiryDateIndex;
+    std::optional<pqxx::row::size_type> acceptDateIndex;
+    std::optional<pqxx::row::size_type> statusIndex;
+    std::optional<pqxx::row::size_type> lastStatusChangeIndex;
+    std::optional<pqxx::row::size_type> saltIndex;
+    std::optional<pqxx::row::size_type> keyBlobIdIndex;
+    std::optional<pqxx::row::size_type> accessCodeIndex;
+    std::optional<pqxx::row::size_type> secretIndex;
+    std::optional<pqxx::row::size_type> ownerIndex;
+    std::optional<pqxx::row::size_type> healthcareProviderPrescriptionIndex;
+    std::optional<pqxx::row::size_type> receiptIndex;
+    std::optional<pqxx::row::size_type> lastMedicationDispenseIndex;
+    std::optional<pqxx::row::size_type> euRedeemableByPatientIndex;
+    std::optional<pqxx::row::size_type> euRedeemableIndex;
+    std::optional<pqxx::row::size_type> isPkvIndex;
+};
 namespace
 {
-db_model::Blob getSalt(const pqxx::row& resultRow, model::Task::Status status,
-                              const PostgresBackendTask::TaskQueryIndexes& indexes)
+bool checkIndexAndRow(const std::optional<pqxx::row::size_type>& row, const pqxx::row& resultRow)
 {
-    if (resultRow.at(indexes.saltIndex).is_null())
+    return row.has_value() && ! resultRow.at(*row).is_null();
+}
+db_model::Blob getSalt(const pqxx::row& resultRow, model::Task::Status status,
+                              const TaskQueryIndexes& indexes)
+{
+    if (!checkIndexAndRow(indexes.saltIndex, resultRow))
     {
         Expect3(status == model::Task::Status::cancelled, "Missing salt data in task.", std::logic_error);
     }
     else
     {
-        return db_model::Blob{resultRow.at(indexes.saltIndex).as<db_model::postgres_bytea>()};
+        return db_model::Blob{resultRow.at(*indexes.saltIndex).as<db_model::postgres_bytea>()};
     }
     return {};
 }
 
-bool checkIndexAndRow(const std::optional<pqxx::row::size_type>& row, const pqxx::row& resultRow)
+TaskQueryIndexes buildIndexes(const pqxx::row& resultRow)
 {
-    return row.has_value() && ! resultRow.at(*row).is_null();
+    TaskQueryIndexes result{};
+    size_t idx = 0;
+    for (const auto& field : resultRow)
+    {
+        auto enumValue = magic_enum::enum_cast<PostgresBackendTask::ColumnName>(field.name());
+        Expect(enumValue.has_value(), "missing enum value for column " + std::string{field.name()});
+        switch (*enumValue)
+        {
+            using enum PostgresBackendTask::ColumnName;
+        case prescription_id:
+            result.prescriptionIdIndex = idx;
+            break;
+        case prescription_type:
+            result.prescriptionTypeIndex = idx;
+            break;
+        case kvnr:
+            result.kvnrIndex = idx;
+            break;
+        case last_modified:
+            result.lastModifiedIndex = idx;
+            break;
+        case authored_on:
+            result.authoredOnIndex = idx;
+            break;
+        case expiry_date:
+            result.expiryDateIndex = idx;
+            break;
+        case accept_date:
+            result.acceptDateIndex = idx;
+            break;
+        case status:
+            result.statusIndex = idx;
+            break;
+        case task_key_blob_id:
+            result.keyBlobIdIndex = idx;
+            break;
+        case salt:
+            result.saltIndex = idx;
+            break;
+        case access_code:
+            result.accessCodeIndex = idx;
+            break;
+        case secret:
+            result.secretIndex = idx;
+            break;
+        case healthcare_provider_prescription:
+            result.healthcareProviderPrescriptionIndex = idx;
+            break;
+        case receipt:
+            result.receiptIndex = idx;
+            break;
+        case medication_dispense_bundle:
+            result.lastMedicationDispenseIndex = idx;
+            break;
+        case owner:
+            result.ownerIndex = idx;
+            break;
+        case last_medication_dispense:
+            result.lastMedicationDispenseIndex = idx;
+            break;
+        case last_status_update:
+            result.lastStatusChangeIndex = idx;
+            break;
+        case eu_redeemable:
+            result.euRedeemableIndex = idx;
+            break;
+        case eu_redeemable_patient:
+            result.euRedeemableByPatientIndex = idx;
+            break;
+        case is_pkv:
+            result.isPkvIndex = idx;
+            break;
+        case kvnr_hashed:
+        case when_handed_over:
+        case when_prepared:
+        case performer:
+        case medication_dispense_blob_id:
+        case medication_dispense_salt:
+        case doctor_identity:
+        case pharmacy_identity:
+            // no index
+            break;
+        }
+        ++idx;
+    }
+    Expect(result.prescriptionIdIndex.has_value(), "prescription_id missing in task table");
+    Expect(result.keyBlobIdIndex.has_value(), "task_key_blob_id missing in task table");
+    Expect(result.statusIndex.has_value(), "status missing in task table");
+    Expect(result.authoredOnIndex.has_value(), "authored_on missing in task table");
+    Expect(result.lastModifiedIndex.has_value(), "last_modified missing in task table");
+    Expect(result.euRedeemableByPatientIndex.has_value(), "eu_redeemable_patient missing in task table");
+    Expect(result.euRedeemableIndex.has_value(), "eu_redeemable missing in task table");
+    return result;
 }
+std::optional<bool> isPkv(const pqxx::row& resultRow, const TaskQueryIndexes& indexes)
+{
+    if (checkIndexAndRow(indexes.isPkvIndex, resultRow))
+    {
+        return resultRow.at(*indexes.isPkvIndex).as<bool>();
+    }
+    // for tasks of type 166 before $activate, it is unknown if the patient is gkv or pkv.
+    return std::nullopt;
+}
+
+}
+
+std::vector<db_model::Task> PostgresBackendTask::tasksFromQueryResult(const pqxx::result& results,
+                                                                      std::optional<model::PrescriptionType> prescriptionType)
+{
+    std::vector<db_model::Task> resultSet;
+    resultSet.reserve(gsl::narrow<size_t>(results.size()));
+    if (!results.empty())
+    {
+        auto indexes = buildIndexes(results.front());
+        for (const auto & result : results)
+        {
+            resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(result, prescriptionType, indexes));
+        }
+    }
+    return resultSet;
 }
 
 db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resultRow,
-                                                           const PostgresBackendTask::TaskQueryIndexes& indexes,
-                                                           model::PrescriptionType prescriptionType)
+                                                           std::optional<model::PrescriptionType> prescriptionType)
+{
+    return taskFromQueryResultRow(resultRow, prescriptionType, buildIndexes(resultRow));
+}
+
+db_model::Task PostgresBackendTask::taskFromQueryResultRow(const pqxx::row& resultRow,
+                                                           std::optional<model::PrescriptionType> prescriptionType,
+                                                           const TaskQueryIndexes& indexes)
 {
     Expect(resultRow.size() >= 12, "Too few fields in result row");
 
+    if (checkIndexAndRow(indexes.prescriptionTypeIndex, resultRow))
+    {
+        prescriptionType = magic_enum::enum_cast<model::PrescriptionType>(
+            gsl::narrow<uint8_t>(resultRow.at(*indexes.prescriptionTypeIndex).as<uint16_t>()));
+    }
+    Expect(prescriptionType.has_value(), "prescription_type missing in query result");
+
     const auto& prescriptionId =
-        model::PrescriptionId::fromDatabaseId(prescriptionType,
-                                              resultRow.at(indexes.prescriptionIdIndex).as<int64_t>());
-    const auto keyBlobId = gsl::narrow<BlobId>(resultRow.at(indexes.keyBlobIdIndex).as<int32_t>());
+        model::PrescriptionId::fromDatabaseId(*prescriptionType,
+                                              resultRow.at(*indexes.prescriptionIdIndex).as<int64_t>());
+    const auto keyBlobId = gsl::narrow<BlobId>(resultRow.at(*indexes.keyBlobIdIndex).as<int32_t>());
     const auto status =
-        model::Task::fromNumericalStatus(gsl::narrow<int8_t>(resultRow.at(indexes.statusIndex).as<int>()));
+        model::Task::fromNumericalStatus(gsl::narrow<int8_t>(resultRow.at(*indexes.statusIndex).as<int>()));
 
     db_model::Blob salt = getSalt(resultRow, status, indexes);
 
-    const model::Timestamp authoredOn{resultRow.at(indexes.authoredOnIndex).as<double>()};
-    const model::Timestamp lastModified{resultRow.at(indexes.lastModifiedIndex).as<double>()};
+    const model::Timestamp authoredOn{resultRow.at(*indexes.authoredOnIndex).as<double>()};
+    const model::Timestamp lastModified{resultRow.at(*indexes.lastModifiedIndex).as<double>()};
     auto lastStatusChange = lastModified;
-    if (! resultRow.at(indexes.lastStatusChangeIndex).is_null())
+    if (checkIndexAndRow(indexes.lastStatusChangeIndex, resultRow))
     {
-        lastStatusChange = model::Timestamp{resultRow.at(indexes.lastStatusChangeIndex).as<double>()};
+        lastStatusChange = model::Timestamp{resultRow.at(*indexes.lastStatusChangeIndex).as<double>()};
     }
-    db_model::Task dbTask{prescriptionId, keyBlobId, salt, status, lastStatusChange, authoredOn, lastModified};
+    db_model::Task dbTask{prescriptionId,   keyBlobId,  salt,         status,
+                          lastStatusChange, authoredOn, lastModified, isPkv(resultRow, indexes)};
 
     if (checkIndexAndRow(indexes.accessCodeIndex, resultRow))
     {
         dbTask.accessCode.emplace(resultRow.at(*indexes.accessCodeIndex).as<db_model::postgres_bytea>());
     }
 
-    if (! resultRow.at(indexes.kvnrIndex).is_null())
+    if (checkIndexAndRow(indexes.kvnrIndex, resultRow))
     {
-        dbTask.kvnr.emplace(resultRow.at(indexes.kvnrIndex).as<db_model::postgres_bytea>());
+        dbTask.kvnr.emplace(resultRow.at(*indexes.kvnrIndex).as<db_model::postgres_bytea>());
     }
 
-    if (! resultRow.at(indexes.expiryDateIndex).is_null())
+    if (checkIndexAndRow(indexes.expiryDateIndex, resultRow))
     {
-        dbTask.expiryDate.emplace(resultRow.at(indexes.expiryDateIndex).as<double>());
+        dbTask.expiryDate.emplace(resultRow.at(*indexes.expiryDateIndex).as<double>());
     }
 
-    if (! resultRow.at(indexes.acceptDateIndex).is_null())
+    if (checkIndexAndRow(indexes.acceptDateIndex, resultRow))
     {
-        dbTask.acceptDate.emplace(resultRow.at(indexes.acceptDateIndex).as<double>());
+        dbTask.acceptDate.emplace(resultRow.at(*indexes.acceptDateIndex).as<double>());
     }
 
     if (checkIndexAndRow(indexes.secretIndex, resultRow))

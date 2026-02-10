@@ -184,6 +184,7 @@ std::any FhirPathParser::Impl::visitAdditiveExpression(fhirtools::fhirpathParser
     }
     FPFail("mathematics not implemented");
 }
+
 std::any
 FhirPathParser::Impl::visitMultiplicativeExpression(fhirtools::fhirpathParser::MultiplicativeExpressionContext* context)
 {
@@ -194,8 +195,21 @@ FhirPathParser::Impl::visitMultiplicativeExpression(fhirtools::fhirpathParser::M
     {
         return binaryOperator<MathModOperator>(context);
     }
-    FPFail("mathematics operator not implemented: " + op);
+    if (op == "*")
+    {
+        return binaryOperator<MathMultiplicationOperator>(context);
+    }
+    if (op == "/")
+    {
+        FPFail("mathematics operator not implemented: " + op);
+    }
+    if (op == "div")
+    {
+        FPFail("mathematics operator not implemented: " + op);
+    }
+    FPFail("invalid operator: " + op);
 }
+
 std::any FhirPathParser::Impl::visitUnionExpression(fhirtools::fhirpathParser::UnionExpressionContext* context)
 {
     TRACE;

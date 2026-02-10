@@ -67,6 +67,11 @@ void XmlValidator::loadSchemas(const std::vector<std::string>& paths,
                                   const std::optional<model::Timestamp>& validUntil)
 {
     using namespace std::string_literals;
+    if (paths.size() == 1 && paths[0].empty())
+    {
+        // This happens when the environment variable is empty
+        return;
+    }
     for (const auto& schemaFile : paths)
     {
         SchemaType schemaType{};

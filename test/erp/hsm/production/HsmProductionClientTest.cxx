@@ -10,6 +10,7 @@
 #include "shared/hsm/production/HsmRawSession.hxx"
 #include "shared/hsm/HsmIdentity.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/String.hxx"
 
 #include <gtest/gtest.h>
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -58,13 +59,26 @@ TEST_F(HsmProductionClientTest, hsmErrorIndexString)
 TEST_F(HsmProductionClientTest, hsmErrorDetails)
 {
     {
-        const auto details = HsmProductionClient::hsmErrorDetails(ERP_ERR_NOERROR);
-        ASSERT_EQ(details, "0 ERP_ERR_NOERROR without index");
+        const auto details = HsmProductionClient::hsmErrorDetails(HsmRawSession{}, ERP_ERR_NOERROR);
+        EXPECT_EQ(details, "0 ERP_ERR_NOERROR without index");
     }
 
     {
-        const auto details = HsmProductionClient::hsmErrorDetails(ERP_ERR_PERMISSION_DENIED | 0x0000ff00);
-        ASSERT_EQ(details, "b101ff01 ERP_ERR_PERMISSION_DENIED index ff");
+        const auto details = HsmProductionClient::hsmErrorDetails(HsmRawSession{}, ERP_ERR_PERMISSION_DENIED | 0x0000ff00);
+        EXPECT_EQ(details, "b101ff01 ERP_ERR_PERMISSION_DENIED index ff");
+    }
+
+    if (! Configuration::instance().getOptionalStringValue(ConfigurationKey::HSM_DEVICE, "").empty())
+    {
+        auto session = HsmProductionClient::connect(HsmIdentity::getSetupIdentity());
+        {
+            auto details = HsmProductionClient::hsmErrorDetails(session, ERP_ERR_NOERROR);
+            EXPECT_TRUE(String::starts_with(details, "0 ERP_ERR_NOERROR without index on ")) << details;
+        }
+        {
+            const auto details = HsmProductionClient::hsmErrorDetails(session, ERP_ERR_PERMISSION_DENIED | 0x0000ff00);
+            EXPECT_TRUE(String::starts_with(details, "b101ff01 ERP_ERR_PERMISSION_DENIED index ff on ")) << details;
+        }
     }
 }
 

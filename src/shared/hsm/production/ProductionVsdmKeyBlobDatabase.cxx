@@ -49,10 +49,10 @@ ProductionVsdmKeyBlobDatabase::Entry ProductionVsdmKeyBlobDatabase::getBlob(char
     auto transaction = mConnection.createTransaction();
 
     const pqxx::result result =
-        transaction->exec_params("SELECT operator, version, data, generation, EXTRACT(EPOCH FROM created_date_time) "
-                                 "FROM erp.vsdm_key_blob "
-                                 "WHERE (operator = $1 AND version = $2)",
-                                 std::string{operatorId}, std::string{version});
+        transaction->exec("SELECT operator, version, data, generation, EXTRACT(EPOCH FROM created_date_time) "
+                          "FROM erp.vsdm_key_blob "
+                          "WHERE (operator = $1 AND version = $2)",
+                          pqxx::params{std::string{operatorId}, std::string{version}});
     transaction->commit();
     ErpExpect(! result.empty(), HttpStatus::NotFound, "did not find the blob");
     Expect(result.size() == 1, "found more than one blob");
@@ -65,8 +65,8 @@ std::vector<ProductionVsdmKeyBlobDatabase::Entry> ProductionVsdmKeyBlobDatabase:
     mConnection.connectIfNeeded();
     auto transaction = mConnection.createTransaction();
     const pqxx::result result =
-        transaction->exec_params("SELECT operator, version, data, generation, EXTRACT(EPOCH FROM created_date_time) "
-                                 "FROM erp.vsdm_key_blob");
+        transaction->exec("SELECT operator, version, data, generation, EXTRACT(EPOCH FROM created_date_time) "
+                          "FROM erp.vsdm_key_blob");
     transaction->commit();
     std::vector<Entry> entries;
     entries.reserve(gsl::narrow<size_t>(result.size()));
@@ -86,11 +86,12 @@ void ProductionVsdmKeyBlobDatabase::storeBlob(Entry&& entry)
     try
     {
         std::chrono::duration<double> epochDouble = entry.createdDateTime.time_since_epoch();
-        const pqxx::result result = transaction->exec_params(
-            "INSERT INTO erp.vsdm_key_blob (operator, version, data, generation, created_date_time) "
-            "VALUES ($1, $2, $3, $4, TO_TIMESTAMP($5))",
-            std::string{entry.operatorId}, std::string{entry.version}, postgres_bytea_view(entry.blob.data),
-            gsl::narrow<int32_t>(entry.blob.generation), epochDouble.count());
+        const pqxx::result result =
+            transaction->exec("INSERT INTO erp.vsdm_key_blob (operator, version, data, generation, created_date_time) "
+                              "VALUES ($1, $2, $3, $4, TO_TIMESTAMP($5))",
+                              pqxx::params{std::string{entry.operatorId}, std::string{entry.version},
+                                           postgres_bytea_view(entry.blob.data),
+                                           gsl::narrow<int32_t>(entry.blob.generation), epochDouble.count()});
         transaction->commit();
     }
     catch (const pqxx::unique_violation& e)
@@ -113,9 +114,9 @@ void ProductionVsdmKeyBlobDatabase::deleteBlob(char operatorId, char version)
     auto transaction = mConnection.createTransaction();
     try
     {
-        const pqxx::result result = transaction->exec_params("DELETE FROM erp.vsdm_key_blob "
-                                                             "WHERE (operator = $1 AND version = $2)",
-                                                             std::string{operatorId}, std::string{version});
+        const pqxx::result result = transaction->exec("DELETE FROM erp.vsdm_key_blob "
+                                                      "WHERE (operator = $1 AND version = $2)",
+                                                      pqxx::params{std::string{operatorId}, std::string{version}});
         transaction->commit();
         Expect(result.empty(), "did not expect an output");
         ErpExpect(result.affected_rows() == 1, HttpStatus::NotFound, "did not find the blob");

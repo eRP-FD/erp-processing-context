@@ -33,7 +33,6 @@ add_library(erp-shared STATIC
     crypto/CertificateKeyPair.cxx
     crypto/DiffieHellman.cxx
     crypto/EllipticCurve.cxx
-    crypto/EllipticCurvePublicKey.cxx
     crypto/EllipticCurveUtils.cxx
     crypto/EssCertificateHelper.cxx
     crypto/Jws.cxx
@@ -104,6 +103,7 @@ add_library(erp-shared STATIC
     model/KbvBundle.cxx
     model/KbvComposition.cxx
     model/KbvCoverage.cxx
+    model/KbvMedicationBase.cxx
     model/KbvMedicationCompounding.cxx
     model/KbvMedicationPzn.cxx
     model/KbvMedicationRequest.cxx

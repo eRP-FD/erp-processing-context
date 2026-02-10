@@ -10,39 +10,78 @@
 namespace model
 {
 
-TaskEvent::TaskEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
-                     std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, Bundle&& kbvBundle,
-                     const model::Timestamp& lastModified)
+TaskEventBase::TaskEventBase(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, Kvnr kvnr,
+                             std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified, std::int32_t retryCount /* = 0 */)
     : mId(id)
     , mPrescriptionId(prescriptionId)
     , mPrescriptionType(prescriptionType)
-    , mKvnr(kvnr)
+    , mKvnr(std::move(kvnr))
     , mHashedKvnr(hashedKvnr)
-    , mUseCase(useCase)
-    , mState(state)
     , mKbvBundle(std::move(kbvBundle))
     , mLastModified(lastModified)
+    , mRetryCount(retryCount)
 {
 }
 
-TaskEvent::id_t TaskEvent::getId() const
+
+TaskEvent::id_t TaskEventBase::getId() const
 {
     return mId;
 }
 
-const PrescriptionId& TaskEvent::getPrescriptionId() const
+const PrescriptionId& TaskEventBase::getPrescriptionId() const
 {
     return mPrescriptionId;
 }
 
-const Kvnr& TaskEvent::getKvnr() const
+const Kvnr& TaskEventBase::getKvnr() const
 {
     return mKvnr;
 }
 
-const std::string& TaskEvent::getHashedKvnr() const
+const std::string& TaskEventBase::getHashedKvnr() const
 {
     return mHashedKvnr;
+}
+
+PrescriptionType TaskEventBase::getPrescriptionType() const
+{
+    return mPrescriptionType;
+}
+
+const Bundle& TaskEventBase::getKbvBundle() const
+{
+    return mKbvBundle;
+}
+
+Timestamp TaskEventBase::getMedicationRequestAuthoredOn() const
+{
+    auto kbvMedicationRequest = mKbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>();
+    return kbvMedicationRequest.authoredOn();
+}
+
+Timestamp TaskEventBase::getLastModified() const
+{
+    return mLastModified;
+}
+
+std::int32_t TaskEventBase::getRetryCount() const
+{
+    return mRetryCount;
+}
+
+const std::string& TaskEventBase::getXRequestId() const
+{
+    return mXRequestId;
+}
+
+TaskEvent::TaskEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
+                     std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified,
+                     TaskEvent::UseCase useCase, State state)
+    : TaskEventBase(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle), lastModified)
+    , mUseCase(useCase)
+    , mState(state)
+{
 }
 
 TaskEvent::UseCase TaskEvent::getUseCase() const
@@ -55,44 +94,13 @@ TaskEvent::State TaskEvent::getState() const
     return mState;
 }
 
-PrescriptionType TaskEvent::getPrescriptionType() const
-{
-    return mPrescriptionType;
-}
-
-const Bundle& TaskEvent::getKbvBundle() const
-{
-    return mKbvBundle;
-}
-
-Timestamp TaskEvent::getMedicationRequestAuthoredOn() const
-{
-    auto kbvMedicationRequest = mKbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>();
-    return kbvMedicationRequest.authoredOn();
-}
-
-Timestamp TaskEvent::getLastModified() const
-{
-    return mLastModified;
-}
-
-std::int32_t TaskEvent::getRetryCount() const
-{
-    return mRetryCount;
-}
-
-const std::string& TaskEvent::getXRequestId() const
-{
-    return mXRequestId;
-}
-
 ProvidePrescriptionTaskEvent::ProvidePrescriptionTaskEvent(
     id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
     std::string_view hashedKvnr, TaskEvent::UseCase useCase, State state, const std::optional<TelematikId>& qesDoctorId,
     const TelematikId& jwtDoctorId, const std::string& jwtDoctorOrganizationName,
     const std::string& jwtDoctorProfessionOid, Bundle&& kbvBundle, const model::Timestamp& lastModified)
-    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, useCase, state, std::move(kbvBundle),
-                lastModified)
+    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle),
+                lastModified, useCase, state)
     , mQesDoctorId(qesDoctorId)
     , mJwtDoctorId(jwtDoctorId)
     , mJwtDoctorOrganizationName(jwtDoctorOrganizationName)
@@ -164,8 +172,8 @@ CancelPrescriptionTaskEvent::CancelPrescriptionTaskEvent(id_t id, const Prescrip
                                                          std::string_view hashedKvnr, TaskEvent::UseCase useCase,
                                                          State state, Bundle&& kbvBundle,
                                                          const model::Timestamp& lastModified)
-    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, useCase, state, std::move(kbvBundle),
-                lastModified)
+    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle),
+                lastModified, useCase, state)
 {
 }
 
@@ -174,9 +182,50 @@ CancelDispensationTaskEvent::CancelDispensationTaskEvent(id_t id, const Prescrip
                                                          std::string_view hashedKvnr, TaskEvent::UseCase useCase,
                                                          State state, Bundle&& kbvBundle,
                                                          const model::Timestamp& lastModified)
-    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, useCase, state, std::move(kbvBundle),
-                lastModified)
+    : TaskEvent(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle),
+                lastModified, useCase, state)
 {
+}
+
+TRezeptEvent::TRezeptEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType,
+                           const Kvnr& kvnr, std::string_view hashedKvnr, Bundle&& kbvBundle,
+                           const model::Timestamp& lastModified, TaskEvent::UseCase useCase, State state,
+                           model::TelematikId orgTelematikId,
+                           Bundle&& medicationDispenseBundle,
+                           model::Timestamp qesSigningTime,
+                           std::int32_t retryCount)
+    : TaskEventBase(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle), lastModified, retryCount)
+    , mUseCase(useCase)
+    , mState(state)
+    , mOrgTelematikId(std::move(orgTelematikId))
+    , mMedicationDispenseBundle(std::move(medicationDispenseBundle))
+    , mQesSigningTime(qesSigningTime)
+{
+}
+
+TaskEvent::UseCase TRezeptEvent::getUseCase() const
+{
+    return mUseCase;
+}
+
+TRezeptEvent::State TRezeptEvent::getState() const
+{
+    return mState;
+}
+
+const model::TelematikId& TRezeptEvent::orgTelematikId() const
+{
+    return mOrgTelematikId;
+}
+
+const Bundle& TRezeptEvent::getMedicationDispenseBundle() const
+{
+    return mMedicationDispenseBundle;
+}
+
+const Timestamp& TRezeptEvent::getQesSigningTime() const
+{
+    return mQesSigningTime;
 }
 
 }

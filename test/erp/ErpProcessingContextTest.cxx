@@ -133,13 +133,14 @@ TEST_F(ErpProcessingContextTest, PostTaskActivate_ProfessionOIDs)
 // GEMREQ-start A_19166-test1
 TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWfOther)
 {
-    A_19166_01.test("Unit test of allowedForProfessionOID() function");
+    A_19166_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Task/{id}/$accept",
                  {
                      "1.2.276.0.76.4.54",// oid_oeffentliche_apotheke
                      "1.2.276.0.76.4.55",// oid_krankenhausapotheke
                  },
-                 {model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::direkteZuweisung,
+                 {model::PrescriptionType::apothekenpflichigeArzneimittel, model::PrescriptionType::tRezept,
+                  model::PrescriptionType::direkteZuweisung,
                   model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                   model::PrescriptionType::direkteZuweisungPkv});
 }
@@ -148,7 +149,7 @@ TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWfOther)
 // GEMREQ-start A_25993-test1
 TEST_F(ErpProcessingContextTest, PostTaskAccept_ProfessionOIDsWf162)
 {
-    A_19166_01.test("Unit test of allowedForProfessionOID() function");
+    A_19166_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::POST, "/Task/{id}/$accept",
                  {
                      "1.2.276.0.76.4.59",// oid_kostentraeger

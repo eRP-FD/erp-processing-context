@@ -494,17 +494,6 @@ EcSignature::EcSignature(shared_BN r, shared_BN s)
     Assert(mS.isSet()) << "mS must be set";
 }
 
-
-std::unique_ptr<Signature> EcSignature::create(const BinaryView& data, EC_KEY& privateKey)
-{
-    auto pKey = shared_EVP_PKEY::make();
-    int status = EVP_PKEY_set1_EC_KEY(pKey, &privateKey);
-    Assert(status == 1) << "could not convert EC key to EVP_PKEY";
-    Assert(pKey != nullptr) << "created EC key must not be null";
-    return Signature::create(data, *pKey);
-}
-
-
 BinaryBuffer EcSignature::getR() const
 {
     BinaryBuffer r(static_cast<size_t>(BN_num_bytes(mR)));

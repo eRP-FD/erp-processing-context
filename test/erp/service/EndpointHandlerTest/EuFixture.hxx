@@ -16,7 +16,4 @@ public:
     void giveConsent(const std::string& kvnr);
     void allowCountry(const std::string& country);
     void grant(const std::string& kvnr, std::string accessCode = "aaaaaa");
-
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
 };

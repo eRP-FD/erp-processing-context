@@ -10,13 +10,15 @@
 
 #include "fhirtools/model/DateTime.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
-#include "shared/model/ProfileType.hxx"
+#include "shared/model/Kvnr.hxx"
+#include "shared/model/PrescriptionType.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
 #include <memory>
 #include <thread>
 #include <vector>
+#include <ranges>
 
 namespace model
 {
@@ -47,17 +49,26 @@ static void waitFor(T predicate, const std::chrono::milliseconds& timeout = std:
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options);
 
+
+class UnsupportedResourceTypeException : public std::runtime_error {
+    using runtime_error::runtime_error;
+};
+
 void validate(const model::FhirResourceBase& resource);
 std::unique_ptr<model::FhirResourceBase> createResource(model::NumberAsStringParserDocument doc);
 std::unique_ptr<model::FhirResourceBase> createResourceFromJson(std::string_view jsonStr);
 std::unique_ptr<model::FhirResourceBase> createResourceFromXml(std::string_view xmlStr);
 std::unique_ptr<model::FhirResourceBase> createResource(std::string_view doc);
+std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::NumberAsStringParserDocument doc);
 
 std::string shiftDate(const std::string& realDate);
 
-class ShiftFhirResourceViewsGuard {
+class ShiftFhirResourceViewsGuard
+{
 public:
-    class AsConfiguredTag {};
+    class AsConfiguredTag
+    {
+    };
     static constexpr AsConfiguredTag asConfigured{};
 
     ShiftFhirResourceViewsGuard(const AsConfiguredTag&);
@@ -70,7 +81,11 @@ private:
     std::vector<EnvironmentVariableGuard> envGuards;
 };
 
-
-} // namespace testutils
+std::vector<model::PrescriptionType> gkvPrescriptionTypes();
+std::vector<model::PrescriptionType> pkvPrescriptionTypes();
+std::vector<model::PrescriptionType> euPrescriptionTypes();
+std::vector<model::PrescriptionType> nonEuPrescriptionTypes();
+std::vector<model::PrescriptionType> allPrescriptionTypes();
+}// namespace testutils
 
 #endif// ERP_PROCESSING_CONTEXT_TEST_UTILS

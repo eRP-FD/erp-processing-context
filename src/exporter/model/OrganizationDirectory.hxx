@@ -24,6 +24,10 @@ public:
     OrganizationDirectory(const TelematikId& telematikId, const Coding& type, const std::string& name,
                           const std::string& professionOid);
 
+    [[nodiscard]] bool isActive() const;
+    [[nodiscard]] std::string_view getName() const;
+    [[nodiscard]] const rapidjson::Value& getTelematikIdIdentifier() const;
+
 private:
     friend Resource<OrganizationDirectory>;
     explicit OrganizationDirectory(NumberAsStringParserDocument&& jsonTree);

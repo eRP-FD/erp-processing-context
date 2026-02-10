@@ -26,8 +26,11 @@ public:
     void verifyLength() const;
     void validateJsonSchema(const JsonValidator& validator, SchemaType schemaType) const;
     [[nodiscard]] bool empty() const;
+    [[nodiscard]] std::string supplyOptionsType() const;
 
 private:
+    rapidjson::Document getPayloadDoc() const;
+
     std::size_t mLength = 0;
     const rapidjson::Value* mPayloadValue = nullptr;
 };

@@ -85,7 +85,7 @@ void DispenseTaskHandler::handleRequest(PcSessionContext& session)
     A_24281_02.finish();
 
     // Response
-    makeResponse(session, HttpStatus::OK, &bundle);
+    makeResponse(session, HttpStatus::NoContent, nullptr);
 
     // Collect Audit data
     session.auditDataCollector()

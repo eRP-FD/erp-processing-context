@@ -6,7 +6,9 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_PUTRUNTIMECONFIGHANDLER_HXX
 #include "shared/admin/AdminRequestHandler.hxx"
 
-namespace exporter {
+namespace exporter
+{
+class RuntimeConfigurationSetter;
 
 class PutRuntimeConfigHandler : public AdminRequestHandlerBase
 {
@@ -17,8 +19,13 @@ public:
 
 private:
     void doHandleRequest(BaseSessionContext& session) override;
+    static void handleParameterPause(RuntimeConfigurationSetter& runtimeConfig, const std::string& param);
+    static void handleParameterResume(RuntimeConfigurationSetter& runtimeConfig, const std::string& param);
+    static void handleParameterThrottle(RuntimeConfigurationSetter& runtimeConfig, const std::string& param);
+    static void handleParameterMetricsLogThreshold(RuntimeConfigurationSetter& runtimeConfig, const std::string& key,
+                                                   const std::string& param);
 };
 
-} // namespace exporter
+}// namespace exporter
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_ADMIN_PUTRUNTIMECONFIGHANDLER_HXX

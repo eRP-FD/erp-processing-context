@@ -7,6 +7,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EPAACCOUNTLOOKUPCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EPAACCOUNTLOOKUPCLIENT_HXX
 
+#include "exporter/BdeMessage.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/network/client/TlsCertificateVerifier.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
@@ -23,7 +24,7 @@ public:
     virtual ~IEpaAccountLookupClient() = default;
     virtual ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
                                                        const std::string& host, uint16_t port) = 0;
-    virtual IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) = 0;
+    virtual IEpaAccountLookupClient& addLogAttribute(const BDEMessage::Data& bdeData) = 0;
 };
 
 class EpaAccountLookupClient : public IEpaAccountLookupClient
@@ -35,14 +36,14 @@ public:
     ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
                                                const std::string& host, uint16_t port) override;
 
-    IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override;
+    IEpaAccountLookupClient& addLogAttribute(const BDEMessage::Data& bdeData) override;
 
 private:
     ClientResponse sendWithRetry(HttpsClient& client, ClientRequest& request) const;
     MedicationExporterServiceContext& mServiceContext;
     std::string mConsentDecisionsEndpoint;
     std::string mUserAgent;
-    std::unordered_map<std::string, std::any> mLookupClientLogContext;
+    BDEMessage::Data mBdeData;
 };
 
 

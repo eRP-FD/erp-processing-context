@@ -1,6 +1,6 @@
 ## Initial setup
 Populate the current folder with files generated with the script located in `scripts/generate_certs.sh`
-from `ibm:eRp/postgres-docker`.
+from github: `ibm:eRp/postgres-docker`.
 The script generates a root and a client certificate which may be used by postgres, redis and any other component
 which requires certificates. The certificates are for testing purposes and contain no confidential
 information.

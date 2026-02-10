@@ -8,6 +8,9 @@
 #include "shared/crypto/EllipticCurve.hxx"
 #include "shared/util/Expect.hxx"
 
+#include <openssl/core_names.h>
+#include <openssl/param_build.h>
+
 class EllipticCurveBrainpoolP256R1
     : public EllipticCurve
 {
@@ -38,25 +41,9 @@ std::unique_ptr<EllipticCurve> EllipticCurve::BrainpoolP256R1 = std::make_unique
 
 // ----- EllipticCurveBrainpoolP256R1 ----------------------------------------
 
-shared_EVP_PKEY EllipticCurveBrainpoolP256R1::createKeyPair (void) const
+shared_EVP_PKEY EllipticCurveBrainpoolP256R1::createKeyPair() const
 {
-    auto pkey = shared_EVP_PKEY::make();
-
-    auto key = shared_EC_KEY::make(EC_KEY_new_by_curve_name(NID));
-    throwIfNot(
-        key.isSet(),
-        "could not create new EC key on brainpoolP256R1 curve");
-    EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
-    int status = EC_KEY_generate_key(key);
-    throwIfNot(
-        status == 1,
-        "generating EC key failed");
-    status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    throwIfNot(
-        status == 1,
-        "generating EVP key from EC key failed");
-
-    return pkey;
+    return shared_EVP_PKEY::make(EVP_EC_gen(SN_brainpoolP256r1));
 }
 
 

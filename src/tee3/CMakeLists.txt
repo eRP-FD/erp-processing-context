@@ -18,8 +18,6 @@ add_library(tee3 STATIC
     library/crypto/AuthorizationAssertion.cxx
     library/crypto/DiffieHellman.cxx
     library/crypto/EllipticCurve.cxx
-    library/crypto/EllipticCurveKey.cxx
-    library/crypto/EllipticCurveUtils.cxx
     library/crypto/Key.cxx
     library/crypto/KeyDerivationUtils.cxx
     library/crypto/SecureRandomGenerator.cxx

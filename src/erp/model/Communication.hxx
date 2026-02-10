@@ -70,6 +70,7 @@ public:
 
     MessageType messageType() const;
     bool isRequest() const;
+    bool isDispenseRequest() const;
     bool isReply() const;
     bool requiresTask() const;
     std::string_view messageTypeAsString() const;
@@ -104,6 +105,7 @@ public:
     std::optional<std::string_view> contentString() const;
 
     void verifyPayload(const JsonValidator& validator) const;
+    void verifySupplyOptionsType(PrescriptionType prescriptionType) const;
 
 
     std::optional<Timestamp> getValidationReferenceTimestamp() const override;

@@ -46,6 +46,7 @@ public:
 
     std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
 
+    bool testConnection();
 
 private:
     std::chrono::milliseconds mConnectionTimeout;

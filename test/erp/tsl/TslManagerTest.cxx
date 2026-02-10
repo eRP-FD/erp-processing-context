@@ -1236,8 +1236,8 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
 {
     const Certificate certificate = getCert(sub_ca1_ec, qes_cert1_ec);
     X509Certificate x509Certificate = X509Certificate::createFromBase64(certificate.toBase64Der());
-
     const Certificate certificateCA = getCACert(sub_ca1_ec);
+    OcspCertidPtr certId(OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()));
 
     const auto certPairValid = MockOcsp::CertificatePair{
         .certificate = certificate,
@@ -1245,25 +1245,29 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
         .testMode = MockOcsp::CertificateOcspTestMode::SUCCESS
     };
 
-    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>({}, {}, {{ocspUrl, {certPairValid}}});
+    auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
+    auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+    auto outdatedResponse = MockOcsp::create(certId.get(), {certPairValid}, ocspCert, ocspKey).toDer();
+    // as we cannot modify producedAt value in the ocsp response other than by modifying the system time,
+    // wait a few seconds, so by moving the reference time forward, outdatedResponse will be seen as outdated
+    // while the ocsp response from the manager is within the 37 seconds of tolerance
+    std::this_thread::sleep_for(std::chrono::seconds{3});
 
-    OcspCertidPtr certId(OCSP_cert_to_id(nullptr, certificate.toX509(), certificateCA.toX509()));
+    std::shared_ptr<TslManager> manager = TslTestHelper::createTslManager<TslManager>({}, {}, {{ocspUrl, {certPairValid}}});
 
     auto checkDescriptor = TslTestHelper::getDefaultTestOcspCheckDescriptor();
     checkDescriptor.mode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED;
 
 // GEMREQ-start A_24913
-    auto ocspCert = TslTestHelper::getDefaultOcspCertificate();
-    auto ocspKey = TslTestHelper::getDefaultOcspPrivateKey();
+
     using enum MockOcsp::CertificateOcspTestMode;
     // in this PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED mode, an outdated ocsp response is allowed
     // and falling back to the cache/ocsp request
     {
-        auto certPairOutdated = certPairValid;
-        certPairOutdated.testMode = WRONG_PRODUCED_AT;
-        auto response = MockOcsp::create(certId.get(), {certPairOutdated}, ocspCert, ocspKey).toDer();
-        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
+        checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(outdatedResponse);
         ASSERT_NE(checkDescriptor.providedOcspResponse, nullptr);
+        checkDescriptor.timeSettings.referenceTimePoint = std::chrono::system_clock::now() + std::chrono::seconds{35};
+        checkDescriptor.timeSettings.gracePeriod = std::chrono::seconds{0};
 
         ASSERT_NO_THROW(
             manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor));
@@ -1275,6 +1279,8 @@ TEST_F(TslManagerTest, permitOutdatedProducedAt)//NOLINT(readability-function-co
         auto certPairInvalid = certPairValid;
         certPairInvalid.testMode = testMode;
         auto response = MockOcsp::create(certId.get(), {certPairInvalid}, ocspCert, ocspKey).toDer();
+        checkDescriptor.timeSettings.referenceTimePoint = std::chrono::system_clock::now();
+        checkDescriptor.timeSettings.gracePeriod = std::chrono::seconds{600};
         checkDescriptor.providedOcspResponse = OcspHelper::stringToOcspResponse(response);
         EXPECT_THROW(
             manager->verifyCertificate(TslMode::BNA, x509Certificate, {CertificateType::C_HP_QES}, checkDescriptor),

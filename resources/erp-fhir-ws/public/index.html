@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+  (C) Copyright IBM Deutschland GmbH 2021, 2025
+  (C) Copyright IBM Corp. 2021, 2025
+
+  non-exclusively licensed to gematik GmbH
+-->
+<html>
+<head>
+  <script type="module" src="/index.js" charset="utf-8"></script>
+  <script src="/cdn.min.js" defer></script>
+  <link href="/style.css" rel="stylesheet">
+  </link>
+  <title>e-Rezept FHIR Validator</title>
+</head>
+
+<body class="h-screen w-screen m-0 p-0 overflow-hidden">
+  <div class="flex h-full w-full border" x-data="selectData" x-init="setup">
+    <div class="w-1/2 p-2 flex flex-col h-full">
+      <div class="flex items-center gap-2">
+        <select x-init="fetchViews" x-model="validationParam.view" class="flex" :class="validationParam.view == '' && 'bg-red-200'">
+          <option value="" disabled>Select a View</option>
+          <template x-for="view in views" :key="view">
+            <option :value="view" x-text="view"></option>
+          </template>
+        </select>
+        <div class="items-center flex gap-2">
+          <span class="text-right">Validation&nbsp;Date:</span>
+          <span x-init="datePicker($el)"></span>
+          Offset:<input type="number" x-model.debounce.100ms="offset"></input>
+        </div>
+      </div>
+      <textarea
+        spellcheck="false"
+        class="font-mono mt-2 flex-1 resize-none"
+        id="document" x-model.debounce.100ms="fhirDocument"
+        placeholder="Paste your FHIR-Document here and select a View for validation."></textarea>
+    </div>
+
+    <div class="w-1/2 p-2 flex flex-col h-full">
+      <div class="flex flex-none items-stretch grid grid-rows-1 grid-cols-4 gap-2">
+        <template x-for="([severity, count], index) in Object.entries(severityCounters)" :key="severity">
+          <div
+            class="flex items-center justify-between space-x-4 p-3 rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
+            <div>
+              <label :for="'toggle-switch-' + index" x-text="severity + ':&nbsp;' + count"
+                class="text-md font-medium text-gray-800 block cursor-pointer capitalize">
+              </label>
+            </div>
+            <button :id="'toggle-switch-' + index" @click="showSeverity[severity] = !showSeverity[severity]"
+              :aria-checked="showSeverity[severity]" type="button" role="switch"
+              class="custom-toggle focus:outline-none focus:ring-2 focus:ring-offset-2"
+              :class="showSeverity[severity] ? 'bg-indigo-600 focus:ring-indigo-600' : 'bg-gray-200 focus:ring-gray-500'">
+              <span class="sr-only"
+                x-text="showSeverity[severity] ? 'Toggle ' + severity + ' to Off' : 'Toggle ' + severity + ' to On'">Toggle
+                Status</span>
+              <span aria-hidden="true" class="custom-toggle-handle"
+                :class="{ 'translate-x-5': showSeverity[severity], 'translate-x-0': !showSeverity[severity] }"></span>
+            </button>
+          </div>
+        </template>
+      </div>
+
+      <div class="overflow-y-auto mt-2 flex-1 rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
+        <template x-for="issue in validationResult.issue">
+          <div x-show="showSeverity[issue.severity]" class="p-2 border-b border-gray-200">
+            <div :class="issue.severity">
+              <span x-text="issue.severity"></span> (<span x-text="issue.code"></span>) :<span
+                x-text="issue.expression"></span>
+            </div>
+            <div class="ml-4" x-text="issue.details.text"></div>
+            <div class="ml-4 text-sm text-gray-700" x-show="issue.diagnostics" x-text="issue.diagnostics"></div>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </div>
+</body>
+
+</html>

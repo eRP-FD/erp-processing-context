@@ -9,6 +9,7 @@
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/internal/ElementType.hxx"
 #include "fhirtools/repository/internal/FhirStructureDefinitionParser.hxx"
 #include "fhirtools/repository/internal/FhirStructureRepositoryFixer.hxx"
 #include "fhirtools/repository/views/FhirResourceViewVerifier.hxx"

@@ -393,7 +393,7 @@ namespace
             const std::shared_ptr<OCSP_BASICRESP> basicResponse{
                 OCSP_response_get1_basic(response.get()),
                 OCSP_BASICRESP_free};
-            Expect(basicResponse.operator bool(), "Can not get basic data from OCSP response.");
+            OpenSslExpect(basicResponse.operator bool(), "Can not get basic data from OCSP response.");
 
             // gemSpec_PKI § 9.1.2.2 OCSP-Response Zeiten
             // GEMREQ-start GS-A_5215
@@ -451,7 +451,7 @@ namespace
                 checkCertHashExtension(singleResponse, certificate, trustStore.getTslMode());
             }
             const auto certStatus = certificateStatusFromSSL(status);
-            OcspResponse response{
+            OcspResponse resp{
                 .status =
                     {
                         .certificateStatus = certStatus,
@@ -465,7 +465,7 @@ namespace
                 .fromCache = false,
                 .response = {},
             };
-            return response;
+            return resp;
         }
         catch (const TslError&)
         {

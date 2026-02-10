@@ -52,14 +52,6 @@ private:
 
     std::string mConnectionString;
     std::unique_ptr<pqxx::connection> mConnection;
-
-    class ErrorHandler : public pqxx::errorhandler
-    {
-    public:
-        using pqxx::errorhandler::errorhandler;
-        bool operator()(const char* msg) noexcept override;
-    };
-    std::unique_ptr<ErrorHandler> mErrorHandler;
     std::optional<DatabaseConnectionInfo> mConnectionInfo;
 };
 

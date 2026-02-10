@@ -209,7 +209,7 @@ class PrimitiveElement : public Element
 public:
     using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Date, DateTime, Time, QuantityType>;
     explicit PrimitiveElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
-                              Type type, ValueType&& value);
+                              Type type, ValueType&& value, std::weak_ptr<const Element> parent = {});
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
 

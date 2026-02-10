@@ -433,6 +433,10 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
         case model::ProfileType::OrganizationDirectory:
         case model::ProfileType::EPAMedicationPZNIngredient:
         case model::ProfileType::KBV_PR_EVDGA_HealthAppRequest:
+        case model::ProfileType::HealthcareServiceDirectory:
+        case model::ProfileType::LocationDirectory:
+        case model::ProfileType::ERP_TPrescription_CarbonCopy:
+        case model::ProfileType::ERP_TPrescription_Organization:
             return {};
         case model::ProfileType::GEM_ERPEU_PR_Consent:
         case model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request:

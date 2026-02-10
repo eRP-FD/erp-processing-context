@@ -148,11 +148,6 @@ PrescriptionType PrescriptionId::type() const
     return mPrescriptionType;
 }
 
-bool PrescriptionId::isPkv() const
-{
-    return model::isPkv(mPrescriptionType);
-}
-
 void PrescriptionId::validateChecksum (const PrescriptionType prescriptionType, const int64_t id, const uint8_t checksum)
 {
     A_19218.start("Validate the incoming checksum");

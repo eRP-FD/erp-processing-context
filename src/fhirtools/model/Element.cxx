@@ -1035,8 +1035,8 @@ bool Element::QuantityType::convertibleToUnit(const std::string& unit) const
 
 PrimitiveElement::PrimitiveElement(
     gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, Type type,
-    ValueType&& value)
-    : Element(fhirStructureRepository, {},
+    ValueType&& value, std::weak_ptr<const Element> parent)
+    : Element(fhirStructureRepository, std::move(parent),
               ProfiledElementTypeInfo{getStructureDefinition(*fhirStructureRepository, type)})
     , mValue(value)
 {

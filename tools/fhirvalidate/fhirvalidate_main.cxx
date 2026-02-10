@@ -2,6 +2,7 @@
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/repository/views/VersionMappingView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/fhir/Fhir.hxx"
@@ -55,16 +56,29 @@ std::shared_ptr<const fhirtools::FhirStructureRepositoryView> getView(const Conf
     return nullptr;
 }
 
+template<config::ProcessType ProcessT>
+std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
+wrapWithVersionMapper(std::shared_ptr<const fhirtools::FhirStructureRepositoryView> unmapped)
+{
+    std::string id{unmapped->id()};
+    id += "-mapped";
+    fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping()};
+    return fhirtools::VersionMappingView::create(std::move(id), std::move(mapper), std::move(unmapped));
+}
+
+
 std::shared_ptr<const fhirtools::FhirStructureRepositoryView> getView(std::string_view viewId)
 {
     const auto& config = Configuration::instance();
     auto result = getView<Configuration::ERP>(config, viewId);
     if (result)
     {
-        return result;
+        return wrapWithVersionMapper<Configuration::ERP>(result);
     }
-    return getView<Configuration::MedicationExporter>(config, viewId);
+    return wrapWithVersionMapper<Configuration::MedicationExporter>(
+        getView<Configuration::MedicationExporter>(config, viewId));
 }
+
 
 int main(int argc, char* argv[])
 {

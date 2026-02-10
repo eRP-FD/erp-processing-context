@@ -16,11 +16,11 @@ const rapidjson::Pointer valueCodePtr(model::resource::ElementName::path(model::
 namespace model
 {
 
-DataAbsentReason::DataAbsentReason()
+DataAbsentReason::DataAbsentReason(const std::string_view valueCode)
     : Extension<DataAbsentReason>()
 {
     setValue(urlPtr, url);
-    setValue(valueCodePtr, "unknown");
+    setValue(valueCodePtr, valueCode);
 }
 
 template class Extension<DataAbsentReason>;

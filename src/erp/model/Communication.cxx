@@ -7,6 +7,7 @@
 
 #include "erp/model/Communication.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/util/Expect.hxx"
@@ -284,6 +285,10 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
         case ProfileType::GEM_ERPEU_PR_PractitionerRole:
         case ProfileType::GEM_ERPEU_PR_Organization:
         case ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
+        case ProfileType::HealthcareServiceDirectory:
+        case ProfileType::LocationDirectory:
+        case ProfileType::ERP_TPrescription_CarbonCopy:
+        case ProfileType::ERP_TPrescription_Organization:
             ModelFail("Not a Communication Profile");
     }
     Fail2("Communication::profileTypeToMessageType: Unknown ProfileType: " +
@@ -346,6 +351,23 @@ bool Communication::isRequest() const
         case MessageType::DispReq:
         case MessageType::InfoReq:
             return true;
+        case MessageType::ChargChangeReply:
+        case MessageType::DiGA:
+        case MessageType::Representative:
+        case MessageType::Reply:
+            break;
+    }
+    return false;
+}
+
+bool Communication::isDispenseRequest() const
+{
+    switch (messageType())
+    {
+        case MessageType::DispReq:
+            return true;
+        case MessageType::ChargChangeReq:
+        case MessageType::InfoReq:
         case MessageType::ChargChangeReply:
         case MessageType::DiGA:
         case MessageType::Representative:
@@ -541,6 +563,31 @@ void Communication::verifyPayload(const JsonValidator& validator) const
     }
 }
 // GEMREQ-end A_19450-01
+
+void Communication::verifySupplyOptionsType(PrescriptionType prescriptionType) const
+{
+    static const std::set<std::string> allowedTRezeptSupplyOptions{"onPremise", "delivery"};
+    switch (messageType())
+    {
+        case MessageType::DispReq:
+            A_23878_01.start("for flowtype 166 only onPremise und delivery are allowed");
+            if (isTRezept(prescriptionType))
+            {
+                CommunicationPayload payload{getValue(payloadPointer)};
+                ErpExpect(allowedTRezeptSupplyOptions.contains(payload.supplyOptionsType()), HttpStatus::BadRequest,
+                          "for flowType 166 only onPremise and delivery are allowed");
+            }
+            A_23878_01.finish();
+            break;
+        case MessageType::InfoReq:
+        case MessageType::Reply:
+        case MessageType::Representative:
+        case MessageType::ChargChangeReq:
+        case MessageType::ChargChangeReply:
+        case MessageType::DiGA:
+            break;
+    }
+}
 
 
 std::optional<SchemaType> Communication::payloadSchema() const

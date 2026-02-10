@@ -31,7 +31,8 @@ public:
                              accessCode,
                              mSecret,
                              model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                             mKvnr));
+                             mKvnr,
+                             "PKV"));
         mCloseReceipt->removeSignature();
 
         std::optional<model::Consent> consent{};

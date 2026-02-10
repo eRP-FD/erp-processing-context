@@ -10,8 +10,8 @@
 #include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/util/Expect.hxx"
 
+#include <openssl/core_names.h>
 #include <openssl/kdf.h>
-
 
 
 void DiffieHellman::setPrivatePublicKey (const shared_EVP_PKEY& localPrivatePublicKey)
@@ -23,11 +23,14 @@ void DiffieHellman::setPrivatePublicKey (const shared_EVP_PKEY& localPrivatePubl
 void DiffieHellman::setPeerPublicKey (const shared_EVP_PKEY& peerPublicKey)
 {
     Expect(peerPublicKey.isSet(), "got invalid peer's public key");
+    Expect(EVP_PKEY_is_a(peerPublicKey, "EC") == 1, "Key is not an EC key");
 
-    const EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(peerPublicKey);
-    Expect(ecKey != nullptr, "peer key has no public key");
-    const EC_POINT* ecPoint = EC_KEY_get0_public_key(ecKey);
-    Expect(ecPoint!=nullptr, "peer's public key not valid");
+    std::array<uint8_t, 256> pubkey{};
+
+    size_t len = 0;
+    const auto status =
+        EVP_PKEY_get_octet_string_param(peerPublicKey, OSSL_PKEY_PARAM_PUB_KEY, pubkey.data(), pubkey.size(), &len);
+    Expect(status == 1, "unable to obtain public key");
 
     mPeerPublicKey = peerPublicKey;
 }

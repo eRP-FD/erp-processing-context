@@ -27,7 +27,7 @@ CancelPrescription::CancelPrescription(gsl::not_null<IEpaMedicationClient*> medi
 
 Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& erpEvent)
 {
-    model::EPAOpCancelPrescriptionERPInputParameters params{erpEvent.getPrescriptionId(), erpEvent.getMedicationRequestAuthoredOn()};
+    const model::EPAOpCancelPrescriptionERPInputParameters params{erpEvent.getPrescriptionId(), erpEvent.getMedicationRequestAuthoredOn()};
     auto response = mMedicationClient->sendCancelPrescription(erpEvent.getXRequestId(), erpEvent.getKvnr(),
                                                               params.serializeToJsonString());
     Outcome outcome = fromHttpStatus(response.httpStatus);
@@ -35,15 +35,18 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
     {
         case Outcome::Success:
         case Outcome::SuccessAuditFail: {
-            model::EPAOpRxPrescriptionERPOutputParameters responseParameters(std::move(response.body));
+            const model::EPAOpRxPrescriptionERPOutputParameters responseParameters(std::move(response.body));
             const auto issue = responseParameters.getOperationOutcomeIssue();
             switch (issue.detailsCode)
             {
                 using enum model::EPAOperationOutcome::EPAOperationOutcomeCS;
                 case MEDICATIONSVC_OPERATION_SUCCESS:
+                case MEDSVC_OPERATION_SUCCESS:
                 case MEDICATIONSVC_PRESCRIPTION_NO_EXIST:
+                case MEDSVC_PRESCRIPTION_NO_EXIST:
                     break;
                 case MEDICATIONSVC_PRESCRIPTION_STATUS:
+                case MEDSVC_PRESCRIPTION_STATUS:
                     logWarning(erpEvent)
                         << KeyValue("event", "Processing task event: Unexpected operation outcome")
                         << KeyValue("reason",
@@ -55,8 +58,20 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
                 case MEDICATIONSVC_DISPENSATION_STATUS:
                 case MEDICATIONSVC_DISPENSATION_NO_EXIST:
                 case MEDICATIONSVC_PARAMETERS_REFERENCE_NO_EXIST:
-                case MEDICATIONSVC_MEDICATIONPLAN_NO_EXIST:
-                case MEDICATIONSCV_MEDICINAL_PRODUCT_PACKAGE_NOT_ALLOWED:
+                case MEDSVC_NO_VALID_STRUCTURE:
+                case MEDSVC_PRESCRIPTION_DUPLICATE:
+                case MEDSVC_DISPENSATION_NO_EXIST:
+                case MEDSVC_DISPENSATION_STATUS:
+                case MEDSVC_PARAMETERS_REFERENCE_NO_EXIST:
+                case MEDSVC_STATUS_INVALID:
+                case MEDSVC_STATEMENT_NO_EXIST:
+                case MEDSVC_PARAMETERS_INVALID_CONTENT:
+                case MEDSVC_DOSAGE_INVALID:
+                case MEDSVC_EMP_CHRONOLOGY_ID_MISMATCH:
+                case MEDSVC_OPERATION_OUTSIDE_BATCH:
+                case MEDSVC_ALREADY_LINKED:
+                case MEDSVC_EMP_ENTRY_ALREADY_EXISTS:
+                case MEDSVC_EMP_NO_EXIST:
                 case GENERIC_OPERATION_OUTCOME_CODE:
                     logError(erpEvent)
                         << KeyValue("event", "Processing task event: Unexpected error. Adding to deadletter queue.")

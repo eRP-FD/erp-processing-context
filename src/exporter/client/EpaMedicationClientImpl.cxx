@@ -118,7 +118,7 @@ boost::asio::awaitable<Tee3Client::Response> EpaMedicationClientImpl::sendReques
     boost::system::result<Tee3Client::Response> resp;
 
     // GEMREQ-start A_24773#reconnect
-    while (mStickyClient && isGracefulError((resp = co_await mStickyClient->sendInner(xRequestId, req, mLogDataBag)).error()))
+    while (mStickyClient && isGracefulError((resp = co_await mStickyClient->sendInner(xRequestId, req, mBdeData)).error()))
     {
         mStickyClient.reset();
         mStickyClient = co_await mTeeClientPool->acquire(mHostname);
@@ -148,7 +148,7 @@ Tee3Client::Request EpaMedicationClientImpl::request(boost::beast::http::verb ve
     return req;
 }
 
-void EpaMedicationClientImpl::addLogData(const std::string& key, const std::any& data)
+void EpaMedicationClientImpl::addLogData(const BDEMessage::Data& bdeData)
 {
-    mLogDataBag[key] = data;
+    mBdeData.merge(bdeData);
 }

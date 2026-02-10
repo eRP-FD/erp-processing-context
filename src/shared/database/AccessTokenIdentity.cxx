@@ -67,47 +67,13 @@ const std::string& AccessTokenIdentity::getOid() const
     return mOid;
 }
 
-std::optional<std::tuple<std::string, std::string, std::string>> extractStrangeJson(const std::string& input) {
-
-    static const std::regex re(
-       R"#(\{"id": "(.+)", "name": "(.+)", "oid": "([0-9.]+)"\})#"
-   );
-
-    std::smatch m;
-    auto ret = std::regex_match(input, m, re);
-    auto s = m.size();
-    if (ret && s == 4) {
-        return { {m[1].str(), m[2].str(), m[3].str()} };
-    }
-    return std::nullopt;
-}
-
 AccessTokenIdentity AccessTokenIdentity::fromJson(const std::string& json)
 {
     rapidjson::Document doc;
     doc.Parse(json);
-    if (doc.HasParseError())
-    {
-        const auto rescued_json = extractStrangeJson(json);
-        if (rescued_json.has_value()) {
-            const auto [id, name, oid] = *rescued_json;
-
-            JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
-                .keyValue("event", "Extracted information from invalid custom JSON representation of JWT.")
-                .keyValue("reason", "Invalid JSON");
-
-            return {model::TelematikId(id), name, oid};
-        }
-        const auto error = doc.GetParseError();
-        std::stringstream ss;
-        ss << "invalid custom json representation of JWT - ";
-        ss << rapidjson::GetParseError_En(error);
-        ss << " at offset ";
-        ss << doc.GetErrorOffset();
-        Fail2(ss.str(), Exception);
-    }
-    return {model::TelematikId(std::string(doc["id"].GetString())),
-                               std::string(doc["name"].GetString()), std::string(doc["oid"].GetString())};
+    Expect3(! doc.HasParseError(), "invalid custom JSON representation of JWT", Exception);
+    return {model::TelematikId(std::string(doc["id"].GetString())), std::string(doc["name"].GetString()),
+            std::string(doc["oid"].GetString())};
 }
 
 AccessTokenIdentity::Exception::Exception(const std::string& what)

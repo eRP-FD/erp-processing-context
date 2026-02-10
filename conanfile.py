@@ -51,7 +51,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.20.0-DEVELOP",
+        'release_version': "1.21.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -72,11 +72,11 @@ class ErpProcessingContext(ConanFile):
         'libpqxx/7.10.1',
         'libxml2/2.14.5',
         'magic_enum/0.9.7',
-        'openssl/3.0.19+erp',
+        'openssl/3.5.5+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20230929',
         'redis-plus-plus/1.3.15',
-        'xmlsec/1.3.7+erp',
+        'xmlsec/1.3.8',
         'zlib/1.3.1',
         'zstd/1.5.7'  # database compression
     ]
@@ -89,13 +89,13 @@ class ErpProcessingContext(ConanFile):
     def requirements(self):
         if self.options.with_hsm_tpm_production:
             self.requires('tpmclient/0.15.0-b40')
-            self.requires('hsmclient/2.18.0-b96')
+            self.requires('hsmclient/2.19.0-b00')
         self.requires('libunwind/1.8.1', override=True) # Conflict originates from glog/0.7.1
         self.requires('libpq/16.8', override=True) # Conflict originates from libpqxx/7.10.1
         self.requires('hiredis/1.3.0', override=True) # Conflict originates from redis-plus-plus/1.3.15
 
     def build_requirements(self):
-        self.tool_requires('xmlsec/1.3.7+erp', options={"shared": False})
+        self.tool_requires('xmlsec/1.3.8', options={"shared": False})
 
 
     def layout(self):

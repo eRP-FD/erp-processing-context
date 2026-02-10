@@ -230,6 +230,7 @@ void fhirtools::FhirResourceGroupConfiguration::Group::findResourceInfoIn(
     const std::set<ConstGroupPtr>& groups) const
 {
     using namespace std::string_literals;
+    std::vector<std::string> collectedErrors;
     for (const auto& grp : groups)
     {
         if (auto grpResult = grp->findResourceInfo(key); grpResult.first)
@@ -241,13 +242,20 @@ void fhirtools::FhirResourceGroupConfiguration::Group::findResourceInfoIn(
             else if (! grpResult.first->inferior && ! result.first->inferior &&
                      (grpResult.first->version != result.first->version || grpResult.second != result.second))
             {
-                logDependencyTree();
-                FPFail2("In group " + mId + ": ambiguous version ("s + to_string(value(result.first).version) + " vs. "s +
+                collectedErrors.emplace_back("In group " + mId + ": ambiguous version ("s + to_string(value(result.first).version) + " vs. "s +
                             to_string(value(grpResult.first).version) + ") or group ("s.append(result.second->id()) +
-                            " vs. "s.append(grpResult.second->id()) + ") for: "s + to_string(key),
-                        std::logic_error);
+                            " vs. "s.append(grpResult.second->id()) + ") for: "s + to_string(key));
             }
         }
+    }
+    if (!collectedErrors.empty())
+    {
+        logDependencyTree();
+        for (const auto & collectedError : collectedErrors)
+        {
+            LOG(ERROR) << collectedError;
+        }
+        FPFail2("see errors above", std::logic_error);
     }
 }
 

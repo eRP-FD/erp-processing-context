@@ -44,6 +44,19 @@ private:
                                  Element::Type type);
 };
 
+// http://hl7.org/fhirpath/N1/#multiplication
+class MathMultiplicationOperator : public BinaryExpression
+{
+public:
+    static constexpr auto IDENTIFIER = "*";
+    using BinaryExpression::BinaryExpression;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
+
+private:
+    static EvaluationContext multiplication(const EvaluationContext& context, const Element& lhs, const Element& rhs,
+                                            Element::Type type);
+};
+
 // http://hl7.org/fhirpath/N1/#abs-integer-decimal-quantity
 class MathAbs : public Expression
 {

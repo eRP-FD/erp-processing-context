@@ -9,6 +9,7 @@
 
 #include "exporter/model/EpaOpProvideDispensationErpInputParameters.hxx"
 #include "exporter/model/EpaOpProvidePrescriptionErpInputParameters.hxx"
+#include "exporter/TransformerBase.hxx"
 
 namespace model
 {
@@ -27,13 +28,9 @@ namespace fhirtools
 struct ValueMapping;
 }
 
-class Epa4AllTransformer
+class Epa4AllTransformer : public TransformerBase
 {
 public:
-    struct FixedValue {
-        rapidjson::Pointer ptr;
-        std::string value;
-    };
     static model::EPAOpProvidePrescriptionERPInputParameters
     transformPrescription(const model::Bundle& kbvBundle, const model::TelematikId& telematikIdFromQes,
                           const model::TelematikId& telematikIdFromJwt, const std::string_view& organizationNameFromJwt,
@@ -63,13 +60,7 @@ private:
                                       const model::KbvMedicationCompounding& kbvMedicationCompounding);
     static void convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
                                      rapidjson::Value& epaIngredient, const model::Pzn& pzn, std::string_view text);
-    static model::NumberAsStringParserDocument
-    transformResource(const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
-                      const std::vector<fhirtools::ValueMapping>& valueMappings,
-                      const std::vector<FixedValue>& fixedValues);
     static void removeMedicationCodeCodingsByAllowlist(rapidjson::Value& medicationResource);
-    static void remove(rapidjson::Value& from, const rapidjson::Pointer& toBeRemoved);
-    static void checkSetAbsentReason(model::NumberAsStringParserDocument& document, const std::string& memberPath);
     static void addToKeyValueArray(model::NumberAsStringParserDocument& document,
                                    const rapidjson::Pointer& arrayPointer, const rapidjson::Pointer& keyPtr,
                                    const std::string_view key, const rapidjson::Pointer& valuePtr,
@@ -81,8 +72,6 @@ private:
                                      const std::string& organizationProfessionOid);
     static void addMedicationTypeExtension(model::NumberAsStringParserDocument& document,
                                            model::EPAMedicationTypeExtension&& typeExtension);
-    static std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
-    getRepo(const fhirtools::DefinitionKey& profileKey);
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_ERP_FHIR_EPA4ALLTRANSFORMER_HXX

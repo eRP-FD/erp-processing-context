@@ -109,11 +109,12 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
             {model::PrescriptionType::apothekenpflichigeArzneimittel, bde::ActivateTask_UC_2_3_160},
             {model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, bde::ActivateTask_UC_2_3_200},
             {model::PrescriptionType::digitaleGesundheitsanwendungen, bde::ActivateTask_UC_2_3_162},
+            {model::PrescriptionType::tRezept, bde::ActivateTask_UC_2_3_166},
             {model::PrescriptionType::direkteZuweisung, bde::ActivateTask_UC_2_3_169},
             {model::PrescriptionType::direkteZuweisungPkv, bde::ActivateTask_UC_2_3_209}});
     A_19022_01.finish();
     // ... 6.1.2.3
-    A_19166_01.start("Register the allowed professionOIDs");
+    A_19166_02.start("Register the allowed professionOIDs");
     // GEMREQ-start A_19166-01
     std::unordered_set acceptEndpointOIDsWf162{oid_kostentraeger};
     std::unordered_set acceptEndpointOIDsWfOther{oid_oeffentliche_apotheke, oid_krankenhausapotheke};
@@ -123,12 +124,13 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                             std::make_unique<AcceptTaskHandler>(OIDsWf{
                                 {PrescriptionType::apothekenpflichigeArzneimittel, acceptEndpointOIDsWfOther},
                                 {PrescriptionType::digitaleGesundheitsanwendungen, acceptEndpointOIDsWf162},
+                                {PrescriptionType::tRezept, acceptEndpointOIDsWfOther},
                                 {PrescriptionType::direkteZuweisung, acceptEndpointOIDsWfOther},
                                 {PrescriptionType::apothekenpflichtigeArzneimittelPkv, acceptEndpointOIDsWfOther},
                                 {PrescriptionType::direkteZuweisungPkv, acceptEndpointOIDsWfOther}}))
         .setErpUseCase(bde::AcceptTask_UC_4_1);
     // GEMREQ-end A_19166-01
-    A_19166_01.finish();
+    A_19166_02.finish();
     // ... 6.1.2.4
     A_19170_02.start("Register the allowed professionOIDs");
     // GEMREQ-start A_19170-02

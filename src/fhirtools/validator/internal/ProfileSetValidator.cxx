@@ -51,7 +51,7 @@ ProfileSetValidator::ProfileSetValidator(ProfileSetValidator* parent, ProfiledEl
 ProfileSetValidator::~ProfileSetValidator() = default;
 
 
-ProfiledElementTypeInfo ProfileSetValidator::rootPointer() const
+const ProfiledElementTypeInfo& ProfileSetValidator::rootPointer() const
 {
     return mRootValidator.definitionPointer();
 }

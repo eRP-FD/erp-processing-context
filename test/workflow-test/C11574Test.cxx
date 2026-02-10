@@ -55,7 +55,7 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
             std::tie(std::ignore, serverResponse) =
                 send(RequestArguments{HttpMethod::POST, dispensePath, dispenseBody, "application/fhir+xml"}
                     .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
-        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
+        ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::NoContent) << serverResponse.getBody();
     }
 
     {
@@ -94,4 +94,4 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
 }
 
 INSTANTIATE_TEST_SUITE_P(C11574TestInst, C11574Test,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

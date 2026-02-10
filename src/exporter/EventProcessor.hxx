@@ -16,11 +16,12 @@
 #include "shared/util/JsonLog.hxx"
 #include "shared/util/Configuration.hxx"
 
-#include <memory>
+#include <boost/asio/awaitable.hpp>
 
 class IEpaMedicationClient;
 class MedicationExporterDatabaseFrontendInterface;
 class MedicationExporterServiceContext;
+class RunLoopScheduler;
 class SafeString;
 
 class EventProcessorInterface
@@ -53,10 +54,14 @@ public:
 
     static std::chrono::seconds calculateExponentialBackoffDelay(std::int32_t retry);
 
+    static boost::asio::awaitable<void> runloopWorker(RunLoopScheduler& scheduler,
+                                                      std::weak_ptr<MedicationExporterServiceContext> serviceContext);
+
 private:
     template<typename FuncT>
     decltype(auto) autocommit(FuncT&& function);
-    void removeEuMedicationDispenseEvents(const model::EventKvnr &kvnr, std::vector<std::unique_ptr<model::TaskEvent>>& events);
+    void removeEuMedicationDispenseEvents(const model::EventKvnr& kvnr,
+                                          std::vector<std::unique_ptr<model::TaskEvent>>& events);
 
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
     void mergeFailingEpas(std::set<std::string>&& failingEpas);

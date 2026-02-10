@@ -13,3 +13,13 @@ package/CodeSystem-ICD-9CM-procedurecodes.json
 # is identical to the one in hl7.fhir.r4.core
 # using the different version is fixed by version-mapper
 package/CodeSystem-data-absent-reason.json
+
+# The following files are patched in 6.5.0 but still use the same version number:
+# use the updated version from 6.5.0
+package/CodeSystem-immunization-recommendation-status.json
+package/CodeSystem-insurance-plan-type.json
+package/CodeSystem-synthesis-type.json
+package/CodeSystem-v2-0560.json
+package/CodeSystem-v2-tables.json
+package/CodeSystem-v3-CodeSystem.json
+package/CodeSystem-v3-RoleClass.json

@@ -20,6 +20,7 @@ public:
     ~ConfigurationFormatter() override;
     explicit ConfigurationFormatter(gsl::not_null<std::shared_ptr<const RuntimeConfiguration>> runtimeConfig);
     void appendRuntimeConfiguration(rapidjson::Document& document) override;
+    void appendFhirPackagesConfiguration(rapidjson::Document& document) override;
 
 private:
   std::shared_ptr<const RuntimeConfiguration> mRuntimeConfig;

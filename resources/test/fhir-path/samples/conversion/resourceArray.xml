@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Resource xmlns="http://hl7.org/fhir" id="conversion-resourceArray">
+  <contained>
+    <Resource id="contained1"/>
+  </contained>
+  <contained>
+    <Resource id="contained2"/>
+  </contained>
+</Resource>

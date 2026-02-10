@@ -20,6 +20,21 @@
 class ErpWorkflowPkvTestP : public ErpWorkflowTestP
 {
 public:
+    std::string getCoverageInsuranceType() const
+    {
+        switch (GetParam())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            case model::PrescriptionType::direkteZuweisung:
+                return "GKV";
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisungPkv:
+            case model::PrescriptionType::tRezept:
+                break;
+        }
+        return "PKV";
+    }
 // GEMREQ-start createChargeItemsWithCommunication
     // Creates test data for the tests regarding deletion of ChargeItem or Consent
     void createChargeItemsWithCommunication(
@@ -42,9 +57,9 @@ public:
         prescriptionIds.resize(numOfTasks);
         for(std::size_t i = 0; i < numOfTasks; ++i)
         {
-            ASSERT_NO_FATAL_FAILURE(
-                closedTasks[i] = createClosedTask(
-                    prescriptionIds[i], kbvBundles[i], closeReceipts[i], accessCodes[i], secrets[i], GetParam(), kvnr));
+            ASSERT_NO_FATAL_FAILURE(closedTasks[i] = createClosedTask(prescriptionIds[i], kbvBundles[i],
+                                                                      closeReceipts[i], accessCodes[i], secrets[i],
+                                                                      GetParam(), kvnr, getCoverageInsuranceType()));
         }
         // Create a charge item for each task
         auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
@@ -127,8 +142,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvConsent)//NOLINT(readability-function-cognitive-c
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr.id()));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr.id(), getCoverageInsuranceType()));
 
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
 
@@ -183,7 +198,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvTaskAcceptWithConsent)//NOLINT(readability-functi
     generateNewRandomKVNR(kvnr);
     std::string qesBundle;
     std::vector<model::Communication> communications;
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode, true));
 
     const auto now = model::Timestamp::now();
     ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
@@ -289,7 +304,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItem)//NOLINT(readability-function-cognitiv
     {
         ASSERT_NO_FATAL_FAILURE(
             createClosedTask(prescriptionIds[i], kbvBundles[i], closeReceipts[i], accessCodes[i], secrets[i],
-                             GetParam(), kvnr.id()));
+                             GetParam(), kvnr.id(), getCoverageInsuranceType()));
     }
     // GEMREQ-start A_22614-02#createAccessCode
     // Create a charge item for each task
@@ -535,7 +550,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdKvnrCheck)//NOLINT(readability-f
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr1.id()));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr1.id(), getCoverageInsuranceType()));
     // Create a charge item for task
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> createdChargeItem;
@@ -581,8 +597,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemGetByIdTelematikIdCheck)//NOLINT(readab
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr, getCoverageInsuranceType()));
     closeReceipt->removeSignature();
     // Create a charge item for task
     const auto telematikIdPharmacy1 = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
@@ -640,8 +656,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cog
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr1));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr1, getCoverageInsuranceType()));
     // Create a charge item for task
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> createdChargeItem;
@@ -692,7 +708,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemDelete)//NOLINT(readability-function-co
     {
         ASSERT_NO_FATAL_FAILURE(
             createClosedTask(prescriptionIds[i], kbvBundles[i], closeReceipts[i], accessCodes[i], secrets[i],
-                             GetParam(), kvnr1));
+                             GetParam(), kvnr1, getCoverageInsuranceType()));
     }
     // Create a charge item for each task
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
@@ -820,8 +836,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPut)//NOLINT(readability-function-cogni
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr, getCoverageInsuranceType()));
     closeReceipt->removeSignature();
     // Create a charge item for task
     const auto telematikIdPharmacy1 = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
@@ -885,7 +901,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvCommunicationsChargChange)
     std::string qesBundle{};
     const std::string kvnr = generateNewRandomKVNR().id();
     std::vector<model::Communication> communications{};
-    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode));
+    ASSERT_NO_FATAL_FAILURE(checkTaskActivate(qesBundle, communications, *prescriptionId, kvnr, accessCode, true));
 
     const auto now = model::Timestamp::now();
     ASSERT_NO_FATAL_FAILURE(consentPost(model::ConsentType::CHARGCONS, kvnr, now));
@@ -1081,8 +1097,6 @@ TEST_P(ErpWorkflowPkvTestP, DeleteEUConsent_NotDeleteChargeInfo)
         GTEST_SKIP() << "Not supported for direkteZuweisungPkv";
     }
     EnvironmentVariableGuard featureToggleGuard("ERP_FEATURE_EU", "true");
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
 
     const auto kvnr = generateNewRandomKVNR().id();
     const auto now = model::Timestamp::now();
@@ -1140,8 +1154,8 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readabili
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
-    ASSERT_NO_FATAL_FAILURE(
-            createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+    ASSERT_NO_FATAL_FAILURE(createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(),
+                                             kvnr, getCoverageInsuranceType()));
     // Create a charge item for task
     const auto telematikIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> createdChargeItem;
@@ -1155,6 +1169,5 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemMultiplePostSameTask)//NOLINT(readabili
 
 // GEMREQ-start InstantiateTest
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowPkvTestPInst, ErpWorkflowPkvTestP,
-                         testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(testutils::pkvPrescriptionTypes()));
 // GEMREQ-end InstantiateTest

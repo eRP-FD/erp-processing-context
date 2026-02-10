@@ -18,8 +18,40 @@
 namespace model
 {
 
+class TaskEventBase
+{
+public:
+    using id_t = std::int64_t;
 
-class TaskEvent
+    TaskEventBase(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, Kvnr kvnr,
+                  std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified, std::int32_t retryCount = 0);
+
+    virtual ~TaskEventBase() = default;
+
+    virtual id_t getId() const;
+    virtual const PrescriptionId& getPrescriptionId() const;
+    virtual PrescriptionType getPrescriptionType() const;
+    virtual const Kvnr& getKvnr() const;
+    virtual const std::string& getHashedKvnr() const;
+    virtual const Bundle& getKbvBundle() const;
+    virtual Timestamp getLastModified() const;
+    virtual std::int32_t getRetryCount() const;
+    virtual const std::string& getXRequestId() const;
+    virtual Timestamp getMedicationRequestAuthoredOn() const;
+
+private:
+    id_t mId;
+    PrescriptionId mPrescriptionId;
+    PrescriptionType mPrescriptionType;
+    Kvnr mKvnr;
+    std::string mHashedKvnr;
+    Bundle mKbvBundle;
+    model::Timestamp mLastModified;
+    std::int32_t mRetryCount{0};
+    std::string mXRequestId{Uuid{}.toString()};
+};
+
+class TaskEvent : public TaskEventBase
 {
 public:
     enum class UseCase : uint8_t
@@ -35,38 +67,16 @@ public:
         deadLetterQueue
     };
 
-    using id_t = std::int64_t;
-
     TaskEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
-              std::string_view hashedKvnr, UseCase useCase, State state, Bundle&& kbvBundle,
-              const model::Timestamp& lastModified);
-    virtual ~TaskEvent() = default;
+              std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified,
+              UseCase useCase, State state);
 
-    virtual id_t getId() const;
-    virtual const PrescriptionId& getPrescriptionId() const;
-    virtual PrescriptionType getPrescriptionType() const;
-    virtual const Kvnr& getKvnr() const;
-    virtual const std::string& getHashedKvnr() const;
     virtual UseCase getUseCase() const;
     virtual State getState() const;
-    virtual const Bundle& getKbvBundle() const;
-    virtual Timestamp getMedicationRequestAuthoredOn() const;
-    virtual Timestamp getLastModified() const;
-    virtual std::int32_t getRetryCount() const;
-    virtual const std::string& getXRequestId() const;
 
 private:
-    id_t mId;
-    PrescriptionId mPrescriptionId;
-    PrescriptionType mPrescriptionType;
-    Kvnr mKvnr;
-    std::string mHashedKvnr;
     UseCase mUseCase;
     State mState;
-    Bundle mKbvBundle;
-    model::Timestamp mLastModified;
-    std::int32_t mRetryCount{0};
-    std::string mXRequestId{Uuid{}.toString()};
 };
 
 struct BareTaskEvent
@@ -147,6 +157,40 @@ public:
                                 Bundle&& kbvBundle, const model::Timestamp& lastModified);
 };
 
+class TRezeptEvent : public TaskEventBase
+{
+public:
+    enum class State : uint8_t
+    {
+        pending,
+        deadLetterQueue,
+        processing
+    };
+
+    TRezeptEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
+                 std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified,
+                 TaskEvent::UseCase useCase, State state,
+                 model::TelematikId orgTelematikId,
+                 Bundle&& medicationDispenseBundle,
+                 model::Timestamp qesSigningTime,
+                 std::int32_t retryCount);
+
+    TaskEvent::UseCase getUseCase() const;
+    State getState() const;
+
+    const model::TelematikId& orgTelematikId() const;
+
+    const Bundle& getMedicationDispenseBundle() const;
+
+    const Timestamp& getQesSigningTime() const;
+
+private:
+    TaskEvent::UseCase mUseCase;
+    State mState;
+    model::TelematikId mOrgTelematikId;
+    Bundle mMedicationDispenseBundle;
+    Timestamp mQesSigningTime;
+};
 
 }// model
 

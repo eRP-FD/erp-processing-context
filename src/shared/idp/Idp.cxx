@@ -11,7 +11,7 @@
 #include "shared/util/TLog.hxx"
 
 
-const Certificate& Idp::getCertificate(void) const
+Certificate Idp::getCertificate() const
 {
     std::lock_guard lock(mMutex);
 
@@ -35,6 +35,29 @@ void Idp::resetCertificate(void)
     std::lock_guard lock(mMutex);
     mSignerCertificate.reset();
 }
+
+
+void Idp::setSecondaryCertificate(Certificate secondaryCertificate)
+{
+    const std::scoped_lock lock(mMutex);
+
+    mSecondaryCertificate.emplace(std::move(secondaryCertificate));
+}
+
+
+std::optional<Certificate> Idp::getSecondaryCertificate() const
+{
+    const std::scoped_lock lock(mMutex);
+    return mSecondaryCertificate;
+}
+
+
+void Idp::resetSecondaryCertificate()
+{
+    const std::scoped_lock lock(mMutex);
+    mSecondaryCertificate.reset();
+}
+
 
 bool Idp::isHealthy() const
 {

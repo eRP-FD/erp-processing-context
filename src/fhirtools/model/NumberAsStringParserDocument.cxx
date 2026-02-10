@@ -7,9 +7,10 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"
+#include "shared/ErpRequirements.hxx"
+#include "shared/util/Base64.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/String.hxx"
-
 
 #include <rapidjson/ostreamwrapper.h>
 #include <regex>
@@ -115,8 +116,10 @@ model::NumberAsStringParserDocument model::NumberAsStringParserDocument::fromJso
 {
     NumberAsStringParserDocument document;
     rj::MemoryStream s(json.data(), json.size());
-    document.ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
-    ModelExpect(!document.HasParseError(), "can not parse json string " + std::string{json});
+    A_28427.start("enforce and validate UTF-8 encoding");
+    document.ParseStream<rj::kParseNumbersAsStringsFlag | rj::kParseValidateEncodingFlag, rj::CustomUtf8>(s);
+    ModelExpect(! document.HasParseError(),
+                "can not parse json string. Erroneous json as base64: " + Base64::encode(json));
     return document;
 }
 
@@ -750,6 +753,7 @@ rj::Document& NumberAsStringParserDocumentConverter::convertToNumbersAsStrings(r
     document.Accept(writer);
     document.SetObject();
     rj::StringStream s(buffer.GetString());
-    document.ParseStream<rj::kParseNumbersAsStringsFlag, rj::CustomUtf8>(s);
+    document.ParseStream<rj::kParseNumbersAsStringsFlag | rj::kParseValidateEncodingFlag, rj::CustomUtf8>(s);
+    ModelExpect(! document.HasParseError(), "can not parse json document (convertToNumbersAsStrings)");
     return document;
 }

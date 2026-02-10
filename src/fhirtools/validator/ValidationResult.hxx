@@ -29,16 +29,18 @@ class ValidationError
 public:
     using MessageReason = std::tuple<Severity, std::string>;
     using ExtendedValidationFailure = std::tuple<Severity, ExtendedValidation>;
+    using Reason = std::variant<FhirConstraint, MessageReason, ExtendedValidationFailure>;
     ValidationError(FhirConstraint, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     ValidationError(MessageReason, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     ValidationError(ExtendedValidationFailure, std::string inFieldName, const FhirStructureDefinition* inProfile = nullptr);
     std::string fieldName;
-    std::variant<FhirConstraint, MessageReason, ExtendedValidationFailure> reason;
+    Reason reason;
     const FhirStructureDefinition* profile = nullptr;
 
     bool operator==(const ValidationError&) const = default;
     auto operator<=>(const ValidationError&) const = default;
     Severity severity() const;
+    std::string text() const;
 };
 
 struct ValidationAdditionalInfo {

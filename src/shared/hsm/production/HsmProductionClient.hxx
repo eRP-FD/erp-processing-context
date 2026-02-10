@@ -11,6 +11,7 @@
 #include "shared/hsm/HsmClient.hxx"
 #include "shared/hsm/HsmException.hxx"
 #include "shared/hsm/HsmEciesCurveMismatchException.hxx"
+#include "shared/util/DurationConsumer.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
 
 
@@ -112,26 +113,31 @@ public:
 
     static std::string hsmErrorCodeString (const uint32_t errorCode);
     static std::string hsmErrorIndexString (const uint32_t errorCode);
-    static std::string hsmErrorDetails (const uint32_t errorCode);
-    static std::string hsmErrorMessage (const size_t status, const uint32_t errorCode);
+    static std::string hsmErrorDetails(const HsmRawSession& session, uint32_t errorCode);
+    static std::string hsmErrorMessage(const HsmRawSession& session, uint32_t errorCode);
+
 private:
     static HsmRawSession logon(const hsmclient::HSMSession& connectedSession,  const HsmIdentity& identity);
 };
 
-#define HsmExpectSuccess(response, message, timer)                                                                     \
-    {                                                                                                                  \
-        if ((response).returnCode != 0)                                                                                \
-        {                                                                                                              \
-            std::ostringstream s;                                                                                      \
-            s << (message) << ": error " << HsmProductionClient::hsmErrorDetails((response).returnCode);               \
-            TVLOG(1) << "throwing HSM exception at " << __FILE__ << ':' << __LINE__ << ": " << s.str();                \
-            (timer).notifyFailure(s.str() + " at " + __FILE__ + ":" + std::to_string(__LINE__));                       \
-            const auto origin = FileNameAndLineNumber({__FILE__, __LINE__});                                           \
-            if ((response).returnCode == ERP_ERR_ECIES_CURVE_MISMATCH)                                                 \
-                throw ExceptionWrapper<HsmEciesCurveMismatchException>::create(origin, s.str(), (response).returnCode);\
-            throw ExceptionWrapper<HsmException>::create(origin, s.str(), (response).returnCode);                      \
-        }                                                                                                              \
+template<typename ResponseType>
+void hsmExpectSuccess(const HsmRawSession& session, const ResponseType response, std::string_view message,
+                      DurationTimer& timer, std::source_location loc = std::source_location::current())
+{
+    if (response.returnCode != 0)
+    {
+        std::ostringstream s;
+        s << message << ": error " << HsmProductionClient::hsmErrorDetails(session, response.returnCode);
+        TVLOG(1) << "throwing HSM exception at " << loc.file_name() << ':' << loc.line() << ": " << s.str();
+        timer.notifyFailure(s.str() + " at " + loc.file_name() + ":" + std::to_string(loc.line()));
+        const auto origin = FileNameAndLineNumber({loc.file_name(), loc.line()});
+        if (response.returnCode == ERP_ERR_ECIES_CURVE_MISMATCH)
+        {
+            throw ExceptionWrapper<HsmEciesCurveMismatchException>::create(origin, s.str(), response.returnCode);
+        }
+        throw ExceptionWrapper<HsmException>::create(origin, s.str(), (response).returnCode);
     }
+}
 
 
 #endif

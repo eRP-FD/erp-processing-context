@@ -17,6 +17,7 @@
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include <date/date.h>
@@ -91,7 +92,7 @@ TEST_F(CommunicationPostEndpointTest, ERP_12846_SubscriptionKeyRefresh)
                                            model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
                                            .toString())
                     .setSender(ActorRole::Insurant, kvnr)
-                    .setRecipient(ActorRole::Doctor, "A-Doctor")
+                    .setRecipient(ActorRole::Pharmacists, "3-x")
                     .setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60")
                     .setPayload(R"({"version":1, "supplyOptionsType": "onPremise"})")
                     .createJsonString();
@@ -297,7 +298,7 @@ TEST_P(CommunicationPostEndpointTestP, ProfileValidity)
             builder.setPrescriptionId(pkvPrescriptionId.toString());
             break;
         case DispReq:
-            builder.setSender(ActorRole::Insurant, kvnr).setRecipient(ActorRole::Pharmacists, "A-Pharmacy");
+            builder.setSender(ActorRole::Insurant, kvnr).setRecipient(ActorRole::Pharmacists, "3-A-Pharmacy");
             builder.setPrescriptionId(gkvPrescriptionId.toString());
             builder.setAccessCode("8ec23b29b2b53d0f8ffd6a17275a584e753e5af4c5fdfc4c7a2f07f7383b2e60");
             break;

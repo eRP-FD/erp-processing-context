@@ -7,34 +7,41 @@
 
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/crypto/DtbpPseudonymization.hxx"
+#include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
+#include "fhirtools/converter/FhirConverter.hxx"
+#include "mock/crypto/MockCryptography.hxx"
 #include "shared/ErpRequirements.hxx"
-#include "shared/network/client/HttpClient.hxx"
 #include "shared/common/Constants.hxx"
 #include "shared/crypto/Certificate.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/model/ProfessionOid.hxx"
+#include "shared/network/client/HttpClient.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/JwtException.hxx"
-#include "mock/crypto/MockCryptography.hxx"
-
+#include "test_config.h"
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CryptoHelper.hxx"
-#include "test/util/ServerTestBase.hxx"
-
-#include <chrono>
-#include <gtest/gtest.h>
-#include <test/util/EnvironmentVariableGuard.hxx>
-
-#include "test_config.h"
-#include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/ServerTestBase.hxx"
 
+#include <gtest/gtest.h>
+#include <test/util/EnvironmentVariableGuard.hxx>
+#include <chrono>
+#include <codecvt>
+
+template<class Facet>
+struct UsableFacet : public Facet {
+    using Facet::Facet;
+    ~UsableFacet() override = default;
+};
+template<typename internT, typename externT, typename stateT>
+using codecvt = UsableFacet<std::codecvt<internT, externT, stateT>>;
 
 class VauRequestHandlerTest : public ServerTestBase
 {
@@ -265,6 +272,36 @@ TEST_F(VauRequestHandlerTest, invalidSignatureJwt)//NOLINT(readability-function-
     ASSERT_THROW(manipulatedJwt.verify(MockCryptography::getEciesPublicKey()), JwtInvalidSignatureException);
 
     A_19132.finish();
+}
+
+TEST_F(VauRequestHandlerTest, idpAllowUseSecondaryCert)//NOLINT(readability-function-cognitive-complexity)
+{
+    const auto originalIdpCert = mContext->idp.getCertificate();
+    mContext->idp.setCertificate(Certificate::createSelfSignedCertificateMock(MockCryptography::getEciesPrivateKey()));
+
+    auto client = createClient();
+    Uuid uuid;
+    auto encryptedRequest = makeEncryptedRequest(HttpMethod::GET, "/Communication/" + uuid.toString(), *mJwt);
+    // Send the request.
+    auto response = client.send(encryptedRequest);
+    // Verify the outer response
+    ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
+    auto innerResponse = mTeeProtocol.parseResponse(response);
+    // Verify the inner response is not authorized
+    ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
+
+    // set secondary certificate to the right idp cert
+    mContext->idp.setSecondaryCertificate(Certificate(originalIdpCert));
+    encryptedRequest = makeEncryptedRequest(HttpMethod::GET, "/Communication/" + uuid.toString(), *mJwt);
+    // Send the request.
+    response = client.send(encryptedRequest);
+    ASSERT_EQ(response.getHeader().status(), HttpStatus::OK);
+    innerResponse = mTeeProtocol.parseResponse(response);
+    // Verify the inner response
+    ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
+
+    mContext->idp.resetSecondaryCertificate();
+    mContext->idp.setCertificate(Certificate(originalIdpCert));
 }
 
 TEST_F(VauRequestHandlerTestForceMockDB, BruteForceHeaderTaskAbort)
@@ -1008,3 +1045,394 @@ TEST_F(VauRequestHandlerTest, pnLogKeyProfession)//NOLINT(readability-function-c
         DtbpPseudonymization::decryptLogData(response.getHeader().header(Header::PnTelematikId).value(), key);
     EXPECT_EQ(telematikId, "X020406082");
 }
+
+TEST_F(VauRequestHandlerTest, utf8BomXml)
+{
+    A_28427.test("UTF-8 BOM before inner request body");
+    auto client = createClient();
+    const std::string bom{static_cast<char>(0xEF), static_cast<char>(0xBB), static_cast<char>(0xBF)};
+    const std::string body = bom + R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(body, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before inner request body");
+}
+
+TEST_F(VauRequestHandlerTest, utf8BomJson)
+{
+    A_28427.test("UTF-8 BOM before inner request body");
+    auto client = createClient();
+    const std::string bom{static_cast<char>(0xEF), static_cast<char>(0xBB), static_cast<char>(0xBF)};
+    const std::string body = bom + R"(
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "workflowType",
+      "valueCoding": {
+        "code": "160",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"
+      }
+    }
+  ]
+}
+)";
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(body, "application/fhir+json"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before inner request body");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEBomXml)
+{
+    A_28427.test("UTF-16-LE BOM before inner request body");
+    auto client = createClient();
+    const std::u16string bom=u"\xFEFF";
+    const std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    auto u16Body = bom + convert.from_bytes(body);
+    std::string_view view{reinterpret_cast<char*>(u16Body.data()), u16Body.size() * 2};
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(view, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before inner request body");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEWithoutBomXml)
+{
+    A_28427.test("UTF-16-LE without BOM before inner request body");
+    auto client = createClient();
+    const std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    auto u16Body = convert.from_bytes(body);
+    std::string_view view{reinterpret_cast<char*>(u16Body.data()), u16Body.size() * 2};
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(view, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "Input is not a FHIR+XML/UTF-8 document");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEBomJson)
+{
+    A_28427.test("UTF-16-LE BOM before inner request body");
+    auto client = createClient();
+    const std::u16string bom=u"\xFEFF";
+    const std::string body = R"(
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "workflowType",
+      "valueCoding": {
+        "code": "160",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"
+      }
+    }
+  ]
+}
+)";
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    auto u16Body = bom + convert.from_bytes(body);
+    std::string_view view{reinterpret_cast<char*>(u16Body.data()), u16Body.size() * 2};
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(view, "application/fhir+json"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before inner request body");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEWithoutBomJson)
+{
+    A_28427.test("UTF-16-LE without BOM before inner request body");
+    auto client = createClient();
+    const std::string body = R"(
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "workflowType",
+      "valueCoding": {
+        "code": "160",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"
+      }
+    }
+  ]
+}
+)";
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    auto u16Body = convert.from_bytes(body);
+    std::string_view view{reinterpret_cast<char*>(u16Body.data()), u16Body.size() * 2};
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(view, "application/fhir+json"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "Input is not a FHIR+JSON/UTF-8 document");
+}
+
+TEST_F(VauRequestHandlerTest, utf16BEBom)
+{
+    A_28427.test("UTF-16-BE BOM before inner request body");
+    auto client = createClient();
+    std::array<unsigned char, 570> utf16be_txt = {
+  0xFE, 0xFF, 0x00, 0x3c, 0x00, 0x50, 0x00, 0x61, 0x00, 0x72, 0x00, 0x61, 0x00, 0x6d,
+  0x00, 0x65, 0x00, 0x74, 0x00, 0x65, 0x00, 0x72, 0x00, 0x73, 0x00, 0x20,
+  0x00, 0x78, 0x00, 0x6d, 0x00, 0x6c, 0x00, 0x6e, 0x00, 0x73, 0x00, 0x3d,
+  0x00, 0x22, 0x00, 0x68, 0x00, 0x74, 0x00, 0x74, 0x00, 0x70, 0x00, 0x3a,
+  0x00, 0x2f, 0x00, 0x2f, 0x00, 0x68, 0x00, 0x6c, 0x00, 0x37, 0x00, 0x2e,
+  0x00, 0x6f, 0x00, 0x72, 0x00, 0x67, 0x00, 0x2f, 0x00, 0x66, 0x00, 0x68,
+  0x00, 0x69, 0x00, 0x72, 0x00, 0x22, 0x00, 0x3e, 0x00, 0x0d, 0x00, 0x0a,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c, 0x00, 0x70, 0x00, 0x61,
+  0x00, 0x72, 0x00, 0x61, 0x00, 0x6d, 0x00, 0x65, 0x00, 0x74, 0x00, 0x65,
+  0x00, 0x72, 0x00, 0x3e, 0x00, 0x0d, 0x00, 0x0a, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c, 0x00, 0x6e,
+  0x00, 0x61, 0x00, 0x6d, 0x00, 0x65, 0x00, 0x20, 0x00, 0x76, 0x00, 0x61,
+  0x00, 0x6c, 0x00, 0x75, 0x00, 0x65, 0x00, 0x3d, 0x00, 0x22, 0x00, 0x77,
+  0x00, 0x6f, 0x00, 0x72, 0x00, 0x6b, 0x00, 0x66, 0x00, 0x6c, 0x00, 0x6f,
+  0x00, 0x77, 0x00, 0x54, 0x00, 0x79, 0x00, 0x70, 0x00, 0x65, 0x00, 0x22,
+  0x00, 0x2f, 0x00, 0x3e, 0x00, 0x0d, 0x00, 0x0a, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c, 0x00, 0x76,
+  0x00, 0x61, 0x00, 0x6c, 0x00, 0x75, 0x00, 0x65, 0x00, 0x43, 0x00, 0x6f,
+  0x00, 0x64, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x67, 0x00, 0x3e, 0x00, 0x0d,
+  0x00, 0x0a, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c, 0x00, 0x73,
+  0x00, 0x79, 0x00, 0x73, 0x00, 0x74, 0x00, 0x65, 0x00, 0x6d, 0x00, 0x20,
+  0x00, 0x76, 0x00, 0x61, 0x00, 0x6c, 0x00, 0x75, 0x00, 0x65, 0x00, 0x3d,
+  0x00, 0x22, 0x00, 0x68, 0x00, 0x74, 0x00, 0x74, 0x00, 0x70, 0x00, 0x73,
+  0x00, 0x3a, 0x00, 0x2f, 0x00, 0x2f, 0x00, 0x67, 0x00, 0x65, 0x00, 0x6d,
+  0x00, 0x61, 0x00, 0x74, 0x00, 0x69, 0x00, 0x6b, 0x00, 0x2e, 0x00, 0x64,
+  0x00, 0x65, 0x00, 0x2f, 0x00, 0x66, 0x00, 0x68, 0x00, 0x69, 0x00, 0x72,
+  0x00, 0x2f, 0x00, 0x65, 0x00, 0x72, 0x00, 0x70, 0x00, 0x2f, 0x00, 0x43,
+  0x00, 0x6f, 0x00, 0x64, 0x00, 0x65, 0x00, 0x53, 0x00, 0x79, 0x00, 0x73,
+  0x00, 0x74, 0x00, 0x65, 0x00, 0x6d, 0x00, 0x2f, 0x00, 0x47, 0x00, 0x45,
+  0x00, 0x4d, 0x00, 0x5f, 0x00, 0x45, 0x00, 0x52, 0x00, 0x50, 0x00, 0x5f,
+  0x00, 0x43, 0x00, 0x53, 0x00, 0x5f, 0x00, 0x46, 0x00, 0x6c, 0x00, 0x6f,
+  0x00, 0x77, 0x00, 0x54, 0x00, 0x79, 0x00, 0x70, 0x00, 0x65, 0x00, 0x22,
+  0x00, 0x2f, 0x00, 0x3e, 0x00, 0x0d, 0x00, 0x0a, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x3c, 0x00, 0x63, 0x00, 0x6f, 0x00, 0x64, 0x00, 0x65,
+  0x00, 0x20, 0x00, 0x76, 0x00, 0x61, 0x00, 0x6c, 0x00, 0x75, 0x00, 0x65,
+  0x00, 0x3d, 0x00, 0x22, 0x00, 0x31, 0x00, 0x36, 0x00, 0x30, 0x00, 0x22,
+  0x00, 0x2f, 0x00, 0x3e, 0x00, 0x0d, 0x00, 0x0a, 0x00, 0x20, 0x00, 0x20,
+  0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c, 0x00, 0x2f,
+  0x00, 0x76, 0x00, 0x61, 0x00, 0x6c, 0x00, 0x75, 0x00, 0x65, 0x00, 0x43,
+  0x00, 0x6f, 0x00, 0x64, 0x00, 0x69, 0x00, 0x6e, 0x00, 0x67, 0x00, 0x3e,
+  0x00, 0x0d, 0x00, 0x0a, 0x00, 0x20, 0x00, 0x20, 0x00, 0x20, 0x00, 0x3c,
+  0x00, 0x2f, 0x00, 0x70, 0x00, 0x61, 0x00, 0x72, 0x00, 0x61, 0x00, 0x6d,
+  0x00, 0x65, 0x00, 0x74, 0x00, 0x65, 0x00, 0x72, 0x00, 0x3e, 0x00, 0x0d,
+  0x00, 0x0a, 0x00, 0x3c, 0x00, 0x2f, 0x00, 0x50, 0x00, 0x61, 0x00, 0x72,
+  0x00, 0x61, 0x00, 0x6d, 0x00, 0x65, 0x00, 0x74, 0x00, 0x65, 0x00, 0x72,
+  0x00, 0x73, 0x00, 0x3e
+};
+    auto view = std::string_view{reinterpret_cast<char*>(utf16be_txt.data()), utf16be_txt.size()};
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(view, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before inner request body");
+}
+
+TEST_F(VauRequestHandlerTest, utf8BomInSignedPrescription)
+{
+    auto task = createTask();
+    A_28428.test("UTF-8 BOM in signed prescription");
+    auto client = createClient();
+    const std::string bom{static_cast<char>(0xEF), static_cast<char>(0xBB), static_cast<char>(0xBF)};
+
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = task.prescriptionId()};
+    auto kbvBundleXml = bom + ResourceTemplates::kbvBundleXml(options);
+    auto cadesBesSignatureFile = CryptoHelper::toCadesBesSignature(std::string(kbvBundleXml), model::Timestamp::now());
+    auto body = R"--(
+<Parameters xmlns="http://hl7.org/fhir">
+    <parameter>
+        <name value="ePrescription" />
+        <resource>
+            <Binary>
+                <contentType value="application/pkcs7-mime" />
+                <data value=")--" +
+                cadesBesSignatureFile + R"--("/>
+            </Binary>
+        </resource>
+    </parameter>
+</Parameters>)--";
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/" + options.prescriptionId.toString() + "/$activate",
+                                    mJwtBuilder.makeJwtArzt(), task.accessCode(), std::make_pair(body, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before XML resource");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEBomInSignedPrescription)
+{
+    auto task = createTask();
+    A_28428.test("UTF-16-LE BOM in signed prescription");
+    auto client = createClient();
+    const std::u16string bom=u"\xFEFF";
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = task.prescriptionId()};
+    auto kbvBundleXml = bom + convert.from_bytes(ResourceTemplates::kbvBundleXml(options));
+    auto cadesBesSignatureFile = CryptoHelper::toCadesBesSignature(
+        std::string(reinterpret_cast<char*>(kbvBundleXml.data()), kbvBundleXml.size() * 2), model::Timestamp::now());
+    auto body = R"--(
+<Parameters xmlns="http://hl7.org/fhir">
+    <parameter>
+        <name value="ePrescription" />
+        <resource>
+            <Binary>
+                <contentType value="application/pkcs7-mime" />
+                <data value=")--" +
+                cadesBesSignatureFile + R"--("/>
+            </Binary>
+        </resource>
+    </parameter>
+</Parameters>)--";
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/" + options.prescriptionId.toString() + "/$activate",
+                                    mJwtBuilder.makeJwtArzt(), task.accessCode(), std::make_pair(body, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "illegal BOM before XML resource");
+}
+
+TEST_F(VauRequestHandlerTest, utf16LEWithoutBomInSignedPrescription)
+{
+    auto task = createTask();
+    A_28428.test("UTF-16-LE without BOM in signed prescription");
+    auto client = createClient();
+
+    std::wstring_convert<codecvt<char16_t,char,std::mbstate_t>, char16_t> convert;
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = task.prescriptionId()};
+    auto kbvBundleXml = convert.from_bytes(ResourceTemplates::kbvBundleXml(options));
+    auto cadesBesSignatureFile = CryptoHelper::toCadesBesSignature(
+        std::string(reinterpret_cast<char*>(kbvBundleXml.data()), kbvBundleXml.size() * 2), model::Timestamp::now());
+    auto body = R"--(
+<Parameters xmlns="http://hl7.org/fhir">
+    <parameter>
+        <name value="ePrescription" />
+        <resource>
+            <Binary>
+                <contentType value="application/pkcs7-mime" />
+                <data value=")--" +
+                cadesBesSignatureFile + R"--("/>
+            </Binary>
+        </resource>
+    </parameter>
+</Parameters>)--";
+
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/" + options.prescriptionId.toString() + "/$activate",
+                                    mJwtBuilder.makeJwtArzt(), task.accessCode(), std::make_pair(body, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "Input is not a FHIR+XML/UTF-8 document");
+}
+
+TEST_F(VauRequestHandlerTest, invalidUtf8Xml)
+{
+    A_28427.test("UTF-8 containing invalid code point");
+    auto client = createClient();
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    using namespace std::string_literals;
+    // inject invalid byte 0b11011111.
+    body = String::replaceAll(body, "160", "\xdf"s + "160");
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(body, "application/fhir+xml"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "Input is not a FHIR+XML/UTF-8 document");
+}
+
+TEST_F(VauRequestHandlerTest, invalidUtf8Json)
+{
+    A_28427.test("UTF-8 containing invalid code point");
+    auto client = createClient();
+    std::string body = R"(
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "workflowType",
+      "valueCoding": {
+        "code": "160",
+        "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"
+      }
+    }
+  ]
+}
+)";
+
+    using namespace std::string_literals;
+    // inject invalid byte 0b11011111.
+    body = String::replaceAll(body, "160", "\xdf"s + "160");
+    auto req = makeEncryptedRequest(HttpMethod::POST, "/Task/$create", mJwtBuilder.makeJwtArzt(), {},
+                                    std::make_pair(body, "application/fhir+json"));
+    auto response = client.send(req);
+    const ClientResponse innerResponse = mTeeProtocol.parseResponse(response);
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
+    expectOperationOutcome(innerResponse, "Input is not a FHIR+JSON/UTF-8 document");
+}
+

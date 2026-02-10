@@ -27,7 +27,7 @@ pipeline {
         )
     }
     environment {
-        ERP_RELEASE_VERSION = "1.20.0"
+        ERP_RELEASE_VERSION = "1.21.0"
         ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
         ERP_POSTGRES_IMAGE = "erp-test-database:${dbImageUUID}"
         GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
@@ -319,7 +319,7 @@ pipeline {
                     }
                     axis {
                         name 'ERP_TEST_DATE'
-                        values 'today', '2026-04-01'
+                        values 'today', '2026-04-01', '2026-07-01'
                     }
                 }
                 stages{

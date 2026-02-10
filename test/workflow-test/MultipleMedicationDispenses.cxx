@@ -29,6 +29,11 @@ public:
 protected:
     void SetUp() override
     {
+        if (isTRezept(GetParam().mPrescriptionType) &&
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        {
+            GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
+        }
         ErpWorkflowTestTemplate<::testing::TestWithParam<Params>>::SetUp();
     }
 
@@ -68,7 +73,8 @@ TEST_P(MultipleMedicationDispensesTestP, MultipleMedicationsOneTaskTest)//NOLINT
 
 
     const auto telematicIdDoctor = jwtArzt().stringForClaim(JWT::idNumberClaim).value();
-    const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    auto jwt = isDiga(GetParam().mPrescriptionType) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicIdPharmacy = jwt.stringForClaim(JWT::idNumberClaim).value();
     std::vector<std::string> actorIdentifiers = {
         telematicIdDoctor,   kvnr, telematicIdPharmacy, telematicIdPharmacy, telematicIdPharmacy,
         telematicIdPharmacy, kvnr};
@@ -224,4 +230,5 @@ INSTANTIATE_TEST_SUITE_P(MultipleMedicationDispensesTestPInst, MultipleMedicatio
                                          Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 5},
                                          Params{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 6},
                                          Params{model::PrescriptionType::direkteZuweisungPkv, 3},
-                                         Params{model::PrescriptionType::direkteZuweisungPkv, 8}));
+                                         Params{model::PrescriptionType::direkteZuweisungPkv, 8},
+                                         Params{model::PrescriptionType::tRezept, 2}));

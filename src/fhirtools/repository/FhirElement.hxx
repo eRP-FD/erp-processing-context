@@ -48,9 +48,9 @@ public:
         std::optional<uint32_t> max = std::nullopt;
         bool isConstraint(bool isArray);
         auto operator<=>(const Cardinality&) const = default;
-        ValidationResults check(uint32_t count, std::string_view elementFullPath, const FhirStructureDefinition*,
-                                const std::shared_ptr<const Element>& element,
-                                const std::string& typeId) const;
+        ValidationResults check(uint32_t count, std::string_view elementFullPath, std::string_view subElementName,
+                                const FhirStructureDefinition* profile, const std::shared_ptr<const Element>& element,
+                                const std::string& typeId, bool isSlice) const;
         bool restricts(const Cardinality&) const;
     private:
         bool isArrayConstraint() const;
@@ -78,7 +78,7 @@ public:
     std::string_view originalFieldName() const;
     const std::string& originalName() const { return mOriginalName.empty()?mName:mOriginalName; }
     const std::string& typeId() const { return isRoot()?mName: mTypeId; }
-    std::list<std::string> profiles() const {return mProfiles; }
+    const std::set<std::string>& profiles() const {return mProfiles; }
     const std::string& contentReference() const { return mContentReference; }
     Representation representation() const { return mRepresentation; }
     const std::vector<FhirConstraint>& getConstraints() const { return mConstraints; }
@@ -123,7 +123,7 @@ private:
     std::string mName;
     std::string mOriginalName;
     std::string mTypeId;
-    std::list<std::string> mProfiles;
+    std::set<std::string> mProfiles;
     std::string mContentReference;
     Representation mRepresentation = Representation::element;
     std::vector<FhirConstraint> mConstraints;
@@ -166,7 +166,7 @@ public:
 
     Builder& addProfile(std::string profile);
 
-    Builder& setProfiles(std::list<std::string> profiles);
+    Builder& setProfiles(std::set<std::string> profiles);
 
     Builder& contentReference(std::string contentReference_);
 
@@ -202,7 +202,7 @@ public:
 
     Builder& maxValueDecimal(const std::string& decimalAsString);
 
-    Builder& addTargetProfile(std::string&& targetProfile);
+    Builder& setTargetProfiles(std::set<std::string> targetProfile);
 
     Builder& structureDefinition(const FhirStructureDefinition* def);
 

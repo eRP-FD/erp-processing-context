@@ -155,3 +155,41 @@ SafeString MedicationExporterDatabaseFrontend::medicationDispenseKey(const db_mo
     return mDerivation.medicationDispenseKey(dbTaskEvent.hashedKvnr, *dbTaskEvent.medicationDispenseBundleBlobId,
                                              *dbTaskEvent.medicationDispenseSalt);
 }
+
+std::optional<std::unique_ptr<model::TRezeptEvent>> MedicationExporterDatabaseFrontend::processNextTRezeptEvent() const
+{
+    auto dbModel = mBackend->processNextTRezeptEvent();
+
+    if (! dbModel)
+    {
+        return std::nullopt;
+    }
+
+    auto keyForTask = taskKey(*dbModel);
+
+    SafeString keyForMedicationDispense{dbModel->medicationDispenseBundle.has_value() ? medicationDispenseKey(*dbModel)
+                                                                                      : SafeString{}};
+
+    return TaskEventConverter(mCodec, mTelematikLookup)
+        .convertToTRezeptEvent(*dbModel, keyForTask, keyForMedicationDispense);
+}
+
+void MedicationExporterDatabaseFrontend::deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const
+{
+    mBackend->deleteTRezeptEvent(eventId);
+}
+
+void MedicationExporterDatabaseFrontend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) const
+{
+    mBackend->updateProcessingDelay(newRetry, delay, eventData);
+}
+
+bool MedicationExporterDatabaseFrontend::isDeadLetter(const model::TRezeptEvent& eventData) const
+{
+    return mBackend->isDeadLetter(eventData);
+}
+
+int MedicationExporterDatabaseFrontend::markDeadLetter(const model::TRezeptEvent& eventData) const
+{
+    return mBackend->markDeadLetter(eventData);
+}

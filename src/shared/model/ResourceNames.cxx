@@ -136,6 +136,14 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::gem_erpeu_pr_organization;
         case GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input:
             return sd::gem_erpeu_pr_par_patch_charge_item_input;
+        case HealthcareServiceDirectory:
+            return sd::healthcare_service_directory;
+        case LocationDirectory:
+            return sd::location_directory;
+        case ERP_TPrescription_CarbonCopy:
+            return sd::erp_tprescription_carbon_copy;
+        case ERP_TPrescription_Organization:
+            return sd::erp_tprescription_organization;
     }
     Fail2("invalid value for ProfileType: " + std::to_string(static_cast<uintmax_t>(profileType)), std::logic_error);
 }
@@ -190,6 +198,8 @@ std::optional<model::ProfileType> model::ProfileInfo::findType()
         {sd::gem_erpeu_pr_practitioner, GEM_ERPEU_PR_Practitioner},
         {sd::gem_erpeu_pr_practitionerrole, GEM_ERPEU_PR_PractitionerRole},
         {sd::gem_erpeu_pr_organization, GEM_ERPEU_PR_Organization},
+        {sd::healthcare_service_directory, HealthcareServiceDirectory},
+        {sd::location_directory, LocationDirectory}
     };
     if (auto profiType = profileUrlToTypeMap.find(url); profiType != profileUrlToTypeMap.end())
     {

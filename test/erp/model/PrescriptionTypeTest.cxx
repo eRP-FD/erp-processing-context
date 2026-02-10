@@ -17,26 +17,6 @@ class PrescriptionTypeTest : public ::testing::TestWithParam<PrescriptionType>
 protected:
 };
 
-TEST_P(PrescriptionTypeTest, isPkv)
-{
-    PrescriptionType prescriptionType = GetParam();
-    if (prescriptionType == PrescriptionType::apothekenpflichtigeArzneimittelPkv ||
-        prescriptionType == PrescriptionType::direkteZuweisungPkv)
-    {
-        EXPECT_TRUE(isPkv(prescriptionType));
-    }
-    else
-    {
-        EXPECT_FALSE(isPkv(prescriptionType));
-    }
-}
-
-TEST(PrescriptionTypeTest, isPkv_badValueThrows)
-{
-    PrescriptionType prescriptionType = static_cast<PrescriptionType>(0);
-    EXPECT_THROW(isPkv(prescriptionType), std::exception);
-}
-
 TEST_P(PrescriptionTypeTest, isDiga)
 {
     PrescriptionType prescriptionType = GetParam();

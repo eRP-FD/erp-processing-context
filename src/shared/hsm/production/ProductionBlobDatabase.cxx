@@ -170,18 +170,17 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob (
 {
     auto transaction = createTransaction();
 
-    const pqxx::result result = transaction->exec_params(
-        "SELECT blob_id, type, name, data, generation,"
-        "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), EXTRACT(EPOCH FROM end_date_time),"
-        "       meta, vau_certificate, pcr_hash "
-        "FROM erp.blob "
-        "WHERE (type = $1 AND blob_id = $2)"
-        "  AND (host_ip IS NULL OR host_ip = $3)"
-        "  AND (build IS NULL OR build = $4)",
-        gsl::narrow<int16_t>(type),
-        gsl::narrow<int32_t>(id),
-        transaction->esc(getHostIp()),
-        transaction->esc(getBuildNumber()));
+    const pqxx::result result =
+        transaction->exec("SELECT blob_id, type, name, data, generation,"
+                          "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
+                          "EXTRACT(EPOCH FROM end_date_time),"
+                          "       meta, vau_certificate, pcr_hash "
+                          "FROM erp.blob "
+                          "WHERE (type = $1 AND blob_id = $2)"
+                          "  AND (host_ip IS NULL OR host_ip = $3)"
+                          "  AND (build IS NULL OR build = $4)",
+                          pqxx::params{gsl::narrow<int16_t>(type), gsl::narrow<int32_t>(id),
+                                       transaction->esc(getHostIp()), transaction->esc(getBuildNumber())});
 
     Expect(!result.empty(), "did not find the requested blob");
     Expect(result.size() == 1, "found more than one blob");
@@ -196,7 +195,7 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob(BlobType type, const ErpVect
 {
     auto transaction = createTransaction();
 
-    const pqxx::result result = transaction->exec_params(
+    const pqxx::result result = transaction->exec(
         "SELECT blob_id, type, name, data, generation,"
         "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
         "EXTRACT(EPOCH FROM end_date_time),"
@@ -205,8 +204,10 @@ BlobDatabase::Entry ProductionBlobDatabase::getBlob(BlobType type, const ErpVect
         "WHERE (type = $1 AND name = $2)"
         "  AND (host_ip IS NULL OR host_ip = $3)"
         "  AND (build IS NULL OR build = $4)",
-        gsl::narrow<int16_t>(type), postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size()),
-        transaction->esc(getHostIp()), transaction->esc(getBuildNumber()));
+        pqxx::params{gsl::narrow<int16_t>(type),
+                     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                     postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size()),
+                     transaction->esc(getHostIp()), transaction->esc(getBuildNumber())});
 
     Expect(! result.empty(), "did not find the requested blob");
     Expect(result.size() == 1, "found more than one blob");
@@ -222,15 +223,15 @@ std::vector<BlobDatabase::Entry> ProductionBlobDatabase::getAllBlobsSortedById()
 {
     auto transaction = createTransaction();
     const pqxx::result result =
-        transaction->exec_params("SELECT blob_id, type, name, data, generation,"
-                                 "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
-                                 "EXTRACT(EPOCH FROM end_date_time),"
-                                 "       meta, vau_certificate, pcr_hash "
-                                 "FROM erp.blob "
-                                 "WHERE (host_ip IS NULL OR host_ip = $1)"
-                                 "  AND (build IS NULL OR build = $2)"
-                                 "ORDER BY blob_id",
-                                 transaction->esc(getHostIp()), transaction->esc(getBuildNumber()));
+        transaction->exec("SELECT blob_id, type, name, data, generation,"
+                          "       EXTRACT(EPOCH FROM expiry_date_time), EXTRACT(EPOCH FROM start_date_time), "
+                          "EXTRACT(EPOCH FROM end_date_time),"
+                          "       meta, vau_certificate, pcr_hash "
+                          "FROM erp.blob "
+                          "WHERE (host_ip IS NULL OR host_ip = $1)"
+                          "  AND (build IS NULL OR build = $2)"
+                          "ORDER BY blob_id",
+                          pqxx::params{transaction->esc(getHostIp()), transaction->esc(getBuildNumber())});
 
     std::vector<Entry> entries;
     entries.reserve(gsl::narrow<size_t>(result.size()));
@@ -252,26 +253,23 @@ BlobId ProductionBlobDatabase::storeBlob (Entry&& entry)
     {
         auto transaction = createTransaction();
 
-        const pqxx::result result = transaction->exec_params(
+        const pqxx::result result = transaction->exec(
             "INSERT INTO erp.blob (type, host_ip, build, name, data, generation, expiry_date_time, start_date_time, "
             "end_date_time, meta, vau_certificate, pcr_hash)"
             "VALUES ($1,$2,$3,$4,$5,$6, TO_TIMESTAMP($7), TO_TIMESTAMP($8), TO_TIMESTAMP($9), $10, $11, $12) "
             "RETURNING blob_id",
-            static_cast<int16_t>(entry.type),
-            hostIp,
-            build,
-            postgres_bytea_view(reinterpret_cast<const std::byte*>(entry.name.data()), entry.name.size()),
-            postgres_bytea_view(entry.blob.data),
-            gsl::narrow<int32_t>(entry.blob.generation),
-            toOptionalSecondsSinceEpoch(entry.expiryDateTime),
-            toOptionalSecondsSinceEpoch(entry.startDateTime),
-            toOptionalSecondsSinceEpoch(entry.endDateTime),
-            createMeta(entry.metaAkName, entry.pcrSet),
-            entry.certificate,
-            entry.pcrHash ? std::basic_string_view<std::byte>{
-                                    reinterpret_cast<const ::std::byte*>(entry.pcrHash->data()), entry.pcrHash->size()}
-                          : std::basic_string_view<std::byte>{}
-        );
+            pqxx::params{
+                static_cast<int16_t>(entry.type), hostIp, build,
+                postgres_bytea_view(reinterpret_cast<const std::byte*>(entry.name.data()), entry.name.size()),
+                postgres_bytea_view(entry.blob.data), gsl::narrow<int32_t>(entry.blob.generation),
+                toOptionalSecondsSinceEpoch(entry.expiryDateTime), toOptionalSecondsSinceEpoch(entry.startDateTime),
+                toOptionalSecondsSinceEpoch(entry.endDateTime), createMeta(entry.metaAkName, entry.pcrSet),
+                entry.certificate,
+                entry.pcrHash
+                    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                    ? std::basic_string_view<std::byte>{reinterpret_cast<const ::std::byte*>(entry.pcrHash->data()),
+                                                        entry.pcrHash->size()}
+                    : std::basic_string_view<std::byte>{}});
         Expect(result.size() == 1, "insertion of new blob failed");
 
         transaction.commit();
@@ -293,11 +291,12 @@ void ProductionBlobDatabase::deleteBlob (
     auto transaction = createTransaction();
     try
     {
-        const pqxx::result result = transaction->exec_params(
+        const pqxx::result result = transaction->exec(
             "DELETE FROM erp.blob "
             "WHERE type = $1 AND name = $2",
-            gsl::narrow<int16_t>(type),
-            postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size()));
+            pqxx::params{gsl::narrow<int16_t>(type),
+                         // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                         postgres_bytea_view(reinterpret_cast<const std::byte*>(name.data()), name.size())});
         Expect(result.empty(), "did not expect an output");
         const auto count = result.affected_rows();
         ErpExpect(count==1, HttpStatus::NotFound, "did not find the blob");
@@ -345,10 +344,8 @@ std::vector<bool> ProductionBlobDatabase::hasValidBlobsOfType (std::vector<BlobT
     query << ")";
 
     auto transaction = createTransaction();
-    const auto result = transaction->exec_params(
-        query.str(),
-        transaction->esc(getHostIp()),
-        transaction->esc(getBuildNumber()));
+    const auto result =
+        transaction->exec(query.str(), pqxx::params{transaction->esc(getHostIp()), transaction->esc(getBuildNumber())});
 
     std::vector<bool> flags (blobTypes.size(), false);
     for (const auto& row : result)

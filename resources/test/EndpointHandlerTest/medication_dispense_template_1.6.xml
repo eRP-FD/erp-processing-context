@@ -1,0 +1,44 @@
+<MedicationDispense xmlns="http://hl7.org/fhir">
+    <id value="###MEDICATION_DISPENSE_ID###" />
+    <meta>
+        <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.6" />
+    </meta>###CONTAINED_MEDICATION###
+    <extension url="http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction">
+        <valueMarkdown value="1-0-1-0"/>
+    </extension>
+    <extension url="http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta">
+        <extension url="language">
+            <valueCode value="de-DE"/>
+        </extension>
+        <extension url="algorithmVersion">
+            <valueString value="0.0.1"/>
+        </extension>
+    </extension>
+    <identifier>
+        <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
+        <value value="###PRESCRIPTION_ID###" />
+    </identifier>
+    <status value="completed" />
+    <medicationReference>
+        <reference value="###MEDICATION_REFERENCE###" />
+    </medicationReference>
+    <subject>
+        <identifier>
+            <system value="http://fhir.de/sid/gkv/kvid-10" />
+            <value value="###INSURANT_KVNR###" />
+        </identifier>
+    </subject>
+    <performer>
+        <actor>
+            <identifier>
+                <system value="https://gematik.de/fhir/sid/telematik-id" />
+                <value value="###TELEMATIK_ID###" />
+            </identifier>
+        </actor>
+    </performer>
+    ###WHENPREPARED###
+    <whenHandedOver value="###WHENHANDEDOVER###" />
+    <dosageInstruction>
+        <text value="1-0-1-0" />
+    </dosageInstruction>
+</MedicationDispense>

@@ -1,5 +1,6 @@
 #include "EventProcessor.hxx"
 #include "BdeMessage.hxx"
+#include "RunLoopScheduler.hxx"
 #include "database/CommitGuard.hxx"
 #include "exporter/ExporterRequirements.hxx"
 #include "exporter/client/EpaMedicationClientImpl.hxx"
@@ -425,10 +426,11 @@ void EventProcessor::checkDeactivateThrottle(const std::string& hostNotFailing)
 
 EpaAccount EventProcessor::ePaAccountLookup(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent)
 {
-    mEpaAccountLookup.lookupClient()
-        .addLogAttribute(BDEMessage::lastModifiedTimestampKey, taskEvent.getLastModified())
-        .addLogAttribute(BDEMessage::prescriptionIdKey, taskEvent.getPrescriptionId().toString())
-        .addLogAttribute(BDEMessage::hashedKvnrKey,  std::make_optional<model::HashedKvnr>(taskEvent.getHashedKvnr()));
+    BDEMessage::Data data;
+    data.lastModified = taskEvent.getLastModified();
+    data.prescriptionId = taskEvent.getPrescriptionId().toString();
+    data.hashedKvnr = model::HashedKvnr(taskEvent.getHashedKvnr());
+    mEpaAccountLookup.lookupClient().addLogAttribute(data);
     auto acc = mEpaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr(),
                                         kvnr.useCachedValues() ? kvnr.getAssignedEpa() : std::nullopt);
     return acc;
@@ -498,4 +500,79 @@ void EventProcessor::removeEuMedicationDispenseEvents(const model::EventKvnr &kv
                                     return eventsToRemove.contains(event.get());
                                 }),
                  events.end());
+}
+
+
+boost::asio::awaitable<void>
+EventProcessor::runloopWorker(RunLoopScheduler& scheduler,
+                              std::weak_ptr<MedicationExporterServiceContext> serviceContext)
+{
+    using namespace std::chrono_literals;
+
+    boost::asio::steady_timer timer{scheduler.getThreadPool().ioContext()};
+    while (! scheduler.getThreadPool().ioContext().stopped())
+    {
+        RunLoopScheduler::Reschedule rescheduleRule{RunLoopScheduler::Reschedule::Delayed};
+        try
+        {
+            auto serviceCtx = serviceContext.lock();
+            if (! serviceCtx)
+            {
+                co_return;
+            }
+            if (scheduler.checkIsPaused(serviceCtx, exporter::RuntimeConfiguration::ProcessorType::EPA))
+            {
+                serviceCtx.reset();
+                timer.expires_after(100ms);
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                continue;
+            }
+
+            EpaAccountLookup accountLookup(*serviceCtx);
+            if (EventProcessor{serviceCtx, accountLookup}.process())
+            {
+                if (scheduler.checkIsThrottled(serviceCtx))
+                {
+                    rescheduleRule = RunLoopScheduler::Reschedule::Throttled;
+                }
+                else
+                {
+                    rescheduleRule = RunLoopScheduler::Reschedule::Immediate;
+                }
+            }
+            else
+            {
+                rescheduleRule = RunLoopScheduler::Reschedule::Delayed;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            rescheduleRule = RunLoopScheduler::Reschedule::TemporaryError;
+            std::string reason = dynamic_cast<const model::ModelException*>(&e) ? "not given" : e.what();
+            JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
+                .keyValue("event", "Processing task events: Unexpected error. Wait before trying next processing.")
+                .keyValue("reason", reason)
+                .locationFromException(e);
+        }
+        switch (rescheduleRule)
+        {
+            case RunLoopScheduler::Reschedule::Immediate:
+                // return into executor to allow handling of other events (like SignalHandler)
+                co_await async_immediate(co_await boost::asio::this_coro::executor);
+                break;
+            case RunLoopScheduler::Reschedule::Delayed:
+                timer.expires_after(std::chrono::seconds(5));
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+            case RunLoopScheduler::Reschedule::Throttled:
+                timer.expires_after(scheduler.getThrottleValue());
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+            case RunLoopScheduler::Reschedule::TemporaryError:
+                // handle KVNR processing error
+                timer.expires_after(std::chrono::seconds(60));
+                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                break;
+        }
+    }
 }

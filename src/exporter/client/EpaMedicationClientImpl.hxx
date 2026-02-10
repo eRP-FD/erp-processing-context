@@ -45,7 +45,7 @@ public:
                                      const std::string& payload) override;
     Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
                                     const std::string& payload) override;
-    void addLogData(const std::string& key, const std::any& data) override;
+    void addLogData(const BDEMessage::Data& bdeData) override;
 
     bool testConnection();
 
@@ -57,7 +57,7 @@ private:
     boost::asio::io_context& mIoContext;
     std::string mHostname;
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
-    std::unordered_map<std::string, std::any> mLogDataBag;
+    BDEMessage::Data mBdeData;
     Tee3ClientPool::Tee3ClientPtr mStickyClient;
     bool mUseStickyClient;
 };

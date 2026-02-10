@@ -24,6 +24,7 @@
 #include "shared/model/KbvBundle.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/OperationOutcome.hxx"
 #include "shared/model/Patient.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceFactory.hxx"
@@ -61,6 +62,11 @@ std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt1
 std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt1)
 {
     return { Header::Authorization, AuthorizationBearerPrefix + jwt1 };
+}
+
+bool HttpsReconnectingClient::testConnection()
+{
+    return mClient->testConnection();
 }
 
 std::unique_ptr<RedisInterface> createRedisInstance (void)
@@ -426,19 +432,21 @@ Task ServerTestBase::addTaskToDatabase(const TaskDescriptor& descriptor)
     }
 
     Task task = createTask(descriptor.accessCode, descriptor.prescriptionType);
+    const bool isPkv = descriptor.isPkv.value_or(model::canBePkv(descriptor.prescriptionType));
+    task.setIsPkv(isPkv);
 
     if (descriptor.status == Task::Status::ready)
     {
-        activateTask(task, descriptor.kvnrPatient, descriptor.expiryDate);
+        activateTask(task, descriptor.kvnrPatient, descriptor.expiryDate, {}, isPkv);
     }
     else if (descriptor.status == Task::Status::inprogress)
     {
-        activateTask(task, descriptor.kvnrPatient);
+        activateTask(task, descriptor.kvnrPatient, {}, {}, isPkv);
         acceptTask(task);
     }
     else if (descriptor.status == Task::Status::completed)
     {
-        activateTask(task, descriptor.kvnrPatient);
+        activateTask(task, descriptor.kvnrPatient, {}, {}, isPkv);
         acceptTask(task);
         closeTask(task, descriptor.telematicIdPharmacy.has_value() ? descriptor.telematicIdPharmacy.value() : mPharmacy.id());
     }
@@ -459,10 +467,11 @@ Task ServerTestBase::createTask(
 
 void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient,
                                   std::optional<model::Timestamp> expiryDate,
-                                  std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions)
+                                  std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions,
+                                  bool isPkv)
 {
-    PrescriptionId prescriptionId = task.prescriptionId();
-    Kvnr kvnr{kvnrPatient, prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv};
+    const PrescriptionId prescriptionId = task.prescriptionId();
+    const Kvnr kvnr{kvnrPatient, isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv};
     task.setKvnr(kvnr);
 
     const auto prescriptionBundleXmlString = mvoOptions.has_value()
@@ -703,6 +712,25 @@ model::ChargeItem ServerTestBase::addChargeItemToDatabase(const ChargeItemDescri
     database->commitTransaction();
 
     return result;
+}
+
+void ServerTestBase::expectOperationOutcome(const ClientResponse& response, const std::string_view expectedDetailsText)
+{
+    EXPECT_TRUE(response.getHeader().contentType().has_value());
+    std::optional<model::OperationOutcome> oo;
+    if (response.getHeader().contentType()->starts_with("application/fhir+xml"))
+    {
+        ASSERT_NO_THROW(
+            oo.emplace(model::OperationOutcome::fromXml(response.getBody(), *StaticData::getXmlValidator())));
+    }
+    else if (response.getHeader().contentType()->starts_with("application/fhir+json"))
+    {
+        ASSERT_NO_THROW(
+            oo.emplace(model::OperationOutcome::fromJson(response.getBody(), *StaticData::getJsonValidator())));
+    }
+    ASSERT_TRUE(oo.has_value());
+    EXPECT_FALSE(oo->issues().empty());
+    EXPECT_EQ(oo->issues()[0].detailsText, expectedDetailsText);
 }
 
 void ServerTestBase::initializeIdp (Idp& idp)

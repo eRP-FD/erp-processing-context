@@ -73,6 +73,12 @@ std::optional<boost::asio::ip::tcp::endpoint> ClientBase<StreamClass>::currentEn
     return mImplementation ? mImplementation->currentEndpoint() : std::nullopt;
 }
 
+template<class StreamClass>
+bool ClientBase<StreamClass>::testConnection()
+{
+    return mImplementation ? mImplementation->testConnection() : false;
+}
+
 
 template class ClientBase<SslStream>;
 template class ClientBase<TcpStream>;

@@ -27,6 +27,7 @@ public:
     constexpr void start(const char* description) const;
 
     constexpr bool implements(const char* description) const;
+    constexpr bool tests(const char* description) const;
 
     /**
      * Mark the end of (a part of) a gematik requirement.
@@ -50,6 +51,11 @@ constexpr void Requirement::start(const char*) const
 }
 
 constexpr bool Requirement::implements(const char*) const
+{
+    return true;
+}
+
+constexpr bool Requirement::tests(const char*) const
 {
     return true;
 }

@@ -11,8 +11,6 @@
 
 TEST(GemErpEuPrParAccessAuthorizationRequestTest, test)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     ResourceTemplates::EuAccessPermissionOptions optionas;
     auto json = ResourceTemplates::euAccessPermissionRequestJson(optionas);
     std::optional<model::GemErpEuPrParAccessAuthorizationRequest> resource;

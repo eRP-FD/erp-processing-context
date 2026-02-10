@@ -10,19 +10,19 @@
 
 #include "shared/model/GemErpPrMedication.hxx"
 #include "shared/model/MedicationDispense.hxx"
-#include "shared/model/GemErpEuPrPractitioner.hxx"
-#include "shared/model/GemErpEuPrPractitionerRole.hxx"
-#include "shared/model/GemErpEuPrOrganization.hxx"
 
 #include <vector>
 
 namespace model
 {
+class MedicationDispenseOperationParameters;
 class MedicationDispenseBundle;
 
 class MedicationsAndDispenses {
 public:
     void addFromBundle(const MedicationDispenseBundle& bundle);
+    void addFromDigaParameters(const model::MedicationDispenseOperationParameters& digaParameters);
+    void addFromParameters(const model::MedicationDispenseOperationParameters& parameters);
     MedicationsAndDispenses filter(const MedicationDispenseId& medicationDispenseId) &&;
 
     bool containsDigaRedeemCode() const;

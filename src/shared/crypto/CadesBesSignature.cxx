@@ -255,9 +255,11 @@ namespace
 
         A_19225_02.start("Check ProfessionOIDs in QES certificate for 160/169/200/209.");
         A_25990.start("Check ProfessionOIDs in QES certificate for 162.");
+        A_27812.start("Check ProfessionOIDs in QES certificate for 166.");
         Expect3(certificate.checkRoles(oidsStr),
                 "The QES-Certificate does not have expected ProfessionOID.",
                 CadesBesSignature::UnexpectedProfessionOidException);
+        A_27812.finish();
         A_25990.finish();
         A_19225_02.finish();
     }

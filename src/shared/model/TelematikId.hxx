@@ -26,6 +26,12 @@ public:
     std::string id() &&;
 
     static bool isTelematikId(std::string_view value);
+
+    // according to A_27767 / Tabelle 5 : Tab_eRPFD_028 Zulässige Empfänger
+    bool isOeffentlicheApotheke() const;
+    bool isKrankenhausApotheke() const;
+    bool isKostentraeger() const;
+
 private:
     std::string mId;
 };

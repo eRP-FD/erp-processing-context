@@ -98,8 +98,8 @@ pipeline {
                             #
                             # Execute tests
                             #
-                            ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS=-83 LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
-                            ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS=-83 LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:mvo-test-report.xml  --gtest_filter=MVO_*
+                            LD_LIBRARY_PATH=../lib ERP_SERVER_HOST="\${ERP_SERVER_HOSTNAME}" ERP_SERVER_PORT="\${ERP_SERVER_PORT}" ERP_IDP_REGISTERED_FD_URI="\${ERP_IDP_REGISTERED_FD_URI}" TEST_QES_PEM_FILE_NAME="\${TEST_QES_PEM_FILE_NAME}" TEST_RESOURCE_MANAGER_PATH="\${TEST_RESOURCE_MANAGER_PATH}" ERP_ADMIN_RC_CREDENTIALS=cred ./erp-integration-test --gtest_output=xml:erp-integration-test.xml  --gtest_filter=-MVO_*
                         """
                     }
                 }

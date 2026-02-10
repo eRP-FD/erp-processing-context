@@ -523,7 +523,7 @@ void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepositoryView& 
 
 // NOLINTNEXTLINE(misc-no-recursion)
 void fhirtools::ReferenceFinder::addProfiles(const FhirStructureRepositoryView& repo,
-                                             const std::list<std::string>& newProfileUrls,
+                                             const std::set<std::string>& newProfileUrls,
                                              std::string_view elementFullPath,
                                              const FhirStructureDefinition* sourceProfile)
 {

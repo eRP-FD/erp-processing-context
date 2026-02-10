@@ -6,10 +6,12 @@
  */
 
 #include "exporter/database/TaskEventConverter.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/model/HashedKvnr.hxx"
 #include "shared/database/AccessTokenIdentity.hxx"
 #include "shared/model/Binary.hxx"
 #include "shared/crypto/Jwt.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "shared/util/JsonLog.hxx"
 
 
@@ -35,6 +37,72 @@ model::BareTaskEvent TaskEventConverter::convertBareEvent(const db_model::Encryp
 
     return model::BareTaskEvent{decodedKvnr, model::HashedKvnr(hashedKvnr), *typedUsecase, prescriptionId,
                                 *typedPrescriptionType};
+}
+
+std::unique_ptr<model::TRezeptEvent> TaskEventConverter::convertToTRezeptEvent(const db_model::TaskEvent& dbTaskEvent,
+                                                                 const SafeString& key,
+                                                                 const SafeString& medicationDispenseKey) const
+{
+    std::unique_ptr<model::TRezeptEvent> result;
+
+    Expect(dbTaskEvent.healthcareProviderPrescription,
+           "missing healthproviderprescription in ProvidePrescription taskevent");
+
+    const auto kvnr = model::Kvnr(std::string_view{mCodec.decode(dbTaskEvent.kvnr, key)});
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    std::string hashedKvnrString(reinterpret_cast<const char*>(dbTaskEvent.hashedKvnr.data()), dbTaskEvent.hashedKvnr.size());
+    model::HashedKvnr hashedKvnr(dbTaskEvent.hashedKvnr);
+
+    const auto usecase = magic_enum::enum_cast<model::TaskEvent::UseCase>(dbTaskEvent.usecase);
+    Expect(usecase.has_value(), "unknown usecase value");
+    Expect(*usecase == model::TaskEvent::UseCase::provideDispensation, "trezept_event with wrong usecase");
+
+    const auto state = magic_enum::enum_cast<model::TRezeptEvent::State>(dbTaskEvent.state);
+    Expect(state.has_value(), "unknown state value");
+
+    const auto prescriptionType =
+        magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<std::uint8_t>(dbTaskEvent.prescriptionType));
+    Expect(prescriptionType.has_value(), "unknown prescription type value");
+
+    A_27823.start("Handle only prescriptions of type 166");
+    Expect(prescriptionType == model::PrescriptionType::tRezept, "Only for tRezept prescriptions");
+    A_27823.finish();
+
+    const auto decryptedProviderPrescription = mCodec.decode(*dbTaskEvent.healthcareProviderPrescription, key);
+    auto prescriptionBundle = model::Binary::fromJsonNoValidation(decryptedProviderPrescription);
+    const auto viewData = prescriptionBundle.data();
+    Expect(viewData.has_value(), "bad healthcareProviderPrescription in task event.");
+    const auto cadesBesSignature = SignedPrescription::fromBinNoVerify(std::string(*viewData));
+
+    const auto& prescription = cadesBesSignature.payload();
+    model::Bundle bundle = model::Bundle::fromXmlNoValidation(prescription);    // TaskEvent.kbvBundle = bundle
+    Expect(dbTaskEvent.medicationDispenseBundle && dbTaskEvent.medicationDispenseBundleBlobId,
+           "no medication dispense in task event");
+    Expect(medicationDispenseKey.size() > 0, "medication dispense key is missing in task event");
+    const auto decryptedMedicationDispense =
+        mCodec.decode(*dbTaskEvent.medicationDispenseBundle, medicationDispenseKey);
+    auto medicationDispenseBundle = model::Bundle::fromJsonNoValidation(decryptedMedicationDispense);
+
+    const auto mds = medicationDispenseBundle.getResourcesByType<model::MedicationDispense>();
+    Expect(not mds.empty(), "Empty medication dispense bundle");
+    const auto orgTelematikId = mds[0].telematikId();
+
+    const model::Timestamp qesSigningTime = cadesBesSignature.getSigningTime().has_value() ? cadesBesSignature.getSigningTime().value() : model::Timestamp::now();
+    result = std::make_unique<model::TRezeptEvent>(
+                                                   dbTaskEvent.id,
+                                                   dbTaskEvent.prescriptionId,
+                                                   *prescriptionType,
+                                                   kvnr,
+                                                   hashedKvnrString,
+                                                   std::move(bundle),
+                                                   dbTaskEvent.lastModified,
+                                                   *usecase,
+                                                   *state,
+                                                   orgTelematikId,
+                                                   std::move(medicationDispenseBundle),
+                                                   qesSigningTime,
+                                                   dbTaskEvent.retryCount);
+    return result;
 }
 
 std::unique_ptr<model::TaskEvent> TaskEventConverter::convert(const db_model::TaskEvent& dbTaskEvent,

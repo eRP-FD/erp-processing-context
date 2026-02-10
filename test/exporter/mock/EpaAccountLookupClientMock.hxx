@@ -18,21 +18,21 @@ public:
     ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
                                                const std::string& host, uint16_t port) override;
 
-    IEpaAccountLookupClient& addLogAttribute(const std::string& key, const std::any& value) override
+    IEpaAccountLookupClient& addLogAttribute(const BDEMessage::Data& data) override
     {
-        mLogAttributes[key] = value;
+        mBdeData.merge(data);
         return *this;
     }
 
-    virtual const std::map<std::string, std::any>& getLogAttributes() const
+    virtual const BDEMessage::Data& getLogAttributes() const
     {
-        return mLogAttributes;
+        return mBdeData;
     }
 
 private:
     HttpStatus mHttpStatus{HttpStatus::OK};
     std::string mResponseBody;
-    std::map<std::string, std::any> mLogAttributes;
+    BDEMessage::Data mBdeData;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_TEST_EXPORTER_MOCK_EPAACCOUNTLOOKUPCLIENTMOCK_HXX

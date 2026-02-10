@@ -31,8 +31,10 @@ public:
 
         auto task1 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pidReady160, .kvnr = kvnr}));
+        task1.setIsPkv(false);
         auto task2 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pidReady200, .kvnr = kvnr}));
+        task2.setIsPkv(true);
         // DRAFT:
         auto task3 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pidDraft200, .kvnr = kvnr}));
@@ -42,31 +44,40 @@ public:
                                          .prescriptionId = pidInProgress160_Own,
                                          .kvnr = kvnr,
                                          .owningPharmacy = telematikId}));
+        task4.setIsPkv(false);
         // IN_PROGRESS:
         auto task5 = model::Task::fromJsonNoValidation(
             ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::InProgress,
                                          .prescriptionId = pidInProgress160_Foreign,
                                          .kvnr = kvnr,
                                          .owningPharmacy = "3-SMC-B-Testkarte-XXXXXXXXXXXXXXXXXXX"}));
+        task5.setIsPkv(false);
         // MVO, READY:
         auto task6 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pidReady160Mvo, .kvnr = kvnr}));
+        task6.setIsPkv(false);
 
         // They are sorted by authoredOn by the get-eu-prescriptions handler;
-        const auto kbvBundle1Xml =
+        auto kbvBundle1Xml =
             ResourceTemplates::kbvBundleXml({.prescriptionId = pidReady160,
                                              .authoredOn = model::Timestamp::now() - std::chrono::days{1},
-                                             .kvnr = kvnr});
-        const auto kbvBundle2Xml = ResourceTemplates::kbvBundleXml(
-            {.prescriptionId = pidReady200, .authoredOn = model::Timestamp::now(), .kvnr = kvnr});
+                                             .kvnr = kvnr,
+                                             .generateNewId = false});
+        kbvBundle1Xml = String::replaceAll(kbvBundle1Xml, "8938aff5-720a-414a-b574-114bd8d1e11c", "non-uuid");
+        const auto kbvBundle2Xml = ResourceTemplates::kbvBundleXml({.prescriptionId = pidReady200,
+                                                                    .authoredOn = model::Timestamp::now(),
+                                                                    .kvnr = kvnr,
+                                                                    .generateNewId = true});
         const auto kbvBundle4Xml =
             ResourceTemplates::kbvBundleXml({.prescriptionId = pidInProgress160_Own,
                                              .authoredOn = model::Timestamp::now() - std::chrono::days{2},
-                                             .kvnr = kvnr});
+                                             .kvnr = kvnr,
+                                             .generateNewId = true});
         const auto kbvBundle5Xml =
             ResourceTemplates::kbvBundleXml({.prescriptionId = pidInProgress160_Foreign,
                                              .authoredOn = model::Timestamp::now() - std::chrono::days{2},
-                                             .kvnr = kvnr});
+                                             .kvnr = kvnr,
+                                             .generateNewId = true});
         // MVO:
         const auto kbvBundle6Xml = ResourceTemplates::kbvBundleMvoXml(
             {.prescriptionId = pidReady160Mvo,
@@ -318,8 +329,12 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_list_Expired)
                                      .prescriptionId = pId,
                                      .expirydate = model::Timestamp::now() - std::chrono::days{1},
                                      .kvnr = kvnr}));
-    const auto kbvBundleXXml = ResourceTemplates::kbvBundleXml(
-        {.prescriptionId = pId, .authoredOn = model::Timestamp::now() - std::chrono::days{1}, .kvnr = kvnr});
+    taskX.setIsPkv(false);
+    const auto kbvBundleXXml =
+        ResourceTemplates::kbvBundleXml({.prescriptionId = pId,
+                                         .authoredOn = model::Timestamp::now() - std::chrono::days{1},
+                                         .kvnr = kvnr,
+                                         .generateNewId = true});
     const auto& kbvBundleX = CryptoHelper::toCadesBesSignature(kbvBundleXXml);
     mockDatabase->insertTask(
         taskX, std::nullopt,
@@ -356,6 +371,7 @@ TEST_F(EuPostGetPrescriptionsHandlerTest, e_prescriptions_list_MvoStartDateNotVa
     auto pId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 33);
     auto taskX = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pId, .kvnr = kvnr}));
+    taskX.setIsPkv(false);
     const auto kbvBundleXXml = ResourceTemplates::kbvBundleMvoXml(
         {.prescriptionId = pId,
          .kvnr = kvnr,

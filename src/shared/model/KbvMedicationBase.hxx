@@ -8,8 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_KBVMEDICATIONBASE_HXX
 
-#include "shared/model/Resource.hxx"
 #include "shared/model/MedicationBase.hxx"
+#include "shared/model/Resource.hxx"
 #include "shared/model/extensions/KBVMedicationCategory.hxx"
 
 #include <optional>
@@ -19,22 +19,22 @@ class XmlValidator;
 
 namespace model
 {
+enum class MedicationCategoryCode
+{
+    ARZNEIMITTELVERORDNUNG,
+    BTM,
+    TREZEPT
+};
+[[nodiscard]] bool isArzneimittelverordnung(MedicationCategoryCode category);
+[[nodiscard]] bool isBTM(MedicationCategoryCode category);
+[[nodiscard]] bool isTRezept(MedicationCategoryCode category);
 
 class KbvMedicationGeneric : public MedicationBase<KbvMedicationGeneric>
 {
 public:
-    KbvMedicationGeneric(NumberAsStringParserDocument&& document)
-        : MedicationBase<KbvMedicationGeneric>(std::move(document))
-    {
-    }
+    KbvMedicationGeneric(NumberAsStringParserDocument&& document);
 
-    bool isNarcotics() const
-    {
-        const auto narcotics = this->template getExtension<KBVMedicationCategory>();
-        ModelExpect(narcotics.has_value(), "Missing medication category.");
-        ModelExpect(narcotics->valueCodingCode().has_value(), "Missing medication category code.");
-        return narcotics->valueCodingCode().value() != "00";
-    }
+    [[nodiscard]] MedicationCategoryCode getCategoryCode() const;
 
 private:
     friend MedicationBase<KbvMedicationGeneric>;

@@ -69,6 +69,10 @@ enum class ProfileType
     GEM_ERPEU_PR_Practitioner,
     GEM_ERPEU_PR_PractitionerRole,
     GEM_ERPEU_PR_Organization,
+    HealthcareServiceDirectory,
+    LocationDirectory,
+    ERP_TPrescription_CarbonCopy,
+    ERP_TPrescription_Organization
 };
 
 // these profiles define "meta.profile" as mandatory elements

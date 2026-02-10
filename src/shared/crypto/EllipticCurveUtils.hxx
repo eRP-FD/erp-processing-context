@@ -63,8 +63,14 @@ public:
     static shared_EVP_PKEY pemToPrivatePublicKeyPair (const SafeString& pemString);
     static shared_EVP_PKEY pemToPublicKey (const SafeString& pemString);
 
-    static shared_EVP_PKEY x962ToPublicKey(const SafeString& derString);
+    /**
+     * Decode the EVP_PKEY from an X509 SubjectPublicKey info format
+     */
+    static shared_EVP_PKEY x962ToPublicKey(const std::string& derString);
     static std::string publicKeyToPem (const shared_EVP_PKEY& publicKey);
+    /**
+     * Encode the EVP_PKEY into an X509 SubjectPublicKey info format
+     */
     static std::string publicKeyToX962Der (const shared_EVP_PKEY& publicKey);
     static std::string privateKeyToPem (const shared_EVP_PKEY& privateKey);
 

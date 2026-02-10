@@ -1,5 +1,7 @@
 {
   "erp-medication-exporter": {
+    "enable-epa": "true",
+    "enable-t-rezept": "true",
     "is-production": "true",
     "server": {
       "thread-count": "8",
@@ -24,6 +26,22 @@
     },
     "ocsp": {
       "gracePeriodEpa": "3600"
+    },
+    "fhir-vzd-client": {
+      "secret": "",
+      "id": "",
+      "tokenUrl": "auth-ref.vzd.ti-dienste.de",
+      "tokenPort": "9443",
+      "apiUrl": "fhir-directory-ref.vzd.ti-dienste.de",
+      "apiPort": "443"
+    },
+    "bfarm-client": {
+      "secret": "",
+      "id": "",
+      "url": "webapps-public.bfarm.de",
+      "port": "443",
+      "numRetries": "20",
+      "maxExponentialBackoff": "8"
     },
     "vau-https-client": {
       "connectTimeoutMilliseconds": "1500",
@@ -76,25 +94,19 @@
         }
       },
       "reference-time-offset-days": "0",
-      "version-mapping": [
-        {
-          "urlRegex": "https://gematik\\.de/fhir/epa-medication/StructureDefinition/.*",
-          "versionRegex": "1\\.0",
-          "realVersion": "1.0.6-2",
-          "renderVersion": "1.0"
-        },
-        {
-          "urlRegex": "https://gematik\\.de/fhir/directory/StructureDefinition/.*",
-          "versionRegex": "0\\.11",
-          "realVersion": "0.11.25",
-          "renderVersion": "0.11"
-        }
-      ],
       "schluesseltabellen": [
         {
           "id": "2025-Q2",
+          "valid-until": "2026-06-30",
           "groups": [
             "KBV-Schluesseltabellen-Q2/25"
+          ]
+        },
+        {
+          "id": "2026-Q3",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "KBV-Schluesseltabellen-Q3/26"
           ]
         }
       ],
@@ -103,6 +115,13 @@
           "id": "epa.medication-1.0.6-2",
           "groups": [
             "de.gematik.epa.medication-1.0.6-2"
+          ]
+        },
+        {
+          "id": "erp.t-prescription-1.1.0-ballot3",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "de.gematik.erp.t-prescription-1.1.0-ballot3"
           ]
         }
       ]

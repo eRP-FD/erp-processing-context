@@ -741,8 +741,6 @@ TEST_P(UnresolveableReferenceInBundleTest, run)
 {
     static rapidjson::Pointer bundleTypePtr{"/type"};
     std::string json = resourceManager.getStringResource(GetParam().fileName);
-    TVLOG(0) << json;
-
     auto doc = model::NumberAsStringParserDocument::fromJson(json);
     doc.setValue(bundleTypePtr, GetParam().bundleType);
 

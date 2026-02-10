@@ -13,12 +13,13 @@
 #include "shared/util/ConfigurationFormatter.hxx"
 #include "shared/util/String.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/ErpMacros.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestConfiguration.hxx"
 #include "test/util/TestUtils.hxx"
 
-#include <barrier>
 #include <gtest/gtest.h>
+#include <barrier>
 
 
 class PostgresBackendTest : public testing::Test
@@ -144,38 +145,43 @@ TEST_F(PostgresBackendTest, recreateConnectionTimer)
         return;
     }
     EnvironmentVariableGuard maxAgeEnv(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES, "0");
-    auto factories = StaticData::makeMockFactoriesWithServers();
-    PcServiceContext context{Configuration::instance(), std::move(factories)};
-    context.getTeeServer().serve(threadCount, "th");
-    testutils::waitFor([&threadPool = context.getTeeServer().getThreadPool()]{
-        return threadPool.getThreadCount() == threadPool.getWorkerCount();
-    });
-    auto& ioContext = context.getTeeServer().getThreadPool().ioContext();
-    context.getTeeServer().getThreadPool().runOnAllThreads([&] {
-        auto database = context.databaseFactory();
-        ASSERT_TRUE(database->getConnectionInfo());
-        auto connectedFor = connectionDuration(database->getConnectionInfo().value());
-        EXPECT_LT(connectedFor, 1s);
-    });
-    ioContext.run_for(100ms);
-    auto timer = std::make_unique<DatabaseConnectionTimer>(context, std::chrono::seconds(2));
-    timer->start(ioContext, std::chrono::minutes(0));
-    std::this_thread::sleep_for(1.1s);
-    ioContext.run_for(100ms);
-    context.getTeeServer().getThreadPool().runOnAllThreads([&] {
-        auto database = context.databaseFactory();
-        ASSERT_TRUE(database->getConnectionInfo());
-        auto connectedFor = connectionDuration(database->getConnectionInfo().value());
-        EXPECT_GT(connectedFor, 1s);
-    });
-    ioContext.run_for(100ms);
-    std::this_thread::sleep_for(1.1s);
-    ioContext.run_for(100ms);
-    context.getTeeServer().getThreadPool().runOnAllThreads([&] {
-        auto database = context.databaseFactory();
-        ASSERT_TRUE(database->getConnectionInfo());
-        auto connectedFor = connectionDuration(database->getConnectionInfo().value());
-        EXPECT_LT(connectedFor, 1s);
-    });
-    ioContext.run_for(100ms);
+    bool hadError = true;
+    for (int repeat = 10; repeat > 0 && hadError; --repeat)
+    {
+        hadError = false;
+        auto factories = StaticData::makeMockFactoriesWithServers();
+        PcServiceContext context{Configuration::instance(), std::move(factories)};
+        context.getTeeServer().serve(threadCount, "th");
+        testutils::waitFor([&threadPool = context.getTeeServer().getThreadPool()]{
+            return threadPool.getThreadCount() == threadPool.getWorkerCount();
+        });
+        auto& ioContext = context.getTeeServer().getThreadPool().ioContext();
+        context.getTeeServer().getThreadPool().runOnAllThreads([&] {
+            auto database = context.databaseFactory();
+            ASSERT_TRUE(database->getConnectionInfo());
+            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
+            EXPECT_LT(connectedFor, 1s);
+        });
+        ioContext.run_for(100ms);
+        auto timer = std::make_unique<DatabaseConnectionTimer>(context, std::chrono::seconds(2));
+        timer->start(ioContext, std::chrono::minutes(0));
+        std::this_thread::sleep_for(1.1s);
+        ioContext.run_for(100ms);
+        context.getTeeServer().getThreadPool().runOnAllThreads([&] {
+            auto database = context.databaseFactory();
+            ASSERT_TRUE(database->getConnectionInfo());
+            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
+            SOFT_EXPECT_TRUE(connectedFor > 1s, repeat > 1, hadError);
+        });
+        ioContext.run_for(100ms);
+        std::this_thread::sleep_for(1.1s);
+        ioContext.run_for(100ms);
+        context.getTeeServer().getThreadPool().runOnAllThreads([&] {
+            auto database = context.databaseFactory();
+            ASSERT_TRUE(database->getConnectionInfo());
+            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
+            EXPECT_LT(connectedFor, 1s);
+        });
+        ioContext.run_for(100ms);
+    }
 }

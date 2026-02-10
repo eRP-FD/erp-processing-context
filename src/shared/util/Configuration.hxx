@@ -53,6 +53,7 @@ enum class ConfigurationKey
     IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH,
     IDP_UPDATE_INTERVAL_MINUTES,
     IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS,
+    IDP_SECONDARY_CERTIFICATE,
     JSON_META_SCHEMA,
     JSON_SCHEMA,
     OCSP_C_FD_SIG_ERP_GRACE_PERIOD,
@@ -155,7 +156,6 @@ enum class ConfigurationKey
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
 
     FEATURE_EU,
-    ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -232,6 +232,23 @@ enum class ConfigurationKey
 
     MEDICATION_EXPORTER_SERNO2TID_PATH,
     MEDICATION_EXPORTER_SERNO2TID_HASH,
+
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_SECRET,
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID,
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL,
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT,
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL,
+    MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_PORT,
+
+    MEDICATION_EXPORTER_BFARM_CLIENT_SECRET,
+    MEDICATION_EXPORTER_BFARM_CLIENT_ID,
+    MEDICATION_EXPORTER_BFARM_CLIENT_URL,
+    MEDICATION_EXPORTER_BFARM_CLIENT_PORT,
+    MEDICATION_EXPORTER_BFARM_CLIENT_NUM_RETRIES,
+    MEDICATION_EXPORTER_BFARM_CLIENT_MAX_EXPONENTIAL_BACKOFF,
+
+    MEDICATION_EXPORTER_ENABLE_EPA,
+    MEDICATION_EXPORTER_ENABLE_T_REZEPT,
 };
 
 
@@ -253,6 +270,7 @@ struct KeyData
         categoryFunctionalStatic = 1 << 5,
         categoryDebug = 1 << 6,
         categoryRuntime = 1 << 7,
+        categoryFhirPackages = 1 << 8,
         all = INT_MAX,
     };
     int flags = none;
@@ -284,11 +302,11 @@ public:
         constexpr static std::string_view fhirResourceGroups = "/fhir/resource-groups";
         constexpr static std::string_view synthesizeCodesystemPath = "/fhir/synthesize-codesystems";
         constexpr static std::string_view synthesizeValuesetPath = "/fhir/synthesize-valuesets";
+        constexpr static std::string_view versionMappingPath = "/fhir/version-mapping";
     };
     struct ERP {
         constexpr static std::string_view fhirResourceViews = "/erp/fhir/resource-views";
         constexpr static std::string_view kbvSchluesseltabellen = "/erp/fhir/schluesseltabellen";
-        constexpr static std::string_view versionMappingPath = "/erp/fhir/version-mapping";
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
             ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
@@ -302,7 +320,6 @@ public:
     struct MedicationExporter {
         constexpr static std::string_view fhirResourceViews = "/erp-medication-exporter/fhir/resource-views";
         constexpr static std::string_view kbvSchluesseltabellen = "/erp-medication-exporter/fhir/schluesseltabellen";
-        constexpr static std::string_view versionMappingPath = "/erp-medication-exporter/fhir/version-mapping";
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE =
             ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE;
         constexpr static ConfigurationKey FHIR_VALIDATION_LEVELS_UNREFERENCED_CONTAINED_RESOURCE =
@@ -610,13 +627,11 @@ public:
     [[nodiscard]] bool timingLoggingEnabled(const std::string& category) const;
     AnrChecksumValidationMode anrChecksumValidationMode() const;
 
-    template <config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::FhirResourceGroupConfiguration fhirResourceGroupConfiguration() const;
     template <config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::FhirResourceViewConfiguration fhirResourceViewConfiguration() const;
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeCodesystem() const;
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeValuesets() const;
-    template<config::ProcessType ProcessT>
     [[nodiscard]] fhirtools::VersionMapper::Config fhirVersionMapping() const;
 
     struct EpaFQDN {
@@ -643,13 +658,7 @@ extern template fhirtools::Severity
         ConfigurationKey, std::type_identity_t<fhirtools::Severity>) const;
 
 
-extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::ERP>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
-extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
-
-extern template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
-extern template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;
-
 
 #endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX

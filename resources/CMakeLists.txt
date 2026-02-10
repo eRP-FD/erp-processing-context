@@ -46,29 +46,53 @@ add_custom_command(OUTPUT ${ERP_HL7_ORG_DEFINITIONS_FILES}
 
 include(fhir)
 fhir_substitute(de.gematik.terminology@1.0.5=@1.0.5-4)
+fhir_substitute(hl7.terminology.r4@7.0.0=@6.5.0)
+fhir_substitute(de.gematik.epa.medication@dev=@1.2.1-dev1)
 
 fhir_install(hl7.fhir.uv.extensions.r4 5.2.0)
 fhir_install(hl7.terminology.r4 6.3.0
         PACKAGE_FIX_SCRIPT fhir/hl7.terminology.r4-6.3.0.split-legacy-codes.cmake)
 
+fhir_install(hl7.terminology.r4 6.5.0
+        PACKAGE_FIX_SCRIPT fhir/hl7.terminology.r4-6.5.0.split-updated-codes.cmake)
+
 fhir_install(de.basisprofil.r4 1.5.0)
 fhir_install(de.basisprofil.r4 1.5.2)
 fhir_install(de.basisprofil.r4 1.5.3)
+fhir_install(de.basisprofil.r4 1.5.4)
+
+# use 2025.0.0 and 2025.0.1 are pretty much identical:
+fhir_substitute(dvmd.kdl.r4@2025.0.0=@2025.0.1)
+fhir_install(dvmd.kdl.r4 2025.0.1)
 
 fhir_install(de.gematik.epa 1.0.6-2)
 fhir_install(de.gematik.epa 1.1.5)
+fhir_install(de.gematik.epa 1.2.0)
 
-fhir_install(de.gematik.epa.medication 1.0.6-2
-        PACKAGE_FIX_SCRIPT "fhir/de.gematik.epa.medication-fix-part-type.cmake" "-DPatch_EXECUTABLE=${Patch_EXECUTABLE}"
-        DEPENDS "fhir/de.gematik.epa.medication-1.0.6-2-fix-part-type.patch"
-)
 fhir_install(de.gematik.epa.medication 1.1.5
-        PACKAGE_FIX_SCRIPT "fhir/de.gematik.epa.medication-fix-part-type.cmake" "-DPatch_EXECUTABLE=${Patch_EXECUTABLE}"
-        DEPENDS "fhir/de.gematik.epa.medication-1.1.5-fix-part-type.patch"
+    PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
+            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+)
+
+fhir_install(de.gematik.epa.medication 1.2.0
+    PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
+            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+)
+
+fhir_install(de.gematik.epa.medication 1.2.1-dev1
+    PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
+            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
 )
 
 fhir_install(de.gematik.fhir.directory 0.11.25)
 fhir_install(de.gematik.fhir.directory 0.13.1)
+fhir_install(de.gematik.fhir.directory 1.0.0)
 
 fhir_install(de.gematik.terminology 1.0.5-4
         PACKAGE_FIX_SCRIPT "fhir/de.gematik.terminology-1.0.x-remove-broken-expansion.cmake"
@@ -77,18 +101,30 @@ fhir_install(de.gematik.terminology 1.0.6
         PACKAGE_FIX_SCRIPT "fhir/de.gematik.terminology-1.0.x-remove-broken-expansion.cmake"
 )
 
+fhir_install(de.gematik.terminology 1.0.7)
+
 fhir_install(de.gematik.ti 1.0.1)
 fhir_install(de.gematik.ti 1.1.0)
+fhir_install(de.gematik.ti 1.1.1)
 
-fhir_install(dvmd.kdl.r4 2025.0.0)
 fhir_install(de.ihe-d.terminology 3.0.1)
+
+fhir_install(de.fhir.medication 1.0.0)
+fhir_install(de.fhir.medication 1.0.2)
 
 fhir_install(kbv.basis 1.7.0)
 fhir_install(kbv.ita.for 1.2.1)
+fhir_install(kbv.ita.for 1.3.0)
 
 fhir_install(de.abda.erezeptabgabedatenbasis 1.5.0)
 
 # Main packages:
+fhir_install(de.gematik.epa.medication 1.0.6-2
+    PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
+            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+)
 fhir_install(de.abda.erezeptabgabedatenpkv 1.4.0)
 fhir_install(de.gematik.erezept.eu 1.1.1
         PACKAGE_FIX_SCRIPT
@@ -98,9 +134,17 @@ fhir_install(de.gematik.erezept.eu 1.1.1
 )
 fhir_install(de.gematik.erezept-patientenrechnung.r4 1.1.0)
 fhir_install(de.gematik.erezept-workflow.r4 1.5.2)
+fhir_install(de.gematik.erezept-workflow.r4 1.6.0)
 fhir_install(kbv.ita.erp 1.3.3)
 fhir_install(kbv.itv.evdga 1.2.2)
+fhir_install(kbv.ita.erp 1.4.0)
 
+fhir_install(de.gematik.erp.t-prescription 1.1.0-ballot3
+    PACKAGE_FIX_SCRIPT
+        "fhir/de.gematik.erp.t-prescription-fix-part-type.cmake"
+            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
+    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+)
 
 
 set(SCHEMA_FILES
@@ -129,6 +173,7 @@ foreach(schema ${SCHEMA_FILES})
 endforeach()
 
 set(FHIR_PROFILES_DIRS
+        "fhir/profiles/r4.extensions-hl7.fhir.r5.core"
         "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.3.1"
         "fhir/profiles/de.abda.erezeptabgabedatenbasis-1.4.1"
         "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0"
@@ -203,11 +248,11 @@ add_dependencies(resources configuration resource_files)
 include(add_erp_config)
 add_erp_config(001_fhir-resource-groups.config
         TEMPLATE "production/001_fhir-resource-groups.config.json.in"
-        COMPONENTS production blob-db-initialization
+        COMPONENTS production blob-db-initialization erp-fhir-ws
 )
 add_erp_config(01_production.config
         TEMPLATE "production/01_production.config.json.in"
-        COMPONENTS production blob-db-initialization
+        COMPONENTS production blob-db-initialization erp-fhir-ws
 )
 add_erp_config(01_production-medication-exporter.config
         TEMPLATE "production/01_production-medication-exporter.config.json.in"
@@ -222,12 +267,16 @@ add_erp_config(02_development.config
 install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/resources/
         DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
         COMPONENT production)
+install(DIRECTORY ${CMAKE_BINARY_DIR}/bin/resources/
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        COMPONENT erp-fhir-ws
+        EXCLUDE_FROM_ALL)
 
 if (NOT TARGET production)
     add_custom_target(production)
 endif()
 
 add_dependencies(production resources)
-
+add_subdirectory(erp-fhir-ws)
 
 

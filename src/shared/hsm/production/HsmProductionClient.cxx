@@ -81,7 +81,7 @@ namespace
      * An expired session should happen seldodmly enough so that using an exception to notify it to the caller is
      * an acceptable overhead.
      */
-    void handleExpiredSession(const uint32_t status)
+    void handleExpiredSession(const HsmRawSession& session, const uint32_t status)
     {
         switch(status)
         {
@@ -93,9 +93,9 @@ namespace
             case ERP_UTIMACO_MESSAGING_FAILED:
             case ERP_UTIMACO_INVALID_USER_NAME:
             case ERP_UTIMACO_UNKNOWN_USER:
-                throw ExceptionWrapper<HsmSessionExpiredException>::create({__FILE__, __LINE__},
-                    "HSM session expired: " + HsmProductionClient::hsmErrorDetails(status),
-                    status);
+                throw ExceptionWrapper<HsmSessionExpiredException>::create(
+                    {__FILE__, __LINE__},
+                    "HSM session expired: " + HsmProductionClient::hsmErrorDetails(session, status), status);
 
             default:
                 // Other error conditions are handled elsewhere.
@@ -123,8 +123,8 @@ namespace
         const hsmclient::DeriveKeyOutput response = (*deriveKey)(
             session.rawSession,
             input);
-        handleExpiredSession(response.returnCode);
-        HsmExpectSuccess(response, "ERP_DeriveTaskKey failed", timer);
+        handleExpiredSession(session, response.returnCode);
+        hsmExpectSuccess(session, response, "ERP_DeriveTaskKey failed", timer);
         Expect(response.derivationDataLength<MaxBuffer, "invalid response from ERP_DeriveTaskKey");
 
         DeriveKeyOutput output;
@@ -155,7 +155,7 @@ namespace
 
     const auto nonceOutput = ::hsmclient::ERP_GenerateNONCE(session.rawSession, ::hsmclient::UIntInput{input});
 
-    HsmExpectSuccess(nonceOutput, "ERP_GenerateNONCE failed", timer);
+    hsmExpectSuccess(session, nonceOutput, "ERP_GenerateNONCE failed", timer);
 
     return {{nonceOutput.NONCE, nonceOutput.NONCE + NONCE_LEN},
             ::ErpBlob{::std::vector<uint8_t>{nonceOutput.BlobOut.BlobData,
@@ -167,7 +167,7 @@ ErpBlob HsmProductionClient::generatePseudonameKey(const ::HsmRawSession& sessio
 {
     auto timer = DurationConsumer::getCurrent().getTimer(DurationCategory::hsm, "erp_generatepseudonamekey");
     const auto result = ::hsmclient::ERP_GeneratePseudonameKey(session.rawSession, ::hsmclient::UIntInput{input});
-    HsmExpectSuccess(result, "ERP_GeneratePseudonameKey failed", timer);
+    hsmExpectSuccess(session, result, "ERP_GeneratePseudonameKey failed", timer);
     return ::ErpBlob{::std::vector<uint8_t>{result.BlobOut.BlobData, result.BlobOut.BlobData + result.BlobOut.BlobLength},
                      result.BlobOut.BlobGeneration};
 }
@@ -179,8 +179,8 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapPseudonameKey(const HsmRawSess
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.Key, input.key);
     const auto response = hsmclient::ERP_UnwrapPseudonameKey(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_UnwrapPseudonameKey failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_UnwrapPseudonameKey failed", timer);
     return createErpArray<Aes256Length>(reinterpret_cast<const uint8_t*>(response.Key));
 }
 
@@ -203,9 +203,9 @@ ErpBlob HsmProductionClient::getTeeToken(
     const hsmclient::SingleBlobOutput response = hsmclient::ERP_GetTEEToken(
         session.rawSession,
         requestInput);
-        handleExpiredSession(response.returnCode);
+    handleExpiredSession(session, response.returnCode);
 
-    HsmExpectSuccess(response, "ERP_GetTEEToken failed", timer);
+    hsmExpectSuccess(session, response, "ERP_GetTEEToken failed", timer);
 
     return convertErpBlob(response.BlobOut);
 }
@@ -270,8 +270,8 @@ ErpArray<Aes128Length> HsmProductionClient::doVauEcies128(
     const auto response = hsmclient::ERP_DoVAUECIES128(
         session.rawSession,
         requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_DoVAUECIES128 failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_DoVAUECIES128 failed", timer);
 
     return createErpArray<Aes128Length>(reinterpret_cast<const uint8_t*>(response.AESKey));
 }
@@ -284,9 +284,10 @@ shared_EVP_PKEY HsmProductionClient::getEcPublicKey(const HsmRawSession& session
     auto response = hsmclient::ERP_GetECPublicKey(
         session.rawSession,
         requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_GetECPublicKey failed", timer);
-    return EllipticCurveUtils::x962ToPublicKey(SafeString{response.keyData, response.keyLength});
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_GetECPublicKey failed", timer);
+    return EllipticCurveUtils::x962ToPublicKey(
+        util::bufferToString(util::rawToBuffer(response.keyData, response.keyLength)));
 }
 
 
@@ -303,9 +304,9 @@ SafeString HsmProductionClient::getVauSigPrivateKey (
     auto response = hsmclient::ERP_GetVAUSIGPrivateKey(
         session.rawSession,
         requestInput);
-        handleExpiredSession(response.returnCode);
+    handleExpiredSession(session, response.returnCode);
 
-    HsmExpectSuccess(response, "ERP_GetVAUSIGPrivateKey failed", timer);
+    hsmExpectSuccess(session, response, "ERP_GetVAUSIGPrivateKey failed", timer);
 
     return SafeString(gsl::span(response.keyData, response.keyLength));
 }
@@ -320,9 +321,9 @@ ErpVector HsmProductionClient::getRndBytes(
     const auto response = hsmclient::ERP_GetRNDBytes(
         session.rawSession,
         hsmclient::UIntInput{gsl::narrow<unsigned int>(input)});
-        handleExpiredSession(response.returnCode);
+    handleExpiredSession(session, response.returnCode);
 
-    HsmExpectSuccess(response, "ERP_GetRNDBytes failed", timer);
+    hsmExpectSuccess(session, response, "ERP_GetRNDBytes failed", timer);
 
     return createErpVector(response.RNDDataLen, response.RNDData);
 }
@@ -341,9 +342,9 @@ ErpArray<Aes256Length> HsmProductionClient::unwrapHashKey(
     const auto response = hsmclient::ERP_UnwrapHashKey(
         session.rawSession,
         requestInput);
-        handleExpiredSession(response.returnCode);
+    handleExpiredSession(session, response.returnCode);
 
-    HsmExpectSuccess(response, "ERP_UnwrapHashKey failed", timer);
+    hsmExpectSuccess(session, response, "ERP_UnwrapHashKey failed", timer);
 
     return createErpArray<Aes256Length>(response.Key);
 }
@@ -358,8 +359,8 @@ ErpBlob HsmProductionClient::wrapRawPayload(const HsmRawSession& session, WrapRa
     requestInput.desiredGeneration = input.generation;
     const auto response = hsmclient::ERP_WrapRawPayloadWithToken(session.rawSession, requestInput);
 
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_WrapRawPayloadWithToken failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_WrapRawPayloadWithToken failed", timer);
     return convertErpBlob(response.BlobOut);
 }
 
@@ -370,8 +371,8 @@ ErpVector HsmProductionClient::unwrapRawPayload(const HsmRawSession& session, Un
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.wrappedRawPayload, input.wrappedRawPayload);
     const auto response = hsmclient::ERP_UnwrapRawPayload(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_UnwrapRawPayload failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_UnwrapRawPayload failed", timer);
     return createErpVector(response.payloadLen, response.rawPayload);
 }
 
@@ -384,8 +385,8 @@ ErpVector HsmProductionClient::signWithVauAutKey(const HsmRawSession& session, S
     requestInput.signableLength = input.signableData.size();
     setInput(requestInput.signableData, input.signableData);
     const auto response = hsmclient::ERP_SignVAUAUTToken(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_SignVAUAUTToken failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_SignVAUAUTToken failed", timer);
     return createErpVector(response.signatureLength, response.signatureData);
 }
 
@@ -398,8 +399,8 @@ ErpBlob HsmProductionClient::wrapPseudonameLogKeyPackage(const HsmRawSession& se
     setInput(requestInput.rawPayload, input.rawPayload);
     requestInput.desiredGeneration = input.generation;
     const auto response = hsmclient::ERP_WrapPseudonameLogKeyPackage(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_WrapPseudonameLogKeyPackage failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_WrapPseudonameLogKeyPackage failed", timer);
     return convertErpBlob(response.BlobOut);
 }
 
@@ -411,8 +412,8 @@ ErpVector HsmProductionClient::unwrapPseudonameLogKeyPackage(const HsmRawSession
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.wrappedRawPayload, input.wrappedRawPayload);
     const auto response = hsmclient::ERP_UnwrapPseudonameLogKeyPackage(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_UnwrapPseudonameLogKeyPackage failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_UnwrapPseudonameLogKeyPackage failed", timer);
     return createErpVector(response.payloadLen, response.rawPayload);
 }
 
@@ -424,8 +425,8 @@ ErpBlob HsmProductionClient::wrapPseudonameLogKey(const HsmRawSession& session, 
     setInput<Aes128Length>(requestInput.AESKey, input.aesKey);
     requestInput.desiredGeneration = input.generation;
     const auto response = hsmclient::ERP_WrapPseudonameLogKey(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_WrapPseudonameLogKey failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_WrapPseudonameLogKey failed", timer);
     return convertErpBlob(response.BlobOut);
 }
 
@@ -437,8 +438,8 @@ ErpArray<Aes128Length> HsmProductionClient::unwrapPseudonameLogKey(const HsmRawS
     setInput(requestInput.TEEToken, input.teeToken);
     setInput(requestInput.Key, input.pseudonameAesKey);
     const auto response = hsmclient::ERP_UnwrapPseudonameLogKey(session.rawSession, requestInput);
-    handleExpiredSession(response.returnCode);
-    HsmExpectSuccess(response, "ERP_UnwrapPseudonameLogKey failed", timer);
+    handleExpiredSession(session, response.returnCode);
+    hsmExpectSuccess(session, response, "ERP_UnwrapPseudonameLogKey failed", timer);
     // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     return createErpArray<Aes128Length>(reinterpret_cast<const uint8_t*>(response.AESKey));
 }
@@ -454,7 +455,7 @@ ErpArray<Aes128Length> HsmProductionClient::unwrapPseudonameLogKey(const HsmRawS
 
     const auto parsedQuote = ::hsmclient::ERP_ParseTPMQuote(input);
 
-    HsmExpectSuccess(parsedQuote, "ERP_ParseTPMQuote failed", timer);
+    hsmExpectSuccess(HsmRawSession{}, parsedQuote, "ERP_ParseTPMQuote failed", timer);
 
     ::ParsedQuote result;
     result.qualifiedSignerName = createErpVector(TPM_NAME_LEN, parsedQuote.qualifiedSignerName);
@@ -497,9 +498,8 @@ HsmRawSession HsmProductionClient::connect (const HsmIdentity& identity)
 
     if (connectedSession.status != hsmclient::HSMAnonymousOpen)
     {
-        Expect(connectedSession.status == hsmclient::HSMAnonymousOpen,
-            "could not connect to HSM " + hsmDeviceString
-                + " : " + HsmProductionClient::hsmErrorMessage(connectedSession.status, connectedSession.errorCode));
+        Fail("could not connect to HSM " + hsmDeviceString + " : " +
+             HsmProductionClient::hsmErrorMessage(HsmRawSession{}, connectedSession.errorCode));
     }
     return logon(connectedSession, identity);
 }
@@ -678,22 +678,31 @@ std::string HsmProductionClient::hsmErrorIndexString (const uint32_t errorCode)
 }
 
 
-std::string HsmProductionClient::hsmErrorDetails (const uint32_t errorCode)
+std::string HsmProductionClient::hsmErrorDetails(const HsmRawSession& session, const uint32_t errorCode)
 {
     std::ostringstream s;
-    s << std::hex << errorCode
-      << " " + hsmErrorCodeString(errorCode);
+    s << std::hex << errorCode << " " + hsmErrorCodeString(errorCode);
     if ((errorCode & ~ERR_INDEX_MASK) != 0)
+    {
         s << " index " << hsmErrorIndexString(errorCode);
+    }
     else
+    {
         s << " without index";
+    }
+    const auto* device = hsmclient::ERP_ClusterGetCurrentDevice(session.rawSession);
+    if (device)
+    {
+        s << " on " << device;
+    }
+
     return s.str();
 }
 
 
-std::string HsmProductionClient::hsmErrorMessage (const size_t status, const uint32_t errorCode)
+std::string HsmProductionClient::hsmErrorMessage(const HsmRawSession& session, uint32_t errorCode)
 {
-    switch(status)
+    switch(session.rawSession.status)
     {
         case hsmclient::HSMUninitialised:
             return "HSMUninitialised";
@@ -706,7 +715,7 @@ std::string HsmProductionClient::hsmErrorMessage (const size_t status, const uin
         case hsmclient::HSMLoginFailed:
             return "HSMLoginFailed";
         case hsmclient::HSMError:
-            return "HSMError: " + hsmErrorDetails(errorCode);
+            return "HSMError: " + hsmErrorDetails(session, errorCode);
 
         default:
             return "unknown HSM session status";

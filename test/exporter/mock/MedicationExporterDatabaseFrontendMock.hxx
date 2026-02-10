@@ -45,6 +45,12 @@ public:
     MOCK_METHOD(void, deleteOneEventForKvnr, (const model::EventKvnr& kvnr, model::TaskEvent::id_t id),
                 (const, override));
     MOCK_METHOD(void, deleteAllEventsForKvnr, (const model::EventKvnr& kvnr), (const, override));
+    MOCK_METHOD(std::optional<std::unique_ptr<model::TRezeptEvent>>, processNextTRezeptEvent, (), (const, override));
+    MOCK_METHOD(void, deleteTRezeptEvent, (model::TRezeptEvent::id_t eventId), (const, override));
+    MOCK_METHOD(void, updateProcessingDelay,
+                (std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData), (const, override));
+    MOCK_METHOD(bool, isDeadLetter, (const model::TRezeptEvent& eventData), (const, override));
+    MOCK_METHOD(int, markDeadLetter, (const model::TRezeptEvent& eventData), (const, override));
     MOCK_METHOD(void, updateProcessingDelay,
                 (std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr), (const, override));
     MOCK_METHOD(void, finalizeKvnr, (const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix),
@@ -73,6 +79,12 @@ public:
     std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const override;
     void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const override;
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const override;
+    std::optional<std::unique_ptr<model::TRezeptEvent>> processNextTRezeptEvent() const override;
+    void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const override;
+    void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                               const model::TRezeptEvent& eventData) const override;
+    bool isDeadLetter(const model::TRezeptEvent& eventData) const override;
+    int markDeadLetter(const model::TRezeptEvent& eventData) const override;
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                const model::EventKvnr& kvnr) const override;
     void finalizeKvnr(const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix) const override;

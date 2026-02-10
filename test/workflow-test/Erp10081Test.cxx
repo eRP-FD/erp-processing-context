@@ -23,8 +23,21 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
     std::optional<model::ErxReceipt> closeReceipt;
     std::string accessCode;
     std::string secret;
+    std::string coverageInsuranceType = "PKV";
+    switch (GetParam())
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::direkteZuweisung:
+            coverageInsuranceType = "GKV";
+            break;
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+        case model::PrescriptionType::tRezept:
+            break;
+    }
     ASSERT_NO_FATAL_FAILURE(
-        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr));
+        createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret, GetParam(), kvnr, coverageInsuranceType));
 
     std::optional<model::Consent> consent;
     ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, model::Timestamp::now()));
@@ -38,7 +51,7 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::direkteZuweisung:
-            A_22731.test("wrong flow type for ChargeItem");
+            A_22731_01.test("wrong flow type for ChargeItem");
             mChargeItemRequestArgs.overrideExpectedDavVersion = "XXX";
             mChargeItemRequestArgs.overrideExpectedPatientenrechnungVersion = "XXX";
             ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(
@@ -52,6 +65,7 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
+        case model::PrescriptionType::tRezept:
             ASSERT_NO_FATAL_FAILURE(chargeItem = chargeItemPost(*prescriptionId, kvnr, telematikId, secret));
             ASSERT_TRUE(chargeItem);
             break;
@@ -59,4 +73,4 @@ TEST_P(Erp10081Test, ChargeItemFlowType)
 }
 
 INSTANTIATE_TEST_SUITE_P(Erp10081TestInst, Erp10081Test,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

@@ -62,8 +62,10 @@ SignedPrescription SignedPrescription::doUnpackCadesBesSignature(const std::stri
     catch (const CadesBesSignature::UnexpectedProfessionOidException& ex)
     {
         A_19225_02.start("Report 400 because of unexpected ProfessionOIDs in QES certificate.");
-        A_25990.start("Report 400 because of unexpected QES certificate.");
+        A_25990.start("Report 400 because of unexpected unexpected ProfessionOIDs in QES certificate.");
+        A_27812.start("Report 400 because of unexpected unexpected ProfessionOIDs in QES certificate.");
         VauFail(HttpStatus::BadRequest, VauErrorCode::invalid_prescription, ex.what());
+        A_27812.finish();
         A_25990.finish();
         A_19225_02.finish();
     }

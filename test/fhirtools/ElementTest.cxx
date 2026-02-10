@@ -441,6 +441,156 @@ TEST_F(ElementTest, QuantityConstructor)
     EXPECT_EQ(q7.unit(), "");
 }
 
+
+TEST_F(ElementTest, ValueSelectorString)
+{
+    const auto* type = mRepo->findTypeById("string");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"("str")");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::String);
+    ASSERT_EQ(value->asString(), "str");
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorInteger)
+{
+    const auto* type = mRepo->findTypeById("integer");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"(10)");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Integer);
+    ASSERT_EQ(value->asInt(), 10);
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorDecimal)
+{
+    const auto* type = mRepo->findTypeById("decimal");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"(0.815)");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Decimal);
+    ASSERT_EQ(value->asDecimal(), fhirtools::DecimalType{"0.815"});
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorBoolean)
+{
+    const auto* type = mRepo->findTypeById("boolean");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"(true)");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Boolean);
+    ASSERT_EQ(value->asBool(), true);
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorDate)
+{
+    const auto* type = mRepo->findTypeById("date");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"("2020-11-20")");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Date);
+    ASSERT_EQ(value->asDate().compareTo(fhirtools::Date("2020-11-20")), std::strong_ordering::equal);
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorDateTime)
+{
+    const auto* type = mRepo->findTypeById("dateTime");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"("2015-02-07T13:28:17-05:00")");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::DateTime);
+    ASSERT_EQ(value->asDateTime().compareTo(fhirtools::DateTime("2015-02-07T13:28:17-05:00")), std::strong_ordering::equal);
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorTime)
+{
+    const auto* type = mRepo->findTypeById("time");
+    ASSERT_NE(type, nullptr);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"("13:28:17")");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*type}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Time);
+    ASSERT_EQ(value->asTime().compareTo(fhirtools::Time("13:28:17")), std::strong_ordering::equal);
+    ASSERT_TRUE(value->subElements("value").empty());
+}
+
+TEST_F(ElementTest, ValueSelectorQuantity)
+{
+    const auto* quantityType = mRepo->findTypeById("Quantity");
+    ASSERT_NE(quantityType, nullptr);
+    // NOTE: Quantity is not a primitive type
+    // see: https://simplifier.net/packages/hl7.fhir.r4.core/4.0.1/files/2998175
+    ASSERT_NE(quantityType->kind(), fhirtools::FhirStructureDefinition::Kind::primitiveType);
+    auto testResource = model::NumberAsStringParserDocument::fromJson(R"({"value": "47.11", "unit": "cl"})");
+    auto erpElement = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                   fhirtools::ProfiledElementTypeInfo{*quantityType}, &testResource);
+    auto valueElements = erpElement->subElements("value");
+    ASSERT_FALSE(valueElements.empty());
+    auto value = valueElements.at(0);
+    ASSERT_NE(value, nullptr);
+    ASSERT_EQ(value->parent(), erpElement);
+    // When selecting `value` we get the field `value` which has primitive-type `decimal`
+    ASSERT_EQ(value->type(), fhirtools::Element::Type::Decimal);
+    ASSERT_EQ(value->asDecimal(), fhirtools::DecimalType("47.11"));
+    // as `value` itself is a primitive-type we can get its value (i.e. `value.value`):
+    auto valueValueElements = value->subElements("value");
+    ASSERT_FALSE(valueValueElements.empty());
+    auto valueValue = valueValueElements.at(0);
+    ASSERT_NE(valueValue, nullptr);
+    ASSERT_EQ(valueValue->parent(), value);
+    ASSERT_EQ(valueValue->type(), fhirtools::Element::Type::Decimal);
+    ASSERT_EQ(valueValue->asDecimal(), fhirtools::DecimalType("47.11"));
+    // as `value.value` is system-type System.Decimal there is no further `value` subElement
+    ASSERT_TRUE(valueValue->subElements("value").empty());
+}
+
 TEST_F(ElementTest, Equals1)
 {
     auto testResource = model::NumberAsStringParserDocument::fromJson(

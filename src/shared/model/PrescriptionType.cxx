@@ -11,22 +11,6 @@
 namespace model
 {
 
-bool isPkv(PrescriptionType prescriptionType)
-{
-    switch (prescriptionType)
-    {
-        case PrescriptionType::apothekenpflichigeArzneimittel:
-        case PrescriptionType::direkteZuweisung:
-        case PrescriptionType::digitaleGesundheitsanwendungen:
-            return false;
-        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-        case PrescriptionType::direkteZuweisungPkv:
-            return true;
-    }
-    Fail2("invalid PrescriptionType " + std::to_string(static_cast<uintmax_t>(prescriptionType)), std::logic_error);
-    return false;
-}
-
 bool isDiga(PrescriptionType prescriptionType)
 {
     switch (prescriptionType)
@@ -38,6 +22,7 @@ bool isDiga(PrescriptionType prescriptionType)
         case PrescriptionType::direkteZuweisung:
         case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case PrescriptionType::direkteZuweisungPkv:
+        case PrescriptionType::tRezept:
             return false;
     }
     Fail2("invalid PrescriptionType " + std::to_string(static_cast<uintmax_t>(prescriptionType)), std::logic_error);
@@ -54,11 +39,59 @@ bool isDirectAssignment(PrescriptionType prescriptionType)
         case PrescriptionType::digitaleGesundheitsanwendungen:
         case PrescriptionType::apothekenpflichigeArzneimittel:
         case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::tRezept:
             return false;
     }
     Fail2("invalid PrescriptionType " + std::to_string(static_cast<uintmax_t>(prescriptionType)), std::logic_error);
     return false;
 }
 
+bool canBeGkv(PrescriptionType prescriptionType)
+{
+    switch (prescriptionType)
+    {
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+        case PrescriptionType::digitaleGesundheitsanwendungen:
+        case PrescriptionType::direkteZuweisung:
+        case PrescriptionType::tRezept:
+            return true;
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
+    return false;
+}
+
+bool canBePkv(PrescriptionType prescriptionType)
+{
+    switch (prescriptionType)
+    {
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::direkteZuweisungPkv:
+        case PrescriptionType::tRezept:
+            return true;
+        case PrescriptionType::digitaleGesundheitsanwendungen:
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+        case PrescriptionType::direkteZuweisung:
+            break;
+    }
+    return false;
+}
+
+bool isTRezept(PrescriptionType prescriptionType)
+{
+    switch (prescriptionType)
+    {
+        case PrescriptionType::tRezept:
+            return true;
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+        case PrescriptionType::digitaleGesundheitsanwendungen:
+        case PrescriptionType::direkteZuweisung:
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
+    return false;
+}
 
 }

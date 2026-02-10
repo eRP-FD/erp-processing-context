@@ -1,0 +1,45 @@
+/*
+ (C) Copyright IBM Deutschland GmbH 2021, 2025
+ (C) Copyright IBM Corp. 2021, 2025
+
+ non-exclusively licensed to gematik GmbH
+*/
+
+@import "tailwindcss";
+
+.switch-container {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.switch-handle {
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.warning {
+    background-color: lightyellow;
+}
+
+.error, .fatal {
+    background-color: lightpink;
+}
+
+@layer components {
+    /* --- Custom Toggle Switch Components --- */
+    /* These remain custom classes because they apply a non-standard look and role (role="switch") */
+
+    .custom-toggle {
+        @apply relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out;
+    }
+
+    .custom-toggle-handle {
+        @apply pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition duration-200 ease-in-out;
+    }
+
+    select {
+        @apply space-x-4 p-3 rounded-xl border border-gray-200 bg-gray-50 shadow-sm;
+    }
+    textarea {
+        @apply space-x-4 p-3 rounded-xl border border-gray-200 bg-gray-50 shadow-sm;
+    }
+
+}
+

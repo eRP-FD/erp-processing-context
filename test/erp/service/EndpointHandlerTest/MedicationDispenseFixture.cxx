@@ -53,6 +53,12 @@ std::list<MedicationDispenseFixture::ProfileValidityTestParams> MedicationDispen
 
         { failure , "2026-01-12", parameters, V::GEM_ERP_1_4 },
         { success , "2026-01-12", parameters, V::GEM_ERP_1_5_2 },
+
+        { success , "2026-06-30", parameters, V::GEM_ERP_1_5_2 },
+        { failure , "2026-06-30", parameters, V::GEM_ERP_1_6_0 },
+
+        { success , "2026-07-01", parameters, V::GEM_ERP_1_5_2 },
+        { success , "2026-07-01", parameters, V::GEM_ERP_1_6_0 },
     };
 }
 
@@ -88,6 +94,11 @@ std::list<MedicationDispenseFixture::MaxWhenHandedOverTestParams> MedicationDisp
         { failure , {"2025-01-12", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
         { success , {"2025-10-01", "2025-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
         { success , {"2026-01-10", "2026-01-11", "2025-01-15"}, parameters, V::GEM_ERP_1_5_2 },
+
+        { failure , {"2026-01-10", "2026-06-30", "2025-01-15"}, parameters, V::GEM_ERP_1_6_0 },
+        { success , {"2026-07-01", "2026-01-10", "2025-01-15"}, parameters, V::GEM_ERP_1_6_0 },
+        { success , {"2026-01-10", "2026-07-01", "2025-01-15"}, parameters, V::GEM_ERP_1_6_0 },
+        { success , {"2026-01-10", "2025-01-15", "2026-07-01"}, parameters, V::GEM_ERP_1_6_0 },
     };
 }
 

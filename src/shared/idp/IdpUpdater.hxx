@@ -100,6 +100,7 @@ private:
     std::unique_ptr<PeriodicTimerBase> mUpdater;
     boost::asio::io_context& mIo;
 
+    void updateSecondaryCertificate();
     Certificate getUpToDateCertificate (void);
     UrlHelper::UrlParts downloadAndParseWellknown (void);
     std::vector<Certificate> downloadAndParseDiscovery (const UrlHelper::UrlParts& url);

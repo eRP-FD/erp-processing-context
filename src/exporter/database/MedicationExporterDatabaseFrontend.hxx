@@ -58,6 +58,12 @@ public:
     void finalizeKvnr(const model::EventKvnr& kvnr,
                       const std::string& assignedEpaPrefix) const override;
 
+    std::optional<std::unique_ptr<model::TRezeptEvent>> processNextTRezeptEvent() const override;
+    void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const override;
+    void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) const override;
+    bool isDeadLetter(const model::TRezeptEvent& eventData) const override;
+    int markDeadLetter(const model::TRezeptEvent& eventData) const override;
+
 private:
     static std::shared_ptr<Compression> compressionInstance();
     [[nodiscard]] SafeString taskKey(const db_model::TaskEvent& dbTaskEvent) const;

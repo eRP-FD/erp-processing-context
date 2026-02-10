@@ -251,7 +251,7 @@ void DatabaseFrontend::activateTask(const model::Task& task, const SafeString& k
 
     mBackend->activateTask(task.prescriptionId(), encrypedKvnr, hashedKvnr, task.status(), task.lastModifiedDate(),
                            task.expiryDate(), task.acceptDate(), encryptedPrescription, encryptedDoctorIdentity,
-                           task.lastStatusChangeDate(), task.isEuRedeemableByProperties());
+                           task.lastStatusChangeDate(), task.isEuRedeemableByProperties(), task.isPkv());
 }
 
 void DatabaseFrontend::updateTaskMedicationDispense(const model::Task& task,
@@ -535,7 +535,7 @@ std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const mode
     for (const auto& dbTask : dbTaskList)
     {
         auto modelTask = getModelTask(dbTask);
-        auto kvnrType = modelTask.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+        auto kvnrType = dbTask.isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
         modelTask.setKvnr(model::Kvnr{kvnr.id(), kvnrType});
         allTasks.emplace_back(std::move(modelTask));
     }
@@ -678,7 +678,7 @@ std::vector<Uuid> DatabaseFrontend::retrieveCommunicationIds(const std::string& 
 }
 
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+std::optional<Uuid>
 DatabaseFrontend::deleteCommunication(const Uuid& communicationId, const std::string& sender)
 {
     return mBackend->deleteCommunication(communicationId, mDerivation.hashIdentity(sender));
@@ -937,10 +937,10 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
 {
 
     model::Task modelTask(dbTask.prescriptionId, dbTask.prescriptionId.type(), dbTask.lastModified, dbTask.authoredOn,
-                          dbTask.status, dbTask.lastStatusChange);
+                          dbTask.status, dbTask.lastStatusChange, dbTask.isPkv);
     if (dbTask.kvnr && key)
     {
-        const auto type = dbTask.prescriptionId.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+        const auto type = dbTask.isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
         modelTask.setKvnr(model::Kvnr{std::string_view{mCodec.decode(*dbTask.kvnr, *key)}, type});
     }
     if (dbTask.expiryDate)

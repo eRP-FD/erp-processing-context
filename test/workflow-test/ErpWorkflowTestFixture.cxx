@@ -106,10 +106,12 @@ void ErpWorkflowTestBase::checkTaskActivate(
     std::vector<model::Communication>& communications,
     const model::PrescriptionId& prescriptionId,
     const std::string& kvnr,
-    const std::string& accessCode)
+    const std::string& accessCode,
+    bool isPkv)
 {
     // repare QES-Bundle for invokation of POST /task/<id>/$activate
-    ASSERT_NO_THROW(qesBundle = std::get<0>(makeQESBundle(kvnr, prescriptionId, model::Timestamp::now())));
+    ASSERT_NO_THROW(qesBundle =
+                        std::get<0>(makeQESBundle(kvnr, prescriptionId, model::Timestamp::now(), std::nullopt, isPkv)));
     ASSERT_FALSE(qesBundle.empty());
     std::optional<model::Task> task;
     // invoke /task/<id>/$activate
@@ -135,6 +137,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::tRezept:
             EXPECT_EQ(task2->accessCode(), task->accessCode());
             break;
         case model::PrescriptionType::direkteZuweisung:
@@ -160,7 +163,8 @@ void ErpWorkflowTestBase::checkTaskActivate(
     ASSERT_EQ(bundleList.size(), 1);
     EXPECT_EQ(bundleList.front().getId().toString(), std::string(*task2->patientConfirmationUuid()));
 
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
 
     std::string kvnrRepresentative = "X234567891";
@@ -180,6 +184,7 @@ void ErpWorkflowTestBase::checkTaskActivate(
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::tRezept:
             break;
         case model::PrescriptionType::direkteZuweisung:
         case model::PrescriptionType::direkteZuweisungPkv:
@@ -234,7 +239,8 @@ void ErpWorkflowTestBase::checkTaskAccept(
     ASSERT_TRUE(secret.has_value());
     EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*secret));
     ASSERT_TRUE(tasks[0].owner().has_value());
-    EXPECT_EQ(tasks[0].owner(), jwtApotheke().stringForClaim(JWT::idNumberClaim));
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+    EXPECT_EQ(tasks[0].owner(), jwt.stringForClaim(JWT::idNumberClaim));
     const auto binaryResources = acceptResultBundle->getResourcesByType<model::Binary>("Binary");
     ASSERT_EQ(binaryResources.size(), 1);
     ASSERT_TRUE(binaryResources[0].data().has_value());
@@ -295,16 +301,14 @@ void ErpWorkflowTestBase::checkTaskDispense(
         const std::string& secret,
         size_t numMedicationDispenses)
 {
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
 
     // invoke /Task/<id>/$dispense
-    std::optional<model::Bundle> dispenseBundle;
     auto lastMedicationDispenseReferenceTimestamp =
         model::Timestamp::fromXsDateTime(model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds());
-    ASSERT_NO_FATAL_FAILURE(dispenseBundle =
-                                taskDispense(prescriptionId, secret, kvnr, HttpStatus::OK, {}, numMedicationDispenses));
-    ASSERT_TRUE(dispenseBundle);
+    ASSERT_NO_FATAL_FAILURE(taskDispense(prescriptionId, secret, kvnr, HttpStatus::NoContent, {}, numMedicationDispenses));
 
     std::optional<model::Bundle> taskBundle;
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskGetId(prescriptionId, "X-dummy", std::nullopt, secret));
@@ -327,7 +331,8 @@ void ErpWorkflowTestBase::checkTaskClose(
     size_t numMedicationDispenses)
 {
     const auto& testConfig = TestConfiguration::instance();
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+    const auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
 
     // The following communication messages have been sent:
@@ -1264,7 +1269,8 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
     }
     else
     {
-        args.jwt = jwtApotheke();
+        auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+        args.jwt = jwt;
     }
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
     std::string revPfx = "?";
@@ -1338,7 +1344,8 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                         case model::PrescriptionType::apothekenpflichigeArzneimittel:
                         case model::PrescriptionType::direkteZuweisung:
                         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-                        case model::PrescriptionType::direkteZuweisungPkv: {
+                        case model::PrescriptionType::direkteZuweisungPkv:
+                        case model::PrescriptionType::tRezept:{
                             using KbvBundleFactory = model::ResourceFactory<model::KbvBundle>;
                             std::optional<KbvBundleFactory> kbvBundleFactory;
                             ASSERT_NO_THROW(kbvBundleFactory.emplace(KbvBundleFactory::fromXml(
@@ -1519,7 +1526,7 @@ ResourceTemplates::Versions::GEM_ERP ErpWorkflowTestBase::serverGematikProfileVe
 
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void ErpWorkflowTestBase::taskDispenseInternal(
-    std::optional<model::Bundle>& bundle, const model::PrescriptionId& prescriptionId, const std::string& secret,
+    const model::PrescriptionId& prescriptionId, const std::string& secret,
     const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
     const HttpStatus expectedInnerStatus, const std::optional<model::OperationOutcome::Issue::Type>& expectedErrorCode,
     const std::optional<std::string>& expectedErrorText,
@@ -1547,7 +1554,7 @@ void ErpWorkflowTestBase::taskDispenseInternal(
     }
     std::string dispensePath = "/Task/" + prescriptionId.toString() + "/$dispense?secret=" + secret;
     ClientResponse serverResponse;
-    JWT jwt{ jwtApotheke() };
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
                                 send(RequestArguments{mDispenseTaskRequestArgs}
                                          .withHttpMethod(HttpMethod::POST)
@@ -1559,17 +1566,7 @@ void ErpWorkflowTestBase::taskDispenseInternal(
             .withExpectedInnerStatus(expectedInnerStatus)
             .withExpectedBdeUseCase(bde::TaskDispense_UC_4_16)));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
-    if(expectedInnerStatus == HttpStatus::OK)
-    {
-        auto view = Fhir::instance()
-                        .structureRepository(model::Timestamp::now())
-                        .match(ResourceTemplates::Versions::latest(
-                            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense"));
-        ASSERT_NO_THROW(bundle = model::ResourceFactory<model::Bundle>::fromXml(serverResponse.getBody(),
-                                                                                *StaticData::getXmlValidator())
-                                     .getValidated(model::ProfileType::fhir, view));
-    }
-    else
+    if(expectedInnerStatus != HttpStatus::NoContent)
     {
         Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
         ASSERT_NO_FATAL_FAILURE(checkOperationOutcome(operationOutcomeFromResponse(serverResponse.getBody(), false /*isJson*/),
@@ -1700,6 +1697,8 @@ ErpWorkflowTestBase::taskActivateInternal(std::variant<model::Task, model::Opera
                 return bde::ActivateTask_UC_2_3_160;
             case model::PrescriptionType::digitaleGesundheitsanwendungen:
                 return bde::ActivateTask_UC_2_3_162;
+            case model::PrescriptionType::tRezept:
+                return bde::ActivateTask_UC_2_3_166;
             case model::PrescriptionType::direkteZuweisung:
                 return bde::ActivateTask_UC_2_3_169;
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -1767,6 +1766,9 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
             break;
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
             create += "162";
+            break;
+        case model::PrescriptionType::tRezept:
+            create += "166";
             break;
         case model::PrescriptionType::direkteZuweisung:
             create += "169";
@@ -1978,7 +1980,7 @@ void ErpWorkflowTestBase::consentGetInternal(
             def->resourceGroup(),
         };
         auto craftedView = fhirtools::FhirResourceViewGroupSet::create("EU_AND_PKV_CONSENT", groups, &repo);
-        fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping<Configuration::ERP>()};
+        fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping()};
         auto craftedMappingView =
             fhirtools::VersionMappingView::create("EU_AND_PKV_CONSENT-mapping", std::move(mapper), craftedView);
 
@@ -2383,14 +2385,15 @@ void ErpWorkflowTestBase::createClosedTaskInternal(
     std::string& createdAccessCode,
     std::string& createdSecret,
     const model::PrescriptionType prescriptionType,
-    const std::string& kvnr)
+    const std::string& kvnr,
+    const std::string& coverageInsuranceType)
 {
     // Create a closed task:
     ASSERT_NO_FATAL_FAILURE(checkTaskCreate(createdId, createdAccessCode, prescriptionType));
     ASSERT_TRUE(createdId.has_value());
 
     std::tuple<std::string, std::string> qesBundle;
-    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now()));
+    ASSERT_NO_THROW(qesBundle = makeQESBundle(kvnr, *createdId, model::Timestamp::now(), coverageInsuranceType));
     ASSERT_NO_THROW(usedKbvBundle = model::KbvBundle::fromXmlNoValidation(std::get<1>(qesBundle)));
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*createdId, createdAccessCode, std::get<0>(qesBundle)));
     ASSERT_TRUE(task);
@@ -2790,16 +2793,14 @@ ErpWorkflowTestBase::taskAccept(const model::PrescriptionId& prescriptionId,
     taskAcceptInternal(bundle, prescriptionId, accessCode, expectedInnerStatus, expectedErrorCode, expectedIssueText);
     return bundle;
 }
-std::optional<model::Bundle>
+void
 ErpWorkflowTestBase::taskDispense(const model::PrescriptionId& prescriptionId, const std::string& secret,
                                const std::string& kvnr, HttpStatus expectedInnerStatus,
                                const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
                                size_t numMedicationDispenses)
 {
-    std::optional<model::Bundle> bundle;
-    taskDispenseInternal(bundle, prescriptionId, secret, kvnr, prescriptionId.toString(), expectedInnerStatus,
-                      expectedErrorCode, {}, {}, model::Timestamp::now().toGermanDate(), numMedicationDispenses);
-    return bundle;
+    taskDispenseInternal(prescriptionId, secret, kvnr, prescriptionId.toString(), expectedInnerStatus,
+                         expectedErrorCode, {}, {}, model::Timestamp::now().toGermanDate(), numMedicationDispenses);
 }
 std::optional<model::ErxReceipt>
 ErpWorkflowTestBase::taskClose(const model::PrescriptionId& prescriptionId, const std::string& secret,
@@ -2886,7 +2887,7 @@ void ErpWorkflowTestBase::taskReject(const std::string& prescriptionIdString,
 {
     std::string rejectPath = "/Task/" + prescriptionIdString + "/$reject?secret=" + secret;
     ClientResponse serverResponse;
-    JWT jwt{ jwtApotheke() };
+    auto jwt = prescriptionIdString.starts_with("162") ? jwtKostentraeger() : jwtApotheke();
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
                                 send(RequestArguments{HttpMethod::POST, rejectPath, {}}
                                          .withJwt(jwt)
@@ -2931,7 +2932,9 @@ std::optional<model::Bundle> ErpWorkflowTestBase::taskGet(const std::string& kvn
 }
 std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(const std::string& kvnr,
                                                                         const model::PrescriptionId& prescriptionId,
-                                                                        const model::Timestamp& timestamp)
+                                                                        const model::Timestamp& timestamp,
+                                                                        const std::optional<std::string>& coverageInsuranceType,
+                                                                        bool isPkv)
 {
     std::string qesBundle;
     switch (prescriptionId.type())
@@ -2940,8 +2943,23 @@ std::tuple<std::string, std::string> ErpWorkflowTestBase::makeQESBundle(const st
         case model::PrescriptionType::direkteZuweisung:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
         case model::PrescriptionType::direkteZuweisungPkv:
-            qesBundle = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp, .kvnr = kvnr});
+            qesBundle = kbvBundleXml({.prescriptionId = prescriptionId,
+                                      .authoredOn = timestamp,
+                                      .kvnr = kvnr,
+                                      .coverageInsuranceType = coverageInsuranceType,
+                                      .generateNewId = true});
             break;
+        case model::PrescriptionType::tRezept: {
+            ResourceTemplates::KbvBundleOptions options{.prescriptionId = prescriptionId,
+                                     .authoredOn = timestamp,
+                                     .kvnr = kvnr,
+                                     .coverageInsuranceType = coverageInsuranceType,
+                                     .generateNewId = true};
+            options.medicationOptions.medicationCategory = "02";
+            options.tRezeptIsPkv = isPkv;
+            qesBundle = kbvBundleXml(options);
+            break;
+        }
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
             qesBundle = ResourceTemplates::evdgaBundleXml({.prescriptionId = prescriptionId.toString(),
                                                            .timestamp = timestamp.toXsDateTime(),
@@ -3219,11 +3237,12 @@ std::optional<model::Task> ErpWorkflowTestBase::createClosedTask(
     std::string& createdAccessCode,
     std::string& createdSecret,
     const model::PrescriptionType prescriptionType,
-    const std::string& kvnr)
+    const std::string& kvnr,
+    const std::string& coverageInsuranceType)
 {
     std::optional<model::Task> task;
     createClosedTaskInternal(
-        task, createdId, usedKbvBundle, closeReceipt, createdAccessCode, createdSecret, prescriptionType, kvnr);
+        task, createdId, usedKbvBundle, closeReceipt, createdAccessCode, createdSecret, prescriptionType, kvnr, coverageInsuranceType);
     return task;
 }
 

@@ -8,6 +8,7 @@
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
+#include "fhirtools/repository/internal/ElementType.hxx"
 #include "shared/model/Resource.hxx"
 
 #include <gtest/gtest.h>

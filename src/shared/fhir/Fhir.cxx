@@ -39,8 +39,9 @@ public:
     using ViewPtr = fhirtools::FhirResourceViewList::ViewPtr;
     using ViewConfig = fhirtools::FhirResourceViewConfiguration::ViewConfig;
 
+    void load();
     ViewPtr acquireView(const ViewConfig& viewConfig) const;
-    virtual ViewPtr wrapWithVersionMapper(ViewPtr view) const = 0;
+    static ViewPtr wrapWithVersionMapper(ViewPtr unmapped);
 
     const fhirtools::FhirStructureRepositoryBackend& backend() const override
     {
@@ -51,6 +52,27 @@ public:
     mutable std::shared_mutex mViewsByConfigIdMutex;
     mutable std::map<std::string, ViewPtr> mViewsByConfigId;
 };
+
+void FhirImplBase::load()
+{
+    const auto& config = Configuration::instance();
+    auto filesAsString = config.getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
+    std::list<std::filesystem::path> files;
+    std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
+        return std::filesystem::path{str};
+    });
+    TLOG(INFO) << "Loading FHIR structure repository.";
+    auto resolver = config.fhirResourceGroupConfiguration();
+    for (const auto& [url, version] : config.synthesizeCodesystem())
+    {
+        mBackend.synthesizeCodeSystem(url, version, resolver);
+    }
+    for (const auto& [url, version] : config.synthesizeValuesets())
+    {
+        mBackend.synthesizeValueSet(url, version, resolver);
+    }
+    mBackend.load(files, resolver);
+}
 
 FhirImplBase::ViewPtr FhirImplBase::acquireView(const ViewConfig& viewConfig) const
 {
@@ -72,6 +94,14 @@ FhirImplBase::ViewPtr FhirImplBase::acquireView(const ViewConfig& viewConfig) co
     auto newView =
         fhirtools::CodeCachingView::create(std::move(newId), wrapWithVersionMapper(viewConfig.view(&mBackend)));
     return mViewsByConfigId.emplace_hint(view, viewConfig.mId, std::move(newView))->second;
+}
+
+FhirImplBase::ViewPtr FhirImplBase::wrapWithVersionMapper(ViewPtr unmapped)
+{
+    std::string id{unmapped->id()};
+    id += "-mapped";
+    fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping()};
+    return fhirtools::VersionMappingView::create(std::move(id), std::move(mapper), std::move(unmapped));
 }
 
 template<config::ProcessType ProcessT>
@@ -96,11 +126,8 @@ public:
     fhirtools::ValidatorOptions defaultValidatorOptions(model::ProfileType profileType,
                                                         const model::Timestamp& referenceTimestamp) const override;
 
-    ViewPtr wrapWithVersionMapper(ViewPtr unmapped) const override;
-
     void ensureInitialized() override;
 
-    void load();
     void validateViews() const;
     void validateProfileRequirements(const fhirtools::FhirResourceViewList& viewList,
                                      const model::Timestamp& timestamp) const;
@@ -122,27 +149,6 @@ template<config::ProcessType ProcessT>
 FhirImpl<ProcessT>::FhirImpl()
     : mConverter()
 {
-}
-template<config::ProcessType ProcessT>
-void FhirImpl<ProcessT>::load()
-{
-    const auto& config = Configuration::instance();
-    auto filesAsString = config.getArray(ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS);
-    std::list<std::filesystem::path> files;
-    std::transform(filesAsString.begin(), filesAsString.end(), std::back_inserter(files), [](const auto& str) {
-        return std::filesystem::path{str};
-    });
-    TLOG(INFO) << "Loading FHIR structure repository.";
-    auto resolver = config.fhirResourceGroupConfiguration<ProcessT>();
-    for (const auto& [url, version] : config.synthesizeCodesystem())
-    {
-        mBackend.synthesizeCodeSystem(url, version, resolver);
-    }
-    for (const auto& [url, version] : config.synthesizeValuesets())
-    {
-        mBackend.synthesizeValueSet(url, version, resolver);
-    }
-    mBackend.load(files, resolver);
 }
 
 template<config::ProcessType ProcessT>
@@ -329,15 +335,6 @@ FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
         }
     }
     return options;
-}
-
-template<config::ProcessType ProcessT>
-FhirImplBase::ViewPtr FhirImpl<ProcessT>::wrapWithVersionMapper(ViewPtr unmapped) const
-{
-    std::string id{unmapped->id()};
-    id += "-mapped";
-    fhirtools::VersionMapper mapper{Configuration::instance().fhirVersionMapping<ProcessT>()};
-    return fhirtools::VersionMappingView::create(std::move(id), std::move(mapper), std::move(unmapped));
 }
 
 }

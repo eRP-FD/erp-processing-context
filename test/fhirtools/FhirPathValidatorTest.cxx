@@ -562,6 +562,7 @@ INSTANTIATE_TEST_SUITE_P(samples, FhirPathValidatorTest, ::testing::Values(
         {std::make_tuple(Severity::error, R"-(reference is not literal or invalid but must be resolvable: {"type": "Device", "identifier": {"system": "https://fhir.kbv.de/NamingSystem/KBV_NS_FOR_Pruefnummer", "value": "X/000/1111/22/333"}})-"), "Bundle.entry[0].resource{Composition}.author[1]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://fhir.de/CodeSystem/ifa/pzn, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.code.coding[0]"},
         {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://snomed.info/sct, it is empty or synthesized."), "Bundle.entry[4].resource{Medication}.extension[3].valueCodeableConcept.coding[0]"},
+        {std::make_tuple(Severity::warning, "Can not validate CodeSystem http://unitsofmeasure.org, it has not been loaded."), "Bundle.entry[6].resource{MedicationRequest}.dispenseRequest.quantity"},
       },{
         {"dom-6", "Bundle.entry[0].resource{Composition}"},
         {"dom-6", "Bundle.entry[1].resource{Patient}"},

@@ -122,7 +122,7 @@ public:
     [[nodiscard]] uint64_t countCommunications(const std::string& user,
                                                const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<Uuid> retrieveCommunicationIds(const std::string& recipient) override;
-    [[nodiscard]] std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    [[nodiscard]] std::optional<Uuid>
     deleteCommunication(const Uuid& communicationId, const std::string& sender) override;
     void markCommunicationsAsRetrieved(const std::vector<Uuid>& communicationIds, const model::Timestamp& retrieved,
                                        const std::string& recipient) override;

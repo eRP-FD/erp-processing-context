@@ -61,17 +61,18 @@ void ChargeItemPostHandler::handleRequest(PcSessionContext& session)
     const auto prescriptionId = parseIdFromQuery(session.request, session.accessLog, "task");
     A_22130.finish();
 
-    A_22731.start("check flow type in PUT/POST ChargeItem");
-    ErpExpect(prescriptionId.isPkv(), HttpStatus::BadRequest, "Referenced task is not of type PKV");
-    A_22731.finish();
-
     auto* databaseHandle = session.database();
 
-    A_22131.start("Check existence of referenced task in status 'completed'");
     auto [task, prescription, receipt] = databaseHandle->retrieveTaskAndPrescriptionAndReceipt(prescriptionId);
     // GEMREQ-end A_22135-01#getReceipt, A_22134#getReceipt
 
+    A_22131.start("Check existence of referenced task in status 'completed'");
     ErpExpect(task.has_value(), HttpStatus::Conflict, "Referenced task not found for provided prescription id");
+
+    A_22731_01.start("Coverage.type.coding.code == PKV is stored in Task during $activate");
+    ErpExpect(task->isPkv(), HttpStatus::BadRequest, "Referenced task is not of type PKV");
+    A_22731_01.finish();
+
     ErpExpect(task->status() == model::Task::Status::completed, HttpStatus::Conflict, "Referenced task must be in status 'completed'");
     A_22131.finish();
 

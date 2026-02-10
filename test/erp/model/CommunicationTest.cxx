@@ -1046,12 +1046,10 @@ enum ExpectedOutcome
 
 void testVerifyPayload(Communication::MessageType messageType, std::string_view payload,
                        ExpectedOutcome expectedOutcome, std::optional<std::string_view> expectedMessage = std::nullopt,
-                       bool withDiagnostics = true)
+                       bool withDiagnostics = true, PrescriptionId prescriptionId = PrescriptionId::fromDatabaseId(PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711))
 {
     auto builder = CommunicationJsonStringBuilder(messageType);
-    builder.setPayload(std::string{payload})
-        .setPrescriptionId(
-            PrescriptionId::fromDatabaseId(PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711).toString());
+    builder.setPayload(std::string{payload}).setPrescriptionId(prescriptionId.toString());
     switch (messageType)
     {
         using enum Communication::MessageType;
@@ -1082,6 +1080,7 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
     try
     {
         comm.verifyPayload(*jsonValidator);
+        comm.verifySupplyOptionsType(prescriptionId.type());
     }
     catch (const ErpException& e)
     {
@@ -1111,7 +1110,7 @@ void testVerifyPayload(Communication::MessageType messageType, std::string_view 
 TEST_F(CommunicationTest, verifyPayloadDispReq)
 {
     const auto msgType = Communication::MessageType::DispReq;
-    A_23878.test("Validierung DispReq payload");
+    A_23878_01.test("Validierung DispReq payload");
 
     // simple success cases
     {
@@ -1154,6 +1153,12 @@ TEST_F(CommunicationTest, verifyPayloadDispReq)
         std::string_view payload = R"({"version":1,"supplyOptionsType":"onPremise","extraElement":"1"})";
         EXPECT_NO_FATAL_FAILURE(
             testVerifyPayload(msgType, payload, failure, "Invalid payload: does not conform to expected JSON schema:"));
+    }
+    {
+        std::string_view payload = R"({"version":1,"supplyOptionsType":"shipment"})";
+        EXPECT_NO_FATAL_FAILURE(testVerifyPayload(msgType, payload, failure,
+                                                  "for flowType 166 only onPremise and delivery are allowed", false,
+                                                  PrescriptionId::fromDatabaseId(PrescriptionType::tRezept, 4800)));
     }
     // failures with too large field lengths
     {

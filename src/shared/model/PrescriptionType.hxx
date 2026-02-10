@@ -22,28 +22,40 @@ enum class PrescriptionType : uint8_t
 {
     apothekenpflichigeArzneimittel = 160U,
     digitaleGesundheitsanwendungen = 162U,
+    tRezept = 166U,
     direkteZuweisung = 169U,
     apothekenpflichtigeArzneimittelPkv = 200U,
     direkteZuweisungPkv = 209U
 };
 
-bool isPkv(PrescriptionType prescriptionType);
 bool isDiga(PrescriptionType prescriptionType);
 bool isDirectAssignment(PrescriptionType prescriptionType);
+bool canBeGkv(PrescriptionType prescriptionType);
+bool canBePkv(PrescriptionType prescriptionType);
+bool isTRezept(PrescriptionType prescriptionType);
 
-// mappings defined in A_19445
-static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay{
+// mappings defined in A_19445 AND in profile https://simplifier.net/erezept-workflow/gem-erp-cs-flowtype
+static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay_UntilWorkflow15{
     {PrescriptionType::apothekenpflichigeArzneimittel, "Muster 16 (Apothekenpflichtige Arzneimittel)"},
     {PrescriptionType::digitaleGesundheitsanwendungen, "Muster 16 (Digitale Gesundheitsanwendungen)"},
+    {PrescriptionType::tRezept, "Flowtype für Arzneimittel nach § 3a AMVV"},
     {PrescriptionType::direkteZuweisung, "Muster 16 (Direkte Zuweisung)"},
     {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "PKV (Apothekenpflichtige Arzneimittel)"},
     {PrescriptionType::direkteZuweisungPkv, "PKV (Direkte Zuweisung)"}};
+static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay{
+    {PrescriptionType::apothekenpflichigeArzneimittel, "Flowtype für Apothekenpflichtige Arzneimittel"},
+    {PrescriptionType::digitaleGesundheitsanwendungen, "Flowtype für Digitale Gesundheitsanwendungen"},
+    {PrescriptionType::tRezept, "Flowtype für Arzneimittel nach § 3a AMVV"},
+    {PrescriptionType::direkteZuweisung, "Flowtype zur Workflow-Steuerung durch Leistungserbringer"},
+    {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "Flowtype für Apothekenpflichtige Arzneimittel (PKV)"},
+    {PrescriptionType::direkteZuweisungPkv, "Flowtype zur Workflow-Steuerung durch Leistungserbringer (PKV)"}};
 
 static const std::unordered_map<PrescriptionType, std::string> PrescriptionTypePerformerType{
     {PrescriptionType::apothekenpflichigeArzneimittel,
      "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
     {PrescriptionType::digitaleGesundheitsanwendungen,
     "urn:oid:" + std::string(profession_oid::oid_kostentraeger)},
+    {PrescriptionType::tRezept, "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
     {PrescriptionType::direkteZuweisung, "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
     {PrescriptionType::apothekenpflichtigeArzneimittelPkv,
      "urn:oid:" + std::string(profession_oid::oid_oeffentliche_apotheke)},
@@ -53,6 +65,7 @@ static const std::unordered_map<PrescriptionType, std::string> PrescriptionTypeP
 static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypePerformerDisplay{
     {PrescriptionType::apothekenpflichigeArzneimittel, "Öffentliche Apotheke"},
     {PrescriptionType::digitaleGesundheitsanwendungen, "Kostenträger"},
+    {PrescriptionType::tRezept, "Öffentliche Apotheke"},
     {PrescriptionType::direkteZuweisung, "Öffentliche Apotheke"},
     {PrescriptionType::apothekenpflichtigeArzneimittelPkv, "Öffentliche Apotheke"},
     {PrescriptionType::direkteZuweisungPkv, "Öffentliche Apotheke"}};

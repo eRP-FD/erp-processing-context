@@ -32,7 +32,8 @@ class Task
 public:
     explicit Task(const model::PrescriptionId& initPrescriptionId, BlobId initKeyBlobId, Blob initSalt,
                   model::Task::Status initStatus, model::Timestamp initLastStatusChanged,
-                  const model::Timestamp& initAuthoredOn, const model::Timestamp& initLastModified);
+                  const model::Timestamp& initAuthoredOn, const model::Timestamp& initLastModified,
+                  std::optional<bool> initIsPkv);
 
     model::PrescriptionId prescriptionId;
     BlobId blobId;
@@ -52,6 +53,7 @@ public:
     std::optional<model::Timestamp> lastMedicationDispense;
     bool euRedeemableByPatient{false};
     bool euRedeemable{false};
+    std::optional<bool> isPkv;
 };
 
 class MedicationDispense
@@ -104,8 +106,8 @@ struct ChargeItem {
 };
 
 struct EuAccessPermission {
-    EuAccessPermission(std::string countryCode, EncryptedBlob accessCode,
-                       const model::Timestamp& expires, BlobId blobId, Blob salt);
+    EuAccessPermission(std::string countryCode, EncryptedBlob accessCode, const model::Timestamp& expires,
+                       BlobId blobId, Blob salt);
 
     std::string countryCode;
     EncryptedBlob accessCode;

@@ -7,11 +7,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_CLIENT_EPAMEDIACTIONCLIENT_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_CLIENT_EPAMEDIACTIONCLIENT_HXX
 
+#include "exporter/BdeMessage.hxx"
 #include "exporter/model/EpaOperationOutcome.hxx"
 
-#include <any>
 #include <string>
-#include <unordered_map>
 
 namespace model
 {
@@ -35,7 +34,7 @@ public:
                                              const std::string& payload) = 0;
     virtual Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
                                             const std::string& payload) = 0;
-    virtual void addLogData(const std::string& key, const std::any& data) = 0;
+    virtual void addLogData(const BDEMessage::Data& bdeData) = 0;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_CLIENT_EPAMEDIACTIONCLIENT_HXX

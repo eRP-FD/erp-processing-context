@@ -6,7 +6,6 @@
 
 #include "library/crypto/tee3/Tee3Protocol.hxx"
 #include "library/crypto/EllipticCurve.hxx"
-#include "library/crypto/EllipticCurveUtils.hxx"
 #include "library/crypto/Key.hxx"
 #include "library/crypto/tee3/Kyber768.hxx"
 #include "library/util/Assert.hxx"
@@ -35,7 +34,7 @@ Tee3Protocol::EcdhPublicKey Tee3Protocol::EcdhPublicKey::fromEvpPkey(const share
 shared_EVP_PKEY Tee3Protocol::EcdhPublicKey::toEvpPkey() const
 {
     return Key::createPublicKeyBin(
-        binaryBufferToString(x), binaryBufferToString(y), EllipticCurveUtils::P256);
+        binaryBufferToString(x), binaryBufferToString(y), NID_X9_62_prime256v1);
 }
 
 

@@ -797,6 +797,15 @@ TEST_F(ExpressionTest, BooleanAndOperator)
     BooleanOperatorTest<BooleanAndOperator>({}, {}, {});
 }
 
+TEST_F(ExpressionTest, BooleanAndOperator_lazyEval)
+{
+    auto lhs = std::make_shared<LiteralBooleanExpression>(&backend, false);
+    auto rhs = std::make_shared<ExpressionMock>();
+    EXPECT_CALL(*rhs, eval).Times(0);
+    BooleanAndOperator implies{lhs, rhs};
+    (void) implies.eval({mRepo, {}, rootElement});
+}
+
 TEST_F(ExpressionTest, BooleanOrOperator)
 {
     BooleanOperatorTest<BooleanOrOperator>(true, true, true);
@@ -808,6 +817,15 @@ TEST_F(ExpressionTest, BooleanOrOperator)
     BooleanOperatorTest<BooleanOrOperator>({}, true, true);
     BooleanOperatorTest<BooleanOrOperator>({}, false, {});
     BooleanOperatorTest<BooleanOrOperator>({}, {}, {});
+}
+
+TEST_F(ExpressionTest, BooleanOrOperator_lazyEval)
+{
+    auto lhs = std::make_shared<LiteralBooleanExpression>(&backend, true);
+    auto rhs = std::make_shared<ExpressionMock>();
+    EXPECT_CALL(*rhs, eval).Times(0);
+    BooleanOrOperator implies{lhs, rhs};
+    (void) implies.eval({mRepo, {}, rootElement});
 }
 
 TEST_F(ExpressionTest, BooleanNotOperator)
@@ -844,6 +862,17 @@ TEST_F(ExpressionTest, BooleanXorOperator)
     BooleanOperatorTest<BooleanXorOperator>({}, {}, {});
 }
 
+TEST_F(ExpressionTest, BooleanXorOperator_lazyEval)
+{
+    // normally XOR cannot be lazy-eval but due to the ternary logic we can short-circuit on _empty_
+    fhirtools::EvaluationContext context{mRepo, rootElement};
+    auto lhs = std::make_shared<testing::NiceMock<ExpressionMock>>();
+    ON_CALL(*lhs, eval).WillByDefault(::testing::Return(context()));
+    auto rhs = std::make_shared<ExpressionMock>();
+    EXPECT_CALL(*rhs, eval).Times(0);
+    BooleanXorOperator implies{lhs, rhs};
+    (void) implies.eval(context);
+}
 
 TEST_F(ExpressionTest, BooleanImpliesOperator)
 {

@@ -48,8 +48,6 @@ public:
 
     [[nodiscard]] PrescriptionType type() const;
 
-    bool isPkv() const;
-
     bool operator==(const PrescriptionId& rhs) const = default;
 
     PrescriptionId() = delete;

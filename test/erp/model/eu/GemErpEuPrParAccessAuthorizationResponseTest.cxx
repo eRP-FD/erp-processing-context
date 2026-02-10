@@ -12,8 +12,6 @@
 
 TEST(GemErpEuPrParAccessAuthorizationResponseTest, test)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     std::optional<model::GemErpEuPrParAccessAuthorizationResponse> resource;
     model::EuAccessPermission eua{model::EuAccessCode{SafeString{"abcdef"}}, model::CountryCode{"FR"}};
     ASSERT_NO_THROW((resource = model::GemErpEuPrParAccessAuthorizationResponse{eua, model::Kvnr{"X1234567"}}));

@@ -6,10 +6,14 @@
  */
 
 #include "MedicationsAndDispenses.hxx"
-
+#include "shared/ErpRequirements.hxx"
+#include "shared/model/GemErpEuPrOrganization.hxx"
+#include "shared/model/GemErpEuPrPractitioner.hxx"
+#include "shared/model/GemErpEuPrPractitionerRole.hxx"
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispenseId.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/util/Expect.hxx"
 
 void model::MedicationsAndDispenses::addFromBundle(const MedicationDispenseBundle& bundle)
@@ -42,6 +46,31 @@ void model::MedicationsAndDispenses::addFromBundle(const MedicationDispenseBundl
         {
             ModelFail("Unexpected resource type in MedicationDispenseBundle: " + std::string(resourceType));
         }
+    }
+}
+
+void model::MedicationsAndDispenses::addFromDigaParameters(
+    const model::MedicationDispenseOperationParameters& digaParameters)
+{
+    auto medicationDispensesDiga = digaParameters.medicationDispensesDiga();
+    for (auto&& medicationDispense : medicationDispensesDiga)
+    {
+        medicationDispenses.emplace_back(std::move(medicationDispense));
+    }
+}
+
+void model::MedicationsAndDispenses::addFromParameters(const model::MedicationDispenseOperationParameters& parameters)
+{
+    auto medicationDispensePairs = parameters.medicationDispenses();
+    for (auto&& [medicationDispense, medication]: medicationDispensePairs)
+    {
+        A_26527.start("Assign new IDs to ensure uniqueness in GET /MedicationDispense");
+        const Uuid newId{};
+        medicationDispense.setMedicationReference(newId.toUrn());
+        medication.setId(newId.toString());
+        A_26527.finish();
+        medicationDispenses.emplace_back(std::move(medicationDispense));
+        medications.emplace_back(std::move(medication));
     }
 }
 

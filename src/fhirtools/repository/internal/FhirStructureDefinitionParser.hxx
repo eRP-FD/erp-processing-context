@@ -138,7 +138,7 @@ private:
     FhirSliceDiscriminator::Builder mDiscriminatorBuilder;
     FhirCodeSystem::Builder mCodeSystemBuilder;
     FhirValueSet::Builder mValueSetBuilder;
-    std::list<std::string> mElementTypes;
+    std::list<internal::ElementType> mElementTypes;
     bool mExperimental = false;
     std::deque<ElementInfo> mStack;
     std::filesystem::path mCurrentFile;

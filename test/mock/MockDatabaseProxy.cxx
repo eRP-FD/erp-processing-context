@@ -32,11 +32,11 @@ void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId, const 
                                      const db_model::EncryptedBlob& healthCareProviderPrescription,
                                      const db_model::EncryptedBlob& doctorIdentity,
                                      const model::Timestamp& lastStatusUpdate,
-                                     bool euRedeemable)
+                                     bool euRedeemable, bool isPkv)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
     mDatabase.activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
-                           healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable);
+                           healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable, isPkv);
 }
 
 void MockDatabaseProxy::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -325,7 +325,7 @@ MockDatabaseProxy::getTaskKeyData(const model::PrescriptionId& taskId)
     return mDatabase.getTaskKeyData(taskId);
 }
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+std::optional<Uuid>
 MockDatabaseProxy::deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);

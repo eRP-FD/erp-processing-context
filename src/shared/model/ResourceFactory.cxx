@@ -30,6 +30,7 @@ model::ResourceFactoryBase::ResourceFactoryBase(XmlDocCache xml, Options options
 model::NumberAsStringParserDocument model::ResourceFactoryBase::fromJson(std::string_view jsonStr,
                                                                          const JsonValidator& validator)
 {
+    ErpExpect(!String::startsWithBom(jsonStr), HttpStatus::BadRequest, "illegal BOM before JSON resource");
     try
     {
         auto doc = NumberAsStringParserDocument::fromJson(jsonStr);
@@ -39,13 +40,14 @@ model::NumberAsStringParserDocument model::ResourceFactoryBase::fromJson(std::st
     catch (const ModelException& ex)
     {
         TVLOG(2) << jsonStr;
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Document is not a FHIR-JSON.", ex.what());
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Input is not a FHIR+JSON/UTF-8 document", ex.what());
     }
 }
 
 model::NumberAsStringParserDocument model::ResourceFactoryBase::fromXml(std::string_view xmlStr,
                                                                         const XmlValidator& xmlValidator)
 {
+    ErpExpect(!String::startsWithBom(xmlStr), HttpStatus::BadRequest, "illegal BOM before XML resource");
     try
     {
         auto fhirSchemaValidationContext = xmlValidator.getSchemaValidationContext(SchemaType::fhir);
@@ -56,7 +58,7 @@ model::NumberAsStringParserDocument model::ResourceFactoryBase::fromXml(std::str
     }
     catch (const ModelException& ex)
     {
-        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Input is not a FHIR+XML document", ex.what());
+        ErpFailWithDiagnostics(HttpStatus::BadRequest, "Input is not a FHIR+XML/UTF-8 document", ex.what());
     }
 }
 

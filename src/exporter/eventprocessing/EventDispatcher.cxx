@@ -33,9 +33,11 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     auditDataCollector.setPrescriptionId(erpEvent.getPrescriptionId());
     auditDataCollector.setInsurantKvnr(erpEvent.getKvnr());
 
-    mMedicationClient->addLogData(BDEMessage::prescriptionIdKey, erpEvent.getPrescriptionId().toString());
-    mMedicationClient->addLogData(BDEMessage::lastModifiedTimestampKey, erpEvent.getLastModified());
-    mMedicationClient->addLogData(BDEMessage::hashedKvnrKey, std::make_optional<model::HashedKvnr>(erpEvent.getHashedKvnr()));
+    BDEMessage::Data data;
+    data.prescriptionId = erpEvent.getPrescriptionId().toString();
+    data.lastModified = erpEvent.getLastModified();
+    data.hashedKvnr = model::HashedKvnr(erpEvent.getHashedKvnr());
+    mMedicationClient->addLogData(data);
 
     std::optional<model::AuditEventId> successAuditType;
     std::optional<model::AuditEventId> failedAuditType;

@@ -116,8 +116,8 @@ TEST_F(CommitGuardTest, exceptionstrategy_commit)//NOLINT(readability-function-c
     {
     }
     auto transaction = pqxx::work{getConnection()};
-    auto r = transaction.exec_params("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
-                                     eventKvnr.kvnrHashed());
+    auto r = transaction.exec("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
+                              pqxx::params{eventKvnr.kvnrHashed()});
     EXPECT_EQ(r.at(0, 0).as<int>(), 0);
     transaction.commit();
 }
@@ -150,8 +150,8 @@ TEST_F(CommitGuardTest, exceptionstrategy_abort)//NOLINT(readability-function-co
     {
     }
     auto transaction = pqxx::work{getConnection()};
-    auto r = transaction.exec_params("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
-                                     eventKvnr.kvnrHashed());
+    auto r = transaction.exec("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
+                              pqxx::params{eventKvnr.kvnrHashed()});
     EXPECT_EQ(r.at(0, 0).as<int>(), 1);
     transaction.commit();
 }

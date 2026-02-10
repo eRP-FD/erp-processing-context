@@ -19,6 +19,7 @@ namespace model
 {
 class AuditData;
 class EventKvnr;
+class TRezeptEvent;
 }
 
 class KeyDerivation;
@@ -31,7 +32,7 @@ enum class TransactionMode : uint8_t;
 class MedicationExporterDatabaseFrontendInterface
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "9";
+    static constexpr const char* expectedSchemaVersion = "11";
 
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
@@ -61,6 +62,11 @@ public:
     virtual std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const = 0;
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const = 0;
+    virtual std::optional<std::unique_ptr<model::TRezeptEvent>> processNextTRezeptEvent() const = 0;
+    virtual void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const = 0;
+    virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) const = 0;
+    virtual bool isDeadLetter(const model::TRezeptEvent& eventData) const = 0;
+    virtual int markDeadLetter(const model::TRezeptEvent& eventData) const = 0;
 
     /**
      * Postpone processing of a KVNR by adding a delay to the export time and store the current retry count.

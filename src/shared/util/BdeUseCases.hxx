@@ -19,6 +19,7 @@ struct UseCase {
         UC_2_3,
         UC_2_3_169,
         UC_2_3_162,
+        UC_2_3_166,
         UC_2_3_200,
         UC_2_3_209,
         UC_2_5,
@@ -76,6 +77,7 @@ static constexpr UseCase CreateTask_UC_2_1{.fdOperation = UseCase::UC_2_1};
 static constexpr UseCase ActivateTask_UC_2_3_160{.fdOperation = UseCase::UC_2_3};
 static constexpr UseCase ActivateTask_UC_2_3_169{.fdOperation = UseCase::UC_2_3_169};
 static constexpr UseCase ActivateTask_UC_2_3_162{.fdOperation = UseCase::UC_2_3_162};
+static constexpr UseCase ActivateTask_UC_2_3_166{.fdOperation = UseCase::UC_2_3_166};
 static constexpr UseCase ActivateTask_UC_2_3_200{.fdOperation = UseCase::UC_2_3_200};
 static constexpr UseCase ActivateTask_UC_2_3_209{.fdOperation = UseCase::UC_2_3_209};
 static constexpr UseCase AbortTaskDoctor_UC_2_5{.fdOperation = UseCase::UC_2_5};

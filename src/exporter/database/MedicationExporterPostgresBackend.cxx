@@ -128,6 +128,82 @@ FROM
 LIMIT
   1;
     )");
+
+    // T-Rezept
+
+QUERY(sqlProcessNextTRezeptEvent, R"(
+UPDATE
+  erp_event.trezept_event tre
+SET
+  state = 'processing', next_export = NOW() + interval '1 second'
+WHERE
+  tre.id = (
+    SELECT
+      id
+    FROM
+      erp_event.trezept_event
+    WHERE
+      next_export < NOW() AND state in ('processing', 'pending')
+    ORDER BY
+      retry_count ASC, next_export ASC
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+  )
+RETURNING
+  id,
+  prescription_id,
+  prescription_type,
+  task_key_blob_id,
+  salt,
+  kvnr,
+  kvnr_hashed,
+  state,
+  usecase,
+  doctor_identity,
+  pharmacy_identity,
+  EXTRACT(EPOCH FROM last_modified),
+  EXTRACT(EPOCH FROM authored_on),
+  healthcare_provider_prescription,
+  medication_dispense_blob_id,
+  medication_dispense_salt,
+  medication_dispense_bundle,
+  retry_count
+)");
+
+QUERY(sqlDeleteTRezeptEvent, R"(
+DELETE FROM
+  erp_event.trezept_event
+WHERE
+  id = $1;
+)");
+
+QUERY(sqlUpdateRetryTRezeptEvent, R"(
+UPDATE
+  erp_event.trezept_event
+SET
+  state = 'pending',
+  retry_count = $1,
+  next_export = NOW() + ($2 * interval '1 second')
+WHERE
+  id = $3;
+)");
+
+QUERY(sqlCheckDeadletterTRezeptEvents, R"(
+SELECT
+  COUNT(*)
+FROM erp_event.trezept_event
+WHERE
+  id = $1 AND state = 'deadLetterQueue';
+)");
+
+QUERY(sqlMarkDeadletterTRezeptEvent, R"(
+UPDATE
+  erp_event.trezept_event
+SET
+  state = 'deadLetterQueue'
+WHERE
+  id = $1 AND state != 'deadLetterQueue'
+)");
 }
 
 thread_local PostgresConnection MedicationExporterPostgresBackend::mConnection{defaultConnectString()};
@@ -229,7 +305,7 @@ MedicationExporterPostgresBackend::getAllEventsForKvnr(const model::EventKvnr& e
 
     if (not eventKvnr.kvnrHashed().empty())
     {
-        const auto results = transaction()->exec_params(sqlGetAllEventsForKvnr.query, eventKvnr.kvnrHashed());
+        const auto results = transaction()->exec(sqlGetAllEventsForKvnr.query, pqxx::params{eventKvnr.kvnrHashed()});
         TVLOG(2) << "got " << results.size() << " results";
 
         std::vector<db_model::TaskEvent> models{};
@@ -281,9 +357,9 @@ bool MedicationExporterPostgresBackend::isDeadLetter(const model::EventKvnr& kvn
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "sqlcheckdeadletter");
 
-    const auto result =
-        transaction()->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
-                                   static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
+    const auto result = transaction()->exec(
+        sql.query, pqxx::params{kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
+                                static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType))});
     TVLOG(2) << "got " << result.size() << " results";
     std::int64_t count = 0;
     Expect(result.at(0, 0).to(count), "Could not retrieve count of deadletters as int64_t");
@@ -300,9 +376,9 @@ int MedicationExporterPostgresBackend::markDeadLetter(const model::EventKvnr& kv
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "markcheckdeadletter");
 
-    const auto result =
-        transaction()->exec_params(sql.query, kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
-                                   static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)));
+    const auto result = transaction()->exec(
+        sql.query, pqxx::params{kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
+                                static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType))});
     return result.affected_rows();
 }
 
@@ -315,7 +391,7 @@ MedicationExporterPostgresBackend::markFirstEventDeadLetter(const model::EventKv
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "markfirsteventdeadletter");
 
-    const auto result = transaction()->exec_params(sql.query, kvnr.kvnrHashed());
+    const auto result = transaction()->exec(sql.query, pqxx::params{kvnr.kvnrHashed()});
 
     if (! result.empty())
     {
@@ -356,7 +432,7 @@ void MedicationExporterPostgresBackend::deleteAllEventsForKvnr(const model::Even
 
     std::basic_string<std::byte> s{kvnr.kvnrHashed().data(), kvnr.kvnrHashed().size()};
 
-    const auto results = transaction()->exec_params(sqlDeleteAllEventsForKvnr.query, s);
+    const auto results = transaction()->exec(sqlDeleteAllEventsForKvnr.query, pqxx::params{s});
     TVLOG(2) << "got " << results.size() << " results";
 }
 
@@ -371,7 +447,7 @@ void MedicationExporterPostgresBackend::updateProcessingDelay(std::int32_t newRe
 
     Expect(not kvnr.kvnrHashed().empty(), "Kvnr missing");
 
-    const auto results = transaction()->exec_params(sql.query, newRetry, delay.count(), kvnr.kvnrHashed());
+    const auto results = transaction()->exec(sql.query, pqxx::params{newRetry, delay.count(), kvnr.kvnrHashed()});
     TVLOG(2) << "affected " << results.affected_rows() << " rows";
 }
 
@@ -387,7 +463,7 @@ void MedicationExporterPostgresBackend::deleteOneEventForKvnr(const model::Event
 
     std::basic_string<std::byte> s{kvnr.kvnrHashed().data(), kvnr.kvnrHashed().size()};
 
-    const auto results = transaction()->exec_params(sqlDeleteOneEventForFKvnr.query, s, id);
+    const auto results = transaction()->exec(sqlDeleteOneEventForFKvnr.query, pqxx::params{s, id});
     TVLOG(2) << "got " << results.size() << " results";
 }
 
@@ -410,6 +486,81 @@ void MedicationExporterPostgresBackend::finalizeKvnr(const model::EventKvnr& kvn
     TVLOG(2) << "got " << results.size() << " results";
 }
 
+std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNextTRezeptEvent()
+{
+    checkCommonPreconditions();
+    TVLOG(2) << sqlProcessNextTRezeptEvent.query;
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "processnexttrezeptevent");
+
+    const auto results = transaction()->exec(sqlProcessNextTRezeptEvent.query);
+    TVLOG(2) << "got " << results.size() << " results";
+
+    if (results.empty())
+    {
+        return std::nullopt;
+    }
+
+    Expect(results.size() == 1, "A maximum of one result row expected");
+
+    auto res = results.at(0);
+
+    TaskEventQueryIndexes idx;
+
+    Expect(res.size() == idx.total, "Invalid number of fields in result row: " + std::to_string(res.size()));
+
+    auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(
+        map<uint8_t, int16_t>(res, idx.prescriptionType, "prescription_type is null"));
+    Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
+
+    const auto& prescriptionId = model::PrescriptionId::fromDatabaseId(
+        *prescription_type_opt, map<int64_t>(res, idx.prescriptionId, "prescription_id is null"));
+    db_model::TaskEvent dbModel(
+        map<db_model::TaskEvent::id_t, model::TaskEvent::id_t>(res, idx.id, "id is null"),
+        prescriptionId,
+        map<std::int16_t, std::int16_t>(res, idx.prescriptionType, "prescription type is null"),
+        map<BlobId, int32_t>(res, idx.keyBlobId, "blob id is null"),
+        map<db_model::Blob, db_model::postgres_bytea>(res, idx.salt, "salt is null"),
+        map<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.kvnr, "kvnr is null"),
+        map<db_model::HashedKvnr, db_model::postgres_bytea>(res, idx.kvnrHashed, "kvnr_hashed is null"),
+        map<std::string, std::string>(res, idx.state, "state is null"),
+        map<std::string, std::string>(res, idx.usecase, "use case is null"),
+        map<model::Timestamp, double>(res, idx.lastModified, "last_modified is null"),
+        map<model::Timestamp, double>(res, idx.authoredOn, "authored_on is null"),
+        mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.healthcareProviderPrescription),
+        mapOptional<BlobId, int32_t>(res, idx.medicationDispenseBundleBlobId),
+        mapOptional<db_model::Blob, db_model::postgres_bytea>(res, idx.medicationDispenseBundleSalt),
+        mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.medicationDispenseBundle),
+        mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.doctorIdentity),
+        std::nullopt,
+        mapDefault<std::int32_t, std::int32_t>(res, idx.retryCount, 0));
+
+    return dbModel;
+}
+
+void MedicationExporterPostgresBackend::deleteTRezeptEvent(model::TRezeptEvent::id_t eventId)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << sqlDeleteTRezeptEvent.query;
+    const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
+                                                                        "sqldeletetrezeptevent");
+
+    const auto results = transaction()->exec(sqlDeleteTRezeptEvent.query, pqxx::params{eventId});
+    TVLOG(2) << "got " << results.size() << " results";
+}
+
+void MedicationExporterPostgresBackend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << sqlUpdateRetryTRezeptEvent.query;
+
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "sqlupdateretrytrezeptevent");
+
+    const auto results = transaction()->exec(sqlUpdateRetryTRezeptEvent.query, pqxx::params{newRetry, delay.count(), eventData.getId()});
+    TVLOG(2) << "affected " << results.affected_rows() << " rows";
+}
+
 void MedicationExporterPostgresBackend::healthCheck()
 {
     checkCommonPreconditions();
@@ -418,4 +569,27 @@ void MedicationExporterPostgresBackend::healthCheck()
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "healthcheck");
     const auto result = transaction()->exec(sqlHealthCheck.query);
     TVLOG(2) << "got " << result.size() << " results";
+}
+
+bool MedicationExporterPostgresBackend::isDeadLetter(const model::TRezeptEvent& eventData)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << sqlCheckDeadletterTRezeptEvents.query;
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "sqlcheckdeadlettertrezeptevents");
+    const auto result = transaction()->exec(sqlCheckDeadletterTRezeptEvents.query, pqxx::params{eventData.getId()});
+    TVLOG(2) << "got " << result.size() << " results";
+    std::int64_t count = 0;
+    Expect(result.at(0, 0).to(count), "Could not retrieve count of deadletters as int64_t");
+    return count > 0;
+}
+
+int MedicationExporterPostgresBackend::markDeadLetter(const model::TRezeptEvent& eventData)
+{
+    checkCommonPreconditions();
+    TVLOG(2) << sqlMarkDeadletterTRezeptEvent.query;
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "sqlmarkdeadlettertrezeptevent");
+    const auto result = transaction()->exec(sqlMarkDeadletterTRezeptEvent.query, pqxx::params{eventData.getId()});
+    return result.affected_rows();
 }

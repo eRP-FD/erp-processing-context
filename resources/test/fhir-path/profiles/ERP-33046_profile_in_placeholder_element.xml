@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Bundle xmlns="http://hl7.org/fhir">
+    <id value="minifhirtypes"/>
+    <type value="collection"/>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/NoSystemQuantity"/>
+        <resource>
+            <StructureDefinition>
+                <id value="NoSystemQuantity"/>
+                <url value="http://hl7.org/fhir/StructureDefinition/NoSystemQuantity"/>
+                <version value="4.0.1"/>
+                <name value="NoSystemQuantity"/>
+                <status value="active"/>
+                <abstract value="false"/>
+                <kind value="complex-type"/>
+                <type value="Quantity"/>
+                <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Quantity"/>
+                <derivation value="constraint"/>
+                <snapshot>
+                    <element id="Quantity">
+                        <path value="Quantity"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Quantity"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="Quantity.value">
+                        <path value="Quantity.value"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Quantity.value"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="decimal"/>
+                        </type>
+                    </element>
+                    <element id="Quantity.unit">
+                        <path value="Quantity.unit"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Quantity.unit"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                    <element id="Quantity.system">
+                        <path value="Quantity.system"/>
+                        <min value="0"/>
+                        <max value="0"/> <!-- set to zero  -->
+                        <base>
+                            <path value="Quantity.system"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="uri"/>
+                        </type>
+                    </element>
+                    <element id="Quantity.code">
+                        <path value="Quantity.code"/>
+                        <short value="Symbol in syntax defined by the system"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Quantity.code"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/coding/Dummy1"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Coding"/>
+                <url value="http://hl7.org/fhir/StructureDefinition/coding/Dummy1"/>
+                <version value="4.0.1"/>
+                <name value="Coding"/>
+                <status value="active"/>
+                <abstract value="false"/>
+                <kind value="complex-type"/>
+                <type value="Coding"/>
+                <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Coding"/>
+                <derivation value="constraint"/>
+                <snapshot>
+                    <element id="Coding">
+                        <path value="Coding"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Coding"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="Coding.system">
+                        <path value="Coding.system"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Coding.system"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="uri"/>
+                        </type>
+                    </element>
+                    <element id="Coding.code">
+                        <path value="Coding.code"/>
+                        <short value="Symbol in syntax defined by the system"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Coding.code"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://hl7.org/fhir/StructureDefinition/coding/Dummy2"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Coding"/>
+                <url value="http://hl7.org/fhir/StructureDefinition/coding/Dummy2"/>
+                <version value="4.0.1"/>
+                <name value="Coding"/>
+                <status value="active"/>
+                <abstract value="false"/>
+                <kind value="complex-type"/>
+                <type value="Coding"/>
+                <baseDefinition value="http://hl7.org/fhir/StructureDefinition/Coding"/>
+                <derivation value="constraint"/>
+                <snapshot>
+                    <element id="Coding">
+                        <path value="Coding"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Coding"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="Coding.system">
+                        <path value="Coding.system"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Coding.system"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="uri"/>
+                        </type>
+                    </element>
+                    <element id="Coding.code">
+                        <path value="Coding.code"/>
+                        <short value="Symbol in syntax defined by the system"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Coding.code"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://fhir-tools.test/minifhirtypes/reference/Dummy"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Reference"/>
+                <url value="http://fhir-tools.test/minifhirtypes/reference/Dummy"/>
+                <version value="4.0.1"/>
+                <name value="Reference"/>
+                <status value="draft"/>
+                <kind value="complex-type"/>
+                <abstract value="false"/>
+                <type value="Reference"/>
+                <baseDefinition value="http://fhir-tools.test/minifhirtypes/Reference"/>
+                <derivation value="constraint"/>
+                <snapshot>
+                    <element id="Reference">
+                        <path value="Reference"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Reference"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="Reference.reference">
+                        <path value="Reference.reference"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Reference.reference"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                    <element id="Reference.type">
+                        <path value="Reference.type"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Reference.type"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://fhir-tools.test/minifhirtypes/extension/ERP-33046_profile_in_placeholder_element"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Extension-ERP-33046_profile_in_placeholder_element"/>
+                <url value="http://fhir-tools.test/minifhirtypes/extension/ERP-33046_profile_in_placeholder_element"/>
+                <version value="4.0.1"/>
+                <name value="Extension-ERP-33046_profile_in_placeholder_element"/>
+                <status value="draft"/>
+                <kind value="complex-type"/>
+                <abstract value="false"/>
+                <type value="Extension"/>
+                <baseDefinition value="http://fhir-tools.test/minifhirtypes/Extension"/>
+                <derivation value="constraint"/>
+                <snapshot>
+                    <element id="Extension">
+                        <path value="Extension"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Extension"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="Extension.url">
+                        <path value="Extension.url"/>
+                        <representation value="xmlAttr"/>
+                        <min value="1"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Extension.url"/>
+                            <min value="1"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="string"/>
+                        </type>
+                        <fixedString value="http://fhir-tools.test/minifhirtypes/extension/ERP-33046_profile_in_placeholder_element"/>
+                    </element>
+                    <element id="Extension.extension">
+                        <path value="Extension.extension"/>
+                        <slicing>
+                            <discriminator>
+                                <type value="value"/>
+                                <path value="url"/>
+                            </discriminator>
+                            <rules value="open"/>
+                        </slicing>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Extension.extension"/>
+                            <min value="1"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Extension"/>
+                        </type>
+                    </element>
+                    <element id="Extension.value[x]">
+                        <path value="Extension.value[x]"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Extension.value[x]"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="Quantity"/>
+                            <profile value="http://hl7.org/fhir/StructureDefinition/NoSystemQuantity"/>
+                        </type>
+                        <type>
+                            <code value="Coding"/>
+                            <profile value="http://hl7.org/fhir/StructureDefinition/coding/Dummy1"/>
+                            <profile value="http://hl7.org/fhir/StructureDefinition/coding/Dummy2"/>
+                        </type>
+                        <type>
+                            <code value="Reference"/>
+                            <profile value="http://fhir-tools.test/minifhirtypes/reference/Dummy"/>
+                            <targetProfile value="SomeTargetProfile1"/>
+                            <targetProfile value="SomeTargetProfile2"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+    <entry>
+        <fullUrl value="http://fhir-tools.test/minifhirtypes/resource/ERP-33046_profile_in_placeholder_element"/>
+        <resource>
+            <StructureDefinition>
+                <id value="Resource-ERP-33046_profile_in_placeholder_element"/>
+                <url value="http://fhir-tools.test/minifhirtypes/resource/ERP-33046_profile_in_placeholder_element"/>
+                <version value="4.0.1"/>
+                <name value="Resource-ERP-33046_profile_in_placeholder_element"/>
+                <status value="draft"/>
+                <kind value="resource"/>
+                <abstract value="false"/>
+                <type value="ResourceErp33046"/>
+                <snapshot>
+                    <element id="ResourceErp33046">
+                        <path value="ResourceErp33046"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Resource"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                    </element>
+                    <element id="ResourceErp33046.id">
+                        <path value="ResourceErp33046.id"/>
+                        <representation value="xmlAttr"/>
+                        <min value="1"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Resource.id"/>
+                            <min value="1"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="http://hl7.org/fhirpath/System.String"/>
+                        </type>
+                    </element>
+                    <element id="ResourceErp33046.meta">
+                        <path value="ResourceErp33046.meta"/>
+                        <min value="0"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Resource.meta"/>
+                            <min value="0"/>
+                            <max value="1"/>
+                        </base>
+                        <type>
+                            <code value="Meta"/>
+                        </type>
+                    </element>
+                    <element id="ResourceErp33046.extension">
+                        <path value="ResourceErp33046.extension"/>
+                        <slicing>
+                            <discriminator>
+                                <type value="value"/>
+                                <path value="url"/>
+                            </discriminator>
+                            <rules value="open"/>
+                        </slicing>
+                        <min value="1"/>
+                        <max value="1"/>
+                        <base>
+                            <path value="Resource.extension"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Extension"/>
+                            <profile value="http://fhir-tools.test/minifhirtypes/extension/ERP-33046_profile_in_placeholder_element"/>
+                        </type>
+                    </element>
+                    <element id="ResourceErp33046.contained">
+                        <path value="ResourceErp33046.contained"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="Resource.contained"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Resource"/>
+                        </type>
+                    </element>
+                    <element id="ResourceErp33046.reference">
+                        <path value="ResourceErp33046.reference"/>
+                        <min value="0"/>
+                        <max value="*"/>
+                        <base>
+                            <path value="ResourceErp33046.reference"/>
+                            <min value="0"/>
+                            <max value="*"/>
+                        </base>
+                        <type>
+                            <code value="Reference"/>
+                            <profile value="http://fhir-tools.test/minifhirtypes/reference/Dummy"/>
+                            <targetProfile value="SomeOtherTargetProfile1"/>
+                            <targetProfile value="SomeOtherTargetProfile2"/>
+                        </type>
+                    </element>
+                </snapshot>
+            </StructureDefinition>
+        </resource>
+    </entry>
+</Bundle>

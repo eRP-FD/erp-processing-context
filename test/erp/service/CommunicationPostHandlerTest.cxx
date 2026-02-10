@@ -6,25 +6,18 @@
  */
 
 #include "erp/service/CommunicationPostHandler.hxx"
-#include "shared/model/ResourceNames.hxx"
-#include "shared/model/OperationOutcome.hxx"
-
 #include "shared/ErpRequirements.hxx"
-
-#include "shared/crypto/Certificate.hxx"
-#include "shared/model/Binary.hxx"
+#include "shared/model/OperationOutcome.hxx"
+#include "shared/model/ResourceNames.hxx"
 #include "shared/network/message/MimeType.hxx"
 #include "shared/util/Base64.hxx"
-
-#include "mock/crypto/MockCryptography.hxx"
-
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/mock/ClientTeeProtocol.hxx"
+#include "test/util/ErpMacros.hxx"
 #include "test/util/JsonTestUtils.hxx"
+#include "test/util/JwtBuilder.hxx"
 #include "test/util/ServerTestBase.hxx"
 #include "test/util/StaticData.hxx"
-
-#include "test/util/JwtBuilder.hxx"
 
 
 using namespace model;
@@ -1378,6 +1371,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
             .redeemPeriodStart = authoredOn.toGermanDate(),
             .redeemPeriodEnd = authoredOn.toGermanDate()
         };
+        task.setIsPkv(false);
         activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                                      .setPrescriptionId(task.prescriptionId().toString())
@@ -1405,6 +1399,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
             .redeemPeriodStart = authoredOn.toGermanDate(),
             .redeemPeriodEnd = authoredOn.toGermanDate()
         };
+        task.setIsPkv(false);
         activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                                      .setPrescriptionId(task.prescriptionId().toString())
@@ -1432,6 +1427,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
             .redeemPeriodStart = authoredOn.toGermanDate(),
             .redeemPeriodEnd = authoredOn.toGermanDate()
         };
+        task.setIsPkv(false);
         activateTask(task, InsurantG, Timestamp::now(), mvoOptions);
         std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                                      .setPrescriptionId(task.prescriptionId().toString())
@@ -2357,3 +2353,132 @@ TEST_F(CommunicationPostHandlerTest, ChargChangeReplyErr)//NOLINT(readability-fu
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
 }
+
+struct FlowtypeTestParams
+{
+    PrescriptionType prescriptionType;
+    TelematikId telematikId;
+    bool expectedSuccess;
+};
+std::ostream &operator<<(std::ostream &os, const FlowtypeTestParams &params)
+{
+    os << magic_enum::enum_name(params.prescriptionType) << ", " << params.telematikId.id();
+    return os;
+}
+class CommunicationPostHandlerTestP : public CommunicationPostHandlerTest, public ::testing::WithParamInterface<FlowtypeTestParams>
+{
+public:
+    void SetUp() override
+    {
+        if (isTRezept(GetParam().prescriptionType) &&
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        {
+            GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
+        }
+        CommunicationPostHandlerTest::SetUp();
+    }
+};
+
+TEST_P(CommunicationPostHandlerTestP, FlowtypeTest)
+{
+    A_27767_01.test("Nachricht einstellen - Prüfung des Empfängers");
+    auto task = addTaskToDatabase({ .status = Task::Status::ready, .kvnrPatient = InsurantG, .accessCode = TaskAccessCode,
+                                    .prescriptionType = GetParam().prescriptionType });
+
+    CommunicationJsonStringBuilder builder{Communication::MessageType::DispReq};
+    builder.setAccessCode(TaskAccessCode);
+    builder.setPrescriptionId(task.prescriptionId().toString());
+    builder.setRecipient(ActorRole::Pharmacists, GetParam().telematikId.id());
+    if (! isDiga(GetParam().prescriptionType))
+    {
+        builder.setPayload(DispReqMessage);
+    }
+    auto jsonString = builder.createJsonString();
+
+    CommunicationPostHandler handler{};
+    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantG) };
+    ServerRequest request(createCommunicationPostHeader("/Communication", jwtInsurant));
+    request.setAccessToken(std::move(jwtInsurant));
+    request.setBody(jsonString);
+    ServerResponse response;
+    AccessLog accessLog;
+    SessionContext sessionContext{*mContext, request, response, accessLog};
+    if (GetParam().expectedSuccess)
+    {
+        ASSERT_NO_THROW(handler.handleRequest(sessionContext));
+    }
+    else
+    {
+        auto msg =
+            "Der Empfänger darf den " + std::string{PrescriptionTypeDisplay.at(task.type())} + " nicht empfangen";
+        EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::Forbidden, msg.c_str());
+    }
+}
+const TelematikId telematikIdOeffentlicheApotheke{"3-x"};
+const TelematikId telematikIdOeffentlicheApotheke2{"9-x"};
+const TelematikId telematikIdKrankenhausApotheke{"5-x"};
+const TelematikId telematikIdKostentraeger{"8-x"};
+const TelematikId telematikIdOther{"4-x"};
+
+INSTANTIATE_TEST_SUITE_P(
+    x, CommunicationPostHandlerTestP,
+    testing::Values(FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel,
+                                       .telematikId = telematikIdOeffentlicheApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel,
+                                       .telematikId = telematikIdOeffentlicheApotheke2,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel,
+                                       .telematikId = telematikIdKrankenhausApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel,
+                                       .telematikId = telematikIdKostentraeger,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichigeArzneimittel,
+                                       .telematikId = telematikIdOther,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                       .telematikId = telematikIdOeffentlicheApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                       .telematikId = telematikIdOeffentlicheApotheke2,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                       .telematikId = telematikIdKrankenhausApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                       .telematikId = telematikIdKostentraeger,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                       .telematikId = telematikIdOther,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::tRezept,
+                                       .telematikId = telematikIdOeffentlicheApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::tRezept,
+                                       .telematikId = telematikIdOeffentlicheApotheke2,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::tRezept,
+                                       .telematikId = telematikIdKrankenhausApotheke,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::tRezept,
+                                       .telematikId = telematikIdKostentraeger,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::tRezept,
+                                       .telematikId = telematikIdOther,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::digitaleGesundheitsanwendungen,
+                                       .telematikId = telematikIdOeffentlicheApotheke,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::digitaleGesundheitsanwendungen,
+                                       .telematikId = telematikIdOeffentlicheApotheke2,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::digitaleGesundheitsanwendungen,
+                                       .telematikId = telematikIdKrankenhausApotheke,
+                                       .expectedSuccess = false},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::digitaleGesundheitsanwendungen,
+                                       .telematikId = telematikIdKostentraeger,
+                                       .expectedSuccess = true},
+                    FlowtypeTestParams{.prescriptionType = PrescriptionType::digitaleGesundheitsanwendungen,
+                                       .telematikId = telematikIdOther,
+                                       .expectedSuccess = false}));

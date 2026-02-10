@@ -103,4 +103,42 @@ EvaluationContext MathModOperator::mod(const EvaluationContext& context, const E
     FPFail("unsupported type for mod operator");
 }
 
+EvaluationContext MathMultiplicationOperator::eval(const EvaluationContext& context) const
+{
+    FPExpect(mLhs && mRhs, "Missing argument for multiplication operator");
+    const auto lhs = mLhs->eval(context).collection.single();
+    const auto rhs = mRhs->eval(context).collection.single();
+    if (isImplicitConvertible(lhs->type(), rhs->type()))
+    {
+        return multiplication(context, *lhs, *rhs, rhs->type());
+    }
+    if (isImplicitConvertible(rhs->type(), lhs->type()))
+    {
+        return multiplication(context, *lhs, *rhs, lhs->type());
+    }
+    FPFail("incompatible operand types for multiplication operator");
+}
+
+EvaluationContext MathMultiplicationOperator::multiplication(const EvaluationContext& context, const Element& lhs,
+                                                      const Element& rhs, Element::Type type)
+{
+    switch (type)
+    {
+        case Element::Type::Integer:
+            return context.makeIntegerElement(lhs.asInt() * rhs.asInt());
+        case Element::Type::Decimal: {
+            return context.makeDecimalElement(lhs.asDecimal() * rhs.asDecimal());
+        }
+        case Element::Type::String:
+        case Element::Type::Boolean:
+        case Element::Type::Date:
+        case Element::Type::DateTime:
+        case Element::Type::Time:
+        case Element::Type::Quantity:
+        case Element::Type::Structured:
+            break;
+    }
+    FPFail("unsupported type for multiplication operator");
+}
+
 }

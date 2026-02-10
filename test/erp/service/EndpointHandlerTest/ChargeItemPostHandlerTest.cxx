@@ -478,28 +478,27 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLIN
 
 TEST_F(ChargeItemPostHandlerTest, PostNonPkvFails)
 {
-    ChargeItemPostHandler handler{{}};
-    auto serviceContext = StaticData::makePcServiceContext();
-    auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
-    Header requestHeader{HttpMethod::POST, "/chargeitem/" + prescriptionId.toString(), 0, {}, HttpStatus::Unknown};
-    ServerRequest serverRequest{std::move(requestHeader)};
-    serverRequest.setQueryParameters({{"task", prescriptionId.toString()}});
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext(serviceContext, serverRequest, serverResponse, accessLog);
-    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    try
-    {
-        handler.handleRequest(sessionContext);
-        ADD_FAILURE() << "Expected ErpException";
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(ex.status(), HttpStatus::BadRequest);
-        EXPECT_STREQ(ex.what(), "Referenced task is not of type PKV");
-    }
-    catch (const std::exception& ex)
-    {
-        ADD_FAILURE() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
-    }
+    const auto gkvTaskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
+    const auto gkvKvnr = model::Kvnr{"X123456788", model::Kvnr::Type::gkv};
+
+    CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
+                                        ResourceTemplates::davDispenseItemXml({.prescriptionId = gkvTaskId}),
+                                        std::nullopt};
+    const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = gkvKvnr,
+                                                                 .prescriptionId = gkvTaskId,
+                                                                 .dispenseBundleBase64 = cadesBesSignature.getBase64(),
+                                                                 .operation = OperationType::Post});
+    const auto inputChargeItem = model::ChargeItem::fromXmlNoValidation(chargeItemXml);
+
+    const auto referencedTask = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = gkvTaskId, .kvnr = gkvKvnr.id()}));
+
+    const auto jwtPharmacy =
+        JwtBuilder::testBuilder().makeJwtApotheke(std::string(inputChargeItem.entererTelematikId().value()));
+
+    std::optional<model::ChargeItem> resultChargeItem;
+    ASSERT_NO_FATAL_FAILURE(checkPostChargeItemHandler(resultChargeItem, mServiceContext, jwtPharmacy, chargeItemXml,
+                                                       inputChargeItem.prescriptionId(), referencedTask.secret(),
+                                                       HttpStatus::BadRequest, "Referenced task is not of type PKV"));
 }

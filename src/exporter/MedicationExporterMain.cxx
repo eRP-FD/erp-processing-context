@@ -7,6 +7,9 @@
 
 #include "exporter/MedicationExporterMain.hxx"
 #include "exporter/EventProcessor.hxx"
+#include "exporter/ExporterRequirements.hxx"
+#include "exporter/RunLoopScheduler.hxx"
+#include "exporter/TRezeptEventProcessor.hxx"
 #include "exporter/client/EpaMedicationClientImpl.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
 #include "exporter/database/MedicationExporterPostgresBackend.hxx"
@@ -36,6 +39,8 @@
 #include "shared/tpm/TpmProduction.hxx"
 #endif
 
+#include "client/BfArMClient.hxx"
+#include "client/FhirVZDClient.hxx"
 #include "util/RuntimeConfiguration.hxx"
 
 #include <boost/asio/awaitable.hpp>
@@ -173,7 +178,7 @@ int MedicationExporterMain::runApplication(
     log << "initializing FHIR data processing";
     Fhir::init<ConfigurationBase::MedicationExporter>(Fhir::Init::now);
 
-    RunLoop runLoop;
+    RunLoopScheduler runLoop;
     auto serviceContext =
         std::make_shared<MedicationExporterServiceContext>(ioContext, Configuration::instance(), std::move(factories));
 
@@ -208,7 +213,6 @@ int MedicationExporterMain::runApplication(
         log << "calling post initialization callback";
         postInitializationCallback(*serviceContext);
     }
-    TVLOG(0) << "serving requests with " << threadCount << " threads";
 
     runLoop.getThreadPool().setUp(threadCount, "medication-exporter");
 
@@ -216,7 +220,20 @@ int MedicationExporterMain::runApplication(
     {
         log << "complete";
         std::cout << "press CTRL-C to stop" << std::endl;
-        runLoop.serve(serviceContext, threadCount);
+        A_27859.start("configuration for each exporter processor");
+        if (configuration.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA))
+        {
+            TVLOG(0) << "serving requests for EPA with " << threadCount << " threads";
+            runLoop.serve(serviceContext, &EventProcessor::runloopWorker, threadCount);
+        }
+        // GEMREQ-start A_27859
+        if (configuration.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT))
+        {
+            TVLOG(0) << "serving requests for T-Rezept with 1 thread";
+            runLoop.serve(serviceContext, &TRezeptEventProcessor::runloopWorker, 1);
+        }
+        // GEMREQ-end A_27859
+        A_27859.finish();
     }
 
     runLoop.getThreadPool().joinAllThreads();
@@ -244,145 +261,8 @@ int MedicationExporterMain::runApplication(
         return EXIT_SUCCESS;
 }
 
-MedicationExporterMain::RunLoop::RunLoop()
-    : mWorkerThreadPool()
-{
-}
 
-boost::asio::awaitable<void> MedicationExporterMain::RunLoop::eventProcessingWorker(
-    std::weak_ptr<MedicationExporterServiceContext> serviceContext)
-{
-    using namespace std::chrono_literals;
-    boost::asio::steady_timer timer{mWorkerThreadPool.ioContext()};
-    while (! mWorkerThreadPool.ioContext().stopped())
-    {
-        Reschedule rescheduleRule{Reschedule::Delayed};
-        try
-        {
-            auto serviceCtx = serviceContext.lock();
-            if (! serviceCtx)
-            {
-                co_return;
-            }
-            if (checkIsPaused(serviceCtx))
-            {
-                serviceCtx.reset();
-                timer.expires_after(100ms);
-                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                continue;
-            }
-            rescheduleRule = process(serviceCtx);
-        }
-        catch (const std::exception& e)
-        {
-            rescheduleRule = Reschedule::TemporaryError;
-            std::string reason = dynamic_cast<const model::ModelException*>(&e) ? "not given" : e.what();
-            JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
-                .keyValue("event", "Processing task events: Unexpected error. Wait before trying next processing.")
-                .keyValue("reason", reason)
-                .locationFromException(e);
-        }
-        switch (rescheduleRule)
-        {
-            case Reschedule::Immediate:
-                // return into executor to allow handling of other events (like SignalHandler)
-                co_await async_immediate(co_await boost::asio::this_coro::executor);
-                break;
-            case Reschedule::Delayed:
-                timer.expires_after(std::chrono::seconds(5));
-                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                break;
-            case Reschedule::Throttled:
-                timer.expires_after(mThrottleValue.load());
-                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                break;
-            case Reschedule::TemporaryError:
-                // handle KVNR processing error
-                timer.expires_after(std::chrono::seconds(60));
-                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                break;
-        }
-    }
-}
-void MedicationExporterMain::RunLoop::serve(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext,
-                                            const size_t threadCount)
-{
-    // Schedule initial job to the workers.
-    for (size_t i = 0; i < threadCount; ++i)
-    {
-        boost::asio::co_spawn(mWorkerThreadPool.ioContext(), eventProcessingWorker(std::weak_ptr{serviceContext}),
-                              boost::asio::detached);
-    }
-}
-
-MedicationExporterMain::RunLoop::Reschedule
-MedicationExporterMain::RunLoop::process(const std::shared_ptr<MedicationExporterServiceContext>& serviceCtx)
-{
-    EpaAccountLookup accountLookup (*serviceCtx);
-    if (EventProcessor{serviceCtx, accountLookup}.process())
-    {
-        if (checkIsThrottled(serviceCtx))
-        {
-            return Reschedule::Throttled;
-        }
-        else
-        {
-            return Reschedule::Immediate;
-        }
-    }
-    else
-    {
-        return Reschedule::Delayed;
-    }
-}
-
-void MedicationExporterMain::RunLoop::shutDown()
-{
-    mWorkerThreadPool.shutDown();
-}
-
-bool MedicationExporterMain::RunLoop::isStopped() const
-{
-    return mWorkerThreadPool.ioContext().stopped();
-}
-
-ThreadPool& MedicationExporterMain::RunLoop::getThreadPool()
-{
-    return mWorkerThreadPool;
-}
-
-bool MedicationExporterMain::RunLoop::checkIsPaused(
-    const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
-{
-    const auto paused = serviceContext->getRuntimeConfigurationGetter()->isPaused();
-    if (mPaused.exchange(paused) != paused)
-    {
-        TLOG(INFO) << (paused ? "Paused" : "Resuming");
-    }
-    return paused;
-}
-
-bool MedicationExporterMain::RunLoop::checkIsThrottled(
-    const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
-{
-    using namespace std::chrono_literals;
-    const auto throttleValue = serviceContext->getRuntimeConfigurationGetter()->throttleValue();
-    const bool throttlingActive = throttleValue > 0ms;
-    if (mThrottleValue.exchange(throttleValue) != throttleValue)
-    {
-        if (throttlingActive)
-        {
-            TLOG(INFO) << "Throttling active, value: " << throttleValue.count() << "ms";
-        }
-        else
-        {
-            TLOG(INFO) << "Throttling inactive";
-        }
-    }
-    return throttlingActive;
-}
-
-bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop,
+bool MedicationExporterMain::waitForHealthUp(RunLoopScheduler& runLoop,
                                              const std::shared_ptr<MedicationExporterServiceContext>& serviceContext)
 {
     constexpr size_t loopWaitSeconds = 1;
@@ -409,12 +289,16 @@ bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop,
                 serviceContext->getHsmPool().getTokenUpdater().healthCheck();
                 healthCheckIsUp = true;
                 // validate ePA endpoints
+                TLOG(INFO) << "Testing connections";
                 testEpaEndpoints(*serviceContext);
+                testTRezeptEndpoints();
+                TLOG(INFO) << "Done testing connections";
             }
             catch (...)
             {
                 JsonLog(LogId::INTERNAL_WARNING, JsonLog::makeErrorLogReceiver())
-                    .message("Retry #" + std::to_string(0) + " health check due to resource temporarily unavailable ");
+                    .message("Retry #" + std::to_string(loopCount / loopHealthCheckInterval) +
+                             " health check due to resource temporarily unavailable ");
             }
         }
         if (healthCheckIsUp)
@@ -440,6 +324,10 @@ bool MedicationExporterMain::waitForHealthUp(RunLoop& runLoop,
 
 bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& serviceContext)
 {
+    if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA))
+    {
+        return true;
+    }
     auto epaHostPortList = Configuration::instance().epaFQDNs();
     Expect(! epaHostPortList.empty(), "ePA Host list must not be empty");
     bool allUp = true;
@@ -449,9 +337,44 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
             EpaMedicationClientImpl{serviceContext.ioContext(), entry.hostName, serviceContext.teeClientPool()};
         if (! epaClient.testConnection())
         {
-            TLOG(WARNING) << "Connection ePA server at " << entry.hostName << entry.port << " failed";
+            TLOG(WARNING) << "Connection to ePA server at " << entry.hostName << ":" << entry.port << " failed";
             allUp = false;
         }
+        else
+        {
+            TLOG(INFO) << "Connection to ePA server at " << entry.hostName << ":" << entry.port << " successfully tested";
+        }
+    }
+    return allUp;
+}
+
+bool MedicationExporterMain::testTRezeptEndpoints()
+{
+    if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT))
+    {
+        return true;
+    }
+    bool allUp = true;
+    if (! FhirVzdClient{
+            Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID)}
+              .testConnection())
+    {
+        TLOG(WARNING) << "Connection to FHIR-VZD failed";
+        allUp = false;
+    }
+    else
+    {
+        TLOG(INFO) << "Connection to FHIR-VZD successfully tested";
+    }
+    if (! BfArMClient{Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID)}
+              .testConnection())
+    {
+        TLOG(WARNING) << "Connection to BfArM failed";
+        allUp = false;
+    }
+    else
+    {
+        TLOG(INFO) << "Connection to BfArM successfully tested";
     }
     return allUp;
 }

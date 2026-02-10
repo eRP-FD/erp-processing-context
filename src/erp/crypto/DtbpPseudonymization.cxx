@@ -13,6 +13,7 @@
 
 #include <boost/endian.hpp>
 
+// GEMREQ-start A_27332
 std::string DtbpPseudonymization::encryptLogData(std::string_view data, const SafeString& key)
 {
     A_27332_01.start("encrypt pseudonymized data");
@@ -32,6 +33,7 @@ std::string DtbpPseudonymization::encryptLogData(std::string_view data, const Sa
 
     return output;
 }
+// GEMREQ-end A_27332
 
 std::string DtbpPseudonymization::decryptLogData(std::string_view base64Data, const SafeString& key)
 {

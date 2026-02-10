@@ -11,7 +11,6 @@
 #include <stdexcept>
 #include <unordered_set>
 
-#include "shared/crypto/EllipticCurvePublicKey.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/crypto/Certificate.hxx"
 #include "shared/tsl/error/TslError.hxx"
@@ -791,28 +790,6 @@ EVP_PKEY* X509Certificate::getPublicKey () const
     }
 
     return X509_get0_pubkey(pCert.get());
-}
-
-
-std::unique_ptr<EllipticCurvePublicKey> X509Certificate::getEllipticCurvePublicKey() const
-{
-    if (SigningAlgorithm::ellipticCurve != getSigningAlgorithm())
-    {
-        Fail2("There is no elliptic curve public key to be retrieved", std::logic_error);
-    }
-
-    auto* evpKey = getPublicKey();
-    if (evpKey)
-    {
-        const auto* ecKey = EVP_PKEY_get0_EC_KEY(evpKey);
-        if (ecKey)
-        {
-            const auto* ecPublicKey = EC_KEY_get0_public_key(ecKey);
-            return std::make_unique<EllipticCurvePublicKey>(NID_brainpoolP256r1, ecPublicKey);
-        }
-    }
-
-    Fail2("Cannot retrieve elliptic curve public key", std::runtime_error);
 }
 
 

@@ -9,9 +9,17 @@
 namespace exporter
 {
 
-bool RuntimeConfiguration::isPaused() const
+RuntimeConfiguration::RuntimeConfiguration()
 {
-    return mPause;
+    for (const auto processor : magic_enum::enum_values<ProcessorType>())
+    {
+        mPause[processor] = false;
+    }
+}
+
+bool RuntimeConfiguration::isPaused(const ProcessorType processor) const
+{
+    return mPause.at(processor);
 }
 
 std::chrono::milliseconds RuntimeConfiguration::throttleValue() const
@@ -24,14 +32,14 @@ RuntimeConfiguration::ThrottleMode RuntimeConfiguration::throttleMode() const
     return mThrottleMode;
 }
 
-void RuntimeConfiguration::pause()
+void RuntimeConfiguration::pause(const ProcessorType processor)
 {
-    mPause = true;
+    mPause[processor] = true;
 }
 
-void RuntimeConfiguration::resume()
+void RuntimeConfiguration::resume(const ProcessorType processor)
 {
-    mPause = false;
+    mPause[processor] = false;
 }
 
 void RuntimeConfiguration::throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle)
@@ -61,9 +69,9 @@ RuntimeConfiguration::Getter::Getter(std::shared_ptr<const RuntimeConfiguration>
 {
 }
 
-bool RuntimeConfiguration::Getter::isPaused() const
+bool RuntimeConfiguration::Getter::isPaused(const ProcessorType processor) const
 {
-    return mRuntimeConfiguration->isPaused();
+    return mRuntimeConfiguration->isPaused(processor);
 }
 
 std::chrono::milliseconds RuntimeConfiguration::Getter::throttleValue() const
@@ -93,14 +101,14 @@ RuntimeConfiguration::Setter::Setter(std::shared_ptr<RuntimeConfiguration> runti
 {
 }
 
-void RuntimeConfiguration::Setter::pause()
+void RuntimeConfiguration::Setter::pause(const ProcessorType processor)
 {
-    mRuntimeConfiguration->pause();
+    mRuntimeConfiguration->pause(processor);
 }
 
-void RuntimeConfiguration::Setter::resume()
+void RuntimeConfiguration::Setter::resume(const ProcessorType processor)
 {
-    mRuntimeConfiguration->resume();
+    mRuntimeConfiguration->resume(processor);
 }
 
 void RuntimeConfiguration::Setter::throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle)
@@ -108,9 +116,9 @@ void RuntimeConfiguration::Setter::throttle(ThrottleMode throttleMode, const std
     mRuntimeConfiguration->throttle(throttleMode, throttle);
 }
 
-bool RuntimeConfiguration::Setter::isPaused() const
+bool RuntimeConfiguration::Setter::isPaused(const ProcessorType processor) const
 {
-    return mRuntimeConfiguration->isPaused();
+    return mRuntimeConfiguration->isPaused(processor);
 }
 
 std::chrono::milliseconds RuntimeConfiguration::Setter::throttleValue() const

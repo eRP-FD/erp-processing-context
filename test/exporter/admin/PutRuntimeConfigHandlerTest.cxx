@@ -66,7 +66,7 @@ public:
     ServerResponse response;
     AccessLog accessLog;
 
-    void changeConfig(const std::string& key, const std::string& value)
+    void changeConfig(const std::string& key, const std::string& value, HttpStatus expectedStatus = HttpStatus::OK)
     {
         ServerRequest request{Header(header)};
         request.header().setMethod(HttpMethod::PUT);
@@ -79,10 +79,18 @@ public:
         exporter::SessionContext session{*serviceContext, request, response, accessLog};
         exporter::PutRuntimeConfigHandler handler{ConfigurationKey::MEDICATION_EXPORTER_ADMIN_RC_CREDENTIALS};
         EXPECT_NO_THROW(handler.handleRequest(session));
-        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
+        EXPECT_EQ(session.response.getHeader().status(), expectedStatus) << session.response.getBody();
     }
 
-    void checkGetConfig(bool expectedPause, int64_t expectedThrottle)
+    struct CheckGetConfigExpectation
+    {
+        bool pause;
+        bool epaPause;
+        bool tRezeptPause;
+        int64_t throttle;
+    };
+
+    void checkGetConfig(CheckGetConfigExpectation expectation)
     {
         ServerRequest request{Header(header)};
         request.header().setMethod(HttpMethod::GET);
@@ -98,39 +106,99 @@ public:
         configDocument.Parse(session.response.getBody());
 
         rapidjson::Pointer pausePointer{std::string{"/runtime/Pause/value"}};
+        rapidjson::Pointer epaPausePointer{std::string{"/runtime/Pause/epa/value"}};
+        rapidjson::Pointer tRezeptPausePointer{std::string{"/runtime/Pause/t-rezept/value"}};
         rapidjson::Pointer throttlePointer{std::string{"/runtime/Throttle/value"}};
-        EXPECT_EQ(pausePointer.Get(configDocument)->GetBool(), expectedPause);
-        EXPECT_EQ(throttlePointer.Get(configDocument)->GetInt64(), expectedThrottle);
+        EXPECT_EQ(pausePointer.Get(configDocument)->GetBool(), expectation.pause);
+        EXPECT_EQ(epaPausePointer.Get(configDocument)->GetBool(), expectation.epaPause);
+        EXPECT_EQ(tRezeptPausePointer.Get(configDocument)->GetBool(), expectation.tRezeptPause);
+        EXPECT_EQ(throttlePointer.Get(configDocument)->GetInt64(), expectation.throttle);
     }
 };
 
 TEST_F(PutRuntimeConfigHandlerTest, PauseResumeThrottle)
 {
-    checkGetConfig(false, 0);
+    CheckGetConfigExpectation expect{.pause = false, .epaPause = false, .tRezeptPause = false, .throttle = 0};
+    checkGetConfig(expect);
 
     changeConfig("Pause", "");
-    checkGetConfig(true, 0);
+    expect = {.pause = true, .epaPause = true, .tRezeptPause = true, .throttle = 0};
+    checkGetConfig(expect);
 
     changeConfig("Pause", "");
-    checkGetConfig(true, 0);
+    checkGetConfig(expect);
 
     changeConfig("Throttle", "1500");
-    checkGetConfig(true, 1500);
+    expect.throttle = 1500;
+    checkGetConfig(expect);
 
     changeConfig("Throttle", "1500");
-    checkGetConfig(true, 1500);
+    checkGetConfig(expect);
 
     changeConfig("Resume", "");
-    checkGetConfig(false, 1500);
+    expect = {.pause = false, .epaPause = false, .tRezeptPause = false, .throttle = 1500};
+    checkGetConfig(expect);
 
     changeConfig("Resume", "");
-    checkGetConfig(false, 1500);
+    checkGetConfig(expect);
 
     changeConfig("Throttle", "0");
-    checkGetConfig(false, 0);
+    expect.throttle = 0;
+    checkGetConfig(expect);
 
     changeConfig("Throttle", "0");
-    checkGetConfig(false, 0);
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "epa");
+    expect.epaPause = true;
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "t-rezept");
+    expect.tRezeptPause = true;
+    expect.pause = true;
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "epa");
+    expect.epaPause = false;
+    expect.pause = false;
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "t-rezept");
+    expect.tRezeptPause = false;
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "t-rezept");
+    expect.tRezeptPause = true;
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "epa");
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "");
+    expect.tRezeptPause = false;
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "true");
+    expect = {.pause = true, .epaPause = true, .tRezeptPause = true, .throttle = 0};
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "false", HttpStatus::BadRequest);
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "true");
+    expect = {.pause = false, .epaPause = false, .tRezeptPause = false, .throttle = 0};
+    checkGetConfig(expect);
+
+    changeConfig("Pause", "");
+    expect = {.pause = true, .epaPause = true, .tRezeptPause = true, .throttle = 0};
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "false", HttpStatus::BadRequest);
+    checkGetConfig(expect);
+
+    changeConfig("Resume", "true");
+    expect = {.pause = false, .epaPause = false, .tRezeptPause = false, .throttle = 0};
+    checkGetConfig(expect);
 }
 
 using magic_enum::ostream_operators::operator<<;

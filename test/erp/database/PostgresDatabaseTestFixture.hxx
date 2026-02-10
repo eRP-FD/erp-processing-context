@@ -97,6 +97,8 @@ public:
                 return "erp.task";
             case model::PrescriptionType::digitaleGesundheitsanwendungen:
                 return "erp.task_162";
+            case model::PrescriptionType::tRezept:
+                return "erp.task_166";
             case model::PrescriptionType::direkteZuweisung:
                 return "erp.task_169";
             case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
@@ -182,8 +184,8 @@ protected:
     {
         auto&& txn = createTransaction();
         auto kvnr_hashed = mKeyDerivation->hashKvnr(kvnr);
-        txn.exec_params("DELETE FROM " + taskTableName + " WHERE kvnr=$1", kvnr_hashed.binarystring());
-        txn.exec_params("DELETE FROM erp.auditevent WHERE kvnr_hashed=$1", kvnr_hashed.binarystring());
+        txn.exec("DELETE FROM " + taskTableName + " WHERE kvnr=$1", pqxx::params{kvnr_hashed.binarystring()});
+        txn.exec("DELETE FROM erp.auditevent WHERE kvnr_hashed=$1", pqxx::params{kvnr_hashed.binarystring()});
         txn.commit();
     }
 

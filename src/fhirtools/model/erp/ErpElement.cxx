@@ -107,17 +107,17 @@ std::string ErpElement::asRaw() const
 
 int32_t ErpElement::asInt() const
 {
-    return asPrimitiveElement().asInt();
+    return asPrimitiveElement()->asInt();
 }
 
 fhirtools::DecimalType ErpElement::asDecimal() const
 {
-    return asPrimitiveElement().asDecimal();
+    return asPrimitiveElement()->asDecimal();
 }
 
 bool ErpElement::asBool() const
 {
-    return asPrimitiveElement().asBool();
+    return asPrimitiveElement()->asBool();
 }
 
 std::string ErpElement::asString() const
@@ -127,27 +127,27 @@ std::string ErpElement::asString() const
     {
         return std::string{model::NumberAsStringParserDocument::getStringValueFromValue(mValue)};
     }
-    return asPrimitiveElement().asString();
+    return asPrimitiveElement()->asString();
 }
 
 fhirtools::Date ErpElement::asDate() const
 {
-    return asPrimitiveElement().asDate();
+    return asPrimitiveElement()->asDate();
 }
 
 fhirtools::Time ErpElement::asTime() const
 {
-    return asPrimitiveElement().asTime();
+    return asPrimitiveElement()->asTime();
 }
 
 fhirtools::DateTime ErpElement::asDateTime() const
 {
-    return asPrimitiveElement().asDateTime();
+    return asPrimitiveElement()->asDateTime();
 }
 
 Element::QuantityType ErpElement::asQuantity() const
 {
-    return asPrimitiveElement().asQuantity();
+    return asPrimitiveElement()->asQuantity();
 }
 
 const rapidjson::Value* ErpElement::asJson() const
@@ -249,6 +249,11 @@ std::vector<std::shared_ptr<const Element>> ErpElement::subElements(const std::s
     {
         return cachedPos->second;
     }
+    if (definitionPointer().profile()->kind() == FhirStructureDefinition::Kind::primitiveType &&
+        name == "value")
+    {
+        return mSubElementCache.insert(cachedPos, {name, {asPrimitiveElement()}})->second;
+    }
     using std::max;
     FPExpect(definitionPointer().element(), "element must be set");
     if (definitionPointer().isResource() && name == resourceType())
@@ -338,46 +343,44 @@ std::vector<std::shared_ptr<const Element>> ErpElement::arraySubElements(const P
 }
 
 
-PrimitiveElement ErpElement::asPrimitiveElement() const
+std::shared_ptr<const PrimitiveElement> ErpElement::asPrimitiveElement() const
 {
+    using DocType = model::NumberAsStringParserDocument;
     Expect3(mValue, "Element has no value", std::logic_error);
     const auto* repo = std::addressof(getFhirStructureRepository());
     switch (type())
     {
         case Type::Integer:
-            return PrimitiveElement(repo, type(),
-                                    model::NumberAsStringParserDocument::getOptionalIntValue(*mValue, {}).value());
+            return std::make_shared<PrimitiveElement>(repo, type(), DocType::getOptionalIntValue(*mValue, {}).value(),
+                                                      weak_from_this());
         case Type::Decimal:
-            return PrimitiveElement(
-                repo, type(),
-                fhirtools::DecimalType(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), fhirtools::DecimalType(DocType::getStringValueFromValue(mValue)), weak_from_this());
         case Type::String:
-            return PrimitiveElement(repo, type(),
-                                    std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue)));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), std::string(DocType::getStringValueFromValue(mValue)), weak_from_this());
         case Type::Boolean:
-            return PrimitiveElement(repo, type(), mValue->GetBool());
+            return std::make_shared<PrimitiveElement>(repo, type(), mValue->GetBool(), weak_from_this());
         case Type::Date:
-            return PrimitiveElement(
-                repo, type(),
-                fhirtools::Date(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), fhirtools::Date(std::string(DocType::getStringValueFromValue(mValue))), weak_from_this());
         case Type::DateTime:
-            return PrimitiveElement(
-                repo, type(),
-                fhirtools::DateTime(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), fhirtools::DateTime(std::string(DocType::getStringValueFromValue(mValue))),
+                weak_from_this());
         case Type::Time:
-            return PrimitiveElement(
-                repo, type(),
-                fhirtools::Time(std::string(model::NumberAsStringParserDocument::getStringValueFromValue(mValue))));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), fhirtools::Time(std::string(DocType::getStringValueFromValue(mValue))), weak_from_this());
         case Type::Structured:
             break;
         case Type::Quantity: {
             const auto* valueElement = rapidjson::Pointer("/value").Get(*mValue);
             FPExpect(valueElement, "Quantity value not defined");
-            const auto value = model::NumberAsStringParserDocument::getStringValueFromValue(valueElement);
+            const auto value = DocType::getStringValueFromValue(valueElement);
             FPExpect(! value.empty(), "Quantity value not defined");
-            const auto unit =
-                model::NumberAsStringParserDocument::getOptionalStringValue(*mValue, rapidjson::Pointer("/unit"));
-            return PrimitiveElement(repo, type(), QuantityType(fhirtools::DecimalType(value), unit.value_or("")));
+            const auto unit = DocType::getOptionalStringValue(*mValue, rapidjson::Pointer("/unit"));
+            return std::make_shared<PrimitiveElement>(
+                repo, type(), QuantityType(fhirtools::DecimalType(value), unit.value_or("")), weak_from_this());
         }
     }
     FPFail("not convertible to primitive");

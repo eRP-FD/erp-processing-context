@@ -64,7 +64,7 @@ public:
     bool isResource() const;
     bool isArray() const;
 
-    ProfiledElementTypeInfo rootPointer() const;
+    const ProfiledElementTypeInfo& rootPointer() const;
 
     void typecast(const FhirStructureDefinition* structDef);
 

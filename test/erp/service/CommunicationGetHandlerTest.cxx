@@ -47,8 +47,10 @@ public:
             {
                 auto transaction = pqxx::work(*connection);
                 auto kvnrHashed = mServer->serviceContext().getKeyDerivation().hashKvnr(model::Kvnr{user});
-                transaction.exec_params0("DELETE FROM erp.communication WHERE sender = $1 OR recipient = $1",
-                                         kvnrHashed.binarystring());
+                transaction
+                    .exec("DELETE FROM erp.communication WHERE sender = $1 OR recipient = $1",
+                          pqxx::params{kvnrHashed.binarystring()})
+                    .no_rows();
                 transaction.commit();
             }
         }

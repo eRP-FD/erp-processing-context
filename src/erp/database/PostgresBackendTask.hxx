@@ -14,6 +14,7 @@
 #include <pqxx/transaction_base>
 
 class PostgresConnection;
+struct TaskQueryIndexes;
 
 class PostgresBackendTask
 {
@@ -21,9 +22,44 @@ public:
 
     static constexpr const char* TASK_160_TABLE_NAME = "erp.task";
     static constexpr const char* TASK_162_TABLE_NAME = "erp.task_162";
+    static constexpr const char* TASK_166_TABLE_NAME = "erp.task_166";
     static constexpr const char* TASK_169_TABLE_NAME = "erp.task_169";
     static constexpr const char* TASK_200_TABLE_NAME = "erp.task_200";
     static constexpr const char* TASK_209_TABLE_NAME = "erp.task_209";
+
+    // this contains all possible column names of all task tables. They are not necessarily contained in all task tables
+    enum class ColumnName
+    {
+        prescription_id,
+        kvnr,
+        kvnr_hashed,
+        last_modified,
+        authored_on,
+        expiry_date,
+        accept_date,
+        status,
+        task_key_blob_id,
+        prescription_type,
+        salt,
+        access_code,
+        secret,
+        healthcare_provider_prescription,
+        receipt,
+        when_handed_over,
+        when_prepared,
+        performer,
+        medication_dispense_blob_id,
+        medication_dispense_bundle,
+        owner,
+        last_medication_dispense,
+        medication_dispense_salt,
+        doctor_identity,
+        pharmacy_identity,
+        last_status_update,
+        eu_redeemable,
+        eu_redeemable_patient,
+        is_pkv,
+    };
 
     explicit PostgresBackendTask(model::PrescriptionType prescriptionType);
 
@@ -49,7 +85,7 @@ public:
                       const model::Timestamp& expiryDate, const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
                       const db_model::EncryptedBlob& doctorIdentity, const model::Timestamp& lastStatusUpdate,
-                      bool euRedeemable) const;
+                      bool euRedeemable, bool isPkv) const;
 
     void updateTaskReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                            const model::Task::Status& taskStatus, const model::Timestamp& lastModified,
@@ -105,30 +141,13 @@ public:
                                                                              const db_model::HashedKvnr& kvnrHashed,
                                                                              const std::optional<UrlArguments>& search);
 
-    struct TaskQueryIndexes {
-        pqxx::row::size_type prescriptionIdIndex = 0;
-        pqxx::row::size_type kvnrIndex = 1;
-        pqxx::row::size_type lastModifiedIndex = 2;
-        pqxx::row::size_type authoredOnIndex = 3;
-        pqxx::row::size_type expiryDateIndex = 4;
-        pqxx::row::size_type acceptDateIndex = 5;
-        pqxx::row::size_type statusIndex = 6;
-        pqxx::row::size_type lastStatusChangeIndex = 7;
-        pqxx::row::size_type saltIndex = 8;
-        pqxx::row::size_type keyBlobIdIndex = 9;
-        std::optional<pqxx::row::size_type> accessCodeIndex = 10;
-        std::optional<pqxx::row::size_type> secretIndex = 11;
-        std::optional<pqxx::row::size_type> ownerIndex = 12;
-        std::optional<pqxx::row::size_type> healthcareProviderPrescriptionIndex = {};
-        std::optional<pqxx::row::size_type> receiptIndex = {};
-        std::optional<pqxx::row::size_type> lastMedicationDispenseIndex = {};
-        // Not actual optional:
-        std::optional<pqxx::row::size_type> euRedeemableByPatientIndex;
-        std::optional<pqxx::row::size_type> euRedeemableIndex;
-    };
-
-    [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow, const TaskQueryIndexes& indexes,
-                                                               model::PrescriptionType prescriptionType);
+    [[nodiscard]] static std::vector<db_model::Task> tasksFromQueryResult(const pqxx::result& result,
+                                                                          std::optional<model::PrescriptionType> prescriptionType);
+    [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow,
+                                                               std::optional<model::PrescriptionType> prescriptionType);
+    [[nodiscard]] static db_model::Task taskFromQueryResultRow(const pqxx::row& resultRow,
+                                                               std::optional<model::PrescriptionType> prescriptionType,
+                                                               const TaskQueryIndexes& indexes);
 
 private:
     std::string taskTableName() const;

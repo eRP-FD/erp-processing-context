@@ -15,15 +15,22 @@
 
 class Configuration;
 struct KeyData;
-
+namespace fhirtools {
+class FhirResourceViewConfiguration;
+};
 class ConfigurationFormatter
 {
 public:
     virtual ~ConfigurationFormatter() = default;
     std::string formatAsJson(const Configuration& config, int flags);
 
+protected:
+    static void appendFhirPackagesConfiguration(rapidjson::Document& document,
+                                                const fhirtools::FhirResourceViewConfiguration& config);
+
 private:
     virtual void appendRuntimeConfiguration(rapidjson::Document& document) = 0;
+    virtual void appendFhirPackagesConfiguration(rapidjson::Document& document) = 0;
     std::string getCategoryPath(int flags);
     void processConfOption(rapidjson::Document& document, std::unordered_set<std::string>& erpEnvVariables,
                            const KeyData& confOption, int flags, const std::string& value,

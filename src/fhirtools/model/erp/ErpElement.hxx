@@ -68,7 +68,7 @@ public:
     [[nodiscard]] const rapidjson::Value* jsonValue() const;
 
 private:
-    fhirtools::PrimitiveElement asPrimitiveElement() const;
+    std::shared_ptr<const fhirtools::PrimitiveElement> asPrimitiveElement() const;
     static std::string resourceType(const rapidjson::Value& resource);
     static std::vector<std::string_view> profiles(const rapidjson::Value& resource);
     std::shared_ptr<ErpElement> createElement(fhirtools::ProfiledElementTypeInfo, bool isResource,

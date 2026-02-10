@@ -104,7 +104,6 @@ private:
 class EcSignature : public Signature
 {
 public:
-    static std::unique_ptr<Signature> create(const BinaryView& data, EC_KEY& privateKey);
 
     static std::unique_ptr<Signature> from(const BinaryView& data);
     static std::unique_ptr<EcSignature> fromP1363(const BinaryView& data);

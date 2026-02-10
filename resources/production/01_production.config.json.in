@@ -95,7 +95,7 @@
     "fhir": {
       "validation": {
         "urnUuidCheckFrom": "2025-10-01",
-        "fullUrlAndBundleReferenceCheckFrom": "2026-04-01",
+        "fullUrlAndBundleReferenceCheckFrom": "2099-01-01",
         "rejectUnslicedExtensionsFrom": "2026-04-01",
         "levels": {
           "unreferenced-bundled-resource": "error",
@@ -105,55 +105,19 @@
         }
       },
       "reference-time-offset-days": "0",
-      "version-mapping": [
-        {
-          "urlRegex": "https://gematik\\.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_.*",
-          "versionRegex": "1\\.1",
-          "realVersion": "1.1.1",
-          "renderVersion": "1.1"
-        },
-        {
-          "urlRegex": "https://gematik\\.de/fhir/erp/StructureDefinition/GEM_ERP_PR_.*",
-          "versionRegex": "1\\.5",
-          "realVersion": "1.5.2",
-          "renderVersion": "1.5"
-        },
-        {
-          "urlRegex": "https://gematik\\.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_.*",
-          "versionRegex": "1\\.1",
-          "realVersion": "1.1.0",
-          "renderVersion": "1.1"
-        },
-        {
-          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_.*",
-          "versionRegex": "1\\.2",
-          "realVersion": "1.2.1",
-          "renderVersion": "1.2"
-        },
-        {
-          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_.*",
-          "versionRegex": "1\\.3",
-          "realVersion": "1.3.3",
-          "renderVersion": "1.3"
-        },
-        {
-          "urlRegex": "https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_.*",
-          "versionRegex": "1\\.2",
-          "realVersion": "1.2.2",
-          "renderVersion": "1.2"
-        },
-        {
-          "urlRegex": "http://fhir\\.abda\\.de/eRezeptAbgabedaten/StructureDefinition/DAV-PKV-PR-ERP-.*",
-          "versionRegex": "1\\.4",
-          "realVersion": "1.4.0",
-          "renderVersion": "1.4"
-        }
-      ],
       "schluesseltabellen": [
         {
           "id": "2025-Q2",
+          "valid-until": "2026-06-30",
           "groups": [
             "KBV-Schluesseltabellen-Q2/25"
+          ]
+        },
+        {
+          "id": "2026-Q3",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "KBV-Schluesseltabellen-Q3/26"
           ]
         }
       ],
@@ -258,10 +222,24 @@
           ]
         },
         {
+          "id": "GEM_WF_1_6",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "de.gematik.erezept-workflow.r4-1.6"
+          ]
+        },
+        {
           "id": "KBV_1_3",
           "valid-from": "2025-10-01",
           "groups": [
             "kbv.ita.erp-1.3"
+          ]
+        },
+        {
+          "id": "KBV_1_4",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "kbv.ita.erp-1.4"
           ]
         },
         {
@@ -338,8 +316,7 @@
     "httpClientConnectTimeoutSeconds": "60",
     "httpClientResolveTimeoutMilliseconds": "2000",
     "feature": {
-      "eu": "false",
-      "enableCheckAusschlussKostentraeger": "true"
+      "eu": "false"
     },
     "report": {
       "leips": {

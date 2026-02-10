@@ -11,9 +11,13 @@
 #include "exporter/model/EpaOpProvidePrescriptionErpInputParameters.hxx"
 #include "exporter/model/EpaOpRxDispensationErpOutputParameters.hxx"
 #include "exporter/model/EpaOpRxPrescriptionErpOutputParameters.hxx"
+#include "exporter/model/HealthcareServiceDirectory.hxx"
+#include "exporter/model/LocationDirectory.hxx"
 #include "exporter/model/OrganizationDirectory.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Resource.txx"
+#include "trezept/ErpTPrescriptionCarbonCopy.hxx"
+#include "trezept/ErpTPrescriptionOrganization.hxx"
 
 
 namespace model
@@ -27,4 +31,8 @@ template class Resource<EPAOpProvidePrescriptionERPInputParameters>;
 template class Resource<OrganizationDirectory>;
 template class Resource<EPAMedicationPZNIngredient>;
 template class Resource<EPAMedicationTypeExtension>;
+template class Resource<HealthcareServiceDirectory>;
+template class Resource<LocationDirectory>;
+template class Resource<ErpTPrescriptionCarbonCopy>;
+template class Resource<ErpTPrescriptionOrganization>;
 }

@@ -24,6 +24,7 @@
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 
@@ -46,7 +47,7 @@ protected:
     }
 
     std::tuple<model::Task, model::ErxReceipt, model::MedicationDispense>
-    createTask(model::PrescriptionType prescriptionType)
+    createTask(model::PrescriptionType prescriptionType, bool isPkv)
     {
         auto& db = database();
         model::Task task{prescriptionType, accessCode};
@@ -60,6 +61,7 @@ protected:
         model::PrescriptionId prescriptionId = db.storeTask(task);
         task.setPrescriptionId(prescriptionId);
         task.updateLastMedicationDispense();
+        task.setIsPkv(isPkv);
         db.activateTask(task, model::Binary{binId, binData}, JwtBuilder::testBuilder().makeJwtArzt());
         auto erxReceipt =
             model::ErxReceipt::fromJsonNoValidation(ResourceManager::instance().getStringResource(erxBundleResource));
@@ -76,9 +78,10 @@ protected:
     db_model::Blob accountSalt(const db_model::HashedId& identityHashed, db_model::MasterKeyType keyType, BlobId blobId)
     {
         auto txn = createTransaction();
-        auto medicationDispenseAccountRow = txn.exec_params1(
-            "SELECT salt FROM erp.account WHERE account_id = $1 AND master_key_type = $2 AND blob_id = $3",
-            identityHashed.binarystring(), gsl::narrow<int>(keyType), blobId);
+        auto medicationDispenseAccountRow =
+            txn.exec("SELECT salt FROM erp.account WHERE account_id = $1 AND master_key_type = $2 AND blob_id = $3",
+                     pqxx::params{identityHashed.binarystring(), gsl::narrow<int>(keyType), blobId})
+                .one_row();
         txn.commit();
         return db_model::Blob{medicationDispenseAccountRow[0].as<db_model::postgres_bytea>()};
     }
@@ -104,8 +107,17 @@ protected:
 };
 
 class DatabaseEncryptionTestP : public DatabaseEncryptionTest,
-                                public ::testing::WithParamInterface<model::PrescriptionType>
+                                public ::testing::WithParamInterface<std::tuple<model::PrescriptionType, bool>>
 {
+public:
+    model::PrescriptionType prescriptionType() const
+    {
+        return std::get<model::PrescriptionType>(GetParam());
+    }
+    bool isPkv() const
+    {
+        return std::get<bool>(GetParam());
+    }
 };
 
 TEST_P(DatabaseEncryptionTestP, TableViewTask)
@@ -145,15 +157,17 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
             last_status_updated,
             eu_redeemable_patient,
             eu_redeemable,
+            is_pkv,
             COUNT
         };
     };
-    const auto& [task, erxReceipt, medicationDispense] = createTask(GetParam());
+    const auto& [task, erxReceipt, medicationDispense] = createTask(prescriptionType(), isPkv());
     auto prescriptionId = task.prescriptionId();
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
-    auto row = txn.exec_params1("SELECT * FROM " + taskTableName(prescriptionId.type()) + " WHERE prescription_id = $1",
-                                prescriptionId.toDatabaseId());
+    auto row = txn.exec("SELECT * FROM " + taskTableName(prescriptionId.type()) + " WHERE prescription_id = $1",
+                        pqxx::params{prescriptionId.toDatabaseId()})
+                   .one_row();
     ASSERT_EQ(row.size(), col::index::COUNT) << "Expected table `erp.task` to have " << col::index::COUNT << " columns";
     txn.commit();
     db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
@@ -258,11 +272,21 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
     EXPECT_EQ(decryptedPharmacyIdentity, expectedPharmacyIdentity);
     // 24:  last_status_update date
     //     not encrypted
+    // 25: eu_redeemable_patient
+    //     not encrypted
+    // 26: eu_redeemable
+    //     not encrypted
+    // 27: is_pkv
+    //     not encrypted
     A_19688.finish();
 }
 
-INSTANTIATE_TEST_SUITE_P(TableViewTask, DatabaseEncryptionTestP,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+INSTANTIATE_TEST_SUITE_P(GKV, DatabaseEncryptionTestP,
+                         testing::Combine(testing::ValuesIn(testutils::gkvPrescriptionTypes()),
+                                          testing::Values(false)));
+INSTANTIATE_TEST_SUITE_P(PKV, DatabaseEncryptionTestP,
+                         testing::Combine(testing::ValuesIn(testutils::pkvPrescriptionTypes()),
+                                          testing::Values(true)));
 
 TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -306,7 +330,7 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     db.commitTransaction();
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
-    auto row = txn.exec_params1("SELECT * FROM erp.communication WHERE id = $1", id->toString());
+    auto row = txn.exec("SELECT * FROM erp.communication WHERE id = $1", pqxx::params{id->toString()}).one_row();
     txn.commit();
     ASSERT_EQ(row.size(), 11) << "Expected table `erp.communication` to have 11 columns.";
 
@@ -393,7 +417,7 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
     db.commitTransaction();
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
-    auto row = txn.exec_params1("SELECT * FROM erp.auditevent WHERE id = $1", id);
+    auto row = txn.exec("SELECT * FROM erp.auditevent WHERE id = $1", pqxx::params{id}).one_row();
     txn.commit();
     ASSERT_EQ(row.size(), 10) << "Expected table `erp.auditevent` to have 10 columns.";
     auto kvnrHashed = getKeyDerivation().hashKvnr(kvnr);

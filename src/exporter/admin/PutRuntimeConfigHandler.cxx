@@ -14,6 +14,27 @@
 namespace exporter
 {
 
+namespace
+{
+std::optional<RuntimeConfiguration::ProcessorType> processorTypeFromParam(const std::string& param)
+{
+    const auto processorLower = String::toLower(param);
+    if (processorLower == RuntimeConfiguration::parameter_epa)
+    {
+        return RuntimeConfiguration::ProcessorType::EPA;
+    }
+    if (processorLower == RuntimeConfiguration::parameter_t_rezept)
+    {
+        return RuntimeConfiguration::ProcessorType::T_REZEPT;
+    }
+    if (processorLower.empty() || processorLower == "true")
+    {
+        return std::nullopt;
+    }
+    ErpFail(HttpStatus::BadRequest, "invalid pause/resume parameter: " + param);
+}
+}
+
 PutRuntimeConfigHandler::PutRuntimeConfigHandler(ConfigurationKey adminRcCredentialsKey)
     : AdminRequestHandlerBase(adminRcCredentialsKey)
 {
@@ -43,39 +64,19 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
         TVLOG(1) << param.first << ": " << param.second;
         if (param.first == exporter::RuntimeConfiguration::parameter_pause)
         {
-            TLOG(INFO) << "admin: pause";
-            runtimeConfig->pause();
+            handleParameterPause(*runtimeConfig, param.second);
         }
         else if (param.first == exporter::RuntimeConfiguration::parameter_resume)
         {
-            TLOG(INFO) << "admin: resume";
-            runtimeConfig->resume();
+            handleParameterResume(*runtimeConfig, param.second);
         }
         else if (param.first == exporter::RuntimeConfiguration::parameter_throttle)
         {
-            try
-            {
-                std::size_t idx = 0;
-                const int64_t throttleValue = std::stoll(param.second, &idx);
-                ErpExpect(idx == param.second.size(), HttpStatus::BadRequest,
-                          "illegal throttle value: " + param.second);
-                TLOG(INFO) << "admin: throttle value: " << throttleValue;
-                runtimeConfig->throttle(RuntimeConfiguration::ThrottleMode::MANUAL, std::chrono::milliseconds(throttleValue));
-            }
-            catch (const std::logic_error& re)
-            {
-                ErpFail(HttpStatus::BadRequest,
-                        (std::ostringstream{} << "invalid: " << param.first << "=" << param.second << ". " << re.what())
-                            .str());
-            }
+            handleParameterThrottle(*runtimeConfig, param.second);
         }
         else if (RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.contains(param.first))
         {
-            const auto category = RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.at(param.first);
-            const auto defaults = RuntimeConfiguration::defaultMetricsLogThresholdsMs();
-            const auto value =
-                ! param.second.empty() ? std::chrono::milliseconds{std::stol(param.second)} : defaults.at(category);
-            runtimeConfig->setMetricsLogThresholdMs(category, value);
+            handleParameterMetricsLogThreshold(*runtimeConfig, param.first, param.second);
         }
         else
         {
@@ -84,4 +85,63 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
     }
 }
 
+void PutRuntimeConfigHandler::handleParameterPause(RuntimeConfigurationSetter& runtimeConfig, const std::string& param)
+{
+    // GEMREQ-start A_27859
+    if (const auto processor = processorTypeFromParam(param))
+    {
+        TLOG(INFO) << "admin: pause " << magic_enum::enum_name(*processor);
+        runtimeConfig.pause(*processor);
+    }
+    else
+    {
+        TLOG(INFO) << "admin: pause all";
+        for (const auto processorType : magic_enum::enum_values<RuntimeConfiguration::ProcessorType>())
+        {
+            runtimeConfig.pause(processorType);
+        }
+    }
+    // GEMREQ-end A_27859
+}
+void PutRuntimeConfigHandler::handleParameterResume(RuntimeConfigurationSetter& runtimeConfig, const std::string& param)
+{
+    if (const auto processor = processorTypeFromParam(param))
+    {
+        TLOG(INFO) << "admin: resume " << magic_enum::enum_name(*processor);
+        runtimeConfig.resume(*processor);
+    }
+    else
+    {
+        TLOG(INFO) << "admin: resume all";
+        for (const auto processorType : magic_enum::enum_values<RuntimeConfiguration::ProcessorType>())
+        {
+            runtimeConfig.resume(processorType);
+        }
+    }
+}
+void PutRuntimeConfigHandler::handleParameterThrottle(RuntimeConfigurationSetter& runtimeConfig,
+                                                      const std::string& param)
+{
+    try
+    {
+        std::size_t idx = 0;
+        const int64_t throttleValue = std::stoll(param, &idx);
+        ErpExpect(idx == param.size(), HttpStatus::BadRequest, "illegal throttle value: " + param);
+        TLOG(INFO) << "admin: throttle value: " << throttleValue;
+        runtimeConfig.throttle(RuntimeConfiguration::ThrottleMode::MANUAL, std::chrono::milliseconds(throttleValue));
+    }
+    catch (const std::logic_error& re)
+    {
+        ErpFail(HttpStatus::BadRequest,
+                (std::ostringstream{} << "invalid: Throttle=" << param << ". " << re.what()).str());
+    }
+}
+void PutRuntimeConfigHandler::handleParameterMetricsLogThreshold(RuntimeConfigurationSetter& runtimeConfig,
+                                                                 const std::string& key, const std::string& param)
+{
+    const auto category = RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.at(key);
+    const auto defaults = RuntimeConfiguration::defaultMetricsLogThresholdsMs();
+    const auto value = ! param.empty() ? std::chrono::milliseconds{std::stol(param)} : defaults.at(category);
+    runtimeConfig.setMetricsLogThresholdMs(category, value);
+}
 }// namespace exporter

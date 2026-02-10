@@ -113,6 +113,18 @@ spec:
                 secretKeyRef:
                   name: secret-subscription-erp-pc
                   key: SERVICE_SUBSCRIPTION_SIGNING_KEY
+            - name: ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL
+              value: bfarm-test-mock.%NAMESPACE%.svc.cluster.local
+            - name: ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT
+              value: '443'
+            - name: ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL
+              value: bfarm-test-mock.%NAMESPACE%.svc.cluster.local
+            - name: ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_PORT
+              value: '443'
+            - name: ERP_MEDICATION_EXPORTER_BFARM_CLIENT_URL
+              value: bfarm-test-mock.%NAMESPACE%.svc.cluster.local
+            - name: ERP_MEDICATION_EXPORTER_BFARM_CLIENT_PORT
+              value: '443'
           envFrom:
             - prefix: ERP_
               secretRef:

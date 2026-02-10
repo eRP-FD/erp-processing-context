@@ -386,7 +386,8 @@ public:
             {
                 pqxx::connection conn{PostgresConnection::defaultConnectString()};
                 pqxx::work txn{conn};
-                txn.exec_params0("DELETE FROM erp.task WHERE prescription_id = $1", prescriptionId.toDatabaseId());
+                txn.exec("DELETE FROM erp.task WHERE prescription_id = $1", pqxx::params{prescriptionId.toDatabaseId()})
+                    .no_rows();
                 txn.commit();
             }
             else
@@ -403,7 +404,7 @@ public:
             {
                 pqxx::connection conn{PostgresConnection::defaultConnectString()};
                 pqxx::work txn{conn};
-                txn.exec_params0("DELETE FROM erp.auditevent WHERE id = $1", std::string{eventId});
+                txn.exec("DELETE FROM erp.auditevent WHERE id = $1", pqxx::params{std::string{eventId}}).no_rows();
                 txn.commit();
             }
             else

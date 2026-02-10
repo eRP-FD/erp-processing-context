@@ -730,7 +730,7 @@ TEST_F(CloseTaskTest, CloseTask_FutureLastStatusUpdate)
             {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = prescriptionId}));
 
         model::Task taskX(taskY.prescriptionId(), taskY.type(), taskY.lastModifiedDate(), taskY.authoredOn(),
-                          taskY.status(), lastStatusChange);
+                          taskY.status(), lastStatusChange, false);
         taskX.setSecret(*taskY.secret());
         taskX.setKvnr(*taskY.kvnr());
 
@@ -781,9 +781,10 @@ TEST_F(CloseTaskTest, CloseTask_IgnoreFutureLastModified)
     {
         const auto lastModified = model::Timestamp::now() + std::chrono::minutes(5);
 
-        const auto taskX = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        auto taskX = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
             {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = prescriptionId,
              .timestamp = lastModified}));
+        taskX.setIsPkv(false);
 
         const auto& kbvBundleX = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml({.prescriptionId = prescriptionId}));
         const auto healthCarePrescriptionUuidX = taskX.healthCarePrescriptionUuid().value();
@@ -999,7 +1000,7 @@ class CloseTaskWrongInputTest : public CloseTaskTest, public testing::WithParamI
 };
 TEST_P(CloseTaskWrongInputTest, test)
 {
-    A_26002.test("Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
+    A_26002_02.test("Task schließen - Flowtype 160/166/169/200/209 - Profilprüfung MedicationDispense");
     A_26003.test("Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
     std::optional<model::PrescriptionId> prescriptionId1{prescriptionId};
     std::string message =
@@ -1011,7 +1012,8 @@ TEST_P(CloseTaskWrongInputTest, test)
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::direkteZuweisung:
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-        case model::PrescriptionType::direkteZuweisungPkv: {
+        case model::PrescriptionType::direkteZuweisungPkv:
+        case model::PrescriptionType::tRezept: {
             medicationDispenseOptions.medicationDispenses.clear();
             auto& md = medicationDispenseOptions.medicationDispensesDiGA.emplace_front();
             md.prescriptionId = prescriptionId1->toString();
@@ -1057,7 +1059,7 @@ TEST_P(CloseTaskWrongInputTest, test)
     mockDatabase.reset();
 }
 INSTANTIATE_TEST_SUITE_P(x, CloseTaskWrongInputTest,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));
 
 
 class CloseTaskProfileValidityTest : public CloseTaskTest,

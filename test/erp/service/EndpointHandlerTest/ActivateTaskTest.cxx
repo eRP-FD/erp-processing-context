@@ -22,6 +22,7 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <date/tz.h>
 
 class ActivateTaskTest : public EndpointHandlerTest
@@ -186,6 +187,24 @@ public:
             ASSERT_EQ(std::string{*performerTypeCodingDisplay}, "Öffentliche Apotheke");
         }
     }
+
+    bool enableDarreichungsformTest() const
+    {
+        const fhirtools::DefinitionKey darreichungsformKey{
+            "https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM", std::nullopt};
+        auto allViews = Fhir::instance().allViews();
+        std::set<fhirtools::DefinitionKey> keys;
+        for (const auto& view: allViews.all())
+        {
+            if (auto&& found = view->findValueSet(darreichungsformKey))
+            {
+                keys.emplace(found->key());
+            }
+        }
+        Expect(keys.size() > 0, "must have at least one Darreichungsform version.");
+        return keys.size() != 1;
+    }
+
 };
 
 class ActivateTaskTestPkv : public ActivateTaskTest
@@ -230,6 +249,45 @@ TEST_F(ActivateTaskTest, ActivateTask)
         checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891", {.signingTime = signingTime}));
 }
 
+TEST_F(ActivateTaskTest, ActivateTask166)
+{
+    testutils::ShiftFhirResourceViewsGuard kbv14Guard{
+        "KBV_1_4", date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+    auto signingTime = model::Timestamp::now();
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4800);
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = taskId, .authoredOn = signingTime};
+    options.medicationOptions.medicationCategory = "02";
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml(options);
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = taskId});
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
+                                              {.signingTime = signingTime}));
+}
+
+TEST_F(ActivateTaskTest, ActivateTask166Kbv13)
+{
+    auto signingTime = model::Timestamp::now();
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4800);
+    const auto fakeId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = fakeId, .authoredOn = signingTime};
+    options.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3;
+    options.medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_1_3_3;
+    options.medicationOptions.medicationCategory = "02";
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml(options);
+    boost::replace_all(kbvBundleXml, fakeId.toString(), taskId.toString());
+    const auto taskJson =
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = taskId});
+    std::exception_ptr exception;
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(
+        mServiceContext, taskJson, kbvBundleXml, "X234567891",
+        {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exception}));
+    ASSERT_TRUE(exception);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(std::rethrow_exception(exception), HttpStatus::BadRequest,
+                                      "T-Rezept Workflow 166 not allowed before KBV-1.4");
+}
+
 TEST_F(ActivateTaskTestPkv, ActivateTaskPkv)
 {
     const auto pkvTaskId =
@@ -242,6 +300,22 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkv)
     const auto bundle =
         ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .authoredOn = authoredOn, .kvnr = pkvKvnr});
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, pkvKvnr, {.signingTime = authoredOn}));
+}
+
+TEST_F(ActivateTaskTestPkv, ActivateTask166Pkv)
+{
+    testutils::ShiftFhirResourceViewsGuard kbv14Guard{
+        "KBV_1_4", date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4801);
+    const auto authoredOn = model::Timestamp::now();
+
+    const auto task = ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = authoredOn});
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = pkvTaskId, .authoredOn = authoredOn, .tRezeptIsPkv = true};
+    options.medicationOptions.medicationCategory = "02";
+    const auto bundle = ResourceTemplates::kbvBundleXml(options);
+    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, task, bundle, "X234567891",
+                                              {.signingTime = authoredOn}));
 }
 
 TEST_F(ActivateTaskTestPkv, ActivateTaskPkv209)
@@ -532,10 +606,10 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
         else
         {
             auto ver = to_string(currentKbv);
-            EXPECT_STREQ(ex.what(), "FHIR-Validation error");
-            EXPECT_EQ(ex.diagnostics(),
-                      "Bundle: error: -erp-angabeKVKVersichertennummerVerbot: In der Ressource vom Typ Patient ist "
-                      "eine KVK-Versichertennummer vorhanden, diese darf nicht angegeben werden. (from profile: "
+            expectErpExceptionWithFHIRValidationError(
+                ex, "FHIR-Validation error",
+                "Bundle: error: -erp-angabeKVKVersichertennummerVerbot: In der Ressource vom Typ Patient ist "
+                "eine KVK-Versichertennummer vorhanden, diese darf nicht angegeben werden. (from profile: "
                       "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); ");
         }
     }
@@ -587,8 +661,7 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientIdentifierSystem)
                     "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient|1.1.0); ";
     }
     // clang-format on
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(std::rethrow_exception(exception), HttpStatus::BadRequest,
-                                          "FHIR-Validation error", diagnostics);
+    EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(std::rethrow_exception(exception), diagnostics);
 }
 
 
@@ -765,12 +838,9 @@ TEST_F(ActivateTaskTest, UnslicedExtension)
 
 TEST_F(ActivateTaskTest, authoredOnReference)
 {
-    if (Configuration::instance()
-            .fhirResourceViewConfiguration<Configuration::ERP>()
-            .kbvSchluesseltabellenConfiguration()
-            .size() == 1)
+    if (!enableDarreichungsformTest())
     {
-        // consider adapting this test when two schlüsseltabellen are present again!
+        // consider adapting this test when two darreichungsform versions are present again!
         GTEST_SKIP();
     }
 
@@ -1374,12 +1444,9 @@ class ActivateTaskTestDarreichungsformValidity
 
 TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
 {
-    if (Configuration::instance()
-        .fhirResourceViewConfiguration<Configuration::ERP>()
-        .kbvSchluesseltabellenConfiguration()
-        .size() == 1)
+    if (!enableDarreichungsformTest())
     {
-        // consider adapting this test when two schlüsseltabellen are present again!
+        // consider adapting this test when two darreichungsform versions are present again!
         GTEST_SKIP();
     }
     using namespace fhirtools::version_literal;
@@ -1485,6 +1552,7 @@ struct Parameters {
     std::string_view acceptDate;
     std::string_view expiryDate;
     std::string_view acceptDatePkv;
+    std::string_view acceptDate166;
 };
 
 
@@ -1499,45 +1567,75 @@ std::ostream& operator<<(std::ostream& out, const Parameters& params)
 
 class ProzessParameterFlowtype : public ActivateTaskTest, public testing::WithParamInterface<ParameterTuple>
 {
+public:
+    void SetUp() override
+    {
+        if (isTRezept(std::get<model::PrescriptionId>(GetParam()).type()) &&
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        {
+            GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
+        }
+    }
+    static std::string name(const testing::TestParamInfo<ParameterTuple>& info)
+    {
+        return boost::replace_all_copy(std::string{std::get<Parameters>(info.param).testName} + "_" +
+               std::get<model::PrescriptionId>(info.param).toString(), ".", "_");
+    }
 };
 
 
 TEST_P(ProzessParameterFlowtype, samples)
 {
-    std::vector<EnvironmentVariableGuard> envVars;
     const auto* kvnr = "X234567891";
     testutils::ShiftFhirResourceViewsGuard shiftView(
-        "EVDGA_2025_01_15", date::year_month_day{date::year(2020), date::month(02), date::day(01)});
+        "KBV_1_4", date::year_month_day{date::year(2020), date::month(02), date::day(01)});
 
-    A_19445_11.test("Prozessparameter - Flowtype");
+    A_27844.test("Prozessparameter - Flowtype 160");
+    A_27845.test("Prozessparameter - Flowtype 162");
+    A_27846.test("Prozessparameter - Flowtype 166");
+    A_27847.test("Prozessparameter - Flowtype 169");
+    A_27848.test("Prozessparameter - Flowtype 200");
+    A_27849.test("Prozessparameter - Flowtype 209");
     //using namespace model::resource;
     const auto& [params, prescriptionId] = GetParam();
     auto signingTime = model::Timestamp::fromGermanDate(std::string{params.signingTime});
     auto acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate});
     auto expiryDate = model::Timestamp::fromGermanDate(std::string{params.expiryDate});
 
-    if (prescriptionId.isPkv() || isDiga(prescriptionId.type()))
+    ResourceTemplates::KbvBundleOptions options{
+        .prescriptionId = prescriptionId,
+        .authoredOn = signingTime,
+        .kvnr = kvnr,
+        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(signingTime)};
+    switch (prescriptionId.type())
     {
-        acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            break;
+        case model::PrescriptionType::tRezept:
+            options.medicationOptions.medicationCategory = "02";
+            acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDate166});
+            expiryDate = acceptDate;
+            break;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            acceptDate = model::Timestamp::fromGermanDate(std::string{params.acceptDatePkv});
+            break;
     }
 
     // Create Task
     const auto taskJson = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = prescriptionId, .timestamp = signingTime});
-    std::string kbvBundleXml = ResourceTemplates::kbvBundleXml({
-        .prescriptionId = prescriptionId,
-        .authoredOn = signingTime,
-        .kvnr = kvnr,
-        .kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(signingTime),
-    });
+    std::string kbvBundleXml = ResourceTemplates::kbvBundleXml(options);
     std::string_view flowTypeDisplayName;
     switch (prescriptionId.type())
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
-            flowTypeDisplayName = "Muster 16 (Apothekenpflichtige Arzneimittel)";
+            flowTypeDisplayName = "Flowtype für Apothekenpflichtige Arzneimittel";
             break;
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
-            flowTypeDisplayName = "Muster 16 (Digitale Gesundheitsanwendungen)";
+            flowTypeDisplayName = "Flowtype für Digitale Gesundheitsanwendungen";
             kbvBundleXml = ResourceTemplates::evdgaBundleXml({
                 .version = ResourceTemplates::Versions::KBV_EVDGA_current(signingTime),
                 .prescriptionId = prescriptionId.toString(),
@@ -1547,13 +1645,16 @@ TEST_P(ProzessParameterFlowtype, samples)
             });
             break;
         case model::PrescriptionType::direkteZuweisung:
-            flowTypeDisplayName = "Muster 16 (Direkte Zuweisung)";
+            flowTypeDisplayName = "Flowtype zur Workflow-Steuerung durch Leistungserbringer";
             break;
         case model::PrescriptionType::direkteZuweisungPkv:
-            flowTypeDisplayName = "PKV (Direkte Zuweisung)";
+            flowTypeDisplayName = "Flowtype zur Workflow-Steuerung durch Leistungserbringer (PKV)";
             break;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            flowTypeDisplayName = "PKV (Apothekenpflichtige Arzneimittel)";
+            flowTypeDisplayName = "Flowtype für Apothekenpflichtige Arzneimittel (PKV)";
+            break;
+        case model::PrescriptionType::tRezept:
+            flowTypeDisplayName = "Flowtype für Arzneimittel nach § 3a AMVV";
             break;
     }
     ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
@@ -1565,9 +1666,9 @@ TEST_P(ProzessParameterFlowtype, samples)
 
 
 std::list<Parameters> samples = {
-    {"normal"  , "2021-02-10", "2021-03-10", "2021-05-10", "2021-05-10"},
-    {"leapYear", "2020-02-10", "2020-03-09", "2020-05-10", "2020-05-10"},
-    {"leapDay" , "2020-02-29", "2020-03-28", "2020-05-29", "2020-05-29"}
+    {"normal"  , "2021-02-10", "2021-03-10", "2021-05-10", "2021-05-10", "2021-02-16"},
+    {"leapYear", "2020-02-10", "2020-03-09", "2020-05-10", "2020-05-10", "2020-02-16"},
+    {"leapDay" , "2020-02-29", "2020-03-28", "2020-05-29", "2020-05-29", "2020-03-06"}
 };
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1577,9 +1678,11 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713),
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6001),
+            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4800),
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 4718),
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50010),
-            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011))));
+            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50011))),
+            &ProzessParameterFlowtype::name);
 
 struct ActivateTaskTestPatchParam {
     std::string testling;

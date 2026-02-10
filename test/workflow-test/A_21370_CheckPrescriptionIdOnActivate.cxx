@@ -40,6 +40,12 @@ public:
             case model::PrescriptionType::direkteZuweisungPkv:
                 bundleXml = kbvBundleXml({.prescriptionId = prescriptionId, .authoredOn = timestamp});
                 break;
+            case model::PrescriptionType::tRezept: {
+                ResourceTemplates::KbvBundleOptions options{.prescriptionId = prescriptionId, .authoredOn = timestamp};
+                options.medicationOptions.medicationCategory = "02";
+                bundleXml = kbvBundleXml(options);
+                break;
+            }
             case model::PrescriptionType::digitaleGesundheitsanwendungen:
                 bundleXml = ResourceTemplates::evdgaBundleXml({.prescriptionId = prescriptionId.toString(),
                                                                .timestamp = timestamp.toXsDateTime(),
@@ -62,10 +68,15 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
     ASSERT_TRUE(task.has_value());
     auto accessCode = std::string{task->accessCode()};
     auto correctId = task->prescriptionId();
-    for (auto wrongWorkflow: magic_enum::enum_values<model::PrescriptionType>())
+    for (auto wrongWorkflow: testutils::allPrescriptionTypes())
     {
         if (wrongWorkflow == correctWorkflow)
         {
+            continue;
+        }
+        if (isTRezept(wrongWorkflow) || isTRezept(correctWorkflow))
+        {
+            // T-Rezept has some special constraints that are not fulfilled by this bundle.
             continue;
         }
 
@@ -118,4 +129,4 @@ TEST_P(A_21370_CheckPrescriptionIdOnActivate, reject)
 }
 
 INSTANTIATE_TEST_SUITE_P(WorkflowTypes, A_21370_CheckPrescriptionIdOnActivate,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

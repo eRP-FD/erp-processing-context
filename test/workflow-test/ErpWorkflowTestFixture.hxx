@@ -273,8 +273,8 @@ public:
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {},
         const std::optional<std::string>& expectedIssueText = {});
 
-    std::optional<model::Bundle> taskDispense(const model::PrescriptionId& prescriptionId,
-        const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::OK,
+    void taskDispense(const model::PrescriptionId& prescriptionId,
+        const std::string& secret, const std::string& kvnr, HttpStatus expectedInnerStatus = HttpStatus::NoContent,
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode = {}, size_t numMedicationDispenses = 1);
 
     std::optional<model::ErxReceipt> taskClose(const model::PrescriptionId& prescriptionId,
@@ -329,7 +329,8 @@ public:
     std::tuple<std::string, std::string> makeQESBundle( // returns signed and unsigned bundle
         const std::string& kvnr,
         const model::PrescriptionId& prescriptionId,
-        const model::Timestamp& timestamp);
+        const model::Timestamp& timestamp,
+        const std::optional<std::string>& coverageInsuranceType = std::nullopt, bool isPkv = false);
 
     std::optional<model::Bundle> medicationDispenseGetAll(const std::string_view& searchArguments = {},
                                                           const std::optional<JWT>& jwt = std::nullopt);
@@ -433,7 +434,8 @@ public:
         std::string& createdAccessCode,
         std::string& createdSecret,
         const model::PrescriptionType prescriptionType,
-        const std::string& kvnr);
+        const std::string& kvnr,
+        const std::string& coverageInsuranceType);
 
     void checkTaskCreate(
         std::optional<model::PrescriptionId>& createdId,
@@ -445,7 +447,8 @@ public:
         std::vector<model::Communication>& communications,
         const model::PrescriptionId& prescriptionId,
         const std::string& kvnr,
-        const std::string& accessCode);
+        const std::string& accessCode,
+        bool isPkv = false);
 
     void checkTaskAccept(
         std::string& createdSecret,
@@ -584,7 +587,7 @@ private:
         const std::optional<model::OperationOutcome::Issue::Type> expectedErrorCode,
         const std::optional<std::string>& expectedIssueText);
 
-    void taskDispenseInternal(std::optional<model::Bundle>& receipt,
+    void taskDispenseInternal(
         const model::PrescriptionId& prescriptionId,
         const std::string& secret,
         const std::string& kvnr,
@@ -725,7 +728,8 @@ private:
         std::string& createdAccessCode,
         std::string& createdSecret,
         const model::PrescriptionType prescriptionType,
-        const std::string& kvnr);
+        const std::string& kvnr,
+        const std::string& coverageInsuranceType);
 
     void getMedicationDispenseForTask(
         std::optional<model::MedicationDispense>& medicationDispenseForTask,

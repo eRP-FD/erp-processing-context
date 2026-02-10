@@ -18,6 +18,7 @@
 namespace model
 {
 class EventKvnr;
+class TRezeptEvent;
 }
 
 class MedicationExporterDatabaseBackend : virtual public DatabaseBackend
@@ -38,6 +39,12 @@ public:
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) = 0;
     virtual void finalizeKvnr(const model::EventKvnr& kvnr,
                               const std::string& assignedEpaPrefix) const = 0;
+
+    virtual std::optional<db_model::TaskEvent> processNextTRezeptEvent() = 0;
+    virtual void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) = 0;
+    virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) = 0;
+    virtual bool isDeadLetter(const model::TRezeptEvent& eventData) = 0;
+    virtual int markDeadLetter(const model::TRezeptEvent& eventData) = 0;
 };
 
 #endif// ERP_PROCESSING_CONTEXT_DATABASE_MEDICATIONEXPORTER_BACKEND_HXX

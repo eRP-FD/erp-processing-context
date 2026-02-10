@@ -31,17 +31,6 @@ public:
     static std::string publicKeyToPemString(const shared_EVP_PKEY& key);
     static shared_EVP_PKEY publicKeyFromPemString(const std::string& pemString);
 
-    /**
-     * Convert the public key of an EC key pair to X9.62 format encoded as BER stream.
-     * See https://dth01.ibmgcloud.net/confluence/pages/viewpage.action?pageId=40577291 section "X9.62" for details.
-     */
-    static std::string publicKeyToX962DerString(const shared_EVP_PKEY& keyPair);
-
-    /**
-     * Convert a public key in X9.62 format, encoded as BER stream back into an openssl EC key pair.
-     */
-    static shared_EVP_PKEY publicKeyFromX962Der(const std::string& derString);
-
     struct PaddedComponents
     {
         const std::string x;

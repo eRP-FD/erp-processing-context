@@ -19,7 +19,6 @@
 PostgresConnection::PostgresConnection(const std::string_view& connectionString)
     : mConnectionString(connectionString)
     , mConnection()
-    , mErrorHandler()
 {
 }
 
@@ -118,7 +117,10 @@ void PostgresConnection::connectIfNeeded()
              .maxAge = std::chrono::minutes{
                  Configuration::instance().getIntValue(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES)}});
         TVLOG(1) << "connected to " << toString(mConnectionInfo.value());
-        mErrorHandler = std::make_unique<ErrorHandler>(*mConnection);
+        mConnection->set_verbosity(pqxx::error_verbosity::normal);
+        mConnection->set_notice_handler([](auto msg) {
+            TVLOG(1) << "error/warning from postgres: " << msg;
+        });
     }
 }
 
@@ -191,12 +193,4 @@ void PostgresConnection::recreateConnection()
         close();
         connectIfNeeded();
     }
-}
-
-
-bool PostgresConnection::ErrorHandler::operator()(const char* msg) noexcept
-{
-    TVLOG(1) << "error/warning from postgres: " << msg;
-    // true: other error handlers shall be called after this one.
-    return true;
 }

@@ -65,6 +65,7 @@ public:
 
     void setValueIdentifier(rapidjson::Value& part, std::string_view system, std::string_view value);
     void setValueDate(rapidjson::Value& part, std::string_view date);
+    void setValueInstant(rapidjson::Value& part, std::string_view instant);
     void setResource(rapidjson::Value& part, const rapidjson::Value& resource);
 
     std::string_view getValueIdentifier(const rapidjson::Value& part) const;
@@ -73,6 +74,7 @@ public:
     NumberAsStringParserDocument getResourceDoc(const rapidjson::Value& part) const;
     std::string_view getValueCoding(const rapidjson::Value& part) const;
     std::string_view getValueString(const rapidjson::Value& part) const;
+    Timestamp getValueInstant(const rapidjson::Value& part) const;
 
     void setId(std::string_view id);
 
@@ -188,6 +190,12 @@ void Parameters<ParametersT>::setValueDate(rapidjson::Value& part, std::string_v
 }
 
 template<typename ParametersT>
+void Parameters<ParametersT>::setValueInstant(rapidjson::Value& part, std::string_view instant)
+{
+    ResourceBase::setKeyValue(part, valueInstantPointer, instant);
+}
+
+template<typename ParametersT>
 void Parameters<ParametersT>::setResource(rapidjson::Value& part, const rapidjson::Value& resource)
 {
     ResourceBase::setKeyValue(part, resourcePointer, resource);
@@ -233,6 +241,12 @@ template<typename ParametersT>
 std::string_view Parameters<ParametersT>::getValueString(const rapidjson::Value& part) const
 {
     return ResourceBase::getStringValue(part, valueStringPointer);
+}
+
+template<typename ParametersT>
+Timestamp Parameters<ParametersT>::getValueInstant(const rapidjson::Value& part) const
+{
+    return Timestamp::fromXsDateTime(std::string{ResourceBase::getStringValue(part, valueInstantPointer)});
 }
 
 template<typename ParametersT>

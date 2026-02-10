@@ -373,6 +373,9 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
 
     try {
         innerTeeRequest->parseHeaderAndBody();
+        A_28427.start("BOM header are forbidden");
+        ErpExpect(! String::startsWithBom(innerTeeRequest->body()), HttpStatus::BadRequest,
+                  "illegal BOM before inner request body");
         innerServerRequest = std::make_unique<ServerRequest>( innerTeeRequest->releaseHeader() );
         innerServerRequest->setBody(innerTeeRequest->releaseBody());
 
@@ -414,7 +417,19 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         // GEMREQ-start A_19439, A_20373, A_20365
         A_20163.start("4 - verify JWT");
         A_20365_01.start("Pass the IDP pubkey to the verification method.");
-        innerServerRequest->getAccessToken().verify(getIdpPublicKey(outerSession.serviceContext));
+        try
+        {
+            innerServerRequest->getAccessToken().verify(getIdpPublicKey(outerSession.serviceContext));
+        }
+        catch (const std::exception& e)
+        {
+            const auto& cert = outerSession.serviceContext.idp.getSecondaryCertificate();
+            if (! cert.has_value())
+            {
+                throw;
+            }
+            innerServerRequest->getAccessToken().verify(cert->getPublicKey());
+        }
         A_20365_01.finish();
         A_20163.finish();
         // GEMREQ-end A_19439, A_20373, A_20365
@@ -573,6 +588,7 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
             A_22975.finish();
             A_22698.finish();
 
+            // GEMREQ-start A_27560
             A_23090_07.start("If a pseudonymization log key is available, write pseuodnymized fields");
             auto pseudonymizationKey =
                 outerSession.baseServiceContext.getHsmPool().acquire().session().getPseudonameLogKey();
@@ -593,6 +609,7 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
                 }
             }
             A_23090_07.finish();
+            // GEMREQ-end A_27560
         }
     }
     catch (const std::exception& e)
@@ -642,7 +659,7 @@ bool VauRequestHandler::checkProfessionOID(
     A_19022_01.start("Check if professionOID claim is allowed for this endpoint");
     A_19026_01.start("Check if professionOID claim is allowed for this endpoint");
     A_19113_02.start("Check if professionOID claim is allowed for this endpoint");
-    A_19166_01.start("Check if professionOID claim is allowed for this endpoint WF-160/169/200/209");
+    A_19166_02.start("Check if professionOID claim is allowed for this endpoint WF-160/169/200/209");
     A_25993.start("Check if professionOID claim is allowed for this endpoint WF-162");
     A_19170_02.start("Check if professionOID claim is allowed for this endpoint");
     A_19230_01.start("Check if professionOID claim is allowed for this endpoint");
@@ -662,7 +679,7 @@ bool VauRequestHandler::checkProfessionOID(
         A_19022_01.finish();
         A_19026_01.finish();
         A_19113_02.finish();
-        A_19166_01.finish();
+        A_19166_02.finish();
         A_25993.finish();
         A_19170_02.finish();
         A_19230_01.finish();

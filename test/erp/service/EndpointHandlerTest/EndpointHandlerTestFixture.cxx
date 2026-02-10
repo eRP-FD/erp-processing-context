@@ -87,6 +87,7 @@ model::Task EndpointHandlerTest::addTaskToDatabase(SessionContext& sessionContex
     task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::gkv});
     task.updateLastUpdate(lastUpdate);
     task.setStatus(taskStatus);
+    task.setIsPkv(false);
     model::PrescriptionId prescriptionId = database->storeTask(task);
     task.setPrescriptionId(prescriptionId);
     if (taskStatus != model::Task::Status::draft)

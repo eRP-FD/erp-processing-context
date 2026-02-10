@@ -52,11 +52,10 @@ private:
 
     [[nodiscard]]
     size_t convertMemberWithType(xmlNode& targetNode, const std::string& memberName,
-                         const fhirtools::FhirStructureDefinition& fhirParentType,
-                         const fhirtools::FhirStructureDefinition& fhirElementType,
-                         const std::shared_ptr<const fhirtools::FhirElement>& fhirElementInfo,
-                         size_t fhirElementIndex,
-                         const rapidjson::Value* jsonMember, const rapidjson::Value& subObjectOfPrimary);
+                                 const fhirtools::FhirStructureDefinition& fhirParentType,
+                                 const std::shared_ptr<const fhirtools::FhirElement>& fhirElementInfo,
+                                 size_t fhirElementIndex, const rapidjson::Value* jsonMember,
+                                 const rapidjson::Value& subObjectOfPrimary);
 
     [[nodiscard]]
     size_t convertSingleMember(xmlNode& targetNode, const std::string& memberName,

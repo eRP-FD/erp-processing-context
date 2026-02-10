@@ -91,3 +91,4 @@ target_link_libraries(tee3send
 add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate tee3send resources)
 
 add_subdirectory(fhirinstall)
+add_subdirectory(erp-fhir-ws)

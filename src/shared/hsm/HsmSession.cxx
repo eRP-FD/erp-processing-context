@@ -54,11 +54,7 @@ namespace
             {
                 // Failure due to an expired HSM connection. Try again.
                 JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
-                    .message("HSM connection expired: "s + e.what()
-#if WITH_HSM_TPM_PRODUCTION > 0
-                             + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
-#endif
-                             )
+                    .message("HSM connection expired: "s + e.what())
                     .keyValue("retry", retryCount);
                 ++retryCount;
 
@@ -76,11 +72,7 @@ namespace
                 // Some other failure (not an expired HSM connection). Try again.
                 // This catch may be removed later.
                 JsonLog(LogId::HSM_WARNING, JsonLog::makeWarningLogReceiver())
-                    .message("HSM error: "s + e.what()
-#if WITH_HSM_TPM_PRODUCTION > 0
-                             + " (" + HsmProductionClient::hsmErrorDetails(e.errorCode) + ")"
-#endif
-                             )
+                    .message("HSM error: "s + e.what())
                     .keyValue("retry", retryCount);
                 ++retryCount;
 

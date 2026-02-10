@@ -361,3 +361,19 @@ void String::copyMemorySafely(void* dest, size_t destSize, const void* src, size
     char* const destBegin = static_cast<char*>(dest);
     std::copy(srcBegin, srcEnd, destBegin);
 }
+
+bool String::startsWithBom(std::string_view s)
+{
+    using namespace std::string_view_literals;
+    std::array knownBoms = {
+        "\xEF\xBB\xBF"sv,    // UTF-8
+        "\xFF\xFE"sv,        // UTF-16 LE
+        "\xFE\xFF"sv,        // UTF-16 BE
+        "\xFF\xFE\x00\x00"sv,// UTF-32 LE
+        "\x00\x00\xFE\xFF"sv,// UTF-32 BE
+    };
+
+    return std::ranges::any_of(knownBoms, [s](auto bom) {
+        return s.starts_with(bom);
+    });
+}

@@ -12,6 +12,10 @@
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/crypto/OpenSslHelper.hxx"
 
+#include <openssl/core_names.h>
+#include <openssl/param_build.h>
+
+
 namespace epa
 {
 
@@ -83,24 +87,52 @@ DiffieHellman::DiffieHellman(const shared_EVP_PKEY& keyPair)
 // GEMREQ-start A_21888
 void DiffieHellman::replaceKeyPairFromPrivateKey(const std::string& privateKeyHex)
 {
-    auto ecKey = shared_EC_KEY::make(EC_KEY_new_by_curve_name(NID_brainpoolP256r1));
-    throwIfNot(ecKey != nullptr, "cannot create new brainpoolP256R1 EC_KEY");
+    auto privKeyBn = shared_BN::make();
+    auto count = BN_hex2bn(privKeyBn.getP(), privateKeyHex.c_str());
+    AssertOpenSsl(gsl::narrow<size_t>(count) == privateKeyHex.size())
+        << "conversion of hex private key failed";
 
-    // Set private key.
-    auto privateKey = shared_BN::make();
-    throwIfNot(BN_hex2bn(privateKey.getP(), privateKeyHex.c_str()) > 0, "cannot parse private key");
-    throwIfNot(EC_KEY_set_private_key(ecKey, privateKey) == 1, "cannot set private key");
+    // calculate the pubkey from the private key
+    auto group = std::unique_ptr<EC_GROUP, decltype(&EC_GROUP_free)>{
+        EC_GROUP_new_by_curve_name(NID_brainpoolP256r1), &EC_GROUP_free};
+    auto pubkeyPoint = std::unique_ptr<EC_POINT, decltype(&EC_POINT_free)>{
+        EC_POINT_new(group.get()), &EC_POINT_free};
+    auto result =
+        EC_POINT_mul(group.get(), pubkeyPoint.get(), privKeyBn, nullptr, nullptr, nullptr);
+    AssertOpenSsl(result == 1) << "EC_POINT_mul failed";
+    std::array<unsigned char, 1 + (2 * 32)> pubkeyUncompressed{};
+    auto len = EC_POINT_point2oct(
+        group.get(),
+        pubkeyPoint.get(),
+        POINT_CONVERSION_UNCOMPRESSED,
+        pubkeyUncompressed.data(),
+        pubkeyUncompressed.size(),
+        nullptr);
+    AssertOpenSsl(len > 0) << "EC_POINT_point2oct failed";
 
-    // Calculate public key from private key within given group.
-    const EC_GROUP* group = EC_KEY_get0_group(ecKey);
-    auto publicKey = shared_EC_POINT::make(EC_POINT_new(group));
-    throwIfNot(
-        EC_POINT_mul(group, publicKey, privateKey, nullptr, nullptr, nullptr) == 1,
-        "cannot multiply group with private key to retrieve public key");
-    throwIfNot(EC_KEY_set_public_key(ecKey, publicKey) == 1, "cannot set public key");
-    mKeyPair = shared_EVP_PKEY::make();
-    throwIfNot(mKeyPair != nullptr, "cannot create new EVP_PKEY");
-    EVP_PKEY_set1_EC_KEY(mKeyPair, ecKey);
+    // build the pkey from pubkey and private key
+    const std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx{
+        EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr), &EVP_PKEY_CTX_free};
+    AssertOpenSsl(EVP_PKEY_fromdata_init(pctx.get()) == 1) << "EVP_PKEY_fromdata_init failed";
+    const std::unique_ptr<OSSL_PARAM_BLD, decltype(&OSSL_PARAM_BLD_free)> paramsBuild{
+        OSSL_PARAM_BLD_new(), &OSSL_PARAM_BLD_free};
+    OSSL_PARAM_BLD_push_utf8_string(
+        paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(NID_brainpoolP256r1), 0);
+    OSSL_PARAM_BLD_push_BN(paramsBuild.get(), OSSL_PKEY_PARAM_PRIV_KEY, privKeyBn);
+    OSSL_PARAM_BLD_push_octet_string(
+        paramsBuild.get(),
+        OSSL_PKEY_PARAM_PUB_KEY,
+        pubkeyUncompressed.data(),
+        pubkeyUncompressed.size());
+
+    const std::unique_ptr<OSSL_PARAM, decltype(&OSSL_PARAM_free)> params{
+        OSSL_PARAM_BLD_to_param(paramsBuild.get()), &OSSL_PARAM_free};
+    AssertOpenSsl(params != nullptr) << "Failed to generate OSSL_PARAM";
+
+    EVP_PKEY* pkey = nullptr;
+    result = EVP_PKEY_fromdata(pctx.get(), &pkey, EVP_PKEY_KEYPAIR, params.get());
+    AssertOpenSsl(result == 1) << "EVP_PKEY_fromdata failed";
+    mKeyPair = shared_EVP_PKEY::make(pkey);
 }
 // GEMREQ-end A_21888
 
@@ -130,10 +162,12 @@ shared_EVP_PKEY DiffieHellman::getPrivateKey()
 DiffieHellman& DiffieHellman::setPeerPublicKey(const shared_EVP_PKEY& peerPublicKey)
 {
     throwIfNot(peerPublicKey.isSet(), "got invalid peer's public key");
-    const EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(peerPublicKey);
-    throwIfNot(ecKey != nullptr, "peer key has no public key");
-    const EC_POINT* ecPoint = EC_KEY_get0_public_key(ecKey);
-    throwIfNot(ecPoint != nullptr, "peer's public key not valid");
+    AssertOpenSsl(EVP_PKEY_is_a(peerPublicKey, "EC") == 1) << "Key is not an EC key";
+    std::array<uint8_t, 256> pubkey{};
+    size_t len = 0;
+    const auto status = EVP_PKEY_get_octet_string_param(
+        peerPublicKey, OSSL_PKEY_PARAM_PUB_KEY, pubkey.data(), pubkey.size(), &len);
+    AssertOpenSsl(status == 1) << "unable to obtain public key";
 
     mPeerPublicKey = peerPublicKey;
 

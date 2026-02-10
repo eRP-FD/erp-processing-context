@@ -56,8 +56,12 @@ list(
         EpaAccountLookupClient.cxx
         EventProcessor.cxx
         MedicationExporterMain.cxx
+        RunLoopScheduler.cxx
         TelematikLookup.cxx
         TelematikLookup.hxx
+        TRezeptEventProcessor.cxx
+        TransformerBase.cxx
+        TRezeptTransformer.cxx
         VauAutTokenSigner.cxx
         admin/PutRuntimeConfigHandler.cxx
         database/TaskEvent.cxx
@@ -69,6 +73,8 @@ list(
         database/MedicationExporterDatabaseFrontendInterface.hxx
         database/MedicationExporterPostgresBackend.cxx
         database/TaskEventConverter.cxx
+        model/trezept/ErpTPrescriptionCarbonCopy.cxx
+        model/trezept/ErpTPrescriptionOrganization.cxx
         model/ConsentDecisionsResponseType.cxx
         model/DataAbsentReason.cxx
         model/EventKvnr.cxx
@@ -80,6 +86,8 @@ list(
         model/EpaOpRxDispensationErpOutputParameters.cxx
         model/EpaOpRxPrescriptionErpOutputParameters.cxx
         model/HashedKvnr.cxx
+        model/HealthcareServiceDirectory.cxx
+        model/LocationDirectory.cxx
         model/OrganizationDirectory.cxx
         model/ResourceInstances.cxx
         model/TaskEvent.cxx
@@ -89,8 +97,12 @@ list(
         network/client/Tee3ClientsForHost.cxx
         pc/MedicationExporterFactories.hxx
         pc/MedicationExporterServiceContext.cxx
+        client/BfArMClient.cxx
         client/EpaMedicationClient.cxx
         client/EpaMedicationClientImpl.cxx
+        client/FhirVZDClient.cxx
+        client/TokenCache.cxx
+        client/OAuthClientBase.cxx
         eventprocessing/CancelPrescription.cxx
         eventprocessing/EventDispatcher.cxx
         eventprocessing/EventProcessingBase.cxx

@@ -268,7 +268,7 @@ ErpBlob EnrolmentHelper::trustTpmMfr (const uint32_t generation)
     }
 
     hsmclient::SingleBlobOutput output = ERP_TrustTPMMfr(mHsmSession.rawSession, input);
-    HsmExpectSuccess(output, "ERP_TrustTPMMfr failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_TrustTPMMfr failed", timer);
     TVLOG(logLevel) << "successfully called ERP_TrustTPMMfr and got blob of size " << output.BlobOut.BlobLength << " in return";
 
     return convertBlob(output.BlobOut);
@@ -287,7 +287,7 @@ ErpBlob EnrolmentHelper::enrollEk (const uint32_t generation, const ErpBlob& tru
 
     auto output = ERP_EnrollTPMEK(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_EnrollTPMEK failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_EnrollTPMEK failed", timer);
     TVLOG(logLevel) << "successfully called ERP_EnrollTPMEK and got blob of size " << output.BlobOut.BlobLength << " in return";
 
     return convertBlob(output.BlobOut);
@@ -318,7 +318,7 @@ EnrolmentHelper::getAkChallenge (
 
     auto output = ERP_GetAKChallenge(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_GetAKChallenge failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_GetAKChallenge failed", timer);
     TVLOG(logLevel) << "successfully called ERP_GetAKChallenge and got blob of size " << output.ChallengeBlob.BlobLength << " in return";
 
     return {
@@ -381,7 +381,7 @@ ErpBlob EnrolmentHelper::enrollAk (
 
     auto output = ERP_EnrollTPMAK(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_EnrollTPMAK failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_EnrollTPMAK failed", timer);
     TVLOG(logLevel) << "successfully called ERP_EnrollTPMAK and got blob of size " << output.BlobOut.BlobLength << " in return";
 
     return convertBlob(output.BlobOut);
@@ -400,7 +400,7 @@ std::tuple<
 
     auto output = ERP_GenerateNONCE(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_GenerateNONCE failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_GenerateNONCE failed", timer);
     TVLOG(logLevel) << "successfully called ERP_GenerateNONCE and got nonce of size " << NONCE_LEN;
 
     return {
@@ -453,7 +453,7 @@ ErpBlob EnrolmentHelper::enrollEnclave (
 
     auto output = ERP_EnrollEnclave(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_EnrollEnclave failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_EnrollEnclave failed", timer);
     TVLOG(logLevel) << "successfully called ERP_EnrollEnclave";
 
     return convertBlob(output.BlobOut);
@@ -482,7 +482,7 @@ ErpBlob EnrolmentHelper::getTeeToken (
 
     auto output = ERP_GetTEEToken(mHsmSession.rawSession, input);
 
-    HsmExpectSuccess(output, "ERP_TEEToken failed", timer);
+    hsmExpectSuccess(mHsmSession, output, "ERP_TEEToken failed", timer);
     TVLOG(logLevel) << "successfully called ERP_TEEToken";
 
     return convertBlob(output.BlobOut);

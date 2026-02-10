@@ -214,6 +214,8 @@ public:
      * greater than destSize.
      */
     static void copyMemorySafely(void* dest, size_t destSize, const void* src, size_t count);
+
+    static bool startsWithBom(std::string_view s);
 };
 
 

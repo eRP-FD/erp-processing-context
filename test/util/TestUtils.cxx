@@ -6,6 +6,7 @@
  */
 
 #include "test/util/TestUtils.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "erp/model/AbgabedatenPkvBundle.hxx"
 #include "erp/model/ChargeItem.hxx"
 #include "erp/model/Communication.hxx"
@@ -43,7 +44,11 @@
 #include <fhirtools/util/SaxHandler.hxx>
 #include <algorithm>
 #include <chrono>
+#include <ranges>
 #include <regex>
+
+namespace testutils
+{
 
 namespace
 {
@@ -88,10 +93,101 @@ void referenceTime(const std::shared_ptr<const fhirtools::Element>& resourceRoot
     }
     result = model::Timestamp::now();
 }
+
+void additionalValidation(const std::shared_ptr<const ErpElement>& entry, const std::string& entryPath)
+{
+    model::NumberAsStringParserDocument doc;
+    doc.CopyFrom(*entry->jsonValue(), doc.GetAllocator());
+    auto resource = createResourceNoValidation(std::move(doc));
+    ASSERT_NE(resource, nullptr);
+    ASSERT_NO_FATAL_FAILURE(resource->additionalValidation()) << entryPath;
+}
+
+void validateBundleEntry(const std::shared_ptr<const ErpElement>& entry, const std::string& entryPath)
+{
+    const auto& fhirInstance = Fhir::instance();
+    const auto& profiles = entry->profiles();
+    auto reference = model::Timestamp::now();
+    ASSERT_NO_FATAL_FAILURE(referenceTime(entry, reference));
+    auto viewList = fhirInstance.structureRepository(reference);
+    for (const auto& profile: profiles)
+    {
+        fhirtools::DefinitionKey key{profile};
+        viewList = viewList.matchAll(key.url, value(key.version));
+    }
+    fhirtools::ValidatorOptions validatorOptions;
+    std::optional<model::ProfileType> profileType;
+    if (profiles.size() == 1)
+    {
+        profileType = model::findProfileType(profiles[0]);
+    }
+    if (profileType)
+    {
+        validatorOptions = fhirInstance.defaultValidatorOptions(*profileType, model::Timestamp::now());
+    }
+    // references have been checked already from top-level
+    // must be disabled here, because references are unresolvable when the resource is validated alone.
+    validatorOptions.levels.unresolveableReferenceInBundle = fhirtools::Severity::info;
+    ASSERT_FALSE(viewList.empty()) << reference << " " << String::join(profiles);
+    auto repoView = viewList.latest();
+    const auto validationResult = fhirtools::FhirPathValidator::validate(repoView, entry, entryPath, validatorOptions);
+    if (validationResult.highestSeverity() >= fhirtools::Severity::error)
+    {
+        validationResult.dumpToLog();
+        FAIL();
+    }
+    if (profileType)
+    {
+        ASSERT_NO_FATAL_FAILURE(additionalValidation(entry, entryPath));
+    }
+}
+
+void validateUnprofiledBundle(const model::FhirResourceBase& resource,
+                              const fhirtools::ProfiledElementTypeInfo& elementId)
+{
+    static const auto getEntries = Fhir::parseFhirPath("Bundle.entry.resource");
+    const auto& fhirInstance = Fhir::instance();
+    const auto* backend = std::addressof(fhirInstance.backend());
+    const auto& allGroups = backend->allGroups();
+    const auto element = std::make_shared<ErpElement>(backend, std::weak_ptr<ErpElement>{}, elementId,
+                                                      std::addressof(resource.jsonDocument()));
+    const auto hl7FhirR4Core = fhirtools::FhirResourceViewGroupSet::create(
+        "hl7.fhir.r4.core",
+        {allGroups.at("hl7.fhir.r4.core-4.0.1-structures"), allGroups.at("hl7.fhir.r4.core-4.0.1-terminology")},
+        backend);
+    auto fhirOptions = fhirInstance.defaultValidatorOptions(model::ProfileType::fhir, model::Timestamp::now());
+    // ignore meta.profile in all entries, beacuse each entry will be validated separately
+    fhirOptions.validateMetaProfiles = false;
+    fhirOptions.allowNonLiteralAuthorReference = true;
+    // cannot be checked on base profiles:
+    fhirOptions.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::disable;
+    fhirOptions.levels.unknownMetaProfile = fhirtools::Severity::info;
+
+    // there is no requirement, that we only produce Bundles, that have resolveable references
+    // A_22122 even requires to not include the referenced resources (ChargeItem.supportingInformation)
+    fhirOptions.levels.unresolveableReferenceInBundle = fhirtools::Severity::warning;
+
+    // cannot be checked on base profiles:
+    auto baseValidationResult = fhirtools::FhirPathValidator::validate(hl7FhirR4Core, element, "Bundle", fhirOptions);
+    if (baseValidationResult.highestSeverity() >= fhirtools::Severity::error)
+    {
+        baseValidationResult.dumpToLog();
+        FAIL() << resource.jsonDocument().serializeToJsonString();
+    }
+    auto entries = getEntries->eval({hl7FhirR4Core, element});
+    for (size_t idx = 0; const auto& entryPtr : entries.collection)
+    {
+        auto entry = std::dynamic_pointer_cast<const ErpElement>(entryPtr);
+        ASSERT_NE(entry, nullptr);
+        validateBundleEntry(entry, "Bundle.entry[" + std::to_string(idx) + "].resource");
+        ++idx;
+    }
+}
 template<typename T>
 std::unique_ptr<T> createResourceNoValidation(model::NumberAsStringParserDocument doc)
 {
     return std::make_unique<T>(model::Resource<T>::fromJson(std::move(doc)));
+}
 }
 
 std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::NumberAsStringParserDocument doc)
@@ -212,13 +308,17 @@ std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::Numbe
         case ProvidePrescriptionErpOp:
         case CancelPrescriptionErpOp:
         case ProvideDispensationErpOp:
+        case HealthcareServiceDirectory:
         case OrganizationDirectory:
+        case LocationDirectory:
         case EPAMedicationPZNIngredient:
         case GEM_ERPEU_PR_PAR_Access_Authorization_Request:
         case GEM_ERPEU_PR_PAR_Access_Authorization_Response:
         case GEM_ERPEU_PR_PAR_PATCH_Task_Input:
         case GEM_ERPEU_PR_PAR_GET_Prescription_Input:
         case GEM_ERPEU_PR_PAR_CloseOperation_Input:
+        case ERP_TPrescription_CarbonCopy:
+        case ERP_TPrescription_Organization:
             break;
         case GEM_ERPEU_PR_MedicationDispense:
             return createResourceNoValidation<model::GemErpEuPrMedicationDispense>(std::move(doc));
@@ -231,102 +331,9 @@ std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::Numbe
         case GEM_ERPEU_PR_Organization:
             return createResourceNoValidation<model::GemErpEuPrOrganization>(std::move(doc));
     }
-    Fail("resource creation not supported for: "s.append(magic_enum::enum_name(*profileType)));
+    Fail2("resource creation not supported for: "s.append(magic_enum::enum_name(*profileType)), UnsupportedResourceTypeException);
 }
 
-void additionalValidation(const std::shared_ptr<const ErpElement>& entry, const std::string& entryPath)
-{
-    model::NumberAsStringParserDocument doc;
-    doc.CopyFrom(*entry->jsonValue(), doc.GetAllocator());
-    auto resource = createResourceNoValidation(std::move(doc));
-    ASSERT_NE(resource, nullptr);
-    ASSERT_NO_FATAL_FAILURE(resource->additionalValidation()) << entryPath;
-}
-
-void validateBundleEntry(const std::shared_ptr<const ErpElement>& entry, const std::string& entryPath)
-{
-    const auto& fhirInstance = Fhir::instance();
-    const auto& profiles = entry->profiles();
-    auto reference = model::Timestamp::now();
-    ASSERT_NO_FATAL_FAILURE(referenceTime(entry, reference));
-    auto viewList = fhirInstance.structureRepository(reference);
-    for (const auto& profile: profiles)
-    {
-        fhirtools::DefinitionKey key{profile};
-        viewList = viewList.matchAll(key.url, value(key.version));
-    }
-    fhirtools::ValidatorOptions validatorOptions;
-    std::optional<model::ProfileType> profileType;
-    if (profiles.size() == 1)
-    {
-        profileType = model::findProfileType(profiles[0]);
-    }
-    if (profileType)
-    {
-        validatorOptions = fhirInstance.defaultValidatorOptions(*profileType, model::Timestamp::now());
-    }
-    // references have been checked already from top-level
-    // must be disabled here, because references are unresolvable when the resource is validated alone.
-    validatorOptions.levels.unresolveableReferenceInBundle = fhirtools::Severity::info;
-    ASSERT_FALSE(viewList.empty()) << reference << " " << String::join(profiles);
-    auto repoView = viewList.latest();
-    const auto validationResult = fhirtools::FhirPathValidator::validate(repoView, entry, entryPath, validatorOptions);
-    if (validationResult.highestSeverity() >= fhirtools::Severity::error)
-    {
-        validationResult.dumpToLog();
-        FAIL();
-    }
-    if (profileType)
-    {
-        ASSERT_NO_FATAL_FAILURE(additionalValidation(entry, entryPath));
-    }
-}
-
-void validateUnprofiledBundle(const model::FhirResourceBase& resource,
-                              const fhirtools::ProfiledElementTypeInfo& elementId)
-{
-    static const auto getEntries = Fhir::parseFhirPath("Bundle.entry.resource");
-    const auto& fhirInstance = Fhir::instance();
-    const auto* backend = std::addressof(fhirInstance.backend());
-    const auto& allGroups = backend->allGroups();
-    const auto element = std::make_shared<ErpElement>(backend, std::weak_ptr<ErpElement>{}, elementId,
-                                                      std::addressof(resource.jsonDocument()));
-    const auto hl7FhirR4Core = fhirtools::FhirResourceViewGroupSet::create(
-        "hl7.fhir.r4.core",
-        {allGroups.at("hl7.fhir.r4.core-4.0.1-structures"), allGroups.at("hl7.fhir.r4.core-4.0.1-terminology")},
-        backend);
-    auto fhirOptions = fhirInstance.defaultValidatorOptions(model::ProfileType::fhir, model::Timestamp::now());
-    // ignore meta.profile in all entries, beacuse each entry will be validated separately
-    fhirOptions.validateMetaProfiles = false;
-    fhirOptions.allowNonLiteralAuthorReference = true;
-    // cannot be checked on base profiles:
-    fhirOptions.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::disable;
-    fhirOptions.levels.unknownMetaProfile = fhirtools::Severity::info;
-
-    // there is no requirement, that we only produce Bundles, that have resolveable references
-    // A_22122 even requires to not include the referenced resources (ChargeItem.supportingInformation)
-    fhirOptions.levels.unresolveableReferenceInBundle = fhirtools::Severity::warning;
-
-    // cannot be checked on base profiles:
-    auto baseValidationResult = fhirtools::FhirPathValidator::validate(hl7FhirR4Core, element, "Bundle", fhirOptions);
-    if (baseValidationResult.highestSeverity() >= fhirtools::Severity::error)
-    {
-        baseValidationResult.dumpToLog();
-        FAIL() << resource.jsonDocument().serializeToJsonString();
-    }
-    auto entries = getEntries->eval({hl7FhirR4Core, element});
-    for (size_t idx = 0; const auto& entryPtr : entries.collection)
-    {
-        auto entry = std::dynamic_pointer_cast<const ErpElement>(entryPtr);
-        ASSERT_NE(entry, nullptr);
-        validateBundleEntry(entry, "Bundle.entry[" + std::to_string(idx) + "].resource");
-        ++idx;
-    }
-}
-}
-
-namespace testutils
-{
 
 std::set<fhirtools::ValidationError> validationResultFilter(const fhirtools::ValidationResults& validationResult,
                                                             const fhirtools::ValidatorOptions& options)
@@ -507,6 +514,86 @@ ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::chrono::days
 ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& viewId, const date::sys_days& startDate)
     : ShiftFhirResourceViewsGuard{viewId, fhirtools::Date{date::year_month_day{startDate}, fhirtools::Date::Precision::day}}
 {
+}
+
+static bool enable166(model::PrescriptionType prescriptionType)
+{
+    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_4_0)
+    {
+        return true;
+    }
+    return prescriptionType != model::PrescriptionType::tRezept;
+}
+static bool canBeEu(model::PrescriptionType prescriptionType)
+{
+    switch (prescriptionType)
+    {
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            return true;
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::tRezept:
+        case model::PrescriptionType::direkteZuweisung:
+        case model::PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
+    return false;
+}
+
+std::vector<model::PrescriptionType> gkvPrescriptionTypes()
+{
+    std::vector<model::PrescriptionType> prescriptionTypes;
+    for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
+                                     std::ranges::views::filter(&model::canBeGkv) |
+                                     std::ranges::views::filter(&enable166))
+    {
+        prescriptionTypes.emplace_back(prescriptionType);
+    }
+    return prescriptionTypes;
+}
+std::vector<model::PrescriptionType> pkvPrescriptionTypes()
+{
+    std::vector<model::PrescriptionType> prescriptionTypes;
+    for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
+                                     std::ranges::views::filter(&model::canBePkv) |
+                                     std::ranges::views::filter(&enable166))
+    {
+        prescriptionTypes.emplace_back(prescriptionType);
+    }
+    return prescriptionTypes;
+}
+std::vector<model::PrescriptionType> euPrescriptionTypes()
+{
+    std::vector<model::PrescriptionType> prescriptionTypes;
+    for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
+                                     std::ranges::views::filter(&canBeEu) |
+                                     std::ranges::views::filter(&enable166))
+    {
+        prescriptionTypes.emplace_back(prescriptionType);
+    }
+    return prescriptionTypes;
+}
+std::vector<model::PrescriptionType> nonEuPrescriptionTypes()
+{
+    std::vector<model::PrescriptionType> prescriptionTypes;
+    for (auto prescriptionType :
+         magic_enum::enum_values<model::PrescriptionType>() | std::ranges::views::filter([](auto t) {
+             return ! canBeEu(t);
+         }) | std::ranges::views::filter(&enable166))
+    {
+        prescriptionTypes.emplace_back(prescriptionType);
+    }
+    return prescriptionTypes;
+}
+std::vector<model::PrescriptionType> allPrescriptionTypes()
+{
+    std::vector<model::PrescriptionType> prescriptionTypes;
+    for (auto prescriptionType :
+         magic_enum::enum_values<model::PrescriptionType>() | std::ranges::views::filter(&enable166))
+    {
+        prescriptionTypes.emplace_back(prescriptionType);
+    }
+    return prescriptionTypes;
 }
 
 } // namespace testutils

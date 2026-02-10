@@ -46,7 +46,10 @@ std::string profileList(const fhirtools::FhirStructureRepositoryView& repoView,
 
 namespace version
 {
-static inline fhirtools::FhirVersion GEM_ERP_1_4{"1.4"};
+static inline const fhirtools::FhirVersion GEM_ERP_1_4{"1.4"};
+static inline const fhirtools::FhirVersion GEM_ERP_1_5{"1.5"};
+static inline const fhirtools::FhirVersion GEM_ERP_1_6{"1.6"};
+static inline const fhirtools::FhirVersion KBV_1_4{"1.4"};
 }
 
 namespace resource
@@ -186,6 +189,14 @@ constexpr std::string_view gem_erpeu_pr_practitionerrole =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_PractitionerRole";
 constexpr std::string_view gem_erpeu_pr_organization =
     "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Organization";
+constexpr std::string_view healthcare_service_directory =
+    "https://gematik.de/fhir/directory/StructureDefinition/HealthcareServiceDirectory";
+constexpr std::string_view location_directory =
+    "https://gematik.de/fhir/directory/StructureDefinition/LocationDirectory";
+constexpr std::string_view erp_tprescription_organization =
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-organization";
+constexpr std::string_view erp_tprescription_carbon_copy =
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy";
 } // namespace structure_definition
 
 namespace operation_definition
@@ -213,12 +224,15 @@ constexpr std::string_view rxDispensation = "rxDispensation";
 namespace part
 {
 constexpr std::string_view prescriptionId = "prescriptionId";
+constexpr std::string_view prescriptionSignatureDate = "prescriptionSignatureDate";
 constexpr std::string_view authoredOn = "authoredOn";
 constexpr std::string_view medicationRequest = "medicationRequest";
 constexpr std::string_view medication = "medication";
 constexpr std::string_view organization = "organization";
+constexpr std::string_view dispenseOrganization = "dispenseOrganization";
 constexpr std::string_view practitioner = "practitioner";
 constexpr std::string_view medicationDispense = "medicationDispense";
+constexpr std::string_view dispenseInformation = "dispenseInformation";
 }
 }
 
@@ -305,6 +319,7 @@ const ElementName id{ "id" };
 const ElementName identifier{ "identifier" };
 const ElementName ingredient{ "ingredient" };
 const ElementName language{ "language" };
+const ElementName location{ "location" };
 const ElementName line{ "line" };
 const ElementName _line{ "_line" };
 const ElementName medicationReference { "medicationReference" };
@@ -324,6 +339,7 @@ const ElementName period{ "period" };
 const ElementName practitioner{ "practitioner" };
 const ElementName prefix{ "prefix" };
 const ElementName _prefix{ "_prefix" };
+const ElementName providedBy{ "providedBy" };
 const ElementName profile{ "profile" };
 const ElementName qualification{ "qualification" };
 const ElementName received{ "received" };

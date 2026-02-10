@@ -23,9 +23,8 @@ public:
                                      const std::string& payload) override;
     Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
                                     const std::string& payload) override;
-    void addLogData(const std::string& key, const std::any& data) override
+    void addLogData(const BDEMessage::Data& data) override
     {
-        (void) key;
         (void) data;
         // Not required in mock.
     }

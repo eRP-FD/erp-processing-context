@@ -7,6 +7,7 @@
 #ifndef MEDICATION_EXPORTER_TEE3CLIENT_HXX
 #define MEDICATION_EXPORTER_TEE3CLIENT_HXX
 
+#include "exporter/BdeMessage.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/network/client/CoHttpsClient.hxx"
 #include "library/crypto/tee3/Tee3Context.hxx"
@@ -56,7 +57,7 @@ public:
     [[nodiscard]] boost::asio::awaitable<void> ensureConnected();
 
     [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>>
-    sendInner(std::string xRequestId, Request request, std::unordered_map<std::string, std::any> logDataBag);
+    sendInner(std::string xRequestId, Request request, const BDEMessage::Data& bdeData);
 
 
     static const boost::system::error_category& errorCategory();

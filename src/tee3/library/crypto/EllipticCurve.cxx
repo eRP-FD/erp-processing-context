@@ -28,18 +28,7 @@ namespace
         // GEMREQ-start GS-A_4368#EllipticCurveKeyBrainpoolP256R1
         shared_EVP_PKEY createKeyPair() const override
         {
-            auto pkey = shared_EVP_PKEY::make();
-
-            auto key = shared_EC_KEY::make(EC_KEY_new_by_curve_name(mCurveNid));
-            AssertOpenSsl(key.isSet())
-                << "could not create new EC key on " << mCurveName << " curve";
-            EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
-            int status = EC_KEY_generate_key(key);
-            AssertOpenSsl(status == 1) << "generating EC key failed";
-            status = EVP_PKEY_set1_EC_KEY(pkey, key);
-            AssertOpenSsl(status == 1) << "generating EVP key from EC key failed";
-
-            return pkey;
+            return shared_EVP_PKEY::make(EVP_EC_gen(OBJ_nid2sn(mCurveNid)));
         }
         // GEMREQ-end GS-A_4368#EllipticCurveKeyBrainpoolP256R1
 
@@ -62,14 +51,19 @@ namespace
 
         bool isOnCurve(const EVP_PKEY& key) const override
         {
-            const auto* eckey = EVP_PKEY_get0_EC_KEY(&key);
-            if (eckey == nullptr)
+            if (! EVP_PKEY_is_a(&key, "EC"))
+            {
                 return false;
-            const auto* group = EC_KEY_get0_group(eckey);
-            if (group == nullptr)
+            }
+
+            std::array<char, 64> groupName{};
+            size_t len = 0;
+            if (EVP_PKEY_get_group_name(&key, groupName.data(), groupName.size(), &len) != 1)
+            {
                 return false;
-            auto name = EC_GROUP_get_curve_name(group);
-            return name == mCurveNid;
+            }
+            const auto curveId = OBJ_txt2nid(groupName.data());
+            return curveId == mCurveNid;
         }
 
     private:

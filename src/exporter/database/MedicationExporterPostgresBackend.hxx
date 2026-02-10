@@ -45,6 +45,12 @@ public:
     void finalizeKvnr(const model::EventKvnr& kvnr,
                       const std::string& assignedEpaPrefix) const override;
 
+    std::optional<db_model::TaskEvent> processNextTRezeptEvent() override;
+    void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) override;
+    void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) override;
+    bool isDeadLetter(const model::TRezeptEvent& eventData) override;
+    int markDeadLetter(const model::TRezeptEvent& eventData) override;
+
     struct TaskEventQueryIndexes {
         pqxx::row::size_type id = 0;
         pqxx::row::size_type prescriptionId = 1;

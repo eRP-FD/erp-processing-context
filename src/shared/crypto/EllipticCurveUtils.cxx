@@ -10,9 +10,13 @@
 #include "shared/crypto/EllipticCurve.hxx"
 #include "shared/util/Base64.hxx"
 #include "fhirtools/util/Gsl.hxx"
+#include "shared/util/Buffer.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/String.hxx"
 
+#include <array>
+#include <openssl/core_names.h>
+#include <openssl/param_build.h>
 
 namespace
 {
@@ -228,78 +232,94 @@ shared_EVP_PKEY EllipticCurveUtils::createPublicKeyBin (
 }
 
 
-shared_EVP_PKEY EllipticCurveUtils::createPublicKeyBN (
-    const shared_BN& xCoordinate,
-    const shared_BN& yCoordinate,
-    const int curveId)
+shared_EVP_PKEY EllipticCurveUtils::createPublicKeyBN(const shared_BN& xCoordinate, const shared_BN& yCoordinate,
+                                                      const int curveId)
 {
-    auto key = shared_EC_KEY::make(EC_KEY_new_by_curve_name(curveId));
-    OpenSslExpect(key.isSet(), "could not create new EC key on elliptic curve");
-    EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
-    int status = EC_KEY_generate_key(key);
-    OpenSslExpect(status == 1, "generating EVP key from EC key failed");
+    util::Buffer pubkeyUncompressed(1 + (2 * ecdsaComponentSize));
+    auto pubkeySpan = std::span{pubkeyUncompressed.data(), pubkeyUncompressed.size()};
+    pubkeySpan[0] = 0x4;
 
-    const auto* group = EC_KEY_get0_group(key);
-    OpenSslExpect(group!=nullptr, "could not get group from elliptic curve key");
+    int paddedSize =
+        BN_bn2binpad(xCoordinate, pubkeySpan.subspan(1, 1 + ecdsaComponentSize).data(), ecdsaComponentSize);
+    OpenSslExpect(paddedSize == static_cast<int>(ecdsaComponentSize), "could not extract padded x component");
+    paddedSize =
+        BN_bn2binpad(yCoordinate, pubkeySpan.subspan(1 + ecdsaComponentSize, 1 + (2 * ecdsaComponentSize)).data(),
+                     ecdsaComponentSize);
+    OpenSslExpect(paddedSize == static_cast<int>(ecdsaComponentSize), "could not extract padded y component");
 
-    auto publicKey = shared_EC_POINT::make(EC_POINT_new(group));
-    int result = EC_POINT_set_affine_coordinates(group, publicKey, xCoordinate, yCoordinate, nullptr);
-    OpenSslExpect(result == 1, "could not create public key from x,y components");
+    const std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx{
+        EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr), &EVP_PKEY_CTX_free};
+    OpenSslExpect(EVP_PKEY_fromdata_init(pctx.get()) == 1, "EVP_PKEY_fromdata_init failed");
+    const std::unique_ptr<OSSL_PARAM_BLD, decltype(&OSSL_PARAM_BLD_free)> paramsBuild{OSSL_PARAM_BLD_new(),
+                                                                                      &OSSL_PARAM_BLD_free};
 
-    result = EC_KEY_set_public_key(key, publicKey);
-    OpenSslExpect(result == 1, "could not create ec key public key");
+    OSSL_PARAM_BLD_push_utf8_string(paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(curveId), 0);
+    OSSL_PARAM_BLD_push_octet_string(paramsBuild.get(), OSSL_PKEY_PARAM_PUB_KEY, pubkeyUncompressed.data(),
+                                     pubkeyUncompressed.size());
+    const std::unique_ptr<OSSL_PARAM, decltype(&OSSL_PARAM_free)> params{OSSL_PARAM_BLD_to_param(paramsBuild.get()),
+                                                                         &OSSL_PARAM_free};
+    OpenSslExpect(params != nullptr, "Failed to generate OSSL_PARAM");
 
-    auto pkey = shared_EVP_PKEY::make();
+    EVP_PKEY* pkey = nullptr;
+    auto result = EVP_PKEY_fromdata(pctx.get(), &pkey, EVP_PKEY_PUBLIC_KEY, params.get());
 
-    status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    OpenSslExpect(status == 1, "could not convert key into EC key");
+    OpenSslExpect(result == 1, "EVP_PKEY_fromdata failed");
+    OpenSslExpect(pkey != nullptr, "Unable to create public key");
 
-    return pkey;
+    return shared_EVP_PKEY::make(pkey);
 }
 
 
-shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex (
-    const std::string& pComponent)
+shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex(const std::string& pComponent)
 {
-    auto key = shared_EC_KEY::make(EC_KEY_new_by_curve_name(NID_brainpoolP256r1));
-    OpenSslExpect(key.isSet(), "could not create new EC key on brainpoolP256R1 curve");
-    EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
-    int status = EC_KEY_generate_key(key);
-    OpenSslExpect(status == 1, "generating EVP key from EC key failed");
+    auto privKeyBn = shared_BN::make();
+    auto count = BN_hex2bn(privKeyBn.getP(), pComponent.c_str());
+    OpenSslExpect(gsl::narrow<size_t>(count) == pComponent.size(), "conversion of hex private key failed");
 
-    const auto* group = EC_KEY_get0_group(key);
-    OpenSslExpect(group!=nullptr, "could not get group from elliptic curve key");
+    // calculate the pubkey from the private key
+    auto group = std::unique_ptr<EC_GROUP, decltype(&EC_GROUP_free)>{EC_GROUP_new_by_curve_name(NID_brainpoolP256r1),
+                                                                     &EC_GROUP_free};
+    auto pubkeyPoint = std::unique_ptr<EC_POINT, decltype(&EC_POINT_free)>{EC_POINT_new(group.get()), &EC_POINT_free};
+    auto result = EC_POINT_mul(group.get(), pubkeyPoint.get(), privKeyBn, nullptr, nullptr, nullptr);
+    OpenSslExpect(result == 1, "EC_POINT_mul failed");
+    std::array<unsigned char, 1 + (2 * ecdsaComponentSize)> pubkeyUncompressed{};
+    auto len = EC_POINT_point2oct(group.get(), pubkeyPoint.get(), POINT_CONVERSION_UNCOMPRESSED,
+                                  pubkeyUncompressed.data(), pubkeyUncompressed.size(), nullptr);
+    OpenSslExpect(len > 0, "EC_POINT_point2oct failed");
 
-    auto p = shared_BN::make();
-    auto count = BN_hex2bn(p.getP(), pComponent.c_str());
-    OpenSslExpect(gsl::narrow<size_t>(count)==pComponent.size(), "conversion of hex private key failed");
+    // build the pkey from pubkey and private key
+    const std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx{
+        EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr), &EVP_PKEY_CTX_free};
+    OpenSslExpect(EVP_PKEY_fromdata_init(pctx.get()) == 1, "EVP_PKEY_fromdata_init failed");
+    const std::unique_ptr<OSSL_PARAM_BLD, decltype(&OSSL_PARAM_BLD_free)> paramsBuild{OSSL_PARAM_BLD_new(),
+                                                                                      &OSSL_PARAM_BLD_free};
+    OSSL_PARAM_BLD_push_utf8_string(paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(NID_brainpoolP256r1), 0);
+    OSSL_PARAM_BLD_push_BN(paramsBuild.get(), OSSL_PKEY_PARAM_PRIV_KEY, privKeyBn);
+    OSSL_PARAM_BLD_push_octet_string(paramsBuild.get(), OSSL_PKEY_PARAM_PUB_KEY, pubkeyUncompressed.data(),
+                                     pubkeyUncompressed.size());
 
-    int result = EC_KEY_set_private_key(key, p);
-    OpenSslExpect(result == 1, "could not create ec private key");
+    const std::unique_ptr<OSSL_PARAM, decltype(&OSSL_PARAM_free)> params{OSSL_PARAM_BLD_to_param(paramsBuild.get()),
+                                                                         &OSSL_PARAM_free};
+    OpenSslExpect(params != nullptr, "Failed to generate OSSL_PARAM");
 
-    auto publicKey = shared_EC_POINT::make(EC_POINT_new(group));
-    result = EC_POINT_mul(group, publicKey, p, nullptr, nullptr, nullptr);
-    OpenSslExpect(result == 1, "could not create ec public key");
-    result = EC_KEY_set_public_key(key, publicKey);
-    OpenSslExpect(result == 1, "could not set ec public key");
-
-    auto pkey = shared_EVP_PKEY::make();
-    status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    OpenSslExpect(status == 1, "could not convert key into EC key");
-
-    return pkey;
+    EVP_PKEY* pkey = nullptr;
+    result = EVP_PKEY_fromdata(pctx.get(), &pkey, EVP_PKEY_KEYPAIR, params.get());
+    OpenSslExpect(result == 1, "EVP_PKEY_fromdata failed");
+    OpenSslExpect(pkey != nullptr, "EVP_PKEY_fromdata failed");
+    return shared_EVP_PKEY::make(pkey);
 }
 
 
-std::tuple<std::string,std::string> EllipticCurveUtils::getPublicKeyCoordinatesHex (
-    const shared_EVP_PKEY& privateKey)
+std::tuple<std::string, std::string> EllipticCurveUtils::getPublicKeyCoordinatesHex(const shared_EVP_PKEY& privateKey)
 {
-    const auto* key = EVP_PKEY_get0_EC_KEY(privateKey);
-    const auto* ecPoint = EC_KEY_get0_public_key(key);
-    const auto* group = EC_KEY_get0_group(key);
-    auto x = shared_BN::make();
-    auto y = shared_BN::make();
-    EC_POINT_get_affine_coordinates(group, ecPoint, x, y, nullptr);
+    BIGNUM *bnX = nullptr;
+    BIGNUM *bnY = nullptr;
+    auto result = EVP_PKEY_get_bn_param(privateKey, OSSL_PKEY_PARAM_EC_PUB_X, &bnX);
+    auto x = shared_BN::make(bnX);
+    OpenSslExpect(result == 1, "EVP_PKEY_get_bn_param failed");
+    result = EVP_PKEY_get_bn_param(privateKey, OSSL_PKEY_PARAM_EC_PUB_Y, &bnY);
+    OpenSslExpect(result == 1, "EVP_PKEY_get_bn_param failed");
+    auto y = shared_BN::make(bnY);
     return {String::toLower(BN_to_hexString(x)), String::toLower(BN_to_hexString(y))};
 }
 
@@ -310,30 +330,29 @@ EllipticCurveUtils::PaddedComponents EllipticCurveUtils::getPaddedXYComponents (
     // If 32 is not sufficient for a future use case, make the value larger.
     OpenSslExpect(length <= 32, "invalid padding length");
 
-    auto xComponent = shared_BN::make();
-    auto yComponent = shared_BN::make();
+    BIGNUM *bnX = nullptr;
+    BIGNUM *bnY = nullptr;
 
-    const auto* ecKey = EVP_PKEY_get0_EC_KEY(keyPair);
-    OpenSslExpect(ecKey!=nullptr, "could not extract elliptic curve key from key pair");
+    auto result = EVP_PKEY_get_bn_param(keyPair, OSSL_PKEY_PARAM_EC_PUB_X, &bnX);
+    auto xComponent = shared_BN::make(bnX);
+    OpenSslExpect(result == 1, "EVP_PKEY_get_bn_param failed");
+    result = EVP_PKEY_get_bn_param(keyPair, OSSL_PKEY_PARAM_EC_PUB_Y, &bnY);
+    OpenSslExpect(result == 1, "EVP_PKEY_get_bn_param failed");
+    auto yComponent = shared_BN::make(bnY);
 
-    const auto* publicKey = EC_KEY_get0_public_key(ecKey);
-    OpenSslExpect(publicKey!=nullptr, "could not extract public key from elliptic curve key");
-
-    const auto* group = EC_KEY_get0_group(ecKey);
-    OpenSslExpect(group!=nullptr, "could not get group from elliptic curve key");
-
-    const int result = EC_POINT_get_affine_coordinates(group, publicKey, xComponent, yComponent, nullptr);
-    OpenSslExpect(result==1, "could not get x and y components from elliptic curve public key");
-
-    std::string x (length, 'X');
+    std::string x(length, 'X');
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     int paddedSize = BN_bn2binpad(xComponent, reinterpret_cast<unsigned char*>(x.data()), static_cast<int>(x.size()));
-    OpenSslExpect(paddedSize==static_cast<int>(length) && static_cast<size_t>(paddedSize)==length, "could not extract padded x component");
+    OpenSslExpect(paddedSize == static_cast<int>(length) && static_cast<size_t>(paddedSize) == length,
+                  "could not extract padded x component");
 
-    std::string y (length, 'X');
+    std::string y(length, 'X');
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     paddedSize = BN_bn2binpad(yComponent, reinterpret_cast<unsigned char*>(y.data()), static_cast<int>(y.size()));
-    OpenSslExpect(paddedSize==static_cast<int>(length) && static_cast<size_t>(paddedSize)==length, "could not extract padded y component");
+    OpenSslExpect(paddedSize == static_cast<int>(length) && static_cast<size_t>(paddedSize) == length,
+                  "could not extract padded y component");
 
-    return {std::move(x),std::move(y)};
+    return {.x = std::move(x), .y = std::move(y)};
 }
 
 
@@ -365,26 +384,12 @@ shared_EVP_PKEY EllipticCurveUtils::pemToPublicKey(const SafeString& pemString)
 }
 
 
-shared_EVP_PKEY EllipticCurveUtils::x962ToPublicKey(const SafeString& derString)
+shared_EVP_PKEY EllipticCurveUtils::x962ToPublicKey(const std::string& derString)
 {
-    auto mem = shared_BIO::make();
-    const int length = BIO_write(mem, static_cast<const char*>(derString), gsl::narrow_cast<int>(derString.size()));
-    OpenSslExpect(
-        gsl::narrow<int>(derString.size()) == length,
-        "deserialization of public key from X9.62 format failed while filling internal buffer");
-    // There have been several comments and clarifications from Gematik regarding the binary
-    // format for they keys.
-    auto key = shared_EC_KEY::make(d2i_EC_PUBKEY_bio(mem, nullptr));
-    OpenSslExpect(
-        key.isSet(),
-        "deserialization of public key from X9.62 format failed while extracting EC key");
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    const auto* dataptr = reinterpret_cast<const unsigned char*>(derString.data());
 
-    auto pkey = shared_EVP_PKEY::make();
-    const int status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    OpenSslExpect(
-        status==1,
-        "deserialization of public key from X9.62 format failed");
-    return pkey;
+    return shared_EVP_PKEY::make(d2i_PUBKEY(nullptr, &dataptr, gsl::narrow<long>(derString.size())));
 }
 
 
@@ -415,21 +420,14 @@ std::string EllipticCurveUtils::publicKeyToPem (const shared_EVP_PKEY& publicKey
 }
 
 
-std::string EllipticCurveUtils::publicKeyToX962Der (const shared_EVP_PKEY& publicKey)
+std::string EllipticCurveUtils::publicKeyToX962Der(const shared_EVP_PKEY& publicKey)
 {
     Expect(publicKey.isSet(), "the key is missing");
-
-    shared_EC_KEY ecKey = shared_EC_KEY::make(EVP_PKEY_get1_EC_KEY(publicKey.removeConst()));
-    Expect(ecKey.isSet(), "serialization of public key to X9.62 format failed while extracting EC key");
-    shared_BIO out = shared_BIO::make();
-    Expect(out.isSet(), "can not allocate memory for BIO");
-
-    const int status = i2d_EC_PUBKEY_bio(out, ecKey);
-    Expect(status==1, "serialization of public key to X9.62 format failed");
-    auto unused = BIO_flush(out);
-    (void)unused;
-
-    return bioToString(out);
+    unsigned char* out = nullptr;
+    const auto dlen = gsl::narrow<size_t>(i2d_PUBKEY(publicKey, &out));
+    OpenSslBufferPtr bufferPtr{out};
+    const auto buffer = util::rawToBuffer(out, dlen);
+    return util::bufferToString(buffer);
 }
 
 

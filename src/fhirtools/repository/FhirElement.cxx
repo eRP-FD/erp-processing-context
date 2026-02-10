@@ -7,6 +7,7 @@
 
 #include "FhirElement.hxx"
 #include "fhirtools/FPExpect.hxx"
+#include "fhirtools/model/Element.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
@@ -257,11 +258,11 @@ FhirElement::Builder& FhirElement::Builder::typeId(std::string type_)
 
 FhirElement::Builder& FhirElement::Builder::addProfile(std::string profile)
 {
-    mFhirElement->mProfiles.emplace_back(std::move(profile));
+    mFhirElement->mProfiles.emplace(std::move(profile));
     return *this;
 }
 
-fhirtools::FhirElement::Builder& fhirtools::FhirElement::Builder::setProfiles(std::list<std::string> profiles)
+fhirtools::FhirElement::Builder& fhirtools::FhirElement::Builder::setProfiles(std::set<std::string> profiles)
 {
     mFhirElement->mProfiles = std::move(profiles);
     return *this;
@@ -390,10 +391,9 @@ FhirElement::Builder& fhirtools::FhirElement::Builder::maxValueDecimal(const std
     return *this;
 }
 
-FhirElement::Builder& fhirtools::FhirElement::Builder::addTargetProfile(std::string&& targetProfile)
+FhirElement::Builder& fhirtools::FhirElement::Builder::setTargetProfiles(std::set<std::string> targetProfile)
 {
-    TVLOG(4) << "target profile: " << targetProfile;
-    mFhirElement->mReferenceTargetProfiles.emplace(std::move(targetProfile));
+    mFhirElement->mReferenceTargetProfiles = std::move(targetProfile);
     return *this;
 }
 
@@ -420,9 +420,10 @@ bool fhirtools::FhirElement::Cardinality::isConstraint(bool isArray)
 
 
 fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std::string_view elementFullPath,
+                                                             std::string_view subElementName,
                                                              const FhirStructureDefinition* profile,
                                                              const std::shared_ptr<const Element>& element,
-                                                             const std::string& typeId) const
+                                                             const std::string& typeId, bool isSlice) const
 {
     using namespace std::string_literals;
     using std::to_string;
@@ -449,6 +450,15 @@ fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std
     {
         result.add(Severity::error, "At most " + to_string(*max) + " elements expected, but got " + to_string(count),
                    std::string{elementFullPath}, profile);
+        if (max == 0 && ! isSlice)
+        {
+            const auto subElements = element->subElements(std::string{subElementName});
+            for (const auto& subElement : subElements)
+            {
+                result.addInfo(ValidationAdditionalInfo::IllegalElement, subElement, std::string{elementFullPath},
+                               typeId);
+            }
+        }
     }
     else
     {

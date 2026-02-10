@@ -57,7 +57,7 @@ enum class CmacKeyCategory : int8_t;
 class Database
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "38";
+    static constexpr const char* expectedSchemaVersion = "41";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey
@@ -178,13 +178,10 @@ public:
     virtual std::vector<Uuid> retrieveCommunicationIds (const std::string& recipient) = 0;
     /**
      * Tries to remove the communication object defined by its id and sender from the database.
-     * If no data row for the specified id and sender has been found the method returns no value.
-     * If the data row has been deleted a tuple consisting of the id as the first element and
-     * the optional value of the column "received"a as the second element is returned.
-     * If "received" does not have a value this means that the communication has not been
-     * received by the recipient.
+     * If no data row for the specified id and sender has been found, the method returns no value.
+     * If the data row has been deleted, the id as is returned.
      */
-    virtual std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
+    virtual std::optional<Uuid> deleteCommunication (const Uuid& communicationId, const std::string& sender) = 0;
     virtual void deleteCommunicationsForTask (const model::PrescriptionId& taskId) = 0;
     virtual void markCommunicationsAsRetrieved (
         const std::vector<Uuid>& communicationIds,

@@ -18,6 +18,7 @@ class ValidatorOptions;
 }
 namespace model
 {
+class KbvCoverage;
 class EvdgaBundle;
 enum class KbvStatusKennzeichen;
 class MedicationRequest;
@@ -51,9 +52,9 @@ private:
                                           const model::PrescriptionType prescriptionType,
                                           std::optional<model::KbvStatusKennzeichen> legalBasisCode,
                                           const model::Timestamp& authoredOn);
-    template<typename KbvOrEvdgaBundle>
-    static void checkValidCoverage(const KbvOrEvdgaBundle& bundle, const model::PrescriptionType prescriptionType);
-    static void checkNarcoticsMatches(const model::KbvBundle& bundle);
+    static void checkValidCoverage(const model::KbvCoverage& coverage, model::PrescriptionType prescriptionType);
+    static bool isPkvCoverage(const model::KbvCoverage& coverage);
+    static void checkMedicationCategoryCode(const model::KbvBundle& bundle, model::PrescriptionType workflow);
     template<typename KbvOrEvdgaBundle>
     static void checkAuthoredOnEqualsSigningDate(const KbvOrEvdgaBundle& kbvOrEvdgaBundle,
                                                  const model::Timestamp& signingTime);

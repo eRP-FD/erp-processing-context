@@ -67,4 +67,28 @@ OrganizationDirectory::OrganizationDirectory(NumberAsStringParserDocument&& json
 {
 }
 
+[[nodiscard]] bool OrganizationDirectory::isActive() const
+{
+    const auto* val = getValue(rapidjson::Pointer{"/active"});// 0 .. 1
+    if (! val)
+    {
+        return false;
+    }
+    ModelExpect(val->IsBool(), "Invalid active flag.");
+    return val->GetBool();
+}
+
+[[nodiscard]] std::string_view OrganizationDirectory::getName() const
+{
+    return getStringValue(namePtr);
+}
+
+const rapidjson::Value& OrganizationDirectory::getTelematikIdIdentifier() const
+{
+    const auto* telematikIdItem = findMemberInArray(rapidjson::Pointer{"/identifier"}, rapidjson::Pointer{"/system"},
+                                                    "https://gematik.de/fhir/sid/telematik-id");
+    ModelExpect(telematikIdItem, "Telematik ID identifier not found.");
+    return *telematikIdItem;
+}
+
 }

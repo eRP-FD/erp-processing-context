@@ -29,5 +29,4 @@ TEST_P(Error403IfTaskStateDraft, run)//NOLINT(readability-function-cognitive-com
 }
 
 INSTANTIATE_TEST_SUITE_P(Error403IfTaskStateDraftInst, Error403IfTaskStateDraft,
-                         testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(testutils::pkvPrescriptionTypes()));

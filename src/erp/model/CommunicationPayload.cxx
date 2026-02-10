@@ -55,10 +55,7 @@ void CommunicationPayload::verifyLength() const
 
 void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, SchemaType schemaType) const
 {
-    const auto payload = NumberAsStringParserDocument::getStringValueFromValue(mPayloadValue);
-    rj::Document payloadDoc;
-    payloadDoc.Parse(payload.data(), payload.size());
-    ModelExpect(! payloadDoc.HasParseError(), "Invalid JSON in payload.contentString");
+    const auto payloadDoc = getPayloadDoc();
     try
     {
         validator.validate(payloadDoc, schemaType);
@@ -84,7 +81,7 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
             ModelExpect(supplyOptionsTypeValue == "onPremise",
                         "Invalid payload: Value of 'supplyOptionsType' must be 'onPremise'");
         }
-        auto* urlValue = urlPointer.Get(payloadDoc);
+        const auto* urlValue = urlPointer.Get(payloadDoc);
         if (urlValue)
         {
             try
@@ -104,4 +101,21 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
 bool CommunicationPayload::empty() const
 {
     return mPayloadValue == nullptr || mLength == 0;
+}
+
+std::string CommunicationPayload::supplyOptionsType() const
+{
+    const auto payloadDoc = getPayloadDoc();
+    const auto* supplyOptionType = supplyOptionsTypePointer.Get(payloadDoc);
+    ModelExpect(supplyOptionType && supplyOptionType->IsString(), "supplyOptionsType must be 'string'");
+    return supplyOptionType->GetString();
+}
+
+rapidjson::Document CommunicationPayload::getPayloadDoc() const
+{
+    const auto payload = NumberAsStringParserDocument::getStringValueFromValue(mPayloadValue);
+    rj::Document payloadDoc;
+    payloadDoc.Parse(payload.data(), payload.size());
+    ModelExpect(! payloadDoc.HasParseError(), "Invalid JSON in payload.contentString");
+    return payloadDoc;
 }

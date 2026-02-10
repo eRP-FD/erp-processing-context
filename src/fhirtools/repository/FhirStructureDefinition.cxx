@@ -10,6 +10,7 @@
 #include "fhirtools/repository/FhirSlicing.hxx"
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+#include "fhirtools/repository/internal/ElementType.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Constants.hxx"
@@ -431,7 +432,7 @@ FhirStructureDefinition::Builder::repositoryBackend(gsl::not_null<const FhirStru
 
 FhirStructureDefinition::Builder&
 FhirStructureDefinition::Builder::addElement(FhirElement::Builder elementBuilder,
-                                             std::list<std::string> withTypes)
+                                             std::list<internal::ElementType> withTypes)
 {
     elementBuilder.structureDefinition(mStructureDefinition.get());
     auto element = elementBuilder.getAndReset();
@@ -446,16 +447,16 @@ FhirStructureDefinition::Builder::addElement(FhirElement::Builder elementBuilder
         std::string_view sep{};
         for (const auto& elementType : withTypes)
         {
-            types << sep << elementType;
+            types << sep << elementType.code;
             sep = ", ";
-            if (validBindingTypeIds.contains(elementType))
+            if (validBindingTypeIds.contains(elementType.code))
             {
                 hasValidBindingType = true;
                 break;
             }
         }
         // binding to `http://hl7.org/fhir/ValueSet/duration-units` for type `Duration` is strangely added during snapshot generation
-        bool strangeDurationBinding = (withTypes.size() == 1 && withTypes.front() == "Duration" &&
+        bool strangeDurationBinding = (withTypes.size() == 1 && withTypes.front().code == "Duration" &&
                                        element->binding().key.url == "http://hl7.org/fhir/ValueSet/duration-units");
         if (! hasValidBindingType && ! strangeDurationBinding)
         {
@@ -473,7 +474,7 @@ FhirStructureDefinition::Builder::addElement(FhirElement::Builder elementBuilder
 
 //NOLINTNEXTLINE(misc-no-recursion)
 bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const FhirElement> element,
-                                                          std::list<std::string> withTypes)
+                                                          std::list<internal::ElementType> withTypes)
 {
     using namespace std::string_view_literals;
     using namespace fhirtools::constants;
@@ -483,9 +484,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         std::ranges::search(elementName, typePlaceholder).begin();
     if (placeholderPos == elementName.end())
     {
-        Expect3(withTypes.size() <= 1, "More than one element type for element without placeholder: " + elementName,
-                std::logic_error);
-        return addElementInternal(std::move(element));
+        return addSingleElementInternal(std::move(element), std::move(withTypes));
     }
     Expect3(not withTypes.empty(), "No type for element with placeholder: " + elementName, std::logic_error);
     std::string_view prefix{elementName.begin(), placeholderPos};
@@ -499,17 +498,19 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         bool added = false;
         for (const auto& type : withTypes)
         {
-            FPExpect3(type.find_first_of("#.") == std::string::npos, "contentReference not supported with placeholder",
-                      std::logic_error);
-            Expect3(not type.empty(), "Empty type id: " + elementName, std::logic_error);
-            std::string infix = type;
+            Expect3(not type.code.empty(), "Empty type id: " + elementName, std::logic_error);
+            std::string infix = type.code;
             infix[0] = ctype.toupper(infix[0]);
             std::string name;
             name.reserve(prefix.size() + infix.size() + suffix.size());
             name.append(prefix).append(infix).append(suffix);
             FhirElement::Builder builder{*element};
-            builder.name(name).originalName(elementName).typeId(type);
-            if (addElementInternal(builder.getAndReset(), {}))
+            builder.name(name)
+                .originalName(elementName)
+                .typeId(type.code)
+                .setProfiles(type.profiles)
+                .setTargetProfiles(type.targetProfiles);
+            if (addElementInternal(builder.getAndReset(), {type}))
             {
                 added = true;
             }
@@ -542,8 +543,11 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)
-bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const FhirElement> element)
+bool FhirStructureDefinition::Builder::addSingleElementInternal(std::shared_ptr<const FhirElement> element,
+                                                                std::list<internal::ElementType> withTypes)
 {
+    Expect3(withTypes.size() <= 1, "More than one element type for element without placeholder: " + element->name(),
+            std::logic_error);
     using boost::algorithm::starts_with;
     Expect3(mStructureDefinition->findElement(element->name()) == nullptr, "duplicate element id: " + element->name(),
             std::logic_error);
@@ -569,12 +573,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
         if (element->name().find(':') != std::string::npos &&
             ! element->name().starts_with("http://hl7.org/fhirpath/System."))
         {
-            if (element->contentReference().empty())
-            {
-                FPExpect(! element->typeId().empty(), "element has neither type nor contentReference.");
-                return addSliceElement(element, {element->typeId()});
-            }
-            return addSliceElement(element, {element->contentReference()});
+            return addSliceElement(element, std::move(withTypes));
         }
     }
 
@@ -599,7 +598,7 @@ bool FhirStructureDefinition::Builder::addElementInternal(std::shared_ptr<const 
 
 //NOLINTNEXTLINE(misc-no-recursion)
 bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<const FhirElement>& sliceElement,
-                                                       std::list<std::string> withTypes)
+                                                       std::list<internal::ElementType> withTypes)
 {
     const auto& name = sliceElement->name();
     std::string_view namev{name};
@@ -611,6 +610,8 @@ bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<con
     bool added = false;
     auto& elements = mStructureDefinition->mElements;
     ensureSliceBaseElement(sliceElement);
+    bool hasType = ! sliceElement->typeId().empty();
+    bool hasContentRef = ! sliceElement->contentReference().empty();
     for (size_t i = 0; i < elements.size(); ++i)
     {
         auto& element = elements[i];
@@ -618,9 +619,10 @@ bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<con
         {
             continue;
         }
-        if (suffix.empty() && std::ranges::none_of(withTypes, [&](const std::string& t) {
-                return t == element->typeId() || t == element->contentReference();
-            }))
+        bool typeMatch = hasType && std::ranges::any_of(withTypes, std::bind_front(std::equal_to{}, element->typeId()),
+                                                        &internal::ElementType::code);
+        bool contentReferenceMatch = hasContentRef && element->contentReference() == sliceElement->contentReference();
+        if (suffix.empty() && ! (typeMatch || contentReferenceMatch))
         {
             continue;
         }
@@ -628,20 +630,9 @@ bool FhirStructureDefinition::Builder::addSliceElement(const std::shared_ptr<con
 
         FhirElement::Builder sliceElementBuilder{*sliceElement};
         sliceElementBuilder.originalName(sliceElement->name());
-        if (! suffix.empty() || element->typeId().empty())
+        if (slicingBuilder.addElement(sliceElementBuilder.getAndReset(), withTypes, *mStructureDefinition))
         {
-            if (slicingBuilder.addElement(sliceElementBuilder.getAndReset(), withTypes, *mStructureDefinition))
-            {
-                added = true;
-            }
-        }
-        else
-        {
-            if (slicingBuilder.addElement(sliceElementBuilder.getAndReset(), {element->typeId()},
-                                          *mStructureDefinition))
-            {
-                added = true;
-            }
+            added = true;
         }
     }
     return added;
@@ -686,11 +677,16 @@ bool FhirStructureDefinition::Builder::ensureSliceBaseElement(const std::shared_
     Expect(name.suffix.empty(), "Cannot synthesize base element for: " + sliceElement->originalName());
     TLOG(INFO) << "No unsliced element for: " << sliceElement->originalName() << " - synthesizing";
     auto originalName = splitSlicedName(sliceElement->originalName());
+    std::list<internal::ElementType> withTypes;
+    if (const auto& typeId = sliceElement->typeId(); ! typeId.empty())
+    {
+        withTypes.emplace_back(typeId, std::set<std::string>{}, std::set<std::string>{});
+    }
     return addElementInternal(FhirElement::Builder{*sliceElement}
                                   .name(std::string{name.baseElement})
                                   .originalName(std::string{originalName.baseElement})
                                   .getAndReset(),
-                              {sliceElement->typeId()});
+                              withTypes);
 }
 
 FhirStructureDefinition::Builder::SplitSlicedNameResult

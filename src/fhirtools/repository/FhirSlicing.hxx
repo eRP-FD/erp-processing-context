@@ -31,6 +31,11 @@ class ValidatorOptions;
 
 using ExpressionPtr = std::shared_ptr<Expression>;
 
+namespace internal
+{
+struct ElementType;
+}
+
 /**
  * @brief Provides information about slices for an element
  *
@@ -171,7 +176,8 @@ public:
 
     Builder& slicingRules(SlicingRules);
     Builder& ordered(bool);
-    [[nodiscard]] bool addElement(const std::shared_ptr<const FhirElement>&, std::list<std::string> withTypes,
+    [[nodiscard]] bool addElement(const std::shared_ptr<const FhirElement>&,
+                                  const std::list<internal::ElementType>& withTypes,
                                   const FhirStructureDefinition& containing);
 
     Builder& addDiscriminator(FhirSliceDiscriminator&&);

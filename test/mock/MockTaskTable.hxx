@@ -49,6 +49,7 @@ public:
         std::optional<db_model::Blob> medicationDispenseSalt = std::nullopt;
         bool euRedeemableByPatient = false;
         bool isEuRedeemable = false;
+        bool isPkv = false;
     };
 
     explicit MockTaskTable(MockAccountTable& accountTable, const model::PrescriptionType& prescriptionType);
@@ -87,7 +88,7 @@ public:
                       const model::Timestamp& acceptDate,
                       const db_model::EncryptedBlob& healthCareProviderPrescription,
                       const model::Timestamp& lastStatusUpdate,
-                      bool euRedeemable);
+                      bool euRedeemable, bool isPkv);
     void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                            const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
                            const model::Timestamp& lastStatusUpdate);
@@ -184,7 +185,8 @@ private:
         medication_dispense_bundle,
         medication_dispense_salt,
         redeemable_by_patient,
-        eu_redeemable
+        eu_redeemable,
+        is_pkv
     };
 
     std::optional<db_model::Task> select(int64_t databaseId, const std::set<FieldName>& fields) const;

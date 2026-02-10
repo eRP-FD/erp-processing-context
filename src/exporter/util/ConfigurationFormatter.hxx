@@ -16,6 +16,7 @@ class ConfigurationFormatter : public ::ConfigurationFormatter
 public:
     ConfigurationFormatter(std::shared_ptr<const RuntimeConfiguration> runtimeConfig);
     void appendRuntimeConfiguration(rapidjson::Document& document) override;
+    void appendFhirPackagesConfiguration(rapidjson::Document& document) override;
 
 private:
     std::shared_ptr<const RuntimeConfiguration> mRuntimeConfig;

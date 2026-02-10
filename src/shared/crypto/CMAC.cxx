@@ -15,6 +15,9 @@
 #include "shared/crypto/OpenSsl.hxx"
 #include "shared/util/SafeString.hxx"
 
+#include <openssl/evp.h>
+#include <openssl/core_names.h>
+
 std::string CmacSignature::hex() const
 {
     return ByteHelper::toHex(gsl::span<const char>(reinterpret_cast<const char*>(data()), size()));
@@ -54,12 +57,21 @@ std::string_view toString(CmacKeyCategory cmacCat)
 
 CmacSignature CmacKey::sign(const std::string_view& message) const
 {
-    std::unique_ptr<CMAC_CTX, void (*)(CMAC_CTX*)> ctx{ CMAC_CTX_new(), CMAC_CTX_free};
-    Expect(CMAC_Init(ctx.get(), data(), size(), EVP_aes_128_cbc(), nullptr) == 1, "CMAC context initialization failed");
-    Expect(CMAC_Update(ctx.get(), message.data(), message.size()) == 1, "CMAC calculation failed");
+    std::unique_ptr<EVP_MAC, decltype(&EVP_MAC_free)> mac{EVP_MAC_fetch(nullptr, "CMAC", nullptr), &EVP_MAC_free};
+    std::unique_ptr<EVP_MAC_CTX, decltype(&EVP_MAC_CTX_free)> ctx{EVP_MAC_CTX_new(mac.get()), &EVP_MAC_CTX_free};
+    OpenSslExpect(ctx != nullptr, "Unable to create MAC context");
+
+    auto aes128cbc = std::to_array("AES-128-CBC");
+    const std::array<OSSL_PARAM, 2> params{OSSL_PARAM_construct_utf8_string(OSSL_MAC_PARAM_CIPHER, aes128cbc.data(), 0),
+                                           OSSL_PARAM_construct_end()};
+
+    OpenSslExpect(EVP_MAC_init(ctx.get(), data(), size(), params.data()) == 1, "CMAC context initialization failed");
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    Expect(EVP_MAC_update(ctx.get(), reinterpret_cast<const unsigned char*>(message.data()), message.size()) == 1,
+           "CMAC calculation failed");
     CmacSignature sig{};
     auto len = sig.size();
-    Expect(CMAC_Final(ctx.get(), sig.mSignature.data(), &len) == 1, "CMAC finalization failed.");
+    Expect(EVP_MAC_final(ctx.get(), sig.mSignature.data(), &len, sig.size()) == 1, "CMAC finalization failed.");
     Expect(len == sig.size(), "OpenSSL returned unexpected signature length");
     return sig;
 }

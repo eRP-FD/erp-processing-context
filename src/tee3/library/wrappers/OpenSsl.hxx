@@ -16,6 +16,7 @@ DISABLE_WARNINGS_BEGIN
 #include <openssl/asn1t.h>
 #include <openssl/cmac.h>
 #include <openssl/conf.h>
+#include <openssl/core_names.h>
 #include <openssl/crypto.h>
 #include <openssl/err.h>
 #include <openssl/evp.h>

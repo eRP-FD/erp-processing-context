@@ -241,30 +241,65 @@ Task::Task(const model::PrescriptionType prescriptionType, const std::optional<s
     setValue(flowtypeCodePointer,
              std::to_string(
                  static_cast<std::underlying_type_t<model::PrescriptionType>>(prescriptionType)));
-    setValue(flowtypeDisplayPointer, PrescriptionTypeDisplay.at(prescriptionType));
     A_19112.finish();
+    A_27844.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_27845.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_27846.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_27847.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_27848.start("set Task.performerType corresponding to the value of prescriptionType");
+    A_27849.start("set Task.performerType corresponding to the value of prescriptionType");
+    auto version = getProfileVersionChecked();
+    if (version <= version::GEM_ERP_1_5)
+    {
+        // The old display string is part of the Valueset Binding
+        A_19445_11.start("legacy requirement: FHIR FLOWTYPE für Prozessparameter");
+        setValue(flowtypeDisplayPointer, PrescriptionTypeDisplay_UntilWorkflow15.at(prescriptionType));
+        A_19445_11.finish();
+    }
+    else
+    {
+        setValue(flowtypeDisplayPointer, PrescriptionTypeDisplay.at(prescriptionType));
+    }
 
     A_19214.start("set Task.performerType corresponding to the value of prescriptionType");
-    A_19445_11.start("set Task.performerType corresponding to the value of prescriptionType");
     setValue(performerTypePointer, PrescriptionTypePerformerType.at(prescriptionType));
     setValue(performerTypeDisplayPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
     setValue(performerTypeTextPointer, PrescriptionTypePerformerDisplay.at(prescriptionType));
-    A_19445_11.finish();
+    A_27844.finish();
+    A_27845.finish();
+    A_27846.finish();
+    A_27847.finish();
+    A_27848.finish();
+    A_27849.finish();
     A_19214.finish();
 
     setValue(authoredOnPointer, Timestamp::now().toXsDateTime());
+
+    if (canBeGkv(prescriptionType) && !canBePkv(prescriptionType))
+    {
+        setIsPkv(false);
+    }
+    else if (!canBeGkv(prescriptionType) && canBePkv(prescriptionType))
+    {
+        setIsPkv(true);
+    }
+    // otherwise setIsPkv must be called explicitly
 
     updateLastUpdate();
 }
 
 Task::Task(const PrescriptionId& id, PrescriptionType prescriptionType, Timestamp lastModified, Timestamp authoredOn,
-           Task::Status status, Timestamp lastStatusChange)
+           Task::Status status, Timestamp lastStatusChange, std::optional<bool> isPkv)
     : Task(prescriptionType, {}, lastStatusChange)
 {
     setPrescriptionId(id);
     updateLastUpdate(lastModified);
     setValue(authoredOnPointer, authoredOn.toXsDateTime());
     setStatus(status, lastStatusChange);
+    if (isPkv.has_value())
+    {
+        setIsPkv(*isPkv);
+    }
 }
 
 void Task::setPrescriptionId(const PrescriptionId& prescriptionId)
@@ -376,6 +411,13 @@ bool Task::isEuRedeemableByPatientAuthorization() const
     // Should not land here:
     return false;
 }
+
+bool Task::isPkv() const
+{
+    ModelExpect(mIsPkv.has_value(), "isPkv not set");
+    return mIsPkv.value();
+}
+
 std::optional<std::string_view> Task::uuidFromArray(const rapidjson::Pointer& array,
                                                     std::string_view code) const
 {
@@ -514,18 +556,15 @@ void Task::setAcceptDate(const Timestamp& baseTime, const std::optional<KbvStatu
                 break;
             case KbvStatusKennzeichen::entlassmanagementKennzeichen:
             case KbvStatusKennzeichen::entlassmanagementKennzeichenMitErsatzverordungskennzeichen:
-                A_19517_02.start("deviant accept date for Entlassrezepte");
+                A_19517_04.start("deviant accept date for Entlassrezepte");
                 // -1 because the current day is part of the duration.
                 setAcceptDate((WorkDay(baseTime) + gsl::narrow<unsigned int>(entlassRezeptValidityWorkingDays - 1))
                                   .toTimestamp());
-                A_19517_02.finish();
+                A_19517_04.finish();
                 return;
         }
     }
-    A_19445_11.start(
-        "Task.AcceptDate = <Date of QES Creationv + (28 days for 160 and 169, 3 months for 162, 200 and 209)>");
     setAcceptDateDependentPrescriptionType(baseTime);
-    A_19445_11.finish();
 }
 
 void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
@@ -533,10 +572,13 @@ void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
     using namespace std::chrono_literals;
     switch (type())
     {
-        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-        case model::PrescriptionType::direkteZuweisungPkv:
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::direkteZuweisungPkv:
         case PrescriptionType::digitaleGesundheitsanwendungen:
         {
+            A_27847.start("Flowtype 169 - Accept Date");
+            A_27848.start("Flowtype 200 - Accept Date");
+            A_27849.start("Flowtype 209 - Accept Date");
             auto acceptDay = date::year_month_day{date::floor<date::days>(
                                  date::make_zoned(model::Timestamp::GermanTimezone, baseTime.toChronoTimePoint())
                                      .get_local_time())} +
@@ -546,12 +588,24 @@ void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
                 acceptDay = acceptDay.year() / acceptDay.month() / date::last;
             }
             setAcceptDate(model::Timestamp{date::sys_days{acceptDay}});
+            A_27849.finish();
+            A_27848.finish();
+            A_27847.finish();
             break;
         }
 
-        case model::PrescriptionType::apothekenpflichigeArzneimittel:
-        case model::PrescriptionType::direkteZuweisung:
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+        case PrescriptionType::direkteZuweisung:
+            A_27844.start("Flowtype 160 - Accept Date");
+            A_27845.start("Flowtype 162 - Accept Date");
             setAcceptDate(baseTime + (24h * 28));
+            A_27845.finish();
+            A_27844.finish();
+            break;
+        case PrescriptionType::tRezept:
+            A_27846.start("Flowtype 166 - Accept Date");
+            setAcceptDate(baseTime + (24h * 6));
+            A_27846.finish();
             break;
     }
 }
@@ -649,6 +703,11 @@ void Task::setOwner(std::string_view owner)
 {
     setValue(ownerIdentifierSystemPointer, resource::naming_system::telematicID);
     setValue(ownerIdentifierValuePointer, owner);
+}
+
+void Task::setIsPkv(bool isPkv)
+{
+    mIsPkv = isPkv;
 }
 
 void Task::deleteAccessCode()

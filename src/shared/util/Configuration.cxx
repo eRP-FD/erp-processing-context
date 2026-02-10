@@ -44,7 +44,7 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> Co
     {model::ProfileType::GEM_ERP_PR_Binary, {}},
     {model::ProfileType::fhir, {}},// general FHIR schema
     {model::ProfileType::GEM_ERP_PR_Communication_DispReq, {}},
-    {model::ProfileType::GEM_ERP_PR_Communication_InfoReq, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_InfoReq, { .until = "2026-03-31" }},
     {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq, {}},
     {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply, {}},
     {model::ProfileType::GEM_ERP_PR_Communication_Reply, {}},
@@ -106,7 +106,11 @@ const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement>
         {model::ProfileType::EPAOpRxPrescriptionERPOutputParameters, {}},
         {model::ProfileType::EPAOpRxDispensationERPOutputParameters, {}},
         {model::ProfileType::OrganizationDirectory, {}},
+        {model::ProfileType::HealthcareServiceDirectory, {}},
+        {model::ProfileType::LocationDirectory, {}},
         {model::ProfileType::EPAMedicationPZNIngredient, {}},
+        {model::ProfileType::ERP_TPrescription_CarbonCopy, {"2026-07-01"}},
+        {model::ProfileType::ERP_TPrescription_Organization, {"2026-07-01"}},
     };
 
 namespace {
@@ -304,14 +308,13 @@ ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
     lookupKey("", std::string{Common::fhirResourceGroups});
     lookupKey("", std::string{Common::synthesizeCodesystemPath});
     lookupKey("", std::string{Common::synthesizeValuesetPath});
+    lookupKey("", std::string{Common::versionMappingPath});
 
     lookupKey("", std::string{ERP::fhirResourceViews});
     lookupKey("", std::string{ERP::kbvSchluesseltabellen});
-    lookupKey("", std::string{ERP::versionMappingPath});
 
     lookupKey("", std::string{MedicationExporter::fhirResourceViews});
     lookupKey("", std::string{MedicationExporter::kbvSchluesseltabellen});
-    lookupKey("", std::string{MedicationExporter::versionMappingPath});
 }
 
 const std::string& ConfigurationBase::serverHost() const
@@ -354,6 +357,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH           , {"ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH"           , "/erp/idp/sslRootCaPath", Flags::categoryEnvironment, "Root certificate for IDP download for ERP_IDP_UPDATE_ENDPOINT"}},
     {ConfigurationKey::IDP_UPDATE_INTERVAL_MINUTES                    , {"ERP_IDP_UPDATE_INTERVAL_MINUTES"                    , "/erp/idp/updateIntervalMinutes", Flags::categoryFunctionalStatic, "Update interval for IDP Configuration/Certificate, when the IDP health is up"}},
     {ConfigurationKey::IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS, {"ERP_IDP_NO_VALID_CERTIFICATE_UPDATE_INTERVAL_SECONDS", "/erp/idp/noValidCertificateUpdateIntervalSeconds", Flags::categoryFunctionalStatic, "Update interval for IDP Certificate, when the IDP health is down"}},
+    {ConfigurationKey::IDP_SECONDARY_CERTIFICATE                      , {"ERP_IDP_SECONDARY_CERTIFICATE"                      , "/erp/idp/secondaryCertificate", Flags::categoryFunctionalStatic, "Secondary IDP certificate in case the validation using the certificate from well-known endpoint fails."}},
     {ConfigurationKey::OCSP_C_FD_SIG_ERP_GRACE_PERIOD                 , {"ERP_OCSP_C_FD_SIG_ERP_GRACE_PERIOD"                 , "/erp/ocsp/gracePeriodCFdSigErp", Flags::categoryFunctionalStatic, "OCSP grace period in seconds for OCSP-response of C.FD.OSIG-eRP signer certificate"}},
     {ConfigurationKey::OCSP_SMC_B_OSIG_GRACE_PERIOD                   , {"ERP_OCSP_SMC_B_OSIG_GRACE_PERIOD"                   , "/erp/ocsp/gracePeriodSmcBOsig", Flags::categoryFunctionalStatic, "OCSP Grace period in seconds for OCSP-response of SMC-B certificate from CAdES-BES packet provided in ChargeItem-Post/-Put request"}},
     {ConfigurationKey::OCSP_NON_QES_GRACE_PERIOD                      , {"ERP_OCSP_NON_QES_GRACE_PERIOD"                      , "/erp/ocsp/gracePeriodNonQes", Flags::categoryFunctionalStatic, "OCSP Grace period in seconds for OCSP-response of non-QES Certificates. According to A_20158 for IDP Certificate"}},
@@ -421,7 +425,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
     {ConfigurationKey::FEATURE_EU                                     , {"ERP_FEATURE_EU"                                     , "/erp/feature/eu", Flags::categoryFunctional, "Feature-toggle for the EU-Prescription feature"}},
-    {ConfigurationKey::ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER          , {"ERP_ENABLE_CHECK_AUSSCHLUSS_KOSTENTRAEGER"          , "/erp/feature/enableCheckAusschlussKostentraeger", Flags::categoryFunctional, "Feature-toggle for enabling of Kostentraeger check"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
@@ -519,6 +522,24 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD                                            , {"MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD"                              , "/erp-medication-exporter/ocsp/gracePeriodEpa", Flags::categoryFunctionalStatic, "OCSP-Grace period in seconds for OCSP-response of ePA Servier Certificate"}},
     {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_PATH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_PATH"                                     , "/erp-medication-exporter/serno2tid/path", Flags::categoryEnvironment, "Mapping file path to lookup TID by S/N"}},
     {ConfigurationKey::MEDICATION_EXPORTER_SERNO2TID_HASH                                                   , {"MEDICATION_EXPORTER_SERNO2TID_HASH"                                     , "/erp-medication-exporter/serno2tid/hash", Flags::categoryEnvironment, "Hash value do validate mapping file"}},
+
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_SECRET,     {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_SECRET",     "/erp-medication-exporter/fhir-vzd-client/secret",    Flags::categoryEnvironment, "Client secret"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID,         {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID"    ,     "/erp-medication-exporter/fhir-vzd-client/id"    ,    Flags::categoryEnvironment, "Client id"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL,  {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL",  "/erp-medication-exporter/fhir-vzd-client/tokenUrl",  Flags::categoryEnvironment, "Url to receive an auth token for the api"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT, {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT", "/erp-medication-exporter/fhir-vzd-client/tokenPort", Flags::categoryEnvironment, "Port of the auth token url"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL,    {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL",    "/erp-medication-exporter/fhir-vzd-client/apiUrl",    Flags::categoryEnvironment, "Api url"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_PORT,   {"ERP_MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_PORT",   "/erp-medication-exporter/fhir-vzd-client/apiPort",   Flags::categoryEnvironment, "Api port"}},
+
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_SECRET,                  {"ERP_MEDICATION_EXPORTER_BFARM_CLIENT_SECRET",           "/erp-medication-exporter/bfarm-client/secret",                Flags::categoryEnvironment, "BfArM client secret"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID,                      {"ERP_MEDICATION_EXPORTER_BFARM_CLIENT_ID",               "/erp-medication-exporter/bfarm-client/id",                    Flags::categoryEnvironment, "BfArM client id"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_URL,                     {"ERP_MEDICATION_EXPORTER_BFARM_CLIENT_URL",              "/erp-medication-exporter/bfarm-client/url",                   Flags::categoryEnvironment, "BfArM url"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_PORT,                    {"ERP_MEDICATION_EXPORTER_BFARM_CLIENT_PORT",             "/erp-medication-exporter/bfarm-client/port",                  Flags::categoryEnvironment, "BfArM port"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_NUM_RETRIES,             {"ERP_MEDICATION_EXPORTER_BFARM_CLIENT_NUM_RETRIES",      "/erp-medication-exporter/bfarm-client/numRetries",            Flags::categoryEnvironment, "BfArM carbon copy send max number of attempts"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_MAX_EXPONENTIAL_BACKOFF, {"ERP_MEDICATION_EXPORTER_BFARM_MAX_EXPONENTIAL_BACKOFF", "/erp-medication-exporter/bfarm-client/maxExponentialBackoff", Flags::categoryEnvironment, "BfArM limit exponential backoff"}},
+
+    {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA, {"ERP_MEDICATION_EXPORTER_ENABLE_EPA", "/erp-medication-exporter/enable-epa", Flags::categoryEnvironment, "Enable the EPA-exporter"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT, {"ERP_MEDICATION_EXPORTER_ENABLE_T_REZEPT", "/erp-medication-exporter/enable-t-rezept", Flags::categoryEnvironment, "Enable the T-Rezept-exporter"}},
+
     // */
     });
     // clang-format on
@@ -889,7 +910,7 @@ void Configuration::check(ProcessType processType) const
             (void) get<fhirtools::Severity>(ConfigurationKey::FHIR_VALIDATION_LEVELS_MISSING_OR_EXTRA_META_PROFILE);
             (void) synthesizeCodesystem();
             (void) synthesizeValuesets();
-            (void) fhirVersionMapping<ConfigurationBase::ERP>();
+            (void) fhirVersionMapping();
             return;
         case ConfigurationBase::ProcessType::MedicationExporter:
             (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
@@ -899,12 +920,15 @@ void Configuration::check(ProcessType processType) const
             (void) getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
             (void) synthesizeCodesystem();
             (void) synthesizeValuesets();
-            (void) fhirVersionMapping<ConfigurationBase::MedicationExporter>();
+            (void) fhirVersionMapping();
             for (const auto& epa : this->epaFQDNs())
             {
                 LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
                         << " connections";
             }
+            Expect(getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA) ||
+                       getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT),
+                   "both EPA and T-Rezept are disabled");
             return;
     }
     Fail2("unknown ProcessType: "+ std::to_string(static_cast<uintmax_t>(processType)), std::logic_error);
@@ -927,19 +951,18 @@ Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMod
     return get<AnrChecksumValidationMode>(ConfigurationKey::SERVICE_TASK_ACTIVATE_ANR_VALIDATION_MODE);
 }
 
-template <config::ProcessType ProcessT>
 fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration() const
 {
     static const auto* groups =
     getJsonValue(KeyData{.environmentVariable = "", .jsonPath = Common::fhirResourceGroups, .flags = 0, .description = ""});
-    const auto mapper = std::make_shared<fhirtools::VersionMapper>(fhirVersionMapping<ProcessT>());
+    const auto mapper = std::make_shared<fhirtools::VersionMapper>(fhirVersionMapping());
     return fhirtools::FhirResourceGroupConfiguration(groups, mapper);
 }
 
 template<config::ProcessType ProcessT>
 fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration() const
 {
-    auto groupResolver = fhirResourceGroupConfiguration<ProcessT>();
+    auto groupResolver = fhirResourceGroupConfiguration();
 
     static const auto* kbvsc = getJsonValue(
         KeyData{.environmentVariable = "", .jsonPath = ProcessT::kbvSchluesseltabellen, .flags = 0, .description = ""});
@@ -962,13 +985,12 @@ std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthes
     return resourceList(std::string{Common::synthesizeValuesetPath});
 }
 
-template<config::ProcessType ProcessT>
 fhirtools::VersionMapper::Config Configuration::fhirVersionMapping() const
 {
     using namespace std::string_literals;
     static const KeyData configKey{
         .environmentVariable = "",
-        .jsonPath = ProcessT::versionMappingPath,
+        .jsonPath = Common::versionMappingPath,
         .flags = 0,
         .description = "",
     };
@@ -976,7 +998,7 @@ fhirtools::VersionMapper::Config Configuration::fhirVersionMapping() const
     {
         return fhirtools::VersionMapper::Config::fromJson(*jsonValue);
     }
-    Fail2("missing "s.append(ProcessT::versionMappingPath).append(" in config"), std::logic_error);
+    Fail2("missing "s.append(Common::versionMappingPath).append(" in config"), std::logic_error);
 }
 
 bool Configuration::timingLoggingEnabled(const std::string& category) const
@@ -1046,10 +1068,5 @@ template fhirtools::Severity
     ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>::getOptional<fhirtools::Severity>(
         ConfigurationKey, std::type_identity_t<fhirtools::Severity>) const;
 
-template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::ERP>() const;
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
-template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::ERP>() const;
-
-template fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration<ConfigurationBase::MedicationExporter>() const;
 template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
-template fhirtools::VersionMapper::Config Configuration::fhirVersionMapping<ConfigurationBase::MedicationExporter>() const;

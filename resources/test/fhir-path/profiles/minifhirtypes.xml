@@ -367,6 +367,86 @@
     </resource>
   </entry>
   <entry>
+    <fullUrl value="http://hl7.org/fhir/StructureDefinition/Quantity"/>
+    <resource>
+      <StructureDefinition>
+        <id value="Quantity"/>
+        <url value="http://hl7.org/fhir/StructureDefinition/Quantity"/>
+        <version value="4.0.1"/>
+        <name value="Quantity"/>
+        <status value="active"/>
+        <abstract value="false"/>
+        <kind value="complex-type"/>
+        <type value="Quantity"/>
+        <snapshot>
+          <element id="Quantity">
+            <path value="Quantity"/>
+            <min value="0"/>
+            <max value="*"/>
+            <base>
+              <path value="Quantity"/>
+              <min value="0"/>
+              <max value="*"/>
+            </base>
+          </element>
+          <element id="Quantity.value">
+            <path value="Quantity.value"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Quantity.value"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="decimal"/>
+            </type>
+          </element>
+          <element id="Quantity.unit">
+            <path value="Quantity.unit"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Quantity.unit"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+          <element id="Quantity.system">
+            <path value="Quantity.system"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Quantity.system"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="uri"/>
+            </type>
+          </element>
+          <element id="Quantity.code">
+            <path value="Quantity.code"/>
+            <short value="Symbol in syntax defined by the system"/>
+            <min value="0"/>
+            <max value="1"/>
+            <base>
+              <path value="Quantity.code"/>
+              <min value="0"/>
+              <max value="1"/>
+            </base>
+            <type>
+              <code value="string"/>
+            </type>
+          </element>
+        </snapshot>
+      </StructureDefinition>
+    </resource>
+  </entry>
+  <entry>
     <fullUrl value="http://fhir-tools.test/minifhirtypes/Reference"/>
     <resource>
       <StructureDefinition>
@@ -546,6 +626,18 @@
             </type>
             <type>
               <code value="url"/>
+            </type>
+            <type>
+              <code value="Quantity"/>
+            </type>
+            <type>
+              <code value="Coding"/>
+            </type>
+            <type>
+              <code value="CodeableConcept"/>
+            </type>
+            <type>
+              <code value="Reference"/>
             </type>
             <type>
               <code value="code"/>

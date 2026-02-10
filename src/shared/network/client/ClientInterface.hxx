@@ -16,6 +16,7 @@ class ClientInterface
 {
 public:
     virtual ClientResponse send (const ClientRequest& clientRequest) = 0;
+    virtual bool testConnection() = 0;
     virtual ~ClientInterface() = default;
 };
 

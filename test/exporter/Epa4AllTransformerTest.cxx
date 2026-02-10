@@ -16,17 +16,17 @@
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/fhir/FhirCanonicalizer.hxx"
 #include "shared/model/KbvMedicationBase.hxx"
 #include "shared/model/KbvMedicationRequest.hxx"
 #include "shared/model/KbvOrganization.hxx"
 #include "shared/model/Patient.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
 #include <unordered_set>
-
-#include "test/util/TestUtils.hxx"
 
 
 namespace EpaMedicationRequest
@@ -488,6 +488,7 @@ void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, 
             std::vector<MappedValue>{}, std::vector<std::string>{}, std::vector<std::string>{});
     }
     checkExtensions(source, target, mappedExtensions);
+    checkMedicationIngredientArray(source, target, false);
 
     A_25946.test("KBV_PR_ERP_Medication_PZN: Keine Übernahme von \"extension:Kategorie\"-Elementen");
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
@@ -908,7 +909,11 @@ void Epa4AllTransformerTest::validate(fhirtools::DefinitionKey targetProfileKey,
     auto erpElement = createErpElement(targetProfileKey, resource, timestamp);
     auto validationResult = fhirtools::FhirPathValidator::validateWithProfiles(
         repoView, erpElement, erpElement->definitionPointer().element()->name(), {targetProfileKey}, {});
-    EXPECT_LT(validationResult.highestSeverity(), fhirtools::Severity::error) << validationResult.summary();
+    EXPECT_LT(validationResult.highestSeverity(), fhirtools::Severity::error);
+    if (validationResult.highestSeverity() > fhirtools::Severity::warning)
+    {
+        validationResult.dumpToLog();
+    }
 }
 void Epa4AllTransformerTest::checkExpression(const std::string& expression, fhirtools::DefinitionKey targetProfileKey,
                                              const rapidjson::Value* resource)
@@ -984,9 +989,7 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvo_KBV_V_1_3)
 {
     F_021.test("Test for presence of all expected properties");
     // test that the transformer adds code and system, since these are missing in v 1.3.
-    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({
-        .kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"}
-    });
+    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"}});
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
 
@@ -1007,6 +1010,29 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationPZNTest)
         .medicationOptions =
             {
                 .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .templatePrefix = ResourceTemplates::MedicationOptions::PZN,
+            },
+    });
+    auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
+    auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
+
+    std::optional<model::EPAOpProvidePrescriptionERPInputParameters> params;
+    ASSERT_NO_THROW(params = Epa4AllTransformer::transformPrescription(
+                        kbvBundle, telematikIdFromQes, telematikIdFromAccessToken, organizationNameFromJwt,
+                        std::string{profession_oid::oid_oeffentliche_apotheke}));
+    ASSERT_TRUE(params);
+
+    const auto* medication = params->getMedication();
+    ASSERT_TRUE(medication);
+    checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
+}
+
+TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationPZNTest_V_1_3)
+{
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"},
+        .medicationOptions =
+            {
+                .version = ResourceTemplates::Versions::KBV_ERP{"1.3"},
                 .templatePrefix = ResourceTemplates::MedicationOptions::PZN,
             },
     });

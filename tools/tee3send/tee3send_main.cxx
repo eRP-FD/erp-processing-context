@@ -161,13 +161,13 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
     using boost::beast::http::verb;
     try
     {
-        std::unordered_map<std::string, std::any> empty{};
         auto req = Tee3Client::Request{verb::post, "/epa/medication/api/v1/fhir/$provide-prescription-erp", 11};
         req.set(Header::Tee3::XInsurantId, kvnr.id());
         req.set(Header::XRequestId, Uuid().toString());
         req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
         req.body() = "{}";
-        auto response = co_await teeClient->sendInner(Uuid{}.toString(), req, empty);
+        BDEMessage::Data bdeData;
+        auto response = co_await teeClient->sendInner(Uuid{}.toString(), req, bdeData);
         Expect(response.has_value(), "Response has error: " + response.error().message());
         LOG(INFO) << "got response after waiting " << waitTime;
     }

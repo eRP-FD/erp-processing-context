@@ -89,6 +89,8 @@ protected:
         {
             case ExpectedResult::success:
                 ASSERT_NO_ERP_EXCEPTION(handler.handleRequest(sessionContext));
+                EXPECT_EQ(sessionContext.response.getHeader().status(), HttpStatus::NoContent);
+                EXPECT_TRUE(sessionContext.response.getBody().empty());
                 break;
             case ExpectedResult::failure:
                 // clang-format off

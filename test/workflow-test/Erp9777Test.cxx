@@ -21,7 +21,7 @@ TEST_P(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
     ASSERT_TRUE(task.has_value());
     std::string accessCode{task->accessCode()};
-    const auto qesBundle = std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()));
+    const auto qesBundle = std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now(), std::nullopt, true));
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     std::optional<model::Bundle> taskBundle;
     ASSERT_NO_FATAL_FAILURE(taskBundle = taskAccept(task->prescriptionId(), accessCode));
@@ -40,5 +40,4 @@ TEST_P(Erp9777Test, run)//NOLINT(readability-function-cognitive-complexity)
 }
 
 INSTANTIATE_TEST_SUITE_P(Erp9777TestInst, Erp9777Test,
-                         testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(testutils::pkvPrescriptionTypes()));

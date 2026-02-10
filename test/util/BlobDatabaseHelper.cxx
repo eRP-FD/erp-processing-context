@@ -48,7 +48,7 @@ void BlobDatabaseHelper::removeTestVsdmKeyBlobs(char operatorId)
     {
         auto connection = pqxx::connection(PostgresConnection::defaultConnectString());
         pqxx::work transaction(connection);
-        transaction.exec_params("DELETE FROM erp.vsdm_key_blob WHERE operator LIKE $1", std::string{operatorId});
+        transaction.exec("DELETE FROM erp.vsdm_key_blob WHERE operator LIKE $1", pqxx::params{std::string{operatorId}});
         transaction.commit();
     }
 }

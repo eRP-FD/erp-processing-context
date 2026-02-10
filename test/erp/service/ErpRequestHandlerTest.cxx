@@ -153,7 +153,11 @@ public:
             case EPAOpRxDispensationERPOutputParameters:
             case CancelPrescriptionErpOp:
             case OrganizationDirectory:
+            case HealthcareServiceDirectory:
+            case LocationDirectory:
             case EPAMedicationPZNIngredient:
+            case ERP_TPrescription_CarbonCopy:
+            case ERP_TPrescription_Organization:
                 FAIL() << "wrong SchemaType for this test";
                 break;
             case GEM_ERPEU_PR_PAR_PATCH_Task_Input:

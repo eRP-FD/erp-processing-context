@@ -165,6 +165,7 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
     const auto healthCarePrescriptionBundle =
         model::Binary(healthCarePrescriptionUuid, CryptoHelper::toCadesBesSignature(kbvBundle));
     task.setStatus(model::Task::Status::ready);
+    task.setIsPkv(false);
     db->activateTask(task, healthCarePrescriptionBundle, mJwtBuilder->makeJwtArzt());
     db->commitTransaction();
     db.reset();
@@ -176,6 +177,7 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_22110_01.test("Task akzeptieren – Coverage PKV - Einwilligung Abrechnungsinformation ermitteln");
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50000);
     const char* const pkvKvnr = "X500000056";
@@ -214,6 +216,7 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent)
 
 TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent209)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_22110_01.test("Task akzeptieren – Coverage PKV - Einwilligung Abrechnungsinformation ermitteln");
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisungPkv, 50002);
     const char* const pkvKvnr = "X500000029";
 
@@ -247,6 +250,50 @@ TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent209)
             {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         ResourceTemplates::kbvBundleXml({.prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
         2 /*numOfExpectedResources*/));// no consent resource in result;
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskPkvWithConsent166)
+{
+    A_22110_01.test("Task akzeptieren – Coverage PKV - Einwilligung Abrechnungsinformation ermitteln");
+    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4802);
+    const char* const pkvKvnr = "X500000032";
+
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = pkvTaskId, .kvnr = pkvKvnr, .tRezeptIsPkv = true};
+    options.medicationOptions.medicationCategory = "02";
+
+    std::optional<model::Bundle> resultBundle;
+    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
+        resultBundle, mServiceContext,
+        ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml(options),
+        3 /*numOfExpectedResources*/));
+
+    // Check consent:
+    const auto consents = resultBundle->getResourcesByType<model::Consent>("Consent");
+    ASSERT_EQ(consents.size(), 1);
+    ASSERT_TRUE(consents[0].isChargingConsent());
+    const auto tasks = resultBundle->getResourcesByType<model::Task>("Task");
+    ASSERT_EQ(tasks.size(), 1);
+    ASSERT_TRUE(tasks[0].kvnr().has_value());
+    ASSERT_EQ(tasks[0].kvnr().value(), consents[0].patientKvnr());
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskPkvWithoutConsent166)
+{
+    const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4803);
+    const char* const pkvKvnr = "X500000033";
+
+    ResourceTemplates::KbvBundleOptions options{.prescriptionId = pkvTaskId, .kvnr = pkvKvnr, .tRezeptIsPkv = true};
+    options.medicationOptions.medicationCategory = "02";
+
+    std::optional<model::Bundle> resultBundle;
+    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
+        resultBundle, mServiceContext,
+        ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = pkvTaskId, .kvnr = pkvKvnr}),
+        ResourceTemplates::kbvBundleXml(options),
+        2));
 }
 
 TEST_F(AcceptTaskTest, AcceptTaskFail)//NOLINT(readability-function-cognitive-complexity)
@@ -386,6 +433,7 @@ TEST_F(AcceptTaskTest, AcceptTaskFailExpiryDate)
     const auto taskJson = ResourceTemplates::taskJson({
         .taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId, .expirydate = yesterday});
     model::Task task = model::Task::fromJsonNoValidation(taskJson);
+    task.setIsPkv(false);
     mockDatabase->insertTask(task);
 
     try

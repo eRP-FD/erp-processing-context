@@ -10,6 +10,7 @@
 #include "shared/util/TLog.hxx"
 
 #include <iomanip>
+#include <chrono>
 
 void GLogConfiguration::initLogging(const char* argv0)
 {
@@ -63,6 +64,11 @@ void GLogConfiguration::erpLogPrefix(std::ostream& ostream, const google::LogMes
     using std::setfill;
     using std::setw;
     std::ostream oss(ostream.rdbuf());
+    using namespace std::chrono_literals;
+    using namespace std::chrono;
+    const auto absOffset = abs(lmi.time().gmtoffset());
+    const auto gmtOffsetHours = duration_cast<hours>(absOffset);
+    const auto gmtOffsetMinutes = duration_cast<minutes>(absOffset - gmtOffsetHours);
     // clang-format off
     oss << setw(4) << 1900 + lmi.time().year() << '-'
         << setw(2) << setfill('0') << 1 + lmi.time().month() << '-'
@@ -72,9 +78,9 @@ void GLogConfiguration::erpLogPrefix(std::ostream& ostream, const google::LogMes
         << setw(2) << lmi.time().min() << ':'
         << setw(2) << lmi.time().sec() << "."
         << setw(6) << lmi.time().usec()
-        << ((lmi.time().gmtoff() < 0) ? '-' : '+')
-        << setw(2) << lmi.time().gmtoff() / 3600 << ':'
-        << setw(2) << (lmi.time().gmtoff() % 3600) / 60 << ' '
+        << ((lmi.time().gmtoffset() < 0s) ? '-' : '+')
+        << setw(2) << gmtOffsetHours.count() << ':'
+        << setw(2) << gmtOffsetMinutes.count() << ' '
         << setw(7) << setfill(' ') << std::left
         << google::GetLogSeverityName(lmi.severity())  << ' '
         << lmi.basename() << ':' << lmi.line() << "]";

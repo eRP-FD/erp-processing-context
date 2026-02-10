@@ -9,6 +9,7 @@
 
 #include "shared/util/Base64.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/Random.hxx"
 #include "shared/util/String.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
@@ -364,20 +365,13 @@ Certificate::Builder::Builder (void)
 
 Certificate::Builder& Certificate::Builder::withRandomSerial (void)
 {
-    auto bignum = shared_BN::make();
-    const int status1 = BN_pseudo_rand(bignum, 64, 0, 0);
-    if (status1 == 0)
-    {
-        Fail2("can not create pseudo random value for random serial", std::runtime_error);
-    }
-
-    auto ai = shared_ASN1_INTEGER::make(
-        BN_to_ASN1_INTEGER(bignum, nullptr));
+    auto ai = shared_ASN1_INTEGER::make(ASN1_INTEGER_new());
     if ( ! ai.isSet())
     {
         Fail2("can not convert BIGNUM into ASN1 integer", std::runtime_error);
     }
 
+    ASN1_INTEGER_set_int64(ai, Random::randomIntBetween<int64_t>(0L, INT64_MAX));
     X509_set_serialNumber(mX509Certificate, ai);
 
     return *this;

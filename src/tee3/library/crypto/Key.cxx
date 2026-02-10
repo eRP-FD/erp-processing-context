@@ -7,12 +7,20 @@
 #include "library/crypto/Key.hxx"
 #include "library/log/Logging.hxx"
 #include "library/util/Assert.hxx"
+#include "library/util/BinaryBuffer.hxx"
 #include "library/wrappers/OpenSsl.hxx"
 
 #include "fhirtools/util/Gsl.hxx"
 
+#include <openssl/param_build.h>
+
 namespace epa
 {
+
+namespace
+{
+constexpr std::size_t componentSize = 32;
+}
 
 #define throwIfNot(expression, message) AssertOpenSsl(expression) << message
 
@@ -78,68 +86,21 @@ shared_EVP_PKEY Key::publicKeyFromPemString(const std::string& pemString)
 }
 
 
-// GEMREQ-start A_16901
-std::string Key::publicKeyToX962DerString(const shared_EVP_PKEY& keyPair)
-{
-    throwIfNot(keyPair.isSet(), "the key must be provided");
-
-    const EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(keyPair);
-    throwIfNot(
-        ecKey != nullptr,
-        "serialization of public key to X9.62 format failed while extracting EC key");
-    shared_BIO out = shared_BIO::make();
-    const int status = i2d_EC_PUBKEY_bio(out, ecKey);
-    throwIfNot(status == 1, "serialization of public key to X9.62 format failed");
-    auto unused = BIO_flush(out);
-    (void) unused;
-
-    return bioToString(out);
-}
-// GEMREQ-end A_16901
-
-
-shared_EVP_PKEY Key::publicKeyFromX962Der(const std::string& derString)
-{
-    auto mem = shared_BIO::make();
-    const int length = BIO_write(mem, derString.data(), gsl::narrow<int>(derString.size()));
-    throwIfNot(
-        static_cast<int>(derString.size()) == length,
-        "deserialization of public key from X9.62 format failed while filling internal buffer");
-    // There have been several comments and clarifications from Gematik regarding the binary
-    // format for they keys.
-    auto key = shared_EC_KEY::make(d2i_EC_PUBKEY_bio(mem, nullptr));
-    throwIfNot(
-        key.isSet(),
-        "deserialization of public key from X9.62 format failed while extracting EC key");
-
-    auto pkey = shared_EVP_PKEY::make();
-    const int status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    throwIfNot(status == 1, "deserialization of public key from X9.62 format failed");
-    return pkey;
-}
-
-
 Key::PaddedComponents Key::getPaddedXYComponents(const EVP_PKEY& keyPair, const size_t length)
 {
     // Limit the padding length so that conversion from size_t to int does not make a problem.
     // If 32 is not sufficient for a future use case, make the value larger.
     AssertOpenSsl(length <= 32) << "invalid padding length";
 
-    auto xComponent = shared_BN::make();
-    auto yComponent = shared_BN::make();
+    BIGNUM *bnX = nullptr;
+    BIGNUM *bnY = nullptr;
 
-    const EC_KEY* ecKey = EVP_PKEY_get0_EC_KEY(&keyPair);
-    AssertOpenSsl(ecKey != nullptr) << "could not extract elliptic curve key from key pair";
-
-    const EC_POINT* publicKey = EC_KEY_get0_public_key(ecKey);
-    AssertOpenSsl(publicKey != nullptr) << "could not extract public key from elliptic curve key";
-
-    const EC_GROUP* group = EC_KEY_get0_group(ecKey);
-    AssertOpenSsl(group != nullptr) << "could not get group from elliptic curve key";
-
-    const int result =
-        EC_POINT_get_affine_coordinates(group, publicKey, xComponent, yComponent, nullptr);
-    AssertOpenSsl(result == 1) << "could not get x and y components from elliptic curve public key";
+    auto result = EVP_PKEY_get_bn_param(&keyPair, OSSL_PKEY_PARAM_EC_PUB_X, &bnX);
+    auto xComponent = shared_BN::make(bnX);
+    AssertOpenSsl(result == 1) << "EVP_PKEY_get_bn_param failed";
+    result = EVP_PKEY_get_bn_param(&keyPair, OSSL_PKEY_PARAM_EC_PUB_Y, &bnY);
+    AssertOpenSsl(result == 1) << "EVP_PKEY_get_bn_param failed";
+    auto yComponent = shared_BN::make(bnY);
 
     std::string x(length, 'X');
     int paddedSize = BN_bn2binpad(
@@ -194,29 +155,45 @@ shared_EVP_PKEY Key::createPublicKeyBN(
     const shared_BN& yCoordinate,
     const int curveId)
 {
-    auto key = shared_EC_KEY::make(EC_KEY_new_by_curve_name(curveId));
-    AssertOpenSsl(key.isSet()) << "could not create new EC key on elliptic curve";
-    EC_KEY_set_asn1_flag(key, OPENSSL_EC_NAMED_CURVE);
-    int status = EC_KEY_generate_key(key);
-    AssertOpenSsl(status == 1) << "generating EVP key from EC key failed";
+    BinaryBuffer pubkeyUncompressed(1 + (2 * componentSize));
+    auto pubkeySpan = std::span{pubkeyUncompressed.data(), pubkeyUncompressed.size()};
 
-    const auto* group = EC_KEY_get0_group(key);
-    AssertOpenSsl(group != nullptr) << "could not get group from elliptic curve key";
+    pubkeySpan[0] = 0x4;
+    int paddedSize =
+        BN_bn2binpad(xCoordinate, pubkeySpan.subspan(1, 1 + componentSize).data(), componentSize);
+    AssertOpenSsl(paddedSize == static_cast<int>(componentSize))
+        << "could not extract padded x component";
+    paddedSize = BN_bn2binpad(
+        yCoordinate,
+        pubkeySpan.subspan(1 + componentSize, 1 + (2 * componentSize)).data(),
+        componentSize);
+    AssertOpenSsl(paddedSize == static_cast<int>(componentSize))
+        << "could not extract padded y component";
 
-    auto publicKey = shared_EC_POINT::make(EC_POINT_new(group));
-    int result =
-        EC_POINT_set_affine_coordinates(group, publicKey, xCoordinate, yCoordinate, nullptr);
-    AssertOpenSsl(result == 1) << "could not create public key from x,y components";
+    const std::unique_ptr<EVP_PKEY_CTX, decltype(&EVP_PKEY_CTX_free)> pctx{
+        EVP_PKEY_CTX_new_from_name(nullptr, "EC", nullptr), &EVP_PKEY_CTX_free};
+    throwIfNot(EVP_PKEY_fromdata_init(pctx.get()) == 1, "EVP_PKEY_fromdata_init failed");
+    const std::unique_ptr<OSSL_PARAM_BLD, decltype(&OSSL_PARAM_BLD_free)> paramsBuild{
+        OSSL_PARAM_BLD_new(), &OSSL_PARAM_BLD_free};
 
-    result = EC_KEY_set_public_key(key, publicKey);
-    AssertOpenSsl(result == 1) << "could not create ec key public key";
+    OSSL_PARAM_BLD_push_utf8_string(
+        paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(curveId), 0);
+    OSSL_PARAM_BLD_push_octet_string(
+        paramsBuild.get(),
+        OSSL_PKEY_PARAM_PUB_KEY,
+        pubkeyUncompressed.data(),
+        pubkeyUncompressed.size());
+    const std::unique_ptr<OSSL_PARAM, decltype(&OSSL_PARAM_free)> params{
+        OSSL_PARAM_BLD_to_param(paramsBuild.get()), &OSSL_PARAM_free};
+    throwIfNot(params != nullptr, "Failed to generate OSSL_PARAM");
 
-    auto pkey = shared_EVP_PKEY::make();
+    EVP_PKEY* pkey = nullptr;
+    auto result = EVP_PKEY_fromdata(pctx.get(), &pkey, EVP_PKEY_PUBLIC_KEY, params.get());
 
-    status = EVP_PKEY_set1_EC_KEY(pkey, key);
-    AssertOpenSsl(status == 1) << "could not convert key into EC key";
+    throwIfNot(result == 1, "EVP_PKEY_fromdata failed");
+    throwIfNot(pkey != nullptr, "Unable to create public key");
 
-    return pkey;
+    return shared_EVP_PKEY::make(pkey);
 }
 
 

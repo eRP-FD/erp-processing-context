@@ -50,25 +50,19 @@ void CommunicationDeleteHandler::handleRequest (PcSessionContext& session)
 
     auto* databaseHandle = session.database();
 
-    auto [id, received] = databaseHandle->deleteCommunication(communicationId, sender.value());
+    auto id = databaseHandle->deleteCommunication(communicationId, sender.value());
 
-    if (id.has_value())
+    if (!id.has_value())
     {
-        A_20259.start("E-prescription service - delete communication with warning if the recipient has already accessed it");
-        if (received.has_value())
+        if (databaseHandle->existCommunication(communicationId))
         {
-            session.response.setHeader(Header::Warning, "Deleted message delivered at " + received.value().toXsDateTime());
+            ErpFail(HttpStatus::Unauthorized,
+                sender.value() + " is not allowed to delete communication for id " + communicationId.toString());
         }
-        A_20259.finish();
-    }
-    else if (databaseHandle->existCommunication(communicationId))
-    {
-        ErpFail(HttpStatus::Unauthorized,
-            sender.value() + " is not allowed to delete communication for id " + communicationId.toString());
-    }
-    else
-    {
-        ErpFail(HttpStatus::NotFound, "No communication found for id " + communicationId.toString());
+        else
+        {
+            ErpFail(HttpStatus::NotFound, "No communication found for id " + communicationId.toString());
+        }
     }
 
     A_20258.finish();

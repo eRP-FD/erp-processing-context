@@ -105,8 +105,6 @@ TEST(ParameterTest, CanGetChargeItemMarkingFlag)
 
 TEST(ParameterTest, isEuRedeemableByPatientAuthorization_Validate_true)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const std::string xml = R"(<?xml version="1.0" encoding="UTF-8"?>
 <Parameters xmlns="http://hl7.org/fhir">
   <meta>

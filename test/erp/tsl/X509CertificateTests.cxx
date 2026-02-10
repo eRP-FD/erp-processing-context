@@ -226,10 +226,6 @@ TEST_F(X509CertificateTests, SerialNumberExpectedValue)
 
 TEST_F(X509CertificateTests, SubjectSerialNumberExpectedValue)
 {
-    const std::string certificatePem =
-        FileHelper::readFileAsString(
-            std::string{TEST_DATA_DIR} + "/tsl/X509Certificate/80276883110000129084-C_HP_QES_E256.pem");
-
     const X509Certificate certificateWithSubjectSerialNumber =
         X509Certificate::createFromPem(SUBJECT_SERIAL_NUMBER_CERTIFICATE_PEM);
     EXPECT_EQ(certificateWithSubjectSerialNumber.getSerialNumberFromSubject(), "80276883110000129084");

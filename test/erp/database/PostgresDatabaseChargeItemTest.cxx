@@ -51,7 +51,7 @@ public:
                                ::MockDatabase::mockAccessCode);
             const auto id = database().storeTask(task);
             task.setPrescriptionId(id);
-            const auto type = id.isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
+            const auto type = model::Kvnr::Type::pkv;
             task.setKvnr(model::Kvnr{kvnr, type});
             task.setExpiryDate(::model::Timestamp::now());
             task.setAcceptDate(::model::Timestamp::now());
@@ -65,6 +65,7 @@ public:
                 ::model::Binary{prescription.getId().toString(),
                                 ::CryptoHelper::toCadesBesSignature(prescription.serializeToJsonString())};
 
+            task.setIsPkv(true);
             database().activateTask(task, signedPrescription, mJwtBuilder.makeJwtArzt());
 
             auto chargeItem = model::ChargeItem::fromXmlNoValidation(

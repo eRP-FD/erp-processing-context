@@ -24,7 +24,7 @@ TEST_F(Erp10941Test, PostChargeItemByPharmacyWithMarkingFlagFails)
     std::string secret;
     ASSERT_NO_FATAL_FAILURE(
         createClosedTask(prescriptionId, kbvBundle, closeReceipt, accessCode, secret,
-                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr));
+                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, kvnr, "PKV"));
 
     std::optional<model::Consent> consent;
     ASSERT_NO_FATAL_FAILURE(consent = consentPost(model::ConsentType::CHARGCONS, kvnr, model::Timestamp::now()));

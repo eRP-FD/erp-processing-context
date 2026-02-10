@@ -26,6 +26,10 @@ public:
 
     std::unique_ptr<model::TaskEvent> convert(const db_model::TaskEvent& dbTaskEvent, const SafeString& key,
                                               const SafeString& medicationDispenseKey) const;
+
+    std::unique_ptr<model::TRezeptEvent> convertToTRezeptEvent(const db_model::TaskEvent& dbTaskEvent, const SafeString& key,
+                                                               const SafeString& medicationDispenseKey) const;
+
 private:
     std::unique_ptr<model::TaskEvent> convertProvidePrescriptionTaskEvent(
         const db_model::TaskEvent& dbTaskEvent, const SafeString& key, model::PrescriptionType prescriptionType,

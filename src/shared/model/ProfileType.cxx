@@ -26,6 +26,10 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case ProvideDispensationErpOp:
         case OrganizationDirectory:
         case EPAMedicationPZNIngredient:
+        case HealthcareServiceDirectory:
+        case LocationDirectory:
+        case ERP_TPrescription_CarbonCopy:
+        case ERP_TPrescription_Organization:
             return false;
         case GEM_ERP_PR_AuditEvent:
         case GEM_ERP_PR_Binary:

@@ -41,6 +41,8 @@ public:
 
     std::optional<boost::asio::ip::tcp::endpoint> currentEndpoint() const;
 
+    bool testConnection() override;
+
 protected:
     ClientBase(const ConnectionParameters& params);
 

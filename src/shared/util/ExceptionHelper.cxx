@@ -98,11 +98,7 @@ void ExceptionHelper::extractInformationAndRethrow (
     }
     catch (const HsmException& e)
     {
-        std::move(consumer)("HsmException(" + std::string(e.what())
-#if WITH_HSM_TPM_PRODUCTION > 0
-                     + "," + HsmProductionClient::hsmErrorDetails(e.errorCode)
-#endif
-                     + ")", getLocationString(e));
+        std::move(consumer)("HsmException(" + std::string(e.what()) + ")", getLocationString(e));
         throw;
     }
     catch (const sw::redis::Error& e)

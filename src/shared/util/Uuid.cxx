@@ -114,14 +114,14 @@ Uuid::operator const std::string&() const
 
 std::string Uuid::toUrn () const
 {
-    Expect(isValidIheUuid(), "invalid UUID");
+    ModelExpect(isValidIheUuid(), "invalid UUID: " + mString);
     return "urn:uuid:" + mString;
 }
 
 
 std::string Uuid::toOid() const
 {
-    Expect(isValidIheUuid(), "invalid UUID");
+    ModelExpect(isValidIheUuid(), "invalid UUID: " + mString);
 
     // remove '-'s and concatenate
     std::string hex = String::concatenateStrings(String::split(mString, '-'), "");

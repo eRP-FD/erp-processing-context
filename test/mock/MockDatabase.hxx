@@ -78,7 +78,7 @@ public:
                       const model::Timestamp& acceptDate, const db_model::EncryptedBlob& healthCareProviderPrescription,
                       const db_model::EncryptedBlob& doctorIdentity,
                       const model::Timestamp& lastStatusUpdate,
-                      bool euRedeemable) override;
+                      bool euRedeemable, bool isPkv) override;
     void updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
                            const model::Timestamp& lastModified, const db_model::EncryptedBlob& receipt,
                            const db_model::EncryptedBlob& pharmacyIdentity,
@@ -198,7 +198,7 @@ public:
      * If "received" does not have a value this means that the communication has not been
      * received by the recipient.
      */
-    std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    std::optional<Uuid>
     deleteCommunication (const Uuid& communicationId, const db_model::HashedId& sender) override;
 
     void deleteCommunicationsForTask (const model::PrescriptionId& taskId) override;

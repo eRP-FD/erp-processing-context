@@ -20,6 +20,8 @@ int main (int argc, char** argv)
     Environment::set("ERP_VLOG_MAX_VALUE", "1");
     TestClient::setFactory(&HttpsTestClient::factory);
 
+    Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
+
     auto args = std::span(argv, size_t(argc));
     GLogConfiguration::initLogging(args[0]);
     ::testing::InitGoogleTest(&argc, argv);

@@ -12,41 +12,6 @@ class ChargeItemPatchEndpointTest : public EndpointHandlerTest
 public:
 };
 
-TEST_F(ChargeItemPatchEndpointTest, PatchNonPkvFails)
-{
-    auto jsonBody = ResourceTemplates::patchChargeItemJson({});
-    ChargeItemPatchHandler handler{{}};
-    auto prescriptionId =
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
-    Header requestHeader{HttpMethod::PATCH,
-                         "/chargeitem/" + prescriptionId.toString(),
-                         0,
-                         {{Header::ContentType, ContentMimeType::fhirJsonUtf8}},
-                         HttpStatus::Unknown};
-    ServerRequest serverRequest{std::move(requestHeader)};
-    serverRequest.setBody(std::move(jsonBody));
-    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
-    serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext(mServiceContext, serverRequest, serverResponse, accessLog);
-    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    try
-    {
-        handler.handleRequest(sessionContext);
-        ADD_FAILURE() << "Expected ErpException";
-    }
-    catch (const ErpException& ex)
-    {
-        EXPECT_EQ(ex.status(), HttpStatus::BadRequest);
-        EXPECT_STREQ(ex.what(), "Attempt to access charge item for non-PKV Prescription.");
-    }
-    catch (const std::exception& ex)
-    {
-        ADD_FAILURE() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
-    }
-}
-
 struct ChargeItemPatchEndpointTestParam {
     std::string shiftTo;
     ResourceTemplates::Versions::GEM_ERPCHRG version;

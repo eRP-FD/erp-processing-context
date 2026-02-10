@@ -40,21 +40,18 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
     {
         case model::PrescriptionType::apothekenpflichigeArzneimittel:
         case model::PrescriptionType::digitaleGesundheitsanwendungen:
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::tRezept:
             break;
         case model::PrescriptionType::direkteZuweisung:
-            expected = 1;
-            break;
-        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            expected = 2;
-            break;
         case model::PrescriptionType::direkteZuweisungPkv:
             expected = 1;
             break;
     }
-
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
     {
         std::optional<model::Bundle> communicationsBundle;
-        ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), "identifier=gt2999-12-31"));
+        ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwt, "identifier=gt2999-12-31"));
         ASSERT_EQ(communicationsBundle->getResourceCount(), 0);
     }
 
@@ -62,7 +59,7 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
         std::optional<model::Bundle> communicationsBundle;
         ASSERT_NO_FATAL_FAILURE(
             communicationsBundle = communicationsGet(
-                jwtApotheke(), "identifier=eq" + model::Timestamp::now().toGermanDate()));
+                jwt, "identifier=eq" + model::Timestamp::now().toGermanDate()));
         ASSERT_GE(communicationsBundle->getResourceCount(), expected);
     }
 
@@ -90,7 +87,8 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(*prescriptionId, std::string(task->accessCode()), qesBundle));
     ASSERT_TRUE(task);
 
-    const auto telematicId = jwtApotheke().stringForClaim(JWT::idNumberClaim);
+    auto jwt = isDiga(GetParam()) ? jwtKostentraeger() : jwtApotheke();
+    auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
     ASSERT_TRUE(telematicId.has_value());
 
     std::optional<model::Communication> communicationResponseA;
@@ -120,7 +118,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
                                 ->toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone)
                                 .substr(0, 19);
     std::optional<model::Bundle> communicationsBundle;
-    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwt, args)); // sets "received" timstamp
     EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
 
     auto communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
@@ -151,7 +149,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     args = "sent=ge" + communicationResponseC->timeSent()
                            ->toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone)
                            .substr(0, 19);
-    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args)); // sets "received" timstamp
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwt, args)); // sets "received" timstamp
 
     communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
     ASSERT_EQ(communications.size(), 2);
@@ -160,11 +158,10 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
 
     EXPECT_EQ(communicationsBundle->getResourceCount(), 2);
 
-    const auto jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     args = "received=gt" + start.toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19) +
            "&received=lt" + end.toXsDateTimeWithoutFractionalSeconds(model::Timestamp::GermanTimezone).substr(0, 19) +
            "&_sort=sent";
-    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtApotheke(), args));
+    ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwt, args));
     ASSERT_EQ(communicationsBundle->getResourceCount(), 2);
     communications =  communicationsBundle->getResourcesByType<model::Communication>("Communication");
     ASSERT_EQ(communications.size(), 2);
@@ -173,7 +170,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
 }
 
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowCommunicationTestPInst, ErpWorkflowTestP,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));
 
 TEST_F(ErpWorkflowTest, CommunicationJsonValidationError)
 {
@@ -234,7 +231,7 @@ TEST_F(ErpWorkflowTest, CommunicationDigaReject)
     builder.setRecipient(ActorRole::Insurant, kvnr.id());
     auto communication = builder.createXmlString();
     auto reqArgs = RequestArguments(HttpMethod::POST, "/Communication", communication, "application/fhir+xml")
-                       .withJwt(jwtApotheke());
+                       .withJwt(jwtKostentraeger());
     reqArgs.overrideExpectedPrescriptionId = task->prescriptionId().toString();
     auto [outerResonse, innerResponse] = send(reqArgs);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);

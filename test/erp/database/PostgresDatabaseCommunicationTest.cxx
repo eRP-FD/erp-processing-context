@@ -133,7 +133,6 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
     return search;
 }
 
-
 TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
 {
     if (!usePostgres())
@@ -380,38 +379,33 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     ASSERT_EQ(representativeInserted.value().id(), idRepresentative.value());
 
     // Delete the communication objects by their ids and sender.
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
+    const std::optional<Uuid> resultInfoReqDelete =
         database().deleteCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultReplyDelete =
+    const std::optional<Uuid> resultReplyDelete =
         database().deleteCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultDispReqDelete =
+    const std::optional<Uuid> resultDispReqDelete =
         database().deleteCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultRepresentativeDelete =
+    const std::optional<Uuid> resultRepresentativeDelete =
         database().deleteCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
     database().commitTransaction();
 
     // Check the results from the delete requests.
 
-    // InfoReq must have Id but no received time.
-    ASSERT_TRUE(std::get<0>(resultInfoReqDelete).has_value());
-    ASSERT_EQ(std::get<0>(resultInfoReqDelete).value(), idInfoReq.value());
-    ASSERT_FALSE(std::get<1>(resultInfoReqDelete).has_value());
+    // InfoReq must have Id
+    ASSERT_TRUE(resultInfoReqDelete.has_value());
+    ASSERT_EQ(resultInfoReqDelete.value(), idInfoReq.value());
 
-    // Reply must have Id but no received time.
-    ASSERT_TRUE(std::get<0>(resultReplyDelete).has_value());
-    ASSERT_EQ(std::get<0>(resultReplyDelete).value(), idReply.value());
-    ASSERT_FALSE(std::get<1>(resultReplyDelete).has_value());
+    // Reply must have Id
+    ASSERT_TRUE(resultReplyDelete.has_value());
+    ASSERT_EQ(resultReplyDelete.value(), idReply.value());
 
-    // DispReq must have Id but no received time.
-    ASSERT_TRUE(std::get<0>(resultDispReqDelete).has_value());
-    ASSERT_EQ(std::get<0>(resultDispReqDelete).value(), idDispReq.value());
-    ASSERT_FALSE(std::get<1>(resultDispReqDelete).has_value());
+    // DispReq must have Id
+    ASSERT_TRUE(resultDispReqDelete.has_value());
+    ASSERT_EQ(resultDispReqDelete.value(), idDispReq.value());
 
-    // Representative must have Id AND received time.
-    ASSERT_TRUE(std::get<0>(resultRepresentativeDelete).has_value());
-    ASSERT_EQ(std::get<0>(resultRepresentativeDelete).value(), idRepresentative.value());
-    ASSERT_TRUE(std::get<1>(resultRepresentativeDelete).has_value());
-    ASSERT_EQ(std::get<1>(resultRepresentativeDelete).value().toXsDateTime(), "2022-01-24T12:58:00.000+00:00");
+    // Representative must have Id
+    ASSERT_TRUE(resultRepresentativeDelete.has_value());
+    ASSERT_EQ(resultRepresentativeDelete.value(), idRepresentative.value());
 
     // Check whether the communication objects have been deleted.
     infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
@@ -432,7 +426,7 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
 // GEMREQ-start A_22157
 TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (! usePostgres() || ! isPkv(GetParam()))
+    if (! usePostgres() || ! canBePkv(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -513,7 +507,7 @@ TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOL
 // GEMREQ-start A_22117-01
 TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (! usePostgres() || ! isPkv(GetParam()))
+    if (! usePostgres() || ! canBePkv(GetParam()))
     {
         GTEST_SKIP();
     }
@@ -649,13 +643,12 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     ASSERT_EQ(infoReqInserted.value().id(), idInfoReq.value());
 
     // Delete the communication object by its id and sender.
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
+    const std::optional<Uuid> resultInfoReqDelete =
         database().deleteCommunication(invalidId, model::getIdentityString(infoReq.sender().value()));
     database().commitTransaction();
 
     // Result must be empty.
-    ASSERT_FALSE(std::get<0>(resultInfoReqDelete).has_value());
-    ASSERT_FALSE(std::get<1>(resultInfoReqDelete).has_value());
+    ASSERT_FALSE(resultInfoReqDelete.has_value());
 
     // Check whether the communication objects have been deleted.
     infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
@@ -758,25 +751,21 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     ASSERT_EQ(representativeInserted.value().id(), idRepresentative.value());
 
     // Delete the communication objects by their ids and sender.
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultInfoReqDelete =
+    const std::optional<Uuid> resultInfoReqDelete =
         database().deleteCommunication(idInfoReq.value(), mPharmacy.id());
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultReplyDelete =
+    const std::optional<Uuid> resultReplyDelete =
         database().deleteCommunication(idReply.value(), InsurantA);
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultDispReqDelete =
+    const std::optional<Uuid> resultDispReqDelete =
         database().deleteCommunication(idDispReq.value(), mPharmacy.id());
-    std::tuple<std::optional<Uuid>, std::optional<Timestamp>> resultRepresentativeDelete =
+    const std::optional<Uuid> resultRepresentativeDelete =
         database().deleteCommunication(idRepresentative.value(), mPharmacy.id());
     database().commitTransaction();
 
     // Results must be empty.
-    ASSERT_FALSE(std::get<0>(resultInfoReqDelete).has_value());
-    ASSERT_FALSE(std::get<1>(resultInfoReqDelete).has_value());
-    ASSERT_FALSE(std::get<0>(resultReplyDelete).has_value());
-    ASSERT_FALSE(std::get<1>(resultReplyDelete).has_value());
-    ASSERT_FALSE(std::get<0>(resultDispReqDelete).has_value());
-    ASSERT_FALSE(std::get<1>(resultDispReqDelete).has_value());
-    ASSERT_FALSE(std::get<0>(resultRepresentativeDelete).has_value());
-    ASSERT_FALSE(std::get<1>(resultRepresentativeDelete).has_value());
+    ASSERT_FALSE(resultInfoReqDelete.has_value());
+    ASSERT_FALSE(resultInfoReqDelete.has_value());
+    ASSERT_FALSE(resultInfoReqDelete.has_value());
+    ASSERT_FALSE(resultInfoReqDelete.has_value());
 
     // Check whether the communication objects have been deleted.
     infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
@@ -1286,8 +1275,4 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForTask)
 // GEMREQ-end A_19027-06
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseCommunicationTestInst, PostgresDatabaseCommunicationTest,
-                         testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
-                                         model::PrescriptionType::digitaleGesundheitsanwendungen,
-                                         model::PrescriptionType::direkteZuweisung,
-                                         model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
-                                         model::PrescriptionType::direkteZuweisungPkv));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

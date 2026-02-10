@@ -41,15 +41,18 @@ std::filesystem::path ResourceManager::getAbsoluteFilename(const std::filesystem
             ToolConfig::RESOURCE_SOURCE_DIR / resourceFile,
             ToolConfig::RESOURCE_OUTPUT_DIR / resourceFile,
     };
-    const auto testResourceManagerPath = TestConfiguration::instance().getOptionalStringValue(
-        TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH, std::string{});
-    if (!testResourceManagerPath.empty())
-    {
-        tryFiles.emplace_front(std::filesystem::path{testResourceManagerPath} / resourceFile);
-    }
     for (const auto& file : tryFiles)
     {
         if (exists(file))
+        {
+            return file;
+        }
+    }
+    const std::filesystem::path testResourceManagerPath{TestConfiguration::instance().getOptionalStringValue(
+        TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH, std::string{})};
+    if (!testResourceManagerPath.empty())
+    {
+        if (const auto& file = testResourceManagerPath / resourceFile; exists(file))
         {
             return file;
         }

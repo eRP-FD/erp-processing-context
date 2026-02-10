@@ -59,7 +59,7 @@ public:
 
     std::vector<Uuid> retrieveCommunicationIds(const db_model::HashedId& recipient);
 
-    std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>>
+    std::optional<Uuid>
     deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender);
     void deleteCommunicationsForTask(const model::PrescriptionId& taskId);
     void deleteChargeItemCommunicationsForKvnr(const db_model::HashedKvnr& hashedKvnr);

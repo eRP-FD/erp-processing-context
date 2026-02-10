@@ -1,7 +1,7 @@
 
 ## Configuration
 
-{% for env in config if env != "unusedVariables" %}
+{% for env in config if env not in ["unusedVariables" and "fhirPackagesDates"] %}
 ### {{ env }} configuration
 
 | Environment variable | Value | Description | Default value | Modified | Deprecated |
@@ -11,6 +11,15 @@
 {% endfor %}
 
 {% endfor %}
+
+### FHIR Packages Dates
+
+| {{"%-32s"|format("Environment variable")}} | From       | Until      | Groups         |
+| :------------------------------- | :--------- | :--------- | :------------- |
+{% for var in config["fhirPackagesDates"] -%}
+| {{"%-33s"|format(var['name']|truncate(30, true))}}| {{"%-11s"|format(var['from']|truncate(10, true))}}| {{"%-11s"|format(var['until']|truncate(10, true))}}| {{var['groups']}}|
+{% endfor %}
+
 
 ### Unused variables
 

@@ -9,6 +9,7 @@
 
 #include "shared/idp/IdpUpdater.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "mock/crypto/MockCryptography.hxx"
 #include "mock/tsl/MockOcsp.hxx"
 #include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "shared/tsl/error/TslError.hxx"
@@ -301,7 +302,7 @@ TEST_F(IdpUpdaterTest, updateWithBrokenResponse) // NOLINT(readability-function-
 /**
  * Simulate failed update attempts for the maximum age of the certificate. This is 24 hours in production.
  */
-TEST_F(IdpUpdaterTest, DISABLED_update_resetForMaxAge) // NOLINT(readability-function-cognitive-complexity)
+TEST_F(IdpUpdaterTest, update_resetForMaxAge) // NOLINT(readability-function-cognitive-complexity)
 {
     Idp idp;
     auto tslManager = createAndSetupTslManager();
@@ -631,4 +632,31 @@ TEST_F(IdpUpdaterTest, secondaryTimerTest) // NOLINT(readability-function-cognit
 
     // ... the certificate is set.
     ASSERT_NO_THROW(idp.getCertificate());
+}
+
+
+TEST_F(IdpUpdaterTest, loadSecondaryCertificate)
+{
+    Idp idp;
+    auto tslManager = createAndSetupTslManager();
+    auto updater = IdpTestUpdater(idp, *tslManager, io);
+    updater.update();
+    ASSERT_FALSE(idp.getSecondaryCertificate().has_value());
+    // load a valid certificate
+    {
+        ASSERT_TRUE(mIdpCertificate.has_value());
+        const EnvironmentVariableGuard idpSecondary(ConfigurationKey::IDP_SECONDARY_CERTIFICATE,
+                                                    mIdpCertificate->toPem());
+        updater.update();
+        ASSERT_TRUE(idp.getSecondaryCertificate().has_value());
+    }
+
+    // load an invalid certificate
+    {
+
+        const EnvironmentVariableGuard idpSecondary(ConfigurationKey::IDP_SECONDARY_CERTIFICATE,
+                                                    MockCryptography::getEciesPublicKeyCertificate().toPem());
+        updater.update();
+        ASSERT_FALSE(idp.getSecondaryCertificate().has_value());
+    }
 }

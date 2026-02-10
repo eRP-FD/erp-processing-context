@@ -45,13 +45,8 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
     Expect(client, "Cannot connect to " + host + ':' + std::to_string(port));
 
     BDEMessage bde;
-    bde.mStartTime = model::Timestamp::now();
-    bde.mInnerOperation = request.getHeader().target();
-    bde.mHost = host;
-    bde.mRequestId = xRequestId;
-    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::prescriptionIdKey, bde.mPrescriptionId);
-    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::lastModifiedTimestampKey, bde.mLastModified);
-    BDEMessage::assignIfContains(mLookupClientLogContext, BDEMessage::hashedKvnrKey, bde.mHashedKvnr);
+    bde.update(BDEMessage::Data{.host = host, .innerOperation = request.getHeader().target(), .requestId = xRequestId});
+    bde.update(mBdeData);
 
     try
     {
@@ -63,34 +58,32 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
         {
             std::ostringstream os{};
             os << "got response code " << result.getHeader().status() << " from account lookup to " << host << ":" << port;
-            bde.mError = os.str();
             const auto doc = model::NumberAsStringParserDocument::fromJson(result.getBody());
-            const auto errorCodeStr = doc.getStringValueFromPointer(rapidjson::Pointer{"/errorCode"});
-            bde.mErrorCode = errorCodeStr;
+            const auto errorCodeStr = std::string(doc.getStringValueFromPointer(rapidjson::Pointer{"/errorCode"}));
+            bde.update(BDEMessage::Data{.errorCode = errorCodeStr, .error = os.str()});
         }
         const std::string code = result.getHeader().header(Header::InnerResponseCode).value_or("0");
-        bde.mInnerResponseCode = static_cast<unsigned int>(std::strtoul(code.c_str(), nullptr, 10));
-        bde.mResponseCode = static_cast<unsigned int>(toNumericalValue(result.getHeader().status()));
-        bde.mEndTime = model::Timestamp::now();
+        bde.update(
+            BDEMessage::Data{.endTime = model::Timestamp::now(),
+                             .innerResponseCode = static_cast<unsigned int>(std::strtoul(code.c_str(), nullptr, 10)),
+                             .responseCode = static_cast<unsigned int>(toNumericalValue(result.getHeader().status()))});
         return result;
     }
     catch (const ExceptionWrapper<boost::beast::system_error>& e)
     {
-        bde.mEndTime = model::Timestamp::now();
-        bde.mError = e.code().message();
+        bde.update(BDEMessage::Data{.endTime = model::Timestamp::now(), .error = e.code().message()});
         Fail(e.code().message());
     }
     catch (const std::exception& e)
     {
-        bde.mEndTime = model::Timestamp::now();
-        bde.mError = e.what();
+        bde.update(BDEMessage::Data{.endTime = model::Timestamp::now(), .error = e.what()});
         Fail(e.what());
     }
 }
 
-IEpaAccountLookupClient& EpaAccountLookupClient::addLogAttribute(const std::string& key, const std::any& value)
+IEpaAccountLookupClient& EpaAccountLookupClient::addLogAttribute(const BDEMessage::Data& bdeData)
 {
-    mLookupClientLogContext[key] = value;
+    mBdeData.merge(bdeData);
     return *this;
 }
 

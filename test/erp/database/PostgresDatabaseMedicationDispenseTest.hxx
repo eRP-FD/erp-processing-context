@@ -16,6 +16,7 @@ struct PostgresDatabaseMedicationDispenseTestParams
 {
     size_t numMedications = 1;
     model::PrescriptionType type = model::PrescriptionType::apothekenpflichigeArzneimittel;
+    bool isPkv{false};
     friend std::ostream& operator<<(std::ostream& os, const PostgresDatabaseMedicationDispenseTestParams& params);
 };
 
@@ -34,7 +35,8 @@ protected:
         const std::string& marker = std::string()) const;
     bool writeTestOutputFileEnabled = false;
 
-    model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType);
+    model::Task createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType,
+                                   bool isPkv);
     std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
         const std::string_view& telematicIdPharmacy,

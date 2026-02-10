@@ -7,6 +7,9 @@
 
 #include <rapidjson/pointer.h>
 
+#include "fhirtools/repository/views/FhirResourceViewConfiguration.hxx"
+#include "shared/util/Configuration.hxx"
+
 namespace erp
 {
 
@@ -56,4 +59,10 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
     }
 }
 
+void ConfigurationFormatter::appendFhirPackagesConfiguration(rapidjson::Document& document)
+{
+    const fhirtools::FhirResourceViewConfiguration resourceViewConfigs =
+        Configuration::instance().fhirResourceViewConfiguration<ConfigurationBase::ERP>();
+    ::ConfigurationFormatter::appendFhirPackagesConfiguration(document, resourceViewConfigs);
+}
 }

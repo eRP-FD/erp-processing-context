@@ -139,7 +139,7 @@ TEST_P(VauAutTokenSignerTest, sign)
     const auto x5cArray = headerDoc["x5c"].GetArray();
     ASSERT_EQ(x5cArray.Size(), 1);
     const auto vauAutCert = Certificate::fromBase64(x5cArray.Begin()->GetString());
-    ASSERT_EQ(EVP_PKEY_cmp(vauAutCert.getPublicKey(), publicKey), 1);
+    ASSERT_EQ(EVP_PKEY_eq(vauAutCert.getPublicKey(), publicKey), 1);
 
     auto payload = Base64::decodeToString(parts[1]);
     rapidjson::Document payloadDoc{};

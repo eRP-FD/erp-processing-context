@@ -30,6 +30,11 @@ class FhirStructureRepositoryBackend;
 class FhirStructureRepositoryView;
 class FhirStructureRepositoryFixer;
 
+namespace internal
+{
+struct ElementType;
+}
+
 /// @brief stores information for a single type read from FHIR definition files
 /// also refer to FhirStructureRepositoryView
 class FhirStructureDefinition
@@ -183,7 +188,7 @@ public:
 
     Builder& kind(Kind kind_);
 
-    Builder& addElement(FhirElement::Builder elementBuilder, std::list<std::string> withTypes);
+    Builder& addElement(FhirElement::Builder elementBuilder, std::list<internal::ElementType> withTypes);
 
     Builder& repositoryBackend(gsl::not_null<const FhirStructureRepositoryBackend*> backend);
 
@@ -197,11 +202,12 @@ public:
 private:
     class FhirSlicingBuilder;
     [[nodiscard]]
-    bool addElementInternal(std::shared_ptr<const FhirElement>, std::list<std::string> withTypes);
+    bool addElementInternal(std::shared_ptr<const FhirElement>, std::list<internal::ElementType> withTypes);
     [[nodiscard]]
-    bool addElementInternal(std::shared_ptr<const FhirElement> element);
+    bool addSingleElementInternal(std::shared_ptr<const FhirElement> element,
+                                  std::list<internal::ElementType> withTypes);
     [[nodiscard]]
-    bool addSliceElement(const std::shared_ptr<const FhirElement>&, std::list<std::string> withTypes);
+    bool addSliceElement(const std::shared_ptr<const FhirElement>&, std::list<internal::ElementType> withTypes);
     void commitSlicing(size_t elementIdx);
     FhirSlicingBuilder& getBuilder(size_t elementIdx);
     bool ensureSliceBaseElement(const std::shared_ptr<const FhirElement>&);

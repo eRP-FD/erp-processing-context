@@ -20,7 +20,7 @@ public:
             prepare(mDeleteSchemaVersion);
             pqxx::result result;
             auto &&txn = createTransaction();
-            ASSERT_NO_THROW(result = txn.exec_params("SELECT value FROM erp.config WHERE parameter = 'schema_version'"));
+            ASSERT_NO_THROW(result = txn.exec("SELECT value FROM erp.config WHERE parameter = 'schema_version'"));
             ASSERT_TRUE(result.size() <= 1);
             if(!result.empty())
             {
@@ -49,7 +49,7 @@ public:
     {
         pqxx::result result;
         auto &&txn = createTransaction();
-        ASSERT_NO_THROW(result = txn.exec_prepared(mIouSchemaVersion.name, version));
+        ASSERT_NO_THROW(result = txn.exec(pqxx::prepped{mIouSchemaVersion.name}, pqxx::params{version}));
         ASSERT_TRUE(result.empty());
         txn.commit();
     }
@@ -58,7 +58,7 @@ public:
     {
         pqxx::result result;
         auto &&txn = createTransaction();
-        ASSERT_NO_THROW(result = txn.exec_prepared(mDeleteSchemaVersion.name));
+        ASSERT_NO_THROW(result = txn.exec(pqxx::prepped{mDeleteSchemaVersion.name}));
         ASSERT_TRUE(result.empty());
         txn.commit();
     }

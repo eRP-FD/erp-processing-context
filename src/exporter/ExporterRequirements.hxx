@@ -41,6 +41,25 @@ static constexpr Requirement A_25942("E-Rezept-Fachdienst - ePA - Fehlerbehandlu
 [[maybe_unused]] static const Requirement F_019("no mapping of Practitioner.qualification");
 [[maybe_unused]] static const Requirement F_020("Medication-Type-Extension in EPAMedications");
 [[maybe_unused]] static const Requirement F_021("Add code and system defaults for kbv bundles");
+
+static constexpr Requirement A_27882("E-Rezept-Fachdienst - BfArM - Lokalisierung Konfigurationsparameter BfArM_Domain");
+static constexpr Requirement A_27817("E-Rezept-Fachdienst - BfArM - Lokalisierung des BfArM Webdienstes");
+// static constexpr Requirement A_27819("Anbieter E-Rezept Fachdienst - BfArM - Registrierung für Client Credentials am BfArM Webdienst");
+static constexpr Requirement A_27820("E-Rezept-Fachdienst - BfArM - Prüfung Gültigkeit AccessToken");
+static constexpr Requirement A_27821("E-Rezept-Fachdienst - BfArM - Beziehen des AccessTokens");
+static constexpr Requirement A_27822("E-Rezept-Fachdienst - BfArM - AccessToken für Zugriff auf den BfArM Webdienst");
+static constexpr Requirement A_27823("E-Rezept-Fachdienst - BfArM - Flowtype 166");
+static constexpr Requirement A_27824("E-Rezept-Fachdienst - BfArM - asynchrone Bereitstellung und Übermittlung");
+static constexpr Requirement A_27825("E-Rezept-Fachdienst - BfArM - Suche nach Apothekendaten");
+static constexpr Requirement A_27826("E-Rezept-Fachdienst - BfArM - Erzeugen digitaler Durchschlag E-T-Rezept");
+static constexpr Requirement A_27827("E-Rezept-Fachdienst - BfArM - Anwendungsfall Übertragen des digitalen Durchschlags");
+static constexpr Requirement A_27828("E-Rezept-Fachdienst - BfArM - Übertragen des digitalen Durchschlags");
+static constexpr Requirement A_27830("E-Rezept-Fachdienst - BfArM - Fehlerbehandlung - Reaktion auf Scheitern des Operationaufrufs");
+static constexpr Requirement A_27831("E-Rezept-Fachdienst - BfArM - Fehlerbehandlung - Protokollierung struktureller Fehler");
+
+static constexpr Requirement A_27859("E-Rezept-Fachdienst - Zugriff auf Webdienste - Deaktivieren von Übertragungen");
+static constexpr Requirement A_27860("Anbieter E-Rezept-Fachdienst - Zugriff auf Webdienste - BetrieblicherProzess Deaktivieren von Übertragungen");
+
 // clang-format on
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EXPORTERREQUIREMENTS_HXX

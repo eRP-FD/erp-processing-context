@@ -284,8 +284,10 @@ TEST_F(MVO_A_22632, Step_01_Code_04)
 TEST_F(MVO_A_22632, Step_02_Code_14)
 {
     TestStep(A_22632, "ERP-A_22632.02 - Task aktivieren - Mehrfachverordnung - Entlassrezept Code 14 ablehnen");
-    const auto mvoPrescription =
-        kbvBundleMvoXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .legalBasisCode = "14"});
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .legalBasisCode = "14",
+                                                  .coPaymentValue = "1"});
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -306,8 +308,10 @@ class MVO_A_22633 : public Mehrfachverordnung
 TEST_F(MVO_A_22633, Step_01_Code_10)
 {
     TestStep(A_22633, "ERP-A_22633.01 - Task aktivieren - Ersatzverordnung als Mehrfachverordnung ablehnen - Code 10");
-    const auto mvoPrescription =
-        kbvBundleMvoXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .legalBasisCode = "10"});
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .legalBasisCode = "10",
+                                                  .coPaymentValue = "1"});
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -324,8 +328,10 @@ TEST_F(MVO_A_22633, Step_01_Code_10)
 TEST_F(MVO_A_22633, Step_02_Code_11)
 {
     TestStep(A_22633, "ERP-A_22633.02 - Task aktivieren - Ersatzverordnung als Mehrfachverordnung ablehnen - Code 11");
-    const auto mvoPrescription =
-        kbvBundleMvoXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .legalBasisCode = "11"});
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .legalBasisCode = "11",
+                                                  .coPaymentValue = "1"});
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -342,8 +348,10 @@ TEST_F(MVO_A_22633, Step_02_Code_11)
 TEST_F(MVO_A_22633, Step_03_Code_17)
 {
     TestStep(A_22633, "ERP-A_22633.03 - Task aktivieren - Ersatzverordnung als Mehrfachverordnung ablehnen - Code 17");
-    const auto mvoPrescription =
-        kbvBundleMvoXml({.prescriptionId = task->prescriptionId(), .authoredOn = authoredOn, .legalBasisCode = "17"});
+    const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
+                                                  .authoredOn = authoredOn,
+                                                  .legalBasisCode = "17",
+                                                  .coPaymentValue = "1"});
 
     RecordProperty("Prescription", Base64::encode(mvoPrescription));
     std::optional<std::variant<model::Task, model::OperationOutcome>> result;
@@ -433,7 +441,7 @@ class MVO_A_19445Test : public Mehrfachverordnung
 TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 {
     using namespace date::literals;
-    TestStep(A_19445_11, "ERP-A_19445-08.01 signing date + 365 days");
+    TestStep(A_27844, "ERP-A_19445-08.01 signing date + 365 days");
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),
                                                   .authoredOn = authoredOn,
                                                   .redeemPeriodStart = authoredOn.toGermanDate(),
@@ -450,7 +458,7 @@ TEST_F(MVO_A_19445Test, ExpiryAcceptDate365)
 
 TEST_F(MVO_A_19445Test, ExpiryAcceptDateEndDate)
 {
-    TestStep(A_19445_11, "ERP-A_19445-08.02 signing date given");
+    TestStep(A_27844, "ERP-A_19445-08.02 signing date given");
     auto startDate = authoredOn + date::days{3};
     auto endDate = authoredOn + date::days{10};
     const auto mvoPrescription = kbvBundleMvoXml({.prescriptionId = task->prescriptionId(),

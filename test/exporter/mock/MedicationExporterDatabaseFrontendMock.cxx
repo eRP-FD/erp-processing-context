@@ -94,3 +94,29 @@ void MedicationExporterDatabaseFrontendProxy::finalizeKvnr(const model::EventKvn
 {
     mDatabase->finalizeKvnr(kvnr, assignedEpaPrefix);
 }
+
+std::optional<std::unique_ptr<model::TRezeptEvent> > MedicationExporterDatabaseFrontendProxy::processNextTRezeptEvent() const
+{
+    return mDatabase->processNextTRezeptEvent();
+}
+
+void MedicationExporterDatabaseFrontendProxy::deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const
+{
+    return mDatabase->deleteTRezeptEvent(eventId);
+}
+
+void MedicationExporterDatabaseFrontendProxy::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                                                    const model::TRezeptEvent& eventData) const
+{
+    mDatabase->updateProcessingDelay(newRetry, delay, eventData);
+}
+
+bool MedicationExporterDatabaseFrontendProxy::isDeadLetter(const model::TRezeptEvent& eventData) const
+{
+    return mDatabase->isDeadLetter(eventData);
+}
+
+int MedicationExporterDatabaseFrontendProxy::markDeadLetter(const model::TRezeptEvent& eventData) const
+{
+    return mDatabase->markDeadLetter(eventData);
+}

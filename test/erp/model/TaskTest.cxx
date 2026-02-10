@@ -71,7 +71,14 @@ TEST_F(TaskTest, ConstructNewTask)
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
     ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode)), "160");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Muster 16 (Apothekenpflichtige Arzneimittel)");
+    if (task.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Muster 16 (Apothekenpflichtige Arzneimittel)");
+    }
+    else
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Flowtype für Apothekenpflichtige Arzneimittel");
+    }
 }
 
 TEST_F(TaskTest, ConstructNewTaskType162)
@@ -84,8 +91,16 @@ TEST_F(TaskTest, ConstructNewTaskType162)
               "Kostenträger");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_performerTypeText)), "Kostenträger");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode)), "162");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)),
-              "Muster 16 (Digitale Gesundheitsanwendungen)");
+    if (task.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)),
+                  "Muster 16 (Digitale Gesundheitsanwendungen)");
+    }
+    else
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)),
+                  "Flowtype für Digitale Gesundheitsanwendungen");
+    }
 }
 
 TEST_F(TaskTest, ConstructNewTaskType169)
@@ -93,7 +108,14 @@ TEST_F(TaskTest, ConstructNewTaskType169)
     model::Task task(model::PrescriptionType::direkteZuweisung, "access_code");
     ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode)), "169");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Muster 16 (Direkte Zuweisung)");
+    if (task.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Muster 16 (Direkte Zuweisung)");
+    }
+    else
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Flowtype zur Workflow-Steuerung durch Leistungserbringer");
+    }
 }
 
 TEST_F(TaskTest, ConstructNewPkvTask)
@@ -101,7 +123,14 @@ TEST_F(TaskTest, ConstructNewPkvTask)
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
     ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode)), "200");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "PKV (Apothekenpflichtige Arzneimittel)");
+    if (task.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "PKV (Apothekenpflichtige Arzneimittel)");
+    }
+    else
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Flowtype für Apothekenpflichtige Arzneimittel (PKV)");
+    }
 }
 
 TEST_F(TaskTest, ConstructNewPkvTaskType209)
@@ -109,7 +138,14 @@ TEST_F(TaskTest, ConstructNewPkvTaskType209)
     model::Task task(model::PrescriptionType::direkteZuweisungPkv, "access_code");
     ASSERT_NO_FATAL_FAILURE(checkCommonTaskFields(task));
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeCode)), "209");
-    ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "PKV (Direkte Zuweisung)");
+    if (task.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "PKV (Direkte Zuweisung)");
+    }
+    else
+    {
+        ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_flowtypeDisplay)), "Flowtype zur Workflow-Steuerung durch Leistungserbringer (PKV)");
+    }
 }
 
 TEST_F(TaskTest, SetId)
@@ -196,7 +232,7 @@ TEST_F(TaskTest, SetUuids)//NOLINT(readability-function-cognitive-complexity)
     auto id = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
     model::Task task(id, model::PrescriptionType::apothekenpflichigeArzneimittel,
                      model::Timestamp::now(), model::Timestamp::now(),
-                     model::Task::Status::completed, model::Timestamp::now());
+                     model::Task::Status::completed, model::Timestamp::now(), false);
     const auto uuid1 = id.deriveUuid(1);
     const auto uuid2 = id.deriveUuid(2);
     const auto uuid3 = id.deriveUuid(3);
@@ -238,7 +274,7 @@ TEST_F(TaskTest, AcceptDate)
 
 TEST_F(TaskTest, AcceptDate28Days)
 {
-    A_19445_11.test("Task.AcceptDate = <Date of QES Creation + 28 days");
+    A_27844.test("Task.AcceptDate = <Date of QES Creation + 28 days");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
@@ -246,12 +282,25 @@ TEST_F(TaskTest, AcceptDate28Days)
     task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
     auto expected = baseDate.get_sys_time() + days{28};
     ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
-    A_19445_11.finish();
+    A_27844.finish();
+}
+
+TEST_F(TaskTest, AcceptDate6DaysType166)
+{
+    A_27846.test("Task.AcceptDate = <Datum der QES.Erstellung im Signaturobjekt> +6 Kalendertage");
+    using namespace date;
+    using namespace date::literals;
+    model::Task task(model::PrescriptionType::tRezept, "access_code");
+    auto baseDate = date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / April / 23});
+    task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    auto expected = baseDate.get_sys_time() + days{6};
+    ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
+    A_27846.finish();
 }
 
 TEST_F(TaskTest, AcceptDate28DaysType169)
 {
-    A_19445_11.test("Task.AcceptDate = <Date of QES Creation + 28 days");
+    A_27847.test("Task.AcceptDate = <Date of QES Creation + 28 days");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::direkteZuweisung, "access_code");
@@ -259,12 +308,12 @@ TEST_F(TaskTest, AcceptDate28DaysType169)
     task.setAcceptDate(model::Timestamp(baseDate.get_sys_time()), model::KbvStatusKennzeichen::asvKennzeichen, 3);
     auto expected = baseDate.get_sys_time() + days{28};
     ASSERT_EQ(task.acceptDate().toChronoTimePoint(), expected);
-    A_19445_11.finish();
+    A_27847.finish();
 }
 
 TEST_F(TaskTest, AcceptDate3Months)
 {
-    A_19445_11.test("Task.AcceptDate = <Date of QES Creation + 3 months");
+    A_27848.test("Task.AcceptDate = <Date of QES Creation + 3 months");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, "access_code");
@@ -273,12 +322,12 @@ TEST_F(TaskTest, AcceptDate3Months)
     auto expected = model::Timestamp(
         date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / November / 30}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
-    A_19445_11.finish();
+    A_27848.finish();
 }
 
 TEST_F(TaskTest, AcceptDate3MonthsType209)
 {
-    A_19445_11.test("Task.AcceptDate = <Date of QES Creation + 3 months");
+    A_27849.test("Task.AcceptDate = <Date of QES Creation + 3 months");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::direkteZuweisungPkv, "access_code");
@@ -287,12 +336,12 @@ TEST_F(TaskTest, AcceptDate3MonthsType209)
     auto expected = model::Timestamp(
         date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / November / 30}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
-    A_19445_11.finish();
+    A_27849.finish();
 }
 
 TEST_F(TaskTest, AcceptDate3MonthsType162)
 {
-    A_19445_11.test("Task.AcceptDate = <Date of QES Creation + 3 months");
+    A_27845.test("Task.AcceptDate = <Date of QES Creation + 3 months");
     using namespace date;
     using namespace date::literals;
     model::Task task(model::PrescriptionType::digitaleGesundheitsanwendungen, "access_code");
@@ -301,7 +350,7 @@ TEST_F(TaskTest, AcceptDate3MonthsType162)
     auto expected = model::Timestamp(
         date::make_zoned(model::Timestamp::GermanTimezone, date::local_days{2021_y / November / 30}).get_sys_time());
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
-    A_19445_11.finish();
+    A_27845.finish();
 }
 
 TEST_F(TaskTest, AcceptDate3WorkDays)

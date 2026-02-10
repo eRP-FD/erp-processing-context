@@ -16,57 +16,55 @@
 using fhirtools::ValidationError;
 using fhirtools::ValidationResults;
 
-std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& err)
+std::string ValidationError::text() const
 {
     struct Printer {
-        void operator()(const FhirConstraint& constraint)
+        std::string operator()(const FhirConstraint& constraint)
         {
-            out << magic_enum::enum_name(constraint.getSeverity()) << ": " << constraint.getKey() << ": "
-                << constraint.getHuman();
+            std::string result{constraint.getKey()};
+            result += ": ";
+            result += constraint.getHuman();
+            return result;
         };
-        void operator()(const std::tuple<Severity, std::string>& message)
+        std::string operator()(const std::tuple<Severity, std::string>& message)
         {
-            out << magic_enum::enum_name(std::get<Severity>(message)) << ": " << std::get<std::string>(message);
+            return std::get<std::string>(message);
         };
-        void operator()(const ValidationError::ExtendedValidationFailure& failure)
+        std::string operator()(const ValidationError::ExtendedValidationFailure& failure)
         {
-            out << magic_enum::enum_name(std::get<Severity>(failure)) << ": ";
             switch (std::get<ExtendedValidation>(failure))
             {
                 case ExtendedValidation::unslicedExtension:
-                    out << "element doesn't belong to any slice.";
-                    return;
+                    return "element doesn't belong to any slice.";
                 case ExtendedValidation::invalidUrnUuidInUri:
-                    out << "value is not a valid lower-case urn:uuid.";
-                    return;
+                    return "value is not a valid lower-case urn:uuid.";
                 case ExtendedValidation::bundleFullUrlMissing:
-                    out << "missing fullUrl for resource";
-                    return;
+                    return "missing fullUrl for resource";
                 case ExtendedValidation::bundleFullUrlIdMissmatch:
-                    out << "ID provided in RESTful fullUrl doesn't match resource ID";
-                    return;
+                    return "ID provided in RESTful fullUrl doesn't match resource ID";
                 case ExtendedValidation::bundleFullUrlResourceTypeMissmatch:
-                    out << "Resource type provided in RESTful fullUrl doesn't match type of resource";
-                    return;
+                    return "Resource type provided in RESTful fullUrl doesn't match type of resource";
                 case ExtendedValidation::bundleFullUrlInvalidFormat:
-                    out << "Invalid format for fullUrl must be FHIR-RESTful or urn:uuid";
-                    return;
+                    return "Invalid format for fullUrl must be FHIR-RESTful or urn:uuid";
                 case ExtendedValidation::bundledResourceMissingId:
-                    out << "Bundled resource has no ID.";
-                    return;
+                    return "Bundled resource has no ID.";
                 case ExtendedValidation::unresolveableReferenceInBundle:
-                    out << "Unresolveable reference in bundle";
-                    return;
+                    return "Unresolveable reference in bundle";
             }
-            out << "unknown ExtendedValidation failure: " << static_cast<uintmax_t>(std::get<ExtendedValidation>(failure));
+            return "unknown ExtendedValidation failure: " +
+                   std::to_string(static_cast<uintmax_t>(std::get<ExtendedValidation>(failure)));
         };
-        std::ostream &out;
     };
+    return std::visit(Printer{}, reason);
+}
+
+std::ostream& fhirtools::operator<<(std::ostream& out, const ValidationError& err)
+{
     if (! err.fieldName.empty())
     {
         out << err.fieldName << ": ";
     }
-    std::visit(Printer{out}, err.reason);
+    out << magic_enum::enum_name(err.severity()) << ": " << err.text();
     return out;
 }
 

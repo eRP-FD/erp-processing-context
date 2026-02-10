@@ -175,6 +175,7 @@ void IdpUpdater::update (void)
 
     try
     {
+        updateSecondaryCertificate();
         try
         {
             auto certificate = getUpToDateCertificate();
@@ -222,6 +223,39 @@ UrlHelper::UrlParts IdpUpdater::downloadAndParseWellknown (void)
     {
         reportUpdateStatus(UpdateStatus::WellknownDownloadFailed, e.what());
         throw ReportedException();
+    }
+}
+
+void IdpUpdater::updateSecondaryCertificate()
+{
+    static bool reportedError = false;
+    auto secondaryCertStr =
+        Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_SECONDARY_CERTIFICATE);
+    std::optional<Certificate> secondaryCert;
+    if (secondaryCertStr.has_value())
+    {
+        auto cert = Certificate::fromPem(secondaryCertStr.value());
+        try
+        {
+            doVerifyCertificate({cert});
+            secondaryCert.emplace(cert);
+        }
+        catch (const std::exception& e)
+        {
+            if (! reportedError)
+            {
+                reportedError = true;
+                LOG(WARNING) << "Validation of secondary IDP certificate failed with " << e.what();
+            }
+        }
+    }
+    if (secondaryCert.has_value())
+    {
+        mCertificateHolder.setSecondaryCertificate(std::move(*secondaryCert));
+    }
+    else
+    {
+        mCertificateHolder.resetSecondaryCertificate();
     }
 }
 
@@ -329,8 +363,6 @@ void IdpUpdater::doVerifyCertificate (const std::vector<Certificate>& certificat
         {OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,
          {std::nullopt, OcspHelper::getOcspGracePeriod(TslMode::TSL)},
          {}});
-
-    Expect(x509.checkValidityPeriod(), "Invalid IDP certificate");
 
     A_20158_01.finish();
 }

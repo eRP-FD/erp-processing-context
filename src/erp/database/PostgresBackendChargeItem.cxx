@@ -135,17 +135,18 @@ void PostgresBackendChargeItem::storeChargeInformation(::pqxx::transaction_base&
         return std::nullopt;
     }();
 
-    const pqxx::result result = transaction.exec_params0(
+    const pqxx::result result = transaction.exec(
         mQueries.storeChargeInformation.query,
-        // clang-format off
-        static_cast<uint32_t>(chargeItem.prescriptionId.type()), chargeItem.prescriptionId.toDatabaseId(), chargeItem.enterer.binarystring(),
-        chargeItem.enteredDate.toXsDateTime(),                   chargeItem.lastModified.toXsDateTime(),   markingFlag,
-        chargeItem.blobId,                                       chargeItem.salt.binarystring(),           chargeItem.accessCode.binarystring(),
-        chargeItem.kvnr.binarystring(),                          hashedKvnr.binarystring(),                value(chargeItem.prescription).binarystring(),
-        value(chargeItem.prescriptionJson).binarystring(),       chargeItem.receiptXml->binarystring(),    value(chargeItem.receiptJson).binarystring(),
-        chargeItem.billingData.binarystring(),                   chargeItem.billingDataJson.binarystring()
-        // clang-format on
-    );
+        pqxx::params{
+            // clang-format off
+            static_cast<uint32_t>(chargeItem.prescriptionId.type()), chargeItem.prescriptionId.toDatabaseId(), chargeItem.enterer.binarystring(),
+            chargeItem.enteredDate.toXsDateTime(),                   chargeItem.lastModified.toXsDateTime(),   markingFlag,
+            chargeItem.blobId,                                       chargeItem.salt.binarystring(),           chargeItem.accessCode.binarystring(),
+            chargeItem.kvnr.binarystring(),                          hashedKvnr.binarystring(),                value(chargeItem.prescription).binarystring(),
+            value(chargeItem.prescriptionJson).binarystring(),       chargeItem.receiptXml->binarystring(),    value(chargeItem.receiptJson).binarystring(),
+            chargeItem.billingData.binarystring(),                   chargeItem.billingDataJson.binarystring()
+            // clang-format on
+        }).no_rows();
 }
 // GEMREQ-end storeChargeInformation
 
@@ -161,11 +162,13 @@ void PostgresBackendChargeItem::updateChargeInformation(::pqxx::transaction_base
     const auto markingFlags =
         chargeItem.markingFlags ? ::std::make_optional(chargeItem.markingFlags->binarystring()) : ::std::nullopt;
 
-    transaction.exec_params0(mQueries.updateChargeInformation.query,
-                             static_cast<uint32_t>(chargeItem.prescriptionId.type()),
-                             chargeItem.prescriptionId.toDatabaseId(), markingFlags,
-                             chargeItem.billingData.binarystring(), chargeItem.billingDataJson.binarystring(),
-                             chargeItem.accessCode.binarystring());
+    transaction
+        .exec(mQueries.updateChargeInformation.query,
+              pqxx::params{static_cast<uint32_t>(chargeItem.prescriptionId.type()),
+                           chargeItem.prescriptionId.toDatabaseId(), markingFlags,
+                           chargeItem.billingData.binarystring(), chargeItem.billingDataJson.binarystring(),
+                           chargeItem.accessCode.binarystring()})
+        .no_rows();
 }
 // GEMREQ-end updateChargeInformation
 
@@ -178,8 +181,9 @@ void PostgresBackendChargeItem::deleteChargeInformation(::pqxx::transaction_base
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "deletechargeinformation");
 
-    transaction.exec_params0(mQueries.deleteChargeInformation.query, static_cast<uint32_t>(id.type()),
-                             id.toDatabaseId());
+    transaction
+        .exec(mQueries.deleteChargeInformation.query, pqxx::params{static_cast<uint32_t>(id.type()), id.toDatabaseId()})
+        .no_rows();
 }
 // GEMREQ-end A_22117-01#query-call
 
@@ -192,7 +196,7 @@ void PostgresBackendChargeItem::clearAllChargeInformation(::pqxx::transaction_ba
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "clearallchargeinformation");
 
-    transaction.exec_params0(mQueries.clearAllChargeInformation.query, kvnr.binarystring());
+    transaction.exec(mQueries.clearAllChargeInformation.query, pqxx::params{kvnr.binarystring()}).no_rows();
 }
 // GEMREQ-end A_22157#query-call
 
@@ -228,7 +232,7 @@ PostgresBackendChargeItem::retrieveAllChargeItemsForInsurant(::pqxx::transaction
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "retrieveallchargeitems");
 
-    const auto dbResult = transaction.exec_params(query, kvnr.binarystring());
+    const auto dbResult = transaction.exec(query, pqxx::params{kvnr.binarystring()});
 
     TVLOG(2) << "got " << dbResult.size() << " results";
     ::std::vector<::db_model::ChargeItem> result;
@@ -260,8 +264,8 @@ uint64_t PostgresBackendChargeItem::countChargeInformationForInsurant(pqxx::tran
     const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                           "retrievechargeinformation");
 
-    const auto dbResult =
-        transaction.exec_params(query, static_cast<int16_t>(::magic_enum::enum_integer(id.type())), id.toDatabaseId());
+    const auto dbResult = transaction.exec(
+        query, pqxx::params{static_cast<int16_t>(::magic_enum::enum_integer(id.type())), id.toDatabaseId()});
 
     TVLOG(2) << "got " << dbResult.size() << " results";
     ErpExpectWithDiagnostics(dbResult.size() == 1, ::HttpStatus::NotFound, "no such charge item", id.toString());

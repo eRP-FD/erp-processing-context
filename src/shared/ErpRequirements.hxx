@@ -32,7 +32,7 @@ static constexpr Requirement A_19022_01 ("E-Rezept-Fachdienst - Rollenpruefung V
 static constexpr Requirement A_19026_01 ("E-Rezept-Fachdienst - Rollenpruefung Nutzer loescht Rezept");
 static constexpr Requirement A_19113_02 ("E-Rezept-Fachdienst - Task abrufen - Rollenprüfung");
 static constexpr Requirement A_21558_01 ("E-Rezept-Fachdienst - Rollenprüfung Versicherter liest Rezepte");
-static constexpr Requirement A_19166_01 ("E-Rezept-Fachdienst - Task akzeptieren - Flowtype 160,169,200,209 - Rollenprüfung");
+static constexpr Requirement A_19166_02 ("E-Rezept-Fachdienst - Task akzeptieren - Flowtype 160/166/169/200/209 - Rollenprüfung");
 static constexpr Requirement A_25993    ("E-Rezept-Fachdienst - Task akzeptieren - Flowtype 162 - Rollenprüfung");
 static constexpr Requirement A_19170_02 ("E-Rezept-Fachdienst - Rollenprüfung Abgebender weist zurück");
 static constexpr Requirement A_19230_01 ("E-Rezept-Fachdienst - Rollenpruefung Abgebender vollzieht Abgabe des Rezepts");
@@ -68,17 +68,17 @@ static constexpr Requirement A_20229_01 ("E-Rezept-Fachdienst - Nachricht einste
 static constexpr Requirement A_20230_01 ("E-Rezept-Fachdienst - Nachricht einstellen - Einlösbare E-Rezepte für Versicherter-zu-Versichertem-Kommunikation");
 static constexpr Requirement A_20231    ("E-Rezept-Fachdienst - Ausschluss Nachrichten an Empfänger gleich Absender");
 static constexpr Requirement A_20258    ("E-Rezept-Fachdienst - Communication löschen auf Basis Absender-ID");
-static constexpr Requirement A_20259    ("E-Rezept-Fachdienst - Communication löschen mit Warnung wenn vom Empfänger bereits abgerufen");
 static constexpr Requirement A_20260    (R"(Anwendungsfall "Nachricht durch Versicherten löschen")");
 static constexpr Requirement A_20776    (R"(Anwendungsfall "Nachricht durch Abgebenden löschen")");
 static constexpr Requirement A_20885_03 ("E-Rezept-Fachdienst - Nachricht einstellen - Versicherte - Prüfung Versichertenbezug und Berechtigung");
-static constexpr Requirement A_22731    ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Flowtype Task");
+static constexpr Requirement A_22731_01 ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Coverage PKV");
 static constexpr Requirement A_22734    ("E-Rezept-Fachdienst - Nachricht einstellen - Prüfung Existenz ChargeItem");
-static constexpr Requirement A_23878    ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_DispReq");
+static constexpr Requirement A_23878_01 ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_DispReq");
 static constexpr Requirement A_23879    ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_Reply");
 static constexpr Requirement A_26320    ("E-Rezept-Fachdienst - Nachricht einstellen - Dispense Request - Prüfung Status Task");
 static constexpr Requirement A_26321    ("E-Rezept-Fachdienst - Nachricht einstellen - Dispense Request - Prüfung Ende Gültigkeit Task");
 static constexpr Requirement A_26327    ("E-Rezept-Fachdienst - Nachricht einstellen - Dispense Request - Prüfung Beginn Gültigkeit Task");
+static constexpr Requirement A_27767_01 ("E-Rezept-Fachdienst - Nachricht einstellen - Prüfung des Empfängers");
 
 // Requirements for "Claims der Identitätsbestätigung"
 static constexpr Requirement A_19130    ("E-Rezept-Fachdienst - Authentifizierung erforderlich LEI-Endpunkt");
@@ -102,6 +102,15 @@ static constexpr Requirement A_19217_01 ("Aufbau E-Rezept-ID");
 static constexpr Requirement A_19218    ("Prüfung E-Rezept-ID");
 static constexpr Requirement A_19019_01 ("E-Rezept-Fachdienst - Task erzeugen - Generierung Rezept-ID");
 
+// 6.5 Daten- und Informationsmodell
+static constexpr Requirement A_19445_11 ("FHIR FLOWTYPE für Prozessparameter");
+static constexpr Requirement A_27844 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 160");
+static constexpr Requirement A_27845 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 162");
+static constexpr Requirement A_27846 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 166");
+static constexpr Requirement A_27847 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 169");
+static constexpr Requirement A_27848 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 200");
+static constexpr Requirement A_27849 ("FHIR FLOWTYPE für Prozessparameter - Flowtype 209");
+
 // Requirements for endpoints GET /Task and GET /Task/{id}
 static constexpr Requirement A_19115_01 ("E-Rezept-Fachdienst - Task abrufen - Filter Tasks auf KVNR des Versicherten");
 static constexpr Requirement A_19116_01 ("E-Rezept-Fachdienst - Task abrufen - Prüfung AccessCode bei KVNR-Missmatch");
@@ -119,11 +128,11 @@ static constexpr Requirement A_24177    ("E-Rezept-Fachdienst - Task abrufen - A
 static constexpr Requirement A_24178    ("E-Rezept-Fachdienst - Task abrufen - Apotheke - Verordnung abrufen - Prüfung Status in-progress");
 static constexpr Requirement A_24179    ("E-Rezept-Fachdienst - Task abrufen - Apotheke - Verordnung abrufen - erneuter Abruf Verordnung");
 
+
 // Requirements for endpoint POST /Task/$create
 static constexpr Requirement A_19021_02 ("E-Rezept-Fachdienst - Task erzeugen - Generierung AccessCode");
 static constexpr Requirement A_19112    ("E-Rezept-Fachdienst - Parametrierung Task fuer Workflow-Typ");
 static constexpr Requirement A_19214    ("E-Rezept-Fachdienst - Ergaenzung Performer-Typ fuer Einloeseinstitutstyp");
-static constexpr Requirement A_19445_11 ("FHIR FLOWTYPE für Prozessparameter");
 static constexpr Requirement A_19114    ("E-Rezept-Fachdienst - Status draft");
 static constexpr Requirement A_19257_01 ("E-Rezept-Fachdienst - Task erzeugen - Schemavalidierung Rezept anlegen");
 
@@ -136,11 +145,12 @@ static constexpr Requirement A_19029_06 ("E-Rezept-Fachdienst - Task aktivieren 
 static constexpr Requirement A_19127_02 ("E-Rezept-Fachdienst - Task aktivieren - Übernahme der KVNR des Patienten");
 static constexpr Requirement A_19225_02 ("E-Rezept-Fachdienst - Task aktivieren - Flowtype 160/169/200/209 - QES durch berechtigte Berufsgruppe");
 static constexpr Requirement A_25990    ("E-Rezept-Fachdienst - Task aktivieren - Flowtype 162 - QES durch berechtigte Berufsgruppe");
+static constexpr Requirement A_27812    ("E-Rezept-Fachdienst - Task aktivieren - Flowtype 166 - QES durch berechtigte Berufsgruppe");
 static constexpr Requirement A_19999    ("E-Rezept-Fachdienst - Ergaenzung PerformerTyp fuer Einloeseinstitutstyp");
 static constexpr Requirement A_20159_04 ("E-Rezept-Fachdienst - QES Pruefung Signaturzertifikat des HBA");
-static constexpr Requirement A_19517_02 ("FHIR FLOWTYPE für Prozessparameter - Abweichende Festlegung für Entlassrezept");
-static constexpr Requirement A_22222    ("E-Rezept-Fachdienst - Ausschluss weitere Kostenträger");
-static constexpr Requirement A_22231    ("E-Rezept-Fachdienst - Ausschluss Betäubungsmittel und Thalidomid");
+static constexpr Requirement A_19517_04 ("FHIR FLOWTYPE für Prozessparameter - Abweichende Festlegung für Entlassrezept");
+static constexpr Requirement A_22231_01 ("E-Rezept-Fachdienst - Task aktivieren - Ausschluss Betäubungsmittel");
+static constexpr Requirement A_25642    ("E-Rezept-Fachdienst - Task aktivieren - Flowtype 160/169/200/209 - Prüfung Arzneimittelverordnung");
 static constexpr Requirement A_22487    ("E-Rezept-Fachdienst - Task aktivieren - Prüfregel Ausstellungsdatum");
 static constexpr Requirement A_22627_01 ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - zulässige Flowtype");
 static constexpr Requirement A_22628    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Numerator-Denominator kleiner 5");
@@ -153,6 +163,7 @@ static constexpr Requirement A_22633    ("E-Rezept-Fachdienst - Task aktivieren 
 static constexpr Requirement A_22634    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Beginn Einlösefrist-Pflicht");
 static constexpr Requirement A_23164    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Endedatum nicht vor Startdatum");
 static constexpr Requirement A_23537    ("E-Rezept-Fachdienst - Task aktivieren - Mehrfachverordnung - Startdatum nicht vor Ausstellungsdatum");
+static constexpr Requirement A_27813    ("E-Rezept-Fachdienst - Task aktivieren - Flowtype 166 - Prüfung Arzneimittelverordnung");
 // Either A_22927_01 or A_22927_02 is active depending on rejectUnslicedExtensionsFrom parameter
 static constexpr Requirement A_22927_01 ("E-Rezept-Fachdienst - Task aktivieren - Ausschluss unspezifizierter Extensions");
 static constexpr Requirement A_22927_02 ("E-Rezept-Fachdienst - FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
@@ -185,7 +196,7 @@ static constexpr Requirement A_22635_02 ("E-Rezept-Fachdienst - Task akzeptieren
 static constexpr Requirement A_23539_01 ("E-Rezept-Fachdienst - Task akzeptieren - Ende Einlösefrist prüfen");
 static constexpr Requirement A_24174    ("E-Rezept-Fachdienst - Task akzeptieren - Telematik-ID der abgebenden LEI speichern");
 // PKV related:
-static constexpr Requirement A_22110    ("E-Rezept-Fachdienst – Task akzeptieren – Flowtype 200 - Einwilligung ermitteln");
+static constexpr Requirement A_22110_01 ("E-Rezept-Fachdienst – Task akzeptieren – Coverage PKV - Einwilligung Abrechnungsinformation ermitteln");
 
 // Requirements for endpoint POST /Task/$dispense
 static constexpr Requirement A_24280    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Prüfung Secret");
@@ -201,10 +212,10 @@ static constexpr Requirement A_19232    ("E-Rezept-Fachdienst - Status beenden")
 static constexpr Requirement A_19233_05 ("E-Rezept-Fachdienst - Task schliessen - Quittung erstellen");
 static constexpr Requirement A_22069_01 ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
 static constexpr Requirement A_22070_03 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
-static constexpr Requirement A_23384_03 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
+static constexpr Requirement A_23384_05 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
 static constexpr Requirement A_24287    ("E-Rezept-Fachdienst - Task schließen - Aufruf ohne MedicationDispense");
 static constexpr Requirement A_26337    ("E-Rezept-Fachdienst - Task schließen - Zeitstempel MedicationDispense");
-static constexpr Requirement A_26002    ("E-Rezept-Fachdienst - Task schließen - Flowtype 160/169/200/209 - Profilprüfung MedicationDispense");
+static constexpr Requirement A_26002_02 ("E-Rezept-Fachdienst - Task schließen - Flowtype 160/166/169/200/209 - Profilprüfung MedicationDispense");
 static constexpr Requirement A_26003    ("E-Rezept-Fachdienst - Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
 static constexpr Requirement A_22073_01 ("E-Rezept-Fachdienst - Task schliessen - Datum MedicationDispense whenHandedOver");
 
@@ -431,5 +442,8 @@ static constexpr Requirement A_27075("E-Rezept-Fachdienst - Task schließen - EU
 static constexpr Requirement A_27332_01("Pseudonymisieren der gematik-Logdaten");
 static constexpr Requirement A_27392_01("Import eines Pseudonymisierungsschlüssels (Anomalie-Erkennung)");
 static constexpr Requirement A_27560("E-Rezept-Fachdienst - Pseudonymisieren der gematik-Logdaten - Geheimer Schlüssel für nur in VAU");
+
+static constexpr Requirement A_28427("E-Rezept-Fachdienst - Verarbeitung von Datensätzen - Forcieren von UTF-8 ohne BOM");
+static constexpr Requirement A_28428("E-Rezept-Fachdienst - Verarbeitung von Datensätzen - Deserialisierung von PKCS#7 Enveloping-Daten");
 
 #endif

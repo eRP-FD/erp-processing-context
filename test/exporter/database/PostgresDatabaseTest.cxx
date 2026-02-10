@@ -24,6 +24,101 @@ std::shared_ptr<Compression> compressionInstance()
     return theCompressionInstance;
 }
 
+std::string PostgresDatabaseTest::getTRezeptEventState()
+{
+    auto&& txn = createTransaction();
+    auto results = txn.exec("SELECT state FROM erp_event.trezept_event");
+    txn.commit();
+
+    EXPECT_EQ(results.size(), 1);
+
+    return results.at(0, 0).c_str();
+
+}
+
+std::int32_t PostgresDatabaseTest::getTRezeptEventRetryCount()
+{
+    auto&& txn = createTransaction();
+    auto results = txn.exec("SELECT retry_count FROM erp_event.trezept_event");
+    txn.commit();
+
+    EXPECT_EQ(results.size(), 1);
+
+    return static_cast<std::int32_t>(strtol(results.at(0, 0).c_str(), nullptr, 10));
+}
+
+model::TaskEvent::id_t PostgresDatabaseTest::insertTRezeptEvent(const model::Kvnr& kvnr, std::string_view prescription_id,
+                                   model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
+                                   std::optional<std::string> healthcareProviderPrescription,
+                                   std::optional<std::string> medicationDispense,
+                                   std::optional<std::string> doctorIdentity,
+                                   std::optional<std::string> pharmacyIdentity,
+                                   int retryCount /* = 0 */)
+{
+    auto kvnr_hashed = kvnrHashed(kvnr);
+
+    model::PrescriptionId prescriptionId = model::PrescriptionId::fromString(prescription_id);
+
+    model::Timestamp authoredOn = model::Timestamp::now();
+
+    auto [key, derivationData] = mKeyDerivation->initialTaskKey(prescriptionId, authoredOn);
+    db_model::Blob salt{derivationData.salt};
+
+    auto encrypedKvnr = mCodec.encode(kvnr.id(), key, Compression::DictionaryUse::Default_json);
+
+    auto [keyMedicationDispense, derivationDataMedicationDispense] =
+        mKeyDerivation->initialMedicationDispenseKey(mKeyDerivation->hashKvnr(kvnr));
+
+    std::optional<db_model::postgres_bytea> optHealthcareProviderPrescription;
+    if (healthcareProviderPrescription)
+    {
+        const fhirtools::DefinitionKey binaryProfile{std::string{model::resource::structure_definition::binary},
+                                                     ResourceTemplates::Versions::GEM_ERP_1_3};
+        optHealthcareProviderPrescription =
+            createEncryptedBlobFromXml(*healthcareProviderPrescription, binaryProfile, key);
+    }
+    std::optional<db_model::postgres_bytea> optMedicationDispense;
+    std::optional<std::string> optBlobIdMedicationDispense;
+    std::optional<db_model::postgres_bytea> optSaltMedicationDispense;
+    if(medicationDispense)
+    {
+        optMedicationDispense =
+            mCodec.encode(*medicationDispense, keyMedicationDispense, Compression::DictionaryUse::Default_json)
+                .binarystring();
+        optBlobIdMedicationDispense = std::to_string(derivationDataMedicationDispense.blobId);
+        optSaltMedicationDispense = db_model::Blob{derivationDataMedicationDispense.salt}.binarystring();
+    }
+    std::optional<db_model::postgres_bytea> optDoctorIdentity;
+    if (doctorIdentity)
+    {
+        optDoctorIdentity =
+            mCodec.encode(*doctorIdentity, key, Compression::DictionaryUse::Default_json).binarystring();
+    }
+    std::optional<db_model::postgres_bytea> optPharmacyIdentity;
+    if (pharmacyIdentity)
+    {
+        optPharmacyIdentity =
+            mCodec.encode(*pharmacyIdentity, key, Compression::DictionaryUse::Default_json).binarystring();
+    }
+    auto id = gsl::narrow<model::TaskEvent::id_t>(++mEventIdCounter);
+    auto&& txn = createTransaction();
+    txn.exec("INSERT INTO erp_event.trezept_event "
+             "(id, prescription_type, prescription_id, kvnr, kvnr_hashed, status, usecase, state, salt, "
+             "task_key_blob_id, "
+             " healthcare_provider_prescription, medication_dispense_blob_id, medication_dispense_salt, "
+             "medication_dispense_bundle, doctor_identity, pharmacy_identity, retry_count)"
+             " VALUES "
+             "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)",
+             pqxx::params{id, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
+                          prescriptionId.toDatabaseId(), encrypedKvnr.binarystring(), kvnr_hashed, 1,
+                          magic_enum::enum_name(usecase), magic_enum::enum_name(state), salt.binarystring(),
+                          std::to_string(derivationData.blobId), optHealthcareProviderPrescription,
+                          optBlobIdMedicationDispense, optSaltMedicationDispense, optMedicationDispense,
+                          optDoctorIdentity, optPharmacyIdentity, retryCount});
+    txn.commit();
+    return id;
+}
+
 PostgresDatabaseTest::PostgresDatabaseTest()
     : mDatabase(nullptr)
     , mConnection(nullptr)
@@ -51,7 +146,7 @@ PostgresDatabaseTest::PostgresDatabaseTest()
 bool PostgresDatabaseTest::eventExists(model::TaskEvent::id_t id)
 {
     auto txn{createTransaction()};
-    return txn.exec_params("SELECT count(*) FROM erp_event.task_event where id = $1 LIMIT 1", id)
+    return txn.exec("SELECT count(*) FROM erp_event.task_event where id = $1 LIMIT 1", pqxx::params{id})
                .one_field()
                .as<int>() > 0;
 }
@@ -218,8 +313,7 @@ TEST_F(PostgresDatabaseTest, delayProcessing)//NOLINT(readability-function-cogni
     std::map<db_model::postgres_bytea, StateAndNextExport> before_eventKvnrs;
     {
         auto transaction = pqxx::work{getConnection()};
-        auto r =
-            transaction.exec_params("SELECT kvnr_hashed, state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr ");
+        auto r = transaction.exec("SELECT kvnr_hashed, state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr");
         before_eventKvnrs.try_emplace(
             r.at(0, 0).as<db_model::postgres_bytea>(),
             magic_enum::enum_cast<model::EventKvnr::State>(r.at(0, 1).as<std::string>()).value(),
@@ -237,8 +331,7 @@ TEST_F(PostgresDatabaseTest, delayProcessing)//NOLINT(readability-function-cogni
     std::map<db_model::postgres_bytea, StateAndNextExport> after_eventKvnrs;
     {
         auto transaction = pqxx::work{getConnection()};
-        auto r =
-            transaction.exec_params("SELECT kvnr_hashed, state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr ");
+        auto r = transaction.exec("SELECT kvnr_hashed, state, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr");
         after_eventKvnrs.try_emplace(
             r.at(0, 0).as<db_model::postgres_bytea>(),
             magic_enum::enum_cast<model::EventKvnr::State>(r.at(0, 1).as<std::string>()).value(),
@@ -363,7 +456,7 @@ TEST_F(PostgresDatabaseTest, isDeadletter_yes)//NOLINT(readability-function-cogn
                     mDoctorIdentity, std::nullopt);
 
     auto transaction = createTransaction();
-    const auto results = transaction.exec_params("SELECT prescription_id, prescription_type FROM erp_event.task_event");
+    const auto results = transaction.exec("SELECT prescription_id, prescription_type FROM erp_event.task_event");
     ASSERT_EQ(results.size(), 1);
     transaction.commit();
     auto prescription_id = results[0].at(0).as<std::int64_t>();
@@ -399,11 +492,11 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
     mDatabase.reset();
     {
         auto transaction = createTransaction();
-        const auto results =
-            transaction.exec_params("SELECT state FROM erp_event.task_event WHERE prescription_id = "
-                                    "$1 AND prescription_type = $2 ORDER BY last_modified ASC",
-                                    prescriptionId.toDatabaseId(),
-                                    gsl::narrow_cast<std::int16_t>(magic_enum::enum_integer(prescriptionId.type())));
+        const auto results = transaction.exec(
+            "SELECT state FROM erp_event.task_event WHERE prescription_id = "
+            "$1 AND prescription_type = $2 ORDER BY last_modified ASC",
+            pqxx::params{prescriptionId.toDatabaseId(),
+                         gsl::narrow_cast<std::int16_t>(magic_enum::enum_integer(prescriptionId.type()))});
         ASSERT_EQ(results.size(), 2);
         EXPECT_EQ("pending", results[0].at(0).as<std::string>());
         EXPECT_EQ("deadLetterQueue", results[1].at(0).as<std::string>());
@@ -418,8 +511,7 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
 
     {
         auto transaction = createTransaction();
-        const auto results =
-            transaction.exec_params("SELECT state FROM erp_event.task_event ORDER BY last_modified ASC");
+        const auto results = transaction.exec("SELECT state FROM erp_event.task_event ORDER BY last_modified ASC");
         ASSERT_EQ(results.size(), 2);
         EXPECT_EQ("deadLetterQueue", results[0].at(0).as<std::string>());
         EXPECT_EQ("deadLetterQueue", results[1].at(0).as<std::string>());

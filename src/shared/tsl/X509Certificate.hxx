@@ -24,8 +24,6 @@
 typedef struct x509_st X509;
 typedef struct evp_pkey_st EVP_PKEY;
 
-class EllipticCurvePublicKey;
-
 
 /**
  * Possible values for key usage extension.
@@ -194,13 +192,6 @@ public:
      * must not be freed up after use.
      */
     EVP_PKEY* getPublicKey () const;
-
-    /**
-     * Returns an unique pointer to the elliptic curve public key of the X509 certificate.
-     *
-     * Throws if the signing algorithm is not ellipticCurve.
-     */
-    std::unique_ptr<EllipticCurvePublicKey> getEllipticCurvePublicKey() const;
 
     /**
      * Returns a tuple of:

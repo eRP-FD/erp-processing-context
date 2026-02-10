@@ -18,16 +18,9 @@
 class IdpTest : public testing::Test
 {
 public:
-    void verifyKeyPair (const shared_EVP_PKEY& publicKey, const shared_EVP_PKEY& privateKey, const std::string& dataToSign)
+    void verifyKeyPair(const shared_EVP_PKEY& publicKey, const shared_EVP_PKEY& privateKey)
     {
-        const auto* privateEcKey = EVP_PKEY_get0_EC_KEY(privateKey);
-        ECDSA_SIG* signature = ECDSA_do_sign(reinterpret_cast<const unsigned char*>(dataToSign.data()), gsl::narrow_cast<int>(dataToSign.size()), const_cast<EC_KEY*>(privateEcKey));
-
-        const auto* publicEcKey = EVP_PKEY_get0_EC_KEY(publicKey);
-        const int status = ECDSA_do_verify(reinterpret_cast<const unsigned char*>(dataToSign.data()), gsl::narrow_cast<int>(dataToSign.size()), signature, const_cast<EC_KEY*>(publicEcKey));
-        ASSERT_EQ(status, 1);
-
-        ECDSA_SIG_free(signature);
+        ASSERT_EQ(EVP_PKEY_eq(privateKey, publicKey), 1);
     }
 };
 
@@ -46,8 +39,7 @@ TEST_F(IdpTest, setCertificate)//NOLINT(readability-function-cognitive-complexit
 }
 
 
-// TODO: reenable once the workaround for ERP-5548 is no longer needed.
-TEST_F(IdpTest, DISABLED_resetCertificate)//NOLINT(readability-function-cognitive-complexity)
+TEST_F(IdpTest, resetCertificate)
 {
     Idp idp;
     idp.setCertificate(Certificate::createSelfSignedCertificateMock(MockCryptography::getEciesPrivateKey()));
@@ -67,9 +59,7 @@ TEST_F(IdpTest, mockIdpKeyPair)
 {
     const auto privateKey = MockCryptography::getIdpPrivateKey();
     const auto publicKey = MockCryptography::getIdpPublicKey();
-
-    const std::string dataToSign = "data to sign";
-    verifyKeyPair(publicKey, privateKey, dataToSign);
+    verifyKeyPair(publicKey, privateKey);
 }
 
 
@@ -79,8 +69,7 @@ TEST_F(IdpTest, mockEciesKeyPair)
     const auto privateKey = MockCryptography::getEciesPrivateKey();
     const auto publicKey = MockCryptography::getEciesPublicKey();
 
-    const std::string dataToSign = "data to sign";
-    verifyKeyPair(publicKey, privateKey, dataToSign);
+    verifyKeyPair(publicKey, privateKey);
 }
 
 TEST_F(IdpTest, ephemeralKeyPair)
@@ -88,7 +77,21 @@ TEST_F(IdpTest, ephemeralKeyPair)
     const auto privateKey = EllipticCurve::BrainpoolP256R1->createKeyPair();
     const auto publicKey = EllipticCurveUtils::pemToPublicKey(SafeString(EllipticCurveUtils::publicKeyToPem(privateKey)));
 
-    const std::string dataToSign = "data to sign";
+    verifyKeyPair(publicKey, privateKey);
+}
 
-    verifyKeyPair(publicKey, privateKey, dataToSign);
+
+TEST_F(IdpTest, setSecondaryCertificate)
+{
+    Idp idp;
+
+    // Initially the secondary certificate is not set.
+    ASSERT_FALSE(idp.getSecondaryCertificate().has_value());
+
+    // Set an arbitrary certificate.
+    idp.setSecondaryCertificate(Certificate::createSelfSignedCertificateMock(MockCryptography::getEciesPrivateKey()));
+
+    ASSERT_TRUE(idp.getSecondaryCertificate().has_value());
+    idp.resetSecondaryCertificate();
+    ASSERT_FALSE(idp.getSecondaryCertificate().has_value());
 }

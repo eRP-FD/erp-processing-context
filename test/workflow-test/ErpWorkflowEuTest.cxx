@@ -321,8 +321,6 @@ public:
     ErpWorkflowTestBase testBase;
 
     model::Kvnr kvnr = testBase.generateNewRandomKVNR();
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     model::EuAccessCode accessCode{SafeString{"aaaaaa"}};
 };
 
@@ -558,12 +556,14 @@ TEST_P(ErpWorkflowEuTestP, EuAccessPermissionRemovedOnDeleteConsent)
     ASSERT_FALSE(euAccessPermission.has_value());
 }
 
+// Consent is independet from workflow type:
 INSTANTIATE_TEST_SUITE_P(
     Workflow_featureToggle_expectedSuccess, ErpWorkflowEuTestP,
     testing::Values(ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichigeArzneimittel, false, false},
                     ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichigeArzneimittel, true, true},
                     ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, false, false},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true}));
+                    ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true},
+                    ErpWorkflowEuTestParams{model::PrescriptionType::tRezept, true, true}));
 
 class ErpWorkflowEuTestPatchTaskP : public ErpWorkflowEuTestP
 {
@@ -571,6 +571,11 @@ class ErpWorkflowEuTestPatchTaskP : public ErpWorkflowEuTestP
 
 TEST_P(ErpWorkflowEuTestPatchTaskP, PatchTask)
 {
+    if (isTRezept(GetParam().workflowType) &&
+        ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+    {
+        GTEST_SKIP() << "KBV_ERP_1_4_0 is required for this test";
+    }
     const auto startTime = model::Timestamp::now();
     testPostConsent();
     auto accessPermissionResonse = postEuAccessPermission({"FR", accessCode.toString().c_str()}, HttpStatus::Created);
@@ -622,7 +627,8 @@ INSTANTIATE_TEST_SUITE_P(
                     ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true},
                     ErpWorkflowEuTestParams{model::PrescriptionType::digitaleGesundheitsanwendungen, true, false},
                     ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisung, true, false},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisungPkv, true, false}));
+                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisungPkv, true, false},
+                    ErpWorkflowEuTestParams{model::PrescriptionType::tRezept, true, false}));
 
 
 class ErpWorkflowEuTestGetPrescriptionsP : public ErpWorkflowEuTestP
@@ -630,6 +636,11 @@ class ErpWorkflowEuTestGetPrescriptionsP : public ErpWorkflowEuTestP
 public:
     void SetUp() override
     {
+        if (isTRezept(GetParam().workflowType) &&
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        {
+            GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
+        }
         ErpWorkflowEuTestP::SetUp();
         testPostConsent();
         auto accessPermissionResonse =
@@ -823,13 +834,19 @@ INSTANTIATE_TEST_SUITE_P(
                     ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true},
                     ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisung, true, false},
                     ErpWorkflowEuTestParams{model::PrescriptionType::digitaleGesundheitsanwendungen, true, false},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisungPkv, true, false}));
+                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisungPkv, true, false},
+                    ErpWorkflowEuTestParams{model::PrescriptionType::tRezept, true, false}));
 
 class ErpWorkflowEuTestCloseTaskP : public ErpWorkflowEuTestGetPrescriptionsP
 {
 public:
     void SetUp() override
     {
+        if (isTRezept(GetParam().workflowType) &&
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        {
+            GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
+        }
         ErpWorkflowEuTestGetPrescriptionsP::SetUp();
         retrieveTasks();
     }
@@ -1125,10 +1142,19 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTasks_multipleDispensations)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    CloseTask_featureToggle_expectedSuccess, ErpWorkflowEuTestCloseTaskP,
-    testing::Values(ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichigeArzneimittel, true, true},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true, true},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisung, true, false},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::digitaleGesundheitsanwendungen, true, false},
-                    ErpWorkflowEuTestParams{model::PrescriptionType::direkteZuweisungPkv, true, false}));
+static std::vector<ErpWorkflowEuTestParams> makeParams()
+{
+    std::vector<ErpWorkflowEuTestParams> params;
+    for (auto euPrescriptionType : testutils::euPrescriptionTypes())
+    {
+        params.emplace_back(euPrescriptionType, true, true);
+    }
+    for (auto nonEuPrescriptionType : testutils::nonEuPrescriptionTypes())
+    {
+        params.emplace_back(nonEuPrescriptionType, true, false);
+    }
+    return params;
+}
+
+INSTANTIATE_TEST_SUITE_P(CloseTask_featureToggle_expectedSuccess, ErpWorkflowEuTestCloseTaskP,
+                         testing::ValuesIn(makeParams()));

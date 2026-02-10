@@ -48,6 +48,7 @@ const EVP_CIPHER* encryptionCipher()
 
 }// namespace
 
+// GEMREQ-start A_27332
 template<std::size_t KeyLengthBits>
 std::string AesCbc<KeyLengthBits>::encrypt(std::string_view plaintext, const SafeString& key, std::string_view iv)
 {
@@ -92,6 +93,7 @@ std::string AesCbc<KeyLengthBits>::encrypt(std::string_view plaintext, const Saf
 
     return cipherText;
 }
+// GEMREQ-end A_27332
 
 template<std::size_t KeyLengthBits>
 SafeString AesCbc<KeyLengthBits>::decrypt(std::string_view ciphertext, const SafeString& key, std::string_view iv)

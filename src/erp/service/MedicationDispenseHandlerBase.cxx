@@ -168,25 +168,11 @@ model::MedicationsAndDispenses MedicationDispenseHandlerBase::medicationDispense
     model::MedicationsAndDispenses result;
     if (isDiga(workflow))
     {
-        auto medicationDispenses = validatedParameters.medicationDispensesDiga();
-        for (auto&& medicationDispense : medicationDispenses)
-        {
-            result.medicationDispenses.emplace_back(std::move(medicationDispense));
-        }
+        result.addFromDigaParameters(validatedParameters);
     }
     else
     {
-        auto medicationDispensePairs = validatedParameters.medicationDispenses();
-        for (auto&& [medicationDispense, medication]: medicationDispensePairs)
-        {
-            A_26527.start("Assign new IDs to ensure uniqueness in GET /MedicationDispense");
-            const Uuid newId{};
-            medicationDispense.setMedicationReference(newId.toUrn());
-            medication.setId(newId.toString());
-            A_26527.finish();
-            result.medicationDispenses.emplace_back(std::move(medicationDispense));
-            result.medications.emplace_back(std::move(medication));
-        }
+        result.addFromParameters(validatedParameters);
     }
     return result;
 }

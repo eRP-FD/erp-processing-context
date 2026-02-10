@@ -171,7 +171,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     add_link_options(-NODEFAULTLIB:libboost_regex-vc142-mt-gd-x64-1_74.lib)
 else()
     add_compile_options(-Wall) # This may require an additional -g3 to activate debug symbols for boost::beast
-    add_compile_options(-Wextra -Wpedantic -Wconversion -Wno-deprecated-declarations)
+    add_compile_options(-Wextra -Wpedantic -Wconversion)
     # disable -Wrestict for gcc, see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105651
     if(CMAKE_BUILD_TYPE MATCHES Release)
         add_compile_options($<$<CXX_COMPILER_ID:GNU>:-Wno-restrict> $<$<CXX_COMPILER_ID:GNU>:-Wno-stringop-overread>)

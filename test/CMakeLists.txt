@@ -126,7 +126,7 @@ set(ERP_TEST_CASES_LIB_SOURCES_1
         erp/enrolment/DerivationKeyUpdateTest.cxx
         workflow-test/A_21370_CheckPrescriptionIdOnActivate.cxx
         workflow-test/Mehrfachverordnung.cxx
-        workflow-test/A_22231_BetaebungsmittelAblehnen.cxx
+        workflow-test/A_22231_A_27813_BtmThalidomidTest.cxx
         workflow-test/A_22487_AuthoredOnEqualsQesSigningDate.cxx
         workflow-test/BdeV2Test.cxx
 )
@@ -274,8 +274,9 @@ list(
         erp/enrolment/EnrolmentServerTest.cxx
         erp/fhir/DeAbdaERezeptabgabedatenPkv_1_4_0_Test.cxx
         erp/fhir/DeGematikERezeptEuR4_1_0_0_Test.cxx
-        erp/fhir/DeGematikERezeptWorkflowR4_1_5_0_Test.cxx
+        erp/fhir/DeGematikERezeptWorkflowR4Test.cxx
         erp/fhir/KbvItaErp_1_3_2_Test.cxx
+        erp/fhir/KbvItaErpTest.cxx
         erp/fhir/KbvItvEvdga_1_2_1_Test.cxx
         erp/fhir/ERP-30139-data-absent-uri.cxx
         erp/fhir/FhirConverterTest.cxx

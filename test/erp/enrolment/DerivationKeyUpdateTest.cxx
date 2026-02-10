@@ -145,7 +145,7 @@ public:
     static void forAllTaskTypes(
         ::std::function<void(::model::PrescriptionType)>&& action)//NOLINT(readability-function-cognitive-complexity)
     {
-        for (auto taskType : magic_enum::enum_values<::model::PrescriptionType>())
+        for (auto taskType : testutils::allPrescriptionTypes())
         {
             ASSERT_NO_FATAL_FAILURE(action(taskType));
         }
@@ -257,8 +257,8 @@ public:
     {
         ::std::cout << "Activating Task for KVNr " << mKvnr << ::std::endl;
         mTest.forceUpdateBlobCache();
-        ASSERT_NO_FATAL_FAILURE(
-            mTest.checkTaskActivate(mQesBundle, mCommunications, *mPrescriptionId, mKvnr.id(), mAccessCode));
+        ASSERT_NO_FATAL_FAILURE(mTest.checkTaskActivate(mQesBundle, mCommunications, *mPrescriptionId, mKvnr.id(),
+                                                        mAccessCode, model::canBePkv(mPrescriptionType)));
     }
 
     void accept()
@@ -282,6 +282,7 @@ public:
         {
             case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             case ::model::PrescriptionType::direkteZuweisungPkv:
+            case ::model::PrescriptionType::tRezept:
             {
                 ::std::cout << "Creating consent for KVNr " << mKvnr << ::std::endl;
                 mTest.forceUpdateBlobCache();
@@ -296,8 +297,6 @@ public:
                     mTest.mConsentItemRequestArgs.overrideExpectedPatientenrechnungVersion = "XXX";
                     mTest.mConsentItemRequestArgs.overrideExpectedWorkflowVersion =
                         *ResourceTemplates::Versions::GEM_ERPEU_current().version();
-                    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                     date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
                     ASSERT_NO_FATAL_FAILURE(
                         mTest.consentPost(model::ConsentType::EUDISPCONS, mKvnr.id(), ::model::Timestamp::now()));
                     mTest.mConsentItemRequestArgs.overrideExpectedPatientenrechnungVersion = "";
@@ -346,6 +345,7 @@ public:
         {
             case ::model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             case ::model::PrescriptionType::direkteZuweisungPkv:
+            case ::model::PrescriptionType::tRezept:
             {
                 ::std::cout << "Creating charge item for prescription id " << mPrescriptionId->toString()
                             << ::std::endl;

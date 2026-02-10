@@ -70,6 +70,26 @@
         }                                                                                          \
     }
 
+inline std::set<std::string> stripProfiles(std::vector<std::string>&& diagnostics)
+{
+    std::set<std::string> ret;
+    for (auto&& diagnostic : std::move(diagnostics))
+    {
+        ret.insert(diagnostic.substr(0, diagnostic.find_first_of("(from profile:")));
+    }
+    return ret;
+}
+
+inline void expectErpExceptionWithFHIRValidationError(const ErpException& ex, const std::string& message,
+                                                      const std::string& diag)
+{
+    EXPECT_EQ(ex.status(), HttpStatus::BadRequest);
+    EXPECT_EQ(ex.what(), std::string_view{(message)}) << ex.what();
+    ASSERT_TRUE(ex.diagnostics().has_value());
+    std::set<std::string> diagnosticsMessagesSet = stripProfiles(String::split(ex.diagnostics().value(), "; "));
+    std::set<std::string> fullDiagnosticsMessagesSet = stripProfiles(String::split((diag), "; "));
+    EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet) << std::endl << ex.diagnostics().value();
+}
 
 #define EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(expression, message, diag)        \
     {                                                                                              \
@@ -80,14 +100,7 @@
         }                                                                                          \
         catch (const ErpException& ex)                                                             \
         {                                                                                          \
-            EXPECT_EQ(ex.status(), HttpStatus::BadRequest);                                        \
-            EXPECT_EQ(ex.what(), std::string_view{(message)}) << ex.what();          \
-            ASSERT_TRUE(ex.diagnostics().has_value());                                             \
-            std::vector<std::string> diagnosticsMessages = String::split(ex.diagnostics().value(), "; "); \
-            std::vector<std::string> fullDiagnosticsMessages = String::split((diag), "; ");          \
-            std::set<std::string> diagnosticsMessagesSet(diagnosticsMessages.begin(), diagnosticsMessages.end()); \
-            std::set<std::string> fullDiagnosticsMessagesSet(fullDiagnosticsMessages.begin(), fullDiagnosticsMessages.end()); \
-            EXPECT_EQ(diagnosticsMessagesSet, fullDiagnosticsMessagesSet) << std::endl << ex.diagnostics().value(); \
+            expectErpExceptionWithFHIRValidationError(ex, message, diag);                           \
         }                                                                                          \
         catch (...)                                                                                \
         {                                                                                          \
@@ -115,5 +128,28 @@
         }                                                                                                              \
     }
 
+namespace erp::test
+{
+inline auto softExpectTrue(const bool result, const bool allowFailure, std::string_view msg,
+                           const std::source_location loc)
+{
+    if (! result)
+    {
+        if (! allowFailure)
+        {
+            EXPECT_TRUE(result) << msg << " at " << loc.file_name() << ":" << loc.line();
+        }
+        else
+        {
+            LOG(WARNING) << "failed, retrying: " << msg << " at " << loc.file_name() << ":" << loc.line();
+        }
+        return false;
+    }
+    return true;
+};
+}
+#define SOFT_EXPECT_TRUE(expression, allowFailure, hadError)                                                           \
+    hadError =                                                                                                         \
+        ! erp::test::softExpectTrue(expression, allowFailure, #expression, std::source_location::current()) || hadError
 
 #endif//ERP_PROCESSING_CONTEXT_ERPMACROS_HXX

@@ -21,7 +21,8 @@ using namespace ::std::literals;
 
 db_model::Task::Task(const model::PrescriptionId& initPrescriptionId, BlobId initKeyBlobId, db_model::Blob initSalt,
                      model::Task::Status initStatus, model::Timestamp initLastStatusChanged,
-                     const model::Timestamp& initAuthoredOn, const model::Timestamp& initLastModified)
+                     const model::Timestamp& initAuthoredOn, const model::Timestamp& initLastModified,
+                     std::optional<bool> initIsPkv)
     : prescriptionId(initPrescriptionId)
     , blobId(initKeyBlobId)
     , salt(std::move(initSalt))
@@ -29,6 +30,7 @@ db_model::Task::Task(const model::PrescriptionId& initPrescriptionId, BlobId ini
     , lastStatusChange(initLastStatusChanged)
     , authoredOn(initAuthoredOn)
     , lastModified(initLastModified)
+    , isPkv(initIsPkv)
 {
 }
 

@@ -76,7 +76,7 @@ namespace
 
     QUERY(retrieveCommunicationIdsStatement,   "SELECT id FROM erp.communication WHERE recipient = $1")
     QUERY(deleteCommunicationStatement,        "DELETE FROM erp.communication WHERE id = $1::uuid AND sender = $2 "
-                                               "RETURNING id, EXTRACT(EPOCH FROM received)")
+                                               "RETURNING id")
     QUERY(updateCommunicationsRetrievedStatement, R"--(
         UPDATE erp.communication
             SET received = $2
@@ -110,16 +110,16 @@ namespace
               AND ($3::bigint IS NULL OR (prescription_id = $3::bigint AND prescription_type = $4::smallint)))--")
 
     QUERY(retrieveAllMedicationDispensesByKvnr, R"--(
-        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type from erp.task_view
+        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type, is_pkv from erp.task_view
         WHERE kvnr_hashed = $1 AND ($2::bigint IS NULL OR (prescription_id = $2::bigint AND prescription_type = $3::smallint))
             AND medication_dispense_bundle IS NOT NULL
         )--")
 
 // GEMREQ-start A_19115-01#query
     QUERY(retrieveAllTasksByKvnr, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type,
-            eu_redeemable_patient, eu_redeemable FROM erp.task_view
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id, prescription_type,
+            eu_redeemable_patient, eu_redeemable, is_pkv FROM erp.task_view
         WHERE kvnr_hashed = $1
         )--")
 // GEMREQ-end A_19115-01#query
@@ -129,8 +129,8 @@ namespace
     QUERY(countAll160TasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task WHERE kvnr_hashed = $1)--")
 
     QUERY(retrieveAllTasksForEuStatement, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified), EXTRACT(EPOCH FROM authored_on),
-            EXTRACT(EPOCH FROM expiry_date), EXTRACT(EPOCH FROM accept_date), status, EXTRACT(EPOCH FROM last_status_update), salt, task_key_blob_id, prescription_type, healthcare_provider_prescription, owner, eu_redeemable_patient, eu_redeemable FROM erp.task_view
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id, prescription_type, healthcare_provider_prescription, owner, eu_redeemable_patient, eu_redeemable FROM erp.task_view
         WHERE kvnr_hashed = $1 AND eu_redeemable = true AND eu_redeemable_patient = true
     )--");
 
@@ -141,7 +141,7 @@ namespace
     )--")
 
     QUERY(retrieveAllConsents, R"--(
-        SELECT EXTRACT(EPOCH FROM date_time), category FROM erp.consent WHERE kvnr_hashed = $1
+        SELECT EXTRACT(EPOCH FROM date_time) as date_time, category FROM erp.consent WHERE kvnr_hashed = $1
     )--")
 
 // GEMREQ-start A_22158#query
@@ -159,7 +159,7 @@ namespace
     QUERY(createEuAccessPermissionQuery,
           R"--(INSERT INTO erp.eu_access_permission (kvnr_hashed, country_code, access_code, blob_id, salt, expires) VALUES ($1, $2, $3, $4, $5, $6))--")
     QUERY(retrieveEuAccessPermissionQuery,
-          R"--(SELECT country_code, access_code, blob_id, salt, EXTRACT(EPOCH FROM expires) FROM erp.eu_access_permission WHERE kvnr_hashed = $1)--")
+          R"--(SELECT country_code, access_code, blob_id, salt, EXTRACT(EPOCH FROM expires) as expires FROM erp.eu_access_permission WHERE kvnr_hashed = $1)--")
 
 #undef QUERY
 
@@ -173,6 +173,7 @@ PostgresBackend::PostgresBackend()
     : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
     , mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask162(model::PrescriptionType::digitaleGesundheitsanwendungen)
+    , mBackendTask166(model::PrescriptionType::tRezept)
     , mBackendTask169(model::PrescriptionType::direkteZuweisung)
     , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
     , mBackendTask209(model::PrescriptionType::direkteZuweisungPkv)
@@ -217,12 +218,13 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
     resultSet.reserve(gsl::narrow<size_t>(results.size()));
     for (const auto& res : results)
     {
-        Expect(res.size() == 5, "Too few fields in result row");
+        Expect(res.size() == 6, "Too few fields in result row");
         Expect(not res.at(0).is_null(), "prescription_id is null.");
         Expect(not res.at(1).is_null(), "medication_dispense_bundle is null.");
         Expect(not res.at(2).is_null(), "medication_dispense_blob_id is null.");
         Expect(not res.at(3).is_null(), "salt is null.");
         Expect(not res.at(4).is_null(), "prescription_type is null.");
+        Expect(not res.at(5).is_null(), "is_pkv is null.");
         const auto prescription_type_opt =
             magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(4).as<int16_t>()));
         Expect(prescription_type_opt.has_value(), "could not cast to prescription_type");
@@ -246,7 +248,7 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
     { // scope
         TVLOG(2) << ::retrieveCmac.query;
         auto selectResult =
-            transaction()->exec_params(retrieveCmac.query, validDateStrm.str(), magic_enum::enum_name(cmacType));
+            transaction()->exec(retrieveCmac.query, pqxx::params{validDateStrm.str(), magic_enum::enum_name(cmacType)});
         TVLOG(2) << "got " << selectResult.size() << " results";
         if (!selectResult.empty())
         {
@@ -260,8 +262,8 @@ CmacKey PostgresBackend::acquireCmac(const date::sys_days& validDate, const Cmac
     const db_model::postgres_bytea_view newKeyBin(reinterpret_cast<const std::byte*>(newKey.data()), newKey.size());
     { // scope
         TVLOG(2) << ::acquireCmac.query;
-        auto acquireResult = transaction()->exec_params(::acquireCmac.query, validDateStrm.str(),
-                                                        magic_enum::enum_name(cmacType), newKeyBin);
+        auto acquireResult = transaction()->exec(
+            ::acquireCmac.query, pqxx::params{validDateStrm.str(), magic_enum::enum_name(cmacType), newKeyBin});
         TVLOG(2) << "got " << acquireResult.size() << " results";
         Expect(acquireResult.size() == 1, "Expected exactly one CMAC.");
         TLOG(INFO) << "New CMAC for " << toString(cmacType) << " created";
@@ -316,12 +318,12 @@ void PostgresBackend::activateTask(const model::PrescriptionId& taskId, const db
                                    const db_model::EncryptedBlob& healthCareProviderPrescription,
                                    const db_model::EncryptedBlob& doctorIdentity,
                                    const model::Timestamp& lastStatusUpdate,
-                                   bool euRedeemable)
+                                   bool euRedeemable, bool isPkv)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .activateTask(*transaction(), taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate,
-                      acceptDate, healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable);
+                      acceptDate, healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable, isPkv);
 }
 
 void PostgresBackend::updateTaskReceipt(const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -429,16 +431,11 @@ std::vector<db_model::AuditData> PostgresBackend::retrieveAuditEventData(
         prescriptionTypeNum = static_cast<int16_t>(magic_enum::enum_integer(prescriptionId->type()));
     }
 
-    // Run the query. Arguments that are passed on to exec_params are quoted and escaped automatically.
+    // Run the query. Arguments that are passed on to exec are quoted and escaped automatically.
     A_19396.start("Filter audit events by Kvnr as part of the query");
     TVLOG(2) << query;
     const pqxx::result results =
-        transaction()->exec_params(
-        query,
-        kvnr.binarystring(),
-        idStr,
-        prescriptionIdNum,
-        prescriptionTypeNum);
+        transaction()->exec(query, pqxx::params{kvnr.binarystring(), idStr, prescriptionIdNum, prescriptionTypeNum});
     A_19396.finish();
 
     TVLOG(2) << "got " << results.size() << " results";
@@ -540,28 +537,17 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
     }
     TVLOG(2) << query;
 
-    const pqxx::result results = transaction()->exec_params(query, kvnrHashed.binarystring());
+    const pqxx::result results = transaction()->exec(query, pqxx::params{kvnrHashed.binarystring()});
 
-    PostgresBackendTask::TaskQueryIndexes indexes;
-    indexes.accessCodeIndex.reset();
-    indexes.secretIndex.reset();
-    indexes.ownerIndex.reset();
-    indexes.euRedeemableByPatientIndex = 11;
-    indexes.euRedeemableIndex = 12;
     TVLOG(2) << "got " << results.size() << " results";
-    std::vector<db_model::Task> resultSet;
-    resultSet.reserve(gsl::narrow<size_t>(results.size()));
 
-    for (const auto& res : results)
+    if (!results.empty())
     {
-        Expect(res.size() == 13, "Invalid number of fields in result row: " + std::to_string(res.size()));
-        Expect(!res.at(10).is_null(), "prescription_type is null");
-        auto prescription_type_opt =
-            magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(10).as<int16_t>()));
-        Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
-        resultSet.emplace_back(PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
+        Expect(results.front().size() == 14,
+               "Invalid number of fields in result row: " + std::to_string(results.front().size()));
+        return PostgresBackendTask::tasksFromQueryResult(results, std::nullopt);
     }
-    return resultSet;
+    return {};
 }
 
 std::vector<db_model::Task>
@@ -609,15 +595,6 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForEu(const db_mode
 
     const pqxx::result results = transaction()->exec(query, {kvnrHashed.binarystring()});
 
-    PostgresBackendTask::TaskQueryIndexes indexes;
-    indexes.accessCodeIndex.reset();
-    indexes.secretIndex.reset();
-    indexes.ownerIndex.reset();
-    indexes.healthcareProviderPrescriptionIndex = 11;
-    indexes.ownerIndex = 12;
-    indexes.euRedeemableByPatientIndex = 13;
-    indexes.euRedeemableIndex = 14;
-
     TVLOG(2) << "got " << results.size() << " results";
     std::vector<db_model::Task> resultSet;
     resultSet.reserve(gsl::narrow<size_t>(results.size()));
@@ -630,7 +607,7 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForEu(const db_mode
             magic_enum::enum_cast<model::PrescriptionType>(gsl::narrow<uint8_t>(res.at(10).as<int16_t>()));
         Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
         resultSet.emplace_back(
-            PostgresBackendTask::taskFromQueryResultRow(res, indexes, prescription_type_opt.value()));
+            PostgresBackendTask::taskFromQueryResultRow(res, prescription_type_opt.value()));
     }
     return resultSet;
 }
@@ -659,19 +636,13 @@ std::optional<Uuid> PostgresBackend::insertCommunication(const model::Prescripti
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "insertcommunication");
 
-    const pqxx::result result = transaction()->exec_params(
+    const pqxx::result result = transaction()->exec(
         insertCommunicationStatement.query,
-                    timeSent.toXsDateTime(),
-                    static_cast<int>(model::Communication::messageTypeToInt(messageType)),
-                    sender.binarystring(),
-                    recipient.binarystring(),
-                    std::nullopt,
-                    prescriptionId.toDatabaseId(),
-                    static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
-                    gsl::narrow<int32_t>(senderBlobId),
-                    messageForSender.binarystring(),
-                    gsl::narrow<int32_t>(recipientBlobId),
-                    messageForRecipient.binarystring());
+        pqxx::params{timeSent.toXsDateTime(), static_cast<int>(model::Communication::messageTypeToInt(messageType)),
+                     sender.binarystring(), recipient.binarystring(), std::nullopt, prescriptionId.toDatabaseId(),
+                     static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())),
+                     gsl::narrow<int32_t>(senderBlobId), messageForSender.binarystring(),
+                     gsl::narrow<int32_t>(recipientBlobId), messageForRecipient.binarystring()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.size() <= 1, "Too many results in result set.");
@@ -695,14 +666,15 @@ uint64_t PostgresBackend::countRepresentativeCommunications(
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "countrepresentativecommunications");
 
-    const auto result = transaction()->exec_params(
+    const auto result = transaction()->exec(
         countRepresentativeCommunicationsStatement.query,
-        /* $1 */
-        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::Representative)),
-        /* $2 */ insurantA.binarystring(),
-        /* $3 */ insurantB.binarystring(),
-        /* $4 */ prescriptionId.toDatabaseId(),
-        /* $5 */ static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())));
+        pqxx::params{
+            /* $1 */
+            static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::Representative)),
+            /* $2 */ insurantA.binarystring(),
+            /* $3 */ insurantB.binarystring(),
+            /* $4 */ prescriptionId.toDatabaseId(),
+            /* $5 */ static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type()))});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.size() == 1, "Expecting one element as result containing count.");
@@ -719,7 +691,7 @@ bool PostgresBackend::existCommunication(const Uuid& communicationId)
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "existcommunication");
 
     const pqxx::result result =
-        transaction()->exec_params(countCommunicationsByIdStatement.query, communicationId.toString());
+        transaction()->exec(countCommunicationsByIdStatement.query, pqxx::params{communicationId.toString()});
 
     Expect(result.size() == 1, "Expecting one element as result containing count.");
     int64_t count = 0;
@@ -753,12 +725,9 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
     std::optional<std::string> communicationIdStr =
         communicationId ? communicationId->toString() : std::optional<std::string>{};
 
-    // Run the query. Arguments that are passed on to exec_params are quoted and escaped automatically.
+    // Run the query. Arguments that are passed on to exec() are quoted and escaped automatically.
     TVLOG(2) << query;
-    const pqxx::result results = transaction()->exec_params(
-            query,
-            user.binarystring(),
-            communicationIdStr);
+    const pqxx::result results = transaction()->exec(query, pqxx::params{user.binarystring(), communicationIdStr});
 
     TVLOG(2) << "got " << results.size() << " results";
 
@@ -799,9 +768,7 @@ std::vector<Uuid> PostgresBackend::retrieveCommunicationIds (const db_model::Has
                                                                         "retrievecommunicationids");
 
     const pqxx::result results =
-        transaction()->exec_params(
-        retrieveCommunicationIdsStatement.query,
-        recipient.binarystring());
+        transaction()->exec(retrieveCommunicationIdsStatement.query, pqxx::params{recipient.binarystring()});
 
     TVLOG(2) << "got " << results.size() << " results";
 
@@ -813,7 +780,7 @@ std::vector<Uuid> PostgresBackend::retrieveCommunicationIds (const db_model::Has
     return ids;
 }
 
-std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend::deleteCommunication(
+std::optional<Uuid> PostgresBackend::deleteCommunication(
     const Uuid& communicationId,
     const db_model::HashedId& sender)
 {
@@ -822,23 +789,17 @@ std::tuple<std::optional<Uuid>, std::optional<model::Timestamp>> PostgresBackend
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "deletecommunication");
 
-    const pqxx::result result = transaction()->exec_params(deleteCommunicationStatement.query,
-                                                           communicationId.toString(), sender.binarystring());
+    const pqxx::result result = transaction()->exec(deleteCommunicationStatement.query,
+                                                    pqxx::params{communicationId.toString(), sender.binarystring()});
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.size() <= 1, "Expecting either no or one row as result.");
     if (result.size() == 1)
     {
-        Expect(result.front().size() == 2, "Expecting two columns as result containing id and time received.");
-        const auto id = Uuid(result.front().at(0).as<std::string>());
-        const auto secondsSinceEpoch = result.front().at(1);
-        if (secondsSinceEpoch.is_null())
-            return {id, {}};
-        else
-            return {id, model::Timestamp(secondsSinceEpoch.as<double>())};
+        Expect(result.front().size() == 1, "Expecting one column as result containing id.");
+        return Uuid(result.front().at(0).as<std::string>());
     }
-    else
-        return {{},{}};
+    return std::nullopt;
 }
 
 void PostgresBackend::markCommunicationsAsRetrieved (
@@ -858,11 +819,9 @@ void PostgresBackend::markCommunicationsAsRetrieved (
     }
 
     TVLOG(2) << updateCommunicationsRetrievedStatement.query;
-    const auto result = transaction()->exec_params(
-        updateCommunicationsRetrievedStatement.query,
-        communicationIdStrings,
-        retrieved.toXsDateTime(),
-        recipient.binarystring());
+    const auto result =
+        transaction()->exec(updateCommunicationsRetrievedStatement.query,
+                            pqxx::params{communicationIdStrings, retrieved.toXsDateTime(), recipient.binarystring()});
     TVLOG(2) << "got " << result.size() << " results";
 }
 
@@ -874,8 +833,9 @@ void PostgresBackend::deleteCommunicationsForTask (const model::PrescriptionId& 
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres,
                                                                         "deletecommunicationsfortask");
 
-    const auto result = transaction()->exec_params(deleteCommunicationsForTaskStatement.query, taskId.toDatabaseId(),
-                                                   static_cast<int16_t>(magic_enum::enum_integer(taskId.type())));
+    const auto result = transaction()->exec(
+        deleteCommunicationsForTaskStatement.query,
+        pqxx::params{taskId.toDatabaseId(), static_cast<int16_t>(magic_enum::enum_integer(taskId.type()))});
     TVLOG(2) << "got " << result.size() << " results";
 }
 // GEMREQ-end A_19027-06#query-call-deleteCommunicationsForTask
@@ -928,14 +888,12 @@ bool PostgresBackend::clearConsent(const db_model::HashedKvnr& kvnr, db_model::C
 
 void PostgresBackend::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
 {
-    Expect(chargeItem.prescriptionId.isPkv(), "Attempt to store charge information for non-PKV Prescription.");
     checkCommonPreconditions();
     mBackendChargeItem.storeChargeInformation(*transaction(), chargeItem, kvnr);
 }
 
 void PostgresBackend::updateChargeInformation(const ::db_model::ChargeItem& chargeItem)
 {
-    Expect(chargeItem.prescriptionId.isPkv(), "Attempt to update charge information for non-PKV Prescription.");
     checkCommonPreconditions();
     mBackendChargeItem.updateChargeInformation(*transaction(), chargeItem);
 }
@@ -953,14 +911,12 @@ PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr&
 ::db_model::ChargeItem PostgresBackend::retrieveChargeInformation(const model::PrescriptionId& id) const
 {
     checkCommonPreconditions();
-    Expect(id.isPkv(), "Attempt to retrieve charge information for non-PKV Prescription.");
     return mBackendChargeItem.retrieveChargeInformation(*transaction(), id);
 }
 
 ::db_model::ChargeItem PostgresBackend::retrieveChargeInformationForUpdate(const model::PrescriptionId& id) const
 {
     checkCommonPreconditions();
-    Expect(id.isPkv(), "Attempt to retrieve charge information for non-PKV Prescription.");
     return mBackendChargeItem.retrieveChargeInformationForUpdate(*transaction(), id);
 }
 
@@ -968,7 +924,6 @@ PostgresBackend::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvnr&
 void PostgresBackend::deleteChargeInformation(const model::PrescriptionId& id)
 {
     checkCommonPreconditions();
-    Expect(id.isPkv(), "Attempt to delete charge information for non-PKV Prescription.");
     mBackendChargeItem.deleteChargeInformation(*transaction(), id);
 }
 // GEMREQ-end A_22117-01#query-call-deleteChargeInformation
@@ -989,11 +944,12 @@ void PostgresBackend::clearAllChargeItemCommunications(const db_model::HashedKvn
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "deletechargeitemcommunicationsforkvnrstatement");
 
-    const auto result = transaction()->exec_params(
-        deleteChargeItemCommunicationsForKvnrStatement.query,
-        kvnr.binarystring(),
-        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReq)),
-        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReply)));
+    const auto result = transaction()->exec(deleteChargeItemCommunicationsForKvnrStatement.query,
+                                            pqxx::params{kvnr.binarystring(),
+                                                         static_cast<int>(model::Communication::messageTypeToInt(
+                                                             model::Communication::MessageType::ChargChangeReq)),
+                                                         static_cast<int>(model::Communication::messageTypeToInt(
+                                                             model::Communication::MessageType::ChargChangeReply))});
 
     TVLOG(2) << "deleted " << result.size() << " results";
 }
@@ -1007,11 +963,13 @@ void PostgresBackend::deleteCommunicationsForChargeItem(const model::Prescriptio
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "deletecommunicationsforchargeitem");
 
-    const auto result = transaction()->exec_params(
-        deleteCommunicationsForChargeItemStatement.query, taskId.toDatabaseId(),
-        static_cast<int>(magic_enum::enum_integer(taskId.type())),
-        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReq)),
-        static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReply)));
+    const auto result = transaction()->exec(
+        deleteCommunicationsForChargeItemStatement.query,
+        pqxx::params{
+            taskId.toDatabaseId(), static_cast<int>(magic_enum::enum_integer(taskId.type())),
+            static_cast<int>(model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReq)),
+            static_cast<int>(
+                model::Communication::messageTypeToInt(model::Communication::MessageType::ChargChangeReply))});
 
     TVLOG(2) << "deleted " << result.size() << " results";
 }
@@ -1038,6 +996,8 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
             return mBackendTask209;
         case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
             return mBackendTask200;
+        case model::PrescriptionType::tRezept:
+            return mBackendTask166;
     }
     Fail("invalid prescriptionType: " + std::to_string(std::uintmax_t(prescriptionType)));
 }
@@ -1067,7 +1027,7 @@ uint64_t PostgresBackend::executeCountQuery(pqxx::transaction_base& transaction,
     }
 
     TVLOG(2) << completeQuery;
-    const pqxx::result result = transaction.exec_params(completeQuery, paramValue.binarystring());
+    const pqxx::result result = transaction.exec(completeQuery, pqxx::params{paramValue.binarystring()});
 
     TVLOG(2) << "got " << result.size() << " results";
 

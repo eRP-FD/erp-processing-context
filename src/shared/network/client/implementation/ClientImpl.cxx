@@ -120,5 +120,21 @@ std::optional<boost::asio::ip::tcp::endpoint> ClientImpl<StreamClass>::currentEn
     return mSessionContainer.currentEndpoint();
 }
 
+template<class StreamClass>
+bool ClientImpl<StreamClass>::testConnection()
+{
+    try
+    {
+        mSessionContainer.establish();
+        mSessionContainer.teardown();
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        TLOG(WARNING) << "Error testing connection to " << mHostName << ": " << e.what();
+    }
+    return false;
+}
+
 template class ClientImpl<TcpStream>;
 template class ClientImpl<SslStream>;

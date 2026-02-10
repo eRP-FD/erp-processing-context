@@ -1,0 +1,200 @@
+{
+  "resourceType": "Bundle",
+  "id": "6324132a-0d2c-41ff-870f-04eeb0ef3340",
+  "meta": {
+    "lastUpdated": "2025-11-10T14:06:25.546+01:00",
+    "tag": [
+      {
+        "system": "https://gematik.de/fhir/StructureDefinition/filtered-endpoints-count",
+        "code": "0",
+        "display": "Reason: hideVersicherte"
+      }
+    ]
+  },
+  "type": "searchset",
+  "total": 3,
+  "entry": [
+    {
+      "fullUrl": "https://fhir-directory-ref.vzd.ti-dienste.de/fdv/search/HealthcareService/4e7dfd05-afe6-4565-8113-43ff9969eeaa",
+      "resource": {
+        "resourceType": "HealthcareService",
+        "id": "4e7dfd05-afe6-4565-8113-43ff9969eeaa",
+        "meta": {
+          "versionId": "5",
+          "lastUpdated": "2025-07-28T10:16:05.150+02:00",
+          "profile": [
+            "https://gematik.de/fhir/directory/StructureDefinition/HealthcareServiceDirectory"
+          ],
+          "security": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/OwnerId",
+              "code": "8d5251c5-343b-4c14-9e82-ba470266764a"
+            },
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+              "code": "268db455-1ee2-4194-aac1-58c64a0a7118",
+              "display": "UID of LDAP source entry"
+            }
+          ],
+          "tag": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/Origin",
+              "code": "ldap",
+              "display": "Synchronized from LDAP VZD"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+            "value": "268db455-1ee2-4194-aac1-58c64a0a7118"
+          }
+        ],
+        "providedBy": {
+          "reference": "Organization/8659cd8b-e047-443c-a56b-06e8b32b185a"
+        },
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "urn:oid:1.3.6.1.4.1.19376.3.276.1.5.5",
+                "code": "PHZ",
+                "display": "Pharmazeutik"
+              }
+            ],
+            "text": "ldap"
+          }
+        ],
+        "location": [
+          {
+            "reference": "Location/1ec93850-62c8-4b6c-a080-1bfc30634a4f"
+          }
+        ]
+      },
+      "search": {
+        "mode": "match"
+      }
+    },
+    {
+      "fullUrl": "https://fhir-directory-ref.vzd.ti-dienste.de/fdv/search/Organization/8659cd8b-e047-443c-a56b-06e8b32b185a",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "8659cd8b-e047-443c-a56b-06e8b32b185a",
+        "meta": {
+          "versionId": "3",
+          "lastUpdated": "2025-09-01T17:01:30.419+02:00",
+          "profile": [
+            "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory"
+          ],
+          "security": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/OwnerId",
+              "code": "8d5251c5-343b-4c14-9e82-ba470266764a"
+            },
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+              "code": "268db455-1ee2-4194-aac1-58c64a0a7118",
+              "display": "UID of LDAP source entry"
+            }
+          ],
+          "tag": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/Origin",
+              "code": "ldap",
+              "display": "Synchronized from LDAP VZD"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "PRN"
+                }
+              ]
+            },
+            "system": "https://gematik.de/fhir/sid/telematik-id",
+            "value": "##TELEMATIKID##"
+          },
+          {
+            "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+            "value": "268db455-1ee2-4194-aac1-58c64a0a7118"
+          }
+        ],
+        "active": true,
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "https://gematik.de/fhir/directory/CodeSystem/OrganizationProfessionOID",
+                "code": "1.2.276.0.76.4.54",
+                "display": "Öffentliche Apotheke"
+              }
+            ]
+          }
+        ],
+        "name": "Apotheke_Test_Inland_SMCB",
+        "alias": [
+          "EU-Versandapotheke"
+        ]
+      },
+      "search": {
+        "mode": "include"
+      }
+    },
+    {
+      "fullUrl": "https://fhir-directory-ref.vzd.ti-dienste.de/fdv/search/Location/1ec93850-62c8-4b6c-a080-1bfc30634a4f",
+      "resource": {
+        "resourceType": "Location",
+        "id": "1ec93850-62c8-4b6c-a080-1bfc30634a4f",
+        "meta": {
+          "versionId": "3",
+          "lastUpdated": "2025-09-01T17:01:30.419+02:00",
+          "profile": [
+            "https://gematik.de/fhir/directory/StructureDefinition/LocationDirectory"
+          ],
+          "security": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/OwnerId",
+              "code": "8d5251c5-343b-4c14-9e82-ba470266764a"
+            },
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+              "code": "268db455-1ee2-4194-aac1-58c64a0a7118",
+              "display": "UID of LDAP source entry"
+            }
+          ],
+          "tag": [
+            {
+              "system": "https://gematik.de/fhir/directory/CodeSystem/Origin",
+              "code": "ldap",
+              "display": "Synchronized from LDAP VZD"
+            }
+          ]
+        },
+        "identifier": [
+          {
+            "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
+            "value": "268db455-1ee2-4194-aac1-58c64a0a7118"
+          }
+        ],
+        "address": {
+          "use": "work",
+          "type": "postal",
+          "text": "Hauptstr. 67, 70477, Stuttgart",
+          "line": [
+            "Hauptstr. 67"
+          ],
+          "city": "Stuttgart",
+          "postalCode": "70477",
+          "country": "DE"
+        }
+      },
+      "search": {
+        "mode": "include"
+      }
+    }
+  ]
+}

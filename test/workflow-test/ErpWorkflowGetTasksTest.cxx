@@ -666,4 +666,4 @@ TEST_P(ErpWorkflowTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
 
 
 INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,
-                         testing::ValuesIn(magic_enum::enum_values<model::PrescriptionType>()));
+                         testing::ValuesIn(testutils::allPrescriptionTypes()));

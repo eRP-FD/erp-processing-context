@@ -8,6 +8,7 @@
 #include "FhirStructureDefinitionParser.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/model/ValueElement.hxx"
+#include "fhirtools/repository/internal/ElementType.hxx"
 #include "fhirtools/util/Constants.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/util/XmlHelper.hxx"
@@ -534,6 +535,12 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
         mStack.emplace_back(ElementType::slicing, localname);
         return;
     }
+    if (localname == "type"_xs)
+    {
+        mStack.emplace_back(ElementType::type, localname);
+        mElementTypes.emplace_back();
+        return;
+    }
     std::string_view localnameView{XmlStringView{localname}};
     if (localnameView.starts_with(fixed))
     {
@@ -546,10 +553,11 @@ void FhirStructureDefinitionParser::handleElementSubTree(const xmlChar* localnam
         return;
     }
     bool hasEntered = enter(localname, uri,
-                            {{"type"_xs, ElementType::type},
-                             {"base"_xs, ElementType::base},
-                             {"constraint"_xs, ElementType::constraint},
-                             {"binding"_xs, ElementType::binding}});
+                            {
+                                {"base"_xs, ElementType::base},
+                                {"constraint"_xs, ElementType::constraint},
+                                {"binding"_xs, ElementType::binding},
+                            });
     if (hasEntered)
     {
         return;
@@ -633,14 +641,16 @@ void FhirStructureDefinitionParser::leaveElement()
     //     static const auto& ctype = std::use_facet<std::ctype<char>>(std::locale::classic());
     if (mElementTypes.size() == 1)
     {
-        mElementBuilder.typeId(mElementTypes.front());
+        mElementBuilder.typeId(mElementTypes.front().code);
+        mElementBuilder.setProfiles(mElementTypes.front().profiles);
+        mElementBuilder.setTargetProfiles(mElementTypes.front().targetProfiles);
     }
     if (mSlicingBuilder)
     {
         mElementBuilder.slicing(std::move(mSlicingBuilder).value());
         mSlicingBuilder.reset();
     }
-    std::list<std::string> elementTypes;
+    std::list<internal::ElementType> elementTypes;
     elementTypes.swap(mElementTypes);
     try {
         mStructureBuilder.addElement(std::move(mElementBuilder), std::move(elementTypes));
@@ -687,15 +697,15 @@ void FhirStructureDefinitionParser::handleTypeSubtree(const xmlChar* localname, 
     ensureFhirNamespace(uri);
     if (localname == "code"_xs)
     {
-        mElementTypes.emplace_back(valueAttributeFrom(attributes));
+        mElementTypes.back().code = valueAttributeFrom(attributes);
     }
     else if (localname == "profile"_xs)
     {
-        mElementBuilder.addProfile(valueAttributeFrom(attributes));
+        mElementTypes.back().profiles.emplace(valueAttributeFrom(attributes));
     }
     else if (localname == "targetProfile"_xs)
     {
-        mElementBuilder.addTargetProfile(valueAttributeFrom(attributes));
+        mElementTypes.back().targetProfiles.emplace(valueAttributeFrom(attributes));
     }
 }
 

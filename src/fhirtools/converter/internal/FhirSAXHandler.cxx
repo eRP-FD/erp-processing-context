@@ -676,9 +676,12 @@ void FhirSaxHandler::endXHTMLElement(const xmlChar* localname, const xmlChar* pr
         return;
     }
     UniqueXmlPtr<xmlBufferFree> buffer{xmlBufferCreate()};
-    xmlNodeDump(buffer.get(), mCurrentXHTMLDoc.get(), mCurrentXHTMLNode, 0,0);
-    Expect(buffer->size > 0 && buffer->content != nullptr, "XML document serialization failed.");
-    std::string_view result{reinterpret_cast<const char*>(buffer->content), gsl::narrow<size_t>(buffer->use)};
+    xmlNodeDump(buffer.get(), mCurrentXHTMLDoc.get(), mCurrentXHTMLNode, 0, 0);
+    Expect(xmlBufferLength(buffer.get()) > 0 && xmlBufferContent(buffer.get()) != nullptr,
+           "XML document serialization failed.");
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+    std::string_view result{reinterpret_cast<const char*>(xmlBufferContent(buffer.get())),
+                            gsl::narrow<size_t>(xmlBufferLength(buffer.get()))};
     auto& topContext = mStack.back();
     topContext.value.AddMember(asJsonValue(localname), mResult.makeString(result), mResult.GetAllocator());
     mCurrentXHTMLDoc.reset();

@@ -500,55 +500,6 @@ void Epa4AllTransformer::convertPZNIngredient(model::NumberAsStringParserDocumen
     transformedMedication.copyToArray(containedArrayPointer, containedMedication.jsonDocument());
 }
 
-model::NumberAsStringParserDocument Epa4AllTransformer::transformResource(
-    const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
-    const std::vector<fhirtools::ValueMapping>& valueMappings, const std::vector<FixedValue>& fixedValues)
-{
-    const auto* backend = std::addressof(Fhir::instance().backend());
-    auto repoView = getRepo(targetProfileKey);
-    const auto* targetProfile = repoView->findStructure(targetProfileKey);
-    Expect(targetProfile, "profile not found: " + to_string(targetProfileKey));
-
-    model::NumberAsStringParserDocument targetResource;
-    targetResource.CopyFrom(sourceResource.jsonDocument(), targetResource.GetAllocator());
-
-    for (const auto& fixedValue : fixedValues)
-    {
-        targetResource.setValue(fixedValue.ptr, fixedValue.value);
-    }
-
-    const fhirtools::ProfiledElementTypeInfo baseTargetProfile{*targetProfile->baseType()};
-
-    auto erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{},
-                                                   baseTargetProfile, &targetResource, &targetResource, nullptr);
-
-    fhirtools::ResourceProfileTransformer::Options options;
-    options.removeUnknownExtensionsFromOpenSlicing = true;
-    fhirtools::ResourceProfileTransformer resourceProfileTransformer(repoView.get(), nullptr, targetProfile, options);
-    resourceProfileTransformer.map(valueMappings);
-    resourceProfileTransformer.map(
-        {.from = to_string(sourceResource.getDefinitionKeyFromMeta()), .to = to_string(targetProfileKey)});
-
-    auto result = resourceProfileTransformer.applyMappings(*erpElement);
-    Expect(result.success, result.summary());
-    erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
-                                              &targetResource, &targetResource, nullptr);
-
-    A_25948.start("generic mapping of fhir resources");
-    A_25949.start("generic extension takeover");
-    result = resourceProfileTransformer.transform(repoView, *erpElement, targetProfileKey);
-    // we possibly need to do two rounds, because transformation can unmask other validation errors.
-    // e.g. adding data-absent-reason to numerator unmasks the constraint violation rat-1 (missing denominator)
-    erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{}, baseTargetProfile,
-                                              &targetResource, &targetResource, nullptr);
-    result.merge(resourceProfileTransformer.transform(repoView, *erpElement, targetProfileKey));
-    A_25949.finish();
-    A_25948.finish();
-
-    Expect(result.success, result.summary());
-    return targetResource;
-}
-
 void Epa4AllTransformer::removeMedicationCodeCodingsByAllowlist(rapidjson::Value& medicationResource)
 {
     static const std::unordered_set<std::string_view> allowList{
@@ -585,20 +536,6 @@ void Epa4AllTransformer::removeMedicationCodeCodingsByAllowlist(rapidjson::Value
                 codePtr.Erase(medicationResource);
             }
         }
-    }
-}
-
-void Epa4AllTransformer::remove(rapidjson::Value& from, const rapidjson::Pointer& toBeRemoved)
-{
-    toBeRemoved.Erase(from);
-}
-
-void Epa4AllTransformer::checkSetAbsentReason(model::NumberAsStringParserDocument& document,
-                                              const std::string& memberPath)
-{
-    if (! rapidjson::Pointer(memberPath).Get(document))
-    {
-        document.setValue(rapidjson::Pointer(memberPath + "/extension/0"), model::DataAbsentReason().jsonDocument());
     }
 }
 
@@ -649,13 +586,4 @@ void Epa4AllTransformer::addMedicationTypeExtension(model::NumberAsStringParserD
                                                     model::EPAMedicationTypeExtension&& typeExtension)
 {
     document.copyToArray(rapidjson::Pointer{"/extension"}, std::move(typeExtension).jsonDocument());
-}
-
-std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
-Epa4AllTransformer::getRepo(const fhirtools::DefinitionKey& profileKey)
-{
-    auto viewList = Fhir::instance().structureRepository(model::Timestamp::now());
-    auto repoView = viewList.match(profileKey.url, *profileKey.version);
-    Expect(repoView, "No repository view for " + to_string(profileKey));
-    return repoView;
 }

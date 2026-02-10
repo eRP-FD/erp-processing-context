@@ -5,7 +5,6 @@
 #ifndef ERP_EXPORTER_UTIL_RUNTIMECONFIGURATION_HXX
 #define ERP_EXPORTER_UTIL_RUNTIMECONFIGURATION_HXX
 
-#include "shared/model/Timestamp.hxx"
 #include "shared/util/RuntimeConfigurationBase.hxx"
 
 #include <boost/core/noncopyable.hpp>
@@ -18,6 +17,8 @@ class RuntimeConfiguration : public shared::RuntimeConfigurationBase
 {
 public:
     static constexpr std::string_view parameter_pause = "Pause";
+    static constexpr std::string_view parameter_epa = "epa";
+    static constexpr std::string_view parameter_t_rezept = "t-rezept";
     static constexpr std::string_view parameter_resume = "Resume";
     static constexpr std::string_view parameter_throttle = "Throttle";
 
@@ -29,14 +30,21 @@ public:
         MANUAL,
         AUTOMATIC_EPA_LOOKUP
     };
+    enum class ProcessorType
+    {
+        EPA,
+        T_REZEPT
+    };
+
+    RuntimeConfiguration();
 
 private:
-    bool isPaused() const;
+    bool isPaused(ProcessorType processor) const;
     std::chrono::milliseconds throttleValue() const;
     ThrottleMode throttleMode() const;
 
-    void pause();
-    void resume();
+    void pause(ProcessorType processor);
+    void resume(ProcessorType processor);
     void throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle);
 
     void setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs);
@@ -45,7 +53,7 @@ private:
 
     mutable std::shared_mutex mSharedMutex;
 
-    bool mPause{false};
+    std::map<ProcessorType, bool> mPause;
     std::chrono::milliseconds mThrottle{0};
     ThrottleMode mThrottleMode{ThrottleMode::MANUAL};
 };
@@ -55,7 +63,7 @@ class RuntimeConfiguration::Getter : boost::noncopyable
 public:
     explicit Getter(std::shared_ptr<const RuntimeConfiguration> runtimeConfiguration);
 
-    bool isPaused() const;
+    bool isPaused(ProcessorType processor) const;
     std::chrono::milliseconds throttleValue() const;
     ThrottleMode throttleMode() const;
 
@@ -79,11 +87,11 @@ class RuntimeConfiguration::Setter : boost::noncopyable
 public:
     explicit Setter(std::shared_ptr<RuntimeConfiguration> runtimeConfiguration);
 
-    void pause();
-    void resume();
+    void pause(ProcessorType processor);
+    void resume(ProcessorType processor);
     void throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle);
 
-    bool isPaused() const;
+    bool isPaused(ProcessorType processor) const;
     std::chrono::milliseconds throttleValue() const;
     ThrottleMode throttleMode() const;
 

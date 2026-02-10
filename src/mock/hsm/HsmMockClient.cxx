@@ -121,10 +121,7 @@ ErpArray<Aes128Length> HsmMockClient::doVauEcies128(
     DiffieHellman dh;
     dh.setPrivatePublicKey(
         EllipticCurveUtils::pemToPrivatePublicKeyPair(input.eciesKeyPair.data));
-    dh.setPeerPublicKey(
-        EllipticCurveUtils::x962ToPublicKey(
-            SafeString(
-                stringFromVector(input.clientPublicKey))));
+    dh.setPeerPublicKey(EllipticCurveUtils::x962ToPublicKey(stringFromVector(input.clientPublicKey)));
     // Use BrainpoolP256r1 for the ecdh according to https://dth01.ibmgcloud.net/confluence/pages/viewpage.action?pageId=74023036&preview=/74023036/81467265/LG-051%20Produkt-Kryptokonzept%20v1.0.pdf
     const auto sharedKey = dh.createSharedKey();
 

@@ -51,9 +51,9 @@ void fhirtools::ProfileValidatorCounterData::check(ProfileValidator::Map& profMa
             subElementPath << ':' << cKey.slice;
         }
         profMap.at(element.first)
-            .appendResults(element.second.element()->cardinality().check(count, subElementPath.str(),
+            .appendResults(element.second.element()->cardinality().check(count, subElementPath.str(), cKey.name,
                                                                          element.second.profile(), parentElement,
-                                                                         element.second.element()->typeId()));
+                                                                         element.second.element()->typeId(), !cKey.slice.empty()));
     }
 }
 
@@ -370,11 +370,13 @@ void ProfileValidator::checkValueMaxValue(const Element& element, std::string_vi
 void ProfileValidator::checkCoding(const FhirStructureRepositoryView& view, const Element& element,
                                    std::string_view elementFullPath)
 {
-    if (! mDefPtr.element()->hasBinding() && mDefPtr.element()->typeId() == "Coding")
+    static const std::set<std::string_view> checkedTypes{"Coding", "Quantity"};
+    if (! mDefPtr.element()->hasBinding() && checkedTypes.contains(mDefPtr.element()->typeId()))
     {
         const auto systemSubElement = element.subElements("system");
         const auto codeSubElement = element.subElements("code");
-        if (systemSubElement.size() == 1 && codeSubElement.size() == 1)
+        if ((systemSubElement.size() == 1 && systemSubElement[0]->hasValue()) &&
+            (codeSubElement.size() == 1 && codeSubElement[0]->hasValue()))
         {
             const auto& codes = view.findCodeSystemCodes(DefinitionKey{systemSubElement[0]->asString()});
             if (codes)
@@ -455,8 +457,7 @@ void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& elem
         case Element::Type::Boolean:
         case Element::Type::Date:
         case Element::Type::DateTime:
-        case Element::Type::Time:
-        case Element::Type::Quantity:{
+        case Element::Type::Time:{
             if (! boundCodes.containsCode(element.asString()))
             {
                 mData->add(severity,
@@ -466,6 +467,9 @@ void fhirtools::ProfileValidator::validateBinding(const fhirtools::Element& elem
             }
             break;
         }
+        case Element::Type::Quantity:
+            checkCodingBinding(element, boundCodes, elementFullPath, severity);
+            break;
         case Element::Type::Structured: {
             if (mDefPtr.element()->typeId() == "CodeableConcept")
             {

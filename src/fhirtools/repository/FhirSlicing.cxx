@@ -15,6 +15,7 @@
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/FhirValueSet.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroup.hxx"
+#include "fhirtools/repository/internal/ElementType.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -814,7 +815,8 @@ FhirSlicing::Builder& FhirSlicing::Builder::ordered(bool ord)
     return *this;
 }
 bool FhirSlicing::Builder::addElement(const std::shared_ptr<const FhirElement>& element,
-                                      std::list<std::string> withTypes, const FhirStructureDefinition& containing)
+                                      const std::list<internal::ElementType>& withTypes,
+                                      const FhirStructureDefinition& containing)
 {
     Expect(! mSlicePrefix.empty(), "Prefix not set - Cannot add element.");
     const auto& inElementName = element->name();
@@ -855,7 +857,7 @@ bool FhirSlicing::Builder::addElement(const std::shared_ptr<const FhirElement>& 
     elementName << mSlicePrefix << inElementName.substr(mSlicePrefix.size() + mSliceId.size() + 1);
     FhirElement::Builder sliceElement{*element};
     sliceElement.name(elementName.str());
-    mFhirStructureBuilder->addElement(std::move(sliceElement), std::move(withTypes));
+    mFhirStructureBuilder->addElement(std::move(sliceElement), withTypes);
     return true;
 }
 

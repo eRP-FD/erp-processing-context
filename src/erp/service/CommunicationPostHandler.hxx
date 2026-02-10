@@ -30,9 +30,10 @@ private:
         const model::Communication& communication,
         const std::string& professionOid,
         const std::string& sender) const;
-    void validateRecipient(
+    static void validateRecipient(
         const model::Communication& communication,
-        const model::Identity& recipient) const;
+        const model::Identity& recipient,
+        model::PrescriptionType flowType);
     void checkEligibilityOfInsurant(
         model::Communication::MessageType messageType,
         const model::Kvnr& sender,

@@ -58,6 +58,8 @@ public:
             return mClient->send(clientRequest);
         }
     }
+    bool testConnection() override;
+
 private:
     ConnectionParameters mParameters;
     std::unique_ptr<HttpsClient> mClient;
@@ -123,6 +125,7 @@ public:
         std::string accessCode = ByteHelper::toHex(SecureRandomGenerator::generate(32));
         model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel;
         std::optional<model::Timestamp> expiryDate = std::nullopt;
+        std::optional<bool> isPkv = std::nullopt;
     };
 
     virtual std::vector<model::Task> addTasksToDatabase(const std::vector<TaskDescriptor>& descriptors);
@@ -133,7 +136,8 @@ public:
         model::PrescriptionType prescriptionType = model::PrescriptionType::apothekenpflichigeArzneimittel);
     virtual void activateTask(model::Task& task, const std::string& kvnrPatient = InsurantE,
                               std::optional<model::Timestamp> expiryDate = std::nullopt,
-                              std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions = std::nullopt);
+                              std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions = std::nullopt,
+                              bool isPkv = false);
     virtual void acceptTask(model::Task& task, const SafeString secret = SecureRandomGenerator::generate(32));
     virtual std::vector<model::MedicationDispense> closeTask(
         model::Task& task,
@@ -171,6 +175,8 @@ public:
         std::string_view healthCarePrescriptionUuid;
     };
     virtual model::ChargeItem addChargeItemToDatabase(const ChargeItemDescriptor& descriptor);
+
+    void expectOperationOutcome(const ClientResponse& response, const std::string_view expectedDetailsText);
 
     std::unique_ptr<HttpsServer> mServer;
 

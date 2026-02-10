@@ -78,9 +78,9 @@ Timestamp model::MedicationDispenseBundle::maxWhenHandedOver() const
 
 std::optional<model::Timestamp> MedicationDispenseBundle::getValidationReferenceTimestamp() const
 {
-    A_23384_03.start("Use maximum of whenHandedOver as reference timestamp for validation.");
+    A_23384_05.start("Use maximum of whenHandedOver as reference timestamp for validation.");
     auto result = maxWhenHandedOver();
-    A_23384_03.finish();
+    A_23384_05.finish();
     return result;
 }
 

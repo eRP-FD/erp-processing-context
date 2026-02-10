@@ -208,9 +208,16 @@ void PostGetPrescriptionsHandler::handleRequest(PcSessionContext& session)
             // GEMREQ-end A_27582#prescriptionIdsNotEmpty
 
             A_27064.start("add to response bundle");
-            responseBundle.addResource(makeFullUrl("/Task/" + task.prescriptionId().toString()), {}, {},
-                                       kbvBundle.jsonDocument());
-
+            const auto bundleId = kbvBundle.getId();
+            if (bundleId.isValidIheUuid())
+            {
+                responseBundle.addResource(bundleId.toUrn(), {}, {}, kbvBundle.jsonDocument());
+            }
+            else
+            {
+                responseBundle.addResource(getLinkBase() + "/Bundle/" + bundleId.toString(), {}, {},
+                                           kbvBundle.jsonDocument());
+            }
             A_27064.finish();
         }
 

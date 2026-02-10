@@ -19,9 +19,6 @@
 
 
 TEST(GemErpEuPrParCloseOperationInputTest, test) {
-    testutils::ShiftFhirResourceViewsGuard shift{"EU_2025_10_01",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
-
     auto xmlStr = ResourceTemplates::euCloseTaskXml({
         .kvnr = "X123456789",
         .prescriptionId = "160.000.000.004.715.74",

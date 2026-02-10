@@ -6,8 +6,8 @@
  */
 
 #include "test/erp/database/PostgresDatabaseMedicationDispenseTest.hxx"
-#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/EuMedicationDispenseInfos.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/model/KbvBundle.hxx"
@@ -18,6 +18,7 @@
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <shared/crypto/EllipticCurveUtils.hxx>
@@ -86,7 +87,7 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         auto pharmacy = std::get<1>(patientAndPharmacy);
         std::optional<Timestamp> whenPrepared = std::get<2>(patientAndPharmacy);
 
-        Task task = createAcceptedTask(kvnrPatient.id(), prescriptionType);
+        Task task = createAcceptedTask(kvnrPatient.id(), prescriptionType, GetParam().isPkv);
         auto medicationDispenses = closeTask(task, pharmacy.id(), GetParam().numMedications, whenPrepared);
         ASSERT_FALSE(medicationDispenses.empty());
         const auto& medicationDispense = medicationDispenses[0];
@@ -191,10 +192,13 @@ void PostgresDatabaseMedicationDispenseTestBase::writeCurrentTestOutputFile(
     FileHelper::writeFile(fileName, testOutput);
 }
 
-Task PostgresDatabaseMedicationDispenseTestBase::createAcceptedTask(const std::string_view& kvnrPatient, model::PrescriptionType prescriptionType)
+Task PostgresDatabaseMedicationDispenseTestBase::createAcceptedTask(const std::string_view& kvnrPatient,
+                                                                    model::PrescriptionType prescriptionType,
+                                                                    bool isPkv)
 {
     Task task = createTask(prescriptionType);
-    task.setKvnr(model::Kvnr{kvnrPatient, task.prescriptionId().isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{kvnrPatient, isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setIsPkv(isPkv);
     activateTask(task);
     acceptTask(task);
     return task;
@@ -1092,11 +1096,13 @@ TEST_P(PostgresDatabaseMedicationDispenseTest, SeveralTasksGetByIdNoFilter)//NOL
 }
 
 INSTANTIATE_TEST_SUITE_P(PostgresDatabaseMedicationDispenseTestInst, PostgresDatabaseMedicationDispenseTest,
-                         testing::Values(PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::apothekenpflichigeArzneimittel},
-                                         PostgresDatabaseMedicationDispenseTestParams{2, model::PrescriptionType::digitaleGesundheitsanwendungen},
-                                         PostgresDatabaseMedicationDispenseTestParams{4, model::PrescriptionType::direkteZuweisung},
-                                         PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichigeArzneimittel},
-                                         PostgresDatabaseMedicationDispenseTestParams{3, model::PrescriptionType::direkteZuweisungPkv}));
+                         testing::Values(PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::apothekenpflichigeArzneimittel, false},
+                                         PostgresDatabaseMedicationDispenseTestParams{2, model::PrescriptionType::digitaleGesundheitsanwendungen, false},
+                                         PostgresDatabaseMedicationDispenseTestParams{4, model::PrescriptionType::direkteZuweisung, false},
+                                         PostgresDatabaseMedicationDispenseTestParams{10, model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, true},
+                                         PostgresDatabaseMedicationDispenseTestParams{3, model::PrescriptionType::direkteZuweisungPkv, true},
+                                         PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::tRezept, true},
+                                         PostgresDatabaseMedicationDispenseTestParams{1, model::PrescriptionType::tRezept, false}));
 
 std::ostream& operator<<(std::ostream& os, const PostgresDatabaseMedicationDispenseTestParams& params)
 {
@@ -1118,9 +1124,9 @@ TEST_F(PostgresDatabaseMedicationDispenseTestBase, ERP_30108)
         txn.commit();
     }
 
-    Task task1 = createAcceptedTask(InsurantA, PrescriptionType::apothekenpflichigeArzneimittel);
+    Task task1 = createAcceptedTask(InsurantA, PrescriptionType::apothekenpflichigeArzneimittel, false);
     closeTask(task1, "3-SMC-B-Testkarte-883110000120312", 1, std::nullopt);
-    Task task2 = createAcceptedTask(InsurantA, PrescriptionType::direkteZuweisung);
+    Task task2 = createAcceptedTask(InsurantA, PrescriptionType::direkteZuweisung, false);
     closeTask(task2, "3-SMC-B-Testkarte-883110000120312", 1, std::nullopt);
 
     ASSERT_EQ(task1.prescriptionId().toDatabaseId(), task2.prescriptionId().toDatabaseId());// due to empty tables

@@ -41,8 +41,8 @@ services:
     ports:
       - "9004:6379"
     volumes:
-      - './redis:/data'
-      - './tls:/tls'
+      - './redis:/data:Z'
+      - './tls:/tls:z'
     command: ["/usr/local/bin/redis-server", "/data/redis.conf", "--port 0", "--tls-port 6379", "--tls-cert-file /tls/server.crt", "--tls-key-file /tls/server.key", "--tls-auth-clients no", "--protected-mode no", "--tls-ca-cert-file /tls/rootCA.crt"]
 
   # --------------------------------------------------------------------------------
@@ -60,7 +60,7 @@ services:
       POSTGRES_USER: 'erp_admin'
       POSTGRES_PASSWORD: 'erp0815'
     volumes:
-      - './tls:/tls'
+      - './tls:/tls:z'
     entrypoint: >
       /bin/bash -c "
       install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
@@ -89,7 +89,7 @@ services:
       POSTGRES_PASSWORD: 'erp0815'
       PGPORT: '5433'
     volumes:
-      - './tls:/tls'
+      - './tls:/tls:z'
     entrypoint: >
       /bin/bash -c "
       install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
@@ -109,8 +109,8 @@ services:
     image: postgres:16
     container_name: erp-postgres-schema
     volumes:
-      - './tls:/tls'
-      - '../scripts:/data'
+      - './tls:/tls:z'
+      - '../scripts:/data:Z'
     depends_on:
       - postgres
       - postgres-erp-medication-exporter
@@ -147,5 +147,5 @@ services:
     ports:
       - "18888:8888"
     volumes:
-      - './tls:/tls'
-      - './epa-test-mock:/lzconfig'
+      - './tls:/tls:z'
+      - './epa-test-mock:/lzconfig:Z'
