@@ -65,7 +65,7 @@ ClientResponse HttpsClientMock::send(const ClientRequest& clientRequest)
 
 
 FhirVzdClientMock::FhirVzdClientMock(std::string clientId)
-    : FhirVzdClient(clientId)
+    : FhirVzdClient(clientId, nullptr)
 {
 }
 

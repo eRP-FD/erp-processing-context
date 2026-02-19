@@ -344,7 +344,7 @@ subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 # This is required for TSA certificates.
 # extendedKeyUsage = critical,timeStamping
 
-crlDistributionPoints  = URI:http://example.com/example_ca.crl
+crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
 
 
 [ usr_cert_has_san ]
@@ -354,7 +354,7 @@ crlDistributionPoints  = URI:http://example.com/example_ca.crl
 basicConstraints       = CA:FALSE
 subjectKeyIdentifier   = hash
 authorityKeyIdentifier = keyid,issuer
-crlDistributionPoints  = URI:http://example.com/example_ca.crl
+crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
 
 
 [ v3_req ]
@@ -402,8 +402,6 @@ subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 # You can even override a supported extension:
 # basicConstraints= critical, DER:30:03:01:01:FF
 
-crlDistributionPoints  = URI:http://example.com/example_ca.crl
-
 
 [ v3_ca_has_san ]
 
@@ -413,7 +411,16 @@ subjectKeyIdentifier   = hash
 authorityKeyIdentifier = keyid:always,issuer:always
 basicConstraints       = CA:true
 keyUsage               = cRLSign, keyCertSign
-crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+[ v3_ca_has_san_crl ]
+
+# Same as above, but CA req already has SubjectAltName.
+
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid:always,issuer:always
+basicConstraints       = CA:true
+keyUsage               = cRLSign, keyCertSign
+crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
 
 
 [ crl_ext ]

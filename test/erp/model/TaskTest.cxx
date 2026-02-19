@@ -380,6 +380,410 @@ TEST_F(TaskTest, AcceptDate6WorkDaysOverHolidays)
     ASSERT_EQ(task.acceptDate().toXsDateTime(), expected.toXsDateTime());
 }
 
+struct TaskAcceptDateTestParam {
+    std::string name;
+    std::string baseTime;
+    std::string acceptDate;
+    std::source_location where{std::source_location::current()};
+};
+
+class TaskAcceptDateTest
+    : public TaskTest,
+      public testing::WithParamInterface<std::tuple<model::PrescriptionType, TaskAcceptDateTestParam>>
+{
+public:
+    static std::string name(const testing::TestParamInfo<ParamType>& info)
+    {
+        std::string result{magic_enum::enum_name(get<model::PrescriptionType>(info.param))};
+        result.append(1, '_').append(get<TaskAcceptDateTestParam>(info.param).name);
+        return result;
+    }
+};
+void PrintTo(const TaskAcceptDateTestParam& p, std::ostream* out)
+{
+    (*out) << R"({ "name": ")" << p.name << R"(", )";
+    (*out) << R"("baseTime": ")" << p.baseTime << R"(", )";
+    (*out) << R"("acceptDate": ")" << p.acceptDate << R"(", )";
+    (*out) << R"("where": ")" << std::filesystem::path{p.where.file_name()}.filename().native() << ":" << p.where.line()
+           << ":" << p.where.column() << R"(" })";
+}
+
+TEST_P(TaskAcceptDateTest, run)
+{
+    const auto& [prescriptionType, p] = GetParam();
+    A_27844.test("Task.AcceptDate = <Date of QES Creation + 28 days");
+    std::istringstream baseTimeStream{p.baseTime};
+    auto baseTime = model::Timestamp{model::Timestamp::timepoint_t::max()};
+    if (p.baseTime.find('+') == std::string::npos)
+    {
+        date::local_time<model::Timestamp::duration_t> parsedTime;
+        date::from_stream(baseTimeStream, "%Y-%m-%dT%H:%M", parsedTime);
+        ASSERT_FALSE(baseTimeStream.fail()) << p.baseTime;
+        baseTime = model::Timestamp{date::make_zoned(model::Timestamp::GermanTimezone, parsedTime).get_sys_time()};
+    }
+    else
+    {
+        date::sys_time<model::Timestamp::duration_t> parsedTime;
+        date::from_stream(baseTimeStream, "%Y-%m-%dT%H:%M:%S%z", parsedTime);
+        ASSERT_FALSE(baseTimeStream.fail()) << p.baseTime;
+        baseTime = model::Timestamp{parsedTime};
+    }
+
+    model::Task task(prescriptionType, "access_code");
+    task.setAcceptDate(baseTime, model::KbvStatusKennzeichen::asvKennzeichen, 3);
+    ASSERT_EQ(task.acceptDate().toGermanDate(), p.acceptDate);
+    A_27844.finish();
+}
+
+INSTANTIATE_TEST_SUITE_P(in6Days, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::tRezept),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"yearChange_midnight", "2025-12-29T00:00", "2026-01-04"},
+                                 {"yearChange_early", "2025-12-29T00:30", "2026-01-04"},
+                                 {"yearChange_late", "2025-12-29T23:30", "2026-01-04"},
+
+                                 {"winter_midnight", "2026-01-01T00:00", "2026-01-07"},
+                                 {"winter_early", "2026-01-01T00:30", "2026-01-07"},
+                                 {"winter_late", "2026-01-01T23:30", "2026-01-07"},
+
+                                 {"winter_summer_midnight", "2026-03-24T00:00", "2026-03-30"},
+                                 {"winter_summer_early", "2026-03-24T00:30", "2026-03-30"},
+                                 {"winter_summer_late", "2026-03-24T23:30", "2026-03-30"},
+
+                                 {"summer_midnight", "2026-06-23T00:00", "2026-06-29"},
+                                 {"summer_early", "2026-06-23T00:30", "2026-06-29"},
+                                 {"summer_late", "2026-06-23T23:30", "2026-06-29"},
+
+                                 {"summer_winter_midnight", "2026-10-23T00:00", "2026-10-29"},
+                                 {"summer_winter_early", "2026-10-23T00:30", "2026-10-29"},
+                                 {"summer_winter_late", "2026-10-23T23:30", "2026-10-29"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in6Days_DaylightSaving, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::tRezept),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"toAtChange_winter_summer", "2026-03-23T02:30", "2026-03-29"},
+                                 {"toBeforeChange_winter_summer", "2026-03-23T02:00", "2026-03-29"},
+                                 {"toAfterChange_winter_summer", "2026-03-23T03:00", "2026-03-29"},
+
+                                 {"fromBeforeChange_winter_summer", "2026-03-29T02:00:00+01:00", "2026-04-04"},
+                                 {"fromAfterChange_winter_summer", "2026-03-29T03:00", "2026-04-04"},
+
+                                 {"toAtChange_summer_winter", "2026-10-19T02:30", "2026-10-25"},
+                                 {"toBeforeChange_summer_winter", "2026-10-19T02:00", "2026-10-25"},
+                                 {"toAfterChange_summer_winter", "2026-10-19T03:00", "2026-10-25"},
+
+                                 {"fromChange_summer_winter_before", "2026-10-25T02:30:00+02:00", "2026-10-31"},
+                                 {"fromChange_summer_winter_after", "2026-10-25T02:30:00+01:00", "2026-10-31"},
+                                 {"fromBeforeChange_summer_winter", "2026-10-25T02:00:00+02:00", "2026-10-31"},
+                                 {"fromAfterChange_summer_winter", "2026-10-25T03:00:00+01:00", "2026-10-31"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in6Days_LeapYear, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::tRezept),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"onto_LeapDay_midnight", "2028-02-23T00:00", "2028-02-29"},
+                                 {"onto_LeapDay_early", "2028-02-23T00:30", "2028-02-29"},
+                                 {"onto_LeapDay_late", "2028-02-23T23:30", "2028-02-29"},
+
+                                 {"over_LeapDay_midnight", "2028-02-24T00:00", "2028-03-01"},
+                                 {"over_LeapDay_early", "2028-02-24T00:30", "2028-03-01"},
+                                 {"over_LeapDay_late", "2028-02-24T23:30", "2028-03-01"},
+
+                                 {"from_LeapDay_midnight", "2028-02-29T00:00", "2028-03-06"},
+                                 {"from_LeapDay_early", "2028-02-29T00:30", "2028-03-06"},
+                                 {"from_LeapDay_late", "2028-02-29T23:30", "2028-03-06"},
+
+                                 {"noLeapDay_midnight", "2026-02-23T00:00", "2026-03-01"},
+                                 {"noLeapDay_early", "2026-02-23T00:30", "2026-03-01"},
+                                 {"noLeapDay_late", "2026-02-23T23:30", "2026-03-01"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in6Days_daysPerMonth, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::tRezept),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"28days_to_last_midnight", "2026-02-22T00:00", "2026-02-28"},
+                                 {"28days_to_last_early", "2026-02-22T00:30", "2026-02-28"},
+                                 {"28days_to_last_late", "2026-02-22T23:30", "2026-02-28"},
+
+                                 {"28days_over_last_midnight", "2026-02-23T00:00", "2026-03-01"},
+                                 {"28days_over_last_early", "2026-02-23T00:30", "2026-03-01"},
+                                 {"28days_over_last_late", "2026-02-23T23:30", "2026-03-01"},
+
+                                 {"29days_to_last_midnight", "2028-02-23T00:00", "2028-02-29"},
+                                 {"29days_to_last_early", "2028-02-23T00:30", "2028-02-29"},
+                                 {"29days_to_last_late", "2028-02-23T23:30", "2028-02-29"},
+
+                                 {"29days_over_last_midnight", "2028-02-24T00:00", "2028-03-01"},
+                                 {"29days_over_last_early", "2028-02-24T00:30", "2028-03-01"},
+                                 {"29days_over_last_late", "2028-02-24T23:30", "2028-03-01"},
+
+                                 {"30days_to_last_midnight", "2026-04-24T00:00", "2026-04-30"},
+                                 {"30days_to_last_early", "2026-04-24T00:30", "2026-04-30"},
+                                 {"30days_to_last_late", "2026-04-24T23:30", "2026-04-30"},
+
+                                 {"30days_over_last_midnight", "2026-04-25T00:00", "2026-05-01"},
+                                 {"30days_over_last_early", "2026-04-25T00:30", "2026-05-01"},
+                                 {"30days_over_last_late", "2026-04-25T23:30", "2026-05-01"},
+
+                                 {"31days_to_last_midnight", "2026-05-25T00:00", "2026-05-31"},
+                                 {"31days_to_last_early", "2026-05-25T00:30", "2026-05-31"},
+                                 {"31days_to_last_late", "2026-05-25T23:30", "2026-05-31"},
+
+                                 {"31days_over_last_midnight", "2026-05-26T00:00", "2026-06-01"},
+                                 {"31days_over_last_early", "2026-05-26T00:30", "2026-06-01"},
+                                 {"31days_over_last_late", "2026-05-26T23:30", "2026-06-01"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+
+INSTANTIATE_TEST_SUITE_P(in28Days, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                               model::PrescriptionType::direkteZuweisung),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"yearChange_midnight", "2025-12-15T00:00", "2026-01-12"},
+                                 {"yearChange_early", "2025-12-15T00:30", "2026-01-12"},
+                                 {"yearChange_late", "2025-12-15T23:30", "2026-01-12"},
+
+                                 {"winter_midnight", "2026-01-01T00:00", "2026-01-29"},
+                                 {"winter_early", "2026-01-01T00:30", "2026-01-29"},
+                                 {"winter_late", "2026-01-01T23:30", "2026-01-29"},
+
+                                 {"winter_summer_midnight", "2026-03-02T00:00", "2026-03-30"},
+                                 {"winter_summer_early", "2026-03-02T00:30", "2026-03-30"},
+                                 {"winter_summer_late", "2026-03-02T23:30", "2026-03-30"},
+
+                                 {"summer_midnight", "2026-06-01T00:00", "2026-06-29"},
+                                 {"summer_early", "2026-06-01T00:30", "2026-06-29"},
+                                 {"summer_late", "2026-06-01T23:30", "2026-06-29"},
+
+                                 {"summer_winter_midnight", "2026-10-01T00:00", "2026-10-29"},
+                                 {"summer_winter_early", "2026-10-01T00:30", "2026-10-29"},
+                                 {"summer_winter_late", "2026-10-01T23:30", "2026-10-29"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in28Days_DaylightSaving, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                               model::PrescriptionType::direkteZuweisung),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"toAtChange_winter_summer", "2026-03-01T02:30", "2026-03-29"},
+                                 {"toBeforeChange_winter_summer", "2026-03-01T02:00", "2026-03-29"},
+                                 {"toAfterChange_winter_summer", "2026-03-01T03:00", "2026-03-29"},
+
+                                 {"fromBeforeChange_winter_summer", "2026-03-29T02:00:00+01:00", "2026-04-26"},
+                                 {"fromAfterChange_winter_summer", "2026-03-29T03:00", "2026-04-26"},
+
+                                 {"toAtChange_summer_winter", "2026-09-27T02:30", "2026-10-25"},
+                                 {"toBeforeChange_summer_winter", "2026-09-27T02:00", "2026-10-25"},
+                                 {"toAfterChange_summer_winter", "2026-09-27T03:00", "2026-10-25"},
+
+                                 {"fromChange_summer_winter_before", "2026-10-25T02:30:00+02:00", "2026-11-22"},
+                                 {"fromChange_summer_winter_after", "2026-10-25T02:30:00+01:00", "2026-11-22"},
+                                 {"fromBeforeChange_summer_winter", "2026-10-25T02:00:00+02:00", "2026-11-22"},
+                                 {"fromAfterChange_summer_winter", "2026-10-25T03:00:00+01:00", "2026-11-22"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in28Days_LeapYear, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                               model::PrescriptionType::direkteZuweisung),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"onto_LeapDay_midnight", "2028-02-01T00:00", "2028-02-29"},
+                                 {"onto_LeapDay_early", "2028-02-01T00:30", "2028-02-29"},
+                                 {"onto_LeapDay_late", "2028-02-01T23:30", "2028-02-29"},
+
+                                 {"over_LeapDay_midnight", "2028-02-02T00:00", "2028-03-01"},
+                                 {"over_LeapDay_early", "2028-02-02T00:30", "2028-03-01"},
+                                 {"over_LeapDay_late", "2028-02-02T23:30", "2028-03-01"},
+                                 // in 2036 daylight saving is on 31.March.
+                                 // This avoids to have both leap year and daylight saving in the test-period
+                                 {"from_LeapDay_midnight", "2036-02-29T00:00", "2036-03-28"},
+                                 {"from_LeapDay_early", "2036-02-29T00:30", "2036-03-28"},
+                                 {"from_LeapDay_late", "2036-02-29T23:30", "2036-03-28"},
+
+                                 {"noLeapDay_midnight", "2026-02-01T00:00", "2026-03-01"},
+                                 {"noLeapDay_early", "2026-02-01T00:30", "2026-03-01"},
+                                 {"noLeapDay_late", "2026-02-01T23:30", "2026-03-01"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in28Days_daysPerMonth, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichigeArzneimittel,
+                                               model::PrescriptionType::direkteZuweisung),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"28days_to_last_midnight", "2026-01-31T00:00", "2026-02-28"},
+                                 {"28days_to_last_early", "2026-01-31T00:30", "2026-02-28"},
+                                 {"28days_to_last_late", "2026-01-31T23:30", "2026-02-28"},
+
+                                 {"28days_over_last_midnight", "2026-02-01T00:00", "2026-03-01"},
+                                 {"28days_over_last_early", "2026-02-01T00:30", "2026-03-01"},
+                                 {"28days_over_last_late", "2026-02-01T23:30", "2026-03-01"},
+
+                                 {"29days_to_last_midnight", "2028-02-01T00:00", "2028-02-29"},
+                                 {"29days_to_last_early", "2028-02-01T00:30", "2028-02-29"},
+                                 {"29days_to_last_late", "2028-02-01T23:30", "2028-02-29"},
+
+                                 {"29days_over_last_midnight", "2028-02-02T00:00", "2028-03-01"},
+                                 {"29days_over_last_early", "2028-02-02T00:30", "2028-03-01"},
+                                 {"29days_over_last_late", "2028-02-02T23:30", "2028-03-01"},
+
+                                 {"30days_to_last_midnight", "2026-04-02T00:00", "2026-04-30"},
+                                 {"30days_to_last_early", "2026-04-02T00:30", "2026-04-30"},
+                                 {"30days_to_last_late", "2026-04-02T23:30", "2026-04-30"},
+
+                                 {"30days_over_last_midnight", "2026-04-03T00:00", "2026-05-01"},
+                                 {"30days_over_last_early", "2026-04-03T00:30", "2026-05-01"},
+                                 {"30days_over_last_late", "2026-04-03T23:30", "2026-05-01"},
+
+                                 {"31days_to_last_midnight", "2026-05-03T00:00", "2026-05-31"},
+                                 {"31days_to_last_early", "2026-05-03T00:30", "2026-05-31"},
+                                 {"31days_to_last_late", "2026-05-03T23:30", "2026-05-31"},
+
+                                 {"31days_over_last_midnight", "2026-05-04T00:00", "2026-06-01"},
+                                 {"31days_over_last_early", "2026-05-04T00:30", "2026-06-01"},
+                                 {"31days_over_last_late", "2026-05-04T23:30", "2026-06-01"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+
+INSTANTIATE_TEST_SUITE_P(in3Months, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                               model::PrescriptionType::direkteZuweisungPkv,
+                                               model::PrescriptionType::digitaleGesundheitsanwendungen),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"winter_midnight", "2025-11-15T00:00:00", "2026-02-15"},
+                                 {"winter_early", "2025-11-15T00:30:00", "2026-02-15"},
+                                 {"winter_late", "2025-11-15T23:30:00", "2026-02-15"},
+
+                                 {"winter_summer_midnight", "2026-03-01T00:00:00", "2026-06-01"},
+                                 {"winter_summer_early", "2026-03-01T00:30:00", "2026-06-01"},
+                                 {"winter_summer_late", "2026-03-01T23:30:00", "2026-06-01"},
+
+                                 {"yearChange_winter_summer_midnight", "2022-12-28T00:00:00", "2023-03-28"},
+                                 {"yearChange_winter_summer_early", "2022-12-28T00:30:00", "2023-03-28"},
+                                 {"yearChange_winter_summer_late", "2022-12-28T23:30:00", "2023-03-28"},
+
+                                 {"summer_midnight", "2026-06-01T00:00:00", "2026-09-01"},
+                                 {"summer_early", "2026-06-01T00:30:00", "2026-09-01"},
+                                 {"summer_late", "2026-06-01T23:30:00", "2026-09-01"},
+
+                                 {"summer_winter_midnight", "2026-09-01T00:00:00", "2026-12-01"},
+                                 {"summer_winter_early", "2026-09-01T00:30:00", "2026-12-01"},
+                                 {"summer_winter_late", "2026-09-01T23:30:00", "2026-12-01"},
+
+                                 {"yearChange_summer_winter_midnight", "2026-10-01T00:00:00", "2027-01-01"},
+                                 {"yearChange_summer_winter_early", "2026-10-01T00:30:00", "2027-01-01"},
+                                 {"yearChange_summer_winter_late", "2026-10-01T23:30:00", "2027-01-01"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in3Months_DaylightSaving, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                               model::PrescriptionType::direkteZuweisungPkv,
+                                               model::PrescriptionType::digitaleGesundheitsanwendungen),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"toAtChange_winter_summer", "2025-12-29T02:30", "2026-03-29"},
+                                 {"toBeforeChange_winter_summer", "2025-12-29T02:00", "2026-03-29"},
+                                 {"toAfterChange_winter_summer", "2025-12-29T03:00", "2026-03-29"},
+
+                                 {"fromBeforeChange_winter_summer", "2026-03-29T02:00:00+01:00", "2026-06-29"},
+                                 {"fromAfterChange_winter_summer", "2026-03-29T03:00:00+02:00", "2026-06-29"},
+
+                                 {"toBeforeChange_summer_winter", "2026-07-25T02:00:00+02:00", "2026-10-25"},
+                                 {"toBeforeChange_summer_winter_middel", "2026-07-25T02:30:00+02:00", "2026-10-25"},
+                                 {"toAfterChange_summer_winter_middel", "2026-07-25T02:30:00+01:00", "2026-10-25"},
+                                 {"toAfterChange_summer_winter", "2026-07-25T03:00:00+01:00", "2026-10-25"},
+
+                                 {"fromChange_summer_winter_before", "2026-10-25T02:30:00+02:00", "2027-01-25"},
+                                 {"fromChange_summer_winter_after", "2026-10-25T02:30:00+01:00", "2027-01-25"},
+                                 {"fromBeforeChange_summer_winter", "2026-10-25T02:00:00+02:00", "2027-01-25"},
+                                 {"fromAfterChange_summer_winter", "2026-10-25T03:00:00+01:00", "2027-01-25"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+INSTANTIATE_TEST_SUITE_P(in3Months_LeapYear, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                               model::PrescriptionType::direkteZuweisungPkv,
+                                               model::PrescriptionType::digitaleGesundheitsanwendungen),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"onto_LeapDay_midnight", "2027-11-29T00:00", "2028-02-29"},
+                                 {"onto_LeapDay_early", "2027-11-29T00:30", "2028-02-29"},
+                                 {"onto_LeapDay_late", "2027-11-29T23:30", "2028-02-29"},
+
+                                 {"from_LeapDay_midnight", "2028-02-29T00:00", "2028-05-29"},
+                                 {"from_LeapDay_early", "2028-02-29T00:30", "2028-05-29"},
+                                 {"from_LeapDay_late", "2028-02-29T23:30", "2028-05-29"},
+
+                                 {"noLeapDay_midnight", "2026-11-29T00:00", "2027-02-28"},
+                                 {"noLeapDay_early", "2026-11-29T00:30", "2027-02-28"},
+                                 {"noLeapDay_late", "2026-11-29T23:30", "2027-02-28"},
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
+
+
+INSTANTIATE_TEST_SUITE_P(in3Months_daysPerMonth, TaskAcceptDateTest,
+                         testing::Combine(//
+                             ::testing::Values(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
+                                               model::PrescriptionType::direkteZuweisungPkv,
+                                               model::PrescriptionType::digitaleGesundheitsanwendungen),
+                             ::testing::ValuesIn<std::list<TaskAcceptDateTestParam>>({
+                                 {"28days_shortened_midnight", "2026-11-30T00:00", "2027-02-28"},
+                                 {"28days_shortened_early", "2026-11-30T00:30", "2027-02-28"},
+                                 {"28days_shortened_late", "2026-11-30T23:30", "2027-02-28"},
+
+                                 {"28days_exact_midnight", "2026-11-28T00:00", "2027-02-28"},
+                                 {"28days_exact_early", "2026-11-28T00:30", "2027-02-28"},
+                                 {"28days_exact_late", "2026-11-28T23:30", "2027-02-28"},
+
+                                 {"29days_shortened_midnight", "2027-11-30T00:00", "2028-02-29"},
+                                 {"29days_shortened_early", "2027-11-30T00:30", "2028-02-29"},
+                                 {"29days_shortened_late", "2027-11-30T23:30", "2028-02-29"},
+
+                                 {"29days_exact_midnight", "2027-11-29T00:00", "2028-02-29"},
+                                 {"29days_exact_early", "2027-11-29T00:30", "2028-02-29"},
+                                 {"29days_exact_late", "2027-11-29T23:30", "2028-02-29"},
+
+                                 {"30days_shortened_midnight", "2026-01-31T00:00", "2026-04-30"},
+                                 {"30days_shortened_early", "2026-01-31T00:30", "2026-04-30"},
+                                 {"30days_shortened_late", "2026-01-31T23:30", "2026-04-30"},
+
+                                 {"30days_exact_midnight", "2026-01-30T00:00", "2026-04-30"},
+                                 {"30days_exact_early", "2026-01-30T00:30", "2026-04-30"},
+                                 {"30days_exact_late", "2026-01-30T23:30", "2026-04-30"},
+
+                                 {"31days_midnight", "2026-05-31T00:00", "2026-08-31"},
+                                 {"31days_early", "2026-05-31T00:30", "2026-08-31"},
+                                 {"31days_late", "2026-05-31T23:30", "2026-08-31"},
+
+                             }))//
+                         ,
+                         &TaskAcceptDateTest::name);
 
 TEST_F(TaskTest, DeleteAccessCode)//NOLINT(readability-function-cognitive-complexity)
 {

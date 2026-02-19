@@ -220,10 +220,14 @@ pipeline {
                                     cyclonedx convert --output-version v1_1 --input-file ${sbom_report_json} --output-file ${sbom_report}
                                 """
                             }
-                            dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
-                                projectVersion: "${currentBuild.displayName}", synchronous: true
-                            dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
-                                projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                                dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
+                                    projectVersion: "${currentBuild.displayName}", synchronous: true
+                            }
+                            catchError(buildResult: 'SUCCESS', stageResult: 'UNSTABLE') {
+                                dependencyTrackPublisher artifact: "${sbom_report}", projectName: "erp-processing-context",
+                                    projectVersion: "latest_${env.BRANCH_NAME}", synchronous: false
+                            }
                         }
                     }
                     post {

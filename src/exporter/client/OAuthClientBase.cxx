@@ -11,6 +11,7 @@
 #include "exporter/model/TaskEvent.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "shared/network/client/ClientInterface.hxx"
+#include "shared/network/client/CrlProvider.hxx"
 #include "shared/network/client/HttpsClient.hxx"
 #include "shared/network/client/request/ClientRequest.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
@@ -60,11 +61,13 @@ std::tuple<std::string, int> validateAccessTokenResponse(const model::NumberAsSt
 using namespace medication::exporter::exceptions;
 
 
-OAuthClientBase::OAuthClientBase(std::string clientId, std::string host, std::string port)
+OAuthClientBase::OAuthClientBase(std::string clientId, std::string host, std::string port,
+                                 std::shared_ptr<CrlProvider> crlProvider)
     : mClientId(std::move(clientId))
     , mHost(std::move(host))
     , mPort(std::move(port))
     , mAccessTokenCache(std::make_unique<TokenCache>(TokenCache::TokenType::AccessToken))
+    , mCrlProvider(std::move(crlProvider))
 {
 }
 
@@ -207,13 +210,18 @@ void OAuthClientBase::invalidateTokenCache() const
 std::unique_ptr<ClientInterface> OAuthClientBase::createClient(const std::string& hostname,
                                                                const std::string& port) const
 {
-    return std::make_unique<HttpsClient>(
-        HttpsClient{{.hostname = hostname,
-                     .port = port,
-                     .connectionTimeout = std::chrono::seconds(60),
-                     .resolveTimeout = std::chrono::seconds(5),
-                     .tlsParameters = TlsConnectionParameters{
-                         .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}}});
+    // GEMREQ-start A_27855
+    return std::make_unique<HttpsClient>(HttpsClient{
+        {.hostname = hostname,
+         .port = port,
+         .connectionTimeout = std::chrono::seconds(60),
+         .resolveTimeout = std::chrono::seconds(5),
+         .tlsParameters = TlsConnectionParameters{
+             .certificateVerifier =
+                 TlsCertificateVerifier::withCustomRootCertificates(
+                     Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS))
+                     .withCrl(*mCrlProvider)}}});
+    // GEMREQ-end A_27855
 }
 
 std::string OAuthClientBase::getClientId() const

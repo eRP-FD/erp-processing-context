@@ -142,10 +142,35 @@ services:
   # epa-test-mock
   # --------------------------------------------------------------------------------
   epa-test-mock:
-    image: de.icr.io/erp_dev/epa-test-mock:v-0.82.0
+    image: de.icr.io/erp_dev/epa-test-mock:v-0.89.0
     container_name: epa-test-mock
     ports:
       - "18888:8888"
+    command: [ "srv.yaml", "/opt/epamock/cfg/lzcfg.yaml" ]
     volumes:
-      - './tls:/tls:z'
-      - './epa-test-mock:/lzconfig:Z'
+      - './epa-test-mock/lzconfig/lzcfg.yaml:/opt/epamock/cfg/lzcfg.yaml:Z'
+      - './epa-test-mock/srv-local.yaml:/opt/epamock/bin/srv.yaml:Z'
+      - './epa-test-mock/templates/:/opt/epamock/lzconfig/templates/:Z'
+      - './epa-test-mock/ocsp-response-vau-sig.der:/opt/epamock/ocsp-response-vau-sig.der:Z'
+      - './epa-test-mock/ocsp-response-vau-sig.der:/opt/epamock/tisim-pki/ocsp-response-vau-sig.der:Z'
+      - './epa-test-mock/ocsp-response-tls-epa-as-mock.der:/opt/epamock/tisim-pki/ocsp-response-tls-epa-as-mock.der:Z'
+
+  # --------------------------------------------------------------------------------
+  # bfarm-test-mock
+  # --------------------------------------------------------------------------------
+  bfarm-test-mock:
+    image: de.icr.io/erp_dev/bfarm-test-mock:v-0.14.0
+    container_name: bfarm-test-mock
+    ports:
+      - "18443:8443"
+    environment:
+      QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_FILE: /tls/keystore.p12
+      QUARKUS_HTTP_SSL_CERTIFICATE_KEY_STORE_PASSWORD: changeit
+      BFARM_LCFG_FILE: /opt/bfarmmock/lzconfig/lz-config.json
+      BFARM_TEMPLATE_PATH: /opt/bfarmmock/lzconfig/templates
+      BFARM_SRV_FILE: /opt/bfarmmock/config/srv.yaml
+    volumes:
+      - ./bfarm/tls/keystore.p12:/tls/keystore.p12:ro,Z
+      - ./bfarm/lz-config.json:/opt/bfarmmock/lzconfig/lz-config.json:Z
+      - ./bfarm/templates:/opt/bfarmmock/lzconfig/templates:Z
+      - ./bfarm/srv.yaml:/opt/bfarmmock/config/srv.yaml:Z

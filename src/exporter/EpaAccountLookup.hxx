@@ -57,6 +57,7 @@ public:
 
 private:
     std::unique_ptr<IEpaAccountLookupClient> mLookupClient;
+    std::vector<std::tuple<std::string, uint16_t>> mEpaFqdns;
 };
 
 

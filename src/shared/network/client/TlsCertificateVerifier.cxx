@@ -7,7 +7,7 @@
 
 #include "shared/network/client/TlsCertificateVerifier.hxx"
 #include "shared/crypto/OpenSslHelper.hxx"
-#include "shared/network/connection/RootCertificates.hxx"
+#include "shared/network/client/CrlProvider.hxx"
 #include "shared/tsl/OcspHelper.hxx"
 #include "shared/tsl/TslManager.hxx"
 #include "shared/tsl/X509Certificate.hxx"
@@ -35,7 +35,23 @@ bool verifySubjectAlternativeDnsName(const std::string& hostname, const X509Cert
     return result;
 }
 
+
+// GEMREQ-start A_27857#crl
+void validateCrl(shared_X509_CRL& crl, X509Certificate& issuer, const X509Certificate& cert)
+{
+    Expect(crl != nullptr, "Empty CRL");
+    // following rfc5280, 6.3.33, skipping deltas and reason marks
+    auto crlIssuer = x509NametoString(X509_CRL_get_issuer(crl));
+    Expect(cert.getIssuer() == crlIssuer, "CRL issuer does not match certificate issuer");
+    Expect(issuer.checkKeyUsage({KeyUsage::cRLSign}), "CRL issuer missing key usage cRLSign");
+
+    auto* issuerPKey = issuer.getPublicKey();
+    auto ret = X509_CRL_verify(crl, issuerPKey);
+    Expect(ret == 1, "CRL signature validation failed");
 }
+// GEMREQ-end A_27857#crl
+
+}//namespace
 
 /**
  * Base class for certificate verification implementations. Two methods can be overridden to
@@ -76,7 +92,8 @@ public:
      * @param check The function to be invoked to perform the check. Returns true to accept the
      *        certificate, false to reject it.
      */
-    void addCertificateCheck(const std::function<bool(const X509Certificate&)>& check)
+    void
+    addCertificateCheck(const std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>& check)
     {
         mAdditionalCertificateChecks.push_back(check);
     }
@@ -132,7 +149,7 @@ protected:
     }
 
 private:
-    std::vector<std::function<bool(const X509Certificate&)>> mAdditionalCertificateChecks;
+    std::vector<std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>> mAdditionalCertificateChecks;
 
     static std::optional<X509Certificate> getCertificateFromSslContext(
         boost::asio::ssl::verify_context& context)
@@ -242,32 +259,13 @@ private:
         {
             for (const auto& check : mAdditionalCertificateChecks)
             {
-                if (! check(certificate.value()))
+                if (! check(certificate.value(), context))
+                {
                     return false;
+                }
             }
         }
         return true;
-    }
-};
-
-
-class TlsCertificateVerifier::BundledRootCertificatesImplementation : public Implementation
-{
-public:
-    void install(boost::asio::ssl::context& sslContext) override
-    {
-        Implementation::install(sslContext);
-
-        for (std::size_t ind = 0; ind < rootCertificates.size(); ind++)
-        {
-            boost::system::error_code ec{};
-            sslContext.add_certificate_authority(boost::asio::buffer(rootCertificates[ind]), ec);
-            if (ec.failed())
-            {
-                LOG(ERROR) << "loading bundled CA certificates failed at index " << ind;
-                throw boost::beast::system_error{ec};
-            }
-        }
     }
 };
 
@@ -452,12 +450,6 @@ public:
 };
 
 
-TlsCertificateVerifier TlsCertificateVerifier::withBundledRootCertificates()
-{
-    return TlsCertificateVerifier(std::make_unique<BundledRootCertificatesImplementation>());
-}
-
-
 TlsCertificateVerifier TlsCertificateVerifier::withCustomRootCertificates(
     std::string customRootCertificates)
 {
@@ -485,7 +477,7 @@ void TlsCertificateVerifier::install(boost::asio::ssl::context& sslContext)
 
 
 TlsCertificateVerifier& TlsCertificateVerifier::withAdditionalCertificateCheck(
-    const std::function<bool(const X509Certificate&)>& check)
+    const std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>& check)
 {
     mImplementation->addCertificateCheck(check);
     return *this;
@@ -495,8 +487,47 @@ TlsCertificateVerifier& TlsCertificateVerifier::withAdditionalCertificateCheck(
 TlsCertificateVerifier& TlsCertificateVerifier::withSubjectAlternativeDnsName(
     const std::string& name)
 {
-    auto check = [name](const X509Certificate& certificate) {
+    auto check = [name](const X509Certificate& certificate, boost::asio::ssl::verify_context&) {
         return verifySubjectAlternativeDnsName(name, certificate);
+    };
+    return withAdditionalCertificateCheck(check);
+}
+
+
+TlsCertificateVerifier& TlsCertificateVerifier::withCrl(CrlProvider& crl)
+{
+    auto check = [&crl](const X509Certificate& /*certificate*/, boost::asio::ssl::verify_context& context) -> bool {
+        STACK_OF(X509)* chain = X509_STORE_CTX_get0_chain(context.native_handle());
+        const int chainLength = sk_X509_num(chain);
+        for (int i = 0; i < chainLength - 1; ++i)
+        {
+            auto cert = X509Certificate::createFromX509Pointer(sk_X509_value(chain, i));
+            auto issuer = X509Certificate::createFromX509Pointer(sk_X509_value(chain, i + 1));
+
+            if (cert.getHttpCrlDistributionPoints().empty())
+            {
+                continue;
+            }
+            auto crlPtr = crl.getCrl(cert);
+            try
+            {
+                validateCrl(crlPtr, issuer, cert);
+            }
+            catch (const std::exception& e)
+            {
+                LOG(WARNING) << "CRL validation failed for '" << cert.getSubject() << "', reason: " << e.what();
+                return false;
+            }
+
+            X509_REVOKED* revoked = nullptr;
+            // GEMREQ-start A_27857#validate
+            // find the serial in the crl
+            Expect(! X509_CRL_get0_by_cert(crlPtr, &revoked, cert.getX509Ptr()),
+                   "Certificate with subject '" + cert.getSubject() + "' is revoked by CRL");
+            // GEMREQ-end A_27857#validate
+        }
+        return true;
+
     };
     return withAdditionalCertificateCheck(check);
 }

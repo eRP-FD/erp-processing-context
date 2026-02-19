@@ -6,8 +6,6 @@
  */
 
 #include "shared/network/connection/RootCertificatesMgr.hxx"
-
-#include "shared/network/connection/RootCertificates.hxx"
 #include "shared/util/String.hxx"
 
 #include "shared/util/GLog.hxx"
@@ -32,22 +30,6 @@ void RootCertificatesMgr::loadCaCertificates(boost::asio::ssl::context& context,
         {
             TLOG(WARNING) << "loading ca certificates failed";
             throw;
-        }
-    }
-    else
-    {
-        TVLOG(0) << "loading default root certificates, count of certificates: " << rootCertificates.size();
-        for (std::size_t ind = 0; ind < rootCertificates.size(); ind++)
-        {
-            try
-            {
-                context.add_certificate_authority(boost::asio::buffer(rootCertificates[ind]));
-            }
-            catch(const boost::exception& )
-            {
-                TLOG(WARNING) << "loading ca certificates failed at index " << ind;
-                throw;
-            }
         }
     }
 }

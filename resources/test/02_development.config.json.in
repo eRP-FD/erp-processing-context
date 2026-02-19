@@ -53,6 +53,9 @@
     },
     "bfarm-client": {
       "url": "no-url-configured"
+    },
+    "ocsp": {
+      "gracePeriodEpa": "31557600"
     }
   },
   "debug": {

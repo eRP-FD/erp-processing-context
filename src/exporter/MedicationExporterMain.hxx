@@ -35,7 +35,7 @@ public:
     static bool waitForHealthUp(RunLoopScheduler& runLoop,
                                 const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
     static bool testEpaEndpoints(MedicationExporterServiceContext& serviceContext);
-    static bool testTRezeptEndpoints();
+    static bool testTRezeptEndpoints(MedicationExporterServiceContext& serviceContext);
 
 };
 

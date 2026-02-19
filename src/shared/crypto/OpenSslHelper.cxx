@@ -30,6 +30,7 @@ extern const char evp_pkey_ctx_name[] = "EVP_PKEY_CTX";
 extern const char ocsp_basic_response_name[] = "OCSP_BASICRESP";
 extern const char ocsp_response_name[] = "OCSP_RESPONSE";
 extern const char x509_name[] = "X509";
+extern const char x509_CRL_name[] = "X509_CRL";
 extern const char x509_Name_name[] = "X509_NAME";
 extern const char x509_Store_name[] = "X509_STORE";
 extern const char ecdsa_sig_name[] = "ECDSA_SIG";
@@ -74,6 +75,14 @@ std::string bioToString (BIO* bio)
     const auto length = BIO_get_mem_data(bio, &data);
     OpenSslExpect(length >= 0, "BIO_get_mem_data failed");
     return std::string(data, static_cast<size_t>(length));
+}
+
+BioPtr stringToBio(std::string_view string)
+{
+    BioPtr mem{BIO_new(BIO_s_mem())};
+    Expect(mem != nullptr, "can not allocate memory");
+    BIO_write(mem.get(), string.data(), gsl::narrow_cast<int>(string.size()));
+    return mem;
 }
 
 std::string x509NametoString(const X509_NAME* name)

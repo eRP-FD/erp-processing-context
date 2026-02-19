@@ -208,6 +208,12 @@ public:
     std::vector<std::string> getOcspUrls() const;
 
     /**
+     * Returns the X509v3 CRL Distribution Points of type URI with http prefix
+     * @returns vector of distribution points
+     */
+    std::vector<std::string> getHttpCrlDistributionPoints() const;
+
+    /**
      * Checks, if the admission extension of the certificate contains at least one of the given roles.
      *
      * @param roleOids    the oids of the roles

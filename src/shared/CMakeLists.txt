@@ -134,6 +134,7 @@ add_library(erp-shared STATIC
     model/Pzn.cxx
     network/client/ClientBase.cxx
     network/client/CoHttpsClient.cxx
+    network/client/CrlDownloadCache.cxx
     network/client/HttpClient.cxx
     network/client/HttpsClient.cxx
     network/client/TlsCertificateVerifier.cxx

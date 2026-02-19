@@ -37,7 +37,8 @@ public:
         const std::string& body,
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false) const;
+        const bool trustCn = false,
+        int redirectDepth = 0) const;
     ClientResponse send (
         const UrlHelper::UrlParts& url,
         const HttpMethod method,
@@ -56,6 +57,10 @@ public:
 
     void setTlsCertificateVerifier(TlsCertificateVerifier certificateVerifier);
 
+    void setProxyUrl(std::optional<std::string> url);
+
+    void setFollowRedirects(bool followRedirects);
+
 protected:
     virtual ClientResponse doSend (
         const std::string& url,
@@ -64,7 +69,7 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
+        const boost::asio::ip::tcp::endpoint* ep = nullptr, const std::string& headerFieldHost = "") const;
     virtual ClientResponse doSend (
         const UrlHelper::UrlParts& url,
         const HttpMethod method,
@@ -72,13 +77,17 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
+        const boost::asio::ip::tcp::endpoint* ep = nullptr, const std::string& headerFieldHost = "") const;
+
+    bool followsRedirects() const;
 
 private:
     TlsCertificateVerifier mTlsCertificateVerifier;
     std::chrono::milliseconds mConnectionTimeout;
     std::chrono::milliseconds mResolveTimeout;
     mutable DurationConsumer mDurationConsumer;
+    std::optional<std::string> mProxyUrl;
+    bool mFollowRedirects;
 };
 
 

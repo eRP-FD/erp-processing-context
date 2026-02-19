@@ -841,6 +841,53 @@ std::vector<std::string> X509Certificate::getOcspUrls() const {
     return result;
 }
 
+std::vector<std::string> X509Certificate::getHttpCrlDistributionPoints() const
+{
+    if (!pCert)
+    {
+        return {};
+    }
+
+    std::vector<std::string> result;
+
+    const auto releaseDistPoints = [](STACK_OF(DIST_POINT)* list) {
+        sk_DIST_POINT_pop_free(list, DIST_POINT_free);
+    };
+
+    auto crlDistributionPoints = std::unique_ptr<STACK_OF(DIST_POINT), decltype(releaseDistPoints)>(
+        static_cast<STACK_OF(DIST_POINT)*>(
+            X509_get_ext_d2i(pCert.get(), NID_crl_distribution_points, nullptr, nullptr)),
+        releaseDistPoints);
+
+    for (auto i = 0; i < sk_DIST_POINT_num(crlDistributionPoints.get()); i++)
+    {
+        auto* dp = sk_DIST_POINT_value(crlDistributionPoints.get(), i);
+        if (! dp->distpoint || dp->distpoint->type != 0)
+        {
+            continue;
+        }
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-union-access)
+        auto* gens = dp->distpoint->name.fullname;
+        for (int j = 0; j < sk_GENERAL_NAME_num(gens); j++)
+        {
+            int gtype = GEN_OTHERNAME;
+            auto* gen = sk_GENERAL_NAME_value(gens, j);
+            const ASN1_STRING* uri = static_cast<ASN1_STRING*>(GENERAL_NAME_get0_value(gen, &gtype));
+            if (gtype == GEN_URI && ASN1_STRING_length(uri) > 6)
+            {
+                // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
+                auto url = std::string{reinterpret_cast<const char*>(ASN1_STRING_get0_data(uri))};
+                if (url.starts_with("http://"))
+                {
+                    result.push_back(std::move(url));
+                }
+            }
+        }
+    }
+
+    return result;
+}
+
 
 bool X509Certificate::checkRoles (const std::vector<std::string>& roleOids) const {
     if (!pCert)

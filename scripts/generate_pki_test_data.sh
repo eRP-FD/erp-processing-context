@@ -30,6 +30,9 @@ outdated="outdated"
 multipleNewCA="multipleNewCA"
 brokenNewCA="brokenNewCA"
 validBeforeOutdated="validBeforeOutdated"
+revoked="revoked"
+
+export CRL_DISTRIBUTION_POINTS=""
 
 
 function printUsage()
@@ -104,6 +107,7 @@ function init_ca_directory()
     touch index.txt
     echo "unique_subject = yes" > index.txt.attr
     echo dd if=/dev/urandom bs=8 count=1 status=none | xxd -u -p -g8 > serial
+    echo 1000 > crlnumber
   })
 }
 
@@ -162,19 +166,25 @@ function generate_certificate()
   # normal - normal validity timeframe
   # outdated - outdated validity timeframe
   # validBeforeOutdated - valid currently and validity timeframe starts before outdated validity timeframe ends
+  # revoked - time is valid, but revoked via crl
   local generationMode="$6"
   shift 6
 
   if [ "$generationMode" != "$normal" ] \
     && [ "$generationMode" != "$outdated" ] \
-    && [ "$generationMode" != "$validBeforeOutdated" ] ; then
+    && [ "$generationMode" != "$validBeforeOutdated" ] \
+    && [ "$generationMode" != "$revoked" ]; then
       echo "Wrong generation mode '$generationMode' is provided for certificate $alias"
       exit 1
   fi
 
   eval "$(get_named_arguments subjectAltName "$@")"
+  eval "$(get_named_arguments crlDistributionPoints "$@")"
 
   local caDir="$testDataDir/$caName"
+  local clrFilePem="$caDir/crl/crl.pem"
+  local clrFileDer="$caDir/crl/crl.der"
+  local indexFile="$caDir/index.txt"
 
   local keyArguments  # separate assignment to have exit code != 0 take effect
   keyArguments=$(get_arguments_for_key_type "$keyType")
@@ -206,8 +216,16 @@ function generate_certificate()
 
     # If a SubjectAltName is given, overrided the value in openssl.cnf.
     if [ -n "$subjectAltName" ]; then
-      additionalEnvVars=("SUBJECT_ALT_NAME=$subjectAltName")
+      additionalEnvVars+=("SUBJECT_ALT_NAME=$subjectAltName")
     fi
+    # override crlDisitrbutionPoints, if given
+    if [ -n "$crlDistributionPoints" ]; then
+      additionalEnvVars+=("CRL_DISTRIBUTION_POINTS=$crlDistributionPoints")
+    else
+      additionalEnvVars+=("CRL_DISTRIBUTION_POINTS=URI:http://crl.example.com/${alias}.crl")
+    fi
+
+    echo "vars = $additionalEnvVars"
 
     # create private key and CSR
     echo "Generating key and CSR..."
@@ -248,6 +266,14 @@ function generate_certificate()
             -extensions "$extensions" -startdate "$beforeOutdatedStartDate" -enddate "$validEndDate" -in "$csrFile" -out "$certFile"
     fi
 
+    if [ "$generationMode" == "$revoked" ]; then
+      "$OPENSSL" ca -config "$opensslConfig" -revoke "$certFile"
+    fi
+    if [ ! -f "$clrFileDer" ] || [ "$clrFileDer" -ot "$indexFile" ]; then
+      "$OPENSSL" ca -config "$opensslConfig" -gencrl -out "$clrFilePem"
+      "$OPENSSL" crl -in "$clrFilePem" -inform PEM -out "$clrFileDer" -outform DER
+    fi
+
     "$OPENSSL" x509 -outform der -in "$certFile" -out "$certDerFile"
     cat "${certFile}" "${keyFile}" > "${pairFile}"
   })
@@ -274,17 +300,18 @@ function generate_sub_ca()
   fi
 
   # create sub CA certificate
-  generate_certificate "$parentCaName" "$caName" "$commonName" v3_ca_has_san "$keyType" "$generationMode" "$@"
+  generate_certificate "$parentCaName" "$caName" "$commonName" v3_ca_has_san_crl "$keyType" "$generationMode" "$@"
 
   # initialize sub CA directory
   init_ca_directory "$caDir"
 
-  ln -s "../$parentCaName/certificates/$caName/$caName.pem" "$caDir/ca.pem"
+  ln -s "../$parentCaName/certificates/$caName/${caName}_cert.pem" "$caDir/ca.pem"
   ln -s "../$parentCaName/certificates/$caName/$caName.der" "$caDir/ca.der"
   ln -s "../../$parentCaName/certificates/$caName/${caName}_key.pem" "$caDir/private/ca_key.pem"
 
   # the certificate chain to the CA certificate
   cat "$caDir/ca.pem" "$parentCaDir/ca_cert_chain.pem" > "$caDir/ca_cert_chain.pem"
+
 }
 
 
@@ -529,6 +556,7 @@ generate_root_ca root_ca_ec ec:brainpoolP256r1
 generate_sub_ca root_ca_ec sub_ca1_ec "Example Inc. Sub CA EC 1" ec:brainpoolP256r1 $normal
 generate_sub_ca root_ca_ec bna_signer_ca_ec "Example Inc. BNA signer CA EC" ec:brainpoolP256r1 $normal
 generate_sub_ca root_ca_ec outdated_ca_ec "Example Inc. outdated CA EC" ec:brainpoolP256r1 $outdated
+generate_sub_ca root_ca_ec revoked_ca_ec "Revoked Example Inc. Sub CA EC 2" ec:brainpoolP256r1 $revoked
 generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
 generate_certificate bna_signer_ca_ec bna_signer_ec "BNA signer" bna_signer_cert ec:brainpoolP256r1 $normal \
@@ -549,6 +577,14 @@ generate_certificate sub_ca1_ec tsl_signer_wrong_key_usage_ec "TSL signer 2" tsl
     subjectAltName=email:admin@example.com
 generate_certificate sub_ca1_ec smc_b_osig_ec "SMC-B Osig Signer" smc_b_osig ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec unrevoked_ec "Example Unrevoked Cert" usr_cert ec:brainpoolP256r1 $normal \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
+# certificate revoked, signed by normal CA
+generate_certificate sub_ca1_ec revoked_ec "Example Revoked Cert" usr_cert ec:brainpoolP256r1 $revoked \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1 crlDistributionPoints=URI:http://crl.example.com/revoked_crt.crl,URI:ldap://test/
+# certificate signed by a revoked CA
+generate_certificate revoked_ca_ec normal_ec "Example Cert Revoked Sub Ca" usr_cert ec:brainpoolP256r1 $normal \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
 
 generate_root_ca root_ca_rsa rsa:4096
 generate_sub_ca root_ca_rsa sub_ca1_rsa "Example Inc. Sub CA RSA 1" rsa:4096 $normal

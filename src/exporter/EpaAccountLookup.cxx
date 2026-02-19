@@ -15,13 +15,27 @@
 #include <random>
 #include <ranges>
 
+namespace {
+std::vector<std::tuple<std::string, uint16_t>> epaFqdns() {
+    const auto& fqdns = Configuration::instance().epaFQDNs();
+    std::vector<std::tuple<std::string, uint16_t>> hostPortList;
+    hostPortList.reserve(fqdns.size());
+    for (const auto& fqdn : fqdns)
+    {
+        hostPortList.emplace_back(fqdn.hostName, fqdn.port);
+    }
+    return hostPortList;
+};
+}
+
 EpaAccountLookup::EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient)
     : mLookupClient(std::move(lookupClient))
+    , mEpaFqdns{epaFqdns()}
 {
 }
 
 EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceContext)
-    : mLookupClient(std::make_unique<EpaAccountLookupClient>(
+    : EpaAccountLookup(std::make_unique<EpaAccountLookupClient>(
           serviceContext,
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT),
           Configuration::instance().getStringValue(
@@ -32,34 +46,23 @@ EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceCont
 EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr,
                                     const std::optional<std::string>& prefix /* = std::nullopt */)
 {
-    static const auto epaFqdns = [] {
-        auto fqdns = Configuration::instance().epaFQDNs();
-        std::vector<std::tuple<std::string, uint16_t>> hostPortList;
-        hostPortList.reserve(fqdns.size());
-        for (const auto& fqdn : fqdns)
-        {
-            hostPortList.emplace_back(fqdn.hostName, fqdn.port);
-        }
-        return hostPortList;
-    }();
     static std::random_device rd;
     std::mt19937 gen{rd()};
-    auto shuffledEpaFqdns{epaFqdns};
-    std::ranges::shuffle(shuffledEpaFqdns, gen);
+    std::ranges::shuffle(mEpaFqdns, gen);
     if (prefix.has_value())
     {
         size_t idx = 0;
-        for (auto& entry : shuffledEpaFqdns)
+        for (auto& entry : mEpaFqdns)
         {
             if (std::get<0>(entry).starts_with(prefix.value() + "."))
             {
-                std::swap(shuffledEpaFqdns[0], shuffledEpaFqdns[idx]);
+                std::swap(mEpaFqdns[0], mEpaFqdns[idx]);
                 break;
             }
             idx++;
         }
     }
-    return lookup(xRequestId, kvnr, shuffledEpaFqdns);
+    return lookup(xRequestId, kvnr, mEpaFqdns);
 }
 
 EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::Kvnr& kvnr,

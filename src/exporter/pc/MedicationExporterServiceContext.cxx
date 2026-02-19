@@ -16,6 +16,7 @@
 #include "shared/admin/AdminRequestHandler.hxx"
 #include "shared/admin/GetMetricsHandler.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
+#include "shared/network/client/CrlDownloadCache.hxx"
 #include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
 
@@ -44,6 +45,16 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
     , mTeeClientPool{Tee3ClientPool::create(ioContext, *mHsmPool, getTslManager(), refreshInterval())}
     , mRuntimeConfiguration(std::make_unique<exporter::RuntimeConfiguration>())
 {
+    auto requestSender = std::make_shared<UrlRequestSender>(
+        TlsCertificateVerifier::withCustomRootCertificates(""),
+        std::chrono::seconds{
+            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+        std::chrono::milliseconds{
+            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
+    requestSender->setProxyUrl(
+        Configuration::instance().getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_HTTP_PROXY));
+    requestSender->setFollowRedirects(true);
+    mCrlProvider = std::make_shared<CrlDownloadCache>(std::move(requestSender));
     setupTslRefreshJob(std::chrono::seconds{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)});
     Expect3(mExporterDatabaseFactory != nullptr,
             "exporter database factory has been passed as nullptr to ServiceContext constructor", std::logic_error);
@@ -89,7 +100,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
                                                      .ocspGracePeriod = std::chrono::seconds(configuration.getIntValue(
                                                          ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD)),
                                                      .withSubjectAlternativeAddressValidation = true})
-            .withAdditionalCertificateCheck([](const X509Certificate& cert) -> bool {
+            .withAdditionalCertificateCheck([](const X509Certificate& cert, auto&) -> bool {
                 return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
             });
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
@@ -139,6 +150,12 @@ std::shared_ptr<Tee3ClientPool> MedicationExporterServiceContext::teeClientPool(
 std::shared_ptr<HttpsClientPool> MedicationExporterServiceContext::httpsClientPool(const std::string& hostname)
 {
     return mHttpsClientPools.at(hostname);
+}
+
+
+std::shared_ptr<CrlProvider> MedicationExporterServiceContext::crlProvider()
+{
+    return mCrlProvider;
 }
 
 

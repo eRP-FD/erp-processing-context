@@ -79,7 +79,7 @@ public:
 
     /// @brief Merge data into caller objects mData field.
     /// @param data The data to be merged.
-    void update(Data data);
+    void update(const BDEMessage::Data& data);
 
     /// @brief Access internal metadata.
     /// @return Current data state of this object.

@@ -1,24 +1,31 @@
-# Testing
+Testing
+=======
+There are the following Test-Executables located in `bin` of your build folder:
 
-Tests come (at the moment) in three different flavors. Unit tests, functional (?) tests and workflow tests.
-- Unit tests focus on the implementation of a single class.
-- Functional tests typically test a single endpoint, including VAU encryption and, depending on configuration, either with
-a mock database or a PostgreSQL database.
-- Workflow tests simulate typical work flows that involve multiple endpoint calls.
+| Executable | Description |
+| ---------- | ------------|
+| erp-test   | tests functionality of `erp-processing-context` |
+| exporter-test | tests functionality of `erp-medication-exporter` |
+| fhirtools-test | tests functions of `fhirtools` library located in `src/fhirtrools` |
+| erp-integration-test | This executable is mainly used by Jenkins integrationtest (see: [Jenkins > eRp > Integration](https://jenkins.epa-dev.net/job/eRp/job/Integration/))
 
-## Configuration
+Running `erp-test`
+------------------
+Most tests from `erp-test` already run as standalone tests. However the Database and HSM tests are disabled.
+To enhance testing you will have to set-up the _docker-compose environment_ as described in [docker-compose/README.md](../docker-compose/README.md).
 
-Functional tests use the MockDatabase by default but can easily be configured to use a locally
-running Postgres DB. For this work
-- Either set environment variable `TEST_USE_POSTGRES` to "1", or "on", or "true" (all case insensitive) or alternatively
-  modify `resources/test/02_development.config.json` so that `/test/use-postgres` is set to `"true"` (with double quotes).
-  Recompilation is not necessary.
-- If your locally running db does not support SSL connections then modify `resources/test/02_development.config.json` so
-that `erp/postgres/useSsl` is set `"false"` and that `erp/postgres/certificatePath` is empty. Alternatively you can set
-  environment variables `ERP_POSTGRES_USESSL` and `ERP_POSTGRES_CERTIFICATE_PATH` respectively.
+Running `exporter-test`
+-----------------------
+As most of the core components have not been mocked, the exporter test is highly dependent on setting up the _docker-compose environment_. Make sure to set it up a described in [docker-compose/README.md](../docker-compose/README.md).
 
-This configuration can be overruled in test classes by calling `ServerTestBase(bool forceMockDatabase = false)`
-with a `true` argument.
+Running `fhirtools-test`
+------------------------
+None of the test need extra support from external components. All tests should pass when running the executable.
+
+Running `erp-integration-test`
+-------------------------------
+This test executable is composed of a subset of tests from `erp-test`. It is focuse on running tests on a  full orchestration of the eRP, which also includes the tls-proxy component.
+The integration test is invoked from the Jenkins pipeline [Jenkins > eRp > Integration](https://jenkins.epa-dev.net/job/eRp/job/Integration/). 
 
 ## Manual derivation key update tests
 This test verifies both the workflow and the handling of derivation key updates.
@@ -59,7 +66,11 @@ The TPM can only be configured by environment variables. If the TPM server is st
 the provided docker compose stack, the required variables are:
 
 ```
-TPM_INTERFACE_TYPE="socsim" TPM_COMMAND_PORT="9002" TPM_SERVER_TYPE="mssim" TPM_SERVER_NAME="localhost" TPM_PLATFORM_PORT="9003"
+TPM_INTERFACE_TYPE="socsim"
+TPM_COMMAND_PORT="9002"
+TPM_SERVER_TYPE="mssim"
+TPM_SERVER_NAME="localhost"
+TPM_PLATFORM_PORT="9003"
 ```
 
 With the given configuration you can now execute HSM simulator tests.

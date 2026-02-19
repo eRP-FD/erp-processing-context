@@ -46,7 +46,7 @@ std::optional<model::Bundle> TRezeptEventProcessor::runFhirVzdSearch(const model
 {
     const std::string clientId =
         Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID);
-    FhirVzdClient fhirVzdClient(clientId);
+    FhirVzdClient fhirVzdClient(clientId, mServiceContext->crlProvider());
     fhirVzdClient.setEvent(&event);
     try
     {
@@ -120,7 +120,7 @@ TRezeptEventProcessor::ResultType TRezeptEventProcessor::sendCarbonCopy(const mo
     const std::string clientId =
         Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID);
     TVLOG(1) << "Sending carbon copy, clientId=" << clientId;
-    BfArMClient client(clientId);
+    BfArMClient client(clientId, mServiceContext->crlProvider());
     client.setEvent(&event);
     A_27830.start("Test for retry / dead letter or success");
     try

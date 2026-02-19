@@ -595,16 +595,19 @@ void Task::setAcceptDateDependentPrescriptionType(const Timestamp& baseTime)
         }
 
         case PrescriptionType::apothekenpflichigeArzneimittel:
-        case PrescriptionType::direkteZuweisung:
+        case PrescriptionType::direkteZuweisung: {
             A_27844.start("Flowtype 160 - Accept Date");
             A_27845.start("Flowtype 162 - Accept Date");
-            setAcceptDate(baseTime + (24h * 28));
+            date::local_days acceptDay = baseTime.localDay() + date::days{28};
+            setAcceptDate(model::Timestamp{model::Timestamp::GermanTimezone, acceptDay});
             A_27845.finish();
             A_27844.finish();
             break;
+        }
         case PrescriptionType::tRezept:
             A_27846.start("Flowtype 166 - Accept Date");
-            setAcceptDate(baseTime + (24h * 6));
+            date::local_days acceptDay = baseTime.localDay() + date::days{6};
+            setAcceptDate(model::Timestamp{model::Timestamp::GermanTimezone, acceptDay});
             A_27846.finish();
             break;
     }

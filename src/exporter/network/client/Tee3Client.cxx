@@ -152,14 +152,14 @@ TlsCertificateVerifier epaTlsCertificateVerifier(TslManager& tslManager)
 {
     const auto& config = Configuration::instance();
     return TlsCertificateVerifier::withTslVerification(
-                                   tslManager, {.certificateType = CertificateType::C_FD_TLS_S,
-                                                .ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
-                                                .ocspGracePeriod = std::chrono::seconds(config.getIntValue(
-                                                    ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD)),
-                                                .withSubjectAlternativeAddressValidation = true})
-                                   .withAdditionalCertificateCheck([](const X509Certificate& cert) -> bool {
-                                       return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
-                                   });
+               tslManager, {.certificateType = CertificateType::C_FD_TLS_S,
+                            .ocspCheckMode = OcspCheckDescriptor::PROVIDED_OR_CACHE_REQUEST_IF_OUTDATED,
+                            .ocspGracePeriod = std::chrono::seconds(
+                                config.getIntValue(ConfigurationKey::MEDICATION_EXPORTER_OCSP_EPA_GRACE_PERIOD)),
+                            .withSubjectAlternativeAddressValidation = true})
+        .withAdditionalCertificateCheck([](const X509Certificate& cert, auto&) -> bool {
+            return cert.checkRoles({std::string{profession_oid::oid_epa_dvw}});
+        });
 }
 // GEMREQ-end A_24913#TLS-params
 

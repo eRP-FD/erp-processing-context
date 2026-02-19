@@ -89,6 +89,8 @@ spec:
               value: "mssim"
             - name: TPM_SERVER_NAME
               value: tpm-simulator-2.%NAMESPACE%.svc.cluster.local
+            - name: ERP_IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH
+              value: '/erp/config/IDP_UPDATE_ENDPOINT_SSL_ROOT_CA'
             - name: ERP_E_PRESCRIPTION_SERVICE_URL
               valueFrom:
                 secretKeyRef:

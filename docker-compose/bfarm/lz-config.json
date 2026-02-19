@@ -1,0 +1,54 @@
+{
+  "vzdAuthToken": [
+    {
+      "clientId": ".*",
+      "code": 200,
+      "payload": "{\"access_token\":\"mock-vzd-jwt\",\"expires_in\":300,\"refresh_expires_in\":0,\"token_type\":\"Bearer\",\"not-before-policy\":0,\"scope\":\"Service-Authenticate\"}",
+      "delay": 50
+    }
+  ],
+  "vzdServiceAuth": [
+    {
+      "ua": ".*",
+      "code": 200,
+      "payload": "{\"access_token\":\"mock-vzd-service-jwt\",\"client_id\":\"gemibmderpfdabcxyz\",\"token_type\":\"Bearer\",\"expires_in\":86400}",
+      "delay": 50
+    }
+  ],
+  "searchPharmacy": [
+    {
+      "telematikId": "0123456789",
+      "code": 200,
+      "template": "fdv_search_3services.json",
+      "delay": 100
+    },
+    {
+      "telematikId": "3-01.2.2023001.16.101.*",
+      "code": 404,
+      "template": "fdv_search_not_found.json",
+      "delay": 50
+    }
+  ],
+  "bfarmOauthToken": [
+    {
+      "clientId": "gemibmderpfdabcxyz",
+      "code": 501,
+      "payload": "{\"access_token\":\"mock-bf-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}",
+      "delay": 50
+    },
+    {
+      "clientId": ".*",
+      "code": 200,
+      "payload": "{\"access_token\":\"mock-bf-jwt\",\"expires_in\":3600,\"token_type\":\"Bearer\"}",
+      "delay": 50
+    }
+  ],
+  "bfarmCreateTRezept": [
+    {
+      "kvnr": ".*",
+      "code": 200,
+      "payload": "",
+      "delay": 50
+    }
+  ]
+}

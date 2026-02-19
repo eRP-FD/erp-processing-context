@@ -12,6 +12,8 @@
 #include "shared/tsl/TslMode.hxx"
 #include "shared/util/CertificateType.hxx"
 
+#include <boost/asio/ssl/verify_context.hpp>
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -26,6 +28,7 @@ namespace boost::asio::ssl
 }
 
 
+class CrlProvider;
 class X509Certificate;
 class TslManager;
 
@@ -33,11 +36,6 @@ class TslManager;
 class TlsCertificateVerifier
 {
 public:
-    /**
-     * All cryptography must comply with gematik standards, and the bundled root CA list is used.
-     * (Derived from the Mozilla root CA list; see RootCertificates.hxx.)
-     */
-    static TlsCertificateVerifier withBundledRootCertificates();
 
     /**
      * All cryptography must comply with gematik standards, but the bundled root CA list will not
@@ -87,13 +85,18 @@ public:
      *        certificate, false to reject it.
      */
     TlsCertificateVerifier& withAdditionalCertificateCheck(
-        const std::function<bool(const X509Certificate&)>& check);
+        const std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>& check);
 
     /**
      * Instruct the verifier to additionally require a verified end-entity certificate to contain
      * the given SubjectAlternativeName DNS name.
      */
     TlsCertificateVerifier& withSubjectAlternativeDnsName(const std::string& name);
+
+    /**
+     * Use the passed CRL source for crl validation
+     */
+    TlsCertificateVerifier& withCrl(CrlProvider& crl);
 
 private:
     class Implementation;

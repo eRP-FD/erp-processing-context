@@ -15,6 +15,7 @@ class ClientInterface;
 class ClientResponse;
 class ClientRequest;
 class TokenCache;
+class CrlProvider;
 
 enum class HttpStatus;
 
@@ -69,7 +70,7 @@ private:
 class OAuthClientBase
 {
 public:
-    OAuthClientBase(std::string clientId, std::string host, std::string port);
+    OAuthClientBase(std::string clientId, std::string host, std::string port, std::shared_ptr<CrlProvider> crlProvider);
     virtual ~OAuthClientBase() = default;
 
     virtual bool testConnection() const;
@@ -120,4 +121,5 @@ private:
     mutable std::unique_ptr<TokenCache> mAccessTokenCache;//!< Token cache for the access token
     mutable std::mutex mTokenCacheMutex;
     const model::TRezeptEvent* mEvent{nullptr};
+    std::shared_ptr<CrlProvider> mCrlProvider;
 };

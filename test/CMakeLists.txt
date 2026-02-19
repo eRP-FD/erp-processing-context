@@ -224,10 +224,10 @@ list(
         erp/beast/BoostBeastHeaderTest.cxx
         erp/beast/BoostBeastStringReaderTest.cxx
         erp/beast/BoostBeastStringWriterTest.cxx
+        erp/client/TlsCertificateVerifierTest.cxx
         erp/client/UrlRequestSenderTest.cxx
         erp/client/request/ClientRequestTest.cxx
         erp/client/request/ClientRequestWriterTest.cxx
-        erp/client/UrlRequestSenderTest.cxx
         erp/common/BoostBeastMethodTest.cxx
         erp/common/HeaderTest.cxx
         erp/common/MimeTypeTest.cxx
@@ -458,6 +458,7 @@ list(
         erp/xml/SaxParserTest.cxx
         erp/xml/XmlDocumentTest.cxx
         erp/xml/XmlStringViewTest.cxx
+        shared/network/client/CrlDownloaderCacheTest.cxx
         shared/util/MetricsRegistryTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx

@@ -20,9 +20,10 @@
 #include <unordered_map>
 
 class Configuration;
+class CrlProvider;
+class HttpsClientPool;
 class MedicationExporterFactories;
 class Tee3ClientPool;
-class HttpsClientPool;
 enum class TransactionMode : uint8_t;
 
 namespace boost::asio
@@ -56,6 +57,7 @@ public:
 
     std::shared_ptr<Tee3ClientPool> teeClientPool();
     std::shared_ptr<HttpsClientPool> httpsClientPool(const std::string& hostname);
+    std::shared_ptr<CrlProvider> crlProvider();
 
     std::unique_ptr<exporter::RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
     std::unique_ptr<exporter::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
@@ -75,6 +77,7 @@ private:
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
     std::unordered_map<std::string, std::shared_ptr<HttpsClientPool>> mHttpsClientPools;
     gsl::not_null<std::shared_ptr<exporter::RuntimeConfiguration>> mRuntimeConfiguration;
+    std::shared_ptr<CrlProvider> mCrlProvider;
 #ifdef FRIEND_TEST
     FRIEND_TEST(CommitGuardTest, only_one_transaction_allowed);
     FRIEND_TEST(CommitGuardTest, create_and_query);

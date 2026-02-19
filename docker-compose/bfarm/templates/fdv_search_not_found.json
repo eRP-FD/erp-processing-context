@@ -1,0 +1,16 @@
+{
+  "resourceType": "Bundle",
+  "id": "edd10ae0-799e-401e-83df-f6e96baaff51",
+  "meta": {
+    "lastUpdated": "2025-10-31T02:36:08.452+01:00",
+    "tag": [
+      {
+        "system": "https://gematik.de/fhir/StructureDefinition/filtered-endpoints-count",
+        "code": "0",
+        "display": "Reason: hideVersicherte"
+      }
+    ]
+  },
+  "type": "searchset",
+  "total": 0
+}

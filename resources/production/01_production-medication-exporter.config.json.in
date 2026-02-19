@@ -27,6 +27,8 @@
     "ocsp": {
       "gracePeriodEpa": "3600"
     },
+    "http-proxy": "",
+    "trusted-cas": "",
     "fhir-vzd-client": {
       "secret": "",
       "id": "",

@@ -95,6 +95,11 @@ public:
             std::move(handlerManager),
             serviceContext);
     }
+
+    PcServiceContext& getServiceContext()
+    {
+        return serviceContext;
+    }
 private:
     PcServiceContext serviceContext = StaticData::makePcServiceContext();
 };
@@ -158,4 +163,72 @@ TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
     const auto end = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsedSeconds = end - start;
     EXPECT_LE(elapsedSeconds.count(), timeoutSeconds + 1.0);
+}
+
+
+class ProxyVerifyingHandler : public UnconstrainedRequestHandler
+{
+public:
+    std::atomic_bool requestReceived{false};
+    std::string receivedHost;
+    std::string receivedBody;
+    std::string receivedPath;
+
+    void handleRequest(BaseSessionContext& baseSession) override
+    {
+        auto& session = dynamic_cast<BlockingTestSessionContext&>(baseSession);
+        const auto& header = session.request.header();
+
+        receivedHost = header.header(Header::Host).value_or("????????");
+        receivedBody = session.request.getBody();
+        receivedPath = std::string(header.target());
+        requestReceived = true;
+
+        session.response.setStatus(HttpStatus::OK);
+        session.response.setBody("");
+    }
+
+    Operation getOperation(void) const override
+    {
+        return Operation::UNKNOWN;
+    }
+};
+
+
+TEST_F(UrlRequestSenderTest, proxyUrlIsUsedAndOriginalHostInHeader)
+{
+    const auto& config = Configuration::instance();
+    const auto proxyPort = config.serverPort() + 11;
+
+    auto handlerOwner = std::make_unique<ProxyVerifyingHandler>();
+    const ProxyVerifyingHandler* handlerPtr = handlerOwner.get();
+
+    RequestHandlerManager handlerManager;
+    handlerManager.onPostDo("/test_path", std::move(handlerOwner));
+    auto proxyServer = std::make_unique<HttpsServer>(HOST_IP, gsl::narrow<uint16_t>(proxyPort),
+                                                     std::move(handlerManager), getServiceContext());
+    ASSERT_NE(proxyServer, nullptr);
+    proxyServer->serve(1, "proxyServer");
+
+    UrlRequestSender urlRequestSender(TlsCertificateVerifier::withVerificationDisabledForTesting(),
+                                      std::chrono::milliseconds(50), Constants::resolveTimeout);
+    urlRequestSender.setProxyUrl("https://localhost:" + std::to_string(proxyPort));
+
+    const uint16_t fakeTargetPort = 19999;
+    const std::string targetUrl = "https://127.0.0.1:" + std::to_string(fakeTargetPort) + "/test_path";
+
+    EXPECT_NO_THROW(auto response = urlRequestSender.send(targetUrl, HttpMethod::POST, EXPECTED_BODY, targetUrl));
+
+    EXPECT_TRUE(handlerPtr->requestReceived) << "Request must be forwarded to proxy server";
+
+    const std::string expectedHost = "127.0.0.1:" + std::to_string(fakeTargetPort);
+    EXPECT_EQ(handlerPtr->receivedHost, expectedHost)
+        << "Host header must contain original target host, not proxy host";
+
+    EXPECT_EQ(handlerPtr->receivedBody, EXPECTED_BODY);
+
+    EXPECT_EQ(handlerPtr->receivedPath, "/test_path");
+
+    proxyServer->shutDown();
+    proxyServer.reset();
 }

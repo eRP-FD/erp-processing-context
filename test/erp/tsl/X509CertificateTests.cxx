@@ -286,6 +286,21 @@ TEST_F(X509CertificateTests, OCSPUrls)
     EXPECT_EQ(ocspUrls.at(0), "http://ehca.gematik.de/ocsp/");
 }
 
+
+TEST_F(X509CertificateTests, CrlUrls)
+{
+    const std::string certificatePem = ResourceManager::instance().getStringResource(
+        "test/generated_pki/sub_ca1_ec/certificates/revoked_ec/revoked_ec_cert.pem");
+    const X509Certificate x509Certificate = X509Certificate::createFromPem(certificatePem);
+    EXPECT_TRUE(x509Certificate.hasX509Ptr());
+
+    auto crlUrls = x509Certificate.getHttpCrlDistributionPoints();
+
+    EXPECT_EQ(crlUrls.size(), 1);
+    EXPECT_EQ(crlUrls.at(0), "http://crl.example.com/revoked_crt.crl");
+}
+
+
 TEST_F(X509CertificateTests, Base64Format)
 {
     auto cert = X509Certificate::createFromBase64(EGK_CERTIFICATE);

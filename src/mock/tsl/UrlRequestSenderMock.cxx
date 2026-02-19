@@ -36,7 +36,8 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep) const
+    const boost::asio::ip::tcp::endpoint* ep,
+    const std::string& headerFieldHost) const
 {
     std::lock_guard lock(mMutex);
 
@@ -51,6 +52,14 @@ ClientResponse UrlRequestSenderMock::doSend(
         const bool hasResponse = iterator != mResponses.end();
         if (! hasResponse)
         {
+            if (followsRedirects())
+            {
+                LOG(INFO) << "Following redirect to " << url;
+                const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
+                return UrlRequestSenderMock::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep,
+                                                headerFieldHost);
+            }
+
             if (mStrict)
             {
                 Fail("Unexpected request to " + url);
@@ -58,7 +67,8 @@ ClientResponse UrlRequestSenderMock::doSend(
 
             LOG(INFO) << "Passing request to RequestSender for " << url;
             const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
-            return UrlRequestSender::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
+            return UrlRequestSender::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep,
+                                            headerFieldHost);
         }
 
         Header header;
@@ -77,9 +87,10 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep) const
+    const boost::asio::ip::tcp::endpoint* ep,
+    const std::string& headerFieldHost) const
 {
-    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn, ep);
+    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn, ep, headerFieldHost);
 }
 
 void UrlRequestSenderMock::setUrlHandler(

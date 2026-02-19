@@ -121,7 +121,7 @@ BDEMessage::~BDEMessage()
     publish();
 }
 
-void BDEMessage::update(Data data)
+void BDEMessage::update(const BDEMessage::Data& data)
 {
     mData.merge(data);
 }

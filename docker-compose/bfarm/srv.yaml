@@ -1,0 +1,8 @@
+mode: default
+chaosRatio: 0
+oauthBfarm:
+  clientId: "gemibmderpfdabcxyz"
+  clientSecret: "mock-secret-123"
+oauthFhirvzd:
+  clientId: "gemibmderpfdmnopqrsr"
+  clientSecret: "somesecret"

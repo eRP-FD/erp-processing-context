@@ -13,6 +13,7 @@
 
 namespace
 {
+    // GEMREQ-start A_27858#acceptedCiphers
     std::string getCyphers(const std::optional<std::string>& forcedCiphers)
     {
         if (forcedCiphers.has_value())
@@ -25,17 +26,20 @@ namespace
                "ECDHE-RSA-AES256-GCM-SHA384:"
                "ECDHE-RSA-AES128-GCM-SHA256";
     }
+    // GEMREQ-end A_27858#acceptedCiphers
 }
 
 void TlsSettings::restrictVersions(boost::asio::ssl::context &sslContext)
 {
     /* Prevent fall-back attacks. */
+    // GEMREQ-start A_27858#disallow
     // GEMREQ-start GS-A_5035
     sslContext.set_options(boost::asio::ssl::context::no_sslv2 |
                            boost::asio::ssl::context::no_sslv3 |
                            boost::asio::ssl::context::no_tlsv1 |
                            boost::asio::ssl::context::no_tlsv1_1);
     // GEMREQ-end GS-A_5035
+    // GEMREQ-end A_27858#disallow
 }
 
 void TlsSettings::setAllowedCiphersAndCurves(boost::asio::ssl::context& sslContext,
@@ -44,12 +48,14 @@ void TlsSettings::setAllowedCiphersAndCurves(boost::asio::ssl::context& sslConte
     /* Set allowed cipher suites and curves. */
     // GEMREQ-start A_15751
     // GEMREQ-start A_17124
+    // GEMREQ-start A_27858#useCiphers
     if (1 != SSL_CTX_set_cipher_list(sslContext.native_handle(),
                                      getCyphers(forcedCiphers).c_str()))
     {
         throw ExceptionWrapper<boost::beast::system_error>::create(
             {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
+    // GEMREQ-end A_27858#useCiphers
 
     if (1 != SSL_CTX_set1_curves_list(sslContext.native_handle(),
                                       "brainpoolP256r1:"

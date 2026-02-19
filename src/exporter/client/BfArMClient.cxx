@@ -20,10 +20,11 @@
 using namespace medication::exporter::exceptions;
 
 
-BfArMClient::BfArMClient(std::string clientId)
+BfArMClient::BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider)
     : OAuthClientBase(std::move(clientId),
                       Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_URL),
-                      Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_PORT))
+                      Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_PORT),
+                      std::move(crlProvider))
     , mClientSecret(Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_SECRET))
 {
     Configuration::instance().check(Configuration::ProcessType::MedicationExporter);
@@ -70,7 +71,7 @@ ClientRequest BfArMClient::accessTokenRequest(const std::string& host, const std
     return {{HttpMethod::POST,
              path,
              Header::Version_1_1,
-             {{Header::ContentType, "application/x-www-form-urlencoded"},
+             {{Header::ContentType, MimeType::xWwwFormUrlEncoded},
               {Header::Host, host + ":" + port},
               {Header::Authorization, "Basic " + bearer},
               {Header::XRequestId, Uuid{}.toString()}},

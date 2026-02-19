@@ -291,7 +291,7 @@ bool MedicationExporterMain::waitForHealthUp(RunLoopScheduler& runLoop,
                 // validate ePA endpoints
                 TLOG(INFO) << "Testing connections";
                 testEpaEndpoints(*serviceContext);
-                testTRezeptEndpoints();
+                testTRezeptEndpoints(*serviceContext);
                 TLOG(INFO) << "Done testing connections";
             }
             catch (...)
@@ -348,7 +348,7 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
     return allUp;
 }
 
-bool MedicationExporterMain::testTRezeptEndpoints()
+bool MedicationExporterMain::testTRezeptEndpoints(MedicationExporterServiceContext& serviceContext)
 {
     if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT))
     {
@@ -356,7 +356,8 @@ bool MedicationExporterMain::testTRezeptEndpoints()
     }
     bool allUp = true;
     if (! FhirVzdClient{
-            Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID)}
+            Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID),
+            serviceContext.crlProvider()}
               .testConnection())
     {
         TLOG(WARNING) << "Connection to FHIR-VZD failed";
@@ -366,7 +367,8 @@ bool MedicationExporterMain::testTRezeptEndpoints()
     {
         TLOG(INFO) << "Connection to FHIR-VZD successfully tested";
     }
-    if (! BfArMClient{Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID)}
+    if (! BfArMClient{Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID),
+                      serviceContext.crlProvider()}
               .testConnection())
     {
         TLOG(WARNING) << "Connection to BfArM failed";

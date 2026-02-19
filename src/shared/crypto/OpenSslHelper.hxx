@@ -35,6 +35,9 @@ public:
 };
 // additional function is necessary because OPENSSL_free is a macro
 void opensslBufferDeleteFunction(unsigned char* pointer);
+// Adapt the new and free functions to conform to what openssl_shared_ptr<> expects.
+BIO* createBIO();
+void freeBIO(BIO* bio);
 
 using Asn1ObjectPtr = OpensslUniquePtr<ASN1_OBJECT, &ASN1_OBJECT_free>;
 using Asn1TypePtr = OpensslUniquePtr<ASN1_TYPE, &ASN1_TYPE_free>;
@@ -45,6 +48,7 @@ using OcspResponsePtr = OpensslUniquePtr<OCSP_RESPONSE, &OCSP_RESPONSE_free>;
 using EcdsaSignaturePtr = OpensslUniquePtr<ECDSA_SIG, &ECDSA_SIG_free>;
 using OpenSslBufferPtr = OpensslUniquePtr<unsigned char, &opensslBufferDeleteFunction>;
 using EvpCipherCtxPtr = OpensslUniquePtr<EVP_CIPHER_CTX, &EVP_CIPHER_CTX_free>;
+using BioPtr = OpensslUniquePtr<BIO, &freeBIO>;
 
 // Use
 // #define LOCAL_LOGGING
@@ -53,6 +57,7 @@ using EvpCipherCtxPtr = OpensslUniquePtr<EVP_CIPHER_CTX, &EVP_CIPHER_CTX_free>;
 void showAllOpenSslErrors (void);
 std::string bioToString (BIO* bio);
 std::string x509NametoString(const X509_NAME* name);
+BioPtr stringToBio(std::string_view string);
 
 
 /**
@@ -174,6 +179,9 @@ using shared_OCSP_RESPONSE =       openssl_shared_ptr< OCSP_RESPONSE,     OCSP_R
 extern const char x509_name[];
 using shared_X509 =                openssl_shared_ptr< X509,              X509_new,              X509_free,              X509_up_ref,      x509_name>;
 
+extern const char x509_crl_name[];
+using shared_X509_CRL =            openssl_shared_ptr< X509_CRL,          X509_CRL_new,          X509_CRL_free,          X509_CRL_up_ref,  x509_crl_name>;
+
 extern const char x509_Name_name[];
 using shared_X509_Name =           openssl_shared_ptr< X509_NAME,         X509_NAME_new,         X509_NAME_free,         nullptr,          x509_Name_name>;
 
@@ -190,9 +198,6 @@ extern const char cms_name[];
 using shared_CMS_ContentInfo =     openssl_shared_ptr< CMS_ContentInfo,   CMS_ContentInfo_new,   CMS_ContentInfo_free,   nullptr,          cms_name>;
 
 extern const char bio_name[];
-// Adapt the new and free functions to conform to what openssl_shared_ptr<> expects.
-BIO* createBIO (void);
-void freeBIO (BIO* bio);
 using shared_BIO = openssl_shared_ptr<BIO, createBIO,freeBIO, BIO_up_ref, bio_name>;
 
 /**

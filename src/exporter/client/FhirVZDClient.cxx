@@ -20,11 +20,12 @@
 using namespace medication::exporter::exceptions;
 
 
-FhirVzdClient::FhirVzdClient(std::string clientId)
+FhirVzdClient::FhirVzdClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider)
     : OAuthClientBase(
           std::move(clientId),
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL),
-          Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT))
+          Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT),
+          std::move(crlProvider))
     , mClientSecret(
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_SECRET))
     , mApiUrl(Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL))
@@ -141,7 +142,7 @@ ClientRequest FhirVzdClient::accessTokenRequest(const std::string& host, const s
     return {{HttpMethod::POST,
              path,
              Header::Version_1_1,
-             {{Header::ContentType, "application/x-www-form-urlencoded"}, {Header::Host, host + ":" + port}, {Header::XRequestId, Uuid{}.toString()}},
+             {{Header::ContentType, MimeType::xWwwFormUrlEncoded}, {Header::Host, host + ":" + port}, {Header::XRequestId, Uuid{}.toString()}},
              HttpStatus::Unknown},
             buildAccessTokenRequestBody()};
 }

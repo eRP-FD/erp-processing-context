@@ -152,11 +152,13 @@ TlsSession::TlsSession(const ConnectionParameters& params)
       mPort{params.port},
       mConnectionTimeout(params.connectionTimeout),
       mIoContext{},
+      // GEMREQ-start A_27858
       // GEMREQ-start GS-A_4385
       // GEMREQ-start GS-A_5542
       mSslContext{boost::asio::ssl::context::tlsv12_client},
       // GEMREQ-end GS-A_4385
       // GEMREQ-end GS-A_5542
+      // GEMREQ-end A_27858
       mSslStream{},
       mTicket{},
       mCertificateVerifier{params.tlsParameters.value().certificateVerifier},
@@ -349,6 +351,7 @@ void TlsSession::configureSession(const boost::asio::ip::basic_resolver_results<
             {__FILE__, __LINE__}, static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category());
     }
 
+    // GEMREQ-start A_27856#hostnamecheck
     /* Set SNI Hostname (many hosts need this to handshake successfully). */
     if (!SSL_set_tlsext_host_name(mSslStream.getNativeHandle(), mHostName.c_str()))
     {
@@ -379,4 +382,5 @@ void TlsSession::configureSession(const boost::asio::ip::basic_resolver_results<
     {
         throw ExceptionWrapper<boost::beast::system_error>::create({__FILE__, __LINE__}, errorCode);
     }
+    // GEMREQ-end A_27856#hostnamecheck
 }

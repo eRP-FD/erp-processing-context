@@ -539,6 +539,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA, {"ERP_MEDICATION_EXPORTER_ENABLE_EPA", "/erp-medication-exporter/enable-epa", Flags::categoryEnvironment, "Enable the EPA-exporter"}},
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT, {"ERP_MEDICATION_EXPORTER_ENABLE_T_REZEPT", "/erp-medication-exporter/enable-t-rezept", Flags::categoryEnvironment, "Enable the T-Rezept-exporter"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_HTTP_PROXY, {"ERP_MEDICATION_EXPORTER_HTTP_PROXY", "/erp-medication-exporter/http-proxy", Flags::categoryEnvironment, "Proxy used /only/ for indirect lookup of CRL urls."}},
+    {ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS, {"ERP_MEDICATION_EXPORTER_TRUSTED_CAS", "/erp-medication-exporter/trusted-cas", Flags::categoryEnvironment, "Trusted root certificates for bfarm and vzd TLS client connections."}},
 
     // */
     });
