@@ -6,9 +6,10 @@
  */
 
 #include "shared/audit/AuditDataCollector.hxx"
-
+#include "shared/audit/AuditEventTextTemplates.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/Jwt.hxx"
+#include "shared/model/PoPPTokenProofMethod.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/String.hxx"
 
@@ -114,6 +115,13 @@ AuditDataCollector& AuditDataCollector::setVariable(const std::string& key, cons
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setPoPPTokenProofMethod(PoPPTokenProofMethodPrefix method)
+{
+    setVariable(std::string{AuditEventTextTemplates::proofMethodVariableNameRaw},
+                std::string{magic_enum::enum_name(method)});
+    return *this;
+}
+
 model::AuditData AuditDataCollector::createData() const
 {
     Expect3(mEventId.has_value(), "Event ID should not be missing", std::logic_error);
@@ -123,6 +131,8 @@ model::AuditData AuditDataCollector::createData() const
     const std::string_view countryCodeView = countryCodeStr;
     const std::optional<std::string_view> countryCodeViewOpt =
         countryCodeStr.empty() ? std::nullopt : std::make_optional(countryCodeView);
+
+
 
     const bool isEventCausedByPatient = model::isEventCausedByPatient(*mEventId);
     return model::AuditData(

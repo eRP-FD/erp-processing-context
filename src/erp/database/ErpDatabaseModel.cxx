@@ -36,11 +36,11 @@ db_model::Task::Task(const model::PrescriptionId& initPrescriptionId, BlobId ini
 
 MedicationDispense::MedicationDispense(model::PrescriptionId initPrescriptionId,
                                        db_model::EncryptedBlob initMedicationDispense, BlobId initKeyBlobId,
-                                       db_model::Blob initSalt)
+                                       db_model::Blob initMedicationDispenseSalt)
     : prescriptionId(initPrescriptionId)
     , medicationDispense(std::move(initMedicationDispense))
     , blobId(initKeyBlobId)
-    , salt(std::move(initSalt))
+    , medicationDispenseSalt(std::move(initMedicationDispenseSalt))
 {
 }
 

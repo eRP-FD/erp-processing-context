@@ -7,7 +7,6 @@
 
 set(updated_files
     CodeSystem-immunization-recommendation-status.json
-    CodeSystem-insurance-plan-type.json
     CodeSystem-synthesis-type.json
     CodeSystem-v2-0560.json
     CodeSystem-v2-tables.json

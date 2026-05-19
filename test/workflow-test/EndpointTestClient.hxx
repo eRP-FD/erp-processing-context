@@ -17,6 +17,8 @@
 #include "test/util/StaticData.hxx"
 #include "test/workflow-test/TestClient.hxx"
 
+class PostgresConnection;
+
 class EndpointTestClient final : public TestClient
 {
 public:
@@ -31,14 +33,15 @@ public:
     std::string getHostHttpHeader() const override;
     std::string getHostAddress() const override;
     uint16_t getPort() const override;
-    ~EndpointTestClient() override;
+    ~EndpointTestClient() override = default;
 
     PcServiceContext* getContext() const override;
 
     bool runsInErpTest() const override;
 
 private:
-    Database::Factory createDatabaseFactory();
+    using ConnectionFactory = PostgresConnection&(*)();
+    Database::Factory createDatabaseFactory(ConnectionFactory connFactory);
     static std::unique_ptr<HttpsServer> httpsServerFactory(const std::string_view address, uint16_t port,
                                                            RequestHandlerManager&& requestHandlers,
                                                            BaseServiceContext& serviceContext,
@@ -53,8 +56,7 @@ private:
     void initClient();
     void initVsdmKeys();
 
-    std::unique_ptr<MockDatabase> mMockDatabase;
-    std::unique_ptr<HttpsServer> mServer;
+    std::shared_ptr<MockDatabase> mMockDatabase;
     std::unique_ptr<HttpsClient> mHttpsClient;
     std::unique_ptr<PcServiceContext> mContext;
     std::unique_ptr<HsmPool> mPool;

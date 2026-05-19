@@ -211,11 +211,19 @@ public:
         txn.commit();
     }
 
+    void clearTrezeptEventTable()
+    {
+        auto deleteTxn = createTransaction();
+        deleteTxn.exec("DELETE FROM erp_event.trezept_event");
+        deleteTxn.commit();
+    }
+
     void clearTables()
     {
         auto deleteTxn = createTransaction();
         deleteTxn.exec("DELETE FROM erp_event.task_event");
         deleteTxn.exec("DELETE FROM erp_event.kvnr");
+        deleteTxn.exec("DELETE FROM erp_event.trezept_event");
         deleteTxn.commit();
     }
 
@@ -266,7 +274,7 @@ protected:
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
             mErpDatabase = std::make_unique<DatabaseFrontend>(
-                std::make_unique<PostgresBackend>(), *mHsmPool, *mKeyDerivation);
+                std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()), *mHsmPool, *mKeyDerivation);
         }
         return *mErpDatabase;
     }

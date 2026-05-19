@@ -201,3 +201,11 @@ TEST_F(TimePeriodTest, fromDatabaseUuid_success)
         EXPECT_EQ(dbUuid, converted);
     }
 }
+
+TEST_F(TimePeriodTest, daylightSaving)
+{
+    // winter->summer
+    const TimePeriod period = TimePeriod::fromFhirSearchDate("2026-03-29");
+    EXPECT_EQ(period.begin(), Timestamp::fromXsDateTime("2026-03-28T23:00:00+00:00"));
+    EXPECT_EQ(period.end(),Timestamp::fromXsDateTime("2026-03-29T22:00:00+00:00"));
+}

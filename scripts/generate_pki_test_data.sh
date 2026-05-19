@@ -33,6 +33,7 @@ validBeforeOutdated="validBeforeOutdated"
 revoked="revoked"
 
 export CRL_DISTRIBUTION_POINTS=""
+export POPP_OID=""
 
 
 function printUsage()
@@ -180,6 +181,7 @@ function generate_certificate()
 
   eval "$(get_named_arguments subjectAltName "$@")"
   eval "$(get_named_arguments crlDistributionPoints "$@")"
+  eval "$(get_named_arguments popp_oid "$@")"
 
   local caDir="$testDataDir/$caName"
   local clrFilePem="$caDir/crl/crl.pem"
@@ -223,6 +225,11 @@ function generate_certificate()
       additionalEnvVars+=("CRL_DISTRIBUTION_POINTS=$crlDistributionPoints")
     else
       additionalEnvVars+=("CRL_DISTRIBUTION_POINTS=URI:http://crl.example.com/${alias}.crl")
+    fi
+    if [ -n "$popp_oid" ]; then
+      additionalEnvVars+=("POPP_OID=$popp_oid")
+    else
+      additionalEnvVars+=("POPP_OID=OID:1.2.276.0.76.4.320")
     fi
 
     echo "vars = $additionalEnvVars"
@@ -561,6 +568,10 @@ generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:br
     subjectAltName=email:admin@example.com
 generate_certificate bna_signer_ca_ec bna_signer_ec "BNA signer" bna_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec popp_zd_sig_ec "PoPP signer" popp_zd_sig_cert ec:prime256v1 $normal
+generate_certificate sub_ca1_ec popp_zd_sig2_ec "PoPP signer 2" popp_zd_sig_cert ec:prime256v1 $normal
+generate_certificate sub_ca1_ec popp_invalid_oid_zd_sig_ec "PoPP with invalid oid signer" popp_zd_sig_cert ec:prime256v1 $normal \
+    subjectAltName="" crlDistributionPoints="" popp_oid="OID:1.2.345.6.78.9.123"
 generate_certificate sub_ca1_ec qes_cert1_ec "Example Inc. Test QES Certificate" qes_cert1 ec:brainpoolP256r1 \
     $normal subjectAltName=email:admin@example.com
 generate_certificate sub_ca1_ec arzt "Example Arzt Test QES Certificate" arzt ec:brainpoolP256r1 \

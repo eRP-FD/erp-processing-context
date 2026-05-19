@@ -1027,6 +1027,17 @@ TEST_F(ExpressionTest, StringManipSubstring)
             EXPECT_TRUE(result.collection.empty());
         }
     }
+    {
+        StringManipSubstring stringManipSubstring(std::make_shared<LiteralIntegerExpression>(&backend, 5),
+                                                  std::make_shared<LiteralIntegerExpression>(&backend, 1));
+        auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+            R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+        auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                        mRepo->findTypeById("Test"), "Test", &testResource2);
+        ASSERT_NO_THROW((void)stringManipSubstring.eval({mRepo, {erpElement2}, erpElement2}));
+        const auto result = stringManipSubstring.eval({mRepo, {erpElement2}, erpElement2});
+        EXPECT_TRUE(result.collection.empty());
+    }
 }
 
 TEST_F(ExpressionTest, StringManipStartsWith)
@@ -1050,6 +1061,15 @@ TEST_F(ExpressionTest, StringManipStartsWith)
         {
             const auto result = stringManipStartsWith.eval({mRepo, {}, rootElement});
             ASSERT_TRUE(result.collection.empty());
+        }
+        {
+            auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+                R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+            auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                            mRepo->findTypeById("Test"), "Test", &testResource2);
+            ASSERT_NO_THROW((void)stringManipStartsWith.eval({mRepo, {erpElement2}, erpElement2}));
+            const auto result = stringManipStartsWith.eval({mRepo, {erpElement2}, erpElement2});
+            EXPECT_TRUE(result.collection.empty());
         }
     }
     {
@@ -1093,6 +1113,15 @@ TEST_F(ExpressionTest, StringManipContains)
             const auto result = stringManipContains.eval({mRepo, {}, rootElement});
             ASSERT_TRUE(result.collection.empty());
         }
+        {
+            auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+                R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+            auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                            mRepo->findTypeById("Test"), "Test", &testResource2);
+            ASSERT_NO_THROW((void)stringManipContains.eval({mRepo, {erpElement2}, erpElement2}));
+            const auto result = stringManipContains.eval({mRepo, {erpElement2}, erpElement2});
+            EXPECT_TRUE(result.collection.empty());
+        }
     }
     {
         StringManipContains stringManipContains{nullptr};
@@ -1135,6 +1164,15 @@ TEST_F(ExpressionTest, StringManipMatches)
                  {std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "hello world"s)},
                  rootElement});
             checkBoolResult(result, true);
+        }
+        {
+            auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+                R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+            auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                            mRepo->findTypeById("Test"), "Test", &testResource2);
+            ASSERT_NO_THROW((void)stringManipMatches.eval({mRepo, {erpElement2}, erpElement2}));
+            const auto result = stringManipMatches.eval({mRepo, {erpElement2}, erpElement2});
+            EXPECT_TRUE(result.collection.empty());
         }
     }
     {
@@ -1246,6 +1284,15 @@ TEST_F(ExpressionTest, StringManipReplaceMatches)
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result.single()->asString(), "hallo\\");
     }
+    {
+        auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+            R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+        auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                        mRepo->findTypeById("Test"), "Test", &testResource2);
+        ASSERT_NO_THROW((void)stringManipReplaceMatches.eval({mRepo, {erpElement2}, erpElement2}));
+        const auto result = stringManipReplaceMatches.eval({mRepo, {erpElement2}, erpElement2});
+        EXPECT_TRUE(result.collection.empty());
+    }
 }
 TEST_F(ExpressionTest, StringManipReplaceMatches2)
 {
@@ -1288,6 +1335,15 @@ TEST_F(ExpressionTest, StringManipLength)
              {std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "hello world"s)},
              rootElement});
         checkIntResult(result, 11);
+    }
+    {
+        auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+            R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+        auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                        mRepo->findTypeById("Test"), "Test", &testResource2);
+        ASSERT_NO_THROW((void)stringManipLength.eval({mRepo, {erpElement2}, erpElement2}));
+        const auto result = stringManipLength.eval({mRepo, {erpElement2}, erpElement2});
+        EXPECT_TRUE(result.collection.empty());
     }
 }
 

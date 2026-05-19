@@ -23,17 +23,16 @@ namespace pqxx {class connection;}
 class PostgresBackend : public CommonPostgresBackend, public ErpDatabaseBackend
 {
 public:
-    PostgresBackend();
+    PostgresBackend(PostgresConnection& connection);
     ~PostgresBackend() override;
-
-    static void recreateConnection();
 
     void healthCheck() override;
 
     [[nodiscard]] static uint64_t executeCountQuery(pqxx::transaction_base& transaction, const std::string_view& query,
                                                     const db_model::Blob& paramValue,
                                                     const std::optional<UrlArguments>& search,
-                                                    const std::string_view& context);
+                                                    const std::string_view& context,
+                                                    const std::vector<model::PrescriptionType>& prescriptionTypeParam = {});
     std::tuple<model::PrescriptionId, model::Timestamp> createTask(model::PrescriptionType prescriptionType,
                                                                    model::Task::Status taskStatus,
                                                                    const model::Timestamp& lastUpdated,
@@ -78,7 +77,8 @@ public:
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
                                       const db_model::Blob& medicationDispenseSalt,
-                                      const std::optional<model::Task::Status>& taskStatus = std::nullopt) override;
+                                      const std::optional<model::Task::Status>& taskStatus,
+                                      const db_model::EncryptedBlob& owner) override;
     void updateTaskMedicationDispenseReceipt(
         const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
@@ -86,7 +86,8 @@ public:
         const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
         const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense,
         const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
-        const model::Timestamp& lastStatusUpdate) override;
+        const model::Timestamp& lastStatusUpdate,
+        const db_model::EncryptedBlob& owner) override;
     void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                             const model::Timestamp& lastModified) override;
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
@@ -121,10 +122,10 @@ public:
     retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<db_model::Task>
-    retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
-                                      const std::optional<UrlArguments>& search) override;
+    retrieveAllEgkRedeemableTasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    [[nodiscard]] uint64_t countAllEgkRedeemableTasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
                                                                     const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) override;
@@ -206,11 +207,15 @@ public:
     std::optional<db_model::EuAccessPermission> retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr) override;
 
     PostgresConnection& connection() const override;
+    static PostgresConnection& mainConnection();
+    static bool haveReadOnlyConnection();
+    static PostgresConnection& readOnlyConnection();
+
 private:
     PostgresBackendTask& getTaskBackend(model::PrescriptionType prescriptionType);
+    static void appendWherePrescriptionTypeIn(std::string& query, const std::vector<model::PrescriptionType>& presciptionTypes);
 
-    thread_local static PostgresConnection mConnection;
-
+    PostgresConnection& mConnection;
     PostgresBackendTask mBackendTask;
     PostgresBackendTask mBackendTask162;
     PostgresBackendTask mBackendTask166;

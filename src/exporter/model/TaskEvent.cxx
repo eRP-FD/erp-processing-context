@@ -60,6 +60,16 @@ Timestamp TaskEventBase::getMedicationRequestAuthoredOn() const
     return kbvMedicationRequest.authoredOn();
 }
 
+void TaskEventBase::setXContextId(std::string_view xContextId)
+{
+    mXContextId = xContextId;
+}
+
+const std::string& TaskEventBase::getXContextId() const
+{
+    return mXContextId;
+}
+
 Timestamp TaskEventBase::getLastModified() const
 {
     return mLastModified;
@@ -190,16 +200,16 @@ CancelDispensationTaskEvent::CancelDispensationTaskEvent(id_t id, const Prescrip
 TRezeptEvent::TRezeptEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType,
                            const Kvnr& kvnr, std::string_view hashedKvnr, Bundle&& kbvBundle,
                            const model::Timestamp& lastModified, TaskEvent::UseCase useCase, State state,
-                           model::TelematikId orgTelematikId,
-                           Bundle&& medicationDispenseBundle,
-                           model::Timestamp qesSigningTime,
-                           std::int32_t retryCount)
+                           model::TelematikId orgTelematikId, Bundle&& medicationDispenseBundle,
+                           model::Timestamp qesSigningTime, std::int32_t retryCount,
+                           std::string jwtPharmacyOrganizationName)
     : TaskEventBase(id, prescriptionId, prescriptionType, kvnr, hashedKvnr, std::move(kbvBundle), lastModified, retryCount)
     , mUseCase(useCase)
     , mState(state)
     , mOrgTelematikId(std::move(orgTelematikId))
     , mMedicationDispenseBundle(std::move(medicationDispenseBundle))
     , mQesSigningTime(qesSigningTime)
+    , mJwtPharmacyOrganizationName(std::move(jwtPharmacyOrganizationName))
 {
 }
 
@@ -226,6 +236,11 @@ const Bundle& TRezeptEvent::getMedicationDispenseBundle() const
 const Timestamp& TRezeptEvent::getQesSigningTime() const
 {
     return mQesSigningTime;
+}
+
+const std::string& TRezeptEvent::getJwtPharmacyOrganizationName() const
+{
+    return mJwtPharmacyOrganizationName;
 }
 
 }

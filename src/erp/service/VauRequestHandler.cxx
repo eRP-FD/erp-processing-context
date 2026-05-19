@@ -277,7 +277,6 @@ VauRequestHandler::VauRequestHandler(RequestHandlerManager&& handlers)
 {
 }
 
-
 void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
 {
     auto& session = dynamic_cast<SessionContext&>(baseSessionContext);
@@ -302,6 +301,7 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
     HttpStatus errorStatus = HttpStatus::OK;
     std::string errorText;
     std::optional<std::string> errorMessage;
+// GEMREQ-start A_19417#handleRequest
     try {
         auto upParam = session.request.getPathParameter("UP");
         Expect3(upParam.has_value(), "Missing Pre-User-Pseudonym in Path.", std::logic_error);
@@ -313,6 +313,7 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
     }
     catch (const AesGcmException& e)
     {
+// GEMREQ-end A_19417#handleRequest
         // Can't encrypt/decrypt. Only outer response can be provided.
         session.accessLog.locationFromException(e);
         errorStatus = HttpStatus::BadRequest;
@@ -370,7 +371,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
     // Remove when all endpoints are implemented (or update missing endpoint return values.)
     innerServerResponse.setStatus(HttpStatus::OK);
     Operation innerOperation = Operation::UNKNOWN;
-
+// GEMREQ-start A_19417#findInnerHandler
     try {
         innerTeeRequest->parseHeaderAndBody();
         A_28427.start("BOM header are forbidden");
@@ -408,13 +409,13 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
             A_22153.start("return 405 if no handler for Consent with method and target was found");
             ErpFail(HttpStatus::MethodNotAllowed, "no matching handler found.");
         }
-
+// GEMREQ-end A_19417#findInnerHandler
         // Determine inner operation. Required for final response.
         auto* handler = matchingHandler.handlerContext->handler.get();
         innerOperation = (handler != nullptr) ? handler->getOperation() : Operation::UNKNOWN;
         outerSession.accessLog.setInnerRequestOperation(toString(innerOperation));
 
-        // GEMREQ-start A_19439, A_20373, A_20365
+        // GEMREQ-start A_19439, A_20373, A_20365,A_20163
         A_20163.start("4 - verify JWT");
         A_20365_01.start("Pass the IDP pubkey to the verification method.");
         try
@@ -432,11 +433,12 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         }
         A_20365_01.finish();
         A_20163.finish();
-        // GEMREQ-end A_19439, A_20373, A_20365
+        // GEMREQ-end A_19439, A_20373, A_20365, A_20163
 
         A_20163.start(
             R"(7. Die E-Rezept-VAU MUSS aus dem "sub"-Feld-Wert mittels des CMAC-Schlüssels den 128 Bit langen CMAC-Wert
                           berechnen und hexadezimal kodieren (32 Byte lang). Dies sei das Prenutzerpseudonym (PNP).)");
+        // GEMREQ-start A_20163#pup
         auto sub = innerServerRequest->getAccessToken().stringForClaim(JWT::subClaim);
         Expect(sub.has_value(), "Missing Sub field in JWT claim");
 
@@ -455,12 +457,15 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         auto&& PnPVerifier = outerSession.serviceContext.getPreUserPseudonymManager();
         CmacSignature preUserPseudonym{getPreUserPseudonym(PnPVerifier, upParam, *sub, outerSession)};
         A_20163.finish();
+        // GEMREQ-end A_20163#pup
         A_20163.start(
             "10. Die E-Rezept-VAU MUSS c' und das PNP an die Webschnittstelle als Antwort übergeben.");
+        // GEMREQ-start A_20163#pupResp
         outerSession.response.setHeader(std::string{PreUserPseudonymManager::PNPHeader},
                                    preUserPseudonym.hex());
         TVLOG(2) << "adding PNP: " << preUserPseudonym.hex();
         A_20163.finish();
+        // GEMREQ-end A_20163#pupResp
 
         ErpExpect(matchingHandler.pathParameters.size() == matchingHandler.handlerContext->pathParameterNames.size(),
                   HttpStatus::BadRequest, "Parameter mismatch.");
@@ -496,9 +501,11 @@ void VauRequestHandler::handleInnerRequest(const RequestHandlerManager::Matching
     try
     {
         // Run the secondary handler
+        // GEMREQ-start A_19417#invokeInnerHandler
         A_20163.start("5 - process inner request");
         matchingHandler.handlerContext->handler->handleRequest(innerSession);
         A_20163.finish();
+        // GEMREQ-end A_19417#invokeInnerHandler
         transferResponseHeadersFromInnerSession(innerSession, outerSession, innerSession.accessLog.getPrescriptionId());
         setBdeUseCaseHeader(*matchingHandler.handlerContext, innerSession, outerSession);
         shouldCreateAuditEvent = innerSession.auditDataCollector().shouldCreateAuditEventOnSuccess();
@@ -547,10 +554,12 @@ void VauRequestHandler::makeResponse(ServerResponse& innerServerResponse, const 
     {
         handleKeepAlive(outerSession, innerServerRequest, innerServerResponse);
 
+        // GEMREQ-start A_20163#outerResp
         OuterTeeResponse outerTeeResponse =
             ErpTeeProtocol::encrypt(innerServerResponse, innerTeeRequest.aesKey(), innerTeeRequest.requestId());
 
         outerTeeResponse.convert(outerSession.response);
+        // GEMREQ-end A_20163#outerResp
 
         // In case of certain jwt related exceptions (those who fail early), Operation remains UNKNOWN.
         // The Inner-* header for the java-proxy
@@ -734,6 +743,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
             HttpStatus::Unauthorized, Header::WWWAuthenticate, std::string{wwwAuthenticateErrorInvalidToken()});
         A_20369_01.finish();
     }
+    // GEMREQ-start A_20504#catchException
     catch (const JwtInvalidSignatureException& exception)
     {
         A_19131.start("Handle invalid signature");
@@ -743,6 +753,7 @@ void VauRequestHandler::processException(const std::exception_ptr& exceptionPtr,
         A_19131.finish();
         outerSession.accessLog.message(exception.what());
     }
+    // GEMREQ-end A_20504#catchException
     catch (const JwtInvalidRfcFormatException& exception)
     {
         runJwtInvalidRfcFormatExceptionHandler(

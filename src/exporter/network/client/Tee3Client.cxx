@@ -6,23 +6,26 @@
 
 #include "exporter/network/client/Tee3Client.hxx"
 #include "exporter/BdeMessage.hxx"
+#include "exporter/VauAutTokenSigner.hxx"
 #include "exporter/model/EpaOpRxDispensationErpOutputParameters.hxx"
 #include "exporter/model/EpaOpRxPrescriptionErpOutputParameters.hxx"
 #include "exporter/network/client/Tee3ClientsForHost.hxx"
 #include "exporter/tee3/EpaCertificateService.hxx"
-#include "exporter/VauAutTokenSigner.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/network/message/Header.hxx"
 #include "shared/tsl/TslManager.hxx"
 #include "shared/util/Base64.hxx"
+#include "shared/util/BdeUseCases.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/HeaderLog.hxx"
 #include "shared/util/Random.hxx"
+#include "shared/util/SharedRequirements.hxx"
+#include "shared/util/Uuid.hxx"
 #include "tee3/library/crypto/tee3/ClientTeeHandshake.hxx"
 #include "tee3/library/crypto/tee3/Tee3Context.hxx"
 #include "tee3/library/crypto/tee3/TeeMessageRestart.hxx"
@@ -71,6 +74,16 @@ std::optional<CborMessage> tryDeserializeCbor(const std::string& body)
         TLOG(ERROR) << "Couldn't decode cbor message, runtime error.";
     }
     return std::nullopt;
+}
+
+std::string filteredBoostErrorMessage(const boost::system::result<Tee3Client::Response>& response)
+{
+    std::string msg{};
+    if (response.error() != boost::asio::error::eof)
+    {
+        msg = response.error().message();
+    }
+    return msg;
 }
 
 void logDetails(const boost::system::result<Tee3Client::Response>& outerResponse, BDEMessage& bde)
@@ -260,8 +273,6 @@ Tee3Client::Tee3Client(boost::asio::io_context& ioContext, gsl::not_null<Tee3Cli
     , mStrand{make_strand(ioContext)}
     , mTeeContextRefreshTimer{mStrand}
     , mCertificateService{boost::asio::use_service<EpaCertificateService>(ioContext)}
-    , mDefaultUserAgent{
-          Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT)}
 {
     if (! mCertificateService.hasTlsCertificateVerifier())
     {
@@ -397,13 +408,14 @@ Tee3ClientsForHost* Tee3Client::owningClientsForHost()
 }
 
 Tee3Client::Request Tee3Client::prepareOuterRequest(boost::beast::http::verb verb, std::string_view target,
-                                                   const MimeType& mimeType, std::string_view userAgent)
+                                                    const MimeType& mimeType)
 {
     Request result{verb, target, 11};
     result.keep_alive(true);
     result.set(Header::Connection, Header::ConnectionKeepAlive);
     result.insert(Header::ContentType, std::string{mimeType});
-    result.set(Header::Tee3::XUserAgent, userAgent);
+    A_22470_06.start("set x-useragent for outgoing requests");
+    result.set(Header::XUserAgent, Header::xUserAgentHeader());
     return result;
 }
 
@@ -426,8 +438,7 @@ Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerReques
         epa::StreamFactory::makeReadableStream(serialized.str()));
     // GEMREQ-end A_24619#encryptInner
     // GEMREQ-start A_24628-01#sendOuterUseCID, A_24622#sendOuterUseCID
-    Request outerRequest = prepareOuterRequest(verb::post, mTee3Context->vauCid.toString(), MimeType::binary,
-                                              innerRequest[Header::Tee3::XUserAgent]);
+    Request outerRequest = prepareOuterRequest(verb::post, mTee3Context->vauCid.toString(), MimeType::binary);
     // GEMREQ-end A_24628-01#sendOuterUseCID, A_24622#sendOuterUseCID
 #ifdef ENABLE_DEBUG_LOG
     // GEMREQ-start A_24477
@@ -443,7 +454,7 @@ Tee3Client::Request Tee3Client::createEncryptedOuterRequest(Request& innerReques
 }
 
 boost::asio::awaitable<boost::system::result<Tee3Client::Response>>
-Tee3Client::sendInner(std::string xRequestId, Request request, const BDEMessage::Data& bdeData) //NOLINT(misc-no-recursion)
+Tee3Client::sendInner(std::string xRequestId, Request request, BDEMessage& bdeMessage) //NOLINT(misc-no-recursion)
 {
     auto executor = co_await boost::asio::this_coro::executor;
     co_await boost::asio::dispatch(boost::asio::bind_executor(mStrand, boost::asio::deferred));
@@ -456,14 +467,12 @@ Tee3Client::sendInner(std::string xRequestId, Request request, const BDEMessage:
     auto contexts = std::make_optional(mTee3Context->createSessionContexts(mRequestCounter.fetch_add(1)));
     // GEMREQ-end A_24628-01#createSessionContexts, A_24629callCreateSessionContexts
 
-    BDEMessage bde(BDEMessage::Data{.startTime = model::Timestamp::now(),
-                                    .cid = mTee3Context->vauCid.toString(),
-                                    .host = mHttpsClient.hostname(),
-                                    .innerOperation = request.target(),
-                                    .ip = mHttpsClient.currentEndpoint().address().to_string(),
-                                    .requestId = xRequestId});
-
-    bde.update(bdeData);
+    bdeMessage.update(BDEMessage::Data{.startTime = model::Timestamp::now(),
+                                              .cid = mTee3Context->vauCid.toString(),
+                                              .host = mHttpsClient.hostname(),
+                                              .innerOperation = request.target(),
+                                              .ip = mHttpsClient.currentEndpoint().address().to_string(),
+                                              .requestId = xRequestId});
 
     // GEMREQ-start A_24628-01#encryptInner
     Request outerRequest = createEncryptedOuterRequest(request, *contexts);
@@ -473,7 +482,22 @@ Tee3Client::sendInner(std::string xRequestId, Request request, const BDEMessage:
         return std::ostringstream{} << "sending outer request: " << Base64::encode(to_string(outerRequest));
     });
 
-    auto outerResponse = co_await sendOuter(xRequestId, outerRequest);
+    // In case of an exception in sendOuter, ensure that the finally() lambda is executed.
+    boost::system::result<Tee3Client::Response> outerResponse = boost::system::result<Tee3Client::Response>();
+
+    auto cleanup = gsl::finally([&outerResponse, &bdeMessage] {
+        if (outerResponse.has_value())
+        {
+            bdeMessage.update(
+                BDEMessage::Data{.endTime = model::Timestamp::now(), .responseCode = outerResponse->result_int()});
+        }
+        else
+        {
+            bdeMessage.update(BDEMessage::Data{.endTime = model::Timestamp::now(), .error = ::filteredBoostErrorMessage(outerResponse)});
+        }
+    });
+
+    outerResponse = co_await sendOuter(xRequestId, outerRequest);
 
     // retry once immediately if we're not during authorization requests
     if (outerResponse.has_value() && outerResponse->result() != boost::beast::http::status::ok && mIsAuthorized)
@@ -489,29 +513,28 @@ Tee3Client::sendInner(std::string xRequestId, Request request, const BDEMessage:
         Expect3(mTee3Context != nullptr, "Tee 3 context is gone.", std::logic_error);
         contexts.emplace(mTee3Context->createSessionContexts(mRequestCounter.fetch_add(1)));
         outerRequest = createEncryptedOuterRequest(request, *contexts);
-        bde.update(BDEMessage::Data{.startTime = model::Timestamp::now(), .cid = mTee3Context->vauCid.toString()});
+        bdeMessage.update(
+            BDEMessage::Data{.startTime = model::Timestamp::now(), .cid = mTee3Context->vauCid.toString()});
         co_await boost::asio::dispatch(boost::asio::bind_executor(executor, boost::asio::deferred));
         outerResponse = co_await sendOuter(xRequestId, outerRequest);
     }
 
     if (outerResponse.has_error())
     {
-        bde.update(BDEMessage::Data{.endTime = model::Timestamp::now(), .error = outerResponse.error().message()});
+        bdeMessage.update(
+            BDEMessage::Data{.endTime = model::Timestamp::now(), .error = ::filteredBoostErrorMessage(outerResponse)});
         // closing the TlsSession here ensures the duration does not include the
         // tls session shutdown
         co_await closeTlsSession();
         co_return outerResponse;
     }
 
-    auto cleanup = gsl::finally([&bde, &outerResponse] {
-        // past this point we are sure outerResponse has a value
-        bde.update(BDEMessage::Data{.endTime = model::Timestamp::now(), .responseCode = outerResponse->result_int()});
-    });
     // GEMREQ-start A_24767#not200
     if (outerResponse->result() != boost::beast::http::status::ok)
     {
         closeTeeSession();
-        logDetails(outerResponse, bde);
+        logDetails(outerResponse, bdeMessage);
+
         co_return error::outer_response_status_not_ok;
     }
     // GEMREQ-end A_24767#not200
@@ -546,13 +569,13 @@ Tee3Client::sendInner(std::string xRequestId, Request request, const BDEMessage:
     auto response = responseFromString(innerResponseData);
     if (response)
     {
-        bde.update(BDEMessage::Data{.innerResponseCode = response->result_int()});
+        bdeMessage.update(BDEMessage::Data{.innerResponseCode = response->result_int()});
 
         if (std::ranges::any_of(erpOps, [&](auto op) {
-                return bde.getData().innerOperation.value_or("").ends_with(op);
+                return bdeMessage.getData().innerOperation.value_or("").ends_with(op);
             }))
         {
-            addIssueDetailCode(bde, response->body());
+            addIssueDetailCode(bdeMessage, response->body());
         }
     }
     else
@@ -586,7 +609,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         using boost::beast::http::verb;
 
         // GEMREQ-start A_24428#createM1ReqHeader
-        Request request = prepareOuterRequest(verb::post, "/VAU", MimeType::cbor, mDefaultUserAgent);
+        Request request = prepareOuterRequest(verb::post, "/VAU", MimeType::cbor);
         // GEMREQ-end A_24428#createM1ReqHeader
         bool isPU = Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION);
         epa::ClientTeeHandshake handshake{std::bind_front(&Tee3Client::provideCertificate, this),
@@ -654,7 +677,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         auto target = handshake.vauCid().toString();
         // GEMREQ-end A_24622#storeCID
         // GEMREQ-start A_24622#m3UseCID
-        request = prepareOuterRequest(verb::post, target, MimeType::cbor, mDefaultUserAgent);
+        request = prepareOuterRequest(verb::post, target, MimeType::cbor);
         request.body() = handshake.createMessage3(epa::BinaryBuffer{m2response->body()}).toString();
         // GEMREQ-end A_24622#m3UseCID, A_24623#createM3Request
         HeaderLog::vlog(3, [&] {
@@ -755,7 +778,8 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::authorize(gsl::not
 boost::asio::awaitable<std::string> Tee3Client::getFreshness() //NOLINT(misc-no-recursion)
 {
     using boost::beast::http::verb;
-    auto response = co_await sendInner(Uuid{}.toString(), Request(verb::get, "/epa/authz/v1/freshness", 11), BDEMessage::Data{});
+    BDEMessage bdeMessage;
+    auto response = co_await sendInner(Uuid{}.toString(), Request(verb::get, "/epa/authz/v1/freshness", 11), bdeMessage);
     Expect(! response.has_error(), "TEE request to freshness failed");
     Expect3(response.value().result() == boost::beast::http::status::ok, "Response for freshness request not 200",
             std::runtime_error);
@@ -783,7 +807,8 @@ boost::asio::awaitable<std::string> Tee3Client::sendAuthorizationRequest(gsl::no
     using namespace std::string_literals;
     authorizationReq.body() = R"({"bearerToken":")"s.append(vauAutToken).append(R"("})");
     authorizationReq.set(Header::ContentType, static_cast<std::string>(MimeType::json));
-    auto response = co_await sendInner(Uuid{}.toString(), authorizationReq, BDEMessage::Data{});
+    BDEMessage bdeMessage;
+    auto response = co_await sendInner(Uuid{}.toString(), authorizationReq, bdeMessage);
 // GEMREQ-end A_24771#sendAuthorizationRequest
     Expect(! response.has_error(), "TEE request to send_authorization_request_bearertoken failed");
     Expect(response.value().result() == boost::beast::http::status::ok,

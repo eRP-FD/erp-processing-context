@@ -37,12 +37,14 @@ std::string_view ApplicationHealth::toString (const Service service)
         case Service::Hsm:       return model::Health::hsm;
         case Service::Idp:       return model::Health::idp;
         case Service::Postgres:  return model::Health::postgres;
+        case Service::PostgresRO:return model::Health::postgresRo;
         case Service::PrngSeed:  return model::Health::seedTimer;
         case Service::Redis:     return model::Health::redis;
         case Service::TeeToken:  return model::Health::teeTokenUpdater;
         case Service::Tsl:       return model::Health::tsl;
         case Service::CFdSigErp: return model::Health::cFdSigErp;
         case Service::EventDb:   return model::Health::eventDb;
+        case Service::PoPPService: return model::Health::poppService;
     }
     Fail("unhandled health service");
 }
@@ -151,7 +153,7 @@ bool ApplicationHealth::servicesUp_noLock() const
     bool result = true;
     for (const Service& svc : mEnabledServices)
     {
-        if (svc == Service::CFdSigErp)
+        if (!contributesToApplicationHealth(svc))
         {
             continue;
         }
@@ -193,6 +195,14 @@ void ApplicationHealth::setServiceDetails(Service service, ServiceDetail key, co
     TVLOG(2) << "health-check " << toString(service) << ": key=" << magic_enum::enum_name(key)
              << ", details: " << details;
     mStates[service].serviceDetails[key] = details;
+}
+
+void ApplicationHealth::setPoPPServiceDetails(const std::list<model::PoPPCertificateHealthData>& poppServiceDetails)
+{
+    std::lock_guard lock(mMutex);
+    TVLOG(2) << "health-check PoPPService: key=poppServiceDetails, details for " << poppServiceDetails.size()
+             << " certificates.";
+    mPoPPServiceState.poppServiceDetails = poppServiceDetails;
 }
 
 
@@ -283,6 +293,18 @@ model::Health ApplicationHealth::model() const
                                   getDetails(Service::CFdSigErp));
     }
 
+    if (mEnabledServices.contains(Service::PoPPService))
+    {
+        health.setPoPPServiceStatus(getUpDownStatus(Service::PoPPService), mPoPPServiceState.poppServiceDetails);
+    }
+
+    if (mEnabledServices.contains(Service::PostgresRO))
+    {
+        health.setPostgresROStatus(getUpDownStatus(Service::PostgresRO),
+                                   getServiceDetail(Service::PostgresRO, ServiceDetail::DBConnectionInfo),
+                                   getDetails(Service::PostgresRO));
+    }
+
     health.setOverallStatus(status_noLock());
 
     return health;
@@ -311,18 +333,32 @@ std::string ApplicationHealth::downServicesString_noLock (void) const
     return s.str();
 }
 
+bool ApplicationHealth::contributesToApplicationHealth(Service svc)
+{
+    switch (svc)
+    {
+        case Service::Bna:
+        case Service::Hsm:
+        case Service::Idp:
+        case Service::Postgres:
+        case Service::PrngSeed:
+        case Service::Redis:
+        case Service::TeeToken:
+        case Service::Tsl:
+        case Service::EventDb:
+        case Service::PostgresRO:
+            break;
+        case Service::CFdSigErp:
+        case Service::PoPPService:
+            return false;
+    }
+    return true;
+}
+
 
 std::string_view ApplicationHealth::getUpDownStatus (const Service service) const
 {
-    const auto iterator = mStates.find(service);
-    if (iterator == mStates.end() || iterator->second.status != Status::Up)
-    {
-        return model::Health::down;
-    }
-    else
-    {
-        return model::Health::up;
-    }
+    return isUp_noLock(service) ? model::Health::up : model::Health::down;
 }
 
 

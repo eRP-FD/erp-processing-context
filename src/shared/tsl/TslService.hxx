@@ -72,6 +72,8 @@ public:
     static constexpr const char* oid_fd_tls_s                          {"1.2.276.0.76.4.169"};
     // C.ZD.TLS-S
     static constexpr const char* oid_zd_tls_s                          {"1.2.276.0.76.4.157"};
+    // C.ZD.SIG
+    static constexpr const char* oid_zd_sig                            {"1.2.276.0.76.4.287"};
 
     // QC-Statement-Types are described in ETSI EN 319 412-5
     static constexpr const char* id_etsi_qcs_QcCompliance              {"0.4.0.1862.1.1"};

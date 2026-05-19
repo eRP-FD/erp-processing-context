@@ -100,7 +100,8 @@ TEST_F(ProvidePrescriptionTest, OperationSuccess)
     client.setHttpStatusResponse(HttpStatus::OK);
     client.setOperationOutcomeResponse(operationOutcomeTpl);
 
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -110,7 +111,8 @@ TEST_F(ProvidePrescriptionTest, PrescriptionDuplicate)
     client.setHttpStatusResponse(HttpStatus::OK);
     client.setOperationOutcomeResponse(String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS",
                                                           "MEDICATIONSVC_PRESCRIPTION_DUPLICATE"));
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -122,7 +124,8 @@ TEST_F(ProvidePrescriptionTest, PrescriptionStatus)
     client.setOperationOutcomeResponse(String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS",
                                                           "MEDICATIONSVC_PRESCRIPTION_STATUS"));
 
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -155,7 +158,8 @@ TEST_F(ProvidePrescriptionTest, NoValidStructure)
 ]
 })");
 
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::DeadLetter);
 }
 
@@ -167,7 +171,8 @@ TEST_F(ProvidePrescriptionTest, InternalServerError)
 "errorCode": "internalError"
 })");
 
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Retry);
 }
 
@@ -214,7 +219,8 @@ TEST_P(ProvidePrescriptionErrorCodesTestP, ProvideDispensationNewErrorCodes)
     const auto oo = String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS", GetParam().errorCode);
     client.setOperationOutcomeResponse(oo);
 
-    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, GetParam().expectedOutcome);
 }
 

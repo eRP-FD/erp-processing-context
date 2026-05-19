@@ -69,26 +69,34 @@ struct Versions {
         explicit KBV_FOR(FhirVersion ver);
         std::string renderVersion() const;
     };
+    struct EPA_MEDICATION : fhirtools::FhirVersion {
+        using FhirVersion::FhirVersion;
+        explicit EPA_MEDICATION(FhirVersion ver);
+        std::string renderVersion() const;
+    };
 
 
     static inline GEM_ERP GEM_ERP_1_2{"1.2"};
     static inline GEM_ERP GEM_ERP_1_3{"1.3"};
     static inline GEM_ERP GEM_ERP_1_4{"1.4"};
     static inline GEM_ERP GEM_ERP_1_5_2{"1.5.2"};
-    static inline GEM_ERP GEM_ERP_1_6_0{"1.6.0"};
+    static inline GEM_ERP GEM_ERP_1_6_2{"1.6.2"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
     static inline KBV_ERP KBV_ERP_1_3_3{"1.3.3"};
-    static inline KBV_ERP KBV_ERP_1_4_0{"1.4.0"};
+    static inline KBV_ERP KBV_ERP_1_4_2{"1.4.2"};
     static inline KBV_EVDGA KBV_EVDGA_1_1{"1.1"};
     static inline KBV_EVDGA KBV_EVDGA_1_2_2{"1.2.2"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};
-    static inline GEM_ERPCHRG GEM_ERPCHRG_1_1{"1.1"};
+    static inline GEM_ERPCHRG GEM_ERPCHRG_1_1_0{"1.1.0"};
     static inline DAV_PKV DAV_PKV_1_2{"1.2"};
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
     static inline DAV_PKV DAV_PKV_1_4_0{"1.4.0"};
-    static inline GEM_ERPEU GEM_ERPEU_1_1{"1.1"};
+    static inline GEM_ERPEU GEM_ERPEU_1_1_2{"1.1.2"};
     static inline GEM_ERP_TREZEPT GEM_ERP_TREZEPT_1_1{"1.1"};
-    static inline KBV_FOR KBV_FOR_1_3_0{"1.3.0"};
+    static inline KBV_FOR KBV_FOR_1_3_1{"1.3.1"};
+    static inline EPA_MEDICATION EPA_MEDICATION_1_0{"1.0.6-2"};
+    static inline EPA_MEDICATION EPA_MEDICATION_1_3_0{"1.3.0"};
+    static inline EPA_MEDICATION EPA_MEDICATION_1_3_2{"1.3.2"};
 
     static fhirtools::DefinitionKey latest(std::string_view profileUrl,
                                            const model::Timestamp& reference = model::Timestamp::now());
@@ -107,7 +115,6 @@ struct Versions {
     static std::initializer_list<DAV_PKV> DAV_PKV_all;
     static std::initializer_list<GEM_ERPEU> GEM_ERPEU_all;
 };
-
 
 struct KbvBundleMvoOptions
 {
@@ -262,6 +269,8 @@ struct PatchChargeItemOptions
     std::optional<bool> subsidyMarking = true;
     std::optional<bool> taxOfficeMarking = true;
 };
+
+std::string legacyPatchChargeItemBodyJson(const PatchChargeItemOptions& patchChargeItemOptions);
 std::string patchChargeItemJson(const PatchChargeItemOptions& patchChargeItemOptions);
 
 // ensure we get a warning, when we leave somethin uninitialized when using designated init:
@@ -359,6 +368,41 @@ struct VzdSearchSetOptions
 };
 std::string vzdSearchSetJson(const std::string_view path = "test/EndpointHandlerTest/ERP_TPrescription_VZD_SearchSet_template_1.0.json", const VzdSearchSetOptions& options = {});
 
+struct KbvPractitionerOptions
+{
+    Versions::KBV_FOR kbvPrForVersion = Versions::KBV_FOR_1_3_1;
+    std::string id = "6e6c209e-1b86-43e0-9794-f54ec147fc49";
+    std::string telematikId = "1-838382202";
+    std::string givenName = "Hans";
+};
+std::string kbvPractitionerXml(const KbvPractitionerOptions& options = {});
+
 } // namespace ResourceTemplates
+
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::GEM_ERP> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::GEM_ERPCHRG> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::GEM_ERPEU> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::DAV_PKV> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::GEM_ERP_TREZEPT> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::KBV_ERP> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::KBV_EVDGA> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+template<>
+struct fmt::formatter<ResourceTemplates::Versions::KBV_FOR> : public fmt::formatter<fhirtools::FhirVersion> {
+};
+
 
 #endif // TEST_UTIL_RESOURCETEMPLATES_HXX

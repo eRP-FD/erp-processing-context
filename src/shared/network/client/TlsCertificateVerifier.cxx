@@ -39,7 +39,7 @@ bool verifySubjectAlternativeDnsName(const std::string& hostname, const X509Cert
 // GEMREQ-start A_27857#crl
 void validateCrl(shared_X509_CRL& crl, X509Certificate& issuer, const X509Certificate& cert)
 {
-    Expect(crl != nullptr, "Empty CRL");
+    Expect(crl != nullptr, "No CRL provided");
     // following rfc5280, 6.3.33, skipping deltas and reason marks
     auto crlIssuer = x509NametoString(X509_CRL_get_issuer(crl));
     Expect(cert.getIssuer() == crlIssuer, "CRL issuer does not match certificate issuer");
@@ -53,221 +53,146 @@ void validateCrl(shared_X509_CRL& crl, X509Certificate& issuer, const X509Certif
 
 }//namespace
 
-/**
- * Base class for certificate verification implementations. Two methods can be overridden to
- * implement a strategy: install() is called when the context for a TLS connection is prepared, to
- * install a verification callback and set a verification mode. verifyCertificate() is called to
- * verify individual peer certificates.
- *
- * An instance of this class is only used for a single TLS connection.
- */
-class TlsCertificateVerifier::Implementation
+TlsCertificateVerifier::TlsCertificateVerifier(std::unique_ptr<Implementation> implementation)
+  : mImplementation{std::move(implementation)}
 {
-public:
-    virtual ~Implementation() = default;
+}
 
-    /**
-     * Called when preparing the context for a TLS connection. It should set the verification mode
-     * and verification callback on the OpenSSL SSL context. The default implementation sets the
-     * verification mode such that the remote peer is required to send a certificate and it installs
-     * a verification callback, so that verifyCertificate() is called for each certificate provided
-     * by the peer.
-     *
-     * @param sslContext The SSL context on which to set the verification mode and callback.
-     */
-    virtual void install(boost::asio::ssl::context& sslContext)
+
+void TlsCertificateVerifier::Implementation::install(boost::asio::ssl::context& sslContext)
+{
+    sslContext.set_verify_mode(boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
+
+    installVerifyCallback(sslContext);
+}
+void TlsCertificateVerifier::Implementation::addCertificateCheck(
+    const std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>& check)
+{
+    mAdditionalCertificateChecks.push_back(check);
+}
+bool TlsCertificateVerifier::Implementation::verifyCertificate(boost::asio::ssl::verify_context&,
+                                                               const std::optional<X509Certificate>&, bool preVerified)
+{
+    return preVerified;
+}
+void TlsCertificateVerifier::Implementation::installVerifyCallback(boost::asio::ssl::context& sslContext)
+{
+    sslContext.set_verify_callback([this](bool preVerified, boost::asio::ssl::verify_context& context) {
+        return verifyCertificateCallback(preVerified, context);
+    });
+}
+bool TlsCertificateVerifier::Implementation::isEndEntityCertificate(boost::asio::ssl::verify_context& context,
+                                                                    const X509Certificate& certificate)
+{
+    STACK_OF(X509)* certificateChain = X509_STORE_CTX_get0_chain(context.native_handle());
+    if (sk_X509_num(certificateChain) <= 0)
     {
-        sslContext.set_verify_mode(
-            boost::asio::ssl::verify_peer | boost::asio::ssl::verify_fail_if_no_peer_cert);
-
-        installVerifyCallback(sslContext);
+        LOG(ERROR) << "The certificate chain is empty.";
+        throw std::runtime_error("The certificate chain is empty.");
+    }
+    return certificate.getX509ConstPtr() == sk_X509_value(certificateChain, 0);
+}
+std::optional<X509Certificate>
+TlsCertificateVerifier::Implementation::getCertificateFromSslContext(boost::asio::ssl::verify_context& context)
+{
+    try
+    {
+        return X509Certificate::createFromX509Pointer(X509_STORE_CTX_get_current_cert(context.native_handle()));
+    }
+    catch (const std::exception& exception)
+    {
+        LOG(ERROR) << "failed to get server certificate from SSL context: " << exception.what();
     }
 
-    /**
-     * Add a function that performs an additional check of the certificate. It will be invoked for
-     * an end-entity certificate to be verified that already passed the regular verification
-     * performed by the verifier. If any additional certificate check returns false the certificate
-     * will be rejected.
-     *
-     * @param check The function to be invoked to perform the check. Returns true to accept the
-     *        certificate, false to reject it.
-     */
-    void
-    addCertificateCheck(const std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>& check)
-    {
-        mAdditionalCertificateChecks.push_back(check);
-    }
+    return std::nullopt;
+}
+void TlsCertificateVerifier::Implementation::logVerifyCertificateResult(
+    bool preVerified, bool result, boost::asio::ssl::verify_context& context,
+    const std::optional<X509Certificate>& certificate)
+{
+    std::string serialNumber = "?";
+    std::string subject = "?";
 
-protected:
-    /**
-     * During the TLS handshake, this method is invoked for each certificate of the certificate
-     * chain provided by the remote peer. The method is implemented by derived classes according to
-     * their certificate verification strategy.
-     *
-     * When the method is called, OpenSSL has already done some verification of the certificate
-     * depending on parameters set on the SSL context. The boolean result of this verification is
-     * supplied as an argument. It can be used or ignored as required by the implementation, but it
-     * doesn't have any effect beyond that -- only the return value of this method decides whether
-     * the certificate is accepted. The default implementation simply returns the given
-     * pre-verification result.
-     *
-     * @param context The verification context. A native OpenSSL handle can be retrieved from it.
-     * @param certificate The certificate to be verified. May be the peer's end entity certificate
-     *        or any certificate of the chain it provided.
-     * @param preVerified The result of the verification of the certificate performed by OpenSSL.
-     *        May be ignored or used as needed by the implementation.
-     * @return true, if the certificate (and thus the TLS connection) shall be accepted, false if it
-     *         shall be rejected.
-     */
-    virtual bool verifyCertificate(
-        boost::asio::ssl::verify_context& /*context*/,
-        const std::optional<X509Certificate>& /*certificate*/,
-        bool preVerified)
-    {
-        return preVerified;
-    }
-
-    void installVerifyCallback(boost::asio::ssl::context& sslContext)
-    {
-        sslContext.set_verify_callback(
-            [this](bool preVerified, boost::asio::ssl::verify_context& context) {
-                return verifyCertificateCallback(preVerified, context);
-            });
-    }
-
-    static bool isEndEntityCertificate(
-        boost::asio::ssl::verify_context& context,
-        const X509Certificate& certificate)
-    {
-        STACK_OF(X509)* certificateChain = X509_STORE_CTX_get0_chain(context.native_handle());
-        if (sk_X509_num(certificateChain) <= 0)
-        {
-            LOG(ERROR) << "The certificate chain is empty.";
-            throw std::runtime_error("The certificate chain is empty.");
-        }
-        return certificate.getX509ConstPtr() == sk_X509_value(certificateChain, 0);
-    }
-
-private:
-    std::vector<std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>> mAdditionalCertificateChecks;
-
-    static std::optional<X509Certificate> getCertificateFromSslContext(
-        boost::asio::ssl::verify_context& context)
+    if (certificate.has_value())
     {
         try
         {
-            return X509Certificate::createFromX509Pointer(
-                X509_STORE_CTX_get_current_cert(context.native_handle()));
+            serialNumber = certificate->getSerialNumber();
         }
         catch (const std::exception& exception)
         {
-            LOG(ERROR) << "failed to get server certificate from SSL context: " << exception.what();
+            LOG(ERROR) << "Failed to get serial number from certificate: " << exception.what();
         }
 
-        return std::nullopt;
-    }
-
-    static void logVerifyCertificateResult(
-        bool preVerified,
-        bool result,
-        boost::asio::ssl::verify_context& context,
-        const std::optional<X509Certificate>& certificate)
-    {
-        std::string serialNumber = "?";
-        std::string subject = "?";
-
-        if (certificate.has_value())
-        {
-            try
-            {
-                serialNumber = certificate->getSerialNumber();
-            }
-            catch (const std::exception& exception)
-            {
-                LOG(ERROR) << "Failed to get serial number from certificate: " << exception.what();
-            }
-
-            try
-            {
-                subject = certificate->getSubject();
-            }
-            catch (const std::exception& exception)
-            {
-                LOG(ERROR) << "Failed to get subject from certificate: " << exception.what();
-            }
-        }
-
-        static const auto boolToSuccessString = [](bool value) {
-            return value ? "success" : "failed";
-        };
-
-        TVLOG(1) << "TLS certificate check, subject = " << subject << "\n"
-            << "  Result: " << boolToSuccessString(result)
-            << " (pre-verified: " << boolToSuccessString(preVerified) << ")\n"
-            << "  Serial no: " << serialNumber;
-
-        // In case of TLS certificate validation issues log more details on log level INFO2.
-        if (! result)
-        {
-            const int error = X509_STORE_CTX_get_error(context.native_handle());
-            const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
-            X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
-            TVLOG(2) << "error " << error << " (" << X509_verify_cert_error_string(error)
-                     << " at depth " << errorDepth << " in " << x509NametoString(X509_get_subject_name(errCert));
-        }
-    }
-
-    bool verifyCertificateCallback(
-        const bool preVerified,
-        boost::asio::ssl::verify_context& context)
-    {
-        // get the certificate
-        std::optional<X509Certificate> certificate = getCertificateFromSslContext(context);
-
-        // verify the certificate
-        bool result = false;
         try
         {
-            result = verifyCertificate(context, certificate, preVerified)
-                     && performAdditionalChecks(context, certificate);
+            subject = certificate->getSubject();
         }
         catch (const std::exception& exception)
         {
-            LOG(ERROR) << "failed to verify server certificate: " << exception.what();
+            LOG(ERROR) << "Failed to get subject from certificate: " << exception.what();
         }
-
-        if (! result)
-        {
-            LOG(WARNING) << "validation of server certficate failed: "
-                         << (certificate.has_value() ? certificate->toBase64() : "");
-        }
-
-#if 0 // NOLINT(readability-avoid-unconditional-preprocessor-if)
-        // this callback is registered to better debug certificate verification problems,
-        // it is not necessary for production and should be disabled
-        logVerifyCertificateResult(preVerified, result, context, certificate);
-#endif
-
-        return result;
     }
 
-    bool performAdditionalChecks(
-        boost::asio::ssl::verify_context& context,
-        const std::optional<X509Certificate>& certificate)
+    static const auto boolToSuccessString = [](bool value) {
+        return value ? "success" : "failed";
+    };
+
+    TVLOG(1) << "TLS certificate check, subject = " << subject << "\n"
+             << "  Result: " << boolToSuccessString(result) << " (pre-verified: " << boolToSuccessString(preVerified)
+             << ")\n"
+             << "  Serial no: " << serialNumber;
+
+    // In case of TLS certificate validation issues log more details on log level INFO2.
+    if (! result)
     {
-        if (certificate.has_value() && isEndEntityCertificate(context, *certificate))
+        const int error = X509_STORE_CTX_get_error(context.native_handle());
+        const int errorDepth = X509_STORE_CTX_get_error_depth(context.native_handle());
+        X509* errCert = X509_STORE_CTX_get_current_cert(context.native_handle());
+        TVLOG(2) << "error " << error << " (" << X509_verify_cert_error_string(error) << " at depth " << errorDepth
+                 << " in " << x509NametoString(X509_get_subject_name(errCert));
+    }
+}
+bool TlsCertificateVerifier::Implementation::verifyCertificateCallback(const bool preVerified,
+                                                                       boost::asio::ssl::verify_context& context)
+{
+    // get the certificate
+    std::optional<X509Certificate> certificate = getCertificateFromSslContext(context);
+
+    // verify the certificate
+    bool result = false;
+    try
+    {
+        result = verifyCertificate(context, certificate, preVerified) && performAdditionalChecks(context, certificate);
+    }
+    catch (const std::exception& exception)
+    {
+        LOG(ERROR) << "failed to verify server certificate: " << exception.what();
+    }
+
+    if (! result)
+    {
+        LOG(WARNING) << "validation of server certficate failed: "
+                     << (certificate.has_value() ? certificate->toBase64() : "");
+    }
+
+    return result;
+}
+bool TlsCertificateVerifier::Implementation::performAdditionalChecks(boost::asio::ssl::verify_context& context,
+                                                                     const std::optional<X509Certificate>& certificate)
+{
+    if (certificate.has_value() && isEndEntityCertificate(context, *certificate))
+    {
+        for (const auto& check : mAdditionalCertificateChecks)
         {
-            for (const auto& check : mAdditionalCertificateChecks)
+            if (! check(certificate.value(), context))
             {
-                if (! check(certificate.value(), context))
-                {
-                    return false;
-                }
+                return false;
             }
         }
-        return true;
     }
-};
+    return true;
+}
 
 
 class TlsCertificateVerifier::CustomRootCertificatesImplementation : public Implementation
@@ -435,20 +360,6 @@ private:
 };
 
 
-/**
- * Certificate verification implementation that accepts any certificate, not verifying anything.
- * Used for testing purposes only, but located in production code so it can be used in certain
- * integration environments.
- */
-class TlsCertificateVerifier::NoVerificationImplementation : public Implementation
-{
-public:
-    void install(boost::asio::ssl::context& sslContext) override
-    {
-        sslContext.set_verify_mode(boost::asio::ssl::verify_none);
-    }
-};
-
 
 TlsCertificateVerifier TlsCertificateVerifier::withCustomRootCertificates(
     std::string customRootCertificates)
@@ -461,12 +372,6 @@ TlsCertificateVerifier TlsCertificateVerifier::withCustomRootCertificates(
 TlsCertificateVerifier TlsCertificateVerifier::withTslVerification(TslManager& tslManager, TslValidationParameters tslValidationParameters)
 {
     return TlsCertificateVerifier(std::make_unique<TslImplementation>(tslManager, tslValidationParameters));
-}
-
-
-TlsCertificateVerifier TlsCertificateVerifier::withVerificationDisabledForTesting()
-{
-    return TlsCertificateVerifier(std::make_unique<NoVerificationImplementation>());
 }
 
 
@@ -494,9 +399,9 @@ TlsCertificateVerifier& TlsCertificateVerifier::withSubjectAlternativeDnsName(
 }
 
 
-TlsCertificateVerifier& TlsCertificateVerifier::withCrl(CrlProvider& crl)
+TlsCertificateVerifier& TlsCertificateVerifier::withCrl(CrlProvider& crl, CrlMode mode)
 {
-    auto check = [&crl](const X509Certificate& /*certificate*/, boost::asio::ssl::verify_context& context) -> bool {
+    auto check = [&crl, mode](const X509Certificate& /*certificate*/, boost::asio::ssl::verify_context& context) -> bool {
         STACK_OF(X509)* chain = X509_STORE_CTX_get0_chain(context.native_handle());
         const int chainLength = sk_X509_num(chain);
         for (int i = 0; i < chainLength - 1; ++i)
@@ -509,6 +414,10 @@ TlsCertificateVerifier& TlsCertificateVerifier::withCrl(CrlProvider& crl)
                 continue;
             }
             auto crlPtr = crl.getCrl(cert);
+            if (! crlPtr && mode == CrlMode::SOFT_FAIL) {
+                LOG(ERROR) << "Unable to obtain CRL for '" << cert.getSubject() << "', skipping CRL check (soft fail)";
+                continue;
+            }
             try
             {
                 validateCrl(crlPtr, issuer, cert);
@@ -530,10 +439,4 @@ TlsCertificateVerifier& TlsCertificateVerifier::withCrl(CrlProvider& crl)
 
     };
     return withAdditionalCertificateCheck(check);
-}
-
-
-TlsCertificateVerifier::TlsCertificateVerifier(std::unique_ptr<Implementation> implementation)
-  : mImplementation{std::move(implementation)}
-{
 }

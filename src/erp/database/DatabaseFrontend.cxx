@@ -93,11 +93,8 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
         auto key = keys.find(res.blobId);
         if (key == keys.end())
         {
-            auto salt =
-                mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::medicationDispense, res.blobId);
-            Expect(salt, "Salt not found in database.");
-            std::tie(key, std::ignore) =
-                keys.emplace(res.blobId, mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt));
+            std::tie(key, std::ignore) = keys.emplace(
+                res.blobId, mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, res.medicationDispenseSalt));
         }
         auto unspecified =
             model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key->second));
@@ -142,9 +139,7 @@ model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(cons
 
     const auto& res = encryptedResult[0];
 
-    auto salt = mBackend->retrieveSaltForAccount(hashedKvnr, db_model::MasterKeyType::medicationDispense, res.blobId);
-    Expect(salt, "Salt not found in database.");
-    auto key = mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, *salt);
+    auto key = mDerivation.medicationDispenseKey(hashedKvnr, res.blobId, res.medicationDispenseSalt);
 
     auto unspecified = model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key));
     if (unspecified.getResourceType() == model::MedicationDispense::resourceTypeName)
@@ -279,19 +274,25 @@ void DatabaseFrontend::updateTaskMedicationDispense(const model::Task& task,
     } catch (const ModelException& exc) {
         // Unknown profile type, keep it until ErxMedicationDispense is clarified.
     }
+    auto taskOwner = task.owner();
+    ModelExpect(taskOwner.has_value(), "Cannot update medication dispense for task without owner.");
+    const auto owner =
+        mCodec.encode(taskOwner.value(), taskKey(task.prescriptionId()), Compression::DictionaryUse::Default_json);
     if (isEuProfile)
     {
         const auto hashedTelematikId = mDerivation.hashTelematikId(TelematikId{""});
         mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
-                                               value(task.lastMedicationDispense()), encryptedMedicationDispense, blobId,
-                                               hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt, task.status());
+                                               value(task.lastMedicationDispense()), encryptedMedicationDispense,
+                                               blobId, hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt,
+                                               task.status(), owner);
     }
     else
     {
         const auto hashedTelematikId = mDerivation.hashTelematikId(medicationDispense.telematikId());
         mBackend->updateTaskMedicationDispense(task.prescriptionId(), task.lastModifiedDate(),
-                                           value(task.lastMedicationDispense()), encryptedMedicationDispense, blobId,
-                                           hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt);
+                                               value(task.lastMedicationDispense()), encryptedMedicationDispense,
+                                               blobId, hashedTelematikId, whenHandedOver, whenPrepared, mediDispSalt,
+                                               std::nullopt, owner);
     }
 }
 
@@ -342,6 +343,9 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
               "Cannot update medication dispense for task without kvnr.");
     const auto hashedKvnr = mDerivation.hashKvnr(*kvnr);
     const auto hashedTelematikId = mDerivation.hashTelematikId(telematikId);
+    auto taskOwner = task.owner();
+    ModelExpect(taskOwner.has_value(), "Cannot update medication dispense for task without owner.");
+    const auto owner = mCodec.encode(taskOwner.value(), key, Compression::DictionaryUse::Default_json);
 
     /// MedicationDispense uses same derivation master key as task:
     ErpExpect(task.lastMedicationDispense(), HttpStatus::InternalServerError,
@@ -353,7 +357,7 @@ void DatabaseFrontend::updateTaskMedicationDispenseReceipt(
     mBackend->updateTaskMedicationDispenseReceipt(
         task.prescriptionId(), task.status(), task.lastModifiedDate(), encryptedMedicationDispense, blobId,
         hashedTelematikId, whenHandedOver, whenPrepared, encryptReceipt, value(task.lastMedicationDispense()),
-        mediDispSalt, encryptedPharmacyIdentity, task.lastStatusChangeDate());
+        mediDispSalt, encryptedPharmacyIdentity, task.lastStatusChangeDate(), owner);
 }
 
 db_model::EncryptedBlob
@@ -535,19 +539,18 @@ std::vector<model::Task> DatabaseFrontend::retrieveAllTasksForPatient(const mode
     for (const auto& dbTask : dbTaskList)
     {
         auto modelTask = getModelTask(dbTask);
-        auto kvnrType = dbTask.isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
-        modelTask.setKvnr(model::Kvnr{kvnr.id(), kvnrType});
+        modelTask.setKvnr(model::Kvnr{kvnr.id()});
         allTasks.emplace_back(std::move(modelTask));
     }
     return allTasks;
 }
 
-std::vector<model::Task> DatabaseFrontend::retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr,
+std::vector<model::Task> DatabaseFrontend::retrieveAllEgkRedeemableTasksWithAccessCode(const model::Kvnr& kvnr,
                                                                              const std::optional<UrlArguments>& search)
 {
     ErpExpect(kvnr.validFormat(), HttpStatus::BadRequest, "Invalid KVNR");
 
-    auto dbTaskList = mBackend->retrieveAll160TasksWithAccessCode(mDerivation.hashKvnr(kvnr), search);
+    auto dbTaskList = mBackend->retrieveAllEgkRedeemableTasksWithAccessCode(mDerivation.hashKvnr(kvnr), search);
     std::vector<model::Task> allTasks;
     for (const auto& dbTask : dbTaskList)
     {
@@ -563,9 +566,9 @@ uint64_t DatabaseFrontend::countAllTasksForPatient(const model::Kvnr& kvnr, cons
     return mBackend->countAllTasksForPatient(mDerivation.hashKvnr(kvnr), search);
 }
 
-uint64_t DatabaseFrontend::countAll160Tasks(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
+uint64_t DatabaseFrontend::countAllEgkRedeemableTasks(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search)
 {
-    return mBackend->countAll160Tasks(mDerivation.hashKvnr(kvnr), search);
+    return mBackend->countAllEgkRedeemableTasks(mDerivation.hashKvnr(kvnr), search);
 }
 
 std::vector<std::tuple<model::Task, model::Binary>>
@@ -940,8 +943,7 @@ model::Task DatabaseFrontend::getModelTask(const db_model::Task& dbTask, const s
                           dbTask.status, dbTask.lastStatusChange, dbTask.isPkv);
     if (dbTask.kvnr && key)
     {
-        const auto type = dbTask.isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
-        modelTask.setKvnr(model::Kvnr{std::string_view{mCodec.decode(*dbTask.kvnr, *key)}, type});
+        modelTask.setKvnr(model::Kvnr{std::string_view{mCodec.decode(*dbTask.kvnr, *key)}});
     }
     if (dbTask.expiryDate)
     {

@@ -94,4 +94,20 @@ bool isTRezept(PrescriptionType prescriptionType)
     return false;
 }
 
+bool isEgkRedeemable(PrescriptionType prescriptionType)
+{
+    switch (prescriptionType)
+    {
+        case PrescriptionType::apothekenpflichigeArzneimittel:
+        case PrescriptionType::tRezept:
+            return true;
+        case PrescriptionType::digitaleGesundheitsanwendungen:
+        case PrescriptionType::direkteZuweisung:
+        case PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case PrescriptionType::direkteZuweisungPkv:
+            break;
+    }
+    return false;
+}
+
 }

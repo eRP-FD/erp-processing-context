@@ -17,7 +17,7 @@
           }
         ]
       },
-      "diagnostic": "Invalid request"
+      "diagnostics": "Invalid request"
     }
   ]
 }

@@ -46,7 +46,7 @@ TEST(BDEMessageTest, test0)
     std::unique_ptr<BDEMessage> bdeMessage = std::make_unique<BDEMessage>();
     testing::internal::CaptureStderr();
     std::string startTimeStr = R"-("timestamp":"##VAL##")-";
-    boost::replace_all(startTimeStr, "##VAL##", bdeMessage->getData().startTime.value().toXsDateTime());
+    boost::replace_all(startTimeStr, "##VAL##", bdeMessage->getData().startTime.toXsDateTime());
     bdeMessage = nullptr;
     std::string output = testing::internal::GetCapturedStderr();
     ASSERT_TRUE(output.find(R"-("log_type":"bde")-") != std::string::npos);
@@ -80,7 +80,6 @@ TEST(BDEMessageTest, loadProfiles)
     testing::internal::CaptureStderr();
     bdeMessage = nullptr;
     std::string output = testing::internal::GetCapturedStderr();
-    TVLOG(1)<<output;
     ASSERT_TRUE(output.find("\"duration_in_ms\":5000") != std::string::npos);
     ASSERT_TRUE(output.find("\"response_code\":404") != std::string::npos);
     ASSERT_TRUE(output.find("\"response_time\":10000") != std::string::npos);
@@ -122,7 +121,6 @@ TEST(BDEMessageTest, testMerge)
     bdeMessage->update(delta);
     bdeMessage = nullptr;
     std::string output = testing::internal::GetCapturedStderr();
-    TVLOG(1) << output;
     ASSERT_TRUE(output.find("\"kvnr\":\"666f6f\"") != std::string::npos);
     ASSERT_TRUE(output.find("\"cid\":\"1234\"") != std::string::npos);
     ASSERT_TRUE(output.find("bde data mismatch") != std::string::npos);

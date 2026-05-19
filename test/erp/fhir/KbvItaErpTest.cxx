@@ -13,6 +13,7 @@
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 
 #include <gtest/gtest.h>
@@ -67,7 +68,7 @@ TEST_P(KbvItaErpTest, success)
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    1_4_0, KbvItaErpTest,
-    testing::Combine(::testing::Values(fhirtools::FhirVersion{"1.4.0"}),
+    1_4, KbvItaErpTest,
+    testing::Combine(::testing::Values(ResourceTemplates::Versions::KBV_ERP_1_4_2),
                      ::testing::ValuesIn(KbvItaErpTest::files("test/fhir/examples/kbv.ita.erp-1.4.0", 71))),
     &KbvItaErpTest::name);

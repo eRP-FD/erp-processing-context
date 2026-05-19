@@ -45,7 +45,7 @@ class EpaAccountLookup : public IEpaAccountLookup
 {
 public:
     explicit EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lookupClient);
-    explicit EpaAccountLookup(MedicationExporterServiceContext& serviceContext);
+    explicit EpaAccountLookup(MedicationExporterServiceContext& serviceContext, const std::string& xContextId);
 
     EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::optional<std::string>& prefix = std::nullopt) override;
     EpaAccount lookup(const std::string& xRequestId, const model::Kvnr& kvnr, const std::vector<std::tuple<std::string, uint16_t>>& epaAsHostPortList) override;

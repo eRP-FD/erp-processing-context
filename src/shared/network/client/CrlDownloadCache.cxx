@@ -42,7 +42,16 @@ shared_X509_CRL CrlDownloadCache::getCrl(const X509Certificate& cert)
     }
 
     // in case we dont find it, download the crl and add it to the cache
-    auto urlAndCrlData = downloadCrl(crlUrls);
+    std::pair<std::string, CrlDownloadCache::CrlData> urlAndCrlData;
+    try
+    {
+        urlAndCrlData = downloadCrl(crlUrls);
+    }
+    catch (const std::exception&)
+    {
+        // allow handling empty crl in the layer above
+        return shared_X509_CRL::make(nullptr);
+    }
 
     std::scoped_lock lock{mCacheMutex};
     auto item = mCrlCache.insert_or_assign(urlAndCrlData.first, std::move(urlAndCrlData.second));

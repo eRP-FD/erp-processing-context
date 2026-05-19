@@ -13,6 +13,7 @@ add_executable(exporter-test
         eventprocessing/ProvideDispensationTest.cxx
         eventprocessing/ProvidePrescriptionTest.cxx
         fhir/DeGematikErpT-PrescriptionTest.cxx
+        fhir/FhirRepositoryTest.cxx
         mock/EpaAccountLookupClientMock.cxx
         mock/EpaAccountLookupMock.cxx
         mock/EpaMedicationClientMock.cxx

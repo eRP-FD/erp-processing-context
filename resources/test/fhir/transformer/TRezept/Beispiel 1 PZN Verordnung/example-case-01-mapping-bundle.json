@@ -41,27 +41,27 @@
           {
             "extension": [
               {
-                "url": "off-label",
+                "url": "Off-Label",
                 "valueBoolean": true
               },
               {
-                "url": "childbearing-potential",
+                "url": "GebaerfaehigeFrau",
                 "valueBoolean": false
               },
               {
-                "url": "security-compliance",
+                "url": "EinhaltungSicherheitsmassnahmen",
                 "valueBoolean": true
               },
               {
-                "url": "hand-out-information-material",
+                "url": "AushaendigungInformationsmaterialien",
                 "valueBoolean": true
               },
               {
-                "url": "declaration-of-expertise",
+                "url": "ErklaerungSachkenntnis",
                 "valueBoolean": true
               }
             ],
-            "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-teratogenic-extension"
+            "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Teratogenic"
           },
           {
             "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag",
@@ -75,7 +75,7 @@
             "extension": [
               {
                 "url": "algorithmVersion",
-                "valueString": "1.0.0"
+                "valueString": "1.0.1"
               },
               {
                 "url": "language",
@@ -239,7 +239,7 @@
         "id": "a7e1d25f-0b0a-40f7-b529-afda48e51b46",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.5"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.6"
           ]
         },
         "identifier": [
@@ -285,7 +285,7 @@
         "id": "8e2e5e65-4c5d-49f2-8efc-c30e40838273",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.5"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.6"
           ]
         },
         "code": {

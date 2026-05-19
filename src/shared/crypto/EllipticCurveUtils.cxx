@@ -270,14 +270,14 @@ shared_EVP_PKEY EllipticCurveUtils::createPublicKeyBN(const shared_BN& xCoordina
 }
 
 
-shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex(const std::string& pComponent)
+shared_EVP_PKEY EllipticCurveUtils::createPrivateKeyHex(const std::string& pComponent, int curveNameNid)
 {
     auto privKeyBn = shared_BN::make();
     auto count = BN_hex2bn(privKeyBn.getP(), pComponent.c_str());
     OpenSslExpect(gsl::narrow<size_t>(count) == pComponent.size(), "conversion of hex private key failed");
 
     // calculate the pubkey from the private key
-    auto group = std::unique_ptr<EC_GROUP, decltype(&EC_GROUP_free)>{EC_GROUP_new_by_curve_name(NID_brainpoolP256r1),
+    auto group = std::unique_ptr<EC_GROUP, decltype(&EC_GROUP_free)>{EC_GROUP_new_by_curve_name(curveNameNid),
                                                                      &EC_GROUP_free};
     auto pubkeyPoint = std::unique_ptr<EC_POINT, decltype(&EC_POINT_free)>{EC_POINT_new(group.get()), &EC_POINT_free};
     auto result = EC_POINT_mul(group.get(), pubkeyPoint.get(), privKeyBn, nullptr, nullptr, nullptr);
@@ -293,7 +293,7 @@ shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex(const std
     OpenSslExpect(EVP_PKEY_fromdata_init(pctx.get()) == 1, "EVP_PKEY_fromdata_init failed");
     const std::unique_ptr<OSSL_PARAM_BLD, decltype(&OSSL_PARAM_BLD_free)> paramsBuild{OSSL_PARAM_BLD_new(),
                                                                                       &OSSL_PARAM_BLD_free};
-    OSSL_PARAM_BLD_push_utf8_string(paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(NID_brainpoolP256r1), 0);
+    OSSL_PARAM_BLD_push_utf8_string(paramsBuild.get(), OSSL_PKEY_PARAM_GROUP_NAME, OBJ_nid2sn(curveNameNid), 0);
     OSSL_PARAM_BLD_push_BN(paramsBuild.get(), OSSL_PKEY_PARAM_PRIV_KEY, privKeyBn);
     OSSL_PARAM_BLD_push_octet_string(paramsBuild.get(), OSSL_PKEY_PARAM_PUB_KEY, pubkeyUncompressed.data(),
                                      pubkeyUncompressed.size());
@@ -307,6 +307,12 @@ shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex(const std
     OpenSslExpect(result == 1, "EVP_PKEY_fromdata failed");
     OpenSslExpect(pkey != nullptr, "EVP_PKEY_fromdata failed");
     return shared_EVP_PKEY::make(pkey);
+}
+
+
+shared_EVP_PKEY EllipticCurveUtils::createBrainpoolP256R1PrivateKeyHex(const std::string& pComponent)
+{
+    return createPrivateKeyHex(pComponent, NID_brainpoolP256r1);
 }
 
 

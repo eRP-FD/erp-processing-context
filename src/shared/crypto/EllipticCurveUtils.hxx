@@ -46,6 +46,9 @@ public:
         const shared_BN& yCoordinateBin,
         int curveId = NID_brainpoolP256r1);
 
+    static shared_EVP_PKEY createPrivateKeyHex (
+        const std::string& pComponent, int curveNameNid);
+
     static shared_EVP_PKEY createBrainpoolP256R1PrivateKeyHex (
         const std::string& pComponent);
 

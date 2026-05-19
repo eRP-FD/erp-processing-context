@@ -6,6 +6,7 @@
 
 #include "library/crypto/tee3/Kyber768.hxx"
 #include "library/util/Assert.hxx"
+#include "shared/util/NoDeprecated.hxx"
 
 #include <botan/kyber.h>
 #include <botan/pubkey.h>
@@ -19,7 +20,9 @@ namespace
 {
     constexpr size_t KEM_kyber_768_length_shared_secret = 32;
     constexpr std::string_view kdf = "Raw";
+    BEGIN_NO_DEPRECATED_WARNINGS
     constexpr auto kyberMode = Botan::KyberMode::Kyber768_R3;
+    END_NO_DEPRECATED_WARNINGS
 
 
     BinaryBuffer toBinaryBuffer(const std::vector<uint8_t>& data)

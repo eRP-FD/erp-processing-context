@@ -51,6 +51,10 @@ EvaluationContext StringManipSubstring::eval(const EvaluationContext& context) c
     {
         return context();
     }
+    if (!context.collection.single()->hasValue())
+    {
+        return context();
+    }
     const auto start = gsl::narrow<size_t>(startResult.collection.single()->asInt());
     const auto& asString = context.collection.single()->asString();
     if (start >= asString.size())
@@ -78,6 +82,10 @@ EvaluationContext StringManipStartsWith::eval(const EvaluationContext& context) 
     {
         return context.makeBoolElement(true);
     }
+    if (!context.collection.single()->hasValue())
+    {
+        return context();
+    }
     const auto prefix = prefixResult.collection.single()->asString();
     const auto& asString = context.collection.single()->asString();
     return context.makeBoolElement(asString.starts_with(prefix));
@@ -99,6 +107,10 @@ EvaluationContext StringManipContains::eval(const EvaluationContext& context) co
     {
         return context.makeBoolElement(true);
     }
+    if (!context.collection.single()->hasValue())
+    {
+        return context();
+    }
     const auto substring = substringResult.collection.single()->asString();
     const auto& asString = context.collection.single()->asString();
     return context.makeBoolElement(asString.find(substring) != std::string::npos);
@@ -113,6 +125,10 @@ EvaluationContext StringManipMatches::eval(const EvaluationContext& context) con
     }
     const auto regexResult = mArg->eval(context);
     if (regexResult.collection.empty())
+    {
+        return context();
+    }
+    if (!context.collection.single()->hasValue())
     {
         return context();
     }
@@ -135,6 +151,10 @@ EvaluationContext StringManipReplaceMatches::eval(const EvaluationContext& conte
     {
         return context();
     }
+    if (!context.collection.single()->hasValue())
+    {
+        return context();
+    }
     const auto regex = regexResult.collection.single()->asString();
     const auto replacement = replacementResult.collection.single()->asString();
     const auto& asString = context.collection.single()->asString();
@@ -146,6 +166,10 @@ EvaluationContext StringManipLength::eval(const EvaluationContext& context) cons
 {
     EVAL_TRACE;
     if (context.collection.empty())
+    {
+        return context();
+    }
+    if (!context.collection.single()->hasValue())
     {
         return context();
     }

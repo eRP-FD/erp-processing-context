@@ -7,21 +7,18 @@
 #pragma once
 
 #include "exporter/client/FhirVZDClient.hxx"
-#include "shared/network/client/ClientInterface.hxx"
 
 #include <chrono>
 
 
 enum class HttpStatus;
-struct ConnectionParameters;
 
 
-class HttpsClientMock : public ClientInterface
+class FhirVzdClientMock : public FhirVzdClient
 {
 public:
-    explicit HttpsClientMock();
-
-    ClientResponse send(const ClientRequest& clientRequest) override;
+    explicit FhirVzdClientMock(std::string clientId, const std::string& xContextId);
+    ~FhirVzdClientMock() override = default;
 
     static void setAccessTokenExpiration(std::chrono::seconds v)
     {
@@ -31,39 +28,22 @@ public:
     {
         mAuthTokenExpiration = v;
     }
-
-    static size_t getCallCount()
-    {
-        return mCallCounter;
-    }
-
-    static void resetCallCount()
-    {
-        mCallCounter = 0;
-    }
     static void setHttpStatus(HttpStatus status)
     {
         mHttpStatus = status;
     }
-    bool testConnection() override
+    static size_t getCallCount()
     {
-        return true;
+        return mCallCounter;
     }
-
-private:
+    static void resetCallCount()
+    {
+        mCallCounter = 0;
+    }
+protected:
+    std::unique_ptr<UrlRequestSender> createClient() const override;
     static std::chrono::seconds mAccessTokenExpiration;
     static std::chrono::seconds mAuthTokenExpiration;
-    static size_t mCallCounter;
     static HttpStatus mHttpStatus;
-};
-
-
-class FhirVzdClientMock : public FhirVzdClient
-{
-public:
-    explicit FhirVzdClientMock(std::string clientId);
-    ~FhirVzdClientMock() override = default;
-
-protected:
-    std::unique_ptr<ClientInterface> createClient(const std::string& hostname, const std::string& port) const override;
+    static size_t mCallCounter;
 };

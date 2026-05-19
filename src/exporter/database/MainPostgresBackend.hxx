@@ -23,7 +23,7 @@ public:
     PostgresConnection& connection() const override;
 
 private:
-    thread_local static PostgresConnection mConnection;
+    static PostgresConnection& threadConnection();
 };
 
 }; // namespace exporter

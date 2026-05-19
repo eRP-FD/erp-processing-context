@@ -51,6 +51,7 @@ add_library(erp-shared STATIC
     database/DatabaseConnectionInfo.cxx
     database/DatabaseModel.cxx
     database/PostgresConnection.cxx
+    database/PostgresConnectString.cxx
     deprecated/SignalHandler.cxx
     deprecated/TerminationHandler.cxx
     deprecated/Timer.cxx
@@ -85,10 +86,13 @@ add_library(erp-shared STATIC
     model/AuditEvent.cxx
     model/Binary.cxx
     model/Bundle.cxx
+    model/Bundle.txx
     model/Coding.cxx
     model/Composition.cxx
     model/CountryCode.cxx
     model/Device.cxx
+    model/DosageDgMP.cxx
+    model/extensions/GeneratedDosageInstructionsMeta.cxx
     model/extensions/KBVMedicationCategory.cxx
     model/extensions/KBVMultiplePrescription.cxx
     model/Extension.cxx
@@ -137,6 +141,7 @@ add_library(erp-shared STATIC
     network/client/CrlDownloadCache.cxx
     network/client/HttpClient.cxx
     network/client/HttpsClient.cxx
+    network/client/ProxyParameters.cxx
     network/client/TlsCertificateVerifier.cxx
     network/client/implementation/ClientImpl.cxx
     network/client/implementation/TlsSession.cxx
@@ -231,6 +236,17 @@ add_library(erp-shared STATIC
     util/Uuid.cxx
     util/Version.cxx
     util/WorkDay.cxx
+    util/dosagetext/ScriptVersion.cxx
+    util/dosagetext/Generator.cxx
+    util/dosagetext/Language.cxx
+    util/dosagetext/RenderedDosageInstruction.cxx
+    util/dosagetext/Validator.cxx
+    util/dosagetext/renderer/BoundsDurationRenderer.cxx
+    util/dosagetext/renderer/DosageEntryRenderer.cxx
+    util/dosagetext/renderer/FreeTextRenderer.cxx
+    util/dosagetext/renderer/FrequencyPeriodRenderer.cxx
+    util/dosagetext/renderer/Localization.cxx
+    util/dosagetext/renderer/Renderer.cxx
     util/health/ApplicationHealth.cxx
     validation/JsonValidator.cxx
     validation/RapidjsonErrorDocument.cxx

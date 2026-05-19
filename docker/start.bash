@@ -31,11 +31,14 @@ if [ -n "$ERP_LAUNCHER" ]; then
         echo "Error: ERP_LAUNCHER='$ERP_LAUNCHER' not found in PATH."
         exit 1
     fi
+    echo "Starting (with launcher): $ERP_LAUNCHER $ERP_LAUNCHER_ARGS $BINARY"
     exec "$ERP_LAUNCHER" $ERP_LAUNCHER_ARGS "$BINARY"
 else
     if [ -z "$ERP_STANDALONE" ] || [ "$ERP_STANDALONE" = "0" ]; then
+        echo "Starting: gramine-direct $BINARY-kubernetes"
         exec gramine-direct "$BINARY"-kubernetes
     else
+        echo "Starting: $BINARY"
         exec "./$BINARY"
     fi
 fi

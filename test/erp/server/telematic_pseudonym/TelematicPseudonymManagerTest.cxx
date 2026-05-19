@@ -16,6 +16,7 @@
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -31,6 +32,8 @@ static auto k_1998_01_01 = CmacKey::fromBin("0123456789AB0001");
 
 class TelematicPseudonymCmacTestDatabase : public MockDatabase
 {
+public:
+    ~TelematicPseudonymCmacTestDatabase() override = default;
     using MockDatabase::MockDatabase;
 
     CmacKey acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& category, RandomSource&) override
@@ -66,8 +69,12 @@ public:
         tslEnvironmentGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH", ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
         auto factories = StaticData::makeMockFactories();
-        factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-            return std::make_unique<DatabaseFrontend>(std::make_unique<TelematicPseudonymCmacTestDatabase>(hsmPool),
+        factories.databaseFactory = [&](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            if (!mDatabase)
+            {
+                mDatabase = std::make_shared<TelematicPseudonymCmacTestDatabase>(hsmPool);
+            }
+            return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(mDatabase),
                                                       hsmPool, keyDerivation);
         };
         serviceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
@@ -84,6 +91,7 @@ public:
     }
 
 private:
+    std::shared_ptr<TelematicPseudonymCmacTestDatabase> mDatabase;
     std::unique_ptr<PcServiceContext> serviceContext;
     std::unique_ptr<EnvironmentVariableGuard> tslEnvironmentGuard;
 };

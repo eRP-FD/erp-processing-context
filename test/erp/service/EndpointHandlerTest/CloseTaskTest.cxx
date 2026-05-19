@@ -5,6 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "DosageInstructionTestHelper.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/DispenseTaskHandler.hxx"
@@ -15,6 +16,7 @@
 #include "shared/crypto/CadesBesSignature.hxx"
 #include "shared/crypto/Sha256.hxx"
 #include "shared/erp-serverinfo.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "test/erp/service/EndpointHandlerTest/MedicationDispenseFixture.hxx"
@@ -23,6 +25,7 @@
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
@@ -48,7 +51,8 @@ protected:
         return serverRequest;
     }
 
-    void test(std::string body, ExpectedResult expectedResult = ExpectedResult::success)
+    void test(std::string body, ExpectedResult expectedResult = ExpectedResult::success,
+              const std::function<void(SessionContext&)>& additionalTest = [](SessionContext&){})
     {
 
         CloseTaskHandler handler({});
@@ -81,6 +85,7 @@ protected:
             case ExpectedResult::noCatch:
                 handler.handleRequest(sessionContext);
         }
+        additionalTest(sessionContext);
     }
 
     fhirtools::EvaluationContext runRequest(const fhirtools::FhirStructureRepositoryView& repo)
@@ -141,7 +146,7 @@ protected:
 
     void resetTask(SessionContext& sessionContext)
     {
-        auto* database = sessionContext.database();
+        auto database = sessionContext.serviceContext.databaseFactory();
         auto taskAndKey = database->retrieveTaskForUpdate(prescriptionId);
         ASSERT_TRUE(taskAndKey.has_value());
         auto& task = taskAndKey->task;
@@ -154,7 +159,7 @@ protected:
 };
 
 
-class CloseTaskInputTest : public CloseTaskTest , public testing::WithParamInterface<MedicationDispenseFixture::BodyType>
+class CloseTaskInputTest : public CloseTaskTest
 {
 public:
     static constexpr char notSupported[] = "not supported";
@@ -164,10 +169,10 @@ public:
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
 };
 
-TEST_P(CloseTaskInputTest, CloseTask)
+TEST_F(CloseTaskInputTest, CloseTask)
 {
     using namespace std::string_literals;
-    A_22069_01.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
+    A_22069_02.test("Task schliessen - Speicherung mehrerer MedicationDispenses");
     const auto& testConfig = TestConfiguration::instance();
 
     CloseTaskHandler handler({});
@@ -181,7 +186,7 @@ TEST_P(CloseTaskInputTest, CloseTask)
     serverRequest.setAccessToken(jwtPharmacy);
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
 
-    const auto& payload = medicationDispenseBody({EndpointType::close, GetParam()});
+    const auto& payload = medicationDispenseBody({EndpointType::close});
     if (payload == notSupported)
     {
         GTEST_SKIP_("input type not supported");
@@ -258,13 +263,9 @@ TEST_P(CloseTaskInputTest, CloseTask)
     }
 }
 
-INSTANTIATE_TEST_SUITE_P(valid, CloseTaskInputTest,
-                         testing::ValuesIn(magic_enum::enum_values<MedicationDispenseFixture::BodyType>()));
-
 // Regression Test for Bugticket ERP-5656
 TEST_F(CloseTaskTest, CloseTaskWrongMedicationDispenseErp5656)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_22069_01.test("Test is parameterized with MedicationDispense and MedicationDispenseBundle Resource");
     const auto correctId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
     CloseTaskHandler handler({});
@@ -407,66 +408,33 @@ TEST_F(CloseTaskTest, whenHandedOver)
 
     auto parameters = [dispenseOptions](const ResourceTemplates::Versions::GEM_ERP& gemVersion) mutable {
         dispenseOptions.gematikVersion = gemVersion;
+        get<ResourceTemplates::MedicationOptions>(dispenseOptions.medication).version = gemVersion;
         return ResourceTemplates::MedicationDispenseOperationParametersOptions{
             .version = gemVersion,
-            .medicationDispenses = {dispenseOptions, dispenseOptions}};
-    };
-    auto parametersOptions1_4 = parameters(ResourceTemplates::Versions::GEM_ERP_1_4);
-    auto parametersOptions1_5 = parameters(ResourceTemplates::Versions::GEM_ERP_1_5_2);
+            .medicationDispenses = {dispenseOptions, dispenseOptions},
 
-    // whenHandedOver during Workflow 1.2 period
+        };
+    };
+    auto parametersOptions1_5 = parameters(ResourceTemplates::Versions::GEM_ERP_1_5_2);
+    auto parametersOptions1_6 = parameters(ResourceTemplates::Versions::GEM_ERP_1_6_2);
+
+    // whenHandedOver during Workflow 1.5 period
     {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"2024-10-01", tomorrow};
-        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
-        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
-        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
-        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_2;
-        // LYE is valid early for 1.2
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
-        // failure is expected due to parameters only allowed with workflow 1.4
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::failure));
-    }
-    // whenHandedOver during Workflow 1.3 period
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"2024-11-01", today};
-        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
-        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
-        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
-        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_3;
-        // LYE is valid early for 1.3
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::success));
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::success));
-        // failure is expected due to parameters only allowed with workflow 1.4
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::failure));
-    }
-    // whenHandedOver during Workflow 1.4 period with Schlüsseltabellen Q2/2025 period
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_4_NON_FDV", today};
-        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
-        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
-        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
-        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4;
-        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
-        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
-        // -LYE not valid yet- The view now allows LYE early.
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_4), ExpectedResult::success));
-    }
-    // whenHandedOver during Workflow 1.5 period with Schlüsseltabellen Q2/2025 period
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_5_0", today};
-        dispenseOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
-        bundleOptions.gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
-        bundleOptions.medicationDispenses.front().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
-        bundleOptions.medicationDispenses.back().gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2;
-        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseBundleXml(bundleOptions), ExpectedResult::failure));
-        // failure due to  MedicationDispense in versions 1.4 or later must be provided as Parameters
-        EXPECT_NO_FATAL_FAILURE(test(ResourceTemplates::medicationDispenseXml(dispenseOptions), ExpectedResult::failure));
-        // -LYE not valid yet- The view now allows LYE early.
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", tomorrow};
         EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_5), ExpectedResult::success));
+    }
+    {
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", tomorrow};
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_6), ExpectedResult::failure));
+    }
+    // whenHandedOver during Workflow 1.5 and 1.6 period
+    {
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", today};
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_5), ExpectedResult::success));
+    }
+    {
+        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", today};
+        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_6), ExpectedResult::success));
     }
 }
 
@@ -598,7 +566,7 @@ TEST_F(CloseTaskTest, deviceRefUuid)
 TEST_F(CloseTaskTest, EmptyBody_NoMedicationDispense)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace std::string_literals;
-    A_24287.test("Aufruf ohne MedicationDispense im Request Body");
+    A_24287_01.test("Aufruf ohne MedicationDispense im Request Body");
     CloseTaskHandler handler({});
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4715);
@@ -619,21 +587,19 @@ TEST_F(CloseTaskTest, EmptyBody_NoMedicationDispense)//NOLINT(readability-functi
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
-    EXPECT_ERP_EXCEPTION(handler.handleRequest(sessionContext), HttpStatus::Forbidden);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::Forbidden,
+                                      "Abschluss des Workflows konnte nicht durchgeführt werden. "
+                                      "Dispensierinformationen wurden nicht bereitgestellt.");
 }
 
 TEST_F(CloseTaskTest, EmptyBody_WithMedicationDispense)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace ResourceTemplates;
-    if (Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3)
-    {
-        GTEST_SKIP();
-    }
     const auto prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4718);
 
     using namespace std::string_literals;
-    A_24287.test("Aufruf ohne MedicationDispense im Request Body");
+    A_24287_01.test("Aufruf ohne MedicationDispense im Request Body");
     CloseTaskHandler handler({});
     const Header requestHeader{HttpMethod::POST,
                          "/Task/" + prescriptionId.toString() + "/$close/",
@@ -859,7 +825,7 @@ TEST_F(CloseTaskTest, DigaRedeemCodeHeader1)
 
 TEST_F(CloseTaskTest, UnslicedExtensionAllow)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
                                       (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
@@ -899,7 +865,7 @@ TEST_F(CloseTaskTest, UnslicedExtensionAllow)
 
 TEST_F(CloseTaskTest, UnslicedExtensionReject)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
                                       (model::Timestamp::now()).toGermanDate()};
@@ -995,13 +961,32 @@ TEST_F(CloseTaskTest, DigaRedeemCodeHeader0)
     EXPECT_EQ(sessionContext.getOuterResponseHeaderFields().at(Header::DigaRedeemCode), "0");
 }
 
+TEST_F(CloseTaskTest, OwnerUpdated)
+{
+    A_28411.test("update task.owner on $close");
+    std::string otherTelematikId("3-SMC-B-Testkarte-883110000120999");
+    ASSERT_NE(telematikId, otherTelematikId);
+    jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(otherTelematikId);
+    ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                 .telematikId = otherTelematikId};
+    auto medicationDispenseXml =
+        ResourceTemplates::dispenseOrCloseTaskBodyXml({.version = ResourceTemplates::Versions::GEM_ERP_current(),
+                                                       .medicationDispenses = {dispenseOptions, dispenseOptions}});
+    auto additionalTest = [&](SessionContext& sessionContext) {
+        auto task = sessionContext.database()->retrieveTaskForUpdate(prescriptionId);
+        ASSERT_TRUE(task.has_value());
+        EXPECT_EQ(task->task.owner().value_or(""), otherTelematikId);
+    };
+    ASSERT_NO_FATAL_FAILURE(test(std::move(medicationDispenseXml),ExpectedResult::success, additionalTest));
+}
+
 class CloseTaskWrongInputTest : public CloseTaskTest, public testing::WithParamInterface<model::PrescriptionType>
 {
 };
 TEST_P(CloseTaskWrongInputTest, test)
 {
     A_26002_02.test("Task schließen - Flowtype 160/166/169/200/209 - Profilprüfung MedicationDispense");
-    A_26003.test("Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
+    A_26003_01.test("Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
     std::optional<model::PrescriptionId> prescriptionId1{prescriptionId};
     std::string message =
         "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für Arzneimittel zulässig.";
@@ -1069,8 +1054,11 @@ public ::testing::WithParamInterface< MedicationDispenseFixture::ProfileValidity
 
 TEST_P(CloseTaskProfileValidityTest, run)
 {
-    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({EndpointType::close, GetParam().bodyType,
-        GetParam().version, {testutils::shiftDate(GetParam().date)}}),
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({
+                                     EndpointType::close,
+                                     GetParam().version,
+                                     {testutils::shiftDate(GetParam().date)},
+                                 }),
                                  GetParam().result));
 }
 
@@ -1087,10 +1075,133 @@ TEST_P(CloseTaskMaxWhenHandedOverTest, run)
 {
     std::list<std::string> overrideWhenHandedOver;
     std::ranges::transform(GetParam().whenHandedOver, back_inserter(overrideWhenHandedOver), &testutils::shiftDate);
-    ASSERT_NO_FATAL_FAILURE(test(
-        medicationDispenseBody({EndpointType::close, GetParam().bodyType, GetParam().version, overrideWhenHandedOver}),
-        GetParam().result));
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({
+                                     EndpointType::close,
+                                     GetParam().version,
+                                     overrideWhenHandedOver,
+                                 }),
+                                 GetParam().result));
 }
 
 INSTANTIATE_TEST_SUITE_P(parameters, CloseTaskMaxWhenHandedOverTest,
                          ::testing::ValuesIn(MedicationDispenseFixture::maxWhenHandedOverTestParameters()));
+
+class CloseTaskDosageInstructionTest : public CloseTaskTest, public testing::WithParamInterface<std::string>
+{
+public:
+    model::MedicationDispenseOperationParameters getSample()
+    {
+        return DosageInstructionTestHelper::getDispenseSample(prescriptionId, GetParam(),
+                                                              model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input);
+    }
+
+    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
+};
+
+class CloseTaskDosageValidatorTest : public CloseTaskDosageInstructionTest
+{
+public:
+    CloseTaskDosageValidatorTest()
+        : handler({})
+        , requestHeader({HttpMethod::POST,
+                         "/Task/" + prescriptionId.toString() + "/$close/",
+                         0,
+                         {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                         HttpStatus::Unknown})
+        , serverRequest(requestHeader)
+        , sessionContext(mServiceContext, serverRequest, serverResponse, accessLog)
+
+    {
+        serverRequest.setAccessToken(jwtPharmacy);
+        serverRequest.setQueryParameters(
+            {{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+        mockDatabase.reset();
+        mServiceContext.databaseFactory();// re-init mockdb
+        auto task = mockDatabase->retrieveTaskForUpdate(prescriptionId);
+        serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+    }
+    CloseTaskHandler handler;
+    Header requestHeader;
+    ServerRequest serverRequest;
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext;
+};
+
+TEST_P(CloseTaskDosageValidatorTest, wrongScriptVersion)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/1/extension/0/valueString");
+    sample.setValue(ptr, "1.0.2");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                  "Validation of rendered dosage-instructions: The algorithm version 1.0.2 is unknown");
+}
+
+TEST_P(CloseTaskDosageValidatorTest, wrongLanguage)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/1/extension/1/valueCode");
+    sample.setValue(ptr, "de-AT");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                      "Validation of rendered dosage-instructions: The language de-AT is unknown");
+}
+
+TEST_P(CloseTaskDosageValidatorTest, wrongText)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/0/valueMarkdown");
+    sample.setValue(ptr, "1-0-2-0");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+        handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+        "Validation of rendered dosage-instructions: valueMarkdown does not match the expected string in extension "
+        "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction",
+        "expected: 1-0-2-0 Stück");
+}
+
+INSTANTIATE_TEST_SUITE_P(validator, CloseTaskDosageValidatorTest,
+                         testing::Values("valid/MedicationDispense-MD-Dosage-1020.json"),
+                         &DosageInstructionTestHelper::paramToString);
+
+class CloseTaskDosageInstructionTestValid : public CloseTaskDosageInstructionTest
+{
+};
+class CloseTaskDosageInstructionTestInvalid : public CloseTaskDosageInstructionTest
+{
+};
+
+
+TEST_P(CloseTaskDosageInstructionTestValid, sample)
+{
+    using namespace std::string_literals;
+    CloseTaskHandler handler({});
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwtPharmacy);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+
+    const auto& payload = getSample().serializeToXmlString();
+    mockDatabase.reset();
+    mServiceContext.databaseFactory();// re-init mockdb
+    auto task = mockDatabase->retrieveTaskForUpdate(prescriptionId);
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+    serverRequest.setBody(payload);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    ASSERT_NO_THROW(handler.handleRequest(sessionContext)) << serverRequest.getBody();
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+}
+
+INSTANTIATE_TEST_SUITE_P(valid, CloseTaskDosageInstructionTestValid,
+                         testing::ValuesIn(DosageInstructionTestHelper::makeTestParams("valid", "MedicationDispense")),
+                         &DosageInstructionTestHelper::paramToString);

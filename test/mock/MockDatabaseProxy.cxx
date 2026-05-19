@@ -13,16 +13,18 @@
 
 thread_local bool MockDatabaseProxy::TransactionMonitor::inProgress = false;
 
-MockDatabaseProxy::MockDatabaseProxy(MockDatabase& database)
-    : mDatabase(database)
+MockDatabaseProxy::MockDatabaseProxy(std::shared_ptr<MockDatabase> mockDatabase)
+    : mDatabase(mockDatabase)
 {
 }
+
+MockDatabaseProxy::~MockDatabaseProxy() = default;
 
 CmacKey MockDatabaseProxy::acquireCmac(const date::sys_days& validDate, const CmacKeyCategory& cmacType,
                                        RandomSource& randomSource)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.acquireCmac(validDate, cmacType, randomSource);
+    return mDatabase->acquireCmac(validDate, cmacType, randomSource);
 }
 
 void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& encryptedKvnr,
@@ -35,7 +37,7 @@ void MockDatabaseProxy::activateTask(const model::PrescriptionId& taskId, const 
                                      bool euRedeemable, bool isPkv)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
+    mDatabase->activateTask(taskId, encryptedKvnr, hashedKvnr, taskStatus, lastModified, expiryDate, acceptDate,
                            healthCareProviderPrescription, doctorIdentity, lastStatusUpdate, euRedeemable, isPkv);
 }
 
@@ -45,19 +47,20 @@ void MockDatabaseProxy::updateTaskReceipt(const model::PrescriptionId& taskId, c
                                           const model::Timestamp& lastStatusUpdate)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskReceipt(taskId, taskStatus, lastModified, receipt, pharmacyIdentity, lastStatusUpdate);
+    mDatabase->updateTaskReceipt(taskId, taskStatus, lastModified, receipt, pharmacyIdentity, lastStatusUpdate);
 }
 
 void MockDatabaseProxy::commitTransaction()
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.commitTransaction();
+    transactionMonitor.inProgress = false;
+    mDatabase->commitTransaction();
 }
 
 void MockDatabaseProxy::closeConnection()
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.closeConnection();
+    mDatabase->closeConnection();
 }
 
 bool MockDatabaseProxy::isCommitted() const
@@ -67,13 +70,14 @@ bool MockDatabaseProxy::isCommitted() const
 
 std::string MockDatabaseProxy::retrieveSchemaVersion()
 {
-    return mDatabase.retrieveSchemaVersion();
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase->retrieveSchemaVersion();
 }
 
 void MockDatabaseProxy::healthCheck()
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.healthCheck();
+    mDatabase->healthCheck();
 }
 
 uint64_t MockDatabaseProxy::countRepresentativeCommunications(const db_model::HashedKvnr& insurantA,
@@ -81,7 +85,7 @@ uint64_t MockDatabaseProxy::countRepresentativeCommunications(const db_model::Ha
                                                               const model::PrescriptionId& prescriptionId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countRepresentativeCommunications(insurantA, insurantB, prescriptionId);
+    return mDatabase->countRepresentativeCommunications(insurantA, insurantB, prescriptionId);
 }
 
 std::tuple<model::PrescriptionId, model::Timestamp>
@@ -90,13 +94,13 @@ MockDatabaseProxy::createTask(model::PrescriptionType prescriptionType, model::T
                               const model::Timestamp& lastStatusUpdate)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.createTask(prescriptionType, taskStatus, lastUpdated, created, lastStatusUpdate);
+    return mDatabase->createTask(prescriptionType, taskStatus, lastUpdated, created, lastStatusUpdate);
 }
 
 void MockDatabaseProxy::deleteCommunicationsForTask(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.deleteCommunicationsForTask(taskId);
+    mDatabase->deleteCommunicationsForTask(taskId);
 }
 std::optional<Uuid>
 MockDatabaseProxy::insertCommunication(const model::PrescriptionId& prescriptionId, const model::Timestamp& timeSent,
@@ -106,7 +110,7 @@ MockDatabaseProxy::insertCommunication(const model::PrescriptionId& prescription
                                        BlobId recipientBlobId, const db_model::EncryptedBlob& messageForRecipient)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.insertCommunication(prescriptionId, timeSent, messageType, sender, recipient, senderBlobId,
+    return mDatabase->insertCommunication(prescriptionId, timeSent, messageType, sender, recipient, senderBlobId,
                                          messageForSender, recipientBlobId, messageForRecipient);
 }
 
@@ -115,7 +119,7 @@ void MockDatabaseProxy::markCommunicationsAsRetrieved(const std::vector<Uuid>& c
                                                       const db_model::HashedId& recipient)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.markCommunicationsAsRetrieved(communicationIds, retrieved, recipient);
+    return mDatabase->markCommunicationsAsRetrieved(communicationIds, retrieved, recipient);
 }
 
 std::vector<db_model::MedicationDispense>
@@ -124,50 +128,50 @@ MockDatabaseProxy::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kv
                                                   const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAllMedicationDispenses(kvnr, prescriptionId, search);
+    return mDatabase->retrieveAllMedicationDispenses(kvnr, prescriptionId, search);
 }
 
 std::vector<db_model::Task> MockDatabaseProxy::retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                                           const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAllTasksForPatient(kvnrHashed, search);
+    return mDatabase->retrieveAllTasksForPatient(kvnrHashed, search);
 }
 
 std::vector<db_model::Task>
-MockDatabaseProxy::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+MockDatabaseProxy::retrieveAllEgkRedeemableTasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
                                                      const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAll160TasksWithAccessCode(kvnrHashed, search);
+    return mDatabase->retrieveAllEgkRedeemableTasksWithAccessCode(kvnrHashed, search);
 }
 
 uint64_t MockDatabaseProxy::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                                     const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countAllTasksForPatient(kvnr, search);
+    return mDatabase->countAllTasksForPatient(kvnr, search);
 }
 
-uint64_t MockDatabaseProxy::countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                             const std::optional<UrlArguments>& search)
+uint64_t MockDatabaseProxy::countAllEgkRedeemableTasks(const db_model::HashedKvnr& kvnr,
+                                                       const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countAll160Tasks(kvnr, search);
+    return mDatabase->countAllEgkRedeemableTasks(kvnr, search);
 }
 
 std::vector<db_model::Task> MockDatabaseProxy::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
                                                                      const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAllTasksForEu(kvnr, search);
+    return mDatabase->retrieveAllTasksForEu(kvnr, search);
 }
 
 uint64_t MockDatabaseProxy::countAllTasksForEu(const db_model::HashedKvnr& kvnr,
                                                const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countAllTasksForEu(kvnr, search);
+    return mDatabase->countAllTasksForEu(kvnr, search);
 }
 
 std::vector<db_model::AuditData>
@@ -176,19 +180,19 @@ MockDatabaseProxy::retrieveAuditEventData(const db_model::HashedKvnr& kvnr, cons
                                           const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAuditEventData(kvnr, id, prescriptionId, search);
+    return mDatabase->retrieveAuditEventData(kvnr, id, prescriptionId, search);
 }
 
 std::vector<Uuid> MockDatabaseProxy::retrieveCommunicationIds(const db_model::HashedId& recipient)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveCommunicationIds(recipient);
+    return mDatabase->retrieveCommunicationIds(recipient);
 }
 
 bool MockDatabaseProxy::existCommunication(const Uuid& communicationId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.existCommunication(communicationId);
+    return mDatabase->existCommunication(communicationId);
 }
 
 std::vector<db_model::Communication>
@@ -196,73 +200,73 @@ MockDatabaseProxy::retrieveCommunications(const db_model::HashedId& user, const 
                                           const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveCommunications(user, communicationId, search);
+    return mDatabase->retrieveCommunications(user, communicationId, search);
 }
 
 uint64_t MockDatabaseProxy::countCommunications(const db_model::HashedId& user,
                                                 const std::optional<UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countCommunications(user, search);
+    return mDatabase->countCommunications(user, search);
 }
 
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndPrescription(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskAndPrescription(taskId);
+    return mDatabase->retrieveTaskAndPrescription(taskId);
 }
 
 std::optional<db_model::Task>
 MockDatabaseProxy::retrieveTaskWithSecretAndPrescription(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskWithSecretAndPrescription(taskId);
+    return mDatabase->retrieveTaskWithSecretAndPrescription(taskId);
 }
 
 std::optional<db_model::Task>
 MockDatabaseProxy::retrieveTaskAndPrescriptionAndReceipt(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskAndPrescriptionAndReceipt(taskId);
+    return mDatabase->retrieveTaskAndPrescriptionAndReceipt(taskId);
 }
 
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskAndReceipt(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskAndReceipt(taskId);
+    return mDatabase->retrieveTaskAndReceipt(taskId);
 }
 
 std::optional<db_model::Task> MockDatabaseProxy::retrieveTaskForUpdate(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskForUpdate(taskId);
+    return mDatabase->retrieveTaskForUpdate(taskId);
 }
 
 ::std::optional<::db_model::Task>
 MockDatabaseProxy::retrieveTaskForUpdateAndPrescription(const ::model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveTaskForUpdateAndPrescription(taskId);
+    return mDatabase->retrieveTaskForUpdateAndPrescription(taskId);
 }
 
 std::string MockDatabaseProxy::storeAuditEventData(db_model::AuditData& auditData)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.storeAuditEventData(auditData);
+    return mDatabase->storeAuditEventData(auditData);
 }
 
 void MockDatabaseProxy::updateTask(const model::PrescriptionId& taskId, const db_model::EncryptedBlob& accessCode,
                                    uint32_t blobId, const db_model::Blob& salt)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTask(taskId, accessCode, blobId, salt);
+    mDatabase->updateTask(taskId, accessCode, blobId, salt);
 }
 
 void MockDatabaseProxy::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                                            const model::Timestamp& lastModified)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskDeleteMedicationDispense(taskId, lastModified);
+    mDatabase->updateTaskDeleteMedicationDispense(taskId, lastModified);
 }
 
 void MockDatabaseProxy::updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
@@ -270,7 +274,7 @@ void MockDatabaseProxy::updateTaskClearPersonalData(const model::PrescriptionId&
                                                     const model::Timestamp& lastStatusUpdate)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskClearPersonalData(taskId, taskStatus, lastModified, lastStatusUpdate);
+    mDatabase->updateTaskClearPersonalData(taskId, taskStatus, lastModified, lastStatusUpdate);
 }
 
 void MockDatabaseProxy::updateTaskEuRedeemableByPatient(const model::PrescriptionId& taskId,
@@ -278,7 +282,7 @@ void MockDatabaseProxy::updateTaskEuRedeemableByPatient(const model::Prescriptio
                                                         const model::Timestamp& lastModified)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskEuRedeemableByPatient(taskId, redeemable, lastModified);
+    mDatabase->updateTaskEuRedeemableByPatient(taskId, redeemable, lastModified);
 }
 
 void MockDatabaseProxy::updateTaskMedicationDispense(
@@ -286,12 +290,13 @@ void MockDatabaseProxy::updateTaskMedicationDispense(
     const model::Timestamp& lastMedicationDispense, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematicId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
+    const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus,
+    const db_model::EncryptedBlob& owner)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense,
+    mDatabase->updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense,
                                            medicationDispenseBlobId, telematicId, whenHandedOver, whenPrepared,
-                                           medicationDispenseSalt, taskStatus);
+                                           medicationDispenseSalt, taskStatus, owner);
 }
 
 void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(
@@ -301,12 +306,12 @@ void MockDatabaseProxy::updateTaskMedicationDispenseReceipt(
     const std::optional<model::Timestamp>& whenPrepared, const db_model::EncryptedBlob& receipt,
     const model::Timestamp& lastMedicationDispense, const db_model::Blob& medicationDispenseSalt,
     const db_model::EncryptedBlob& pharmacyIdentity,
-    const model::Timestamp& lastStatusUpdate)
+    const model::Timestamp& lastStatusUpdate, const db_model::EncryptedBlob& owner)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskMedicationDispenseReceipt(
+    mDatabase->updateTaskMedicationDispenseReceipt(
         taskId, taskStatus, lastModified, medicationDispense, medicationDispenseBlobId, telematicId, whenHandedOver,
-        whenPrepared, receipt, lastMedicationDispense, medicationDispenseSalt, pharmacyIdentity, lastStatusUpdate);
+        whenPrepared, receipt, lastMedicationDispense, medicationDispenseSalt, pharmacyIdentity, lastStatusUpdate, owner);
 }
 
 void MockDatabaseProxy::updateTaskStatusAndSecret(const model::PrescriptionId& taskId, model::Task::Status status,
@@ -316,20 +321,20 @@ void MockDatabaseProxy::updateTaskStatusAndSecret(const model::PrescriptionId& t
                                                   const model::Timestamp& lastStatusUpdate)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.updateTaskStatusAndSecret(taskId, status, lastModifiedDate, secret, owner, lastStatusUpdate);
+    mDatabase->updateTaskStatusAndSecret(taskId, status, lastModifiedDate, secret, owner, lastStatusUpdate);
 }
 std::tuple<BlobId, db_model::Blob, model::Timestamp>
 MockDatabaseProxy::getTaskKeyData(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.getTaskKeyData(taskId);
+    return mDatabase->getTaskKeyData(taskId);
 }
 
 std::optional<Uuid>
 MockDatabaseProxy::deleteCommunication(const Uuid& communicationId, const db_model::HashedId& sender)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.deleteCommunication(communicationId, sender);
+    return mDatabase->deleteCommunication(communicationId, sender);
 }
 
 std::optional<db_model::Blob> MockDatabaseProxy::insertOrReturnAccountSalt(const db_model::HashedId& accountId,
@@ -337,7 +342,7 @@ std::optional<db_model::Blob> MockDatabaseProxy::insertOrReturnAccountSalt(const
                                                                            BlobId blobId, const db_model::Blob& salt)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.insertOrReturnAccountSalt(accountId, masterKeyType, blobId, salt);
+    return mDatabase->insertOrReturnAccountSalt(accountId, masterKeyType, blobId, salt);
 }
 
 std::optional<db_model::Blob> MockDatabaseProxy::retrieveSaltForAccount(const db_model::HashedId& accountId,
@@ -345,39 +350,39 @@ std::optional<db_model::Blob> MockDatabaseProxy::retrieveSaltForAccount(const db
                                                                         BlobId blobId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveSaltForAccount(accountId, masterKeyType, blobId);
+    return mDatabase->retrieveSaltForAccount(accountId, masterKeyType, blobId);
 }
 
 void MockDatabaseProxy::storeConsent(const db_model::HashedKvnr& kvnr, const model::Timestamp& creationTime,
                                      db_model::ConsentCategory category)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.storeConsent(kvnr, creationTime, category);
+    mDatabase->storeConsent(kvnr, creationTime, category);
 }
 
 std::vector<db_model::Consent> MockDatabaseProxy::retrieveAllConsents(const db_model::HashedKvnr& kvnr,
                                                                       const UrlArguments& searchArguments)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAllConsents(kvnr, searchArguments);
+    return mDatabase->retrieveAllConsents(kvnr, searchArguments);
 }
 
 bool MockDatabaseProxy::clearConsent(const db_model::HashedKvnr& kvnr, db_model::ConsentCategory category)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.clearConsent(kvnr, category);
+    return mDatabase->clearConsent(kvnr, category);
 }
 
 void MockDatabaseProxy::storeChargeInformation(const ::db_model::ChargeItem& chargeItem, ::db_model::HashedKvnr kvnr)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.storeChargeInformation(chargeItem, kvnr);
+    return mDatabase->storeChargeInformation(chargeItem, kvnr);
 }
 
 void MockDatabaseProxy::updateChargeInformation(const ::db_model::ChargeItem& chargeItem)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.updateChargeInformation(chargeItem);
+    return mDatabase->updateChargeInformation(chargeItem);
 }
 
 ::std::vector<::db_model::ChargeItem>
@@ -385,101 +390,106 @@ MockDatabaseProxy::retrieveAllChargeItemsForInsurant(const ::db_model::HashedKvn
                                                      const ::std::optional<::UrlArguments>& search) const
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveAllChargeItemsForInsurant(requestingInsurant, search);
+    return mDatabase->retrieveAllChargeItemsForInsurant(requestingInsurant, search);
 }
 
 ::db_model::ChargeItem MockDatabaseProxy::retrieveChargeInformation(const ::model::PrescriptionId& id) const
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveChargeInformation(id);
+    return mDatabase->retrieveChargeInformation(id);
 }
 
 ::db_model::ChargeItem MockDatabaseProxy::retrieveChargeInformationForUpdate(const ::model::PrescriptionId& id) const
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.retrieveChargeInformationForUpdate(id);
+    return mDatabase->retrieveChargeInformationForUpdate(id);
 }
 
 void MockDatabaseProxy::deleteChargeInformation(const ::model::PrescriptionId& id)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.deleteChargeInformation(id);
+    mDatabase->deleteChargeInformation(id);
 }
 
 void MockDatabaseProxy::clearAllChargeInformation(const ::db_model::HashedKvnr& insurant)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.clearAllChargeInformation(insurant);
+    mDatabase->clearAllChargeInformation(insurant);
 }
 
 void MockDatabaseProxy::clearAllChargeItemCommunications(const ::db_model::HashedKvnr& insurant)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.clearAllChargeItemCommunications(insurant);
+    mDatabase->clearAllChargeItemCommunications(insurant);
 }
 
 void MockDatabaseProxy::deleteCommunicationsForChargeItem(const model::PrescriptionId& id)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.deleteCommunicationsForChargeItem(id);
+    mDatabase->deleteCommunicationsForChargeItem(id);
 }
 
 uint64_t MockDatabaseProxy::countChargeInformationForInsurant(const ::db_model::HashedKvnr& insurant,
                                                               const ::std::optional<::UrlArguments>& search)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.countChargeInformationForInsurant(insurant, search);
+    return mDatabase->countChargeInformationForInsurant(insurant, search);
 }
 
 bool MockDatabaseProxy::isBlobUsed(BlobId blobId) const
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    return mDatabase.isBlobUsed(blobId);
+    return mDatabase->isBlobUsed(blobId);
 }
 
 void MockDatabaseProxy::deleteTask(const model::PrescriptionId& taskId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.deleteTask(taskId);
+    mDatabase->deleteTask(taskId);
 }
 
 void MockDatabaseProxy::deleteAuditEvent(const Uuid& eventId)
 {
     Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
-    mDatabase.deleteAuditEvent(eventId);
+    mDatabase->deleteAuditEvent(eventId);
 }
 
 std::optional<db_model::Blob> MockDatabaseProxy::retrieveMedicationDispenseSalt(const model::PrescriptionId& taskId)
 {
-    return mDatabase.retrieveMedicationDispenseSalt(taskId);
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase->retrieveMedicationDispenseSalt(taskId);
 }
 
 bool MockDatabaseProxy::existsCountryCode(const std::string& countryCode)
 {
-    return mDatabase.existsCountryCode(countryCode);
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase->existsCountryCode(countryCode);
 }
 
 void MockDatabaseProxy::addCountryCode(const std::string& countryCode)
 {
-    mDatabase.addCountry(countryCode);
+    mDatabase->addCountry(countryCode);
 }
 
 void MockDatabaseProxy::deleteEuAccessPermission(const db_model::HashedKvnr& kvnr)
 {
-    mDatabase.deleteEuAccessPermission(kvnr);
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    mDatabase->deleteEuAccessPermission(kvnr);
 }
 
 void MockDatabaseProxy::createEuAccessPermission(const db_model::HashedKvnr& kvnr, const std::string& countryCode,
                                                  const db_model::EncryptedBlob& accessCode, BlobId blobId,
                                                  const db_model::Blob& salt, const model::Timestamp& validUntil)
 {
-    mDatabase.createEuAccessPermission(kvnr, countryCode, accessCode, blobId, salt, validUntil);
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    mDatabase->createEuAccessPermission(kvnr, countryCode, accessCode, blobId, salt, validUntil);
 }
 
 std::optional<db_model::EuAccessPermission>
 MockDatabaseProxy::retrieveEuAccessPermission(const db_model::HashedKvnr& kvnr)
 {
-    return mDatabase.retrieveEuAccessPermission(kvnr);
+    Expect3(transactionMonitor.inProgress, "transaction already committed!", std::logic_error);
+    return mDatabase->retrieveEuAccessPermission(kvnr);
 }
 
 MockDatabaseProxy::TransactionMonitor::TransactionMonitor()

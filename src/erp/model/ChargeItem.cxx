@@ -146,8 +146,10 @@ std::optional<Kvnr> ChargeItem::subjectKvnr() const
 {
     auto kvnrValue = getOptionalStringValue(subjectKvnrValuePointer);
     if (! kvnrValue.has_value())
+    {
         return {};
-    return Kvnr{*kvnrValue, Kvnr::Type::pkv};
+    }
+    return Kvnr{*kvnrValue};
 }
 
 ::std::optional<std::string_view> ChargeItem::entererTelematikId() const
@@ -231,36 +233,20 @@ void ChargeItem::setPrescriptionId(const PrescriptionId& prescriptionId)
 
 void ChargeItem::setSubjectKvnr(std::string_view kvnr)
 {
-    setSubjectSystem(Kvnr::Type::unspecified);
+    setSubjectSystem();
     setValue(subjectKvnrValuePointer, kvnr);
 }
 
 void ChargeItem::setSubjectKvnr(const Kvnr& kvnr)
 {
-    setSubjectSystem(kvnr.getType());
+    setSubjectSystem();
     setValue(subjectKvnrValuePointer, kvnr.id());
 }
 
-void model::ChargeItem::setSubjectSystem(model::Kvnr::Type kvnrType)
+void model::ChargeItem::setSubjectSystem()
 {
     using namespace fhirtools::version_literal;
-    std::string_view namingSystem = ::model::resource::naming_system::pkvKvid10;
-    switch (kvnrType)
-    {
-        case Kvnr::Type::unspecified:
-            if (getProfileVersionChecked() >= "1.1"_ver)
-            {
-                namingSystem = ::model::resource::naming_system::gkvKvid10;
-            }
-            break;
-        case Kvnr::Type::gkv:
-            namingSystem = ::model::resource::naming_system::gkvKvid10;
-            break;
-        case Kvnr::Type::pkv:
-            namingSystem = ::model::resource::naming_system::pkvKvid10;
-            break;
-    }
-    setValue(subjectKvnrSystemPointer, namingSystem);
+    setValue(subjectKvnrSystemPointer, naming_system::gkvKvid10);
 }
 
 void ChargeItem::setEntererTelematikId(std::string_view telematicId)

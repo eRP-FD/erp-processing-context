@@ -152,7 +152,8 @@
         </identifier>
         <name>
           <use value="official" />
-          <family value="Topp-Glücklich">
+          <!-- utf8 encoding '–' -->
+          <family value="Topp–Glücklich">
             <extension url="http://hl7.org/fhir/StructureDefinition/humanname-own-name">
               <valueString value="Topp-Glücklich" />
             </extension>
@@ -313,15 +314,14 @@
           <valueBoolean value="true" />
         </extension>
         <extension url="http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction">
-          <!-- utf8 encoding -->
-          <valueMarkdown value="0–0–1–0"/>
+          <valueMarkdown value="0-0-1-0 Stück"/>
         </extension>
         <extension url="http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta">
           <extension url="language">
             <valueCode value="de-DE"/>
           </extension>
           <extension url="algorithmVersion">
-            <valueString value="0.0.1"/>
+            <valueString value="1.0.1"/>
           </extension>
         </extension>
         ###MEDICATION_REQUEST_EXTENSION###

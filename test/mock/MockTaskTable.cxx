@@ -6,8 +6,8 @@
  */
 
 #include "test/mock/MockTaskTable.hxx"
-
 #include "fhirtools/util/Gsl.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/util/TLog.hxx"
 #include "test/mock/MockAccountTable.hxx"
 #include "test/mock/TestUrlArguments.hxx"
@@ -85,13 +85,6 @@ uint64_t MockTaskTable::countAllTasksForPatient(const db_model::HashedKvnr& kvnr
                                                 const std::optional<UrlArguments>& search) const
 {
     auto allTasks = retrieveAllTasksForPatient(kvnr, search, false/*onlyFlowtype160*/, true/*applyOnlySearch*/, false);
-    return allTasks.size();
-}
-
-uint64_t MockTaskTable::countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                         const std::optional<UrlArguments>& search) const
-{
-    auto allTasks = retrieveAllTasksForPatient(kvnr, search, true /*onlyFlowtype160*/, true /*applyOnlySearch*/, false);
     return allTasks.size();
 }
 
@@ -235,7 +228,8 @@ void MockTaskTable::updateTaskMedicationDispense(const model::PrescriptionId& ta
                                                  const model::Timestamp& whenHandedOver,
                                                  const std::optional<model::Timestamp>& whenPrepared,
                                                  const db_model::Blob& medicationDispenseSalt,
-                                                 const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
+                                                 const std::optional<model::Task::Status>& taskStatus,
+                                                 const db_model::EncryptedBlob& owner)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
@@ -252,6 +246,12 @@ void MockTaskTable::updateTaskMedicationDispense(const model::PrescriptionId& ta
     {
         taskRow.status = taskStatus;
     }
+    else
+    {
+        // Not for $eu-close
+        A_28410.start("task.owner in MockDatabase for $dispense");
+        taskRow.owner = owner;
+    }
 }
 
 void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
@@ -265,7 +265,8 @@ void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::Prescriptio
                                                        const db_model::EncryptedBlob& taskReceipt,
                                                        const model::Timestamp& lastMedicationDispense,
                                                        const db_model::Blob& medicationDispenseSalt,
-                                                       const model::Timestamp& lastStatusUpdate)
+                                                       const model::Timestamp& lastStatusUpdate,
+                                                       const db_model::EncryptedBlob& owner)
 {
     auto taskRowIt = mTasks.find(taskId.toDatabaseId());
     Expect(taskRowIt != mTasks.end(), "no such task:" + taskId.toString());
@@ -281,6 +282,8 @@ void MockTaskTable::updateTaskMedicationDispenseReceipt(const model::Prescriptio
     taskRow.receipt = taskReceipt;
     taskRow.lastMedicationDispense = lastMedicationDispense;
     taskRow.medicationDispenseSalt = medicationDispenseSalt;
+    A_28411.start("task.owner in MockDatabase for $close");
+    taskRow.owner = owner;
 }
 void MockTaskTable::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId, const model::Timestamp& lastModified)
 {

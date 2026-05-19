@@ -26,12 +26,16 @@ public:
         const model::AuditEventId eventId,
         const std::string& requestedLanguage) const;
 
+    static std::string proofMethodString(const std::string& proofMethodStr, const std::string& language);
+
     static constexpr std::string_view defaultLanguage = "en";
 
     static constexpr std::string_view selfVariableName = "{self}";
     static constexpr std::string_view agentNameVariableName = "{agentName}";
     static constexpr std::string_view prescriptionIdVariableName = "{prescriptionId}";
     static constexpr std::string_view countryCodeVariableName = "{countryCode}";
+    static constexpr std::string_view proofMethodVariableName = "{proofMethod}";
+    static constexpr std::string_view proofMethodVariableNameRaw = "proofMethod";
 private:
     using Id2TextContainer = std::unordered_map<model::AuditEventId, std::string>;
     // Language -> (event-id -> text-template)

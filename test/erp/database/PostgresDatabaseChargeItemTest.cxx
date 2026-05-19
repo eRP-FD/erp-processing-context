@@ -51,8 +51,7 @@ public:
                                ::MockDatabase::mockAccessCode);
             const auto id = database().storeTask(task);
             task.setPrescriptionId(id);
-            const auto type = model::Kvnr::Type::pkv;
-            task.setKvnr(model::Kvnr{kvnr, type});
+            task.setKvnr(model::Kvnr{kvnr});
             task.setExpiryDate(::model::Timestamp::now());
             task.setAcceptDate(::model::Timestamp::now());
             task.setStatus(::model::Task::Status::ready);
@@ -63,7 +62,7 @@ public:
             auto prescription = ::model::Bundle::fromXmlNoValidation(prescriptionXML);
             auto signedPrescription =
                 ::model::Binary{prescription.getId().toString(),
-                                ::CryptoHelper::toCadesBesSignature(prescription.serializeToJsonString())};
+                                ::CryptoHelper::toCadesBesSignature(prescription.serializeToXmlString())};
 
             task.setIsPkv(true);
             database().activateTask(task, signedPrescription, mJwtBuilder.makeJwtArzt());
@@ -83,7 +82,7 @@ public:
             dispenseItem.setId(::Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
             auto signedDispenseItem =
                 ::model::Binary{"fe4a04af-0828-4977-a5ce-bfeed16ebf10",
-                                ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
+                                ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToXmlString())};
 
             chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::dispenseItemBundle);
             chargeItem.setSupportingInfoReference(::model::ChargeItem::SupportingInfoType::prescriptionItemBundle);
@@ -98,10 +97,10 @@ public:
                 ::model::MedicationDispense::fromXmlNoValidation(ResourceTemplates::medicationDispenseXml({
                     .prescriptionId = id,
                     .kvnr = kvnr,
-                    .telematikId = "606358757",
+                    .telematikId = "6-06358757",
                     .whenHandedOver = ::model::Timestamp::now(),
                 })));
-
+            task.setOwner("6-06358757");
             database().updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}},
                                                            ::model::ErxReceipt::fromJsonNoValidation(receiptJson),
                                                            mJwtBuilder.makeJwtApotheke());
@@ -211,9 +210,10 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     ::std::vector<::model::ChargeInformation> chargeInformation = setupChargeItems(1u);
     ASSERT_TRUE(chargeInformation.size() == 1u);
     ASSERT_TRUE(chargeInformation[0].chargeItem.prescriptionId());
+    const auto prescriptionId = chargeInformation[0].chargeItem.prescriptionId().value();
 
     auto [chargeInformationForUpdate, blobId, salt] =
-        database().retrieveChargeInformationForUpdate(chargeInformation[0].chargeItem.prescriptionId().value());
+        database().retrieveChargeInformationForUpdate(prescriptionId);
     database().commitTransaction();
 
     const auto markingFlag = ::String::replaceAll(
@@ -221,19 +221,21 @@ TEST_F(PostgresBackendChargeItemTest, UpdateChargeInformation)//NOLINT(readabili
     chargeInformationForUpdate.chargeItem.setMarkingFlags(
         ::model::ChargeItemMarkingFlags::fromJsonNoValidation(markingFlag));
 
-    const auto dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+    const auto dispenseItemXML = ResourceTemplates::davDispenseItemXml({
+        .prescriptionId = prescriptionId,
+        .whenHandenOver = model::Timestamp{date::floor<date::days>(std::chrono::system_clock::now()) - date::days{1}},
+    });
     auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
     dispenseItem.setId(Uuid{"fe4a04af-0828-4977-a5ce-bfeed16ebf10"});
     chargeInformationForUpdate.dispenseItem =
         ::model::Binary{dispenseItem.getId().toString(),
-                        ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToJsonString())};
+                        ::CryptoHelper::toCadesBesSignature(dispenseItem.serializeToXmlString())};
     chargeInformationForUpdate.unsignedDispenseItem = ::std::move(dispenseItem);
 
     database().updateChargeInformation(chargeInformationForUpdate, blobId, salt);
     database().commitTransaction();
 
-    const auto chargeInformationFromDatabase =
-        database().retrieveChargeInformation(chargeInformation[0].chargeItem.prescriptionId().value());
+    const auto chargeInformationFromDatabase = database().retrieveChargeInformation(prescriptionId);
     database().commitTransaction();
 
     ASSERT_TRUE(chargeInformationFromDatabase.chargeItem.id());

@@ -46,19 +46,26 @@ add_custom_command(OUTPUT ${ERP_HL7_ORG_DEFINITIONS_FILES}
 
 include(fhir)
 fhir_substitute(de.gematik.terminology@1.0.5=@1.0.5-4)
-fhir_substitute(hl7.terminology.r4@7.0.0=@6.5.0)
+fhir_substitute(hl7.terminology.r4@7.0.0=@7.0.1)
 fhir_substitute(de.gematik.epa.medication@dev=@1.2.1-dev1)
+fhir_substitute(de.gematik.fhir.directory@1.0.0=@1.0.1)
+fhir_substitute(de.gematik.terminology@1.0.8=@1.0.9)
+fhir_substitute(de.gematik.ti@1.3.0=@1.3.1)
 
 fhir_install(hl7.fhir.uv.extensions.r4 5.2.0)
-fhir_install(hl7.terminology.r4 6.3.0
-        PACKAGE_FIX_SCRIPT fhir/hl7.terminology.r4-6.3.0.split-legacy-codes.cmake)
+fhir_install(hl7.terminology.r4 6.3.0)
+fhir_patch(hl7.terminology.r4 6.3.0 SCRIPT fhir/hl7.terminology.r4-6.3.0.split-legacy-codes.cmake)
 
-fhir_install(hl7.terminology.r4 6.5.0
-        PACKAGE_FIX_SCRIPT fhir/hl7.terminology.r4-6.5.0.split-updated-codes.cmake)
+fhir_install(hl7.terminology.r4 6.5.0)
+fhir_patch(hl7.terminology.r4 6.5.0 SCRIPT fhir/hl7.terminology.r4-6.5.0.split-updated-codes.cmake)
 
-fhir_install(de.basisprofil.r4 1.5.0)
+fhir_install(hl7.terminology.r4 7.0.1)
+fhir_patch(hl7.terminology.r4 7.0.1 JQ [[.version="5.0.1"]] "package/CodeSystem-v2-0203.json")
+fhir_patch(hl7.terminology.r4 7.0.1 SCRIPT fhir/hl7.terminology.r4-7.0.1.split-updated-codes.cmake)
+
+fhir_install(hl7.terminology.r4 7.1.0)
+
 fhir_install(de.basisprofil.r4 1.5.2)
-fhir_install(de.basisprofil.r4 1.5.3)
 fhir_install(de.basisprofil.r4 1.5.4)
 
 # use 2025.0.0 and 2025.0.1 are pretty much identical:
@@ -66,91 +73,125 @@ fhir_substitute(dvmd.kdl.r4@2025.0.0=@2025.0.1)
 fhir_install(dvmd.kdl.r4 2025.0.1)
 
 fhir_install(de.gematik.epa 1.0.6-2)
-fhir_install(de.gematik.epa 1.1.5)
-fhir_install(de.gematik.epa 1.2.0)
-
-fhir_install(de.gematik.epa.medication 1.1.5
-    PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
-            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
-)
-
-fhir_install(de.gematik.epa.medication 1.2.0
-    PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
-            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
-)
-
-fhir_install(de.gematik.epa.medication 1.2.1-dev1
-    PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
-            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
-)
+fhir_install(de.gematik.epa 1.3.0)
+fhir_install(de.gematik.epa 1.3.1)
+fhir_patch(de.gematik.epa 1.3.1
+    JQ [[.version="1.3.1"]] "package/StructureDefinition-epa-patient.json")
 
 fhir_install(de.gematik.fhir.directory 0.11.25)
-fhir_install(de.gematik.fhir.directory 0.13.1)
-fhir_install(de.gematik.fhir.directory 1.0.0)
+fhir_install(de.gematik.fhir.directory 1.0.1)
+fhir_install(de.gematik.fhir.directory 1.1.1)
 
-fhir_install(de.gematik.terminology 1.0.5-4
-        PACKAGE_FIX_SCRIPT "fhir/de.gematik.terminology-1.0.x-remove-broken-expansion.cmake"
-)
-fhir_install(de.gematik.terminology 1.0.6
-        PACKAGE_FIX_SCRIPT "fhir/de.gematik.terminology-1.0.x-remove-broken-expansion.cmake"
-)
+fhir_install(de.gematik.terminology 1.0.5-4)
+fhir_patch(de.gematik.terminology 1.0.5-4 SCRIPT "fhir/de.gematik.terminology-1.0.x-remove-broken-expansion.cmake")
 
-fhir_install(de.gematik.terminology 1.0.7)
+fhir_install(de.gematik.terminology 1.0.9)
 
 fhir_install(de.gematik.ti 1.0.1)
-fhir_install(de.gematik.ti 1.1.0)
-fhir_install(de.gematik.ti 1.1.1)
+fhir_install(de.gematik.ti 1.2.0)
+fhir_install(de.gematik.ti 1.3.1)
 
 fhir_install(de.ihe-d.terminology 3.0.1)
 
-fhir_install(de.fhir.medication 1.0.0)
-fhir_install(de.fhir.medication 1.0.2)
+fhir_install(de.fhir.medication 1.0.3)
+fhir_install(de.fhir.medication 1.0.4)
 
 fhir_install(kbv.basis 1.7.0)
 fhir_install(kbv.ita.for 1.2.1)
-fhir_install(kbv.ita.for 1.3.0)
+fhir_install(kbv.ita.for 1.3.1)
 
 fhir_install(de.abda.erezeptabgabedatenbasis 1.5.0)
 
 # Main packages:
-fhir_install(de.gematik.epa.medication 1.0.6-2
-    PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.epa.medication-fix-part-type.cmake"
-            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+fhir_install(de.gematik.epa.medication 1.0.6-2)
+fhir_patch(de.gematik.epa.medication 1.0.6-2
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
+        package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
 )
+
+fhir_install(de.gematik.epa.medication 1.3.0)
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-medication-pzn-ingredient.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-medication-unique-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-ms-operation-outcome.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-originator-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-prescription-process-identifier-extension.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-prescription-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
+        package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
+        package/StructureDefinition-epa-op-add-emp-entry-input-parameters.json
+)
+
+fhir_install(de.gematik.epa.medication 1.3.2)
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-epa-medication-unique-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-originator-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-prescription-process-identifier-extension.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-prescription-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
+        package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
+        package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
+        package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
+        package/StructureDefinition-epa-op-add-emp-entry-input-parameters.json
+)
+
 fhir_install(de.abda.erezeptabgabedatenpkv 1.4.0)
-fhir_install(de.gematik.erezept.eu 1.1.1
-        PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.erezept.eu-fix-part-type.cmake"
-        "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-        DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+fhir_install(de.gematik.erezept.eu 1.1.2)
+fhir_patch(de.gematik.erezept.eu 1.1.2
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-GEM-ERPEU-PR-PAR-Close-Operation-Input.json
+        package/StructureDefinition-GEM-ERPEU-PR-PAR-EU-GET-Prescription-Input.json
 )
+
 fhir_install(de.gematik.erezept-patientenrechnung.r4 1.1.0)
 fhir_install(de.gematik.erezept-workflow.r4 1.5.2)
-fhir_install(de.gematik.erezept-workflow.r4 1.6.0)
+fhir_install(de.gematik.erezept-workflow.r4 1.6.2)
+fhir_patch(de.gematik.erezept-workflow.r4 1.6.2
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-GEM-ERP-PR-PAR-Close-Operation-Input.json
+        package/StructureDefinition-GEM-ERP-PR-PAR-Dispense-Operation-Input.json
+)
+
 fhir_install(kbv.ita.erp 1.3.3)
 fhir_install(kbv.itv.evdga 1.2.2)
-fhir_install(kbv.ita.erp 1.4.0)
+fhir_install(kbv.ita.erp 1.4.2)
 
-fhir_install(de.gematik.erp.t-prescription 1.1.0-ballot3
-    PACKAGE_FIX_SCRIPT
-        "fhir/de.gematik.erp.t-prescription-fix-part-type.cmake"
-            "-Djq_EXECUTABLE=${jq_EXECUTABLE}"
-    DEPENDS "fhir/fix-Parameters.parameter.part-type.jq"
+fhir_install(de.gematik.erp.t-prescription 1.1.0)
+fhir_patch(de.gematik.erp.t-prescription 1.1.0
+    FIX_PARAMETERS_PART_TYPE
+        package/StructureDefinition-erp-tprescription-carbon-copy.json
 )
 
 
 set(SCHEMA_FILES
         "schema/hl7.fhir.r4.core/4.0.1/json/fhir.json"
-        "schema/shared/json/CommunicationDispReqPayload.json"
-        "schema/shared/json/CommunicationReplyPayload.json"
+        "schema/shared/json/CommunicationDispReqPayloadV1.json"
+        "schema/shared/json/CommunicationReplyPayloadV1.json"
+        "schema/shared/json/CommunicationDispReqPayloadV3.json"
+        "schema/shared/json/CommunicationReplyPayloadV3.json"
         "schema/shared/json/draft-4-meta-schema.json"
         "schema/hl7.fhir.r4.core/4.0.1/xml/fhir.xsd"
         "schema/shared/xml/fhir-xhtml.xsd"
@@ -179,16 +220,6 @@ set(FHIR_PROFILES_DIRS
         "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.2.0"
         "fhir/profiles/de.abda.erezeptabgabedatenpkv-1.3.0"
         "fhir/profiles/de.basisprofil.r4-1.3.2"
-        "fhir/profiles/de.gematik.epa.medication-1.0.3/package"
-        "fhir/profiles/de.gematik.erezept-patientenrechnung.r4-1.0.4"
-        "fhir/profiles/de.gematik.erezept-workflow.r4-1.2.0"
-        "fhir/profiles/de.gematik.erezept-workflow.r4-1.3.1"
-        "fhir/profiles/de.gematik.erezept-workflow.r4-1.4.3"
-        "fhir/profiles/de.gematik.fhir.directory-0.11.12/package"
-        "fhir/profiles/KBV.Basis-1.3.0"
-        "fhir/profiles/kbv.ita.erp-1.1.2"
-        "fhir/profiles/kbv.ita.for-1.1.0/package/"
-        "fhir/profiles/kbv.itv.evdga-1.1.1/package"
         "fhir/profiles/fhir.kbv.de"
         )
 

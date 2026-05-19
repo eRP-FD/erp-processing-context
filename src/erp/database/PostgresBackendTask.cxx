@@ -72,16 +72,6 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         )--")
     // GEMREQ-end A_22135-01#query, A_22134#query
 
-    // GEMREQ-start A_23452-02#query
-    QUERY(retrieveAllTasksByKvnrWithAccessCode, R"--(
-        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
-            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id,
-            access_code, eu_redeemable_patient, eu_redeemable, is_pkv
-        FROM )--" + taskTableName() + R"--(
-        WHERE kvnr_hashed = $1
-        )--")
-    // GEMREQ-end A_23452-02#query
-
     QUERY(getTaskKeyData, R"--(
         SELECT task_key_blob_id, salt, EXTRACT(EPOCH FROM authored_on) as authored_on
         FROM )--" + taskTableName() + R"--( WHERE prescription_id = $1 FOR UPDATE)--")
@@ -114,7 +104,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         UPDATE )--" + taskTableName() + R"--(
         SET last_modified = $2, medication_dispense_bundle = $3, medication_dispense_blob_id =$4,
             when_handed_over = $5, when_prepared = $6, performer = $7, last_medication_dispense = $8,
-            medication_dispense_salt = $9
+            medication_dispense_salt = $9, owner = $10
         WHERE prescription_id = $1
         )--")
 
@@ -130,7 +120,7 @@ PostgresBackendTask::PostgresBackendTask(model::PrescriptionType prescriptionTyp
         UPDATE )--" + taskTableName() + R"--(
         SET status = $2, last_modified = $3, medication_dispense_bundle = $4, medication_dispense_blob_id =$5,
             receipt = $6, when_handed_over = $7, when_prepared = $8, performer = $9, last_medication_dispense = $10,
-            medication_dispense_salt = $11, pharmacy_identity = $12, last_status_update = $13
+            medication_dispense_salt = $11, pharmacy_identity = $12, last_status_update = $13, owner = $14
         WHERE prescription_id = $1
         )--")
 
@@ -330,13 +320,15 @@ void PostgresBackendTask::updateTaskMedicationDispense(
     const model::Timestamp& lastMedicationDispense, const db_model::EncryptedBlob& medicationDispense,
     BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
-    const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */) const
+    const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus,
+    const db_model::EncryptedBlob& owner) const
 {
     TVLOG(2) << mQueries.updateTask_medicationDispense.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "updatetaskmedicationdispense");
 
     if (taskStatus.has_value()) {
+        // This branch is for $eu-close
         const auto status = model::Task::toNumericalStatus(*taskStatus);
         const pqxx::result result = transaction.exec(
             mQueries.updateTask_medicationDispenseAndStatus.query,
@@ -351,13 +343,15 @@ void PostgresBackendTask::updateTaskMedicationDispense(
     }
     else
     {
+        // This branch is for $close
+        A_28410.start("task.owner in PostgresBackendTask for $dispense");
         const pqxx::result result = transaction.exec(
             mQueries.updateTask_medicationDispense.query,
             pqxx::params{taskId.toDatabaseId(), lastModified.toXsDateTime(), medicationDispense.binarystring(),
                          gsl::narrow<int32_t>(medicationDispenseBlobId), whenHandedOver.toXsDateTime(),
                          whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
                          telematikId.binarystring(), lastMedicationDispense.toXsDateTime(),
-                         medicationDispenseSalt.binarystring()});
+                         medicationDispenseSalt.binarystring(), owner.binarystring()});
         TVLOG(2) << "got " << result.size() << " results";
 
         Expect(result.empty(), "Expected an empty result");
@@ -372,13 +366,14 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
     const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
     const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense,
     const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
-    const model::Timestamp& lastStatusUpdate) const
+    const model::Timestamp& lastStatusUpdate, const db_model::EncryptedBlob& owner) const
 {
     TVLOG(2) << mQueries.updateTask_medicationDispenseReceipt.query;
     const auto timerKeepAlive = DurationConsumer::getCurrent().getTimer(
         DurationCategory::postgres, "updatetaskmedicationdispensereceipt");
 
     const auto status = model::Task::toNumericalStatus(taskStatus);
+    A_28411.start("task.owner in PostgresBackendTask for $close");
     const pqxx::result result =
         transaction.exec(mQueries.updateTask_medicationDispenseReceipt.query,
                          pqxx::params{taskId.toDatabaseId(), static_cast<int>(status), lastModified.toXsDateTime(),
@@ -387,7 +382,8 @@ void PostgresBackendTask::updateTaskMedicationDispenseReceipt(
                                       whenPrepared ? std::make_optional(whenPrepared->toXsDateTime()) : std::nullopt,
                                       telematikId.binarystring(), lastMedicationDispense.toXsDateTime(),
                                       medicationDispenseSalt.binarystring(), pharmacyIdentity.binarystring(),
-                                      lastStatusUpdate.toXsDateTime()});
+                                      lastStatusUpdate.toXsDateTime(), owner.binarystring()});
+    A_28411.finish();
     TVLOG(2) << "got " << result.size() << " results";
 
     Expect(result.empty(), "Expected an empty result");
@@ -587,32 +583,6 @@ PostgresBackendTask::retrieveTaskAndPrescriptionAndReceipt(::pqxx::transaction_b
     return {};
 }
 // GEMREQ-end A_22135-01#retrieveTask, A_22134#retrieveTask
-
-std::vector<db_model::Task>
-PostgresBackendTask::retrieveAllTasksWithAccessCode(::pqxx::transaction_base& transaction,
-                                                    const db_model::HashedKvnr& kvnrHashed,
-                                                    const std::optional<UrlArguments>& search)
-{
-    auto query = mQueries.retrieveAllTasksByKvnrWithAccessCode.query;
-    if (search.has_value())
-    {
-        query.append(search->getSqlExpression(transaction.conn(), "                "));
-    }
-    TVLOG(2) << query;
-
-    const auto timerKeepAlive = ::DurationConsumer::getCurrent().getTimer(
-        DurationCategory::postgres, "retrievealltasksbykvnrwithaccesscode");
-
-    const auto results = transaction.exec(query, pqxx::params{kvnrHashed.binarystring()});
-
-    TVLOG(2) << "got " << results.size() << " results";
-    if (!results.empty())
-    {
-        Expect(results.front().size() == 14,
-               "Invalid number of fields in result row: " + std::to_string(results.front().size()));
-    }
-    return tasksFromQueryResult(results, mPrescriptionType);
-}
 
 struct TaskQueryIndexes {
     std::optional<pqxx::row::size_type> prescriptionIdIndex;

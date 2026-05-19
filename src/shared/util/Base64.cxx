@@ -13,7 +13,6 @@
 #include <array>
 #include <limits>
 #include <memory>
-#include <stdexcept>
 
 
 namespace
@@ -127,26 +126,29 @@ util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
         if (itr == '=')
         {
             paddingBytes += 1;
-            if (paddingBytes > 3)
-                Fail2("Excessive Base64 padding: " + std::string(base64), std::invalid_argument);
+            if (paddingBytes > 2)
+            {
+                ModelFail("Excessive Base64 padding: " + std::string(base64));
+            }
             continue;
         }
 
         // If we have already started seeing padding, we must not see other characters again.
         if (paddingBytes > 0)
-            Fail2("Invalid Base64 padding: " + std::string(base64), std::invalid_argument);
+        {
+            ModelFail("Invalid Base64 padding: " + std::string(base64));
+        }
 
         //NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-constant-array-index)
         std::int8_t binaryDigit = binaryAlphabet[static_cast<std::uint8_t>(itr)];
         if (INVALID_CHARACTER == binaryDigit)
         {
-            Fail2("Invalid Base64 string: " + std::string(base64), std::invalid_argument);
+            ModelFail("Invalid Base64 string: " + std::string(base64));
         }
 
         if (XML_WHITESPACE == binaryDigit)
         {
-            Expect3(skipWhiteSpace, "Unexpected whitespace in Base64 string: " + std::string{base64},
-                    std::invalid_argument);
+            ModelExpect(skipWhiteSpace, "Unexpected whitespace in Base64 string: " + std::string{base64});
             continue;
         }
 

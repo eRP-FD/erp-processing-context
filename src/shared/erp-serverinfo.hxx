@@ -17,7 +17,7 @@ public:
     static std::string_view BuildType();
     static std::string_view ReleaseVersion();
     static std::string_view ReleaseDate();
-    static std::string_view AppName();
+    static std::string_view GematikClientId();
 };
 
 #endif

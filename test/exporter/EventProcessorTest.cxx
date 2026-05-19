@@ -124,7 +124,7 @@ TEST_F(EventProcessorTest, expiredCachedHost)
 
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, "", model::EventKvnr::State::processing, 0);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     auto events = database().getAllEventsForKvnr(eventKvnr);
     database().commitTransaction();
     const auto& firstEvent = *events.front();
@@ -150,7 +150,7 @@ TEST_F(EventProcessorTest, recentCachedHost)
     // last consent is older than 180 days.
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, "", model::EventKvnr::State::processing, 0);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     auto events = database().getAllEventsForKvnr(eventKvnr);
     database().commitTransaction();
     const auto& firstEvent = *events.front();
@@ -177,10 +177,11 @@ TEST_F(EventProcessorTest, process)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     testing::internal::CaptureStderr();
     bool processed = eventProcessor.process();
     std::string output = testing::internal::GetCapturedStderr();
+    std::cout << output << std::endl;
     EXPECT_TRUE(output.find(R"("retryCount":"0")") != std::string::npos) << output;
     EXPECT_EQ(processed, true);
 
@@ -228,7 +229,7 @@ TEST_F(EventProcessorTest, processOne)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.processOne(eventKvnr);
 
     {// verify: events removed, kvnr processed
@@ -276,7 +277,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
     const auto events2 = createDbFrontendCommitGuard(TransactionMode::autocommit).db().getAllEventsForKvnr(eventKvnr2);
     ASSERT_EQ(events1.size(), 2);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.checkRetryCount(eventKvnr1);
 
     auto transaction = createTransaction();
@@ -352,7 +353,7 @@ TEST_F(EventProcessorTest, process_checkRetryCount)
     const auto events1 = createDbFrontendCommitGuard(TransactionMode::autocommit).db().getAllEventsForKvnr(eventKvnr1);
     ASSERT_EQ(events1.size(), 3);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr1);
 
@@ -403,7 +404,7 @@ TEST_F(EventProcessorTest, processOne_jsonlog_failure_providePrescription)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     testing::internal::CaptureStderr();
     eventProcessor.processOne(eventKvnr);
     std::string output = testing::internal::GetCapturedStderr();
@@ -419,7 +420,7 @@ TEST_F(EventProcessorTest, processOne_jsonlog_failure_provideDispensation)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     testing::internal::CaptureStderr();
     eventProcessor.processOne(eventKvnr);
     std::string output = testing::internal::GetCapturedStderr();
@@ -440,7 +441,7 @@ TEST_F(EventProcessorTest, processOne_success_provideDispensationEu)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundleEu,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.processOne(eventKvnr);
 
     const auto events = database().getAllEventsForKvnr(eventKvnr);
@@ -476,7 +477,7 @@ TEST_F(EventProcessorTest, processOne_Conflict)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
@@ -528,7 +529,7 @@ TEST_F(EventProcessorTest, processOne_Locked)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     eventProcessor.processOne(eventKvnr);
 
@@ -568,7 +569,7 @@ TEST_F(EventProcessorTest, processOne_retry_403)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
@@ -623,12 +624,12 @@ TEST_F(EventProcessorTest, epalookup_timeout)
         model::Timestamp::fromGermanDate("2024-12-24"));
 
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     EXPECT_THROW(
     try
     {
-        EpaAccountLookup epaAccountLookup(*serviceContext);
+        EpaAccountLookup epaAccountLookup(*serviceContext, Uuid{}.toString());
         epaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
     }
     catch (const std::exception& e)
@@ -653,7 +654,7 @@ TEST_F(EventProcessorTest, processOne_retry_500)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
@@ -700,7 +701,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, {}, mDoctorIdentity,
                     std::nullopt);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
@@ -746,7 +747,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry3)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, {}, mDoctorIdentity,
                     std::nullopt);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
@@ -803,7 +804,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry_first_event)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
 
@@ -866,7 +867,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry_second_event)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
 
@@ -915,7 +916,7 @@ TEST_F(EventProcessorTest, processOne_epa_timeout_retry_two_events)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     const auto next_export_before = model::Timestamp::now();
     eventProcessor.processOne(eventKvnr);
 
@@ -965,7 +966,7 @@ TEST_F(EventProcessorTest, processEpaConflict)
     insertTaskKvnr(kvnr);
 
     const auto next_export_before = model::Timestamp::now();
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.processEpaConflict(eventKvnr);
 
     {
@@ -1009,7 +1010,7 @@ TEST_F(EventProcessorTest, processEpaDeniedOrNotFound)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.processEpaDeniedOrNotFound(eventKvnr);
 
     {
@@ -1043,7 +1044,7 @@ TEST_F(EventProcessorTest, processEpaUnkown)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     eventProcessor.processEpaUnknown(eventKvnr);
 
     {
@@ -1061,7 +1062,7 @@ TEST_F(EventProcessorTest, processEpaUnkown)
 
 TEST_F(EventProcessorTest, ePaAccountLookup_kvnrIsLogged)
 {
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     model::Kvnr kvnr{"X000000012"};
     model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0);
@@ -1102,7 +1103,7 @@ TEST_F(EventProcessorTest, processEpaAllowed_event_missing_qesDoctorId)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
     auto originalEvents = createDbFrontendCommitGuard(TransactionMode::autocommit).db().getAllEventsForKvnr(eventKvnr);
     auto& originalEvent = dynamic_cast<model::ProvidePrescriptionTaskEvent&>(*originalEvents.at(0));
@@ -1153,7 +1154,7 @@ TEST_F(EventProcessorTest, process_bde_issuecode)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
 
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
     testing::internal::CaptureStderr();
     eventProcessor.process();
     std::string output = testing::internal::GetCapturedStderr();
@@ -1179,15 +1180,15 @@ TEST_F(EventProcessorTest, epalookup_bde_errorcode)
         model::Timestamp::fromGermanDate("2024-12-24"));
 
     testing::internal::CaptureStderr();
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock);
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
 
-    EpaAccountLookup epaAccountLookup(*serviceContext);
+    EpaAccountLookup epaAccountLookup(*serviceContext, Uuid{}.toString());
     epaAccountLookup.lookup(taskEvent.getXRequestId(), taskEvent.getKvnr());
     std::string output = testing::internal::GetCapturedStderr();
     EXPECT_TRUE(output.find(R"("error_component":"statusMismatch")") != std::string::npos) << output;
 }
 
-TEST_F(EventProcessorTest, TrottleOnLookupEpaUnknown)
+TEST_F(EventProcessorTest, ThrottleOnLookupEpaUnknown)
 {
     A_25942.test("test with throttling enabled");
     const EnvironmentVariableGuard envGuard{"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS", "1"};
@@ -1219,7 +1220,7 @@ TEST_F(EventProcessorTest, TrottleOnLookupEpaUnknown)
     EXPECT_TRUE(output.find("Throttling inactive") != std::string::npos);
 }
 
-TEST_F(EventProcessorTest, NoTrottleOnLookupEpaUnknown)
+TEST_F(EventProcessorTest, NoThrottleOnLookupEpaUnknown)
 {
     A_25942.test("test with throttling disabled");
     const model::Kvnr failingKvnr{"X011999972"};

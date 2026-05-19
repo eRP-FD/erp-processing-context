@@ -14,6 +14,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
@@ -198,6 +199,8 @@ int ErpMain::runApplication (
     serviceContext->getBlobCache()->startRefresher(ioContext, blobCacheRefreshInterval);
     serviceContext->getVsdmKeyCache().startRefresher(ioContext, blobCacheRefreshInterval);
 
+    serviceContext->getPoPPService().startConfigured();
+
     // Start periodically seeding and updating seeds in all worker threads.
     // Started after the TEE server because a) it runs asynchronously anyway and b) it will access the thread pool which
     // therefore has to be initialized first.
@@ -252,10 +255,11 @@ int ErpMain::runApplication (
 
 Factories ErpMain::createProductionFactories()
 {
+    const auto& config = Configuration::instance();
     Factories factories;
 
     TVLOG(0) << "HSM/TPM mock is configured as "
-        << (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false) ? "ON" : "OFF");
+        << (config.getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false) ? "ON" : "OFF");
     TVLOG(0) << "HSM/TPM mock is compiled "
     #if WITH_HSM_MOCK > 0
         << "IN";
@@ -270,10 +274,18 @@ Factories ErpMain::createProductionFactories()
              << "OUT";
 #endif
 
-    factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation)
-        {
-            return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool, keyDerivation);
+    factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()),
+                                                  hsmPool, keyDerivation);
+    };
+
+    if (PostgresBackend::haveReadOnlyConnection())
+    {
+        factories.readOnlyDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<DatabaseFrontend>(
+                std::make_unique<PostgresBackend>(PostgresBackend::readOnlyConnection()), hsmPool, keyDerivation);
         };
+    }
 
     factories.blobCacheFactory = []
     {
@@ -287,7 +299,7 @@ Factories ErpMain::createProductionFactories()
 
     factories.tslManagerFactory = TslManager::setupTslManager;
 
-    if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false))
+    if (config.getOptionalBoolValue(ConfigurationKey::DEBUG_ENABLE_HSM_MOCK, false))
     {
 #if WITH_HSM_MOCK > 0
         factories.hsmClientFactory = []()
@@ -351,11 +363,11 @@ Factories ErpMain::createProductionFactories()
         factories.tpmFactory = TpmMock::createFactory();
 #endif
 
-    factories.jsonValidatorFactory = []{
+    factories.jsonValidatorFactory = [] {
         auto jsonValidator = std::make_shared<JsonValidator>();
-        jsonValidator->loadSchema(
-            Configuration::instance().getArray(ConfigurationKey::JSON_SCHEMA),
-            Configuration::instance().getPathValue(ConfigurationKey::JSON_META_SCHEMA));
+        const auto& cfg = Configuration::instance();
+        jsonValidator->loadSchema(cfg.getArray(ConfigurationKey::JSON_SCHEMA),
+                                  cfg.getPathValue(ConfigurationKey::JSON_META_SCHEMA));
         return jsonValidator;
     };
 
@@ -363,6 +375,11 @@ Factories ErpMain::createProductionFactories()
         auto xmlValidator = std::make_shared<XmlValidator>();
         configureXmlValidator(*xmlValidator);
         return xmlValidator;
+    };
+
+    factories.poppServiceFactory = [](gsl::not_null<boost::asio::io_context*> context, TslManager& tslManager,
+                                      std::shared_ptr<CrlProvider> crlProvider) {
+        return std::make_unique<PoPPCertificateVerifierService>(context, tslManager, std::move(crlProvider));
     };
 
     return factories;

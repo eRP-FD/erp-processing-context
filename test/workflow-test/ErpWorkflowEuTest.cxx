@@ -233,7 +233,7 @@ public:
                                   .withHeader(Header::Authorization, testBase.getAuthorizationBearerValueForJwt(jwt))
                                   .withHeader(Header::ContentType, ContentMimeType::fhirJsonUtf8)
                                   .withExpectedInnerStatus(expectedStatus)
-                                  .withExpectedBdeUseCase(bde::PatchTask_UC_PATCH_TASK)));
+                                  .withExpectedBdeUseCase(bde::PatchTask_UC_3_19)));
 
         EXPECT_FALSE(serverResponse.getBody().empty());
         ASSERT_NO_FATAL_FAILURE(outTask = model::Task::fromJsonNoValidation(serverResponse.getBody()));
@@ -572,7 +572,7 @@ class ErpWorkflowEuTestPatchTaskP : public ErpWorkflowEuTestP
 TEST_P(ErpWorkflowEuTestPatchTaskP, PatchTask)
 {
     if (isTRezept(GetParam().workflowType) &&
-        ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
     {
         GTEST_SKIP() << "KBV_ERP_1_4_0 is required for this test";
     }
@@ -592,7 +592,7 @@ TEST_P(ErpWorkflowEuTestPatchTaskP, PatchTask)
     std::optional<model::Task> patchedTask;
     ASSERT_NO_FATAL_FAILURE(patchedTask =
                                 patchTask(options, task->prescriptionId(),
-                                          GetParam().expectedSuccess ? HttpStatus::OK : HttpStatus::Forbidden));
+                                          GetParam().expectedSuccess ? HttpStatus::OK : HttpStatus::Conflict));
     ASSERT_TRUE(patchedTask.has_value());
     if (GetParam().expectedSuccess)
     {
@@ -637,7 +637,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(GetParam().workflowType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
         {
             GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
         }
@@ -664,7 +664,7 @@ public:
         std::optional<model::Task> patchedTask;
         ASSERT_NO_FATAL_FAILURE(patchedTask =
                                     patchTask(options, task->prescriptionId(),
-                                              GetParam().expectedSuccess ? HttpStatus::OK : HttpStatus::Forbidden));
+                                              GetParam().expectedSuccess ? HttpStatus::OK : HttpStatus::Conflict));
         ASSERT_TRUE(patchedTask.has_value());
         tasks.emplace_back(GetParam().expectedSuccess ? std::move(*patchedTask) : std::move(*task));
         ASSERT_NO_THROW((void) tasks.back().prescriptionId()) << tasks.back().serializeToJsonString();
@@ -843,7 +843,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(GetParam().workflowType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
         {
             GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
         }
@@ -997,9 +997,9 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTask_allDispensations)
 
             ASSERT_TRUE(md.performerReference().has_value());
 
-            const auto& practitionerRoleId = Uuid{md.performerReference().value()}.toString();
-            const auto& practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
-            const auto& organizationId = Uuid{practitionerRole.organizationReference()}.toString();
+            const auto practitionerRoleId = Uuid{md.performerReference().value()}.toString();
+            const auto practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
+            const auto organizationId = Uuid{practitionerRole.organizationReference()}.toString();
 
             EXPECT_STREQ(std::string{practitionerRole.getId().value_or("")}.c_str(), practitionerRoleId.c_str());
             EXPECT_STREQ(std::string{practitioner.getId().value_or("")}.c_str(), practitionerId.c_str());
@@ -1117,14 +1117,14 @@ TEST_P(ErpWorkflowEuTestCloseTaskP, closeTasks_multipleDispensations)
         const auto& practitioner = practitioners.front();
         const auto& organization = organizations.front();
 
-        const auto& practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
-        const auto& organizationId = Uuid{practitionerRole.organizationReference()}.toString();
+        const auto practitionerId = Uuid{practitionerRole.practitionerReference()}.toString();
+        const auto organizationId = Uuid{practitionerRole.organizationReference()}.toString();
 
         for (const auto& md : medicationDispenses)
         {
             if (md.performerReference())
             {
-                const auto& practitionerRoleId = Uuid{md.performerReference().value()}.toString();
+                const auto practitionerRoleId = Uuid{md.performerReference().value()}.toString();
                 EXPECT_STREQ(std::string{practitionerRole.getId().value_or("")}.c_str(), practitionerRoleId.c_str());
                 EXPECT_STREQ(std::string{practitioner.getId().value_or("")}.c_str(), practitionerId.c_str());
                 EXPECT_STREQ(std::string{organization.getId().value_or("")}.c_str(), organizationId.c_str());

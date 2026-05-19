@@ -27,8 +27,10 @@ public:
                                         const rapidjson::Value& tRezeptMedicationDispense);
     void checkTRezeptOrganization(const model::Bundle& vzdSearchSet, const rapidjson::Value& tRezeptOrganization);
 
-    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1.0-ballot3",
+    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1",
                                                  date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+    const model::TelematikId fallbackTelematikId{"x-y"};
+    const std::string fallbackName{"Fallback Name"};
 };
 
 void TRezeptTransformerTest::checkCarbonCopy(model::Bundle& kbvBundle, const model::Bundle& medicationDispenseBundle,
@@ -175,15 +177,25 @@ void TRezeptTransformerTest::checkTRezeptOrganization(const model::Bundle& vzdSe
     };
     checkPropertiesNotInTarget(tRezeptOrganization, propertiesNotInTarget);
 
-    const auto& organizationDirectory = vzdSearchSet.getUniqueResourceByType<model::OrganizationDirectory>();
-    const std::vector<std::string> fromOrganizationDirectory{"Organization.name"};
-    checkRetainedProperties(organizationDirectory.jsonDocument(), tRezeptOrganization, fromOrganizationDirectory);
     rapidjson::Pointer identifiersPointer("/identifier");
     const auto* telematikIdItem = model::NumberAsStringParserDocument::findMemberInArray(
         identifiersPointer.Get(tRezeptOrganization), rapidjson::Pointer("/system"),
         "https://gematik.de/fhir/sid/telematik-id");
     ASSERT_TRUE(telematikIdItem);
-    EXPECT_EQ(serialize(organizationDirectory.getTelematikIdIdentifier()), serialize(*telematikIdItem));
+    const auto& organizationDirectories = vzdSearchSet.getResourcesByType<model::OrganizationDirectory>();
+    if (!organizationDirectories.empty())
+    {
+        const auto& organizationDirectory = organizationDirectories.front();
+        const std::vector<std::string> fromOrganizationDirectory{"Organization.name"};
+        checkRetainedProperties(organizationDirectory.jsonDocument(), tRezeptOrganization, fromOrganizationDirectory);
+        EXPECT_EQ(serialize(organizationDirectory.getTelematikIdIdentifier()), serialize(*telematikIdItem));
+    } else
+    {
+        auto telematikId = model::NumberAsStringParserDocument::getStringValueFromValue(rapidjson::Pointer("/value").Get(*telematikIdItem));
+        EXPECT_EQ(fallbackTelematikId.id(), telematikId);
+        auto name = model::NumberAsStringParserDocument::getStringValueFromValue(rapidjson::Pointer("/name").Get(tRezeptOrganization));
+        EXPECT_EQ(fallbackName, name);
+    }
 
     const auto& healthcareService =
         vzdSearchSet.getUniqueResourceByType<model::UnspecifiedResource>("HealthcareService");
@@ -206,6 +218,7 @@ void TRezeptTransformerTest::checkTRezeptOrganization(const model::Bundle& vzdSe
         checkRetainedProperties(optionalLocationDirectory[0].jsonDocument(), tRezeptOrganization,
                                 fromLocationDirectory);
     }
+    checkMappedValues(tRezeptOrganization, {});
 }
 
 TEST_F(TRezeptTransformerTest, transform)
@@ -220,12 +233,13 @@ TEST_F(TRezeptTransformerTest, transform)
     std::optional<model::ErpTPrescriptionCarbonCopy> result;
     auto signingTime = model::Timestamp::now();
     ASSERT_NO_THROW(result = TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
-                                                           options.prescriptionId, vzdSearchset));
+                                                           options.prescriptionId, fallbackTelematikId, fallbackName,
+                                                           vzdSearchset));
     ASSERT_TRUE(result);
     checkCarbonCopy(kbvBundle, medicationDispenseBundle, vzdSearchset, signingTime, *result);
 }
 
-TEST_F(TRezeptTransformerTest, missingOrganization_logError)
+TEST_F(TRezeptTransformerTest, missingOrganization_fallback)
 {
     const ResourceTemplates::KbvBundleOptions options{
         .prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 123456789)};
@@ -233,30 +247,17 @@ TEST_F(TRezeptTransformerTest, missingOrganization_logError)
     auto medicationDispenseBundle = model::Bundle::fromJsonNoValidation(
         ResourceTemplates::internal_type::medicationDispenseBundle().serializeToJsonString());
 
-    auto vzdSearchset = model::Bundle::fromJsonNoValidation(ResourceTemplates::vzdSearchSetJson("test/EndpointHandlerTest/ERP_TPrescription_VZD_SearchSet_missing_organization_template_1.0.json", {}));
+    auto vzdSearchset = model::Bundle::fromJsonNoValidation(ResourceTemplates::vzdSearchSetJson(
+        "test/EndpointHandlerTest/ERP_TPrescription_VZD_SearchSet_missing_organization_template_1.0.json", {}));
 
     std::optional<model::ErpTPrescriptionCarbonCopy> result;
     auto signingTime = model::Timestamp::now();
 
-    std::string logStr = "";
-    bool failed = false;
-    try
-    {
-        TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
-                                      options.prescriptionId, vzdSearchset);
-    }
-    catch (const std::exception& exc)
-    {
-        const auto loc = ExceptionWrapperBase::getLocation(exc);
-        logStr = "unknown location";
-        if (loc && loc->location.fileName)
-        {
-            logStr = std::string{loc->location.fileName} + ":" + std::to_string(loc->location.line);
-        }
-        failed = true;
-    }
-    EXPECT_TRUE(logStr.find("/src/exporter/TRezeptTransformer.cxx:") != std::string::npos);
-    EXPECT_TRUE(failed);
+    ASSERT_NO_THROW(result = TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
+                                                           options.prescriptionId, fallbackTelematikId, fallbackName,
+                                                           vzdSearchset));
+    ASSERT_TRUE(result);
+    checkCarbonCopy(kbvBundle, medicationDispenseBundle, vzdSearchset, signingTime, *result);
 }
 
 TEST_F(TRezeptTransformerTest, missingLocationAndHealthcareService_noError)
@@ -266,12 +267,16 @@ TEST_F(TRezeptTransformerTest, missingLocationAndHealthcareService_noError)
     auto kbvBundle = model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml(options));
     auto medicationDispenseBundle = model::Bundle::fromJsonNoValidation(
         ResourceTemplates::internal_type::medicationDispenseBundle().serializeToJsonString());
-    auto vzdSearchset = model::Bundle::fromJsonNoValidation(ResourceTemplates::vzdSearchSetJson("test/EndpointHandlerTest/ERP_TPrescription_VZD_SearchSet_missing_healthcareservice_and_location_template_1.0.json", {}));
+    auto vzdSearchset = model::Bundle::fromJsonNoValidation(ResourceTemplates::vzdSearchSetJson(
+        "test/EndpointHandlerTest/"
+        "ERP_TPrescription_VZD_SearchSet_missing_healthcareservice_and_location_template_1.0.json",
+        {}));
 
     std::optional<model::ErpTPrescriptionCarbonCopy> result;
     auto signingTime = model::Timestamp::now();
     ASSERT_NO_THROW(result = TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
-                                                           options.prescriptionId, vzdSearchset));
+                                                           options.prescriptionId, fallbackTelematikId, fallbackName,
+                                                           vzdSearchset));
     ASSERT_TRUE(result);
 }
 
@@ -332,7 +337,8 @@ TEST_P(TRezeptSampleTestP, Test)
     std::optional<model::ErpTPrescriptionCarbonCopy> result;
     const auto signingTime = model::Timestamp::now();
     ASSERT_NO_THROW(result = TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
-                                                           task.prescriptionId(), vzdSearchset));
+                                                           task.prescriptionId(), fallbackTelematikId, fallbackName,
+                                                           vzdSearchset));
     ASSERT_TRUE(result);
     checkCarbonCopy(kbvBundle, medicationDispenseBundle, vzdSearchset, signingTime, *result);
 

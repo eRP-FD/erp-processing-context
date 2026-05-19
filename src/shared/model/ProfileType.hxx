@@ -12,7 +12,6 @@ enum class ProfileType
     GEM_ERP_PR_Binary,
     fhir,// general FHIR schema
     GEM_ERP_PR_Communication_DispReq,
-    GEM_ERP_PR_Communication_InfoReq,
     GEM_ERPCHRG_PR_Communication_ChargChangeReq,
     GEM_ERPCHRG_PR_Communication_ChargChangeReply,
     GEM_ERP_PR_Communication_DiGA,

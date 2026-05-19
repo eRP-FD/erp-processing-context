@@ -683,6 +683,185 @@ TEST_F(ElementTest, asRaw)
 
 }
 
+struct ElementMatchesTestParam
+{
+    struct ElementDesc{
+        std::string_view json;
+        std::string_view type;
+    };
+    ElementDesc element;
+    ElementDesc pattern;
+    bool matches;
+};
+
+class ElementMatchesTest : public ElementTest, public testing::WithParamInterface<ElementMatchesTestParam> {
+public:
+    using ElementDesc = ElementMatchesTestParam::ElementDesc;
+    static constexpr ElementDesc primitiveValue{
+        R"("Kirchspielsweg 6")",
+        "string",
+    };
+    static constexpr ElementDesc primitiveAbsent = {
+        R"({"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]})",
+        "string",
+    };
+    static constexpr ElementDesc extensionA = {
+        R"({"url": "A", "valueCode": "A"})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionB = {
+        R"({"url": "B", "valueCode": "B"})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionEmpty = {
+        R"({})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionArrayA = {
+        R"({"extension":[{"url": "A", "valueCode": "A"}]})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionArrayB = {
+        R"({"extension":[{"url": "B", "extension": [{ "url":"nest", "valueCode": "nest" }], "valueCode": "B"}]})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionArrayAB = {
+        R"({"extension":[{"url": "A", "valueCode": "A"}, {"url": "B", "extension": [{ "url":"nest", "valueCode": "nest" }], "valueCode": "B"}]})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionUrlA = {
+        R"({"url": "A"})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionUrlB = {
+        R"({"url": "B"})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionCodeA = {
+        R"({"valueCode": "A"})",
+        "Extension",
+    };
+    static constexpr ElementDesc extensionCodeB = {
+        R"({"valueCode": "B"})",
+        "Extension",
+    };
+    static constexpr ElementDesc stringArrayA = {
+        R"({"resourceType": "Resource", "meta": { "profile": ["A"] } })",
+        "Resource",
+    };
+    static constexpr ElementDesc stringArrayB = {
+        R"({"resourceType": "Resource", "meta": { "profile": ["B"] } })",
+        "Resource",
+    };
+    static constexpr ElementDesc stringArrayAB = {
+        R"({"resourceType": "Resource", "meta": { "profile": ["A", "B"] } })",
+        "Resource",
+    };
+
+
+    static std::list<ElementMatchesTestParam> equal()
+    {
+        return {
+            {primitiveValue, primitiveValue, true},
+            {primitiveAbsent, primitiveAbsent, true},
+            {extensionA, extensionA, true},
+            {extensionB, extensionB, true},
+            {extensionEmpty, extensionEmpty, true},
+            {extensionArrayA, extensionArrayA, true},
+            {extensionArrayB, extensionArrayB, true},
+            {extensionArrayAB, extensionArrayAB, true},
+            {stringArrayA, stringArrayA, true},
+            {stringArrayB, stringArrayB, true},
+            {stringArrayAB, stringArrayAB, true},
+
+        };
+    }
+    static std::list<ElementMatchesTestParam> different()
+    {
+        return {
+            {primitiveValue, primitiveAbsent, false},
+            {primitiveAbsent, primitiveValue, false},
+            {primitiveValue, extensionA, false},
+            {primitiveAbsent, extensionA, false},
+            {extensionA, extensionB, false},
+            {extensionArrayA, extensionArrayB, false},
+            {extensionArrayB, extensionArrayA, false},
+            {stringArrayA, stringArrayB, false},
+            {stringArrayB, stringArrayA, false},
+        };
+    }
+    static std::list<ElementMatchesTestParam> contains()
+    {
+        return {
+            {extensionA, extensionUrlA, true},
+            {extensionB, extensionUrlB, true},
+            {extensionA, extensionCodeA, true},
+            {extensionB, extensionCodeB, true},
+            {extensionArrayAB, extensionEmpty, true},
+            {extensionArrayAB, extensionArrayA, true},
+            {extensionArrayAB, extensionArrayB, true},
+            {extensionArrayA, extensionArrayAB, false},
+            {extensionArrayB, extensionArrayAB, false},
+            {stringArrayAB, stringArrayB, true},
+            {stringArrayAB, stringArrayA, true},
+            {stringArrayA, stringArrayAB, false},
+            {stringArrayB, stringArrayAB, false},
+        };
+    }
+};
+
+TEST_P(ElementMatchesTest, run)
+{
+    const auto& p = GetParam();
+
+    auto elementJson = model::NumberAsStringParserDocument::fromJson(p.element.json);
+    auto patternJson = model::NumberAsStringParserDocument::fromJson(p.pattern.json);
+    const auto* elementType = mRepo->findTypeById(std::string{p.element.type});
+    ASSERT_NE(elementType, nullptr);
+    const auto* patternType = mRepo->findTypeById(std::string{p.pattern.type});
+    ASSERT_NE(patternType, nullptr);
+    const std::weak_ptr<const Element> noParent{};
+    const auto element =
+        std::make_shared<ErpElement>(&backend, noParent, elementType, std::string{p.element.type}, &elementJson);
+    const auto pattern =
+        std::make_shared<ErpElement>(&backend, noParent, patternType, std::string{p.pattern.type}, &patternJson);
+    if (p.element.type == p.pattern.type)
+    {
+        bool matches = false;
+        ASSERT_NO_THROW(matches = element->matches(*pattern));
+        EXPECT_EQ(matches, p.matches);
+    }
+    else
+    {
+        EXPECT_ANY_THROW((void) element->matches(*pattern));
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(equal, ElementMatchesTest, testing::ValuesIn(ElementMatchesTest::equal()));
+INSTANTIATE_TEST_SUITE_P(different, ElementMatchesTest, testing::ValuesIn(ElementMatchesTest::different()));
+INSTANTIATE_TEST_SUITE_P(contains, ElementMatchesTest, testing::ValuesIn(ElementMatchesTest::contains()));
+
+
+TEST_F(ElementTest, matchesPrimitiveTypeObject)
+{
+    auto testResource1 = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "stringPrimitive": "Kirchspielsweg 6"})");
+    auto testResource2 = model::NumberAsStringParserDocument::fromJson(
+        R"({"resourceType": "Test", "_stringPrimitive": {"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]}})");
+
+    auto erpElement1 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                    mRepo->findTypeById("Test"), "Test", &testResource1);
+    auto erpElement2 = std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{},
+                                                    mRepo->findTypeById("Test"), "Test", &testResource2);
+
+    EXPECT_NO_THROW((void) erpElement1->matches(*erpElement2));
+    EXPECT_NO_THROW((void) erpElement2->matches(*erpElement1));
+    EXPECT_FALSE(erpElement1->matches(*erpElement2));
+    EXPECT_FALSE(erpElement2->matches(*erpElement1));
+    EXPECT_TRUE(erpElement1->matches(*erpElement1));
+    EXPECT_TRUE(erpElement2->matches(*erpElement2));
+}
+
 class ElementNavigationTest : public ElementTest
 {
 public:

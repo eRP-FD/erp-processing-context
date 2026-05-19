@@ -6,16 +6,20 @@
 
 #pragma once
 
+#include "shared/network/message/HttpStatus.hxx"
+
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
 
 class BDEMessage;
 class ClientInterface;
 class ClientResponse;
 class ClientRequest;
-class TokenCache;
 class CrlProvider;
+class TokenCache;
+class UrlRequestSender;
 
 enum class HttpStatus;
 
@@ -62,15 +66,28 @@ private:
     HttpStatus mStatusCode;
 };
 
+class TokenAcquisitionException : public ServerErrorException
+{
+ public:
+   TokenAcquisitionException(const std::string& message, HttpStatus statusCode);
+};
+
+class OperationException : public ServerErrorException
+{
+public:
+    OperationException(const std::string& message, HttpStatus statusCode);
+};
+
 //NOLINTNEXTLINE [cppcoreguidelines-macro-usage]
-#define FailFhirVzd(message, httpStatus) local::logAndThrow<ServerErrorException>(message, fileAndLine, httpStatus)
+#define FailFhirVzd(exc, message, httpStatus) local::logAndThrow<exc>(message, fileAndLine, httpStatus)
 }
 
 
 class OAuthClientBase
 {
 public:
-    OAuthClientBase(std::string clientId, std::string host, std::string port, std::shared_ptr<CrlProvider> crlProvider);
+    OAuthClientBase(std::string clientId, std::string host, std::string port, std::shared_ptr<CrlProvider> crlProvider,
+                    std::string xContextId);
     virtual ~OAuthClientBase() = default;
 
     virtual bool testConnection() const;
@@ -98,14 +115,18 @@ protected:
 
     virtual void invalidateTokenCache() const;
 
-    ClientResponse handleCommonHttpErrors(std::function<ClientResponse(BDEMessage& message)>&& action) const;
+    static constexpr auto defaultSuccess = [](HttpStatus status) {
+        return status == HttpStatus::OK;
+    };
+    ClientResponse handleCommonHttpErrors(std::function<ClientResponse(BDEMessage& message)>&& action,
+                                          const std::function<bool(HttpStatus)>& isSuccess = defaultSuccess) const;
 
     /// @brief Helper method for creating https clients.
     ///
     /// @param hostname Target host name to connect to.
     /// @param port Target port to connect to.
     /// @returns HttpsClient instance.
-    virtual std::unique_ptr<ClientInterface> createClient(const std::string& hostname, const std::string& port) const;
+    virtual std::unique_ptr<UrlRequestSender> createClient() const;
 
     std::string getClientId() const;
     std::string getHost() const;
@@ -122,4 +143,5 @@ private:
     mutable std::mutex mTokenCacheMutex;
     const model::TRezeptEvent* mEvent{nullptr};
     std::shared_ptr<CrlProvider> mCrlProvider;
+    std::string mXContextId;
 };

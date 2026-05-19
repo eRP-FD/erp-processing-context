@@ -26,10 +26,12 @@
 #include "shared/util/Hash.hxx"
 #include "test_config.h"
 #include "test/erp/pc/CFdSigErpTestHelper.hxx"
+#include "test/erp/pc/popp/PoPPCertificateVerifierServiceMock.hxx"
 #include "test/erp/service/HealthHandlerTestTslManager.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -151,6 +153,7 @@ public:
         , currentTimestampPointer("/timestamp")
         // Note that the array indices is defined in ApplicationHealth::model()
         , postgresStatusPointer("/checks/3/status")
+        , postgresROStatusPointer("/checks/10/status")
         , postgresRootCausePointer("/checks/3/data/rootCause")
         , hsmStatusPointer("/checks/1/status")
         , hsmRootCausePointer("/checks/1/data/rootCause")
@@ -184,6 +187,7 @@ public:
         , buildTypePointer("/version/buildType")
         , releasePointer("/version/release")
         , releasedatePointer("/version/releasedate")
+        , poPPStatusPointer("/checks/9/status")
         , mGuardERP_HSM_DEVICE("ERP_HSM_DEVICE", "127.0.0.1")
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
                                             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"))
@@ -205,9 +209,13 @@ public:
         const std::string ocspUrl(CFdSigErpTestHelper::cFsSigErpOcspUrl());
 
         auto factories = StaticData::makeMockFactories();
-        factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-            auto md = std::make_unique<HealthHandlerTestMockDatabase>(hsmPool);
-            return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
+        factories.databaseFactory = [md = std::shared_ptr<HealthHandlerTestMockDatabase>{}](
+                                        HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
+            if (!md)
+            {
+                md = std::make_shared<HealthHandlerTestMockDatabase>(hsmPool);
+            }
+            return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(md), hsmPool, keyDerivation);
         };
 
         factories.redisClientFactory = [](std::chrono::milliseconds){return std::make_unique<HealthHandlerTestMockRedisStore>();};
@@ -220,6 +228,18 @@ public:
                 {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
         };
         factories.blobCacheFactory = [this](){return mBlobCache;};
+        factories.poppServiceFactory = [](boost::asio::io_context*, TslManager&, std::shared_ptr<CrlProvider>) {
+            auto poppServiceMock = std::make_unique<PoPPCertificateVerifierServiceMock>();
+            setupDefaultMock(*poppServiceMock);
+            std::list<model::PoPPCertificateHealthData> hd;
+            hd.emplace_back("subject1", std::nullopt, false, model::Timestamp::now() + std::chrono::hours{1});
+            hd.emplace_back("subject2", model::Timestamp::now(), false,
+                            model::Timestamp::now() - std::chrono::hours{1});
+            hd.emplace_back("subject3", model::Timestamp::now() - std::chrono::hours{1}, true,
+                            model::Timestamp::now() + std::chrono::hours{1});
+            ON_CALL(*poppServiceMock, getHealthData()).WillByDefault(::testing::Return(hd));
+            return poppServiceMock;
+        };
         mServiceContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
         mContext = std::make_unique<SessionContext>(*mServiceContext, request, response, mAccessLog);
 
@@ -266,6 +286,7 @@ protected:
     rapidjson::Pointer statusPointer;
     rapidjson::Pointer currentTimestampPointer;
     rapidjson::Pointer postgresStatusPointer;
+    rapidjson::Pointer postgresROStatusPointer;
     rapidjson::Pointer postgresRootCausePointer;
     rapidjson::Pointer hsmStatusPointer;
     rapidjson::Pointer hsmRootCausePointer;
@@ -299,6 +320,7 @@ protected:
     rapidjson::Pointer buildTypePointer;
     rapidjson::Pointer releasePointer;
     rapidjson::Pointer releasedatePointer;
+    rapidjson::Pointer poPPStatusPointer;
     EnvironmentVariableGuard mGuardERP_HSM_DEVICE;
     EnvironmentVariableGuard mGuardERP_TSL_INITIAL_CA_DER_PATH;
 };
@@ -321,6 +343,7 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_NE(std::string(postgresROStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(hsmStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_FALSE(std::string(hsmIpPointer.Get(healthDocument)->GetString()).empty());
     EXPECT_EQ(std::string(hsmIpPointer.Get(healthDocument)->GetString()),
@@ -346,10 +369,61 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ(std::string(seedTimerStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()),
               std::string(model::Health::up));
+    EXPECT_EQ(std::string(poPPStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(ErpServerInfo::BuildVersion()), std::string(buildPointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::BuildType()), std::string(buildTypePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion()), std::string(releasePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate()), std::string(releasedatePointer.Get(healthDocument)->GetString()));
+
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/0/subject"}.Get(healthDocument)->GetString()},
+              "subject1");
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/1/subject"}.Get(healthDocument)->GetString()},
+              "subject2");
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/2/subject"}.Get(healthDocument)->GetString()},
+              "subject3");
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/0/ocsp"}.Get(healthDocument)->GetString()},
+              "");
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/1/ocsp"}.Get(healthDocument)->GetString()},
+              "");
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/2/ocsp"}.Get(healthDocument)->GetString()},
+              "");
+    EXPECT_NE(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/0/certificate_expiry"}.Get(healthDocument)->GetString()},
+        "");
+    EXPECT_NE(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/1/certificate_expiry"}.Get(healthDocument)->GetString()},
+        "");
+    EXPECT_NE(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/2/certificate_expiry"}.Get(healthDocument)->GetString()},
+        "");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/0/certificate_expired"}.Get(healthDocument)->GetString()},
+        "false");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/1/certificate_expired"}.Get(healthDocument)->GetString()},
+        "true");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/2/certificate_expired"}.Get(healthDocument)->GetString()},
+        "false");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/0/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+        "false");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/1/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+        "false");
+    EXPECT_EQ(
+        std::string{
+            rapidjson::Pointer{"/checks/9/data/certificates/2/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+        "true");
+
 
     std::optional<model::Timestamp> requestTimestamp;
     auto afterRequest = model::Timestamp::now();
@@ -541,7 +615,6 @@ TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)//NOLINT(readability-function-cogn
 TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognitive-complexity)
 {
     mBlobCache->deleteBlob(BlobType::VauSig, ErpVector::create("vau-sig"));
-    createServiceContext();
     for (const auto& item : magic_enum::enum_values<ApplicationHealth::Service>())
     {
         if (item == ApplicationHealth::Service::EventDb)
@@ -569,4 +642,25 @@ TEST_F(HealthHandlerTest, VauSigBlobMissing)//NOLINT(readability-function-cognit
         "std::runtime_error(ExceptionWrapper<std::runtime_error>)(no successful validation available) at ");
 
     EXPECT_TRUE(mContext->serviceContext.registrationInterface()->registered());
+}
+
+TEST_F(HealthHandlerTest, PoPPDown)
+{
+    const auto* mock = dynamic_cast<const PoPPCertificateVerifierServiceMock*>(&mServiceContext->getPoPPService());
+    ON_CALL(*mock, healthCheck()).WillByDefault(::testing::Throw(std::runtime_error("failed")));
+    // force refresh of OCSP-Response
+    HealthHandlerTestTslManager::failOcspRetrieval = false;
+    ASSERT_NO_THROW(mServiceContext->getCFdSigErpManager().getOcspResponseData(true));
+
+    ASSERT_NO_THROW(handleRequest());
+
+    ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
+    ASSERT_FALSE(mContext->response.getBody().empty());
+
+    rapidjson::Document healthDocument;
+    auto body = mContext->response.getBody();
+    healthDocument.Parse(body);
+
+    EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_EQ(std::string(poPPStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
 }

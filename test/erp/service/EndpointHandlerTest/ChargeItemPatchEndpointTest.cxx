@@ -14,14 +14,15 @@ public:
 
 struct ChargeItemPatchEndpointTestParam {
     std::string shiftTo;
-    ResourceTemplates::Versions::GEM_ERPCHRG version;
+    std::optional<ResourceTemplates::Versions::GEM_ERPCHRG> version;
     std::optional<bool> insuranceProviderMarking;
     std::optional<bool> subsidyMarking;
     std::optional<bool> taxOfficeMarking;
     bool expectSuccess;
     friend std::ostream& operator<<(std::ostream& os, const ChargeItemPatchEndpointTestParam& param)
     {
-        return os << "shiftTo: " << param.shiftTo << ", version: " << param.version << ", insuranceProvider:"
+        auto version = param.version?to_string(*param.version):"n/a";
+        return os << "shiftTo: " << param.shiftTo << ", version: " << version << ", insuranceProvider:"
                   << (param.insuranceProviderMarking.has_value() ? std::to_string(*param.insuranceProviderMarking)
                                                                   : "nullopt")
                   << ", subsidy:"
@@ -45,16 +46,31 @@ public:
                 GetParam().shiftTo, floor<std::chrono::days>(model::Timestamp::now().toChronoTimePoint())};
         }
     }
+
+    std::string patchChargeItemJson()
+    {
+        if (GetParam().version)
+        {
+            return ResourceTemplates::patchChargeItemJson({
+                .version = *GetParam().version,
+                .insuranceProviderMarking = GetParam().insuranceProviderMarking,
+                .subsidyMarking = GetParam().subsidyMarking,
+                .taxOfficeMarking = GetParam().taxOfficeMarking,
+            });
+        }
+        return ResourceTemplates::legacyPatchChargeItemBodyJson({
+            .insuranceProviderMarking = GetParam().insuranceProviderMarking,
+            .subsidyMarking = GetParam().subsidyMarking,
+            .taxOfficeMarking = GetParam().taxOfficeMarking,
+        });
+    }
+
     std::optional<testutils::ShiftFhirResourceViewsGuard> shiftGuard;
 };
 
 TEST_P(ChargeItemPatchEndpointTestP, ChargeItemPatchEndpointTest)
 {
-    auto jsonBody =
-        ResourceTemplates::patchChargeItemJson({.version = GetParam().version,
-                                                .insuranceProviderMarking = GetParam().insuranceProviderMarking,
-                                                .subsidyMarking = GetParam().subsidyMarking,
-                                                .taxOfficeMarking = GetParam().taxOfficeMarking});
+    auto jsonBody = patchChargeItemJson();
 
     ChargeItemPatchHandler handler{{}};
     auto prescriptionId =
@@ -113,15 +129,13 @@ TEST_P(ChargeItemPatchEndpointTestP, ChargeItemPatchEndpointTest)
 INSTANTIATE_TEST_SUITE_P(
     ChargeItemPatchEndpointTest, ChargeItemPatchEndpointTestP,
     testing::ValuesIn<std::list<ChargeItemPatchEndpointTestParam>>({
-        {"DAV_2025_01_15", ResourceTemplates::Versions::GEM_ERPCHRG_1_0, true, true, true, true},
-        {"DAV_2025_01_15", ResourceTemplates::Versions::GEM_ERPCHRG_1_0, std::nullopt, std::nullopt, std::nullopt,
-         false},
-        {"DAV_2025_01_15", ResourceTemplates::Versions::GEM_ERPCHRG_1_0, false, false, false, true},
-        {"DAV_2025_01_15", ResourceTemplates::Versions::GEM_ERPCHRG_1_0, true, false, std::nullopt, true},
-        {"GEM_WF_1_5_0", ResourceTemplates::Versions::GEM_ERPCHRG_1_0, true, true, true, true},
-        {"DAV_2025_01_15", ResourceTemplates::Versions::GEM_ERPCHRG_1_1, true, true, true, false},
-        {"GEM_WF_1_5_0", ResourceTemplates::Versions::GEM_ERPCHRG_1_1, true, true, true, true},
-        {"GEM_WF_1_5_0", ResourceTemplates::Versions::GEM_ERPCHRG_1_1, std::nullopt, std::nullopt, std::nullopt, false},
-        {"GEM_WF_1_5_0", ResourceTemplates::Versions::GEM_ERPCHRG_1_1, false, false, false, true},
-        {"GEM_WF_1_5_0", ResourceTemplates::Versions::GEM_ERPCHRG_1_1, false, std::nullopt, true, true},
+        {"", std::nullopt, true, true, true, true},
+        {"", std::nullopt, std::nullopt, std::nullopt, std::nullopt, false},
+        {"", std::nullopt, false, false, false, true},
+        {"", std::nullopt, true, false, std::nullopt, true},
+        {"", std::nullopt, true, true, true, true},
+        {"", ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0, true, true, true, true},
+        {"", ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0, std::nullopt, std::nullopt, std::nullopt, false},
+        {"", ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0, false, false, false, true},
+        {"", ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0, false, std::nullopt, true, true},
     }));

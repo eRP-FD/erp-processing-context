@@ -62,14 +62,15 @@ TEST_P(DeGematikERezeptWorkflowR4Test, success)
     testutils::ShiftFhirResourceViewsGuard unshift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     const auto& fhirInstance = Fhir::instance();
     auto viewList = fhirInstance.allViews();
-    auto view = viewList.match(
-        {std::string{model::resource::structure_definition::task}, get<fhirtools::FhirVersion>(GetParam())});
-    ASSERT_NE(view, nullptr);
     using ResourceFactory = model::ResourceFactory<model::UnspecifiedResource>;
 
     auto content = FileHelper::readFileAsString(get<std::string>(GetParam()));
 
     auto resourceFactory = ResourceFactory::fromJson(content, *StaticData::getJsonValidator());
+    fhirtools::DefinitionKey key{resourceFactory.getProfileName().value_or(model::resource::structure_definition::task)};
+    key.version = get<fhirtools::FhirVersion>(GetParam());
+    auto view = viewList.match(key.url, value(key.version));
+    ASSERT_NE(view, nullptr) << key;
     auto results = resourceFactory.validateGeneric(*view, {}, {});
     if (results.highestSeverity() > fhirtools::Severity::warning)
     {
@@ -81,10 +82,10 @@ TEST_P(DeGematikERezeptWorkflowR4Test, success)
 INSTANTIATE_TEST_SUITE_P(examples1_5, DeGematikERezeptWorkflowR4Test,
                          ::testing::Combine(::testing::Values(ResourceTemplates::Versions::GEM_ERP_1_5_2),
                                             ::testing::ValuesIn(DeGematikERezeptWorkflowR4Test::files(
-                                                DeGematikERezeptWorkflowR4Test::examples1_5, 49))),
+                                                DeGematikERezeptWorkflowR4Test::examples1_5, 48))),
                          &DeGematikERezeptWorkflowR4Test::name);
 INSTANTIATE_TEST_SUITE_P(examples1_6, DeGematikERezeptWorkflowR4Test,
-                         ::testing::Combine(::testing::Values(ResourceTemplates::Versions::GEM_ERP_1_6_0),
+                         ::testing::Combine(::testing::Values(ResourceTemplates::Versions::GEM_ERP_1_6_2),
                                             ::testing::ValuesIn(DeGematikERezeptWorkflowR4Test::files(
                                                 DeGematikERezeptWorkflowR4Test::examples1_6, 46))),
                          &DeGematikERezeptWorkflowR4Test::name);

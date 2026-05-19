@@ -8,6 +8,7 @@
 
 namespace model
 {
+class TelematikId;
 
 class ErpTPrescriptionOrganization : public Resource<ErpTPrescriptionOrganization>
 {
@@ -17,6 +18,7 @@ public:
     static constexpr auto profileType = ProfileType::ERP_TPrescription_Organization;
 
     void setTelematikId(const rapidjson::Value& telematikIdItem);
+    void setTelematikId(const TelematikId& telematikId);
     void setName(std::string_view name);
     void setTelecom(const rapidjson::Value& telecom);
     void setAddress(const rapidjson::Value& address);

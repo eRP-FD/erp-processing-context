@@ -27,8 +27,6 @@ public:
     static constexpr auto resourceTypeName = "Communication";
     // GEMREQ-start A_19450-01#acceptedCommunications
     static constexpr std::initializer_list<ProfileType> acceptedCommunications{
-        // see ERP-21119 - CommunicationInfoReq currently disabled:
-        //    ProfileType::Gem_erxCommunicationInfoReq,
         ProfileType::GEM_ERP_PR_Communication_Reply,
         ProfileType::GEM_ERP_PR_Communication_DispReq,
         ProfileType::GEM_ERP_PR_Communication_Representative,
@@ -39,7 +37,6 @@ public:
     // GEMREQ-end A_19450-01#acceptedCommunications
     enum class MessageType : int8_t
     {
-        InfoReq = 0,
         Reply = 1,
         DispReq = 2,
         Representative = 3,
@@ -120,7 +117,9 @@ private:
 
     void setSender(std::string_view sender, std::string_view namingSystem);
     void setRecipient(std::string_view recipient, std::string_view namingSystem);
-    std::optional<SchemaType> payloadSchema() const;
+    std::optional<SchemaType> payloadSchema(const CommunicationPayload& payload) const;
+
+    static void verifySchemaValidityTime(SchemaType schemaType);
 };
 
 // NOLINTNEXTLINE(bugprone-exception-escape)

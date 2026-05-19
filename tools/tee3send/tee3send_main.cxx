@@ -166,8 +166,8 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
         req.set(Header::XRequestId, Uuid().toString());
         req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
         req.body() = "{}";
-        BDEMessage::Data bdeData;
-        auto response = co_await teeClient->sendInner(Uuid{}.toString(), req, bdeData);
+        BDEMessage bde;
+        auto response = co_await teeClient->sendInner(Uuid{}.toString(), req, bde);
         Expect(response.has_value(), "Response has error: " + response.error().message());
         LOG(INFO) << "got response after waiting " << waitTime;
     }
@@ -180,14 +180,13 @@ boost::asio::awaitable<void> runTeeClient(std::shared_ptr<Tee3ClientPool> client
 void testHttpsClient(MedicationExporterServiceContext& serviceContext)
 {
     const auto& config = Configuration::instance();
-    const auto& userAgent = config.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT);
     auto fqdns = config.epaFQDNs();
     auto fqdn = fqdns.front();
     model::Kvnr kvnr{"X1234567890"};
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", userAgent);
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", Uuid{}.toString());
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
             client.sendConsentDecisionsRequest(Uuid{}.toString(), kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));
@@ -199,7 +198,7 @@ void testHttpsClient(MedicationExporterServiceContext& serviceContext)
     for (int i = 0; i < 10; ++i)
     {
         std::thread([&]() {
-            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", userAgent);
+            auto client = EpaAccountLookupClient(serviceContext, "/information/api/v1/ehr/consentdecisions", Uuid{}.toString());
             LOG(INFO) << "sleeping... ";
             std::this_thread::sleep_for(std::chrono::seconds{1});
             client.sendConsentDecisionsRequest(Uuid{}.toString(), kvnr, fqdn.hostName, gsl::narrow<std::uint16_t>(fqdn.port));

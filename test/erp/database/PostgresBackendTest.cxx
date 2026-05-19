@@ -144,11 +144,22 @@ TEST_F(PostgresBackendTest, recreateConnectionTimer)
         GTEST_SKIP();
         return;
     }
+    std::atomic<size_t> remain;
+    const auto waitComplete = [&remain](boost::asio::io_context& ctx) {
+        for (size_t i = 0; i < 1000; ++i)
+        {
+            ctx.run_for(50ms);
+            if (remain == 0)
+            {
+                TLOG(INFO) << "Completed";
+                return;
+            }
+        }
+    };
     EnvironmentVariableGuard maxAgeEnv(ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES, "0");
-    bool hadError = true;
-    for (int repeat = 10; repeat > 0 && hadError; --repeat)
+
+    WITH_RETRIES()
     {
-        hadError = false;
         auto factories = StaticData::makeMockFactoriesWithServers();
         PcServiceContext context{Configuration::instance(), std::move(factories)};
         context.getTeeServer().serve(threadCount, "th");
@@ -156,32 +167,53 @@ TEST_F(PostgresBackendTest, recreateConnectionTimer)
             return threadPool.getThreadCount() == threadPool.getWorkerCount();
         });
         auto& ioContext = context.getTeeServer().getThreadPool().ioContext();
+        remain = threadCount;
         context.getTeeServer().getThreadPool().runOnAllThreads([&] {
             auto database = context.databaseFactory();
-            ASSERT_TRUE(database->getConnectionInfo());
-            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
+            auto connectionInfo = database->getConnectionInfo();
+            ASSERT_TRUE(connectionInfo.has_value());
+            auto connectedFor = connectionDuration(*connectionInfo);
             EXPECT_LT(connectedFor, 1s);
+            database->commitTransaction();
+            --remain;
         });
-        ioContext.run_for(100ms);
+        waitComplete(ioContext);
         auto timer = std::make_unique<DatabaseConnectionTimer>(context, std::chrono::seconds(2));
         timer->start(ioContext, std::chrono::minutes(0));
         std::this_thread::sleep_for(1.1s);
         ioContext.run_for(100ms);
+        remain = threadCount;
         context.getTeeServer().getThreadPool().runOnAllThreads([&] {
             auto database = context.databaseFactory();
-            ASSERT_TRUE(database->getConnectionInfo());
-            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
-            SOFT_EXPECT_TRUE(connectedFor > 1s, repeat > 1, hadError);
+            auto connectionInfo = database->getConnectionInfo();
+            ASSERT_TRUE(connectionInfo.has_value());
+            auto connectedFor = connectionDuration(*connectionInfo);
+            SOFT_EXPECT_TRUE(connectedFor > 1s);
+            database->commitTransaction();
+            --remain;
         });
-        ioContext.run_for(100ms);
+        waitComplete(ioContext);
         std::this_thread::sleep_for(1.1s);
         ioContext.run_for(100ms);
+        remain = threadCount;
         context.getTeeServer().getThreadPool().runOnAllThreads([&] {
             auto database = context.databaseFactory();
-            ASSERT_TRUE(database->getConnectionInfo());
-            auto connectedFor = connectionDuration(database->getConnectionInfo().value());
+            auto connectionInfo = database->getConnectionInfo();
+            ASSERT_TRUE(connectionInfo.has_value());
+            auto connectedFor = connectionDuration(*connectionInfo);
             EXPECT_LT(connectedFor, 1s);
+            database->commitTransaction();
+            --remain;
         });
-        ioContext.run_for(100ms);
+        waitComplete(ioContext);
     }
+}
+
+TEST_F(PostgresBackendTest, duplicateTransaction)
+{
+    PostgresConnection conn{PostgresConnection::defaultConnectString()};
+    conn.connectIfNeeded();
+    std::list<std::unique_ptr<pqxx::transaction_base>> txs;
+    ASSERT_NO_THROW(txs.emplace_back(conn.createTransaction()));
+    ASSERT_THROW(txs.emplace_back(conn.createTransaction()), pqxx::usage_error);
 }

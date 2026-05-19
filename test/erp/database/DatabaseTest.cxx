@@ -49,7 +49,7 @@ public:
         std::optional<model::PrescriptionId> id;
         ASSERT_NO_THROW(id.emplace(db.storeTask(task)));
         task.setPrescriptionId(*id);
-        task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::pkv});
+        task.setKvnr(model::Kvnr{insurant});
         task.setExpiryDate(model::Timestamp::now());
         task.setAcceptDate(model::Timestamp::now());
 
@@ -65,7 +65,7 @@ public:
         chargeItem.setAccessCode(::MockDatabase::mockAccessCode);
         chargeItem.deleteContainedBinary();
 
-        const auto& dispenseItemXML = ResourceTemplates::medicationDispenseBundleXml({.medicationDispenses = {{}}});
+        const auto& dispenseItemXML = ResourceTemplates::davDispenseItemXml({.prescriptionId = *id});
         auto dispenseItem = model::AbgabedatenPkvBundle::fromXmlNoValidation(dispenseItemXML);
         auto signedDispenseItem =
             ::model::Binary{dispenseItem.getIdentifier().toString(),

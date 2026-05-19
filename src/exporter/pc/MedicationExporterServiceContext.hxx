@@ -57,7 +57,7 @@ public:
 
     std::shared_ptr<Tee3ClientPool> teeClientPool();
     std::shared_ptr<HttpsClientPool> httpsClientPool(const std::string& hostname);
-    std::shared_ptr<CrlProvider> crlProvider();
+
 
     std::unique_ptr<exporter::RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
     std::unique_ptr<exporter::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
@@ -66,6 +66,10 @@ public:
     template<typename FuncT>
     std::invoke_result_t<FuncT, MedicationExporterDatabaseFrontendInterface&> transaction(TransactionMode mode,
                                                                                           FuncT&& func);
+
+    void mergeFailingEpas(std::set<std::string>&& failingEpas);
+    void removeFailingEpa(const std::string& epa);
+    bool failingEpasEmpty() const;
 
 private:
     std::unique_ptr<MedicationExporterDatabaseFrontendInterface>
@@ -77,7 +81,8 @@ private:
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
     std::unordered_map<std::string, std::shared_ptr<HttpsClientPool>> mHttpsClientPools;
     gsl::not_null<std::shared_ptr<exporter::RuntimeConfiguration>> mRuntimeConfiguration;
-    std::shared_ptr<CrlProvider> mCrlProvider;
+    mutable std::mutex mFailingEpasMutex;
+    std::set<std::string> mFailingEpas;
 #ifdef FRIEND_TEST
     FRIEND_TEST(CommitGuardTest, only_one_transaction_allowed);
     FRIEND_TEST(CommitGuardTest, create_and_query);

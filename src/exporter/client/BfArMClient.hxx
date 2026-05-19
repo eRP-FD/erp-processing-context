@@ -38,7 +38,7 @@ public:
      *
      * @param clientId The client identifier.
      */
-    explicit BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider);
+    explicit BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider, const std::string& xContextId);
 
     ~BfArMClient() override;
 

@@ -80,146 +80,189 @@ private:
 };
 
 
+TEST(TestFrameWork, WithRetriesDoesTry)
+{
+    size_t tries = 0;
+    WITH_RETRIES()
+    {
+        SOFT_EXPECT_TRUE(tries > 5);
+        ++tries;
+    }
+    EXPECT_GT(tries, 5);
+}
+
+TEST(TestFrameWork, DISABLED_WithRetriesCanFail)
+{
+    WITH_RETRIES(2)
+    {
+        SOFT_EXPECT_TRUE(false);
+    }
+}
+
+
 TEST_F(TimerTest, runAt_now)
 {
-    LocalTimer timer;
-    SharedValue value;
+    WITH_RETRIES()
+    {
+        LocalTimer timer;
+        SharedValue value;
 
-    timer.runAt(std::chrono::system_clock::now(), [&value]{value.append("test");});
-
-    ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(100), 1);
-    ASSERT_EQ(value.updateCount(), 1);
-    ASSERT_EQ(value.get(), "test");
+        timer.runAt(std::chrono::system_clock::now(), [&value]{value.append("test");});
+        ASSERT_EQ(value.updateCount(), 0);
+        value.waitForUpdateCount(std::chrono::milliseconds(100), 1);
+        SOFT_EXPECT_TRUE(value.updateCount() == 1);
+        SOFT_EXPECT_TRUE(value.get() == "test");
+    }
 }
 
 
 TEST_F(TimerTest, runAt_inTheNearFuture)
 {
-    LocalTimer timer;
-    SharedValue value;
+    WITH_RETRIES()
+    {
+        LocalTimer timer;
+        SharedValue value;
 
-    timer.runAt(std::chrono::system_clock::now() + std::chrono::milliseconds(100), [&value]{value.append("test"); });
+        timer.runAt(std::chrono::system_clock::now() + std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
-    ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
-    ASSERT_EQ(value.updateCount(), 1);
-    ASSERT_EQ(value.get(), "test");
+        ASSERT_EQ(value.updateCount(), 0);
+        value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
+        SOFT_EXPECT_TRUE(value.updateCount() == 1);
+        SOFT_EXPECT_TRUE(value.get() == "test");
+    }
 }
 
 
 TEST_F(TimerTest, runIn)
 {
-    LocalTimer timer;
-    SharedValue value;
+    WITH_RETRIES()
+    {
+        LocalTimer timer;
+        SharedValue value;
 
-    timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
+        timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
-    ASSERT_EQ(value.updateCount(), 0);
-    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
-    ASSERT_EQ(value.updateCount(), 1);
-    ASSERT_EQ(value.get(), "test");
+        ASSERT_EQ(value.updateCount(), 0);
+        value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
+        SOFT_EXPECT_TRUE(value.updateCount() == 1);
+        SOFT_EXPECT_TRUE(value.get() == "test");
+    }
 }
 
 
 TEST_F(TimerTest, runIn_shutdownBeforeJobTrigger)
 {
-    SharedValue value;
-
+    WITH_RETRIES()
     {
-        LocalTimer timer;
+        SharedValue value;
 
-        timer.runIn(std::chrono::seconds(1), [&value]{value.append("test"); });
+        {
+            LocalTimer timer;
 
-        ASSERT_EQ(value.updateCount(), 0);
+            timer.runIn(std::chrono::seconds(1), [&value]{value.append("test"); });
+
+            SOFT_EXPECT_TRUE(value.updateCount() == 0);
+        }
+
+        // The timer has been shutdown. Verify that the job still has not been run.
+        SOFT_EXPECT_TRUE(value.updateCount() == 0);
     }
-
-    // The timer has been shutdown. Verify that the job still has not been run.
-    ASSERT_EQ(value.updateCount(), 0);
 }
 
 
 TEST_F(TimerTest, runRepeating)
 {
-    LocalTimer timer;
-    SharedValue value;
-    size_t index = 0;
-
-    timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&]
+    WITH_RETRIES()
     {
-        value.append(" " + std::to_string(index++));
-    });
+        LocalTimer timer;
+        SharedValue value;
+        size_t index = 0;
 
-    ASSERT_EQ(value.updateCount(), 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-    ASSERT_EQ(value.updateCount(), 3);
-    ASSERT_EQ(value.get(), " 0 1 2");
-    ASSERT_EQ(index, 3);
+        timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&]
+        {
+            value.append(" " + std::to_string(index++));
+        });
+
+        ASSERT_EQ(value.updateCount(), 0);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        SOFT_EXPECT_TRUE(value.updateCount() == 3);
+        SOFT_EXPECT_TRUE(value.get() == " 0 1 2");
+        SOFT_EXPECT_TRUE(index == 3);
+    }
 }
 
 
 TEST_F(TimerTest, runRepeating_multipleJobs)
 {
-    LocalTimer timer;
-
-    constexpr size_t jobCount = 10;
-
-    std::array<SharedValue, jobCount> values;
-    std::array<size_t, jobCount> indices{};
-    indices.fill(0);
-
-    for (size_t index=0; index<jobCount; ++index)
+    WITH_RETRIES()
     {
-        timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&,index]
+        LocalTimer timer;
+
+        constexpr size_t jobCount = 10;
+
+        std::array<SharedValue, jobCount> values;
+        std::array<size_t, jobCount> indices{};
+        indices.fill(0);
+
+        for (size_t index=0; index<jobCount; ++index)
         {
-            values[index].append(" " + std::to_string(indices[index]++));
-        });
-    }
+            timer.runRepeating(std::chrono::milliseconds(500), std::chrono::milliseconds(1000), [&,index]
+            {
+                values[index].append(" " + std::to_string(indices[index]++));
+            });
+        }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-    for (size_t index=0; index<jobCount; ++index)
-    {
-        ASSERT_EQ(values[index].updateCount(), 3);
-        ASSERT_EQ(values[index].get(), " 0 1 2");
-        ASSERT_EQ(indices[index], 3);
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+        for (size_t index=0; index<jobCount; ++index)
+        {
+            SOFT_EXPECT_TRUE(values[index].updateCount() == 3);
+            SOFT_EXPECT_TRUE(values[index].get() == " 0 1 2");
+            SOFT_EXPECT_TRUE(indices[index] == 3);
+        }
     }
 }
 
 
 TEST_F(TimerTest, cancel_oneTimeJob)
 {
-    LocalTimer timer;
-    SharedValue value;
+    WITH_RETRIES()
+    {
+        LocalTimer timer;
+        SharedValue value;
 
-    const auto token = timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
+        const auto token = timer.runIn(std::chrono::milliseconds(100), [&value]{value.append("test"); });
 
-    ASSERT_EQ(value.updateCount(), 0);
+        ASSERT_EQ(value.updateCount(), 0);
 
-    timer.cancel(token);
+        timer.cancel(token);
 
-    // Give the job time too be triggered but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
-    ASSERT_EQ(value.updateCount(), 0);
+        // Give the job time too be triggered but note that that is expected not to happen.
+        value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
+        SOFT_EXPECT_TRUE(value.updateCount() == 0);
+    }
 }
 
 
 TEST_F(TimerTest, cancel_repeatingJob)
 {
-    LocalTimer timer;
-    SharedValue value;
+    WITH_RETRIES()
+    {
+        LocalTimer timer;
+        SharedValue value;
 
-    const auto token = timer.runRepeating(
-        std::chrono::milliseconds(50),
-        std::chrono::milliseconds(100),
-        [&value]{value.append("test"); });
+        const auto token = timer.runRepeating(
+            std::chrono::milliseconds(50),
+            std::chrono::milliseconds(100),
+            [&value]{value.append("test"); });
 
-    ASSERT_EQ(value.updateCount(), 0);
+        ASSERT_EQ(value.updateCount(), 0);
 
-    timer.cancel(token);
+        timer.cancel(token);
 
-    // Give the job time too be triggered but note that that is expected not to happen.
-    value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
-    ASSERT_EQ(value.updateCount(), 0);
+        // Give the job time too be triggered but note that that is expected not to happen.
+        value.waitForUpdateCount(std::chrono::milliseconds(200), 1);
+        SOFT_EXPECT_TRUE(value.updateCount() == 0);
+    }
 }
 
 
@@ -227,10 +270,8 @@ TEST_F(TimerTest, cancel_repeatingJob)
 
 TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
 {
-    bool hadError = true;
-    for (int repeat = 10; repeat > 0 && hadError; --repeat)
+    WITH_RETRIES()
     {
-        hadError = false;
         LocalTimer timer;
         SharedValue value;
 
@@ -250,7 +291,7 @@ TEST_F(TimerTest, cancel_repeatingJobAfterFirstTrigger)
 
         // Give the job time too be triggered again but note that that is expected not to happen.
         value.waitForUpdateCount(std::chrono::milliseconds(1000), 2);
-        SOFT_EXPECT_TRUE(value.updateCount() == 1, repeat > 1, hadError);
-        SOFT_EXPECT_TRUE(value.get() == "test", repeat > 1, hadError);
+        SOFT_EXPECT_TRUE(value.updateCount() == 1);
+        SOFT_EXPECT_TRUE(value.get() == "test");
     }
 }

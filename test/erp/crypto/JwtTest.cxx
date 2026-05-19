@@ -24,6 +24,7 @@
 
 #include <gtest/gtest.h>
 #include <chrono>
+#include <rapidjson/document.h>
 
 #include "test/util/ResourceTemplates.hxx"
 

@@ -162,10 +162,10 @@ TEST_F(JsonCanonicalizationTest, Communication2)
     EXPECT_EQ(jsonStringOut, jsonStringOutExpected);
 }
 
-TEST_F(JsonCanonicalizationTest, CommunicationInfoReq)
+TEST_F(JsonCanonicalizationTest, Communication3)
 {
-    std::string jsonStringIn = readInput("CommunicationInfoReq");
-    std::string jsonStringOutExpected = readExpectedOutput("CommunicationInfoReq");
+    std::string jsonStringIn = readInput("Communication3");
+    std::string jsonStringOutExpected = readExpectedOutput("Communication3");
     JsonCanonicalizationTestModel model = JsonCanonicalizationTestModel::fromJson(jsonStringIn);
     std::string jsonStringOut = model.serializeToCanonicalJsonString();
     EXPECT_EQ(jsonStringOut, jsonStringOutExpected);

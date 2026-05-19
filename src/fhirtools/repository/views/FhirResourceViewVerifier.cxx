@@ -30,13 +30,7 @@ void FhirResourceViewVerifier::verify()
     {
         TLOG(INFO) << "Validating FHIR-Repository Backend";
     }
-    for (const auto& def : mRepo.definitionsByKey())
-    {
-        if (! mView || mView->findStructure(def.first))
-        {
-            verifyStructure(*def.second);
-        }
-    }
+    verifyStructures();
     verifyValueSetsRequiredOnly();
     verifyCodeSystemsAreUnambiguous();
 
@@ -88,6 +82,31 @@ void FhirResourceViewVerifier::verify()
     {
         FPExpect3(mVerfied, "FHIR-Structure-Repository verification failed", std::logic_error);
     }
+}
+
+void FhirResourceViewVerifier::verifyStructures()
+{
+    for (const auto& def : mRepo.definitionsByKey())
+    {
+        const auto* viewDef = mView?mView->findStructure(def.first):nullptr;
+        if (! mView || viewDef)
+        {
+            verifyStructure(*def.second);
+        }
+        if (viewDef)
+        {
+            // try to resolve without providing a version to enusre unambigouus or successful disambiguation
+            try {
+                (void)mView->findStructure({def.first.url, std::nullopt});
+            }
+            catch (const std::logic_error& ex)
+            {
+                TLOG(INFO) << ex.what();
+                mVerfied = false;
+            }
+        }
+    }
+
 }
 
 void FhirResourceViewVerifier::verifyStructure(const FhirStructureDefinition& def)

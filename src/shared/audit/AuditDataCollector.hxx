@@ -16,6 +16,9 @@
 
 #include <stdexcept>
 
+
+enum class PoPPTokenProofMethodPrefix;
+enum class PoPPTokenProofMethod;
 namespace model
 {
 class CountryCode;
@@ -47,6 +50,7 @@ public:
     AuditDataCollector& setConsentId(const std::string_view& consentId);
     AuditDataCollector& setCountryCode(const model::CountryCode& countryCode);
     AuditDataCollector& setVariable(const std::string& key, const std::string& value);
+    AuditDataCollector& setPoPPTokenProofMethod(PoPPTokenProofMethodPrefix method);
 
     // throws MissingAuditDataException if mandatory data is missing:
     model::AuditData createData() const;

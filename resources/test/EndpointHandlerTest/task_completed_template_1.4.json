@@ -36,6 +36,11 @@
     },
     {
       "use": "official",
+      "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_AccessCode",
+      "value": "777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
+    },
+    {
+      "use": "official",
       "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_Secret",
       "value": "d816aed610758a777a836dc4ae5c2a3748b38220b9f331d251240be4f7615da3"
     }
@@ -62,6 +67,12 @@
       "text": "Öffentliche Apotheke"
     }
   ],
+  "owner": {
+    "identifier": {
+      "system": "https://gematik.de/fhir/sid/telematik-id",
+      "value": "###OWNING_PHARMACY###"
+    }
+  },
   "input": [
     {
       "type": {

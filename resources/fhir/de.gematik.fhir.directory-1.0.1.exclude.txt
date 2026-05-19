@@ -1,0 +1,4 @@
+# in group de.gematik.fhir.directory-0.11.25+1.0.1+1.1.1
+package/CodeSystem-aerztliche-fachrichtungen-oid-url.json
+package/CodeSystem-kbv-cm-sfhir-bar2-wbo-oid-url.json
+package/CodeSystem-nicht-aerztliche-fachrichtungen-oid-url.json

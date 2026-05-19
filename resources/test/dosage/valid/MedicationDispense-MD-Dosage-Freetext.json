@@ -1,0 +1,36 @@
+{
+  "resourceType" : "MedicationDispense",
+  "id" : "MD-Dosage-Freetext",
+  "meta" : {
+    "profile" : ["http://ig.fhir.de/igs/medication/StructureDefinition/MedicationDispenseDgMP"]
+  },
+  "text" : {
+    "status" : "extensions",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: MedicationDispense MD-Dosage-Freetext</b></p><a name=\"MD-Dosage-Freetext\"> </a><a name=\"hcMD-Dosage-Freetext\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\"/><p style=\"margin-bottom: 0px\">Profile: <a href=\"StructureDefinition-MedicationDispenseDgMP.html\">Medication Dispense dgMP</a></p></div><p><b>Extension Definition for MedicationDispense.renderedDosageInstruction for Version 5.0</b>: </p><div><p>Morgens und abends je 1 Kapsel nach dem Essen</p>\n</div><blockquote><p><b>Generated Dosage Instructions Meta</b></p><ul><li>algorithmVersion: 1.0.1</li><li>language: de-DE</li></ul></blockquote><p><b>status</b>: Completed</p><p><b>medication</b>: <span title=\"Codes:\">Test Medication</span></p><p><b>subject</b>: Patient</p><h3>DosageInstructions</h3><table class=\"grid\"><tr><td style=\"display: none\">-</td><td><b>Text</b></td></tr><tr><td style=\"display: none\">*</td><td>Morgens und abends je 1 Kapsel nach dem Essen</td></tr></table></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction",
+    "valueMarkdown" : "Morgens und abends je 1 Kapsel nach dem Essen"
+  },
+  {
+    "extension" : [{
+      "url" : "algorithmVersion",
+      "valueString" : "1.0.1"
+    },
+    {
+      "url" : "language",
+      "valueCode" : "de-DE"
+    }],
+    "url" : "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta"
+  }],
+  "status" : "completed",
+  "medicationCodeableConcept" : {
+    "text" : "Test Medication"
+  },
+  "subject" : {
+    "display" : "Patient"
+  },
+  "dosageInstruction" : [{
+    "text" : "Morgens und abends je 1 Kapsel nach dem Essen"
+  }]
+}

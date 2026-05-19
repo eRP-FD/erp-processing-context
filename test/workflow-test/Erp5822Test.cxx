@@ -35,12 +35,12 @@ public:
             task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode,
                                 std::get<0>(makeQESBundle(kvnr, task->prescriptionId(), model::Timestamp::now()))));
         ASSERT_TRUE(task.has_value());
-        std::optional<Communication> infoReq;
-        ASSERT_NO_FATAL_FAILURE(infoReq = communicationPost(model::Communication::MessageType::DispReq, *task,
+        std::optional<Communication> dispReq1;
+        ASSERT_NO_FATAL_FAILURE(dispReq1 = communicationPost(model::Communication::MessageType::DispReq, *task,
                                                             ActorRole::Insurant, kvnr, ActorRole::Pharmacists,
                                                             telematikIdApotheke,
                                                             R"({"version": 1, "supplyOptionsType": "onPremise"})"));
-        ASSERT_TRUE(infoReq.has_value());
+        ASSERT_TRUE(dispReq1.has_value());
         std::optional<Communication> reply;
         ASSERT_NO_FATAL_FAILURE(reply = communicationPost(model::Communication::MessageType::Reply,
                         *task,
@@ -48,13 +48,13 @@ public:
                         ActorRole::Insurant, kvnr,
                         R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo, wir haben das Medikament vorraetig."})"));
         ASSERT_TRUE(reply.has_value());
-        std::optional<Communication> dispReq;
-        ASSERT_NO_FATAL_FAILURE(dispReq = communicationPost(model::Communication::MessageType::DispReq,
+        std::optional<Communication> dispReq2;
+        ASSERT_NO_FATAL_FAILURE(dispReq2 = communicationPost(model::Communication::MessageType::DispReq,
                         *task,
                         ActorRole::Insurant, kvnr,
                         ActorRole::Pharmacists, telematikIdApotheke,
                         R"({"version":1,"supplyOptionsType":"delivery","hint":"Ich will bestellen und habe ein E-Rezept"})"));
-        ASSERT_TRUE(dispReq.has_value());
+        ASSERT_TRUE(dispReq2.has_value());
     }
 
     void checkComms(const JWT& jwt, size_t expectedCount)//NOLINT(readability-function-cognitive-complexity)
@@ -106,7 +106,7 @@ public:
     }
 
     JWT jwtArzt() const override { return jwtFromResource("claims_arzt.json"); }
-    JWT jwtApotheke() const override { return jwtFromResource("claims_apotheke.json"); }
+    JWT jwtApotheke(const std::string& = "") const override { return jwtFromResource("claims_apotheke.json"); }
     JWT jwtVersicherter() const override { return jwtFromResource("claims_versicherter.json"); }
 
     ResourceManager& resourceManager = ResourceManager::instance();

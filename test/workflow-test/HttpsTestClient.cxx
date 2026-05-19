@@ -6,14 +6,14 @@
  */
 
 #include "HttpsTestClient.hxx"
-
+#include "fhirtools/util/Gsl.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
+#include "mock/crypto/MockCryptography.hxx"
 #include "shared/common/Constants.hxx"
 #include "shared/crypto/Certificate.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/Expect.hxx"
-#include "fhirtools/util/Gsl.hxx"
-#include "mock/crypto/MockCryptography.hxx"
 
 
 std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidator>, Target target) //NOLINT[performance-unnecessary-value-param]
@@ -28,7 +28,7 @@ std::unique_ptr<TestClient> HttpsTestClient::factory(std::shared_ptr<XmlValidato
             .connectionTimeout = Constants::httpConnectTimeout,
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
-                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+                .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()
             }
         })};
     TVLOG(1) << "using: https://" << serverHost << ":" << serverPort;

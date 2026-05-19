@@ -61,9 +61,9 @@ void GetAllMedicationDispenseHandler::handleRequest(PcSessionContext& session)
     // GEMREQ-end A_19406-01#getAll-2
     const auto identifierSearchArgument = arguments->getSearchArgument("identifier");
 
-    A_24443.start("No pagination");
+    A_24443_01.start("No pagination");
     arguments->disablePagingArgument();
-    A_24443.finish();
+    A_24443_01.finish();
 
     // GEMREQ-start A_19406-01#getAll-3
     A_19406_01.start("Filter MedicationDispense on KVNR of the insured");

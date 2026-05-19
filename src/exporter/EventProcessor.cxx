@@ -28,13 +28,16 @@ decltype(auto) EventProcessor::autocommit(FuncT&& function)
     return mServiceContext->transaction(TransactionMode::autocommit, std::forward<FuncT>(function));
 }
 
-EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext, IEpaAccountLookup& epaAccountLookup)
-    : jsonLog([] {
+EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext,
+                               IEpaAccountLookup& epaAccountLookup, const std::string& xContextId)
+    : jsonLog([this] {
         JsonLog jlog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false);
         if (tlogContext.has_value())
         {
-            jlog << KeyValue("x-request-id", *tlogContext);
+            jlog << KeyValue("x_request_id", *tlogContext);
         }
+        jlog << KeyValue("processor", "epa4all");
+        jlog << KeyValue("x_context", mXContext);
         return jlog;
     })
     , mServiceContext(serviceContext)
@@ -45,6 +48,8 @@ EventProcessor::EventProcessor(const std::shared_ptr<MedicationExporterServiceCo
           Configuration::instance().getIntValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES))
     , mMaxRetryAttempts(Configuration::instance().getIntValue(
           ConfigurationKey::MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER))
+    , mXContext(xContextId)
+    , mLogContext(xContextId)
 {
 }
 
@@ -52,8 +57,9 @@ bool EventProcessor::process()
 {
     // Workflow step 1
     const auto kvnr = autocommit([&](auto& db) {
-        DurationConsumerGuard durationConsumerGuard{
-            "none", mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()};
+        const auto durationConsumerGuard =
+            DurationConsumerGuard{tlogContext.value_or("none"), mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()}
+                .withContextId(mXContext);
         return db.processNextKvnr();
     });
 
@@ -100,6 +106,14 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
 
         removeEuMedicationDispenseEvents(kvnr, events);
 
+        for (auto& taskEvent : events)
+        {
+            if (taskEvent)
+            {
+                taskEvent->setXContextId(mXContext);
+            }
+        }
+
         if (! events.empty())
         {
             const auto& firstEvent = *events.front();
@@ -108,6 +122,7 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
             auto durationConsumerGuard{std::make_unique<DurationConsumerGuard>(
                 firstEvent.getXRequestId(),
                 mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs())};
+            durationConsumerGuard->withContextId(mXContext);
             // Workflow step 3 - decodedKvnr = decrypt(events.front()).kvnr
             auto epaAccount = ePaAccountLookup(kvnr, firstEvent);
             durationConsumerGuard.reset();
@@ -136,7 +151,7 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
                 case EpaAccount::Code::unknown:
                     // Workflow step 4d
                     TVLOG(1) << "account lookup unknown with given kvnr";
-                    mergeFailingEpas(std::move(epaAccount.failingHosts));
+                    mServiceContext->mergeFailingEpas(std::move(epaAccount.failingHosts));
                     processEpaUnknown(kvnr);
                     break;
             }
@@ -234,8 +249,10 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
     for (const auto& event : events)
     {
         ScopedLogContext scopedLogContext{event->getXRequestId()};
-        DurationConsumerGuard durationConsumerGuard{
-            event->getXRequestId(), mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()};
+        const auto durationConsumerGuard =
+            DurationConsumerGuard{event->getXRequestId(),
+                                  mServiceContext->getRuntimeConfigurationGetter()->getMetricsLogThresholdsMs()}
+                .withContextId(mXContext);
         Expect(event, "No or bad events for kvnr");
 
         // Workflow step 6 - check deadletter
@@ -250,7 +267,7 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
             });
             TVLOG(1) << "marked events as deadletterQueue: " << skipped;
-            jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+            jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue because of previous task event in state DLQ")
                       << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                       << KeyValue("prescription_id", event->getPrescriptionId().toString());
             continue;
@@ -304,7 +321,7 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                     return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
                 });
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
-                jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue")
+                jsonLog() << kvnr << KeyValue("event", "Setting all events for task in DLQ because of error in processing current task event")
                           << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                           << KeyValue("prescription_id", event->getPrescriptionId().toString());
                 break;
@@ -393,22 +410,15 @@ void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollecto
     }
 }
 
-void EventProcessor::mergeFailingEpas(std::set<std::string>&& failingEpas)
-{
-    const std::unique_lock lock(mFailingEpasMutex);
-    mFailingEpas.merge(std::move(failingEpas));
-}
-
 void EventProcessor::checkDeactivateThrottle(const std::string& hostNotFailing)
 {
     TVLOG(1) << "checkDeactivateThrottle: " << hostNotFailing;
-    const std::unique_lock lock(mFailingEpasMutex);
-    if (mFailingEpas.empty())
+    if (mServiceContext->failingEpasEmpty())
     {
         return;
     }
-    mFailingEpas.erase(hostNotFailing);
-    if (mFailingEpas.empty())
+    mServiceContext->removeFailingEpa(hostNotFailing);
+    if (mServiceContext->failingEpasEmpty())
     {
         auto configSetter = mServiceContext->getRuntimeConfigurationSetter();
         switch (configSetter->throttleMode())
@@ -528,8 +538,9 @@ EventProcessor::runloopWorker(RunLoopScheduler& scheduler,
                 continue;
             }
 
-            EpaAccountLookup accountLookup(*serviceCtx);
-            if (EventProcessor{serviceCtx, accountLookup}.process())
+            std::string xContextId = Uuid{}.toString();
+            EpaAccountLookup accountLookup(*serviceCtx, xContextId);
+            if (EventProcessor{serviceCtx, accountLookup, xContextId}.process())
             {
                 if (scheduler.checkIsThrottled(serviceCtx))
                 {

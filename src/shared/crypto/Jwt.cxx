@@ -88,7 +88,7 @@ std::string JWT::serialize(void) const
     return mHeader + separator + mPayload + separator + mSignature;
 }
 
-// GEMREQ-start A_19439#verify
+// GEMREQ-start A_19439#verify, A_20504#verify
 void JWT::verify(const shared_EVP_PKEY& publicKey) const
 {
     checkJwtFormat();
@@ -97,9 +97,9 @@ void JWT::verify(const shared_EVP_PKEY& publicKey) const
     checkIfExpired();
     verifySignature(publicKey);
 }
-// GEMREQ-end A_19439#verify
+// GEMREQ-end A_19439#verify, A_20504#verify
 
-void JWT::checkJwtFormat() const
+void JWT::checkJwtFormat(const std::string& expectedAlg /* = "BP256R1" */) const
 {
     A_19993_01.start("Check JWT structure according to gemSpec_IDP_FD chapter 6.");
     // GEMREQ-start A_20362#decodeformat
@@ -112,19 +112,7 @@ void JWT::checkJwtFormat() const
     }
 
     // 7.2.3, 7.2.4
-    rapidjson::Document headerDict{};
-    std::string decodedHeader{};
-    try
-    {
-        decodedHeader = Base64::decodeToString(mHeader);
-    }
-    catch (const std::exception&)
-    {
-        // Handle invalid Base64 encoded string as JwtInvalidRfcFormatException in order to comply with A_19131.
-        Expect3(false, "Pre-verification failed - JWT violates RFC 7519.", JwtInvalidRfcFormatException);
-    }
-    const rapidjson::ParseResult headerResult = headerDict.Parse(decodedHeader);
-    Expect3(!headerResult.IsError(), "Pre-verification failed - JWT violates RFC 7519.", JwtInvalidRfcFormatException);
+    const rapidjson::Document headerDict = headerDocument();
 
     // 7.2.5
     if (!headerDict.HasMember("alg"))
@@ -132,7 +120,7 @@ void JWT::checkJwtFormat() const
         Fail2("Pre-verification failed - Missing signature algorithm name.", JwtInvalidRfcFormatException);
     }
     const std::string alg = headerDict["alg"].GetString();
-    if (alg != "BP256R1")
+    if (alg != expectedAlg)
     {
         Fail2("Pre-verification failed - unsupported signature algorithm requested.", JwtInvalidSignatureException);
     }
@@ -149,13 +137,13 @@ void JWT::checkJwtFormat() const
     A_19993_01.finish();
 }
 
-// GEMREQ-start A_20365#verifySignatureStart
+// GEMREQ-start A_20365#verifySignatureStart, A_20504#checkPublicKeyFormat
 void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
 {
     Expect(publicKey != nullptr, "Missing public key");
     Expect(EVP_PKEY_id(publicKey) == EVP_PKEY_EC, "Wrong pubkey information");
     Expect(EVP_PKEY_bits(publicKey) == 256, "Wrong pubkey bit length");
-    // GEMREQ-end A_20365#verifySignatureStart
+    // GEMREQ-end A_20365#verifySignatureStart, A_20504#checkPublicKeyFormat
     // Create digest and fill with data.
     auto ctx = shared_EVP_MD_CTX::make();
     Expect(ctx != nullptr, "Can't create context");
@@ -176,10 +164,12 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     const auto binarySignature = Base64::decodeToString(mSignature);
     // Two number buffers (r and s values), 2x32 bytes.
     A_20504.start("Check for problematic/corrupted signature.");
+    // GEMREQ-start A_20504#coordinates
     if (binarySignature.size() != 2ul * veclen)
     {
         Fail2("Verification failed - invalid binary signature.", JwtInvalidSignatureException);
     }
+    // GEMREQ-end A_20504#coordinates
     A_20504.finish();
     std::copy_n(std::begin(binarySignature), rvec.size(), std::begin(rvec));
     std::copy_n(std::begin(binarySignature) + rvec.size(), svec.size(), std::begin(svec));
@@ -205,15 +195,19 @@ void JWT::verifySignature(const shared_EVP_PKEY& publicKey) const
     // GEMREQ-start A_20365#verifySignatureFinal
     A_20365_01.start("Verify token signature with the given public key.");
     A_20504.start("Check for valid signature.");
+    // GEMREQ-start A_20504#validity
     // Verification
     if (EVP_DigestVerifyFinal(ctx, sig_der_bytes.data(), gsl::narrow<size_t>(siglen)) != 1)
     {
         Fail2("Verification failed - invalid signature or payload.", JwtInvalidSignatureException);
     }
+    // GEMREQ-end A_20504#validity
     A_20504.finish();
     A_20365_01.finish();
     // GEMREQ-end A_20365#verifySignatureFinal
 }
+// GEMREQ-end A_20504#verifySignature
+
 
 std::optional<std::string> JWT::stringForKey(const rapidjson::Document& doc,
                                              const std::string_view& key) const
@@ -247,6 +241,31 @@ std::optional<double> JWT::doubleForKey(const rapidjson::Document& doc,
         return doc[keyRef.s].GetDouble();
     }
     return std::nullopt;
+}
+
+rapidjson::Document JWT::headerDocument() const
+{
+    // GEMREQ-start A_20362#decodeheader
+    rapidjson::Document headerDict{};
+    std::string decodedHeader{};
+    try
+    {
+        decodedHeader = Base64::decodeToString(mHeader);
+    }
+    catch (const std::exception&)
+    {
+        // Handle invalid Base64 encoded string as JwtInvalidRfcFormatException in order to comply with A_19131.
+        Expect3(false, "Pre-verification failed - JWT violates RFC 7519.", JwtInvalidRfcFormatException);
+    }
+    const rapidjson::ParseResult headerResult = headerDict.Parse(decodedHeader);
+    Expect3(!headerResult.IsError(), "Pre-verification failed - JWT violates RFC 7519.", JwtInvalidRfcFormatException);
+    // GEMREQ-end A_20362#decodeheader
+    return headerDict;
+}
+
+const rapidjson::Document& JWT::claimsDocument() const
+{
+	return mClaims;
 }
 
 std::optional<std::int64_t> JWT::intForClaim(const std::string_view& claimName) const

@@ -63,16 +63,14 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
     using oids = std::initializer_list<std::string_view>;
 
     // For GET /Task see gemSpec_FD_eRp_V1.1.1, 6.1.1
-    A_21558_01.start("Register the allowed professionOIDs");
+    A_21558_02.start("Register the allowed professionOIDs");
     handlerManager.onGetDo("/Task",
             std::make_unique<GetAllTasksHandler>(oids{
                     oid_versicherter,
                     oid_oeffentliche_apotheke,
                     oid_krankenhausapotheke}))
-        .setErpUseCase(
-        std::map<InnerRequestRole, bde::UseCase>{{InnerRequestRole::pharmacy, bde::GetTasksPharmacy_UC_4_12},
-                                                 {InnerRequestRole::patient, bde::GetTasksPatient_UC_3_1}});
-    A_21558_01.finish();
+        .setErpUseCase(bde::NoUseCase{});// set directly in handleRequest.
+    A_21558_02.finish();
 
     A_19113_02.start("Register the allowed professionOIDs");
     // GEMREQ-start A_19113
@@ -365,7 +363,7 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
                       "changing multiple resources in one request via a single request");
         A_27549.start("Only 'oid_versicherter' users are allowed to call the operation");
         handlerManager.onPatchDo("/Task/{id}", std::make_unique<eu::PatchTaskHandler>(euAccessPermissionOIDs))
-            .setErpUseCase(bde::PatchTask_UC_PATCH_TASK);
+            .setErpUseCase(bde::PatchTask_UC_3_19);
         A_27549.finish();
         A_27548.finish();
 

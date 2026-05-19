@@ -20,6 +20,7 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <fmt/format.h>
 #include <gtest/gtest.h>
 
 
@@ -73,9 +74,9 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     const auto resource = ResourceManager::instance().getStringResource(
         "test/issues/ERP-8881/Malformed_URL_in_Communication_Extension.json");
     const auto view = Fhir::instance()
-                          .structureRepository(model::Timestamp::fromGermanDate("2024-10-01"))
+                          .structureRepository(model::Timestamp::fromGermanDate("2026-07-01"))
                           .match(std::string{model::resource::structure_definition::communicationReply},
-                                 ResourceTemplates::Versions::GEM_ERP_1_2);
+                                 ResourceTemplates::Versions::GEM_ERP_1_6_2);
     ASSERT_NE(view, nullptr);
     std::optional<model::Bundle> communication;
     EXPECT_NO_THROW(communication = model::Bundle::fromJsonNoValidation(resource));
@@ -84,8 +85,10 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     validationResults.dumpToLog();
     EXPECT_EQ(validationResults.highestSeverity(), fhirtools::Severity::error);
 
-    std::string expected = "Bundle.entry[0].resource{Communication}.payload[0].extension[0]: error: element doesn't "
-                           "match any slice in closed slicing (from profile: "
-                           "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2); ";
+    std::string expected =
+        fmt::format("Bundle.entry[0].resource{{Communication}}.payload[0].extension[0]: error: element doesn't "
+                    "match any slice in closed slicing (from profile: "
+                    "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|{}); ",
+                    to_string(ResourceTemplates::Versions::GEM_ERP_1_6_2));
     EXPECT_EQ(expected, validationResults.summary(fhirtools::Severity::error));
 }

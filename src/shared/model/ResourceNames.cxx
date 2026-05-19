@@ -34,8 +34,6 @@ std::optional<std::string_view> model::profile(ProfileType profileType)
             return sd::binary;
         case GEM_ERP_PR_Communication_DispReq:
             return sd::communicationDispReq;
-        case GEM_ERP_PR_Communication_InfoReq:
-            return sd::communicationInfoReq;
         case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
             return sd::communicationChargChangeReq;
         case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
@@ -157,7 +155,6 @@ std::optional<model::ProfileType> model::ProfileInfo::findType()
         {sd::binary, GEM_ERP_PR_Binary},
         {sd::communicationDiGA, GEM_ERP_PR_Communication_DiGA},
         {sd::communicationDispReq, GEM_ERP_PR_Communication_DispReq},
-        {sd::communicationInfoReq, GEM_ERP_PR_Communication_InfoReq},
         {sd::communicationChargChangeReq, GEM_ERPCHRG_PR_Communication_ChargChangeReq},
         {sd::communicationChargChangeReply, GEM_ERPCHRG_PR_Communication_ChargChangeReply},
         {sd::communicationReply, GEM_ERP_PR_Communication_Reply},

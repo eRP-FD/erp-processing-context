@@ -33,11 +33,12 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     auditDataCollector.setPrescriptionId(erpEvent.getPrescriptionId());
     auditDataCollector.setInsurantKvnr(erpEvent.getKvnr());
 
-    BDEMessage::Data data;
-    data.prescriptionId = erpEvent.getPrescriptionId().toString();
-    data.lastModified = erpEvent.getLastModified();
-    data.hashedKvnr = model::HashedKvnr(erpEvent.getHashedKvnr());
-    mMedicationClient->addLogData(data);
+    BDEMessage message(BDEMessage::Data{
+            .lastModified = erpEvent.getLastModified(),
+            .hashedKvnr = model::HashedKvnr(erpEvent.getHashedKvnr()),
+            .prescriptionId = erpEvent.getPrescriptionId().toString(),
+            .xContextId = erpEvent.getXRequestId()
+        });
 
     std::optional<model::AuditEventId> successAuditType;
     std::optional<model::AuditEventId> failedAuditType;
@@ -53,7 +54,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
                 successAuditType = model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP;
                 failedAuditType = model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed;
                 A_25962.finish();
-                outcome = ProvidePrescription::process(mMedicationClient.get(), dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(erpEvent));
+                outcome = ProvidePrescription::process(mMedicationClient.get(), dynamic_cast<const model::ProvidePrescriptionTaskEvent&>(erpEvent), message);
                 break;
             // Workflow step 9 - ePa call cancelPrescription
             case model::TaskEvent::UseCase::cancelPrescription:
@@ -62,7 +63,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
                 successAuditType = model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP;
                 failedAuditType = model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed;
                 A_25962.finish();
-                outcome = CancelPrescription::process(mMedicationClient.get(), dynamic_cast<const model::CancelPrescriptionTaskEvent&>(erpEvent));
+                outcome = CancelPrescription::process(mMedicationClient.get(), dynamic_cast<const model::CancelPrescriptionTaskEvent&>(erpEvent), message);
                 break;
             // Workflow step 10 - ePa call ProvideDispensation
             case model::TaskEvent::UseCase::provideDispensation:
@@ -71,7 +72,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
                 successAuditType = model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP;
                 failedAuditType = model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed;
                 A_25962.finish();
-                outcome = ProvideDispensation::process(mMedicationClient.get(), dynamic_cast<const model::ProvideDispensationTaskEvent&>(erpEvent));
+                outcome = ProvideDispensation::process(mMedicationClient.get(), dynamic_cast<const model::ProvideDispensationTaskEvent&>(erpEvent), message);
                 break;
             case model::TaskEvent::UseCase::cancelDispensation:
                 A_25962.start("Die Löschinformation für die Medikamentenabgabe wurde in die Patientenakte übertragen. / Die Löschinformation für die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");

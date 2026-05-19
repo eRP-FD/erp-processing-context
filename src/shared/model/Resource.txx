@@ -9,6 +9,7 @@
 #include "fhirtools/validator/FhirPathValidator.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/DosageDgMP.hxx"
 #include "shared/model/Extension.hxx"
 #include "shared/model/OperationOutcome.hxx"
 #include "shared/model/Parameters.hxx"

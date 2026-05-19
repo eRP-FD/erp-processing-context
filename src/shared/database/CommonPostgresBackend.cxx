@@ -26,10 +26,8 @@ namespace
 }
 
 
-CommonPostgresBackend::CommonPostgresBackend(PostgresConnection& connection, const std::string_view& connectionString,
-                                             TransactionMode mode)
+CommonPostgresBackend::CommonPostgresBackend(PostgresConnection& connection, TransactionMode mode)
 {
-    connection.setConnectionString(connectionString);
     connection.connectIfNeeded();
     mTransaction = connection.createTransaction(mode);
 }

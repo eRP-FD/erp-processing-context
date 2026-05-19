@@ -23,4 +23,9 @@ function(fix_parameters_part_type file)
     endif()
 endfunction()
 
-
+if (DEFINED ERP_FIX_PARAMETERS_PART_TYPE_FILES)
+    list(TRANSFORM ERP_FIX_PARAMETERS_PART_TYPE_FILES PREPEND "${FHIR_CURRENT_PACKAGE_DIR}/")
+    foreach(file ${ERP_FIX_PARAMETERS_PART_TYPE_FILES})
+        fix_parameters_part_type("${file}")
+    endforeach()
+endif()

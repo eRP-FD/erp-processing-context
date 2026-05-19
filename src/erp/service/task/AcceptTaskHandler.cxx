@@ -66,9 +66,9 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
     task.setSecret(ByteHelper::toHex(secret));
 
     // GEMREQ-start A_24174#store-telematikid
-    A_24174.start("store Task.owner");
+    A_24174_01.start("store Task.owner");
     task.setOwner(*telematikId),
-    A_24174.finish();
+    A_24174_01.finish();
     // GEMREQ-end A_24174#store-telematikid
 
     task.updateLastUpdate();

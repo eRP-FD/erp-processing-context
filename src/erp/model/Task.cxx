@@ -487,16 +487,7 @@ void Task::setStatus(Status newStatus, model::Timestamp lastStatusChange)
 void Task::setKvnr(const Kvnr& kvnr)
 {
     ModelExpect(!hasValue(kvnrPointer), "KVNR cannot be set multiple times.");
-    ModelExpect(kvnr.getType() != model::Kvnr::Type::unspecified, "Unspecified kvnr type not allowed");
     setValue(kvnrPointer, kvnr.id());
-    const auto& profileName = getProfileName();
-    if (profileName && fhirtools::DefinitionKey{*profileName}.version >= model::version::GEM_ERP_1_4)
-    {
-        // GEM_ERP_PR_Task V1.4 allows only GKV
-        // https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.4.3/files/2550145
-        setValue(kvnrSysPointer, model::resource::naming_system::gkvKvid10);
-        return;
-    }
     setValue(kvnrSysPointer, kvnr.namingSystem());
 }
 

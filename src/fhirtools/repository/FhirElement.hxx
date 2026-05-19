@@ -50,7 +50,7 @@ public:
         auto operator<=>(const Cardinality&) const = default;
         ValidationResults check(uint32_t count, std::string_view elementFullPath, std::string_view subElementName,
                                 const FhirStructureDefinition* profile, const std::shared_ptr<const Element>& element,
-                                const std::string& typeId, bool isSlice) const;
+                                const std::string& typeId, bool isSlice, const ValidatorOptions& options) const;
         bool restricts(const Cardinality&) const;
     private:
         bool isArrayConstraint() const;

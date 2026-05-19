@@ -6,12 +6,12 @@
  */
 
 #include "erp/service/task/CreateTaskHandler.hxx"
-
+#include "erp/database/Database.hxx"
+#include "erp/model/Task.hxx"
+#include "erp/model/WorkflowParameters.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/SecureRandomGenerator.hxx"
-#include "erp/database/Database.hxx"
-#include "erp/model/WorkflowParameters.hxx"
-#include "erp/model/Task.hxx"
+#include "shared/model/KbvMedicationBase.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/TLog.hxx"
 
@@ -56,6 +56,10 @@ void CreateTaskHandler::handleRequest (PcSessionContext& session)
     }();
     ErpExpect(prescriptionType.has_value(), HttpStatus::BadRequest, "Invalid workFlowType in incoming parameters");
     A_19112.finish();
+
+    const auto tRezeptFeatureEnabled = Configuration::instance().getBoolValue(ConfigurationKey::FEATURE_TREZEPT);
+    ErpExpect(! model::isTRezept(*prescriptionType) || tRezeptFeatureEnabled, HttpStatus::BadRequest,
+              "Erstellung von Tasks mit flowtype 166 noch nicht zulässig");
 
     // GEMREQ-start A_19021-02
     A_19021_02.start("generate 256Bit random access code and add to task");

@@ -27,3 +27,14 @@ HttpClient::HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::stri
                                                      .tlsParameters = std::nullopt})
 {
 }
+
+
+HttpClient::HttpClient(const boost::asio::ip::tcp::endpoint& ep, const ConnectionParameters& params)
+    : ClientBase<TcpStream>(ep, params)
+{
+}
+
+HttpClient::HttpClient(const ConnectionParameters& params)
+    : ClientBase<TcpStream>(params)
+{
+}

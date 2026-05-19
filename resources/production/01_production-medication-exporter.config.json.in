@@ -27,7 +27,6 @@
     "ocsp": {
       "gracePeriodEpa": "3600"
     },
-    "http-proxy": "",
     "trusted-cas": "",
     "fhir-vzd-client": {
       "secret": "",
@@ -60,7 +59,6 @@
       "resolveTimeoutMilliseconds": "2000",
       "dnsRefreshInterval": "18:00:00",
       "endpoint": "/information/api/v1/ehr/consentdecisions",
-      "userAgent": "ERP-FD/@ERP_RELEASE_VERSION@",
       "erpSubmissionFunctionId": "erp-submission",
       "epaAsFqdn": [],
       "poolSizePerFqdn": "5",
@@ -120,13 +118,22 @@
           ]
         },
         {
-          "id": "erp.t-prescription-1.1.0-ballot3",
+          "id": "erp.t-prescription-1.1",
           "valid-from": "2026-07-01",
           "groups": [
-            "de.gematik.erp.t-prescription-1.1.0-ballot3"
+            "de.gematik.erp.t-prescription-1.1"
+          ]
+        },
+        {
+          "id": "epa.medication-1.3.2",
+          "valid-from": "2026-07-01",
+          "groups": [
+            "de.gematik.epa.medication-1.3.2"
           ]
         }
       ]
     }
-  }
+  },
+  "https-proxies": [],
+  "http-proxies": []
 }

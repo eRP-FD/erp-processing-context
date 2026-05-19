@@ -58,11 +58,10 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr,
-        const std::string& headerFieldHost = "") const override
+        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr) const override
     {
         increaseCounter(url);
-        return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn, nullptr, headerFieldHost);
+        return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn, nullptr);
     }
 
 
@@ -73,11 +72,10 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr,
-        const std::string& headerFieldHost = "") const override
+        const boost::asio::ip::tcp::endpoint* /*ep*/ = nullptr) const override
     {
         increaseCounter(url.toString());
-        return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn, nullptr, headerFieldHost);
+        return UrlRequestSenderMock::doSend(url, method, body, contentType, forcedCiphers, trustCn, nullptr);
     }
 
 private:
@@ -117,16 +115,16 @@ public:
         mCaDerPathGuard.reset();
     }
 
-    PcServiceContext mContext{StaticData::makePcServiceContext()};
 };
 
 
 TEST_F(CFdSigErpManagerTest, tslManagerSet_NoOcspConnection_fail)//NOLINT(readability-function-cognitive-complexity)
 {
+    PcServiceContext context{StaticData::makePcServiceContext()};
     // default mocking does not support C.FD.SIG eRP Certificate OCSP request
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>();
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
     EXPECT_TSL_ERROR_THROW(
         (void)cFdSigErpManager.getCertificate(),
         {TslErrorCode::OCSP_NOT_AVAILABLE},
@@ -150,6 +148,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_NoOcspConnection_fail)//NOLINT(readab
 
 TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function-cognitive-complexity)
 {
+    PcServiceContext context{StaticData::makePcServiceContext()};
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
 
@@ -162,7 +161,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
         {
             {ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
     const auto responseData = cFdSigErpManager.getOcspResponseData(false);
     EXPECT_NE(cFdSigErpManager.getOcspResponse(), nullptr);
     EXPECT_EQ(cFdSigErpManager.getLastOcspResponseTimestamp(), model::Timestamp(responseData.producedAt).toXsDateTime());
@@ -183,6 +182,7 @@ TEST_F(CFdSigErpManagerTest, tslManagerSet_success)//NOLINT(readability-function
 TEST_F(CFdSigErpManagerTest, timerUpdate_success)
 {
     EnvironmentVariableGuard ocspGracePeriodGuard("ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL", "1");
+    PcServiceContext context{StaticData::makePcServiceContext()};
 
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
@@ -195,7 +195,7 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
         {},
         {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     // 1 URLs for TSL + 1 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
     ASSERT_EQ(requestSender->getCounterMapSize(), 4);
@@ -209,6 +209,7 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_success)
 TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
 {
     EnvironmentVariableGuard ocspGracePeriodGuard("ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL", "1");
+    PcServiceContext context{StaticData::makePcServiceContext()};
 
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
@@ -221,7 +222,7 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
         {},
         {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     // 1 URLs for TSL + 1 URLs for BNA + 1 URL for TSL Signer OCSP-Request + 1 URL for C.FD.SIG eRP OCSP-Request
     ASSERT_EQ(requestSender->getCounterMapSize(), 4);
@@ -249,6 +250,7 @@ TEST_F(CFdSigErpManagerTest, timerUpdate_OCSP_fails_validation_success)
 
 TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-function-cognitive-complexity)
 {
+    PcServiceContext context{StaticData::makePcServiceContext()};
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
         CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
 
@@ -261,7 +263,7 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-functio
         {},
         {{ocspUrl, {}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     EXPECT_TSL_ERROR_THROW(
         cFdSigErpManager.getOcspResponseData(true),
@@ -278,6 +280,7 @@ TEST_F(CFdSigErpManagerTest, ocspStatusUnknown_fail)//NOLINT(readability-functio
 
 TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
 {
+    PcServiceContext context{StaticData::makePcServiceContext()};
     LogTestBase::TestLogSink logSink;
     EnvironmentVariableGuard ocspGracePeriodGuard(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL, "10");
 
@@ -290,7 +293,7 @@ TEST_F(CFdSigErpManagerTest, signatureStatusValid_withinGracePeriod)
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
         requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     // health check
     ASSERT_NO_THROW(cFdSigErpManager.healthCheck());
@@ -327,6 +330,7 @@ TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
     using namespace std::chrono_literals;
     LogTestBase::TestLogSink logSink;
     EnvironmentVariableGuard ocspGracePeriodGuard(ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL, "2");
+    PcServiceContext context{StaticData::makePcServiceContext()};
 
     std::shared_ptr<UrlRequestSenderMock> requestSender =
     CFdSigErpTestHelper::createRequestSender<UrlRequestSenderMock>();
@@ -337,7 +341,7 @@ TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
     std::shared_ptr<TslManager> tslManager = TslTestHelper::createTslManager<TslManager>(
         requestSender, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     std::timed_mutex completedMtx;
     completedMtx.lock();
@@ -367,6 +371,7 @@ TEST_F(CFdSigErpManagerTest, noBlockDuringRequest)
 
 TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate)
 {
+    PcServiceContext context{StaticData::makePcServiceContext()};
     std::shared_ptr<CountingUrlRequestSenderMock> requestSender =
     CFdSigErpTestHelper::createRequestSender<CountingUrlRequestSenderMock>();
 
@@ -378,7 +383,7 @@ TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate)
         {},
         {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
 
-    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, mContext.getHsmPool());
+    CFdSigErpManager cFdSigErpManager(Configuration::instance(), *tslManager, context.getHsmPool());
 
     ASSERT_EQ(requestSender->getCounter(ocspUrl), 1);
 
@@ -387,7 +392,7 @@ TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate)
         auto workGuard = boost::asio::make_work_guard(ioContext);
         ioContext.run();
     }};
-    auto blobCache = mContext.getBlobCache();
+    auto blobCache = context.getBlobCache();
     blobCache->registerCacheUpdateCallback([&]{cFdSigErpManager.updateOcspResponseCacheOnBlobCacheUpdate();});
     blobCache->startRefresher(ioContext, std::chrono::milliseconds{1000});
 

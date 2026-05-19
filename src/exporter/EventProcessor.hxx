@@ -13,8 +13,8 @@
 #include "database/MedicationExporterDatabaseFrontendInterface.hxx"
 #include "model/EventKvnr.hxx"
 #include "shared/audit/AuditDataCollector.hxx"
-#include "shared/util/JsonLog.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/JsonLog.hxx"
 
 #include <boost/asio/awaitable.hpp>
 
@@ -35,7 +35,7 @@ class EventProcessor : public EventProcessorInterface
 {
 public:
     explicit EventProcessor(const std::shared_ptr<MedicationExporterServiceContext>& serviceContext,
-                   IEpaAccountLookup& epaAccountLookup);
+                            IEpaAccountLookup& epaAccountLookup, const std::string& xContextId);
     bool process() override;
     virtual void processOne(const model::EventKvnr& kvnr);
     virtual bool checkRetryCount(const model::EventKvnr& kvnr);
@@ -64,7 +64,6 @@ private:
                                           std::vector<std::unique_ptr<model::TaskEvent>>& events);
 
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
-    void mergeFailingEpas(std::set<std::string>&& failingEpas);
     void checkDeactivateThrottle(const std::string& hostNotFailing);
 
     std::function<JsonLog()> jsonLog;
@@ -73,8 +72,8 @@ private:
     std::chrono::seconds mRetryDelaySeconds;
     std::chrono::minutes mHealthRecordRelocationWaitMinutes;
     int mMaxRetryAttempts;
-    std::mutex mFailingEpasMutex;
-    std::set<std::string> mFailingEpas;
+    std::string mXContext{Uuid{}.toString()};
+    ScopedLogContext mLogContext;
 };
 
 #endif//#ifndef ERP_PROCESSING_CONTEXT_EXPORTER_EVENTPROCESSOR_HXX

@@ -17,6 +17,7 @@ include_directories(
 add_library(erp-hsm-tpm-mock OBJECT)
 target_sources(erp-hsm-tpm-mock
     PRIVATE
+        client/TlsCertificateVerifierNoVerificationImplementation.cxx
         crypto/MockCryptography.cxx
         hsm/HsmMockClient.cxx
         hsm/HsmMockFactory.cxx
@@ -49,6 +50,7 @@ target_link_libraries(erp-hsm-tpm-mock
     PUBLIC
         boost::boost
         date::date
+        fmt::fmt-header-only
         glog::glog
         gsl::gsl-lite
         PostgreSQL::PostgreSQL

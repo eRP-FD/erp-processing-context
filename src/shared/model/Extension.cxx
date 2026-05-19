@@ -6,7 +6,6 @@
  */
 
 #include "shared/model/Extension.txx"
-
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Expect.hxx"

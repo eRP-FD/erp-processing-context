@@ -6,20 +6,19 @@
 
 
 #include "shared/network/client/CoHttpsClient.hxx"
-
 #include "shared/erp-serverinfo.hxx"
 #include "shared/network/message/Header.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/SharedRequirements.hxx"
 
 #include <boost/asio/as_tuple.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/cancel_after.hpp>
-#include <boost/asio/detached.hpp>
 #include <boost/asio/deferred.hpp>
+#include <boost/asio/detached.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/write.hpp>
-
 
 
 using boost::asio::as_tuple;
@@ -297,11 +296,10 @@ void CoHttpsClient::setMandatoryFields(const std::string& xRequestId, Request& r
     {
         request.set(Header::ContentLength, std::to_string(request.body().size()));
     }
-    if (request.find(Header::Tee3::XUserAgent) == request.cend())
+    if (!request.contains(Header::XUserAgent))
     {
-        std::ostringstream userAgent;
-        userAgent << "ERP-FD/" << ErpServerInfo::ReleaseVersion();
-        request.set(Header::Tee3::XUserAgent, userAgent.view());
+        A_22470_06.start("set x-useragent for outgoing requests");
+        request.set(Header::XUserAgent, Header::xUserAgentHeader());
     }
     if (request.find(Header::Host) == request.cend())
     {

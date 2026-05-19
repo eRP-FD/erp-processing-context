@@ -357,7 +357,7 @@ bool MedicationExporterMain::testTRezeptEndpoints(MedicationExporterServiceConte
     bool allUp = true;
     if (! FhirVzdClient{
             Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_ID),
-            serviceContext.crlProvider()}
+            serviceContext.crlProvider(), Uuid{}.toString()}
               .testConnection())
     {
         TLOG(WARNING) << "Connection to FHIR-VZD failed";
@@ -368,7 +368,7 @@ bool MedicationExporterMain::testTRezeptEndpoints(MedicationExporterServiceConte
         TLOG(INFO) << "Connection to FHIR-VZD successfully tested";
     }
     if (! BfArMClient{Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_ID),
-                      serviceContext.crlProvider()}
+                      serviceContext.crlProvider(), Uuid{}.toString()}
               .testConnection())
     {
         TLOG(WARNING) << "Connection to BfArM failed";

@@ -1,0 +1,4 @@
+## exclude Open API specification
+package/openapi/epa-medication-service-client.openapi.json
+package/openapi/epa-medication-service-server.openapi.json
+

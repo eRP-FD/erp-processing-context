@@ -14,6 +14,13 @@
 
 
 template<typename ExtensionT>
+std::string_view model::Extension<ExtensionT>::url() const
+{
+    static const rapidjson::Pointer urlPointer(resource::ElementName::path(resource::elements::url));
+    return this->getStringValue(urlPointer);
+}
+
+template<typename ExtensionT>
 std::optional<bool> model::Extension<ExtensionT>::valueBoolean() const
 {
     const auto* value = getValue(rapidjson::Pointer{resource::ElementName::path(resource::elements::valueBoolean)});
@@ -60,6 +67,13 @@ template<typename ExtensionT>
 std::optional<std::string_view> model::Extension<ExtensionT>::valueString() const
 {
     static const rapidjson::Pointer valuePointer(resource::ElementName::path(resource::elements::valueString));
+    return getOptionalStringValue(valuePointer);
+}
+
+template<typename ExtensionT>
+std::optional<std::string_view> model::Extension<ExtensionT>::valueMarkdown() const
+{
+    static const rapidjson::Pointer valuePointer(resource::ElementName::path(resource::elements::valueMarkdown));
     return getOptionalStringValue(valuePointer);
 }
 

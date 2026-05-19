@@ -20,6 +20,7 @@ class JwtBuilder
 {
 public:
     explicit JwtBuilder(shared_EVP_PKEY key);
+    explicit JwtBuilder(shared_EVP_PKEY key, JoseHeader header);
 
     [[nodiscard]]
 	static std::string defaultClientId();
@@ -27,8 +28,10 @@ public:
     [[nodiscard]]
     static JwtBuilder testBuilder();
 
+    static JwtBuilder testBuilder(JoseHeader header);
+
     [[nodiscard]]
-    JWT makeJwtApotheke(const std::optional<std::string>& telematicId = std::nullopt);
+    JWT makeJwtApotheke(const std::string& telematikId = "");
 
     [[nodiscard]]
     JWT makeJwtArzt(const std::optional<std::string>& telematicId = std::nullopt);
@@ -40,7 +43,7 @@ public:
     JWT makeJwtVersicherter(const model::Kvnr& kvnr);
 
     [[nodiscard]]
-    JWT makeJwtKostentraeger(const std::optional<std::string>& telematicId = std::nullopt);
+    JWT makeJwtKostentraeger(const std::string& telematikId = "");
 
     [[nodiscard]]
     JWT makeJwtNcpeh();

@@ -928,3 +928,48 @@ professionItem.0 = UTF8String:Arzt
 
 [oid_sect]
 one=OID:1.3.6.1.4.1.24796.4.11.1
+
+
+[popp_zd_sig_cert]
+basicConstraints       = critical,CA:FALSE
+keyUsage               = critical,nonRepudiation
+# oid_zd_sig
+certificatePolicies    = @gempol,1.2.276.0.76.4.287
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
+
+1.3.36.8.3.3 = ASN1:SEQUENCE:admission_syntax_popp_token_sequence
+
+[admission_syntax_popp_token_sequence]
+contentsOfAdmissions = SEQUENCE:admissions_stack_popp_token_sequence
+
+[admissions_stack_popp_token_sequence]
+admissions = SEQUENCE:admissions_popp_token_sequence
+
+[admissions_popp_token_sequence]
+professionInfos = SEQUENCE:profession_info_stack_popp_token_sequence
+
+[profession_info_stack_popp_token_sequence]
+professionInfos = SEQUENCE:profession_info_popp_token_sequence
+
+[profession_info_popp_token_sequence]
+professionItems = SEQUENCE:profession_item_stack_popp_token_sequence
+professionOids = SEQUENCE:profession_oid_stack_popp_token_sequence
+
+[profession_item_stack_popp_token_sequence]
+item1 = FORMAT:UTF8,UTF8:Token-Signatur-Identität für Proof of Patient Presence
+
+[profession_oid_stack_popp_token_sequence]
+#
+# oid_popp-token
+oid1 = ${ENV::POPP_OID}
+
+[gempol]
+# oid_policy_gem_or_cp
+policyIdentifier = 1.2.276.0.76.4.163
+CPS.1="http://www.gematik.de/go/policies"

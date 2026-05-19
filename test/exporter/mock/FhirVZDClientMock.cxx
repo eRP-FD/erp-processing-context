@@ -1,6 +1,5 @@
 #include "test/exporter/mock/FhirVZDClientMock.hxx"
-#include "shared/network/client/ConnectionParameters.hxx"
-#include "shared/network/client/request/ClientRequest.hxx"
+#include "mock/tsl/UrlRequestSenderMock.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
@@ -32,46 +31,51 @@ const std::string AuthResponse{
 )"};
 }
 
-std::chrono::seconds HttpsClientMock::mAccessTokenExpiration;
-std::chrono::seconds HttpsClientMock::mAuthTokenExpiration;
-size_t HttpsClientMock::mCallCounter;
-HttpStatus HttpsClientMock::mHttpStatus;
 
-HttpsClientMock::HttpsClientMock()
-    : ClientInterface()
+std::chrono::seconds FhirVzdClientMock::mAccessTokenExpiration;
+std::chrono::seconds FhirVzdClientMock::mAuthTokenExpiration;
+size_t FhirVzdClientMock::mCallCounter;
+HttpStatus FhirVzdClientMock::mHttpStatus;
+
+
+FhirVzdClientMock::FhirVzdClientMock(std::string clientId, const std::string& xContextId)
+    : FhirVzdClient(clientId, nullptr, xContextId)
 {
 }
 
 
-ClientResponse HttpsClientMock::send(const ClientRequest& clientRequest)
+std::unique_ptr<UrlRequestSender> FhirVzdClientMock::createClient() const
 {
-    mCallCounter++;
-    if (clientRequest.getHeader().target() == "/auth/realms/Service-Authenticate/protocol/openid-connect/token")
-    {
+    std::unordered_map<std::string, std::string> responses{};
+    auto obj = std::make_unique<UrlRequestSenderMock>(responses);
+
+    obj->setUrlHandler("https://localhost:18443/auth/realms/Service-Authenticate/protocol/openid-connect/token",
+                       [](const std::string&) -> ClientResponse {
+                           mCallCounter++;
+                           auto str = TokenResponse;
+                           boost::replace_all(str, "##EXPIRES_IN##", std::to_string(mAccessTokenExpiration.count()));
+                           return ClientResponse{Header{mHttpStatus}, str};
+                       });
+
+    obj->setUrlHandler("https://localhost:18443/service-authenticate", [](const std::string&) -> ClientResponse {
+        mCallCounter++;
         auto str = TokenResponse;
-        boost::replace_all(str, "##EXPIRES_IN##", std::to_string(mAccessTokenExpiration.count()));
-        return ClientResponse{Header{mHttpStatus}, str};
-    }
-    else if (clientRequest.getHeader().target() == "/service-authenticate")
-    {
-        auto str = AuthResponse;
         boost::replace_all(str, "##EXPIRES_IN##", std::to_string(mAuthTokenExpiration.count()));
         return ClientResponse{Header{mHttpStatus}, str};
-    }
+    });
 
+    obj->setUrlHandler("https://localhost:18443/fdv/search/"
+                       "HealthcareService?organization.active=true&organization.identifier=123&_tag=ldap&_include="
+                       "HealthcareService:organization&_include=HealthcareService:location",
+                       [](const std::string&) -> ClientResponse {
+                           mCallCounter++;
+                           return ClientResponse{Header{mHttpStatus}, ResourceTemplates::vzdFhirBundleJson()};
+                       });
 
-    return ClientResponse{Header{mHttpStatus}, ResourceTemplates::vzdFhirBundleJson()};
-}
+    obj->setUrlHandler("", [](const std::string&) -> ClientResponse {
+        mCallCounter++;
+        return ClientResponse{Header{mHttpStatus}, ""};
+    });
 
-
-FhirVzdClientMock::FhirVzdClientMock(std::string clientId)
-    : FhirVzdClient(clientId, nullptr)
-{
-}
-
-
-std::unique_ptr<ClientInterface> FhirVzdClientMock::createClient(const std::string& hostname [[maybe_unused]],
-                                                                 const std::string& port [[maybe_unused]]) const
-{
-    return std::make_unique<HttpsClientMock>(HttpsClientMock{});
+    return obj;
 }

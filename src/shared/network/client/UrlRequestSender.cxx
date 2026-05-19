@@ -14,6 +14,8 @@
 #include "shared/util/Expect.hxx"
 #include "shared/util/UrlHelper.hxx"
 
+#include <fmt/format.h>
+#include <ranges>
 #include <set>
 
 
@@ -23,7 +25,6 @@ UrlRequestSender::UrlRequestSender(std::string rootCertificates, const uint16_t 
     , mConnectionTimeout(std::chrono::seconds{connectionTimeoutSeconds})
     , mResolveTimeout{resolveTimeout}
     , mDurationConsumer()
-    , mProxyUrl(std::nullopt)
     , mFollowRedirects(false)
 {
 }
@@ -35,7 +36,6 @@ UrlRequestSender::UrlRequestSender(TlsCertificateVerifier certificateVerifier,
     , mConnectionTimeout(connectionTimeout)
     , mResolveTimeout{resolveTimeout}
     , mDurationConsumer()
-    , mProxyUrl(std::nullopt)
     , mFollowRedirects(false)
 {
 }
@@ -47,15 +47,15 @@ void UrlRequestSender::setTlsCertificateVerifier(TlsCertificateVerifier certific
 }
 
 
-void UrlRequestSender::setProxyUrl(std::optional<std::string> url)
-{
-    mProxyUrl = std::move(url);
-}
-
-
 void UrlRequestSender::setFollowRedirects(bool followRedirects)
 {
     mFollowRedirects = followRedirects;
+}
+
+
+void UrlRequestSender::setAdditionalHeaders(Header::keyValueMap_t&& additionalHeaders)
+{
+    mAdditionalHeaders = std::move(additionalHeaders);
 }
 
 
@@ -150,29 +150,12 @@ ClientResponse UrlRequestSender::send(const boost::asio::ip::tcp::endpoint& ep, 
     }
 }
 
-ClientResponse UrlRequestSender::doSend(
-    const std::string& url,
-    const HttpMethod method,
-    const std::string& body,
-    const std::string& contentType,
-    const std::optional<std::string>& forcedCiphers,
-    const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep,
-    const std::string& headerFieldHost) const
+ClientResponse UrlRequestSender::doSend(const std::string& url, const HttpMethod method, const std::string& body,
+                                        const std::string& contentType, const std::optional<std::string>& forcedCiphers,
+                                        const bool trustCn, const boost::asio::ip::tcp::endpoint* ep) const
 {
-    if (mProxyUrl.has_value() && not mProxyUrl->empty())
-    {
-        const UrlHelper::UrlParts urlPartsOrig = UrlHelper::parseUrl(url);
-
-        const std::string proxyUrl = *mProxyUrl + urlPartsOrig.mPath;
-        const UrlHelper::UrlParts urlPartsProxy = UrlHelper::parseUrl(proxyUrl);
-
-        const std::string targetUrl = urlPartsOrig.mHost + ":" + std::to_string(urlPartsOrig.mPort);
-        TVLOG(1) << "Using proxy " << proxyUrl << " for access " << urlPartsOrig.mHost;
-        return doSend(urlPartsProxy, method, body, contentType, forcedCiphers, trustCn, ep, targetUrl);
-    }
     const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
-    return doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep, headerFieldHost);
+    return doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
 }
 
 
@@ -183,73 +166,108 @@ ClientResponse UrlRequestSender::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep,
-    const std::string& headerFieldHost) const
+    const boost::asio::ip::tcp::endpoint* ep) const
 {
     TVLOG(1) << "request to Host [" << url.mHost << "], URL: " << url.toString();
+    Expect(url.isHttpsProtocol() || url.isHttpProtocol(), "unsupported protocol");
 
+    const auto isTls = url.isHttpsProtocol();
+    const auto proxyMode = isTls ? ProxyMode::SNI : ProxyMode::HTTP;
+    auto byProxyMode = [proxyMode](const ProxyParameters& proxy) {
+        return proxyMode == proxy.mode;
+    };
+    auto proxies = mProxies | std::views::filter(byProxyMode);
+    const auto tlsParameters =
+        isTls ? std::make_optional<TlsConnectionParameters>({.certificateVerifier = mTlsCertificateVerifier,
+                                                             .forcedCiphers = forcedCiphers,
+                                                             .trustCertificateCn = trustCn})
+              : std::nullopt;
+    const auto connectionParameters = ConnectionParameters{.hostname = url.mHost,
+                                                           .port = std::to_string(url.mPort),
+                                                           .connectionTimeout = mConnectionTimeout,
+                                                           .resolveTimeout = mResolveTimeout,
+                                                           .tlsParameters = tlsParameters};
     Header::keyValueMap_t httpHeaders;
-    if ( ! body.empty())
+    if (! body.empty())
     {
         httpHeaders.emplace(Header::ContentLength, std::to_string(body.size()));
     }
-    if ( ! contentType.empty())
+    if (! contentType.empty())
     {
         httpHeaders.emplace(Header::ContentType, contentType);
     }
     httpHeaders.emplace(Header::UserAgent, "erp-processing-context");
     httpHeaders.emplace(Header::Accept, "*/*");
-    if (headerFieldHost.empty())
-    {
-        httpHeaders.emplace(Header::Host, url.mHost);
-    }
-    else
-    {
-        httpHeaders.emplace(Header::Host, headerFieldHost);
-    }
+    httpHeaders.emplace(Header::Host, fmt::format("{}:{}", url.mHost, url.mPort));
     httpHeaders.emplace(Header::Connection, Header::ConnectionClose);
 
-    const ClientRequest request(
-        Header(method, std::string(url.mPath + url.mRest),
-               Header::Version_1_1, std::move(httpHeaders), HttpStatus::Unknown),
-        body);
+    httpHeaders.insert(
+        std::make_move_iterator(mAdditionalHeaders.begin()),
+        std::make_move_iterator(mAdditionalHeaders.end())
+    );
 
-    if (url.isHttpsProtocol())
-    {
-        auto params = ConnectionParameters{
-                .hostname =  url.mHost,
-                .port = std::to_string(url.mPort),
-                .connectionTimeout = mConnectionTimeout,
-                .resolveTimeout = mResolveTimeout,
-                .tlsParameters = TlsConnectionParameters{
-                    .certificateVerifier = mTlsCertificateVerifier,
-                    .forcedCiphers = forcedCiphers,
-                    .trustCertificateCn = trustCn
-                }
-        };
+    const ClientRequest request(Header(method, std::string(url.mPath + url.mRest), Header::Version_1_1,
+                                       std::move(httpHeaders), HttpStatus::Unknown),
+                                body);
+
+    auto sendHttpReq = [&request, &connectionParameters]<typename Client>(const boost::asio::ip::tcp::endpoint* ep) {
         if (ep != nullptr)
         {
-            return HttpsClient(*ep, params).send(request);
+            return Client(*ep, connectionParameters).send(request);
         }
-        return HttpsClient(params).send(request);
-    }
-    else if (url.isHttpProtocol())
-    {
-        if (ep != nullptr)
-        {
-            return HttpClient(*ep, url.mHost, mConnectionTimeout).send(request);
-        }
+        return Client(connectionParameters).send(request);
+    };
 
-        return HttpClient(url.mHost, gsl::narrow_cast<uint16_t>(url.mPort), mConnectionTimeout, mResolveTimeout)
-            .send(request);
-    }
-    else
+    auto sendReq = [&sendHttpReq](bool isTls, const boost::asio::ip::tcp::endpoint* ep) {
+        if (isTls)
+        {
+            return sendHttpReq.template operator()<HttpsClient>(ep);
+        }
+        else
+        {
+            return sendHttpReq.template operator()<HttpClient>(ep);
+        }
+    };
+
+    // if there are no applicable proxies, directly connect to the host (or provided endpoint)
+    if (proxies.empty())
     {
-        Fail2("unsupported protocol", std::runtime_error);
+        return sendReq(isTls, ep);
     }
+    // we have a proxy match, allow failure for individual connections, as we can have multiple connections
+    Expect(ep == nullptr, "Cannot combine proxy and user-defined endpoint");
+    for (const auto& proxy : proxies)
+    {
+        TVLOG(1)  << "trying proxy at " << proxy.ip << ":" << proxy.port;
+        const auto proxyEndpoint = boost::asio::ip::tcp::endpoint(boost::asio::ip::make_address(proxy.ip), proxy.port);
+        try
+        {
+            return sendReq(isTls, &proxyEndpoint);
+        }
+        catch (const boost::beast::system_error& e)
+        {
+            // in case of of networking errors, try the next proxy
+            auto ec = e.code();
+            if (boost::asio::ssl::error::stream_truncated == ec || boost::asio::error::connection_reset == ec ||
+                boost::asio::error::not_connected == ec || boost::beast::http::error::end_of_stream == ec ||
+                boost::asio::error::connection_refused == ec || boost::asio::error::host_unreachable == ec)
+            {
+                LOG(INFO) << "request to proxy " << proxy.ip << ":" << proxy.port << " failed with " << ec.message();
+                continue;
+            }
+            throw;
+        }
+    }
+    Fail("No proxy available to take request");
 }
 
 bool UrlRequestSender::followsRedirects() const
 {
     return mFollowRedirects;
+}
+
+
+void UrlRequestSender::setProxies(std::vector<ProxyParameters> proxies)
+{
+    mProxies = std::move(proxies);
 }

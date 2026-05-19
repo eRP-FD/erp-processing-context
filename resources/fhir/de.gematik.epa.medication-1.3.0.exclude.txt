@@ -1,0 +1,34 @@
+## exclude Open API specification
+package/openapi/epa-medication-service-client.openapi.json
+package/openapi/epa-medication-service-server.openapi.json
+# de.gematik.epa.medication-1.3.0+1.3.2
+package/StructureDefinition-is-emp-extension.json
+package/StructureDefinition-medication-formulation-packaging-extension.json
+package/ValueSet-epa-medication-statement-status-vs.json
+package/StructureDefinition-context-extension.json
+package/StructureDefinition-indicator-bvg-extension.json
+package/StructureDefinition-multiple-prescription-extension.json
+package/StructureDefinition-medication-id-vaccine-extension.json
+package/StructureDefinition-medication-ingredient-amount-extension.json
+package/CodeSystem-epa-medicationstatement-processing-event-code.json
+package/StructureDefinition-reason-patient-instruction-extension.json
+package/CodeSystem-context-code.json
+package/ValueSet-epa-medicationstatement-processing-event-code.json
+package/StructureDefinition-medication-packaging-size-extension.json
+package/ValueSet-emp-medicationrequest-status-vs.json
+package/StructureDefinition-epa-medication-type-extension.json
+package/CodeSystem-epa-ms-operation-outcome-details.json
+package/StructureDefinition-medication-total-quantity-formulation-extension.json
+package/StructureDefinition-drug-category-extension.json
+package/StructureDefinition-prescriber-id-extension.json
+package/StructureDefinition-patient-note-extension.json
+package/StructureDefinition-medication-manufacturing-instructions-extension.json
+package/ValueSet-epa-provide-dispensation-status-vs.json
+package/ValueSet-epa-medicationstatement-context-code.json
+package/StructureDefinition-is-emp-chronology-extension.json
+package/StructureDefinition-medication-ingredient-darreichungsform-extension.json
+package/StructureDefinition-indicator-ser-extension.json
+package/StructureDefinition-patient-id-extension.json
+package/ValueSet-context-code.json
+package/StructureDefinition-epa-medicationstatement-processing-event-extension.json
+package/StructureDefinition-teratogenic-extension.json

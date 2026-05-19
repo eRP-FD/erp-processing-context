@@ -27,42 +27,23 @@ MedicationDispenseHandlerBase::MedicationDispenseHandlerBase(
 {
 }
 
-model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessionContext& session, Operation forOperation, model::PrescriptionType workflow)
+model::MedicationsAndDispenses MedicationDispenseHandlerBase::parseBody(PcSessionContext& session,
+                                                                        Operation forOperation,
+                                                                        model::PrescriptionType workflow)
 {
     try
     {
-        A_22069_01.start("Detect input resource type: Bundle or MedicationDispense");
-        A_24283_02.start("Detect input resource type: Bundle or MedicationDispense");
-        auto unspec = createResourceFactory<model::UnspecifiedResource>(session);
-        const auto resourceType = unspec.getResourceType();
-        if (const auto profileVersion = unspec.profileVersion())
+        A_22069_02.start("Task schließen - Speicherung mehrerer MedicationDispense");
+        A_24283_03.start("Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
+        auto params = parseAndValidateRequestBody<model::MedicationDispenseOperationParameters>(
+            session, {parameterTypeFor(forOperation)});
+        if (const auto profileVersion = params.getProfileVersionChecked())
         {
             session.addOuterResponseHeaderField(Header::GematikWorkflowProfil, to_string(*profileVersion));
         }
-
-        if (resourceType == model::Bundle::resourceTypeName)
-        {
-            ErpExpect(! isDiga(workflow), HttpStatus::BadRequest,
-                      "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
-                      "Gesundheitsanwendungen zulässig.");
-            return {.medicationDispenses = medicationDispensesFromBundle(std::move(unspec))};
-        }
-        else if (resourceType == model::MedicationDispense::resourceTypeName)
-        {
-            ErpExpect(! isDiga(workflow), HttpStatus::BadRequest,
-                      "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
-                      "Gesundheitsanwendungen zulässig.");
-            model::MedicationsAndDispenses result;
-            result.medicationDispenses.emplace_back(medicationDispensesSingle(std::move(unspec)));
-            return result;
-        }
-        else if (resourceType == model::MedicationDispenseOperationParameters::resourceTypeName)
-        {
-            return medicationDispensesFromParameters(std::move(unspec), forOperation, workflow);
-        }
-        ErpFail(HttpStatus::BadRequest, "Unsupported resource type in request body: " + std::string(resourceType));
-        A_24283_02.finish();
-        A_22069_01.finish();
+        A_24283_03.finish();
+        A_22069_02.finish();
+        return medicationDispensesFromParameters(params, workflow);
     }
     catch (const model::ModelException& e)
     {
@@ -79,24 +60,6 @@ void MedicationDispenseHandlerBase::checkSingleOrBundleAllowed(const model::Medi
     ModelExpect(profileKey.version.has_value(), "No version in meta.profile of MedicationDispense");
     ModelExpect(value(profileKey.version) < model::version::GEM_ERP_1_4,
                 "MedicationDispense in versions 1.4 or later must be provided as Parameters");
-}
-
-model::MedicationDispense MedicationDispenseHandlerBase::medicationDispensesSingle(UnspecifiedResourceFactory&& unspec)
-{
-    auto dispenseFactory = for_resource<model::MedicationDispense>(std::move(unspec));
-    auto medicationDispense = std::move(dispenseFactory).getValidated(model::ProfileType::GEM_ERP_PR_MedicationDispense);
-    checkSingleOrBundleAllowed(medicationDispense);
-    return medicationDispense;
-}
-
-std::vector<model::MedicationDispense>
-MedicationDispenseHandlerBase::medicationDispensesFromBundle(UnspecifiedResourceFactory&& unspec)
-{
-    auto bundleFactory = for_resource<model::MedicationDispenseBundle>(std::move(unspec));
-    auto bundle = std::move(bundleFactory).getValidated(model::ProfileType::MedicationDispenseBundle);
-    auto medicationDispenses = bundle.getResourcesByType<model::MedicationDispense>();
-    std::ranges::for_each(medicationDispenses, &MedicationDispenseHandlerBase::checkSingleOrBundleAllowed);
-    return medicationDispenses;
 }
 
 model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation operation)
@@ -160,19 +123,16 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
 }
 
 model::MedicationsAndDispenses MedicationDispenseHandlerBase::medicationDispensesFromParameters(
-    UnspecifiedResourceFactory&& unspec, Operation forOperation, model::PrescriptionType workflow)
+    const model::MedicationDispenseOperationParameters& parameters, model::PrescriptionType workflow)
 {
-    const model::ProfileType profileType = parameterTypeFor(forOperation);
-    auto parametersFactory = for_resource<model::MedicationDispenseOperationParameters>(std::move(unspec));
-    auto validatedParameters = std::move(parametersFactory).getValidated(profileType);
     model::MedicationsAndDispenses result;
     if (isDiga(workflow))
     {
-        result.addFromDigaParameters(validatedParameters);
+        result.addFromDigaParameters(parameters);
     }
     else
     {
-        result.addFromParameters(validatedParameters);
+        result.addFromParameters(parameters);
     }
     return result;
 }
@@ -197,15 +157,15 @@ void MedicationDispenseHandlerBase::checkMedicationDispenses(
             ErpExpect(medicationDispense.prescriptionId() == prescriptionId, HttpStatus::BadRequest,
                       "Prescription ID in MedicationDispense does not match the one in the task");
             // test if whenPrepared and whenHandedOver can be converted to Timestamp:
-            (void)medicationDispense.whenPrepared();
-            (void)medicationDispense.whenHandedOver();
+            (void) medicationDispense.whenPrepared();
+            (void) medicationDispense.whenHandedOver();
             ErpExpect(medicationDispense.kvnr() == kvnr, HttpStatus::BadRequest,
-                    "KVNR in MedicationDispense does not match the one in the task");
+                      "KVNR in MedicationDispense does not match the one in the task");
 
             if (medicationDispense.profileType() != model::ProfileType::GEM_ERPEU_PR_MedicationDispense)
             {
                 ErpExpect(medicationDispense.telematikId() == telematikIdFromAccessToken, HttpStatus::BadRequest,
-                        "Telematik-ID in MedicationDispense does not match the one in the access token.");
+                          "Telematik-ID in MedicationDispense does not match the one in the access token.");
             }
         }
         catch (const model::ModelException& exc)
@@ -220,7 +180,8 @@ void MedicationDispenseHandlerBase::checkMedicationDispenses(
 }
 
 
-model::MedicationDispenseBundle MedicationDispenseHandlerBase::createBundle(const model::MedicationsAndDispenses& bodyData)
+model::MedicationDispenseBundle
+MedicationDispenseHandlerBase::createBundle(const model::MedicationsAndDispenses& bodyData)
 {
     return model::MedicationDispenseBundle(getLinkBase(), bodyData.medicationDispenses, bodyData.medications);
 }

@@ -135,17 +135,17 @@ std::string model::ResourceFactoryBase::errorMessage(const fhirtools::Validation
             {
                 using enum fhirtools::ExtendedValidation;
                 case unslicedExtension:
-                    A_22927_02.start("generate required message");
+                    A_22927_03.start("generate required message");
                     return "Unintendierte Verwendung von Extensions an unspezifizierter Stelle";
-                    A_22927_02.finish();
+                    A_22927_03.finish();
                 case invalidUrnUuidInUri:
                 case bundleFullUrlMissing:
                 case bundleFullUrlResourceTypeMissmatch:
                     break;
                 case bundleFullUrlIdMissmatch:
-                    A_26229_01.start("generate required message");
+                    A_26229_02.start("generate required message");
                     return "Die ID einer Ressource und die ID der zugehörigen fullUrl stimmen nicht überein.";
-                    A_26229_01.finish();
+                    A_26229_02.finish();
                     break;
                 case bundleFullUrlInvalidFormat:
                     A_26233_01.start("generate required message");

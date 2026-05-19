@@ -133,7 +133,7 @@ UrlArguments PostgresDatabaseCommunicationTest::searchForReceived (const std::st
     return search;
 }
 
-TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
+TEST_P(PostgresDatabaseCommunicationTest, insertCommunication)
 {
     if (!usePostgres())
     {
@@ -150,7 +150,7 @@ TEST_P(PostgresDatabaseCommunicationTest, insertCommunicationInfoReq)
     const auto kvnrInsurant = task.kvnr().value();
 
     // Insert object into database.
-    std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    std::string jsonStringC1 = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
@@ -308,14 +308,14 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     uint64_t communicationsCountPrev = countCommunications();
 
     // Insert objects into database.
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
-    infoReq.setSender(kvnrInsurant);
-    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
-    std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
+    Communication dispReq1 = Communication::fromJsonNoValidation(jsonString);
+    dispReq1.setSender(kvnrInsurant);
+    dispReq1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idDispReq1 = insertCommunication(dispReq1);
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(prescriptionId.toString())
@@ -331,10 +331,10 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("I want to pick up the medication").createJsonString();
-    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
-    dispReq.setSender(kvnrInsurant);
-    dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
-    std::optional<Uuid> idDispReq = insertCommunication(dispReq);
+    Communication dispReq2 = Communication::fromJsonNoValidation(jsonString);
+    dispReq2.setSender(kvnrInsurant);
+    dispReq2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
+    std::optional<Uuid> idDispReq2 = insertCommunication(dispReq2);
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(prescriptionId.toString())
@@ -348,12 +348,12 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     std::optional<Uuid> idRepresentative = insertCommunication(representative);
 
     // Verify that the id fields of the Communication objects have been initialized.
-    ASSERT_TRUE(idInfoReq.has_value());
-    ASSERT_EQ(infoReq.id(), idInfoReq.value());
+    ASSERT_TRUE(idDispReq1.has_value());
+    ASSERT_EQ(dispReq1.id(), idDispReq1.value());
     ASSERT_TRUE(idReply.has_value());
     ASSERT_EQ(reply.id(), idReply.value());
-    ASSERT_TRUE(idDispReq.has_value());
-    ASSERT_EQ(dispReq.id(), idDispReq.value());
+    ASSERT_TRUE(idDispReq2.has_value());
+    ASSERT_EQ(dispReq2.id(), idDispReq2.value());
     ASSERT_TRUE(idRepresentative.has_value());
     ASSERT_EQ(representative.id(), idRepresentative.value());
 
@@ -362,59 +362,59 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication)//NOLINT(readabili
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 4);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    std::optional<Communication> dispReq1Inserted = retrieveCommunication(idDispReq1.value(), model::getIdentityString(dispReq1.sender().value()));
     std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    std::optional<Communication> dispReq2Inserted = retrieveCommunication(idDispReq2.value(), model::getIdentityString(dispReq2.sender().value()));
     std::optional<Communication> representativeInserted =
             retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
 
     // Verify that the objects have been stored in the database.
-    ASSERT_TRUE(infoReqInserted.has_value());
-    ASSERT_EQ(infoReqInserted.value().id(), idInfoReq.value());
+    ASSERT_TRUE(dispReq1Inserted.has_value());
+    ASSERT_EQ(dispReq1Inserted.value().id(), idDispReq1.value());
     ASSERT_TRUE(replyInserted.has_value());
     ASSERT_EQ(replyInserted.value().id(), idReply.value());
-    ASSERT_TRUE(dispReqInserted.has_value());
-    ASSERT_EQ(dispReqInserted.value().id(), idDispReq.value());
+    ASSERT_TRUE(dispReq2Inserted.has_value());
+    ASSERT_EQ(dispReq2Inserted.value().id(), idDispReq2.value());
     ASSERT_TRUE(representativeInserted.has_value());
     ASSERT_EQ(representativeInserted.value().id(), idRepresentative.value());
 
     // Delete the communication objects by their ids and sender.
-    const std::optional<Uuid> resultInfoReqDelete =
-        database().deleteCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    const std::optional<Uuid> resultDispReq1Delete =
+        database().deleteCommunication(idDispReq1.value(), model::getIdentityString(dispReq1.sender().value()));
     const std::optional<Uuid> resultReplyDelete =
         database().deleteCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    const std::optional<Uuid> resultDispReqDelete =
-        database().deleteCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    const std::optional<Uuid> resultDispReq2Delete =
+        database().deleteCommunication(idDispReq2.value(), model::getIdentityString(dispReq2.sender().value()));
     const std::optional<Uuid> resultRepresentativeDelete =
         database().deleteCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
     database().commitTransaction();
 
     // Check the results from the delete requests.
 
-    // InfoReq must have Id
-    ASSERT_TRUE(resultInfoReqDelete.has_value());
-    ASSERT_EQ(resultInfoReqDelete.value(), idInfoReq.value());
+    // DispReq1 must have Id
+    ASSERT_TRUE(resultDispReq1Delete.has_value());
+    ASSERT_EQ(resultDispReq1Delete.value(), idDispReq1.value());
 
     // Reply must have Id
     ASSERT_TRUE(resultReplyDelete.has_value());
     ASSERT_EQ(resultReplyDelete.value(), idReply.value());
 
-    // DispReq must have Id
-    ASSERT_TRUE(resultDispReqDelete.has_value());
-    ASSERT_EQ(resultDispReqDelete.value(), idDispReq.value());
+    // DispReq2 must have Id
+    ASSERT_TRUE(resultDispReq2Delete.has_value());
+    ASSERT_EQ(resultDispReq2Delete.value(), idDispReq2.value());
 
     // Representative must have Id
     ASSERT_TRUE(resultRepresentativeDelete.has_value());
     ASSERT_EQ(resultRepresentativeDelete.value(), idRepresentative.value());
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    dispReq1Inserted = retrieveCommunication(idDispReq1.value(), model::getIdentityString(dispReq1.sender().value()));
     replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    dispReq2Inserted = retrieveCommunication(idDispReq2.value(), model::getIdentityString(dispReq2.sender().value()));
     representativeInserted = retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
-    ASSERT_FALSE(infoReqInserted.has_value());
+    ASSERT_FALSE(dispReq1Inserted.has_value());
     ASSERT_FALSE(replyInserted.has_value());
-    ASSERT_FALSE(dispReqInserted.has_value());
+    ASSERT_FALSE(dispReq2Inserted.has_value());
     ASSERT_FALSE(representativeInserted.has_value());
 
     // Count currently availabe communication objects. The 4 new rows must have been deleted again.
@@ -442,14 +442,14 @@ TEST_P(PostgresDatabaseCommunicationTest, clearAllChargeItemCommunications)//NOL
     const auto kvnrInsurant = task.kvnr().value();
 
     // Insert communication object into database which shall *not* be deleted:
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                      .setPrescriptionId(prescriptionId.toString())
                      .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                      .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
-    infoReq.setSender(kvnrInsurant);
-    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-08-23T12:34:00.000+00:00"));
-    std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
+    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
+    dispReq.setSender(kvnrInsurant);
+    dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-08-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idDispReq = insertCommunication(dispReq);
 
     // Count currently available communication objects.
     uint64_t communicationsCountPrev = countCommunications();
@@ -525,14 +525,14 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunicationsForChargeItem)//NO
     const auto kvnrInsurant = task1.kvnr().value();
 
     // Insert communication objects into database which shall *not* be deleted:
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
                      .setPrescriptionId(prescriptionId1.toString())
                      .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
                      .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
-    infoReq.setSender(kvnrInsurant);
-    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:34:00.000+00:00"));
-    insertCommunication(infoReq);
+    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
+    dispReq.setSender(kvnrInsurant);
+    dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-11-23T12:34:00.000+00:00"));
+    insertCommunication(dispReq);
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::ChargChangeReq)
                      .setPrescriptionId(prescriptionId2.toString())
                      .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
@@ -618,41 +618,41 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidId)//NOLINT
     uint64_t communicationsCountPrev = countCommunications();
 
     // Insert objects into database.
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
-    infoReq.setSender(kvnrInsurant);
-    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
-    std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
+    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
+    dispReq.setSender(kvnrInsurant);
+    dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idDispReq = insertCommunication(dispReq);
 
     // Verify that the id fields of the Communication objects have been initialized.
-    ASSERT_TRUE(idInfoReq.has_value());
-    ASSERT_EQ(infoReq.id(), idInfoReq.value());
+    ASSERT_TRUE(idDispReq.has_value());
+    ASSERT_EQ(dispReq.id(), idDispReq.value());
 
     // Count currently availabe communication objects. One new row must have been added.
     uint64_t communicationsCountCurr = countCommunications();
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 1);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
 
     // Verify that the objects have been stored in the database.
-    ASSERT_TRUE(infoReqInserted.has_value());
-    ASSERT_EQ(infoReqInserted.value().id(), idInfoReq.value());
+    ASSERT_TRUE(dispReqInserted.has_value());
+    ASSERT_EQ(dispReqInserted.value().id(), idDispReq.value());
 
     // Delete the communication object by its id and sender.
-    const std::optional<Uuid> resultInfoReqDelete =
-        database().deleteCommunication(invalidId, model::getIdentityString(infoReq.sender().value()));
+    const std::optional<Uuid> resultDispReqDelete =
+        database().deleteCommunication(invalidId, model::getIdentityString(dispReq.sender().value()));
     database().commitTransaction();
 
     // Result must be empty.
-    ASSERT_FALSE(resultInfoReqDelete.has_value());
+    ASSERT_FALSE(resultDispReqDelete.has_value());
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
-    ASSERT_TRUE(infoReqInserted.has_value());
+    dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    ASSERT_TRUE(dispReqInserted.has_value());
 
     // Count currently availabe communication objects. The new row must not have been deleted.
     communicationsCountCurr = countCommunications();
@@ -681,14 +681,14 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     uint64_t communicationsCountPrev = countCommunications();
 
     // Insert objects into database.
-    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+    jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
         .setPrescriptionId(prescriptionId.toString())
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("Do you have the medication available?").createJsonString();
-    Communication infoReq = Communication::fromJsonNoValidation(jsonString);
-    infoReq.setSender(kvnrInsurant);
-    infoReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
-    std::optional<Uuid> idInfoReq = insertCommunication(infoReq);
+    Communication dispReq1 = Communication::fromJsonNoValidation(jsonString);
+    dispReq1.setSender(kvnrInsurant);
+    dispReq1.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:34:00.000+00:00"));
+    std::optional<Uuid> idDispReq1 = insertCommunication(dispReq1);
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Reply)
         .setPrescriptionId(prescriptionId.toString())
@@ -704,10 +704,10 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
         .setAccessCode(std::string(task.accessCode()))
         .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
         .setPayload("I want to pick up the medication").createJsonString();
-    Communication dispReq = Communication::fromJsonNoValidation(jsonString);
-    dispReq.setSender(kvnrInsurant);
-    dispReq.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
-    std::optional<Uuid> idDispReq = insertCommunication(dispReq);
+    Communication dispReq2 = Communication::fromJsonNoValidation(jsonString);
+    dispReq2.setSender(kvnrInsurant);
+    dispReq2.setTimeSent(Timestamp::fromXsDateTime("2022-01-23T12:54:00.000+00:00"));
+    std::optional<Uuid> idDispReq2 = insertCommunication(dispReq2);
 
     jsonString = CommunicationJsonStringBuilder(Communication::MessageType::Representative)
         .setPrescriptionId(prescriptionId.toString())
@@ -720,12 +720,12 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     std::optional<Uuid> idRepresentative = insertCommunication(representative);
 
     // Verify that the id fields of the Communication objects have been initialized.
-    ASSERT_TRUE(idInfoReq.has_value());
-    ASSERT_EQ(infoReq.id(), idInfoReq.value());
+    ASSERT_TRUE(idDispReq1.has_value());
+    ASSERT_EQ(dispReq1.id(), idDispReq1.value());
     ASSERT_TRUE(idReply.has_value());
     ASSERT_EQ(reply.id(), idReply.value());
-    ASSERT_TRUE(idDispReq.has_value());
-    ASSERT_EQ(dispReq.id(), idDispReq.value());
+    ASSERT_TRUE(idDispReq2.has_value());
+    ASSERT_EQ(dispReq2.id(), idDispReq2.value());
     ASSERT_TRUE(idRepresentative.has_value());
     ASSERT_EQ(representative.id(), idRepresentative.value());
 
@@ -734,47 +734,47 @@ TEST_P(PostgresDatabaseCommunicationTest, deleteCommunication_InvalidSender)//NO
     ASSERT_EQ(communicationsCountCurr, communicationsCountPrev + 4);
 
     // Retrieve communication objects by their ids.
-    std::optional<Communication> infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    std::optional<Communication> dispReq1Inserted = retrieveCommunication(idDispReq1.value(), model::getIdentityString(dispReq1.sender().value()));
     std::optional<Communication> replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    std::optional<Communication> dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    std::optional<Communication> dispReq2Inserted = retrieveCommunication(idDispReq2.value(), model::getIdentityString(dispReq2.sender().value()));
     std::optional<Communication> representativeInserted =
         retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
 
     // Verify that the objects have been stored in the database.
-    ASSERT_TRUE(infoReqInserted.has_value());
-    ASSERT_EQ(infoReqInserted.value().id(), idInfoReq.value());
+    ASSERT_TRUE(dispReq1Inserted.has_value());
+    ASSERT_EQ(dispReq1Inserted.value().id(), idDispReq1.value());
     ASSERT_TRUE(replyInserted.has_value());
     ASSERT_EQ(replyInserted.value().id(), idReply.value());
-    ASSERT_TRUE(dispReqInserted.has_value());
-    ASSERT_EQ(dispReqInserted.value().id(), idDispReq.value());
+    ASSERT_TRUE(dispReq2Inserted.has_value());
+    ASSERT_EQ(dispReq2Inserted.value().id(), idDispReq2.value());
     ASSERT_TRUE(representativeInserted.has_value());
     ASSERT_EQ(representativeInserted.value().id(), idRepresentative.value());
 
     // Delete the communication objects by their ids and sender.
-    const std::optional<Uuid> resultInfoReqDelete =
-        database().deleteCommunication(idInfoReq.value(), mPharmacy.id());
+    const std::optional<Uuid> resultDispReq1Delete =
+        database().deleteCommunication(idDispReq1.value(), mPharmacy.id());
     const std::optional<Uuid> resultReplyDelete =
         database().deleteCommunication(idReply.value(), InsurantA);
-    const std::optional<Uuid> resultDispReqDelete =
-        database().deleteCommunication(idDispReq.value(), mPharmacy.id());
+    const std::optional<Uuid> resultDispReq2Delete =
+        database().deleteCommunication(idDispReq2.value(), mPharmacy.id());
     const std::optional<Uuid> resultRepresentativeDelete =
         database().deleteCommunication(idRepresentative.value(), mPharmacy.id());
     database().commitTransaction();
 
     // Results must be empty.
-    ASSERT_FALSE(resultInfoReqDelete.has_value());
-    ASSERT_FALSE(resultInfoReqDelete.has_value());
-    ASSERT_FALSE(resultInfoReqDelete.has_value());
-    ASSERT_FALSE(resultInfoReqDelete.has_value());
+    ASSERT_FALSE(resultDispReq1Delete.has_value());
+    ASSERT_FALSE(resultDispReq1Delete.has_value());
+    ASSERT_FALSE(resultDispReq1Delete.has_value());
+    ASSERT_FALSE(resultDispReq1Delete.has_value());
 
     // Check whether the communication objects have been deleted.
-    infoReqInserted = retrieveCommunication(idInfoReq.value(), model::getIdentityString(infoReq.sender().value()));
+    dispReq1Inserted = retrieveCommunication(idDispReq1.value(), model::getIdentityString(dispReq1.sender().value()));
     replyInserted = retrieveCommunication(idReply.value(), model::getIdentityString(reply.sender().value()));
-    dispReqInserted = retrieveCommunication(idDispReq.value(), model::getIdentityString(dispReq.sender().value()));
+    dispReq2Inserted = retrieveCommunication(idDispReq2.value(), model::getIdentityString(dispReq2.sender().value()));
     representativeInserted = retrieveCommunication(idRepresentative.value(), model::getIdentityString(representative.sender().value()));
-    ASSERT_TRUE(infoReqInserted.has_value());
+    ASSERT_TRUE(dispReq1Inserted.has_value());
     ASSERT_TRUE(replyInserted.has_value());
-    ASSERT_TRUE(dispReqInserted.has_value());
+    ASSERT_TRUE(dispReq2Inserted.has_value());
     ASSERT_TRUE(representativeInserted.has_value());
 
     // Count currently availabe communication objects. The 4 new rows must not have been deleted.

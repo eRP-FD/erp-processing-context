@@ -5,14 +5,17 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "extensions/GeneratedDosageInstructionsMeta.hxx"
 #include "shared/ErpRequirements.hxx"
-#include "shared/model/KbvCoverage.hxx"
+#include "shared/model/DosageDgMP.hxx"
 #include "shared/model/KbvBundle.hxx"
+#include "shared/model/KbvCoverage.hxx"
 #include "shared/model/KbvMedicationBase.hxx"
 #include "shared/model/KbvMedicationCompounding.hxx"
 #include "shared/model/KbvMedicationPzn.hxx"
 #include "shared/model/KbvMedicationRequest.hxx"
 #include "shared/model/Patient.hxx"
+#include "shared/util/dosagetext/Validator.hxx"
 
 void model::KbvBundle::additionalValidation() const
 {
@@ -20,6 +23,7 @@ void model::KbvBundle::additionalValidation() const
     checkMedications();
     checkPatients();
     checkCoverage();
+    checkRenderedDosageInstruction();
 }
 void model::KbvBundle::checkMedications() const
 {
@@ -66,26 +70,12 @@ void model::KbvBundle::checkPatients() const
     {
         using namespace fhirtools::version_literal;
         auto version = patient.getProfileVersionChecked();
-        if (version < "1.2"_ver)
-        {
-            A_23936.start("Check for valid values of Patient.identifier.type.coding.code");
-            if (patient.identifierSize() > 0)
-            {
-                const auto& identifierTypeCodingCode = patient.identifierTypeCodingCode();
-                ErpExpect(identifierTypeCodingCode == "GKV" || identifierTypeCodingCode == "PKV", HttpStatus::BadRequest,
-                          "Als Identifier für den Patienten muss eine Versichertennummer angegeben werden.");
-            }
-            A_23936.finish();
-        }
-        else
-        {
-            A_23936.start("A_23936 / ANFERP-3322 Anpassung Regel für kbv 1.3.0 Profile");
-            using namespace std::string_literals;
-            using model::resource::naming_system::gkvKvid10;
-            ErpExpect(patient.identifierSystem(0) == gkvKvid10, HttpStatus::BadRequest,
-                      "Patient.identifier.system must be "s.append(gkvKvid10));
-            A_23936.finish();
-        }
+        A_23936_01.start("A_23936 / ANFERP-3322 Anpassung Regel für kbv 1.3.0 Profile");
+        using namespace std::string_literals;
+        using model::resource::naming_system::gkvKvid10;
+        ErpExpect(patient.identifierSystem(0) == gkvKvid10, HttpStatus::BadRequest,
+                  "Als Identifier für den Patienten muss eine VersichertenID (KVNR) angegeben werden.");
+        A_23936_01.finish();
     }
 }
 
@@ -107,6 +97,14 @@ void model::KbvBundle::checkCoverage() const
                   "entspricht nicht den Prüfziffer-Validierungsregeln.");
         A_24030.finish();
     }
+}
+
+void model::KbvBundle::checkRenderedDosageInstruction() const
+{
+    const auto& medicationRequest = getResourcesByType<model::KbvMedicationRequest>();
+    ErpExpect(medicationRequest.size() == 1, HttpStatus::BadRequest,
+              "Expected exactly one MedicationRequest in Bundle.");
+    medicationRequest.at(0).additionalValidation();
 }
 
 std::optional<model::Timestamp> model::KbvBundle::getValidationReferenceTimestamp() const

@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_CLIENT_URLREQUESTSENDER_HXX
 
 #include "shared/network/client/ConnectionParameters.hxx"
+#include "shared/network/client/ProxyParameters.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/UrlHelper.hxx"
@@ -17,6 +18,7 @@
 
 class HttpClient;
 class HttpsClient;
+
 
 class UrlRequestSender
 {
@@ -57,27 +59,29 @@ public:
 
     void setTlsCertificateVerifier(TlsCertificateVerifier certificateVerifier);
 
-    void setProxyUrl(std::optional<std::string> url);
+    /**
+     * Set the list of proxies, for http connections, only proxies with
+     * ProxyMode::HTTP are considered, while for HTTPS connections only proxies
+     * in ProxyMode::SNI are used. Note that when a proxy is used, specifying the
+     * endpoint (i.e. the IP) directly will be ignored.
+     * Proxies are tried in the order they are passed, if a networking issue
+     * is detected, the next proxy is tested.
+     */
+    void setProxies(std::vector<ProxyParameters> proxies);
 
     void setFollowRedirects(bool followRedirects);
 
+    void setAdditionalHeaders(Header::keyValueMap_t&& additionalHeaders);
+
 protected:
-    virtual ClientResponse doSend (
-        const std::string& url,
-        const HttpMethod method,
-        const std::string& body,
-        const std::string& contentType = std::string(),
-        const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr, const std::string& headerFieldHost = "") const;
-    virtual ClientResponse doSend (
-        const UrlHelper::UrlParts& url,
-        const HttpMethod method,
-        const std::string& body,
-        const std::string& contentType = std::string(),
-        const std::optional<std::string>& forcedCiphers = std::nullopt,
-        const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr, const std::string& headerFieldHost = "") const;
+    virtual ClientResponse doSend(const std::string& url, HttpMethod method, const std::string& body,
+                                  const std::string& contentType = std::string(),
+                                  const std::optional<std::string>& forcedCiphers = std::nullopt, bool trustCn = false,
+                                  const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
+    virtual ClientResponse doSend(const UrlHelper::UrlParts& url, HttpMethod method, const std::string& body,
+                                  const std::string& contentType = std::string(),
+                                  const std::optional<std::string>& forcedCiphers = std::nullopt, bool trustCn = false,
+                                  const boost::asio::ip::tcp::endpoint* ep = nullptr) const;
 
     bool followsRedirects() const;
 
@@ -86,8 +90,9 @@ private:
     std::chrono::milliseconds mConnectionTimeout;
     std::chrono::milliseconds mResolveTimeout;
     mutable DurationConsumer mDurationConsumer;
-    std::optional<std::string> mProxyUrl;
+    std::vector<ProxyParameters> mProxies;
     bool mFollowRedirects;
+    Header::keyValueMap_t mAdditionalHeaders;
 };
 
 

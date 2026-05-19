@@ -75,7 +75,7 @@ std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
 TransformerBase::getRepo(const fhirtools::DefinitionKey& profileKey)
 {
     auto viewList = Fhir::instance().structureRepository(model::Timestamp::now());
-    auto repoView = viewList.match(profileKey.url, *profileKey.version);
+    auto repoView = viewList.match(profileKey);
     Expect(repoView, "No repository view for " + to_string(profileKey));
     return repoView;
 }

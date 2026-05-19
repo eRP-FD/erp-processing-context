@@ -8,14 +8,6 @@
             <min value="0" />
             <max value="*" />
         </element>
-        <element id="Test.resourceType">
-            <path value="Test.string" />
-            <min value="0" />
-            <max value="1" />
-            <type>
-                <code value="http://hl7.org/fhirpath/System.String" />
-            </type>
-        </element>
         <element id="Test.string">
             <path value="Test.string" />
             <min value="0" />

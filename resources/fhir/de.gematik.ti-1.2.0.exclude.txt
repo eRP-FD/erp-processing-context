@@ -1,0 +1,13 @@
+###############################################################
+# files with version conflict to de.gematik.ti#1.3.1
+# files in group de.gematik.ti-1.2.0+1.3.1
+###############################################################
+package/StructureDefinition-medication-plan-identifier.json
+package/StructureDefinition-extension-http-method.json
+package/StructureDefinition-e-prescription-id.json
+package/StructureDefinition-ncpeh-country-extension.json
+package/StructureDefinition-ti-capability-statement.json
+package/StructureDefinition-extension-base-url.json
+package/StructureDefinition-extension-http-response-info.json
+package/StructureDefinition-extension-http-header.json
+package/StructureDefinition-ti-operationdefinition.json

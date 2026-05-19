@@ -110,6 +110,7 @@ public:
     void setContentLength (size_t contentLength);
 
     static std::string profileVersionHeader(model::ProfileType profileType);
+    static std::string xUserAgentHeader();
 
     static const std::string Accept;
     static const std::string AcceptLanguage;
@@ -135,6 +136,7 @@ public:
     static const std::string XAccessCode;
     static const std::string XRequestId;
     static const std::string XForwardedFor;
+    static const std::string XPoPPToken;
 
     // header fields in the outer response that are evaluated by the proxy
     static const std::string VAUErrorCode;
@@ -161,9 +163,9 @@ public:
     static const std::string PnTelematikId;
     static const std::string PnIpaddress;
 
+    static const std::string XUserAgent;
     struct Tee3 {
         static const std::string VauCid;
-        static const std::string XUserAgent;
         static const std::string XInsurantId;
         static const std::string VauNP;
         static const std::string VauNonPuTracing;

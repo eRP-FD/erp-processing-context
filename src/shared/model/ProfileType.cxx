@@ -34,7 +34,6 @@ bool mandatoryMetaProfile(ProfileType profileType)
         case GEM_ERP_PR_AuditEvent:
         case GEM_ERP_PR_Binary:
         case GEM_ERP_PR_Communication_DispReq:
-        case GEM_ERP_PR_Communication_InfoReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
         case GEM_ERP_PR_Communication_DiGA:

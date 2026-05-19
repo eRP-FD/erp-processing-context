@@ -6,11 +6,9 @@
 #
 
 
-# taken from de.gematik.fhir.directory-0.13.1
+###############################################################
+# files unchanged in de.gematik.fhir.directory#1.0.1
+###############################################################
 package/CodeSystem-aerztliche-fachrichtungen-oid-url.json
+package/CodeSystem-kbv-cm-sfhir-bar2-wbo-oid-url.json
 package/CodeSystem-nicht-aerztliche-fachrichtungen-oid-url.json
-
-# taken from de.gematik.terminology-1.0.6
-package/CodeSystem-facharzttitelderaerztekammern-oid-url.json
-package/CodeSystem-qualifikationen-nicht-aerztlicher-autoren-oid-url.json
-package/CodeSystem-qualifikatoren-zahnaerztlicher-autoren-oid-url.json

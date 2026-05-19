@@ -3,6 +3,7 @@
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/model/trezept/ErpTPrescriptionOrganization.hxx"
+#include "shared/model/TelematikId.hxx"
 
 namespace model
 {
@@ -17,6 +18,15 @@ void ErpTPrescriptionOrganization::setTelematikId(const rapidjson::Value& telema
 {
     addToArray(rapidjson::Pointer{resource::ElementName::path(resource::elements::identifier)},
                copyValue(telematikIdItem));
+}
+void ErpTPrescriptionOrganization::setTelematikId(const TelematikId& telematikId)
+{
+    rapidjson::Value telematikIdItem;
+    telematikIdItem.SetObject();
+    setKeyValue(telematikIdItem, rapidjson::Pointer{"/system"}, resource::naming_system::telematicID);
+    setKeyValue(telematikIdItem, rapidjson::Pointer{"/value"}, telematikId.id());
+    addToArray(rapidjson::Pointer{resource::ElementName::path(resource::elements::identifier)},
+               std::move(telematikIdItem));
 }
 
 void ErpTPrescriptionOrganization::setName(std::string_view name)

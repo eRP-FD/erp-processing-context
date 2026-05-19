@@ -9,17 +9,19 @@
 
 #include "exporter/eventprocessing/EventProcessingBase.hxx"
 
+class BDEMessage;
+
 namespace eventprocessing
 {
 
 class ProvideDispensation : public EventProcessingBase
 {
 public:
-    static Outcome process(gsl::not_null<IEpaMedicationClient*> client, const model::ProvideDispensationTaskEvent& erpEvent);
+    static Outcome process(gsl::not_null<IEpaMedicationClient*> client, const model::ProvideDispensationTaskEvent& erpEvent, BDEMessage& bdeMessage);
 
 private:
     explicit ProvideDispensation(gsl::not_null<IEpaMedicationClient*> medicationClient);
-    Outcome doProcess(const model::ProvideDispensationTaskEvent& taskEvent);
+    Outcome doProcess(const model::ProvideDispensationTaskEvent& taskEvent, BDEMessage& bdeMessage);
 };
 
 }// eventprocessing

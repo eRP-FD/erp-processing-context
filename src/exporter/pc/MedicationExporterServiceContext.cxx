@@ -47,12 +47,11 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
 {
     auto requestSender = std::make_shared<UrlRequestSender>(
         TlsCertificateVerifier::withCustomRootCertificates(""),
-        std::chrono::seconds{
-            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+        std::chrono::seconds{configuration.getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
         std::chrono::milliseconds{
-            Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
-    requestSender->setProxyUrl(
-        Configuration::instance().getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_HTTP_PROXY));
+            configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
+    requestSender->setProxies(configuration.proxyParameters(ProxyMode::HTTP));
+
     requestSender->setFollowRedirects(true);
     mCrlProvider = std::make_shared<CrlDownloadCache>(std::move(requestSender));
     setupTslRefreshJob(std::chrono::seconds{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)});
@@ -152,13 +151,6 @@ std::shared_ptr<HttpsClientPool> MedicationExporterServiceContext::httpsClientPo
     return mHttpsClientPools.at(hostname);
 }
 
-
-std::shared_ptr<CrlProvider> MedicationExporterServiceContext::crlProvider()
-{
-    return mCrlProvider;
-}
-
-
 std::unique_ptr<exporter::RuntimeConfigurationGetter>
 MedicationExporterServiceContext::getRuntimeConfigurationGetter() const
 {
@@ -174,4 +166,22 @@ MedicationExporterServiceContext::getRuntimeConfigurationSetter() const
 std::shared_ptr<const exporter::RuntimeConfiguration> MedicationExporterServiceContext::getRuntimeConfiguration() const
 {
     return mRuntimeConfiguration;
+}
+
+void MedicationExporterServiceContext::mergeFailingEpas(std::set<std::string>&& failingEpas)
+{
+    const std::unique_lock lock(mFailingEpasMutex);
+    mFailingEpas.merge(std::move(failingEpas));
+}
+
+void MedicationExporterServiceContext::removeFailingEpa(const std::string& epa)
+{
+    const std::unique_lock lock(mFailingEpasMutex);
+    mFailingEpas.erase(epa);
+}
+
+bool MedicationExporterServiceContext::failingEpasEmpty() const
+{
+    const std::unique_lock lock(mFailingEpasMutex);
+    return mFailingEpas.empty();
 }

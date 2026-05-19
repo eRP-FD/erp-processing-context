@@ -97,7 +97,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         const Identity recipient{communication.recipient()};
 
-        A_19448_01.start("set sender and send timestamp");
+        A_19448_04.start("set sender and send timestamp");
         const std::optional<std::string> senderClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
         ErpExpect(senderClaim.has_value(), HttpStatus::BadRequest, "JWT does not contain a claim for the sender");
         communication.setTimeSent();
@@ -108,7 +108,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
             "JWT does not contain a claim for the senders profession Oid");
         const Identity sender{validateSender(communication, senderProfessionOid.value(), senderClaim.value())};
         communication.setSender(sender);
-        A_19448_01.finish();
+        A_19448_04.finish();
 
         // ERP-12846: ensure current keys are loaded before starting DB-Transaction
         auto utcToday = date::floor<date::days>(session.sessionTime().toChronoTimePoint());
@@ -122,10 +122,10 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         std::optional<model::Kvnr> taskKvnr{};
         if (communication.requiresTask())
         {
-            A_21371_02.start("check existence of task");
+            A_21371_03.start("check existence of task");
             auto [taskAndKey, healthCareProviderPrescription] = databaseHandle->retrieveTaskAndPrescription(prescriptionId);
             ErpExpect(taskAndKey.has_value(), HttpStatus::BadRequest, "Task for prescription id " + prescriptionId.toString() + " is missing");
-            A_21371_02.finish();
+            A_21371_03.finish();
 
             task = std::move(taskAndKey->task);
             taskKvnr = task->kvnr();
@@ -152,17 +152,16 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         A_20229_01.finish();
 
         if (messageType == Communication::MessageType::DispReq ||
-            messageType == Communication::MessageType::InfoReq ||
             messageType == Communication::MessageType::Representative)
         {
-            A_20885_03.start("Examination of insured person and eligibility");
+            A_20885_04.start("Examination of insured person and eligibility");
             if (senderProfessionOid == profession_oid::oid_versicherter)
             {
                 std::optional<std::string> headerAccessCode = header.header(Header::XAccessCode);
                 checkEligibilityOfInsurant(messageType, std::get<model::Kvnr>(sender), taskKvnr.value(),
                                            headerAccessCode, std::string(task->accessCode()), communication.accessCode());
             }
-            A_20885_03.finish();
+            A_20885_04.finish();
         }
 
         A_20230_01.start("restrict transfer for messages following the represantive schema to prescriptions that are ready or in-progress");
@@ -204,12 +203,18 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         // GEMREQ-start A_19450-01#callVerifyPayload
         A_19450_01.start("do not allow malicious code in payload");
-        A_23878_01.start("verify json payload of DispReq");
-        A_23879.start("verify json payload of Reply");
+        A_23876_01.start("DispReq - Datenstruktur Nachricht");
+        A_23877_01.start("Reply - Datenstruktur Nachricht");
+        A_23878_01.start("verify json payload V1 of DispReq");
+        A_23878_02.start("verify json payload V3 of DispReq");
+        A_23879.start("verify json payload V1 of Reply");
+        A_23879_01.start("verify json payload V3 of Reply");
         communication.verifyPayload(session.serviceContext.getJsonValidator());
+        A_23879.finish();
+        A_23879_01.finish();
+        A_23878_02.finish();
         A_23878_01.start("for flowtype 166 only onPremise und delivery are allowed");
         communication.verifySupplyOptionsType(prescriptionId.type());
-        A_23879.finish();
         A_23878_01.finish();
         A_19450_01.finish();
         // GEMREQ-end A_19450-01#callVerifyPayload
@@ -225,12 +230,12 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
 
         makeResponse(session, HttpStatus::Created, &communication);
 
-        A_22367_02.start("Create initial subscription only for specific message types.");
+        A_22367_03.start("Create initial subscription only for specific message types.");
         if (communication.isRequest())
         {
             SubscriptionPostHandler::publish(session, std::get<model::TelematikId>(recipient));
         }
-        A_22367_02.finish();
+        A_22367_03.finish();
     // GEMREQ-start A_19450-01#catchModelException
     }
     catch (const ModelException& e)
@@ -284,10 +289,7 @@ model::Identity CommunicationPostHandler::validateSender(
         ErpExpect(profession_oid::toInnerRequestRole(professionOid) == profession_oid::InnerRequestRole::patient,
             HttpStatus::BadRequest, "Invalid sender profession oid in communication message");
         ErpExpect(Kvnr::isKvnr(sender), HttpStatus::BadRequest, "Invalid Kvnr");
-        auto kvnrType = communication.messageType() == Communication::MessageType::ChargChangeReq
-                            ? model::Kvnr::Type::pkv
-                            : model::Kvnr::Type::unspecified;
-        return model::Kvnr{sender, kvnrType};
+        return model::Kvnr{sender};
     }
 }
 
@@ -345,12 +347,6 @@ void CommunicationPostHandler::checkEligibilityOfInsurant(
 {
     switch (messageType)
     {
-    case Communication::MessageType::InfoReq:
-        // The AccessCode for the authorization of the representative cannot be checked, as it must not be sent
-        // with the availability request - otherwise the e - prescription is considered assigned.
-        ErpExpect(!communicationAccessCode.has_value(), HttpStatus::BadRequest,
-                "Info request must not contain an access code in payload");
-        break;
     case Communication::MessageType::ChargChangeReq:
         ErpExpect(!communicationAccessCode.has_value(), HttpStatus::BadRequest,
                   "Charge item change request must not contain an access code in payload");
@@ -403,7 +399,6 @@ void CommunicationPostHandler::checkVerificationIdentitiesOfKvnrs(
 {
     switch (messageType)
     {
-        case Communication::MessageType::InfoReq:
         case Communication::MessageType::DispReq:
             ErpExpect(taskKvnr && std::get<model::Kvnr>(sender).verificationIdentity() == taskKvnr->verificationIdentity(),
                       HttpStatus::BadRequest,

@@ -13,12 +13,14 @@
 #include "shared/util/ByteHelper.hxx"
 
 
+// GEMREQ-start A_20163
 InnerTeeResponse::InnerTeeResponse (const std::string& requestId, const Header& header, const std::string& body)
     : mA("1 "
          + ByteHelper::toHex(requestId) + " "
          + ServerResponseWriter().toString(ValidatedServerResponse(ServerResponse(header, body))))
 {
 }
+// GEMREQ-end A_20163
 
 
 const std::string& InnerTeeResponse::getA (void) const

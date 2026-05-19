@@ -98,16 +98,21 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     }
     if(medicationsAndDispenses.medicationDispenses.empty())
     {
-        A_24287.start("Aufruf ohne MedicationDispense im Request Body");
+        A_24287_01.start("Aufruf ohne MedicationDispense im Request Body");
         model::MedicationDispenseId medicationDispenseId(prescriptionId, 0);
         auto retrieved = databaseHandle->retrieveMedicationDispense(kvnr.value(), medicationDispenseId);
-        ErpExpect(!retrieved.medicationDispenses.empty(), HttpStatus::Forbidden, "Medication dispense does not exist.");
-        A_24287.finish();
+        ErpExpect(! retrieved.medicationDispenses.empty(), HttpStatus::Forbidden,
+                  "Abschluss des Workflows konnte nicht durchgeführt werden. Dispensierinformationen wurden nicht "
+                  "bereitgestellt.");
+        A_24287_01.finish();
     }
     else
     {
         checkMedicationDispenses(medicationsAndDispenses.medicationDispenses, prescriptionId, kvnr.value(),
                                  telematikIdFromAccessToken.value());
+        A_28411.start("Update task.owner in $close");
+        task.setOwner(telematikIdFromAccessToken.value());
+        A_28411.finish();
         A_26337.start("update lastMedicationDispense timestamp");
         task.updateLastMedicationDispense();
         A_26337.finish();
@@ -121,7 +126,7 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         A_23090_07.finish();
     }
 
-    A_19233_05.start(
+    A_19233_06.start(
         "Create receipt bundle including Telematik-ID, timestamp of in-progress, current timestamp, prescription-id");
     const auto completedTimestamp = model::Timestamp::now();
     ErpExpect(inProgressDate < completedTimestamp, HttpStatus::InternalServerError, "in-progress date later than completed time.");
@@ -133,11 +138,11 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
                                                  authorIdentifier, digestIdentifier.ref);
     const model::Device deviceResource;
 
-    A_19233_05.start("Save bundle reference in task.output");
+    A_19233_06.start("Save bundle reference in task.output");
     task.setReceiptUuid();
-    A_19233_05.finish();
+    A_19233_06.finish();
 
-    A_19233_05.start("Add the prescription signature digest");
+    A_19233_06.start("Add the prescription signature digest");
     ErpExpect(prescription.has_value() && prescription.value().data().has_value(), ::HttpStatus::InternalServerError,
               "No matching prescription found.");
 
@@ -160,10 +165,10 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
     model::ErxReceipt responseReceipt(Uuid(*task.receiptUuid()), taskUrl + "/$close/", prescriptionId,
                                       compositionResource, authorIdentifier, deviceResource, digestIdentifier.fullUrl,
                                       prescriptionDigestResource);
-    A_19233_05.finish();
-    A_19233_05.finish();
+    A_19233_06.finish();
+    A_19233_06.finish();
 
-    A_19233_05.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
+    A_19233_06.start("Sign the receipt with ID.FD.SIG using [RFC5652] with profile CAdES-BES ([CAdES]) ");
     // GEMREQ-start GS-A_4357-02#signData
     const std::string serialized = responseReceipt.serializeToXmlString();
     const std::string base64SignatureData =
@@ -174,12 +179,12 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
             std::nullopt,
             session.serviceContext.getCFdSigErpManager().getOcspResponse()).getBase64();
     // GEMREQ-end GS-A_4357-02#signData
-    A_19233_05.finish();
+    A_19233_06.finish();
 
-    A_19233_05.start("Set signature");
+    A_19233_06.start("Set signature");
     const model::Signature signature(base64SignatureData, model::Timestamp::now(), authorIdentifier);
     responseReceipt.setSignature(signature);
-    A_19233_05.finish();
+    A_19233_06.finish();
 
     // store in DB:
     A_19248_05.start("Save modified Task and MedicationDispense / Receipt objects");

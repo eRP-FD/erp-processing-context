@@ -21,7 +21,8 @@ public:
 private:
     void handleRequestFromInsurant(PcSessionContext& session);
 
-    void handleRequestFromPharmacist(PcSessionContext& session);
+    void handleRequestWithPnw(PcSessionContext& session);
+    void handleRequestWithPoPPToken(PcSessionContext& session, const std::string& poppToken);
     model::Bundle handleRequestFromPharmacist(PcSessionContext& session, const model::Kvnr& kvnr);
 
     std::optional<UrlArguments> urlArgumentsForTasks(

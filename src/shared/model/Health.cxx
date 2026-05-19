@@ -6,14 +6,15 @@
  */
 
 #include "Health.hxx"
+#include "ResourceNames.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Expect.hxx"
-#include <rapidjson/document.h>
 
-#include <unordered_map>
+#include <rapidjson/document.h>
 #include <string_view>
+#include <unordered_map>
 
 namespace model
 {
@@ -36,6 +37,12 @@ const std::string health_template = R"--(
 constexpr std::string_view service_template_postgres = R"--(
 {
   "name": "postgres",
+  "status": "DOWN"
+})--";
+
+constexpr std::string_view service_template_postgres_ro = R"--(
+{
+  "name": "postgres-read-only",
   "status": "DOWN"
 })--";
 
@@ -111,6 +118,15 @@ constexpr std::string_view service_template_cfdsigerp = R"--(
   }
 })--";
 
+constexpr std::string_view service_template_poppservice = R"--(
+{
+  "name": "PoPPService",
+  "status": "DOWN",
+  "data": {
+    "certificates" : []
+  }
+})--";
+
 const rapidjson::Pointer statusPointer("/status");
 const rapidjson::Pointer namePointer("/name");
 const rapidjson::Pointer checksPointer("/checks");
@@ -131,6 +147,7 @@ const rapidjson::Pointer tslExpiryPointer("/data/expiryDate");
 const rapidjson::Pointer tslSequenceNumberPointer("/data/sequenceNumber");
 const rapidjson::Pointer tslIdPointer("/data/id");
 const rapidjson::Pointer tslHashPointer("/data/hash");
+const rapidjson::Pointer certificatesPointer("/data/certificates");
 
 const std::string startupTimestamp = model::Timestamp::now().toXsDateTime();
 
@@ -172,6 +189,17 @@ void Health::setPostgresStatus(const std::string_view& status, const std::string
         data.emplace(rootCausePointer, *message);
     }
     setStatusInChecksArray("postgres", status, data);
+}
+
+void Health::setPostgresROStatus(const std::string_view& status, const std::string_view& connectionInfo,
+                                 std::optional<std::string_view> message)
+{
+    std::map<rapidjson::Pointer, std::string_view> data{{connectionInfoPointer, connectionInfo}};
+    if (message)
+    {
+        data.emplace(rootCausePointer, *message);
+    }
+    setStatusInChecksArray("postgres-read-only", status, data);
 }
 
 void Health::setEventDbStatus(const std::string_view& status, const std::string_view& connectionInfo,
@@ -257,6 +285,29 @@ void Health::setTeeTokenUpdaterStatus(const std::string_view& status, std::optio
     setStatusInChecksArray(teeTokenUpdater, status, rootCausePointer, message);
 }
 
+void Health::setPoPPServiceStatus(const std::string_view& status,
+                                  const std::list<PoPPCertificateHealthData>& healthData)
+{
+    std::map<rapidjson::Pointer, std::string> data;
+    for (size_t i = 0; const auto& poPPCertificateHealthData : healthData)
+    {
+        data.emplace(resource::ElementName::path("data", "certificates", i, "subject"),
+                     poPPCertificateHealthData.subject);
+        data.emplace(resource::ElementName::path("data", "certificates", i, "ocsp"),
+                     fmt::format("last success {}", poPPCertificateHealthData.lastOcspSuccess.has_value()
+                                                        ? poPPCertificateHealthData.lastOcspSuccess->toXsDateTime()
+                                                        : "never"));
+        data.emplace(resource::ElementName::path("data", "certificates", i, "ocsp_max_age_exceeded"),
+                     fmt::format("{}", poPPCertificateHealthData.lastOcspMaxAgeExceeded));
+        data.emplace(resource::ElementName::path("data", "certificates", i, "certificate_expiry"),
+                     poPPCertificateHealthData.expiry.toXsDateTime());
+        data.emplace(resource::ElementName::path("data", "certificates", i, "certificate_expired"),
+                     fmt::format("{}", poPPCertificateHealthData.expiry <= Timestamp::now()));
+        ++i;
+    }
+    setStatusInChecksArray(poppService, status, data);
+}
+
 void Health::setHealthCheckError(const std::string_view& errorMessage)
 {
     setValue(healthCheckErrorPointer, errorMessage);
@@ -272,17 +323,16 @@ void Health::setStatusInChecksArray(const std::string_view& name, const std::str
     }
     else
     {
-        setStatusInChecksArray(name, status, {});
+        setStatusInChecksArray(name, status, std::map<rapidjson::Pointer, std::string_view>{});
     }
 }
 
-
-void Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
-    const std::map<rapidjson::Pointer, std::string_view>& data)
+rapidjson::Value& Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status)
 {
     auto* arrayEntry = findMemberInArray(checksPointer, namePointer, name);
     std::unordered_map<std::string_view, std::string_view> templateMap = {
         {"postgres", service_template_postgres},
+        {"postgres-read-only", service_template_postgres_ro},
         {"eventdb", service_template_eventdb},
         {"redis", service_template_redis},
         {"hsm", service_template_hsm},
@@ -292,6 +342,7 @@ void Health::setStatusInChecksArray(const std::string_view& name, const std::str
         {"SeedTimer", service_template_prngseed},
         {"TeeTokenUpdater", service_template_teetoken},
         {"C.FD.SIG-eRP", service_template_cfdsigerp},
+        {"PoPPService", service_template_poppservice},
     };
     if (arrayEntry == nullptr)
     {
@@ -307,9 +358,26 @@ void Health::setStatusInChecksArray(const std::string_view& name, const std::str
     Expect3(arrayEntry != nullptr, "did not find array entry " + std::string(name), std::logic_error);
 
     setKeyValue(*arrayEntry, statusPointer, status);
+    return *arrayEntry;
+}
+
+void Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
+    const std::map<rapidjson::Pointer, std::string_view>& data)
+{
+    auto& arrayEntry = setStatusInChecksArray(name, status);
     for (const auto& item : data)
     {
-        setKeyValue(*arrayEntry, item.first, item.second);
+        setKeyValue(arrayEntry, item.first, item.second);
+    }
+}
+
+void Health::setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
+                                    const std::map<rapidjson::Pointer, std::string>& data)
+{
+    auto& arrayEntry = setStatusInChecksArray(name, status);
+    for (const auto& item : data)
+    {
+        setKeyValue(arrayEntry, item.first, item.second);
     }
 }
 

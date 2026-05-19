@@ -67,7 +67,10 @@ public:
     std::optional<double> doubleForClaim(const std::string_view& claimName) const;
     std::optional<std::string> stringForClaim(const std::string_view& claimName) const;
 
-    void checkJwtFormat() const;
+    rapidjson::Document headerDocument() const;
+	const rapidjson::Document& claimsDocument() const;
+
+    void checkJwtFormat(const std::string& expectedAlg = "BP256R1") const;
     void checkRequiredClaims() const;
     void checkAudClaim() const;
     void checkIfExpired() const;

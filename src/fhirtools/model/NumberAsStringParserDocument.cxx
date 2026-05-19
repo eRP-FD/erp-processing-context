@@ -146,7 +146,7 @@ std::string NumberAsStringParserDocument::pointerToString(const rj::Pointer& poi
 
 std::string_view NumberAsStringParserDocument::getStringValueFromValue(const rj::Value* value)
 {
-    Expect3(value != nullptr, "value is nullptr", std::logic_error);
+    ModelExpect(value != nullptr, "value is not existing");
     ModelExpect(value->IsString(), "value is not a string: " + serializeToJsonString(*value));
     ModelExpect(value->GetStringLength() > 0, "at least prefix character expected");
     ModelExpect(value->GetString()[0] == prefixString || value->GetString()[0] == prefixNumber,

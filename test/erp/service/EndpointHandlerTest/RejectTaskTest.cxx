@@ -36,7 +36,12 @@ protected:
     {
         const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                         .telematikId = telematikId};
-        const auto medicationDispenseXml = ResourceTemplates::medicationDispenseXml(dispenseOptions);
+        const auto medicationDispenseXml = ResourceTemplates::medicationDispenseOperationParametersXml(
+        {
+            .profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
+            .medicationDispenses = {dispenseOptions}
+        }
+        );
 
         Header requestHeader{HttpMethod::POST,
                              "/Task/" + prescriptionId + "/$dispense/",
@@ -146,12 +151,6 @@ TEST_F(RejectTaskTest, OwnerDeleted)
 
 TEST_F(RejectTaskTest, MedicationDispenseDeleted)
 {
-    using namespace ResourceTemplates;
-    if(Versions::GEM_ERP_current() != Versions::GEM_ERP_1_3)
-    {
-        GTEST_SKIP();
-    }
-
     std::string secret = acceptTask();
 
     dispenseTask(secret);

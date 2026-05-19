@@ -19,26 +19,27 @@
 namespace
 {
 const fhirtools::DefinitionKey TRezeptMedicationRequestProfile{
-    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-request|1.1"};
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-request"};
 const fhirtools::DefinitionKey TRezeptMedicationProfile{
-    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication|1.1"};
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication"};
 const fhirtools::DefinitionKey TRezeptMedicationDispenseProfile{
-    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-dispense|1.1"};
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-dispense"};
 const fhirtools::DefinitionKey TRezeptOrganizationProfile{
-    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-organization|1.1"};
+    "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-organization"};
 
 }
 
-model::ErpTPrescriptionCarbonCopy TRezeptTransformer::transform(const model::Bundle& kbvBundle,
-                                                                const model::Bundle& medicationDispenseBundle,
-                                                                const model::Timestamp& qesSigningTime,
-                                                                const model::PrescriptionId& prescriptionId,
-                                                                const model::Bundle& vzdSearchSet)
+model::ErpTPrescriptionCarbonCopy
+TRezeptTransformer::transform(const model::Bundle& kbvBundle, const model::Bundle& medicationDispenseBundle,
+                              const model::Timestamp& qesSigningTime, const model::PrescriptionId& prescriptionId,
+                              const model::TelematikId& fallbackTelematikId,
+                              const std::string& fallbackOrganizationName, const model::Bundle& vzdSearchSet)
 {
     model::ErpTPrescriptionCarbonCopy parameters;
 
     transformRxPrescription(parameters, kbvBundle, qesSigningTime, prescriptionId);
-    transformRxDispense(parameters, medicationDispenseBundle, vzdSearchSet);
+    transformRxDispense(parameters, medicationDispenseBundle, vzdSearchSet, fallbackTelematikId,
+                        fallbackOrganizationName);
     parameters.removeEmptyObjectsAndArrays();
 
     return parameters;
@@ -57,7 +58,7 @@ void TRezeptTransformer::transformRxPrescription(model::ErpTPrescriptionCarbonCo
                                                          {.ptr = rapidjson::Pointer{"/intent"}, .value = "order"}};
     std::vector<fhirtools::ValueMapping> medicationRequestValueMappings = {
         {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Teratogenic",
-         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-teratogenic-extension",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension",
          .restrictFieldName = "url"},
         {.from = "Off-Label", .to = "off-label", .restrictFieldName = "url"},
         {.from = "GebaerfaehigeFrau", .to = "childbearing-potential", .restrictFieldName = "url"},
@@ -67,11 +68,13 @@ void TRezeptTransformer::transformRxPrescription(model::ErpTPrescriptionCarbonCo
          .restrictFieldName = "url"},
         {.from = "ErklaerungSachkenntnis", .to = "declaration-of-expertise", .restrictFieldName = "url"}};
 
-    auto transformedMedicationRequest =
-        transformResource(TRezeptMedicationRequestProfile, medicationRequest, medicationRequestValueMappings, medicationRequestFixedValues);
+    auto transformedMedicationRequest = transformResource(TRezeptMedicationRequestProfile, medicationRequest,
+                                                          medicationRequestValueMappings, medicationRequestFixedValues);
     remove(transformedMedicationRequest, rapidjson::Pointer{"/subject"});
     transformedMedicationRequest.removeEmptyObjectsAndArrays();
-    checkSetAbsentReason(transformedMedicationRequest, "/subject", "not-permitted");
+    transformedMedicationRequest.setValue(rapidjson::Pointer{"/subject/identifier/system"},
+                                          "http://fhir.de/sid/gkv/kvid-10");
+    checkSetAbsentReason(transformedMedicationRequest, "/subject/identifier/_value", "not-permitted");
     outParameter.setMedicationRequest(transformedMedicationRequest);
 
     std::vector<fhirtools::ValueMapping> medicationValueMappings = {
@@ -91,31 +94,41 @@ void TRezeptTransformer::transformRxPrescription(model::ErpTPrescriptionCarbonCo
 
 void TRezeptTransformer::transformRxDispense(model::ErpTPrescriptionCarbonCopy& outParameter,
                                              const model::Bundle& medicationDispenseBundle,
-                                             const model::Bundle& vzdSearchSet)
+                                             const model::Bundle& vzdSearchSet,
+                                             const model::TelematikId& fallbackTelematikId,
+                                             const std::string& fallbackOrganizationName)
 {
-    if (vzdSearchSet.getResourceCount() == 0)
-    {
-        Fail2("Missing or invalid organizationDirectory.", std::runtime_error);
-    }
-
     model::ErpTPrescriptionOrganization organization;
+    // Set profile without version
+    organization.setMetaProfile0(to_string(TRezeptOrganizationProfile));
     std::optional<model::TelematikId> telematikId = std::nullopt;
-    try
+    const auto vzdResourceCount = vzdSearchSet.getResourceCount();
+    if (vzdResourceCount > 0)
     {
-        auto organizationDirectory = vzdSearchSet.getUniqueResourceByType<model::OrganizationDirectory>();
-        const auto& telematikIdItem = organizationDirectory.getTelematikIdIdentifier();
-        organization.setTelematikId(telematikIdItem);
-        telematikId.emplace(model::TelematikId{model::NumberAsStringParserDocument::getStringValueFromValue(
-            rapidjson::Pointer{"/value"}.Get(telematikIdItem))});
-        organization.setId(telematikId->id());
-        organization.setName(organizationDirectory.getName());
+        auto organizationDirectories = vzdSearchSet.getResourcesByType<model::OrganizationDirectory>();
+        if (! organizationDirectories.empty())
+        {
+            Expect(organizationDirectories.size() == 1, "More than one organizationDirectory found in VZD search set");
+            const auto& organizationDirectory = organizationDirectories.front();
+            const auto& telematikIdItem = organizationDirectory.getTelematikIdIdentifier();
+            organization.setName(organizationDirectory.getName());
+            organization.setTelematikId(telematikIdItem);
+            telematikId.emplace(model::TelematikId{model::NumberAsStringParserDocument::getStringValueFromValue(
+                rapidjson::Pointer{"/value"}.Get(telematikIdItem))});
+        }
     }
-    catch (const std::exception& exc)
+    if (! telematikId.has_value())
     {
-        Fail2("Missing or invalid organizationDirectory.", std::runtime_error);
+        LOG(INFO) << "No organizationDirectory found in VZD search set, using fallback values";
+        telematikId.emplace(fallbackTelematikId);
+        organization.setName(fallbackOrganizationName);
+        organization.setTelematikId(fallbackTelematikId);
     }
+    organization.setId(telematikId->id());
 
-    const auto healthcareServices = vzdSearchSet.getResourcesByType<model::HealthcareServiceDirectory>();
+    const auto healthcareServices = vzdResourceCount > 0
+                                        ? vzdSearchSet.getResourcesByType<model::HealthcareServiceDirectory>()
+                                        : std::vector<model::HealthcareServiceDirectory>{};
     if (not healthcareServices.empty())
     {
         const auto& healthcareService = healthcareServices.front();
@@ -124,7 +137,8 @@ void TRezeptTransformer::transformRxDispense(model::ErpTPrescriptionCarbonCopy& 
             organization.setTelecom(*telecom);
         }
     }
-    const auto locations = vzdSearchSet.getResourcesByType<model::LocationDirectory>();
+    const auto locations = vzdResourceCount > 0 ? vzdSearchSet.getResourcesByType<model::LocationDirectory>()
+                                                : std::vector<model::LocationDirectory>{};
     if (not locations.empty())
     {
         const auto& location = locations.front();

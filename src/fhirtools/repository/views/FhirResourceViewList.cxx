@@ -48,7 +48,8 @@ fhirtools::FhirResourceViewList::FhirResourceViewList(const ViewSource& viewSour
         }
         bool latest(const Entry& rhs) const
         {
-            return std::tie(start, end) < std::tie(rhs.start, rhs.end);
+            return std::tuple{start, end.value_or(date::local_days::max())} <
+                   std::tuple{rhs.start, rhs.end.value_or(date::local_days::max())};
         }
         operator std::shared_ptr<const FhirStructureRepositoryView>() &&
         {

@@ -14,12 +14,29 @@ package/CodeSystem-ICD-9CM-procedurecodes.json
 # using the different version is fixed by version-mapper
 package/CodeSystem-data-absent-reason.json
 
+
 # The following files are patched in 6.5.0 but still use the same version number:
 # use the updated version from 6.5.0
 package/CodeSystem-immunization-recommendation-status.json
-package/CodeSystem-insurance-plan-type.json
 package/CodeSystem-synthesis-type.json
 package/CodeSystem-v2-0560.json
 package/CodeSystem-v2-tables.json
 package/CodeSystem-v3-CodeSystem.json
 package/CodeSystem-v3-RoleClass.json
+
+# The following files are patched in 7.0.1 but still use the same version number:
+# use the updated version from 7.0.1
+package/CodeSystem-insurance-plan-type.json
+package/CodeSystem-service-category.json
+package/ValueSet-v2-0003.json
+package/ValueSet-v2-0338.json
+package/ValueSet-v2-0725.json
+package/CodeSystem-v3-ActRelationshipSubset.json
+package/CodeSystem-v3-styleType.json
+
+# Patched in 7.0.1 but still use the same version number:
+# following codes were added:
+# `urn:hl7-org:sdwg:ips:cda-structuredBody:1.1`
+# `urn:hl7-org:sdwg:ips:fhir-composition:1.1`
+# `urn:hl7-org:sdwg:ips:fhir-composition:2.0`
+package/CodeSystem-v3-HL7DocumentFormatCodes.json

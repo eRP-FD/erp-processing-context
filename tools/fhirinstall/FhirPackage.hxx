@@ -50,6 +50,8 @@ public:
     Id id() const;
     const PtrSet& dependencies() const;
     const std::set<fhirtools::DefinitionKey>& resources() const;
+    void printTree(const FhirPackage::PtrSet& packages, size_t indent = 0);
+    PtrSet dependencies(const std::filesystem::path& cacheFolder, const std::map<std::string, Id>& substitutions, bool recursive);
 
 
     struct Id {
@@ -100,9 +102,9 @@ private:
                  const std::map<std::string, FhirPackage::Id>& substitutions);
 
     void processPackageInfo(const std::filesystem::directory_entry& src,
-                            const std::map<std::string, FhirPackage::Id>& substitutions);
+                            const std::map<std::string, FhirPackage::Id>& substitutions, bool quiet = false);
 
-    Id applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id);
+    Id applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id, bool quiet);
 
     std::set<std::filesystem::path> readExcludeFile(const std::filesystem::path& excludeFile,
                                                     const std::filesystem::path& srcFolder);
@@ -111,6 +113,7 @@ private:
     PtrSet mDependencies;
     std::set<fhirtools::DefinitionKey> mResources;
     bool mHadError = false;
+    bool mPackageInfoLoaded = false;
 };
 
 

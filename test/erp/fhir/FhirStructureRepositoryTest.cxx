@@ -14,6 +14,7 @@
 #include "shared/util/Configuration.hxx"
 #include "test/util/ResourceManager.hxx"
 
+#include <ranges>
 #include <gtest/gtest.h>
 
 using namespace fhirtools;
@@ -85,4 +86,55 @@ TEST_F(FhirStructureRepositoryTest, missingBase)
 TEST_F(FhirStructureRepositoryTest, loadConfig)
 {
     ASSERT_NO_THROW(Fhir::instance());
+}
+
+TEST_F(FhirStructureRepositoryTest, groupReferencing)
+{
+    // this test checks if all configured groups are actually referenced
+    // as all groups are configured in a single file `001_fhir-resource-groups.config.json`
+    // `01_production.config.json` and `01_production-medication-exporter.config.json`
+    // are considered
+    const auto& config = Configuration::instance();
+    std::set<std::string> openGroups;
+    const auto erpViews = config.fhirResourceViewConfiguration<Configuration::ERP>().allViews();
+    const auto exporterViews = config.fhirResourceViewConfiguration<Configuration::MedicationExporter>().allViews();
+    const auto allViews = {erpViews, exporterViews};
+    auto intoOpenGrous = std::inserter(openGroups, openGroups.begin());
+    for (const auto& view : std::views::join(allViews))
+    {
+        std::ranges::move(view->mGroups, intoOpenGrous);
+    }
+    std::map unreferencedGroups = config.fhirResourceGroupConfiguration().allGroups();
+    while (!openGroups.empty())
+    {
+        auto groupIt = openGroups.begin();
+        auto group = *groupIt;
+        openGroups.erase(groupIt);
+        auto g = unreferencedGroups.find(group);
+        auto ref = g->second->referencedGroups();
+        unreferencedGroups.erase(g);
+        std::ranges::copy_if(std::move(ref), intoOpenGrous, [&](const std::string& gid){
+            return unreferencedGroups.contains(gid);
+        });
+    }
+    if (!unreferencedGroups.empty())
+    {
+        std::string groups;
+        std::string_view sep;
+        for (const auto& g: std::views::keys(unreferencedGroups))
+        {
+            groups.append(sep).append(g);
+            sep = ", ";
+
+        }
+        TLOG(WARNING) << "unreferenced groups: " << groups;
+        FAIL();
+    }
+
+
+
+
+
+
+
 }

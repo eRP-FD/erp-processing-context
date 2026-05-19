@@ -37,12 +37,12 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(task->prescriptionId(), accessCode, qesBundle));
     ASSERT_TRUE(task.has_value());
     ASSERT_EQ(task->kvnr(), kvnrInsurant);
-    std::optional<model::Communication> infoReq1;
+    std::optional<model::Communication> dispReq1;
     ASSERT_NO_FATAL_FAILURE(
-        infoReq1 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
+        dispReq1 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
                                      kvnrInsurant, ActorRole::Pharmacists, pharmacy1,
                                      R"({"version":1,"supplyOptionsType":"onPremise","address":["zu hause"]})"));
-    ASSERT_TRUE(infoReq1.has_value());
+    ASSERT_TRUE(dispReq1.has_value());
     std::optional<model::Communication> reply1;
     ASSERT_NO_FATAL_FAILURE(reply1 = communicationPost(
         model::Communication::MessageType::Reply, task.value(),
@@ -50,12 +50,12 @@ TEST_F(Erp5827Test, run)//NOLINT(readability-function-cognitive-complexity)
         ActorRole::Insurant, kvnrInsurant,
         R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Nein"})"));
     ASSERT_TRUE(reply1.has_value());
-    std::optional<model::Communication> infoReq2;
+    std::optional<model::Communication> dispReq2;
     ASSERT_NO_FATAL_FAILURE(
-        infoReq2 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
+        dispReq2 = communicationPost(model::Communication::MessageType::DispReq, task.value(), ActorRole::Insurant,
                                      kvnrInsurant, ActorRole::Pharmacists, pharmacy2,
                                      R"({"version":1,"supplyOptionsType":"onPremise","address":["zu hause"]})"));
-    ASSERT_TRUE(infoReq2.has_value());
+    ASSERT_TRUE(dispReq2.has_value());
     std::optional<model::Communication> reply2;
     ASSERT_NO_FATAL_FAILURE(reply2 = communicationPost(
         model::Communication::MessageType::Reply, task.value(),

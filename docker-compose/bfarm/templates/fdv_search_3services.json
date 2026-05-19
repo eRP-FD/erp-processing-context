@@ -42,11 +42,6 @@
                             "code": "ldap",
                             "display": "Synchronized from LDAP VZD",
                             "userSelected": false
-                        },
-                        {
-                            "system": "https://gematik.de/fhir/directory/CodeSystem/Origin",
-                            "code": "ldap",
-                            "display": "Synchronized from LDAP VZD"
                         }
                     ]
                 },
@@ -203,7 +198,7 @@
                         },
                         {
                             "system": "https://gematik.de/fhir/directory/CodeSystem/ldapUID",
-                            "code": "24419e79-* Connection #0 to host fhir-directory-ref.vzd.ti-dienste.de left intact\r\n659f-47d6-b797-17a527daec4d",
+                            "code": "24419e79-659f-47d6-b797-17a527daec4d",
                             "display": "UID of LDAP source entry"
                         }
                     ],
@@ -269,11 +264,6 @@
                             "code": "ldap",
                             "display": "Synchronized from LDAP VZD",
                             "userSelected": false
-                        },
-                        {
-                            "system": "https://gematik.de/fhir/directory/CodeSystem/Origin",
-                            "code": "ldap",
-                            "display": "Synchronized from LDAP VZD"
                         },
                         {
                             "system": "https://gematik.de/fhir/directory/CodeSystem/ResourceTag",

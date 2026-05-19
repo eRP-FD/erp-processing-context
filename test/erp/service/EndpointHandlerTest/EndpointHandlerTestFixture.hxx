@@ -15,6 +15,10 @@
 #include <regex>
 #include <variant>
 
+namespace ResourceTemplates
+{
+enum class TaskType;
+}
 class DatabaseFrontend;
 class JwtBuilder;
 class MockDatabase;
@@ -45,7 +49,8 @@ public:
     std::optional<model::UnspecifiedResource> getMedicationDispenses(const std::string& kvnr,
                                                                     const model::PrescriptionId& prescriptionId);
 
-    void checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename);
+    void checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename,
+                                size_t expectedCount = 1);
 
     std::string replacePrescriptionId(const std::string& templateStr, const std::string& prescriptionId)
     {
@@ -85,10 +90,11 @@ public:
     }
     // GEMREQ-end callHandlerWithResponseStatusCheck
 
-
+    void insertTask(model::PrescriptionType prescriptionType, ResourceTemplates::TaskType taskType,
+                    const int64_t databaseId, const model::Timestamp& expirydate, const model::Kvnr& kvnr);
 
 protected:
-    std::unique_ptr<MockDatabase> mockDatabase;
+    std::shared_ptr<MockDatabase> mockDatabase;
     std::string dataPath;
     PcServiceContext mServiceContext;
     std::unique_ptr<JwtBuilder> mJwtBuilder;

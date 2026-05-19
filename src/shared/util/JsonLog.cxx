@@ -158,6 +158,16 @@ void JsonLog::locationFromException(const ExceptionT& ex)
         {
             mDocument.AddMember("location", "unknown", mDocument.GetAllocator());
         }
+
+        const std::list<std::tuple<std::string, std::string>>& moreContext = ExceptionWrapper<ExceptionT>::getContext(ex);
+        for (const auto& [key, value] : moreContext)
+        {
+            mDocument.AddMember(
+                rapidjson::Value{key.data(), gsl::narrow<rapidjson::SizeType>(key.size()), mDocument.GetAllocator()},
+                rapidjson::Value{value.data(), gsl::narrow<rapidjson::SizeType>(value.size()),
+                                 mDocument.GetAllocator()},
+                mDocument.GetAllocator());
+        }
     }
 }
 

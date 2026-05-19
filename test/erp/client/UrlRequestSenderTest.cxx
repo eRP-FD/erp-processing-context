@@ -6,17 +6,21 @@
  */
 
 #include "shared/network/client/UrlRequestSender.hxx"
-#include "shared/common/Constants.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "erp/server/HttpsServer.hxx"
+#include "erp/service/ErpRequestHandler.hxx"
+#include "shared/common/Constants.hxx"
 #include "shared/server/RequestHandler.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/response/ServerResponse.hxx"
-#include "erp/service/ErpRequestHandler.hxx"
 #include "shared/util/Expect.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/HttpServer.hxx"
 
-#include <gtest/gtest.h>
+#include <boost/asio/ssl/stream.hpp>
 #include <chrono>
+#include <fmt/format.h>
+#include <gtest/gtest.h>
 
 namespace
 {
@@ -69,9 +73,6 @@ private:
     std::function<bool()> mIsBlockedFunctor;
     std::function<void(bool)> mServerBlockingStatusSetter;
 };
-
-
-
 
 
 class UrlRequestSenderTest : public testing::Test
@@ -166,6 +167,81 @@ TEST_F(UrlRequestSenderTest, ConnectionTimeoutHttp)  // NOLINT
 }
 
 
+TEST_F(UrlRequestSenderTest, proxyUrlIsUsedAndOriginalHostInHeader)
+{
+    const auto& config = Configuration::instance();
+    const auto proxyPort = gsl::narrow<uint16_t>(config.serverPort() + 11);
+
+
+    std::atomic_bool triedFirstProxy{false};
+    auto closingRequestHandler = [&](boost::asio::ip::tcp::socket& s, const HttpServer::RequestType&) -> HttpServer::ResponseType {
+        triedFirstProxy = true;
+        s.close();
+        return {};
+    };
+    auto closingProxyServer = HttpServer(boost::asio::ip::make_address("127.0.0.1"), proxyPort+1, closingRequestHandler);
+    auto closingProxyServerThread = std::thread([&closingProxyServer] {
+        closingProxyServer.run();
+    });
+
+    std::atomic_bool requestReceived{false};
+    std::string receivedHost;
+    std::string receivedBody;
+    std::string receivedPath;
+    auto requestHandler = [&](boost::asio::ip::tcp::socket&, const HttpServer::RequestType& request) -> HttpServer::ResponseType {
+        requestReceived = true;
+        receivedHost = request["Host"];
+        receivedBody = request.body();
+        receivedPath = request.target();
+
+        HttpServer::ResponseType response{};
+        response.result(boost::beast::http::status::ok);
+        response.keep_alive(false);
+        return response;
+    };
+
+    auto proxyServer = HttpServer(boost::asio::ip::make_address("127.0.0.1"), proxyPort, requestHandler);
+    auto proxyServerThread = std::thread([&proxyServer] {
+        proxyServer.run();
+    });
+
+    UrlRequestSender urlRequestSender(
+        TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting(),
+        std::chrono::milliseconds(50), Constants::resolveTimeout);
+    // add three configurations
+    // - the first one will not work, which disconnected immediately
+    // - the second does not have a server (connection refused)
+    // - third works
+    auto closingProxyConfig = ProxyParameters::fromUrl(fmt::format("https://127.0.0.1:{}", proxyPort+1), ProxyMode::HTTP);
+    auto deadProxyConfig = ProxyParameters::fromUrl(fmt::format("https://127.0.0.1:{}", proxyPort+2), ProxyMode::HTTP);
+    auto proxyConfig = ProxyParameters::fromUrl(fmt::format("https://127.0.0.1:{}", proxyPort), ProxyMode::HTTP);
+    urlRequestSender.setProxies({closingProxyConfig, deadProxyConfig, proxyConfig});
+
+    const uint16_t fakeTargetPort = 19999;
+    const std::string targetUrl = fmt::format("http://localhost:{}/test_path", fakeTargetPort);
+
+    ASSERT_NO_THROW(auto response = urlRequestSender.send(targetUrl, HttpMethod::POST, EXPECTED_BODY, targetUrl));
+
+    EXPECT_TRUE(triedFirstProxy) << "Request was not sent to closingProxyServer";
+
+    ASSERT_TRUE(requestReceived) << "Request must be forwarded to proxy server";
+    const std::string expectedHost = fmt::format("localhost:{}", fakeTargetPort);
+    EXPECT_EQ(receivedHost, expectedHost) << "Host header must contain original target host, not proxy host";
+    EXPECT_EQ(receivedBody, EXPECTED_BODY);
+    EXPECT_EQ(receivedPath, "/test_path");
+
+
+    // ensure the connection fails if we have only dead proxies
+    urlRequestSender.setProxies({closingProxyConfig, deadProxyConfig});
+    EXPECT_ANY_THROW(urlRequestSender.send(targetUrl, HttpMethod::POST, EXPECTED_BODY, targetUrl));
+
+    closingProxyServer.stop();
+    closingProxyServerThread.join();
+    proxyServer.stop();
+    proxyServerThread.join();
+}
+
+
 class ProxyVerifyingHandler : public UnconstrainedRequestHandler
 {
 public:
@@ -195,11 +271,10 @@ public:
 };
 
 
-TEST_F(UrlRequestSenderTest, proxyUrlIsUsedAndOriginalHostInHeader)
+TEST_F(UrlRequestSenderTest, proxySniIsUsedAndOriginalHostInHeader)
 {
     const auto& config = Configuration::instance();
-    const auto proxyPort = config.serverPort() + 11;
-
+    const auto proxyPort = gsl::narrow<uint16_t>(config.serverPort() + 11);
     auto handlerOwner = std::make_unique<ProxyVerifyingHandler>();
     const ProxyVerifyingHandler* handlerPtr = handlerOwner.get();
 
@@ -207,28 +282,24 @@ TEST_F(UrlRequestSenderTest, proxyUrlIsUsedAndOriginalHostInHeader)
     handlerManager.onPostDo("/test_path", std::move(handlerOwner));
     auto proxyServer = std::make_unique<HttpsServer>(HOST_IP, gsl::narrow<uint16_t>(proxyPort),
                                                      std::move(handlerManager), getServiceContext());
-    ASSERT_NE(proxyServer, nullptr);
     proxyServer->serve(1, "proxyServer");
-
-    UrlRequestSender urlRequestSender(TlsCertificateVerifier::withVerificationDisabledForTesting(),
+    ASSERT_NE(proxyServer, nullptr);
+    UrlRequestSender urlRequestSender(TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting(),
                                       std::chrono::milliseconds(50), Constants::resolveTimeout);
-    urlRequestSender.setProxyUrl("https://localhost:" + std::to_string(proxyPort));
+    auto proxyConfig = ProxyParameters::fromUrl(fmt::format("https://127.0.0.1:{}", proxyPort), ProxyMode::SNI);
+    urlRequestSender.setProxies({proxyConfig});
 
     const uint16_t fakeTargetPort = 19999;
-    const std::string targetUrl = "https://127.0.0.1:" + std::to_string(fakeTargetPort) + "/test_path";
+    const std::string targetUrl = fmt::format("https://localhost:{}/test_path", fakeTargetPort);
 
-    EXPECT_NO_THROW(auto response = urlRequestSender.send(targetUrl, HttpMethod::POST, EXPECTED_BODY, targetUrl));
+    ASSERT_NO_THROW(auto response = urlRequestSender.send(targetUrl, HttpMethod::POST, EXPECTED_BODY, targetUrl));
 
-    EXPECT_TRUE(handlerPtr->requestReceived) << "Request must be forwarded to proxy server";
+    ASSERT_TRUE(handlerPtr->requestReceived) << "Request must be forwarded to proxy server";
 
-    const std::string expectedHost = "127.0.0.1:" + std::to_string(fakeTargetPort);
+    const std::string expectedHost = fmt::format("localhost:{}", fakeTargetPort);
     EXPECT_EQ(handlerPtr->receivedHost, expectedHost)
         << "Host header must contain original target host, not proxy host";
-
     EXPECT_EQ(handlerPtr->receivedBody, EXPECTED_BODY);
-
     EXPECT_EQ(handlerPtr->receivedPath, "/test_path");
-
     proxyServer->shutDown();
-    proxyServer.reset();
 }

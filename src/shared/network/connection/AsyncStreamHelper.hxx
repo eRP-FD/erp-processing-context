@@ -127,9 +127,12 @@ boost::system::error_code AsyncStreamHelper::connect(
         std::atomic_bool completed{false};
         stream.async_connect(resolverResults, [&ec, &completed](const boost::system::error_code& error,
                                                                 const boost::asio::ip::tcp::endpoint& endpoint) {
-            HeaderLog::vlog(2, [&] {
-                return std::ostringstream{} << "connected to: " << endpoint;
-            });
+            if (! error)
+            {
+                HeaderLog::vlog(2, [&] {
+                    return std::ostringstream{} << "connected to: " << endpoint;
+                });
+            }
             ec = error;
             completed.store(true);
         });

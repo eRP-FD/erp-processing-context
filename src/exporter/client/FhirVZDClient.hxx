@@ -33,7 +33,7 @@ public:
      *
      * @param clientId The client identifier for push notifications.
      */
-    explicit FhirVzdClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider);
+    explicit FhirVzdClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider, const std::string& xContextId);
 
     ~FhirVzdClient() override;
 

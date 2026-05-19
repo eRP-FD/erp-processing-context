@@ -71,9 +71,13 @@ void DurationTimer::keyValue(const std::string& key, const std::string& value)
 
 
 DurationTimer DurationConsumer::getTimer(DurationCategory category, const std::string& metric,
-                                         const std::unordered_map<std::string, std::string>& keyValueMap)
+                                         std::unordered_map<std::string, std::string> keyValueMap)
 {
     DurationTimer::Receiver receiver = std::bind_front(&DurationConsumer::defaultReceiver, mLoggingThresholds);
+    if (mContextId.has_value())
+    {
+        keyValueMap.emplace("x_context", mContextId.value());
+    }
     return DurationTimer(receiver, category, metric, mSessionIdentifier.value_or("unknown"), keyValueMap);
 }
 
@@ -94,6 +98,11 @@ void DurationConsumer::initialize(const std::string& sessionIdentifier, Duration
     mSessionIdentifier = sessionIdentifier;
     mReceiver = std::move(receiver);
     mLoggingThresholds = std::move(loggingThresholds);
+}
+
+void DurationConsumer::setContextId(const std::string& contextId)
+{
+    mContextId = contextId;
 }
 
 
@@ -159,6 +168,12 @@ DurationConsumerGuard::DurationConsumerGuard(
     std::map<DurationCategory, std::chrono::milliseconds>&& loggingThresholds, DurationTimer::Receiver&& receiver)
 {
     DurationConsumer::getCurrent().initialize(sessionIdentifier, std::move(receiver), std::move(loggingThresholds));
+}
+
+DurationConsumerGuard& DurationConsumerGuard::withContextId(const std::string& contextId)
+{
+    DurationConsumer::getCurrent().setContextId(contextId);
+    return *this;
 }
 
 DurationConsumerGuard::~DurationConsumerGuard ()

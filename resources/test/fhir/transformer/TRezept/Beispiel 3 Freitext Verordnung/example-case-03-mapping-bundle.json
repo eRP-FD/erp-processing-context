@@ -61,7 +61,7 @@
                 "valueBoolean": true
               }
             ],
-            "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-teratogenic-extension"
+            "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension"
           },
           {
             "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag",

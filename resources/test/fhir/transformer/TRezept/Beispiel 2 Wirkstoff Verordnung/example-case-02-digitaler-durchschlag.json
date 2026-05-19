@@ -17,7 +17,7 @@
           "name": "prescriptionId",
           "valueIdentifier": {
             "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
-            "value": "166.100.000.000.001.39"
+            "value": "166.100.000.000.001.12"
           }
         },
         {
@@ -48,7 +48,7 @@
                     "valueBoolean": true
                   }
                 ],
-                "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-teratogenic-extension"
+                "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension"
               }
             ],
             "status": "completed",

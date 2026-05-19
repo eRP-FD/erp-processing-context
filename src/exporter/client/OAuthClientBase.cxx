@@ -13,12 +13,14 @@
 #include "shared/network/client/ClientInterface.hxx"
 #include "shared/network/client/CrlProvider.hxx"
 #include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
 #include "shared/network/client/request/ClientRequest.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
 #include "shared/network/message/HttpStatus.hxx"
 #include "shared/util/Configuration.hxx"
 
 #include <boost/beast/core/error.hpp>
+#include <utility>
 
 
 namespace medication::exporter::exceptions
@@ -33,6 +35,19 @@ HttpStatus ServerErrorException::statusCode() const
 {
     return mStatusCode;
 }
+
+TokenAcquisitionException::TokenAcquisitionException(const std::string& message, HttpStatus statusCode)
+    : ServerErrorException(message, statusCode)
+{
+
+}
+
+OperationException::OperationException(const std::string& message, HttpStatus statusCode)
+    : ServerErrorException(message, statusCode)
+{
+
+}
+
 }
 
 
@@ -62,12 +77,13 @@ using namespace medication::exporter::exceptions;
 
 
 OAuthClientBase::OAuthClientBase(std::string clientId, std::string host, std::string port,
-                                 std::shared_ptr<CrlProvider> crlProvider)
+                                 std::shared_ptr<CrlProvider> crlProvider, std::string xContextId)
     : mClientId(std::move(clientId))
     , mHost(std::move(host))
     , mPort(std::move(port))
     , mAccessTokenCache(std::make_unique<TokenCache>(TokenCache::TokenType::AccessToken))
     , mCrlProvider(std::move(crlProvider))
+    , mXContextId(std::move(xContextId))
 {
 }
 
@@ -104,15 +120,22 @@ std::string OAuthClientBase::getOrRefreshAccessToken() const
 std::string OAuthClientBase::fetchToken(const std::string& host, const std::string& port, ClientRequest&& request,
                                         TokenCache& tokenCache) const
 {
-    auto client = createClient(host, port);
-    BDEMessage message;
+    auto client = createClient();
+    BDEMessage message{{.startTime = model::Timestamp::now(), .xContextId = mXContextId}};
     try
     {
         message.update(
             BDEMessage::Data{.innerOperation = String::split(request.getHeader().target(), "?")[0],
                              .processor = "trezept",
                              .requestId = request.getHeader().header(Header::XRequestId).value_or("NOT SET")});
-        auto response = client->send(request);
+        client->setAdditionalHeaders({{Header::Authorization, request.getHeader().header(Header::Authorization).value_or("")},
+        {Header::XRequestId, request.getHeader().header(Header::XRequestId).value_or("")}});
+        const auto url = UrlHelper::UrlParts(UrlHelper::HTTPS_PROTOCOL, host,
+                                             static_cast<int>(std::strtol(port.c_str(), nullptr, 10)),
+                                             request.getHeader().target(), "")
+                             .toString();
+        auto response = client->send(url, request.getHeader().method(), request.getBody(),
+                                     request.getHeader().contentType().value_or(""));
         message.update(BDEMessage::Data{
             .endTime = model::Timestamp::now(),
             .responseCode = static_cast<unsigned int>(toNumericalValue(response.getHeader().status()))});
@@ -143,7 +166,7 @@ std::string OAuthClientBase::fetchToken(const std::string& host, const std::stri
                           std::string{magic_enum::enum_name(tokenCache.getType())} + " request.",
                       AuthenticationException);
             default:
-                FailFhirVzd("Unexpected http status " + std::string{toString(response.getHeader().status())} +
+                FailFhirVzd(TokenAcquisitionException, "Unexpected http status " + std::string{toString(response.getHeader().status())} +
                                 " while fetching " + std::string{magic_enum::enum_name(tokenCache.getType())} +
                                 " with client id " + mClientId,
                             response.getHeader().status());
@@ -160,9 +183,10 @@ std::string OAuthClientBase::fetchToken(const std::string& host, const std::stri
     return {};
 }
 
-ClientResponse OAuthClientBase::handleCommonHttpErrors(std::function<ClientResponse(BDEMessage& message)>&& action) const
+ClientResponse OAuthClientBase::handleCommonHttpErrors(std::function<ClientResponse(BDEMessage& message)>&& action,
+                                                       const std::function<bool(HttpStatus)>& isSuccess) const
 {
-    BDEMessage message;
+    BDEMessage message{{.startTime = model::Timestamp::now(), .xContextId = mXContextId}};
     try
     {
         message.update(BDEMessage::Data{.processor = "trezept"});
@@ -177,18 +201,20 @@ ClientResponse OAuthClientBase::handleCommonHttpErrors(std::function<ClientRespo
                 .prescriptionId = getTRezeptEvent()->getPrescriptionId().toString()});
         }
 
+        if (isSuccess(response.getHeader().status()))
+        {
+            return response;
+        }
+
         switch (response.getHeader().status())
         {
-            case HttpStatus::OK:
-                return response;
-
             case HttpStatus::Unauthorized:
                 invalidateTokenCache();
                 Fail2("Client with id " + mClientId + " not authorized.", AuthenticationException);
 
             default:
                 invalidateTokenCache();
-                FailFhirVzd("Unexpected http status " + std::string{toString(response.getHeader().status())} +
+                FailFhirVzd(OperationException, "Unexpected http status " + std::string{toString(response.getHeader().status())} +
                                 " with client id " + mClientId,
                             response.getHeader().status());
         }
@@ -207,21 +233,18 @@ void OAuthClientBase::invalidateTokenCache() const
     mAccessTokenCache->invalidate();
 }
 
-std::unique_ptr<ClientInterface> OAuthClientBase::createClient(const std::string& hostname,
-                                                               const std::string& port) const
+std::unique_ptr<UrlRequestSender> OAuthClientBase::createClient() const
 {
     // GEMREQ-start A_27855
-    return std::make_unique<HttpsClient>(HttpsClient{
-        {.hostname = hostname,
-         .port = port,
-         .connectionTimeout = std::chrono::seconds(60),
-         .resolveTimeout = std::chrono::seconds(5),
-         .tlsParameters = TlsConnectionParameters{
-             .certificateVerifier =
-                 TlsCertificateVerifier::withCustomRootCertificates(
-                     Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS))
-                     .withCrl(*mCrlProvider)}}});
+    auto urlRequestSender = std::make_unique<UrlRequestSender>(
+        TlsCertificateVerifier::withCustomRootCertificates(
+            Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS))
+            .withCrl(*mCrlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL),
+        std::chrono::seconds(60), std::chrono::seconds(5));
     // GEMREQ-end A_27855
+    urlRequestSender->setProxies(Configuration::instance().proxyParameters(ProxyMode::SNI));
+
+    return urlRequestSender;
 }
 
 std::string OAuthClientBase::getClientId() const

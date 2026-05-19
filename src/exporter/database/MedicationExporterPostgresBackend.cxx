@@ -9,6 +9,7 @@
 #include "exporter/model/EventKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/database/PostgresConnection.hxx"
+#include "shared/database/PostgresConnectString.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/PrescriptionType.hxx"
 #include "shared/util/Configuration.hxx"
@@ -135,7 +136,7 @@ QUERY(sqlProcessNextTRezeptEvent, R"(
 UPDATE
   erp_event.trezept_event tre
 SET
-  state = 'processing', next_export = NOW() + interval '1 second'
+  state = 'processing', next_export = NOW() + (5 * interval '1 minute')
 WHERE
   tre.id = (
     SELECT
@@ -209,50 +210,35 @@ WHERE
 thread_local PostgresConnection MedicationExporterPostgresBackend::mConnection{defaultConnectString()};
 
 MedicationExporterPostgresBackend::MedicationExporterPostgresBackend(TransactionMode mode)
-    : CommonPostgresBackend(mConnection, defaultConnectString(), mode)
+    : CommonPostgresBackend(mConnection, mode)
 {
 }
 
 std::string MedicationExporterPostgresBackend::defaultConnectString(void)
 {
-    const auto& configuration = Configuration::instance();
-
-    const std::string host = configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_HOST);
-    const std::string port = configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_PORT);
-    const std::string user = configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_USER);
-    const std::string password = configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_PASSWORD);
-    const std::string dbname = configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_DATABASE);
-    const std::string connectTimeout =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_CONNECT_TIMEOUT_SECONDS);
-    bool enableScramAuthentication =
-        configuration.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_ENABLE_SCRAM_AUTHENTICATION);
-    const std::string tcpUserTimeoutMs =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_TCP_USER_TIMEOUT_MS);
-    const std::string keepalivesIdleSec =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_IDLE_SEC);
-    const std::string keepalivesIntervalSec =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_INTERVAL_SEC);
-    const std::string keepalivesCountSec =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_COUNT);
-    const std::string targetSessionAttrs =
-        configuration.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_TARGET_SESSION_ATTRS);
-
-    std::string sslmode = PostgresConnection::connectStringSslMode();
-
-    std::string connectionString =
-        "host='" + host + "' port='" + port + "' dbname='" + dbname + "' user='" + user + "'" +
-        (password.empty() ? "" : " password='" + password + "'") + sslmode +
-        (targetSessionAttrs.empty() ? "" : (" target_session_attrs=" + targetSessionAttrs)) +
-        " connect_timeout=" + connectTimeout + " tcp_user_timeout=" + tcpUserTimeoutMs + " keepalives=1" +
-        " keepalives_idle=" + keepalivesIdleSec + " keepalives_interval=" + keepalivesIntervalSec +
-        " keepalives_count=" + keepalivesCountSec + (enableScramAuthentication ? " channel_binding=require" : "");
-
-    JsonLog(LogId::INFO, JsonLog::makeVLogReceiver(0))
-        .message("postgres connection string")
-        .keyValue("value", boost::replace_all_copy(connectionString, password, "******"));
-    TVLOG(2) << "using connection string '" << boost::replace_all_copy(connectionString, password, "******") << "'";
-
-    return connectionString;
+    const auto& cfg = Configuration::instance();
+    return PostgresConnectString{
+        .host = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_HOST),
+        .port = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_PORT),
+        .user = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_USER),
+        .password = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_PASSWORD),
+        .dbname = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_DATABASE),
+        .connectTimeout = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_CONNECT_TIMEOUT_SECONDS),
+        .enableScramAuthentication =
+            cfg.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_ENABLE_SCRAM_AUTHENTICATION),
+        .tcpUserTimeoutMs = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_TCP_USER_TIMEOUT_MS),
+        .keepalivesIdleSec = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_IDLE_SEC),
+        .keepalivesIntervalSec =
+            cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_INTERVAL_SEC),
+        .keepalivesCountSec = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_KEEPALIVES_COUNT),
+        .targetSessionAttrs = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_TARGET_SESSION_ATTRS),
+        .useSsl = cfg.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_USESSL),
+        .serverRootCertPath =
+            cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_SSL_ROOT_CERTIFICATE_PATH),
+        .sslCertificatePath =
+            cfg.getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_SSL_CERTIFICATE_PATH),
+        .sslKeyPath = cfg.getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_SSL_KEY_PATH),
+    };
 }
 
 PostgresConnection& MedicationExporterPostgresBackend::connection() const
@@ -490,7 +476,7 @@ std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNex
 {
     checkCommonPreconditions();
     TVLOG(2) << sqlProcessNextTRezeptEvent.query;
-    const auto timerKeepAlive =
+    auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "processnexttrezeptevent");
 
     const auto results = transaction()->exec(sqlProcessNextTRezeptEvent.query);
@@ -501,7 +487,7 @@ std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNex
         return std::nullopt;
     }
 
-    Expect(results.size() == 1, "A maximum of one result row expected");
+    Expect(results.size() == 1, "A maximum of one result row expected, but got " + std::to_string(results.size()));
 
     auto res = results.at(0);
 
@@ -515,6 +501,7 @@ std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNex
 
     const auto& prescriptionId = model::PrescriptionId::fromDatabaseId(
         *prescription_type_opt, map<int64_t>(res, idx.prescriptionId, "prescription_id is null"));
+    timerKeepAlive.keyValue(std::string{"prescription_id"}, prescriptionId.toString());
     db_model::TaskEvent dbModel(
         map<db_model::TaskEvent::id_t, model::TaskEvent::id_t>(res, idx.id, "id is null"),
         prescriptionId,
@@ -532,7 +519,7 @@ std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNex
         mapOptional<db_model::Blob, db_model::postgres_bytea>(res, idx.medicationDispenseBundleSalt),
         mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.medicationDispenseBundle),
         mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.doctorIdentity),
-        std::nullopt,
+        mapOptional<db_model::EncryptedBlob, db_model::postgres_bytea>(res, idx.pharmacyIdentity),
         mapDefault<std::int32_t, std::int32_t>(res, idx.retryCount, 0));
 
     return dbModel;

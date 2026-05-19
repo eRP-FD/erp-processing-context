@@ -11,6 +11,7 @@
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
@@ -53,10 +54,7 @@ EndpointTestClient::EndpointTestClient(std::shared_ptr<XmlValidator> xmlValidato
 void EndpointTestClient::initAdminServer()
 {
     const auto& config = Configuration::instance();
-    RequestHandlerManager manager;
-    AdminServer::addEndpoints(manager, std::make_shared<const erp::RuntimeConfiguration>());
-    auto factories = StaticData::makeMockFactories();
-    factories.adminServerFactory = &EndpointTestClient::httpsServerFactory;
+    auto factories = StaticData::makeMockFactoriesWithServers();
     mContext = std::make_unique<PcServiceContext>(config, std::move(factories));
     mContext->getAdminServer().serve(1, "admin-test");
     initClient();
@@ -65,10 +63,7 @@ void EndpointTestClient::initAdminServer()
 void EndpointTestClient::initEnrolmentServer()
 {
     const auto& config = Configuration::instance();
-    RequestHandlerManager manager;
-    EnrolmentServer::addEndpoints(manager);
-    auto factories = StaticData::makeMockFactories();
-    factories.enrolmentServerFactory = &EndpointTestClient::httpsServerFactory;
+    auto factories = StaticData::makeMockFactoriesWithServers();
     mContext = std::make_unique<PcServiceContext>(config, std::move(factories));
     mContext->getEnrolmentServer()->serve(1, "enroll-test");
     initClient();
@@ -122,37 +117,45 @@ void EndpointTestClient::initVsdmKeys()
 
 void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidator)
 {
-    RequestHandlerManager handlers;
-    ErpProcessingContext::addPrimaryEndpoints(handlers);
-
     mPool = std::make_unique<HsmPool>(
-        std::make_unique<HsmMockFactory>(
-            std::make_unique<HsmMockClient>(),
-            MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
-        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(),
-        std::make_shared<Timer>());
+        std::make_unique<HsmMockFactory>(std::make_unique<HsmMockClient>(),
+                                         MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
+        TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>());
     mMockDatabase = std::make_unique<MockDatabase>(*mPool);
 
-    auto factories = StaticData::makeMockFactories();
+    auto factories = StaticData::makeMockFactoriesWithServers();
     factories.xmlValidatorFactory = [xmlValidator = std::move(xmlValidator)] {
         return xmlValidator;
     };
-    factories.databaseFactory = createDatabaseFactory();
-
-    mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
-
-
+    factories.databaseFactory = createDatabaseFactory(&PostgresBackend::mainConnection);
+    if (PostgresBackend::haveReadOnlyConnection())
+    {
+        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
+        {
+            factories.readOnlyDatabaseFactory = createDatabaseFactory(&PostgresBackend::readOnlyConnection);
+        }
+        else
+        {
+            factories.readOnlyDatabaseFactory = factories.databaseFactory;
+        }
+    }
     // Test of client authentication:
     const bool enableClientAuthentication =
         TestConfiguration::instance().getBoolValue(TestConfigurationKey::TEST_ENABLE_CLIENT_AUTHENTICATON);
     const SafeString clientCertificate{
         TestConfiguration::instance().getStringValue(TestConfigurationKey::TEST_CLIENT_CERTIFICATE)};
+    factories.teeServerFactory = [&](const std::string_view, uint16_t, RequestHandlerManager&& handlers,
+                                     BaseServiceContext& serviceContext, bool, const SafeString&) {
+        return std::make_unique<HttpsServer>(getHostAddress(), getPort(), std::move(handlers),
+                                             dynamic_cast<PcServiceContext&>(serviceContext),
+                                             enableClientAuthentication, clientCertificate);
+    };
 
-    mServer = std::make_unique<HttpsServer>(getHostAddress(), getPort(), std::move(handlers),
-                                            *mContext, enableClientAuthentication,
-                                            clientCertificate);
+    mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
 
-    auto& ioContext = mServer->getThreadPool().ioContext();
+    mContext->getPoPPService().startConfigured();
+
+    auto& ioContext = mContext->getTeeServer().getThreadPool().ioContext();
 
     if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_IDP_UPDATER_MOCK, false))
         IdpUpdater::create<MockIdpUpdater>(mContext->idp, mContext->getTslManager(), ioContext);
@@ -160,28 +163,29 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
         IdpUpdater::create(mContext->idp, mContext->getTslManager(), ioContext);
 
     using namespace std::chrono_literals;
-    mServer->serviceContext().setPrngSeeder(std::make_unique<SeedTimer>(
-        mServer->getThreadPool(), mContext->getHsmPool(), 200ms, [](const SafeString&) {}));
+    mContext->setPrngSeeder(std::make_unique<SeedTimer>(mContext->getTeeServer().getThreadPool(),
+                                                        mContext->getHsmPool(), 200ms, [](const SafeString&) {
+                                                        }));
     const_pointer_cast<SeedTimerHandler>(mContext->getPrngSeeder()->handler())->refreshSeeds();
 
-    mServer->serve(2, "vau-test");
+    mContext->getTeeServer().serve(2, "vau-test");
 
     initClient();
     initVsdmKeys();
 }
 
-Database::Factory EndpointTestClient::createDatabaseFactory()
+Database::Factory EndpointTestClient::createDatabaseFactory(ConnectionFactory connFactory)
 {
     if (isPostgresEnabled())
     {
-        return [](HsmPool& hsmPool, KeyDerivation& keyDerivation){
-            return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool, keyDerivation); };
+        return [connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation){
+            return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(connFactory()), hsmPool, keyDerivation); };
     }
     else
     {
         return [this](HsmPool& hsmPool, KeyDerivation& keyDerivation){
                 return std::make_unique<DatabaseFrontend>(
-                    std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool, keyDerivation);
+                    std::make_unique<MockDatabaseProxy>(mMockDatabase), hsmPool, keyDerivation);
             };
     }
 }
@@ -222,19 +226,6 @@ uint16_t EndpointTestClient::getPort() const
             return gsl::narrow<uint16_t>(config.getIntValue(ConfigurationKey::ENROLMENT_SERVER_PORT));
     }
     Fail2("invalid value for Target: " + std::to_string(static_cast<intmax_t>(mTarget)), std::logic_error);
-}
-
-
-EndpointTestClient::~EndpointTestClient()
-{
-    if (mServer)
-    {
-        mServer->shutDown();
-    }
-    if (mTarget == TestClient::Target::ADMIN)
-    {
-        mContext->getAdminServer().shutDown();
-    }
 }
 
 std::unique_ptr<TestClient> EndpointTestClient::factory(std::shared_ptr<XmlValidator> xmlValidator, Target target)

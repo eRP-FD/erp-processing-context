@@ -101,7 +101,8 @@ public:
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
                                       const db_model::Blob& medicationDispenseSalt,
-                                      const std::optional<model::Task::Status>& taskStatus = std::nullopt);
+                                      const std::optional<model::Task::Status>& taskStatus,
+                                      const db_model::EncryptedBlob& owner);
     void updateTaskMedicationDispenseReceipt(const model::PrescriptionId& taskId,
                                              const model::Task::Status& taskStatus,
                                              const model::Timestamp& lastModified,
@@ -113,7 +114,8 @@ public:
                                              const db_model::EncryptedBlob& receipt,
                                              const model::Timestamp& lastMedicationDispense,
                                              const db_model::Blob& medicationDispenseSalt,
-                                             const model::Timestamp& lastStatusUpdate);
+                                             const model::Timestamp& lastStatusUpdate,
+                                             const db_model::EncryptedBlob& owner);
     void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                      const model::Timestamp& lastModified);
     void updateTaskClearPersonalData(const model::PrescriptionId& taskId,
@@ -139,8 +141,6 @@ public:
                                                             const bool onlyFlowtype160,
                                                             bool applyOnlySearch, bool withAccessCode) const;
     uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
-                                     const std::optional<UrlArguments>& search) const;
-    uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
                                      const std::optional<UrlArguments>& search) const;
     std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
                                                       const std::optional<UrlArguments>& search) const;

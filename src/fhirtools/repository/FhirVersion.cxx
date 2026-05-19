@@ -72,3 +72,12 @@ std::string to_string(FhirVersion&& ver)
 }
 
 }// namespace fhirtools
+
+//NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+fmt::format_context::iterator fmt::formatter<fhirtools::FhirVersion>::format(const fhirtools::FhirVersion& ver,
+                                                                             format_context& ctx) const
+{
+    const auto& str = to_string(ver);
+    std::ranges::copy(str, ctx.out());
+    return ctx.out();
+}

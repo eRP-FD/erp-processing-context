@@ -20,39 +20,21 @@ protected:
         serverRequest.setPathParameters({"id"}, {taskId6.toString()});
         serverRequest.setAccessToken(pharmacyJWT);
         serverRequest.setQueryParameters({{"secret", secret}});
-        if (GEM_ERP_current < ResourceTemplates::Versions::GEM_ERP_1_4)
-        {
-            serverRequest.setBody(ResourceTemplates::medicationDispenseBundleXml(
-                {.gematikVersion = GEM_ERP_current,
-                 .medicationDispenses =
-                     {
-                         {
-                             .prescriptionId = taskId6,
-                         },
-                         {
-                             .prescriptionId = taskId6,
-                         },
-                     },
-                 .prescriptionId = taskId6}));
-        }
-        else
-        {
-            serverRequest.setBody(ResourceTemplates::medicationDispenseOperationParametersXml(
-                {.profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
-                    .version = GEM_ERP_current,
-                    .medicationDispenses = {
-                        {
-                            .prescriptionId = taskId6,
-                            .gematikVersion = GEM_ERP_current,
-                            .medication = ResourceTemplates::MedicationOptions{.version = GEM_ERP_current},
-                        },
-                        {
-                            .prescriptionId = taskId6,
-                            .gematikVersion = GEM_ERP_current,
-                            .medication = ResourceTemplates::MedicationOptions{.version = GEM_ERP_current},
-                        },
-                    }}));
-        }
+        serverRequest.setBody(ResourceTemplates::medicationDispenseOperationParametersXml(
+            {.profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
+                .version = GEM_ERP_current,
+                .medicationDispenses = {
+                    {
+                        .prescriptionId = taskId6,
+                        .gematikVersion = GEM_ERP_current,
+                        .medication = ResourceTemplates::MedicationOptions{.version = GEM_ERP_current},
+                    },
+                    {
+                        .prescriptionId = taskId6,
+                        .gematikVersion = GEM_ERP_current,
+                        .medication = ResourceTemplates::MedicationOptions{.version = GEM_ERP_current},
+                    },
+                }}));
         ServerResponse serverResponse;
         AccessLog accessLog;
         SessionContext session(mServiceContext, serverRequest, serverResponse, accessLog);
@@ -110,17 +92,8 @@ TEST_F(MedicationDispenseGetEndpointTest, searchMode)
             FAIL() << "Resource must be either MedicationDispense or Medication.";
         }
     }
-    if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
-    {
-        EXPECT_EQ(medicationDispenses, 2);
-        EXPECT_EQ(medications, 2);
-    }
-    else
-    {
-        EXPECT_EQ(medicationDispenses, 2);
-        EXPECT_EQ(medications, 0);
-    }
-
+    EXPECT_EQ(medicationDispenses, 2);
+    EXPECT_EQ(medications, 2);
     if (HasFailure())
     {
         LOG(INFO) << bundle.serializeToJsonString();

@@ -25,8 +25,6 @@ public:
     struct ProfileValidityTestParams;
     struct MaxWhenHandedOverTestParams;
 
-    static constexpr char notSupported[] = "not supported";
-
     enum class ExpectedResult
     {
         success,
@@ -39,20 +37,12 @@ public:
         dispense,
     };
 
-    enum class BodyType {
-        single,
-        bundle,
-        bundleNoProfile,
-        parameters,
-    };
-
     static std::list<ProfileValidityTestParams> profileValidityTestParameters();
     static std::list<MaxWhenHandedOverTestParams> maxWhenHandedOverTestParameters();
 
     //NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init,hicpp-member-init) - force initialization at construction site.
     struct BodyOptions {
         EndpointType endpointType;
-        BodyType bodyType;
         std::optional<ResourceTemplates::Versions::GEM_ERP> overrideVersion = std::nullopt;
         std::list<std::string> overrideWhenHandedOver = {};
     };
@@ -73,20 +63,13 @@ protected:
     ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                  .telematikId = telematikId};
 private:
-    std::string medicationDispenseXml(BodyOptions opt) const;
-    std::string medicationDispenseBundleXml(BodyOptions opt) const;
-    std::string medicationDispenseBundleXmlNoProfile(const BodyOptions& opt) const;
     std::string operationInputParamers(model::ProfileType profileType, const BodyOptions& opt) const;
-
-
-
 };
 
 struct MedicationDispenseFixture::ProfileValidityTestParams
 {
     ExpectedResult result;
     std::string date;
-    MedicationDispenseFixture::BodyType bodyType;
     ResourceTemplates::Versions::GEM_ERP version;
 };
 
@@ -96,7 +79,6 @@ struct MedicationDispenseFixture::MaxWhenHandedOverTestParams
 {
     ExpectedResult result;
     std::list<std::string> whenHandedOver;
-    MedicationDispenseFixture::BodyType bodyType;
     ResourceTemplates::Versions::GEM_ERP version;
 };
 

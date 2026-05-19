@@ -15,6 +15,10 @@
 #include <unordered_map>
 #include <vector>
 
+namespace model
+{
+struct PoPPCertificateHealthData;
+}
 
 /**
  * Container for health check results of individual services.
@@ -30,12 +34,14 @@ public:
         Hsm,
         Idp,
         Postgres,
+        PostgresRO,
         PrngSeed,
         Redis,
         TeeToken,
         Tsl,
         EventDb,
-        CFdSigErp
+        CFdSigErp,
+        PoPPService
     };
     enum class Status
     {
@@ -54,7 +60,7 @@ public:
         TSLExpiry,
         TSLSequenceNumber,
         TSLId,
-        TslHash,
+        TslHash
     };
 
     struct State
@@ -62,6 +68,10 @@ public:
         Status status{Status::Unknown};
         std::map<ServiceDetail, std::string> serviceDetails; // Details like HSM device.
         std::optional<std::string> details; // Details like reason for being down or being skipped.
+    };
+    struct PoPPServiceState : State
+    {
+        std::list<model::PoPPCertificateHealthData> poppServiceDetails;
     };
 
     static std::string_view toString (Service service);
@@ -78,6 +88,7 @@ public:
     bool isUp (Service service) const;
 
     void setServiceDetails (Service service, ServiceDetail key, const std::string& details);
+    void setPoPPServiceDetails (const std::list<model::PoPPCertificateHealthData>& poppServiceDetails);
     std::vector<Service> getDownServices (void) const;
 
     model::Health model () const;
@@ -93,6 +104,7 @@ public:
 private:
     mutable std::mutex mMutex;
     std::unordered_map<Service, State> mStates;
+    PoPPServiceState mPoPPServiceState;
     std::set<Service> mEnabledServices;
 
     /// Helper function to retrieve a status in a format suitable as second argument for one of the Health::set*Status() functions.
@@ -107,6 +119,7 @@ private:
     std::string_view status_noLock() const;
     bool isUp_noLock (Service service) const;
     std::string downServicesString_noLock (void) const;
+    static bool contributesToApplicationHealth(Service svc);
     bool servicesUp_noLock() const;
 };
 

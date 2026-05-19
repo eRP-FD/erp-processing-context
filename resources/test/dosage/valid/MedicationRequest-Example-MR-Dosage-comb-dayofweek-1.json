@@ -1,0 +1,55 @@
+{
+  "resourceType" : "MedicationRequest",
+  "id" : "Example-MR-Dosage-comb-dayofweek-1",
+  "meta" : {
+    "profile" : ["http://ig.fhir.de/igs/medication/StructureDefinition/MedicationRequestDgMP"]
+  },
+  "text" : {
+    "status" : "extensions",
+    "div" : "<div xmlns=\"http://www.w3.org/1999/xhtml\"><p class=\"res-header-id\"><b>Generated Narrative: MedicationRequest Example-MR-Dosage-comb-dayofweek-1</b></p><a name=\"Example-MR-Dosage-comb-dayofweek-1\"> </a><a name=\"hcExample-MR-Dosage-comb-dayofweek-1\"> </a><div style=\"display: inline-block; background-color: #d9e0e7; padding: 6px; margin: 4px; border: 1px solid #8da1b4; border-radius: 5px; line-height: 60%\"><p style=\"margin-bottom: 0px\"/><p style=\"margin-bottom: 0px\">Profile: <a href=\"StructureDefinition-MedicationRequestDgMP.html\">Medication Request dgMP</a></p></div><p><b>Extension Definition for MedicationRequest.renderedDosageInstruction for Version 5.0</b>: </p><div><p>montags 1-0-1-0 Stück; freitags 1-0-1-0 Stück</p>\n</div><blockquote><p><b>Generated Dosage Instructions Meta</b></p><ul><li>algorithmVersion: 1.0.1</li><li>language: de-DE</li></ul></blockquote><p><b>status</b>: Active</p><p><b>intent</b>: Order</p><p><b>medication</b>: <span title=\"Codes:\">Ibuprofen 400mg</span></p><p><b>subject</b>: Patient</p><blockquote><p><b>dosageInstruction</b></p><p><b>timing</b>: Morning, Evening, 4 per 1 week</p><h3>DoseAndRates</h3><table class=\"grid\"><tr><td style=\"display: none\">-</td><td><b>Dose[x]</b></td></tr><tr><td style=\"display: none\">*</td><td>1 Stück<span style=\"background: LightGoldenRodYellow\"> (Details: KBV_CS_SFHIR_BMP_DOSIEREINHEIT  code1 = '1')</span></td></tr></table></blockquote></div>"
+  },
+  "extension" : [{
+    "url" : "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction",
+    "valueMarkdown" : "montags 1-0-1-0 Stück; freitags 1-0-1-0 Stück"
+  },
+  {
+    "extension" : [{
+      "url" : "algorithmVersion",
+      "valueString" : "1.0.1"
+    },
+    {
+      "url" : "language",
+      "valueCode" : "de-DE"
+    }],
+    "url" : "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta"
+  }],
+  "status" : "active",
+  "intent" : "order",
+  "medicationCodeableConcept" : {
+    "text" : "Ibuprofen 400mg"
+  },
+  "subject" : {
+    "display" : "Patient"
+  },
+  "dosageInstruction" : [{
+    "timing" : {
+      "repeat" : {
+        "frequency" : 4,
+        "period" : 1,
+        "periodUnit" : "wk",
+        "dayOfWeek" : ["mon",
+        "fri"],
+        "when" : ["MORN",
+        "EVE"]
+      }
+    },
+    "doseAndRate" : [{
+      "doseQuantity" : {
+        "value" : 1,
+        "unit" : "Stück",
+        "system" : "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT",
+        "code" : "1"
+      }
+    }]
+  }]
+}

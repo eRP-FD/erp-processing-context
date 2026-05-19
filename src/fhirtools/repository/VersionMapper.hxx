@@ -35,7 +35,7 @@ public:
     ~VersionMapper();
 
     FhirVersion realVersion(std::string_view url, FhirVersion version) const;
-    FhirVersion renderVersion(const std::string& url, const FhirVersion& version) const;
+    FhirVersion renderVersion(std::string_view url, const FhirVersion& version) const;
     const Config::Mapping* findMapping(const DefinitionKey& foundKey, const DefinitionKey& queryKey) const;
 
     VersionMapper(const VersionMapper&);

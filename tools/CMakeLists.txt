@@ -35,11 +35,14 @@ target_link_libraries(make_task_id
 add_library(enrolment-api-client OBJECT
     EnrolmentApiClient.cxx)
 
+target_compile_definitions(enrolment-api-client PUBLIC WITH_HSM_MOCK=1)
+
 target_link_libraries(enrolment-api-client
     PRIVATE
        LibXml2::LibXml2
        boost::boost
        date::date
+       fmt::fmt-header-only
        glog::glog
        gsl::gsl-lite
        magic_enum::magic_enum

@@ -109,11 +109,11 @@
           <valueBoolean value="true" />
         </extension>
         <extension url="http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction">
-          <valueMarkdown value="für 20 Woche(n) alle 2 Tage: je 1 Stück" />
+          <valueMarkdown value="für 20 Wochen alle 2 Tage: je 1 Stück" />
         </extension>
         <extension url="http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta">
           <extension url="algorithmVersion">
-            <valueString value="1.0.0" />
+            <valueString value="1.0.1" />
           </extension>
           <extension url="language">
             <valueCode value="de-DE" />

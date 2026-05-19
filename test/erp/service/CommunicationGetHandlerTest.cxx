@@ -476,9 +476,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySender)
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -486,9 +487,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySender)
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
     const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -540,7 +542,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipient)
                                     {ActorRole::Insurant, kvnrInsurant},
                                     {ActorRole::Pharmacists, pharmacyB},
                                     {},
-                                    InfoReqMessage,
+                                    DispReqMessage,
                                     model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"),
                                     model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
@@ -611,9 +613,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone) });
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -621,9 +624,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySenders)
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -656,9 +660,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -666,9 +671,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByRecipients)
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -701,9 +707,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -711,9 +718,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndRecip
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -746,9 +754,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
     const std::string pharmacyB = "3-SMC-B-Testkarte-883110000129069";
 
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyA},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication2 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -756,9 +765,10 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySendersAndSent)
         {}, ReplyMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication3 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, kvnrInsurant}, {ActorRole::Pharmacists, pharmacyB},
-        {}, InfoReqMessage,
+        {},
+                                    DispReqMessage,
         model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z"), model::Timestamp::fromXsDate("2022-01-03", model::Timestamp::UTCTimezone)});
     const auto givenCommunication4 = addCommunicationToDatabase({
         givenTask.prescriptionId(), model::Communication::MessageType::Reply,
@@ -1073,7 +1083,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
 
     const auto task = addTaskToDatabase({ model::Task::Status::ready, kvnrInsurant });
 
-    model::Communication infoReqByRepresentative1ToPharmacy1 =
+    model::Communication dispReqByRepresentative1ToPharmacy1 =
         addCommunicationToDatabase({task.prescriptionId(),
                                     model::Communication::MessageType::DispReq,
                                     {ActorRole::Insurant, kvnrRepresentative1},
@@ -1084,7 +1094,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
         task.prescriptionId(), model::Communication::MessageType::Reply,
             {ActorRole::Pharmacists, pharmacy1}, {ActorRole::Insurant, kvnrRepresentative1},
             "", ReplyMessage });
-    model::Communication infoReqByRepresentative2ToPharmacy2 =
+    model::Communication dispReqByRepresentative2ToPharmacy2 =
         addCommunicationToDatabase({task.prescriptionId(),
                                     model::Communication::MessageType::DispReq,
                                     {ActorRole::Insurant, kvnrRepresentative2},
@@ -1111,7 +1121,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
         ClientRequest request(createGetHeader(pathAndArguments, jwtPharmacy), "");
         auto outerResponse = createClient().send(encryptRequest(request, jwtPharmacy));
         const auto bundle = expectGetCommunicationResponse(
-            outerResponse, { infoReqByRepresentative1ToPharmacy1.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
+            outerResponse, { dispReqByRepresentative1ToPharmacy1.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirXmlUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
         EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&sender=" + kvnrRepresentative1 + "&_sort=sent");
@@ -1148,7 +1158,7 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchByReceivedNull)//
         ClientRequest request(createGetHeader(pathAndArguments, jwtInsurant), "");
         auto outerResponse = createClient().send(encryptRequest(request, jwtInsurant));
         const auto bundle = expectGetCommunicationResponse(
-        outerResponse, { infoReqByRepresentative2ToPharmacy2.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirJsonUtf8);
+        outerResponse, { dispReqByRepresentative2ToPharmacy2.id().value() }, true, HttpStatus::OK, ContentMimeType::fhirJsonUtf8);
         const auto selfLink = bundle->getLink(model::Link::Type::Self);
         EXPECT_TRUE(selfLink.has_value());
         EXPECT_EQ(extractPathAndArguments(selfLink.value()), "/Communication?received=eqNULL&recipient=" + pharmacy2 + "&_sort=sent");
@@ -1193,18 +1203,20 @@ TEST_F(CommunicationGetHandlerTest, getAllCommunications_searchBySentNull)//NOLI
 
     const auto task = addTaskToDatabase({ model::Task::Status::ready, kvnrInsurant });
 
-    model::Communication infoReqByRepresentative1ToPharmacy1 = addCommunicationToDatabase({
-        task.prescriptionId(), model::Communication::MessageType::InfoReq,
+    model::Communication dispReqByRepresentative1ToPharmacy1 = addCommunicationToDatabase({
+        task.prescriptionId(), model::Communication::MessageType::DispReq,
             {ActorRole::Insurant, kvnrRepresentative1}, {ActorRole::Pharmacists, pharmacy1},
-            "", InfoReqMessage });
+            "",
+                                    DispReqMessage });
     model::Communication replyByPharmacy1ToRepresentative1 = addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::Reply,
             {ActorRole::Pharmacists, pharmacy1}, {ActorRole::Insurant, kvnrRepresentative1},
             "", ReplyMessage });
-    model::Communication infoReqByRepresentative2ToPharmacy2 = addCommunicationToDatabase({
-        task.prescriptionId(), model::Communication::MessageType::InfoReq,
+    model::Communication dispReqByRepresentative2ToPharmacy2 = addCommunicationToDatabase({
+        task.prescriptionId(), model::Communication::MessageType::DispReq,
             {ActorRole::Insurant, kvnrRepresentative2}, {ActorRole::Pharmacists, pharmacy2},
-            "", InfoReqMessage });
+            "",
+                                    DispReqMessage });
     model::Communication replyByPharmacy2ToRepresentative2 = addCommunicationToDatabase({
         task.prescriptionId(), model::Communication::MessageType::Reply,
             {ActorRole::Pharmacists, pharmacy2}, {ActorRole::Insurant, kvnrRepresentative2},
@@ -1440,7 +1452,7 @@ TEST_F(CommunicationGetHandlerTest, getCommunicationById_ignoreCancelledTasks)
     // Setup the database.
     auto givenTask = addTaskToDatabase({ model::Task::Status::ready, InsurantE });
     const auto givenCommunication1 = addCommunicationToDatabase({
-        givenTask.prescriptionId(), model::Communication::MessageType::InfoReq,
+        givenTask.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, InsurantE}, {ActorRole::Pharmacists, pharmacy},
         std::string(givenTask.accessCode()),
         RepresentativeMessageByInsurant, model::Timestamp::fromXsDateTime("2022-01-23T12:34:56Z") });

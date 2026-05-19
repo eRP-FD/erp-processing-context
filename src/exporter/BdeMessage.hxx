@@ -8,21 +8,16 @@
 #define ERP_PROCESSING_CONTEXT_BDEMESSAGE_HXX
 
 #include "exporter/model/HashedKvnr.hxx"
-#include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Timestamp.hxx"
-#include "shared/util/TLog.hxx"
 
-#include <any>
 #include <optional>
+
+class JsonLog;
 
 class BDEMessage
 {
 public:
-    static constexpr std::string_view hashedKvnrKey{"hashed-kvnr"};
-    static constexpr std::string_view lastModifiedTimestampKey{"lastModifiedTimestamp"};
     static constexpr std::string_view log_type{"bde"};
-    static constexpr std::string_view prescriptionIdKey{"prescriptionId"};
-    static constexpr std::string_view processorKey{"processor"};
 
     /// @brief Container for request/response related metadata.
     /// Holds optional metadata collected during request processing, including
@@ -32,7 +27,7 @@ public:
     /// the database (t-rezeptevent or eventdata entity). It is older than
     /// the startTime, which represents the start of the request.
     struct Data {
-        std::optional<model::Timestamp> startTime = std::nullopt;
+        model::Timestamp startTime = model::Timestamp::now();
         std::optional<model::Timestamp> endTime = std::nullopt;
         std::optional<model::Timestamp> lastModified = std::nullopt;
         std::optional<model::HashedKvnr> hashedKvnr = std::nullopt;
@@ -47,6 +42,7 @@ public:
         std::optional<std::string> processor = std::nullopt;
         std::optional<std::string> requestId = std::nullopt;
         std::optional<unsigned int> responseCode = std::nullopt;
+        std::optional<std::string> xContextId = std::nullopt;
 
         /// @brief Merges another Data object into this one.
         /// Fields which are not set (nullopts) are ignored.
@@ -71,7 +67,8 @@ public:
                                      .prescriptionId = "",
                                      .processor = "",
                                      .requestId = "",
-                                     .responseCode = 0});
+                                     .responseCode = 0,
+                                     .xContextId ="not set"});
 
     /// @brief Before the objets gets destroyed, it calls the private publish()
     /// method to create the actual log.
@@ -89,6 +86,8 @@ private:
     void publish();
 
     Data mData;
- };
+
+    std::unique_ptr<JsonLog> mLog;
+};
 
 #endif//ERP_PROCESSING_CONTEXT_BDEMESSAGE_HXX

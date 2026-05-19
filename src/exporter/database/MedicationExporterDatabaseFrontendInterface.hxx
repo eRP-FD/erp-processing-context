@@ -32,7 +32,7 @@ enum class TransactionMode : uint8_t;
 class MedicationExporterDatabaseFrontendInterface
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "11";
+    static constexpr const char* expectedSchemaVersion = "12";
 
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 

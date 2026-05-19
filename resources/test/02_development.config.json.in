@@ -9,6 +9,9 @@
         "activate": {
           "kbvValidationOnUnknownExtension": "reject"
         }
+      },
+      "subscription": {
+        "signingKey": "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgBwZpm6omGaV11Lev\nmIQtqZCJEGvvXz2ocHzPeNQBmQyhRANCAARBPhwSXbt0WV0HXmEwCmma6ddKPzxx\nmqS1p2Bktj9v17J9yv8lhvjiAdhQ84R/ZGDHfAUw4FA9Mue7GKnnXK5B\n-----END PRIVATE KEY-----\n"
       }
     },
     "enrolment": {
@@ -33,10 +36,16 @@
         "structure-files": []
       }
     },
+    "feature": {
+      "t-rezept": "true"
+    },
     "report": {
       "leips": {
         "enable": "true"
       }
+    },
+    "popp": {
+      "entityStatementUrl": "https://localhost:4443/entityStatement"
     }
   },
   "erp-medication-exporter": {

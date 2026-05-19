@@ -101,7 +101,8 @@ public:
                                               const model::Timestamp& whenHandedOver,
                                               const std::optional<model::Timestamp>& whenPrepared,
                                               const db_model::Blob& medicationDispenseSalt,
-                                              const std::optional<model::Task::Status>& taskStatus = std::nullopt) = 0;
+                                              const std::optional<model::Task::Status>& taskStatus,
+                                              const db_model::EncryptedBlob& owner) = 0;
     virtual void updateTaskMedicationDispenseReceipt(
         const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
         const model::Timestamp& lastModified, const db_model::EncryptedBlob& medicationDispense,
@@ -109,7 +110,8 @@ public:
         const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
         const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense,
         const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
-        const model::Timestamp& lastStatusUpdate) = 0;
+        const model::Timestamp& lastStatusUpdate,
+        const db_model::EncryptedBlob& owner) = 0;
     virtual void updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
                                                    const model::Timestamp& lastModified) = 0;
     virtual void updateTaskClearPersonalData(const model::PrescriptionId& taskId, model::Task::Status taskStatus,
@@ -134,12 +136,12 @@ public:
     virtual std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                                    const std::optional<UrlArguments>& search) = 0;
     virtual std::vector<db_model::Task>
-    retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
-                                      const std::optional<UrlArguments>& search) = 0;
+    retrieveAllEgkRedeemableTasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
                                              const std::optional<UrlArguments>& search) = 0;
-    virtual uint64_t countAll160Tasks(const db_model::HashedKvnr& kvnr,
-                                             const std::optional<UrlArguments>& search) = 0;
+    virtual uint64_t countAllEgkRedeemableTasks(const db_model::HashedKvnr& kvnr,
+                                                const std::optional<UrlArguments>& search) = 0;
     virtual std::vector<db_model::Task> retrieveAllTasksForEu(const db_model::HashedKvnr& kvnr,
                                                               const std::optional<UrlArguments>& search) = 0;
     virtual uint64_t countAllTasksForEu(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search) = 0;

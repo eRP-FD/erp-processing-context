@@ -13,6 +13,7 @@
 #include "shared/util/Base64.hxx"
 #include "shared/util/Hash.hxx"
 #include "src/shared/enrolment/VsdmHmacKey.hxx"
+#include "test/erp/pc/popp/PoPPTokenBuilder.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -140,7 +141,8 @@ TEST_F(GetTaskByPharmacyWfTest, BadPnwMissing)
     std::optional<model::Bundle> tasks{};
     ASSERT_NO_FATAL_FAILURE(tasks = taskGet(kvnr.id(), std::string{}, HttpStatus::Forbidden,
                                             model::OperationOutcome::Issue::Type::forbidden,
-                                            "Missing or invalid PNW query parameter", std::string{}));
+                                            "Missing or invalid PNW query parameter and X-PoPP-Token header",
+                                            std::string{}));
 
     ASSERT_FALSE(tasks);
 }
@@ -422,7 +424,7 @@ TEST_F(GetTaskByPharmacyWfTest, SuccessAcceptPN3)
         EXPECT_EQ(response.getHeader().status(), HttpStatus::OK);
     }
 
-    A_25209.test("Successful GET Task by pharmacy with PN3");
+    A_25209_01.test("Successful GET Task by pharmacy with PN3");
     const auto startTime = model::Timestamp::now();
     std::optional<model::PrescriptionId> prescriptionId{};
     std::optional<model::Bundle> tasks{};
@@ -500,4 +502,23 @@ TEST_F(GetTaskByPharmacyWfTest, RateLimit_PN2HcvMismatch)
                                                 HttpStatus::Locked,
                                                 model::OperationOutcome::Issue::Type::forbidden, "TelematikId blocked for today.", pnw));
     }
+}
+
+
+TEST_F(GetTaskByPharmacyWfTest, DISABLED_WithPoPPToken)
+{
+    std::optional<model::PrescriptionId> prescriptionId{};
+    createActivatedTask(prescriptionId);
+
+    auto telematikId = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
+    shared_EVP_PKEY pkey; // TODO(walantis): private key für PoPP token signatur, passend zum public key im Jwks test/util/StaticData.cxx:123
+    auto poppToken = PoPPTokenBuilder{}.withPatientId(kvnr.id()).withActorId(telematikId).getToken(pkey);
+
+    mGetTaskRequestArgs.headerFields.emplace(Header::XPoPPToken, poppToken.serialize());
+    mGetTaskRequestArgs.expectedBdeUseCase = bde::GetTasksPoPP_UC_4_15;
+    std::optional<model::Bundle> tasks{};
+    ASSERT_NO_FATAL_FAILURE(
+        tasks = taskGet(kvnr.id(), "", HttpStatus::OK, std::nullopt, std::nullopt, std::nullopt, telematikId));
+    ASSERT_TRUE(tasks.has_value());
+    EXPECT_EQ(tasks->getResourceCount(), 1);
 }

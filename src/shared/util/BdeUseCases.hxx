@@ -43,7 +43,7 @@ struct UseCase {
         UC_3_16,
         UC_3_17,
         UC_3_18,
-        UC_PATCH_TASK,// no use case assigned yet
+        UC_3_19,
 
         UC_4_1,
         UC_4_2,
@@ -58,6 +58,7 @@ struct UseCase {
         UC_4_12,
         UC_4_13,
         UC_4_14,
+        UC_4_15,
         UC_4_16,
         UC_4_17,
         UC_4_19,
@@ -67,6 +68,7 @@ struct UseCase {
     };
 
     UC fdOperation;
+    bool operator==(const UseCase&) const = default;
 };
 std::string to_string(const UseCase& uc);
 
@@ -100,7 +102,7 @@ static constexpr UseCase DeleteConsent_UC_3_15{.fdOperation = UseCase::UC_3_15};
 static constexpr UseCase GrantEuAuthorization_UC_3_16{.fdOperation = UseCase::UC_3_16};
 static constexpr UseCase RevokeEuAuthorization_UC_3_17{.fdOperation = UseCase::UC_3_17};
 static constexpr UseCase ReadEuAuthorization_UC_3_18{.fdOperation = UseCase::UC_3_18};
-static constexpr UseCase PatchTask_UC_PATCH_TASK{.fdOperation = UseCase::UC_PATCH_TASK};
+static constexpr UseCase PatchTask_UC_3_19{.fdOperation = UseCase::UC_3_19};
 
 static constexpr UseCase AcceptTask_UC_4_1{.fdOperation = UseCase::UC_4_1};
 static constexpr UseCase RejectTask_UC_4_2{.fdOperation = UseCase::UC_4_2};
@@ -115,6 +117,7 @@ static constexpr UseCase PostChargeItem_UC_4_11{.fdOperation = UseCase::UC_4_11}
 static constexpr UseCase GetTasksPharmacy_UC_4_12{.fdOperation = UseCase::UC_4_12};
 static constexpr UseCase PutChargeItem_UC_4_13{.fdOperation = UseCase::UC_4_13};
 static constexpr UseCase PostSubscription_UC_4_14{.fdOperation = UseCase::UC_4_14};
+static constexpr UseCase GetTasksPoPP_UC_4_15{.fdOperation = UseCase::UC_4_15};
 static constexpr UseCase TaskDispense_UC_4_16{.fdOperation = UseCase::UC_4_16};
 static constexpr UseCase GetTaskPharmacySecretRecovery_UC_4_17{.fdOperation = UseCase::UC_4_17};
 

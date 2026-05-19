@@ -23,6 +23,7 @@ struct FhirInstallArgs {
     // see app help for a description of the substitution format
     void addSubstitution(std::string_view substitution);
 
+    bool tree = false;
     std::filesystem::path cacheFolder;
     std::filesystem::path outputFolder;
     std::optional<std::filesystem::path> configFolder;

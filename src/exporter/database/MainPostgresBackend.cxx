@@ -20,11 +20,8 @@ QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
 
 using namespace exporter;
 
-thread_local PostgresConnection MainPostgresBackend::mConnection{PostgresConnection::defaultConnectString()};
-
-
 MainPostgresBackend::MainPostgresBackend()
-    : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
+    : CommonPostgresBackend(threadConnection())
 {
 }
 
@@ -40,5 +37,11 @@ void MainPostgresBackend::healthCheck()
 
 PostgresConnection& MainPostgresBackend::connection() const
 {
-    return mConnection;
+    return threadConnection();
+}
+
+PostgresConnection& exporter::MainPostgresBackend::threadConnection()
+{
+    static thread_local PostgresConnection connection{PostgresConnection::defaultConnectString()};
+    return connection;
 }

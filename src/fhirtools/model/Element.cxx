@@ -947,30 +947,26 @@ std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
 bool Element::matches(const Element& pattern) const
 {
     Expect3(pattern.type() == type(), "type mismatch", std::logic_error);
-    if (type() == Type::Structured)
+    const auto& subNames = subElementNames();
+    for (const auto& patternSubName : pattern.subElementNames())
     {
-        const auto& subNames = subElementNames();
-        for (const auto& patternSubName : pattern.subElementNames())
+        if (std::ranges::find(subNames, patternSubName) == subNames.end())
         {
-            if (std::ranges::find(subNames, patternSubName) == subNames.end())
+            return false;
+        }
+        for (const auto& patternSub : pattern.subElements(patternSubName))
+        {
+            //NOLINTNEXTLINE(misc-no-recursion)
+            bool found = std::ranges::any_of(subElements(patternSubName), [&patternSub](const auto& sub) {
+                return sub->matches(*patternSub);
+            });
+            if (! found)
             {
                 return false;
             }
-            for (const auto& patternSub : pattern.subElements(patternSubName))
-            {
-                //NOLINTNEXTLINE(misc-no-recursion)
-                bool found = std::ranges::any_of(subElements(patternSubName), [&patternSub](const auto& sub) {
-                    return sub->matches(*patternSub);
-                });
-                if (! found)
-                {
-                    return false;
-                }
-            }
         }
-        return true;
     }
-    return asRaw() == pattern.asRaw();
+    return !pattern.hasValue() || (hasValue() && asRaw() == pattern.asRaw());
 }
 
 size_t fhirtools::Element::subElementLevel() const

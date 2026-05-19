@@ -11,6 +11,7 @@
 #include "shared/erp-serverinfo.hxx"
 #include "shared/model/KbvBundle.hxx"
 #include "shared/model/Resource.hxx"
+#include "test/erp/pc/popp/PoPPTokenBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/StaticData.hxx"
@@ -20,8 +21,92 @@
 #include <date/tz.h>
 #include <thread>
 
+class ErpWorkflowGetTasksTestP : public ErpWorkflowTestP
+{
+public:
+    model::Timestamp authoredOnForAcceptDate(const std::string& acceptDate)
+    {
+        const auto acceptDay = model::Timestamp::fromGermanDate(acceptDate).localDay();
+        switch (GetParam())
+        {
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisungPkv:
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            {
+                date::year_month_day acceptYMD{acceptDay};
+                auto authoredOnYMD = acceptYMD - date::months{3};
+                Expect3(authoredOnYMD.ok(), "cannot deduce authoredOn", std::logic_error);
+                return model::Timestamp{model::Timestamp::GermanTimezone, date::local_days{authoredOnYMD}};
 
-TEST_P(ErpWorkflowTestP, TaskSearchStatus) // NOLINT
+            }
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::direkteZuweisung: {
+                return model::Timestamp{model::Timestamp::GermanTimezone, acceptDay - date::days{28}};
+            }
+            case model::PrescriptionType::tRezept:
+            {
+                return model::Timestamp{model::Timestamp::GermanTimezone, acceptDay - date::days{6}};
+            }
+        }
+        Fail2("Invalid PrescriptionType: " + std::to_string(static_cast<uintmax_t>(GetParam())), std::logic_error);
+    }
+
+    std::string createPrescription(const model::PrescriptionId& prescriptionId, const model::Timestamp& authoredOn,
+                                   std::string kvnr)
+    {
+        switch (prescriptionId.type())
+        {
+            case model::PrescriptionType::apothekenpflichigeArzneimittel:
+            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+            case model::PrescriptionType::direkteZuweisung:
+            case model::PrescriptionType::direkteZuweisungPkv:
+            case model::PrescriptionType::tRezept: {
+                const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
+                mActivateTaskRequestArgs.overrideExpectedKbvVersion = kbvVersion.renderVersion();
+                return kbvBundleXml({
+                    .prescriptionId = prescriptionId,
+                    .authoredOn = authoredOn,
+                    .kvnr = std::move(kvnr),
+                    .kbvVersion = kbvVersion,
+                    .medicationOptions = { .version = kbvVersion }
+                });
+            }
+            case model::PrescriptionType::digitaleGesundheitsanwendungen:
+                const auto& kbvEvdgaVersion = ResourceTemplates::Versions::KBV_EVDGA_current(authoredOn);
+                mActivateTaskRequestArgs.overrideExpectedKbvVersion = kbvEvdgaVersion.renderVersion();
+                return ResourceTemplates::evdgaBundleXml({
+                    .version = kbvEvdgaVersion,
+                    .prescriptionId = prescriptionId.toString(),
+                    .kvnr = std::move(kvnr),
+                    .authoredOn = authoredOn.toGermanDate(),
+                });
+        }
+        Fail2("Invalid PrescriptionType: " + std::to_string(static_cast<uintmax_t>(GetParam())), std::logic_error);
+    };
+
+    void createTasks(const std::string& kvnr,  const std::initializer_list<std::string>& acceptDates)
+    {
+        for (const std::string& acceptDate : acceptDates)
+        {
+            std::optional<model::Task> task;
+            ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
+            ASSERT_TRUE(task.has_value());
+            const auto prescriptionId = task->prescriptionId();
+            const auto authoredOn = authoredOnForAcceptDate(acceptDate);
+            TVLOG(1) << "Creating Task with authoredOn: " << authoredOn << " for accept-date: " << acceptDate;
+            auto bundleXml = createPrescription(prescriptionId, authoredOn, kvnr);
+            //mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
+            ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, task->accessCode(), toCadesBesSignature(bundleXml, authoredOn)));
+        }
+
+    }
+
+    void TaskSearch_AcceptDate_AllPredicates_shortValid();
+    void TaskSearch_AcceptDate_AllPredicates_longValid();
+
+};
+
+TEST_P(ErpWorkflowGetTasksTestP, TaskSearchStatus) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -138,7 +223,7 @@ TEST_F(ErpWorkflowTest, TaskSearchStatusERP4627) // NOLINT
                           model::OperationOutcome::Issue::Type::invalid, "Parsing the HTTP message header failed.");
 }
 
-TEST_P(ErpWorkflowTestP, TaskSearchLastModified) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskSearchLastModified) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -189,7 +274,7 @@ TEST_P(ErpWorkflowTestP, TaskSearchLastModified) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskSearchAuthoredOn ) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskSearchAuthoredOn ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -260,7 +345,7 @@ TEST_P(ErpWorkflowTestP, TaskSearchAuthoredOn ) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetPaging ) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskGetPaging ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -308,7 +393,7 @@ TEST_P(ErpWorkflowTestP, TaskGetPaging ) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetSorting ) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskGetSorting ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -358,7 +443,7 @@ TEST_P(ErpWorkflowTestP, TaskGetSorting ) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetPagingAndSearch) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskGetPagingAndSearch) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -391,7 +476,7 @@ TEST_P(ErpWorkflowTestP, TaskGetPagingAndSearch) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskGetAborted) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -437,7 +522,7 @@ TEST_P(ErpWorkflowTestP, TaskGetAborted) // NOLINT
     }
 }
 
-TEST_P(ErpWorkflowTestP, TaskGetRevinclude ) // NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskGetRevinclude ) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -475,7 +560,7 @@ TEST_P(ErpWorkflowTestP, TaskGetRevinclude ) // NOLINT
 }
 
 // Test for https://dth01.ibmgcloud.net/jira/browse/ERP-5387
-TEST_P(ErpWorkflowTestP, TaskEmptyOutput)// NOLINT
+TEST_P(ErpWorkflowGetTasksTestP, TaskEmptyOutput)// NOLINT
 {
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -506,164 +591,387 @@ TEST_F(ErpWorkflowTest, InvalidSearchArguments)
     ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);
 }
 
-TEST_P(ErpWorkflowTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
+
+TEST_P(ErpWorkflowGetTasksTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
 {
-    const std::vector<std::string> authored_on_dates
+    std::optional<testutils::ShiftFhirResourceViewsGuard> shift;
+    switch (GetParam())
     {
-        "2023-09-26",// 2023-10-24  01
-        "2023-09-27",// 2023-10-25  02
-        "2023-09-28",// 2023-10-26  03
-
-        "2024-01-01",// 2024-01-29  04
-        "2024-01-02",// 2024-01-30  05
-        "2024-01-03",// 2024-01-31  06
-
-        "2024-01-04",// 2024-02-01  07
-        "2024-01-05",// 2024-02-02  08
-
-        "2024-07-05",// 2024-08-02  09
-        "2024-07-06",// 2024-08-03  10
-        "2024-07-07",// 2024-08-04  11
-
-        "2025-01-29",// 2025-02-26  12
-        "2025-01-30",// 2025-02-27  13
-        "2025-01-31",// 2025-02-28  14
-
-        "2025-02-01",// 2025-03-01  15
-        "2025-02-02",// 2025-03-02  16
-        "2025-02-03",// 2025-03-03  17
-        "2025-02-04",// 2025-03-04  18
-        "2025-02-05",// 2025-03-05  19
-        "2025-02-06" // 2025-03-06  20
-    };
-
-    std::string kvnr;
-    generateNewRandomKVNR(kvnr);
-    EXPECT_FALSE(kvnr.empty());
-
-    if (GetParam() == model::PrescriptionType::apothekenpflichigeArzneimittel)
-    {
-        for (const std::string& authoredOnDate : authored_on_dates)
+        case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
+        case model::PrescriptionType::direkteZuweisungPkv:
+        case model::PrescriptionType::digitaleGesundheitsanwendungen:
+            // KBV 1.3 is valid since 2025-10-01, but these are accepted for three months
+            // therefore we cannot make a test with accept dates before 2026-01-01
+            ASSERT_NO_FATAL_FAILURE(TaskSearch_AcceptDate_AllPredicates_longValid());
+            return;
+        case model::PrescriptionType::tRezept:
         {
-            std::optional<model::Task> task;
-            ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
-            ASSERT_TRUE(task.has_value());
-            model::Timestamp authoredOn = model::Timestamp::fromGermanDate(authoredOnDate);
-            auto prescriptionId = task->prescriptionId();
-            const auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
-            auto bundleXml = kbvBundleXml({
-                .prescriptionId = prescriptionId,
-                .authoredOn = authoredOn,
-                .kvnr = kvnr,
-                .kbvVersion = kbvVersion,
-            });
-            mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
-            ASSERT_NO_FATAL_FAILURE(taskActivate(prescriptionId, task->accessCode(), toCadesBesSignature(bundleXml, authoredOn)));
+            if (runsInCloudEnv())
+            {
+                GTEST_SKIP() << "Integration test cannot time-shift";
+            }
+            shift.emplace("KBV_1_4", date::day{1} / date::October / date::year{2025});
+            [[fallthrough]];
         }
-
-        EXPECT_EQ(taskGet(kvnr)->getResourceCount(), 20);
-
-        // eq YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025"))->getResourceCount(), 9);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2023"))->getResourceCount(), 3);
-
-        // ne YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025"))->getResourceCount(), 11);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2023"))->getResourceCount(), 17);
-
-        // lt YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025"))->getResourceCount(), 11);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2024"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2023"))->getResourceCount(), 0);
-
-        // le YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2024"))->getResourceCount(), 11);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2023"))->getResourceCount(), 3);
-
-        // gt YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2024"))->getResourceCount(), 9);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2023"))->getResourceCount(), 17);
-
-        // ge YYYY
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025"))->getResourceCount(), 9);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2024"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2023"))->getResourceCount(), 20);
-
-        // eq YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-02"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2023-12"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2024-02"))->getResourceCount(), 2);
-
-        // ne YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-03"))->getResourceCount(), 14);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2023-10"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2023-01"))->getResourceCount(), 20);
-
-        // lt YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-03"))->getResourceCount(), 14);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2024-01"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2023-10"))->getResourceCount(), 0);
-
-        // le YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2024-12"))->getResourceCount(), 11);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2023-12"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2023-10"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2023-09"))->getResourceCount(), 0);
-
-        // gt YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-02"))->getResourceCount(), 6);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-03"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2023-12"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2024-01"))->getResourceCount(), 14);
-
-        // ge YYYY-mm
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-02"))->getResourceCount(), 9);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2023-10"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2023-12"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2024-01"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2024-08"))->getResourceCount(), 12);
-
-        // eq YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01-01"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2023-10-25"))->getResourceCount(), 1);
-
-        // ne YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01-01"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2024-02-01"))->getResourceCount(), 19);
-
-        // lt YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2023-11-01"))->getResourceCount(), 3);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2023-10-26"))->getResourceCount(), 2);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2023-10-24"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2024-08-02"))->getResourceCount(), 8);
-
-        // le YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2023-09-28"))->getResourceCount(), 0);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2024-02-02"))->getResourceCount(), 8);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-12-31"))->getResourceCount(), 20);
-
-        // gt YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2023-01-01"))->getResourceCount(), 20);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2023-10-28"))->getResourceCount(), 17);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2023-12-31"))->getResourceCount(), 17);
-
-        // ge YYYY-mm-dd
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2023-10-25"))->getResourceCount(), 19);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-03-03"))->getResourceCount(), 4);
-        EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-03-07"))->getResourceCount(), 0);
+        case model::PrescriptionType::apothekenpflichigeArzneimittel:
+        case model::PrescriptionType::direkteZuweisung:
+            ASSERT_NO_FATAL_FAILURE(TaskSearch_AcceptDate_AllPredicates_shortValid());
+            return;
     }
+    Fail2("Invalid PrescriptionType: " + std::to_string(static_cast<uintmax_t>(GetParam())), std::logic_error);
 }
 
 
-INSTANTIATE_TEST_SUITE_P(ErpWorkflowTestPInst, ErpWorkflowTestP,
+
+void ErpWorkflowGetTasksTestP::TaskSearch_AcceptDate_AllPredicates_shortValid()
+{
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
+    EXPECT_FALSE(kvnr.empty());
+    ASSERT_NO_FATAL_FAILURE(//
+        createTasks(kvnr,
+                    {
+                        "2025-10-29",
+                        "2025-10-30",
+                        "2025-10-30",
+
+                        "2025-11-01",
+                        "2025-11-02",
+                        "2025-11-03",
+
+                        "2026-01-01",
+                        "2026-01-02",
+                        "2026-01-03",
+                        "2026-01-04",
+
+                        "2026-02-01",
+                        "2026-02-02",
+                        "2026-02-03",
+                        "2026-02-04",
+                        "2026-02-05",
+                    });//
+    );
+
+    auto allTasks = taskGet(kvnr);
+    EXPECT_EQ(taskGet(kvnr)->getResourceCount(), 15);
+
+    // eq YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2024"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2027"))->getResourceCount(), 0);
+
+    // ne YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2024"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2027"))->getResourceCount(), 15);
+
+    // lt YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2024"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2027"))->getResourceCount(), 15);
+
+    // le YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2024"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2027"))->getResourceCount(), 15);
+
+    // gt YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2024"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2027"))->getResourceCount(), 0);
+
+    // ge YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2024"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2027"))->getResourceCount(), 0);
+
+    // eq YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-09"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-10"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-11"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-12"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-02"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-03"))->getResourceCount(), 0);
+
+    // ne YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-09"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-10"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-11"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-12"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-02"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-03"))->getResourceCount(), 15);
+
+    // lt YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-10"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-11"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-12"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-01"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-02"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-03"))->getResourceCount(), 15);
+
+    // le YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-09"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-10"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-11"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-12"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-01"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-03"))->getResourceCount(), 15);
+
+    // gt YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-09"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-10"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-11"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-12"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-01"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-03"))->getResourceCount(), 0);
+
+    // ge YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-09"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-10"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-11"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-12"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-01"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-02"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-03"))->getResourceCount(), 0);
+
+    // eq YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-09-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-10-30"))->getResourceCount(), 2);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-11-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-12-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-02-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-03-02"))->getResourceCount(), 0);
+
+    // ne YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-09-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-10-30"))->getResourceCount(), 13);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-11-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-12-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-02-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-03-02"))->getResourceCount(), 15);
+
+    // lt YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-09-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-10-30"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-11-02"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-12-02"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-01-02"))->getResourceCount(), 7);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-02-02"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-03-02"))->getResourceCount(), 15);
+
+    // le YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-09-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-10-30"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-11-02"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-12-02"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-01-02"))->getResourceCount(), 8);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-02-02"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-03-02"))->getResourceCount(), 15);
+
+    // gt YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-09-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-10-30"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-11-02"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-12-02"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-01-02"))->getResourceCount(), 7);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-02-02"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-03-02"))->getResourceCount(), 0);
+
+    // ge YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-09-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-10-30"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-11-02"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-12-02"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-01-02"))->getResourceCount(), 8);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-02-02"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-03-02"))->getResourceCount(), 0);
+}
+
+void ErpWorkflowGetTasksTestP::TaskSearch_AcceptDate_AllPredicates_longValid()
+{
+    std::string kvnr;
+    generateNewRandomKVNR(kvnr);
+    EXPECT_FALSE(kvnr.empty());
+    ASSERT_NO_FATAL_FAILURE(//
+        createTasks(kvnr,
+                    {
+                        "2026-01-29",
+                        "2026-01-30",
+                        "2026-01-30",
+
+                        "2026-02-01",
+                        "2026-02-02",
+                        "2026-02-03",
+
+                        "2026-04-01",
+                        "2026-04-02",
+                        "2026-04-03",
+                        "2026-04-04",
+
+                        "2026-05-01",
+                        "2026-05-02",
+                        "2026-05-03",
+                        "2026-05-04",
+                        "2026-05-05",
+                    });//
+    );
+
+    auto allTasks = taskGet(kvnr);
+    EXPECT_EQ(taskGet(kvnr)->getResourceCount(), 15);
+
+    // eq YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2027"))->getResourceCount(), 0);
+
+    // ne YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2027"))->getResourceCount(), 15);
+
+    // lt YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2027"))->getResourceCount(), 15);
+
+    // le YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2027"))->getResourceCount(), 15);
+
+    // gt YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2027"))->getResourceCount(), 0);
+
+    // ge YYYY
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2027"))->getResourceCount(), 0);
+
+    // eq YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-12"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-02"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-03"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-04"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-05"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-06"))->getResourceCount(), 0);
+
+    // ne YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-12"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-02"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-03"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-04"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-05"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-06"))->getResourceCount(), 15);
+
+    // lt YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-01"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-02"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-03"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-04"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-05"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-06"))->getResourceCount(), 15);
+
+    // le YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-12"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-01"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-02"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-03"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-04"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-05"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-06"))->getResourceCount(), 15);
+
+    // gt YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-12"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-01"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-02"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-03"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-04"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-05"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-06"))->getResourceCount(), 0);
+
+    // ge YYYY-mm
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-12"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-01"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-02"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-03"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-04"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-05"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-06"))->getResourceCount(), 0);
+
+    // eq YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2025-12-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-01-30"))->getResourceCount(), 2);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-02-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-03-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-04-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-05-02"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=eq2026-06-02"))->getResourceCount(), 0);
+
+    // ne YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2025-12-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-01-30"))->getResourceCount(), 13);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-02-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-03-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-04-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-05-02"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ne2026-06-02"))->getResourceCount(), 15);
+
+    // lt YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2025-12-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-01-30"))->getResourceCount(), 1);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-02-02"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-03-02"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-04-02"))->getResourceCount(), 7);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-05-02"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=lt2026-06-02"))->getResourceCount(), 15);
+
+    // le YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2025-12-02"))->getResourceCount(), 0);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-01-30"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-02-02"))->getResourceCount(), 5);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-03-02"))->getResourceCount(), 6);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-04-02"))->getResourceCount(), 8);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-05-02"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=le2026-06-02"))->getResourceCount(), 15);
+
+    // gt YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2025-12-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-01-30"))->getResourceCount(), 12);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-02-02"))->getResourceCount(), 10);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-03-02"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-04-02"))->getResourceCount(), 7);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-05-02"))->getResourceCount(), 3);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=gt2026-06-02"))->getResourceCount(), 0);
+
+    // ge YYYY-mm-dd
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2025-12-02"))->getResourceCount(), 15);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-01-30"))->getResourceCount(), 14);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-02-02"))->getResourceCount(), 11);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-03-02"))->getResourceCount(), 9);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-04-02"))->getResourceCount(), 8);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-05-02"))->getResourceCount(), 4);
+    EXPECT_EQ(taskGet(kvnr, UrlHelper::escapeUrl("accept-date=ge2026-06-02"))->getResourceCount(), 0);
+}
+
+
+INSTANTIATE_TEST_SUITE_P(ErpWorkflowGetTasksTestPInst, ErpWorkflowGetTasksTestP,
                          testing::ValuesIn(testutils::allPrescriptionTypes()));
+
+
+

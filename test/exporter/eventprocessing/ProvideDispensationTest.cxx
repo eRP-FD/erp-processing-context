@@ -117,7 +117,8 @@ TEST_F(ProvideDispensationTest, OperationSuccess)
     client.setHttpStatusResponse(HttpStatus::OK);
     client.setOperationOutcomeResponse(operationOutcomeTpl);
 
-    auto outcome = eventprocessing::ProvideDispensation::process(&client, makeEvent(std::nullopt));
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvideDispensation::process(&client, makeEvent(std::nullopt), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -127,8 +128,9 @@ TEST_F(ProvideDispensationTest, OperationSuccess14)
     client.setHttpStatusResponse(HttpStatus::OK);
     client.setOperationOutcomeResponse(operationOutcomeTpl);
 
+    BDEMessage bdeMessage;
     auto outcome =
-        eventprocessing::ProvideDispensation::process(&client, makeEvent(ResourceTemplates::Versions::GEM_ERP_1_4));
+        eventprocessing::ProvideDispensation::process(&client, makeEvent(ResourceTemplates::Versions::GEM_ERP_1_4), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -225,7 +227,8 @@ TEST_P(ProvideDispensationErrorCodesTestP, ProvideDispensationNewErrorCodes)
     const auto oo = String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS", GetParam().errorCode);
     client.setOperationOutcomeResponse(oo);
 
-    auto outcome = eventprocessing::ProvideDispensation::process(&client, makeEvent(std::nullopt));
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvideDispensation::process(&client, makeEvent(std::nullopt), bdeMessage);
     EXPECT_EQ(outcome, GetParam().expectedOutcome);
 }
 

@@ -32,11 +32,13 @@ public:
 private:
     explicit FhirInstall(const std::span<const char*>& args);
     bool run();
+    bool printTree();
+    bool install();
     void installConfig(const FhirPackage& package);
 
     void readArgs(const std::span<const char*>& args);
 
-    FhirInstallArgs mArgumemts;
+    FhirInstallArgs mArguments;
     fhirtools::FhirResourceGroupConst mBaseResourceGroup{"base"};
     fhirtools::FhirStructureRepositoryBackend mBackend;
     std::shared_ptr<const fhirtools::FhirStructureRepositoryView> mView;

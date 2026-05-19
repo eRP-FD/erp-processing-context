@@ -7,7 +7,9 @@
 #include "exporter/eventprocessing/CancelPrescription.hxx"
 #include "exporter/eventprocessing/EventDispatcher.hxx"
 #include "exporter/model/TaskEvent.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/audit/AuditDataCollector.hxx"
+#include "shared/fhir/Fhir.hxx"
 #include "test/exporter/mock/EpaMedicationClientMock.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -84,6 +86,16 @@ public:
             model::TaskEvent::UseCase::cancelPrescription, model::TaskEvent::State::pending,
             model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()), lastModified);
     }
+    static std::string expectedInput()
+    {
+        auto latest = Fhir::instance()
+                            .structureRepository(model::Timestamp::now())
+                            .latestRenderVersion("https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters");
+        const std::string expectedInput =
+             R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|###"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
+             model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
+        return String::replaceAll(expectedInput, "###", latest.version->version().value());
+    }
 
     AuditDataCollector auditDataCollector;
 };
@@ -94,12 +106,10 @@ TEST_F(CancelPrescriptionTest, OperationSuccess)
     client.setHttpStatusResponse(HttpStatus::OK);
     client.setOperationOutcomeResponse(operationOutcomeTpl);
 
-    std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
-        model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
-    client.setExpectedInput(expectedInput);
+    client.setExpectedInput(expectedInput());
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -110,12 +120,10 @@ TEST_F(CancelPrescriptionTest, OperationPrescriptionStatus)
     client.setOperationOutcomeResponse(String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS",
                                                           "MEDICATIONSVC_PRESCRIPTION_STATUS"));
 
-    std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
-        model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
-    client.setExpectedInput(expectedInput);
+    client.setExpectedInput(expectedInput());
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -126,12 +134,10 @@ TEST_F(CancelPrescriptionTest, OperationPrescriptionNoExist)
     client.setOperationOutcomeResponse(String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS",
                                                           "MEDICATIONSVC_PRESCRIPTION_NO_EXIST"));
 
-    std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
-        model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
-    client.setExpectedInput(expectedInput);
+    client.setExpectedInput(expectedInput());
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
 }
 
@@ -164,7 +170,8 @@ TEST_F(CancelPrescriptionTest, Failed)
 ]
 })");
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::DeadLetter);
 }
 
@@ -176,7 +183,8 @@ TEST_F(CancelPrescriptionTest, InternalServerError)
 "errorCode": "internalError"
 })");
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, eventprocessing::Outcome::Retry);
 }
 
@@ -220,16 +228,13 @@ TEST_P(CancelPrescriptionErrorCodesTestP, CancelPrescriptionNewErrorCodes)
     EpaMedicationClientMock client;
     client.setHttpStatusResponse(HttpStatus::OK);
 
-
-    const std::string expectedInput =
-        R"_({"meta":{"profile":["https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-cancel-prescription-erp-input-parameters|1.0"]},"resourceType":"Parameters","parameter":[{"name":"rxPrescription","part":[{"name":"prescriptionId","valueIdentifier":{"system":"https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId","value":"160.000.000.000.001.54"}},{"name":"authoredOn","valueDate":")_" +
-        model::Timestamp::now().toGermanDate() + R"_("}]}]})_";
-    client.setExpectedInput(expectedInput);
+    client.setExpectedInput(expectedInput());
 
     const auto oo = String::replaceAll(operationOutcomeTpl, "MEDICATIONSVC_OPERATION_SUCCESS", GetParam().errorCode);
     client.setOperationOutcomeResponse(oo);
 
-    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent());
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::CancelPrescription::process(&client, makeEvent(), bdeMessage);
     EXPECT_EQ(outcome, GetParam().expectedOutcome);
 }
 

@@ -11,7 +11,7 @@ services:
   # --------------------------------------------------------------------------------
   hsm-simulator-1:
     hostname: com.ibm.erp.hsm-simulator
-    image: de.icr.io/erp_dev/vau-hsm:latest
+    image: de.icr.io/erp_dev/vau-hsm:v-2.20.0-B101
     container_name: erp-hsm-simulator-1
     environment:
       SIMULATOR_PORT: 3001
@@ -23,7 +23,7 @@ services:
   # --------------------------------------------------------------------------------
   tpm-server:
     hostname: com.ibm.erp.tpm-server
-    image: de.icr.io/erp_dev/tpm-client:latest
+    image: de.icr.io/erp_dev/tpm-client:v-0.15.0-B44
     container_name: erp-tpm-server
     ports:
       - "9002:2321"
@@ -46,12 +46,12 @@ services:
     command: ["/usr/local/bin/redis-server", "/data/redis.conf", "--port 0", "--tls-port 6379", "--tls-cert-file /tls/server.crt", "--tls-key-file /tls/server.key", "--tls-auth-clients no", "--protected-mode no", "--tls-ca-cert-file /tls/rootCA.crt"]
 
   # --------------------------------------------------------------------------------
-  # Postgres
+  # Postgres primary node
   # --------------------------------------------------------------------------------
-  postgres:
+  postgres-primary:
     hostname: postgres-erp
-    image: de.icr.io/erp_dev/erp-postgres-db:master
-    container_name: erp-postgres
+    image: de.icr.io/erp_dev/postgres-docker:v-2.20.0-B00
+    container_name: erp-postgres-primary
     ports:
       - "9005:5432"
     environment:
@@ -61,16 +61,42 @@ services:
       POSTGRES_PASSWORD: 'erp0815'
     volumes:
       - './tls:/tls:z'
+      - './postgres:/erp/config:z'
     entrypoint: >
       /bin/bash -c "
       install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
       install -o postgres -m 644 /tls/server.crt /erp/secrets/server.crt &&
       docker-entrypoint.sh
-      -c ssl=on
-      -c ssl_cert_file=/erp/secrets/server.crt
-      -c ssl_key_file=/erp/secrets/server.key
-      -c wal_level=logical
-      -c log_statement=none"
+      -c config_file=/erp/config/postgresql-primary.conf
+      -c hba_file=/erp/config/pg_hba.conf
+      "
+    # set log_statement=all to get detailed output
+
+  # --------------------------------------------------------------------------------
+  # Postgres replica node (streaming hot-standby replication from postgres-primary)
+  # --------------------------------------------------------------------------------
+  postgres-replica:
+    hostname: postgres-replica
+    image: de.icr.io/erp_dev/postgres-docker:v-2.20.0-B00
+    container_name: erp-postgres-replica
+    ports:
+      - "9007:5432"
+    depends_on:
+      - postgres-primary
+    environment:
+      PGPASSWORD: 'erp0815'
+      PRIMARY_HOST: postgres-erp
+      PRIMARY_PORT: 5432
+      REPLICATION_USER: 'erp_admin'
+    volumes:
+      - './tls:/tls:z'
+      - './postgres:/erp/config:z'
+    entrypoint: >
+      /bin/bash -c "
+      install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
+      install -o postgres -m 644 /tls/server.crt /erp/secrets/server.crt &&
+      docker-entrypoint-standby.sh
+      -c config_file=/erp/config/postgresql-standby.conf"
     # set log_statement=all to get detailed output
 
   # --------------------------------------------------------------------------------
@@ -78,7 +104,7 @@ services:
   # --------------------------------------------------------------------------------
   postgres-erp-medication-exporter:
     hostname: postgres-exporter
-    image: de.icr.io/erp_dev/erp-postgres-db:master
+    image: de.icr.io/erp_dev/postgres-docker:v-2.20.0-B00
     container_name: erp-postgres-medication-exporter
     ports:
       - "9006:5433"
@@ -90,16 +116,13 @@ services:
       PGPORT: '5433'
     volumes:
       - './tls:/tls:z'
+      - './postgres:/erp/config:z'
     entrypoint: >
       /bin/bash -c "
       install -o postgres -m 600 /tls/server.key /erp/secrets/server.key &&
       install -o postgres -m 644 /tls/server.crt /erp/secrets/server.crt &&
       docker-entrypoint.sh
-      -c ssl=on
-      -c ssl_cert_file=/erp/secrets/server.crt
-      -c ssl_key_file=/erp/secrets/server.key
-      -c wal_level=logical
-      -c log_statement=none"
+      -c config_file=/erp/config/postgresql.conf"
     # set log_statement=all to get detailed output
 
   # --------------------------------------------------------------------------------
@@ -112,7 +135,7 @@ services:
       - './tls:/tls:z'
       - '../scripts:/data:Z'
     depends_on:
-      - postgres
+      - postgres-primary
       - postgres-erp-medication-exporter
     environment:
       PGPASSWORD: 'erp0815'
@@ -142,7 +165,7 @@ services:
   # epa-test-mock
   # --------------------------------------------------------------------------------
   epa-test-mock:
-    image: de.icr.io/erp_dev/epa-test-mock:v-0.89.0
+    image: de.icr.io/erp_dev/epa-test-mock:v-0.108.0
     container_name: epa-test-mock
     ports:
       - "18888:8888"

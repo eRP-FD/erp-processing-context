@@ -84,7 +84,7 @@
               "definition": "https://gematik.de/fhir/erp/OperationDefinition/AbortOperationDefinition"
             }
           ],
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task|1.6.0"
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Task|1.6.2"
         },
         {
           "type": "Communication",
@@ -123,12 +123,12 @@
           ],
           "profile": "http://hl7.org/fhir/StructureDefinition/Communication|4.0.1",
           "supportedProfile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.6.0",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.6.0",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.6.0",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.6.2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq|1.6.2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Representative|1.6.2",
             "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq|1.1.0",
             "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply|1.1.0",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DiGA|1.6.0"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DiGA|1.6.2"
           ]
         },
         {
@@ -154,8 +154,8 @@
           ],
           "profile": "http://hl7.org/fhir/StructureDefinition/MedicationDispense|4.0.1",
           "supportedProfile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.6.0",
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense_DiGA|1.6.0"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense|1.6.2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_MedicationDispense_DiGA|1.6.2"
           ]
         },
         {
@@ -179,7 +179,7 @@
               "type": "token"
             }
           ],
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.6.0"
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_AuditEvent|1.6.2"
         },
         {
           "type": "Device",
@@ -188,7 +188,7 @@
               "code": "read"
             }
           ],
-          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.6.0"
+          "profile": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Device|1.6.2"
         },
         {
           "type": "ChargeItem",

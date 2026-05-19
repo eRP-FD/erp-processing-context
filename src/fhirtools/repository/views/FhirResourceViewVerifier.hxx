@@ -27,6 +27,8 @@ public:
     void verify();
 
 private:
+    void verifyStructures();
+
     void verifyStructure(const FhirStructureDefinition& def);
 
     void verifyElement(const FhirStructureDefinition& def, const FhirElement& element);

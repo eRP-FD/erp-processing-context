@@ -8,12 +8,21 @@
 #ifndef ERP_PROCESSING_CONTEXT_HEALTH_HXX
 #define ERP_PROCESSING_CONTEXT_HEALTH_HXX
 
+#include "shared/model/Timestamp.hxx"
 #include "shared/model/ResourceBase.hxx"
 
 #include <map>
 
 namespace model
 {
+
+struct PoPPCertificateHealthData
+{
+    std::string subject;
+    std::optional<Timestamp> lastOcspSuccess;
+    bool lastOcspMaxAgeExceeded;
+    Timestamp expiry;
+};
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class Health : public ResourceBase
@@ -24,6 +33,7 @@ public:
     static constexpr std::string_view shutdown = "SHUTTING_DOWN";
 
     static constexpr std::string_view postgres = "postgres";
+    static constexpr std::string_view postgresRo = "postgres-read-only";
     static constexpr std::string_view redis = "redis";
     static constexpr std::string_view cFdSigErp = "C.FD.SIG-eRP";
     static constexpr std::string_view hsm = "hsm";
@@ -33,12 +43,15 @@ public:
     static constexpr std::string_view seedTimer = "SeedTimer";
     static constexpr std::string_view teeTokenUpdater = "TeeTokenUpdater";
     static constexpr std::string_view eventDb = "EventDb";
+    static constexpr std::string_view poppService = "PoPPService";
 
     Health();
 
     void setOverallStatus(const std::string_view& status);
     void setPostgresStatus(const std::string_view& status, const std::string_view& connectionInfo,
                            std::optional<std::string_view> message = std::nullopt);
+    void setPostgresROStatus(const std::string_view& status, const std::string_view& connectionInfo,
+                             std::optional<std::string_view> message = std::nullopt);
     void setEventDbStatus(const std::string_view& status, const std::string_view& connectionInfo,
                           std::optional<std::string_view> message = std::nullopt);
     void setHsmStatus(const std::string_view& status, const std::string_view& device,
@@ -56,13 +69,17 @@ public:
     void setIdpStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setSeedTimerStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
     void setTeeTokenUpdaterStatus(const std::string_view& status, std::optional<std::string_view> message = std::nullopt);
+    void setPoPPServiceStatus(const std::string_view& status, const std::list<PoPPCertificateHealthData>& healthData);
     // the health check itself had an unexpected error:
     void setHealthCheckError(const std::string_view& errorMessage);
 
 private:
     void setStatusInChecksArray(const std::string_view& name, const std::string_view& status, const rapidjson::Pointer& messagePointer, std::optional<std::string_view> message);
+    rapidjson::Value& setStatusInChecksArray(const std::string_view& name, const std::string_view& status);
     void setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
                                 const std::map<rapidjson::Pointer, std::string_view>& data);
+    void setStatusInChecksArray(const std::string_view& name, const std::string_view& status,
+                                const std::map<rapidjson::Pointer, std::string>& data);
 };
 
 }

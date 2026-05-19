@@ -91,10 +91,6 @@ TEST_F(ConsentTest, ConstructFromXml)//NOLINT(readability-function-cognitive-com
     const auto& version = ResourceTemplates::Versions::GEM_ERPCHRG_current();
     auto xmlString = ResourceManager::instance().getStringResource("test/EndpointHandlerTest/consent_input.xml");
     boost::replace_first(xmlString, "###VERSION###", version.renderVersion());
-    if (version >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
-    {
-        boost::replace_all(xmlString, "http://fhir.de/sid/pkv/kvid-10", "http://fhir.de/sid/gkv/kvid-10");
-    }
     auto consent = model::Consent::fromXml( xmlString, *StaticData::getXmlValidator());
 
     EXPECT_FALSE(consent.id().has_value());

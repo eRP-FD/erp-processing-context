@@ -180,7 +180,7 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem)//NOLINT(readability-function-cog
 {
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
 
     const auto newDispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
     auto newDispenseBundle = model::Bundle::fromXmlNoValidation(newDispenseBundleXml);
@@ -272,7 +272,7 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItemInvalidChargeItem)//NOLINT(readabi
 {
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
     auto chargeItemXml = ResourceTemplates::chargeItemXml(
         {.kvnr = pkvKvnr,
          .prescriptionId = pkvTaskId,
@@ -300,7 +300,7 @@ TEST_F(ChargeItemPutHandlerTest,
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
     auto chargeItemXml = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{pkvKvnr},
         .prescriptionId = pkvTaskId,
         .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
         .operation = OperationType::Put,
@@ -329,7 +329,7 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItem_WithProfileVersion)//NOLINT(reada
                                            model::resource::elements::profile, 0)};
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
 
     const auto newDispenseBundleXml = ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId});
     auto newDispenseBundle = model::Bundle::fromXmlNoValidation(newDispenseBundleXml);
@@ -371,7 +371,7 @@ TEST_F(ChargeItemPutHandlerTest, PutChargeItemErp23745)
         dispenseItem, "test/generated_pki/sub_ca1_ec/certificates/apotheker/apotheker.pem", timestamp);
 
     auto chargeItemStr = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{"X500000056"},
         .prescriptionId = prescriptionId,
         .dispenseBundleBase64 = std::move(signedItem),
         .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put,

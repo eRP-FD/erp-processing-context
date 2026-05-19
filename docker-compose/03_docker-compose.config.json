@@ -1,18 +1,25 @@
 {
   "erp": {
     "postgres": {
-      "host": "localhost",
-      "port": "9005",
-      "user": "erp_admin",
-      "password":  "erp0815",
-      "database": "erp_processing_context",
-      "useSsl": "true",
-      "certificatePath": "",
-      "connectTimeoutSeconds": "2",
-      "tcpUserTimeoutMs": "1000",
-      "keepalivesIdleSec": "75",
-      "keepalivesIntervalSec": "75",
-      "keepalivesCount": "9"
+      "main": {
+        "host": "localhost",
+        "port": "9005",
+        "user": "erp_admin",
+        "password":  "erp0815",
+        "database": "erp_processing_context",
+        "useSsl": "true",
+        "certificatePath": "",
+        "connectTimeoutSeconds": "2",
+        "tcpUserTimeoutMs": "1000",
+        "keepalivesIdleSec": "75",
+        "keepalivesIntervalSec": "75",
+        "keepalivesCount": "9"
+      },
+      "readOnly": {
+        "host": "localhost",
+        "port": "9007",
+        "targetSessionAttrs": "read-only"
+      }
     },
     "redis": {
       "database": "0",
@@ -35,6 +42,23 @@
     }
   },
   "erp-medication-exporter": {
+    "trusted-cas": "-----BEGIN CERTIFICATE-----\nMIICNTCCAdugAwIBAgIUWR+SsRglUM6Gx9/JDMHM7WchJ48wCgYIKoZIzj0EAwIw\ncDELMAkGA1UEBhMCREUxEDAOBgNVBAgMB0hhbWJ1cmcxEDAOBgNVBAcMB0hhbWJ1\ncmcxDDAKBgNVBAoMA0lCTTEPMA0GA1UECwwGUm9vdENBMR4wHAYDVQQDDBVURVNU\nLUludGVybmV0LVJvb3QtQ0EwHhcNMjUxMDE3MDk0NTA5WhcNMzUxMDE1MDk0NTA5\nWjBwMQswCQYDVQQGEwJERTEQMA4GA1UECAwHSGFtYnVyZzEQMA4GA1UEBwwHSGFt\nYnVyZzEMMAoGA1UECgwDSUJNMQ8wDQYDVQQLDAZSb290Q0ExHjAcBgNVBAMMFVRF\nU1QtSW50ZXJuZXQtUm9vdC1DQTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABN0i\n93dJBCTPE/FyBex6RQBZrwx0p0W1nwWxIylAvcz7pBZIP1vQUfUQt8+tFoUk1U5T\nYMUGQqEdPduvzKnB3lajUzBRMB0GA1UdDgQWBBRqUa/swH5KlLsjsOAD8WRIR8/5\nkjAfBgNVHSMEGDAWgBRqUa/swH5KlLsjsOAD8WRIR8/5kjAPBgNVHRMBAf8EBTAD\nAQH/MAoGCCqGSM49BAMCA0gAMEUCIEyzfnbbabkBlLKMQzzbE3wqAZJKVfm37+Xo\nOYZby3NaAiEAv0I7jjnyMM3VZwL8eQ+qocYirgj1ks6A1kfPf7uPwEI=\n-----END CERTIFICATE-----\n",
+    "fhir-vzd-client": {
+      "secret": "somesecret",
+      "id": "gemibmderpfdmnopqrsr",
+      "tokenUrl": "localhost",
+      "tokenPort": "18443",
+      "apiUrl": "localhost",
+      "apiPort": "18443"
+    },
+    "bfarm-client": {
+      "secret": "mock-secret-123",
+      "id": "gemibmderpfdabcxyz",
+      "url": "localhost",
+      "port": "18443",
+      "numRetries": "20",
+      "maxExponentialBackoff": "8"
+    },
     "postgres": {
       "host": "localhost",
       "port": "9006",

@@ -4,16 +4,19 @@
  *
  * non-exclusively licensed to gematik GmbH
  */
+#include "DosageInstructionTestHelper.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
 #include "erp/service/task/DispenseTaskHandler.hxx"
 #include "shared/ErpRequirements.hxx"
-#include "shared/model/MedicationDispenseBundle.hxx"
 #include "shared/model/MedicationDispense.hxx"
+#include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/util/Demangle.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/erp/service/EndpointHandlerTest/MedicationDispenseFixture.hxx"
+#include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
@@ -40,10 +43,6 @@ protected:
     void SetUp() override
     {
         using namespace ResourceTemplates;
-        if(Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3)
-        {
-            GTEST_SKIP();
-        }
 
         secret = "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f";
         taskStatus = model::Task::Status::inprogress;
@@ -51,7 +50,7 @@ protected:
 
     void resetTask(SessionContext& sessionContext)
     {
-        auto* database = sessionContext.database();
+        auto database = sessionContext.serviceContext.databaseFactory();
         auto taskAndKey = database->retrieveTaskForUpdate(prescriptionId);
         ASSERT_TRUE(taskAndKey.has_value());
         auto& task = taskAndKey->task;
@@ -143,17 +142,6 @@ protected:
     std::string dispenseTaskBody(std::list<ResourceTemplates::MedicationDispenseOptions> medicationDispenseOptions)
     {
         auto gemVersion = ResourceTemplates::Versions::GEM_ERP_current();
-        if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4)
-        {
-            if (medicationDispenseOptions.size() == 1)
-            {
-                return ResourceTemplates::medicationDispenseXml(medicationDispenseOptions.front());
-            }
-            return ResourceTemplates::medicationDispenseBundleXml({
-                .gematikVersion = gemVersion,
-                .medicationDispenses = std::move(medicationDispenseOptions)
-            });
-        }
         return ResourceTemplates::medicationDispenseOperationParametersXml({
             .profileType = model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input,
             .version = gemVersion,
@@ -164,6 +152,7 @@ protected:
 
 TEST_F(DispenseTaskTest, DispenseTask)//NOLINT(readability-function-cognitive-complexity)
 {
+    A_24283_03.test("Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
     const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                        .telematikId = telematikId};
     const auto body = dispenseTaskBody({dispenseOptions});
@@ -284,6 +273,22 @@ TEST_F(DispenseTaskTest, DispenseSalt)//NOLINT(readability-function-cognitive-co
     ASSERT_NO_FATAL_FAILURE(test(body, ExpectedResult::success, additionalTest));
 }
 
+TEST_F(DispenseTaskTest, OwnerUpdated)
+{
+    std::string otherTelematikId("3-SMC-B-Testkarte-883110000120999");
+    ASSERT_NE(telematikId, otherTelematikId);
+    jwtPharmacy = JwtBuilder::testBuilder().makeJwtApotheke(otherTelematikId);
+    const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
+                                                                       .telematikId = otherTelematikId};
+    const auto body = dispenseTaskBody({dispenseOptions});
+
+    auto additionalTest = [&](SessionContext& sessionContext) {
+        auto task = sessionContext.database()->retrieveTaskForUpdate(prescriptionId);
+        ASSERT_TRUE(task.has_value());
+        EXPECT_EQ(task->task.owner().value_or(""), otherTelematikId);
+    };
+    ASSERT_NO_FATAL_FAILURE(test(body, ExpectedResult::success, additionalTest));
+}
 
 class DispenseTaskEmptyClose_ERP_23917;
 
@@ -293,7 +298,6 @@ struct  DispenseTaskEmptyCloseParam
         MedicationDispense,
         MedicationDispenseBundle,
     };
-    MedicationDispenseFixture::BodyType bodyType;
     ReturnType getReturns;
     size_t expectedDispenseCount;
     size_t expectedMedicationCount;
@@ -325,14 +329,8 @@ public:
 
 TEST_P(DispenseTaskEmptyClose_ERP_23917, closeEmptyBody)
 {
-
-    if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_4 &&
-        GetParam().bodyType == MedicationDispenseFixture::BodyType::parameters)
-    {
-        GTEST_SKIP_("GEM_ERP_PR_PAR_DispenseOperation_Input not supported");
-    }
     using namespace std::string_literals;
-    auto input = medicationDispenseBody({EndpointType::dispense, GetParam().bodyType});
+    auto input = medicationDispenseBody({EndpointType::dispense});
     ASSERT_NO_FATAL_FAILURE(test(input, ExpectedResult::success)) << input;
     ASSERT_NO_FATAL_FAILURE(closeTask());
     std::optional<model::UnspecifiedResource> unspec;
@@ -363,25 +361,6 @@ TEST_P(DispenseTaskEmptyClose_ERP_23917, closeEmptyBody)
 INSTANTIATE_TEST_SUITE_P(input, DispenseTaskEmptyClose_ERP_23917,
                          testing::ValuesIn(std::initializer_list<DispenseTaskEmptyCloseParam>{
                              {
-                                 .bodyType = MedicationDispenseFixture::BodyType::single,
-                                 .getReturns = DispenseTaskEmptyCloseParam::MedicationDispense,
-                                 .expectedDispenseCount = 1,
-                                 .expectedMedicationCount = 0,
-                             },
-                             {
-                                 .bodyType = MedicationDispenseFixture::BodyType::bundle,
-                                 .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
-                                 .expectedDispenseCount = 2,
-                                 .expectedMedicationCount = 0,
-                             },
-                             {
-                                 .bodyType = MedicationDispenseFixture::BodyType::bundleNoProfile,
-                                 .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
-                                 .expectedDispenseCount = 2,
-                                 .expectedMedicationCount = 0,
-                             },
-                             {
-                                 .bodyType = MedicationDispenseFixture::BodyType::parameters,
                                  .getReturns = DispenseTaskEmptyCloseParam::MedicationDispenseBundle,
                                  .expectedDispenseCount = 2,
                                  .expectedMedicationCount = 2,
@@ -398,8 +377,11 @@ class DispenseTaskProfileValidityTest : public DispenseTaskTest,
 
 TEST_P(DispenseTaskProfileValidityTest, run)
 {
-    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({EndpointType::dispense, GetParam().bodyType,
-                                                         GetParam().version, {testutils::shiftDate(GetParam().date)}}),
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({
+                                     EndpointType::dispense,
+                                     GetParam().version,
+                                     {testutils::shiftDate(GetParam().date)},
+                                 }),
                                  GetParam().result));
 }
 
@@ -415,10 +397,84 @@ TEST_P(DispenseTaskMaxWhenHandedOverTest, run)
 {
     std::list<std::string> overrideWhenHandedOver;
     std::ranges::transform(GetParam().whenHandedOver, back_inserter(overrideWhenHandedOver), &testutils::shiftDate);
-    ASSERT_NO_FATAL_FAILURE(test(
-        medicationDispenseBody({EndpointType::dispense, GetParam().bodyType, GetParam().version, overrideWhenHandedOver}),
+    ASSERT_NO_FATAL_FAILURE(test(medicationDispenseBody({
+                                     EndpointType::dispense,
+                                     GetParam().version,
+                                     overrideWhenHandedOver,
+                                 }),
                                  GetParam().result));
 }
 
 INSTANTIATE_TEST_SUITE_P(parameters, DispenseTaskMaxWhenHandedOverTest,
                          ::testing::ValuesIn(MedicationDispenseFixture::maxWhenHandedOverTestParameters()));
+
+
+class DispenseTaskDosageValidatorTest : public DispenseTaskTest
+{
+public:
+    DispenseTaskDosageValidatorTest()
+        : handler({})
+        , requestHeader({HttpMethod::POST,
+                         "/Task/" + prescriptionId.toString() + "/$dispense/",
+                         0,
+                         {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                         HttpStatus::Unknown})
+        , serverRequest(requestHeader)
+        , sessionContext(mServiceContext, serverRequest, serverResponse, accessLog)
+
+    {
+        serverRequest.setAccessToken(jwtPharmacy);
+        serverRequest.setQueryParameters(
+            {{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+        mockDatabase.reset();
+        mServiceContext.databaseFactory();// re-init mockdb
+        auto task = mockDatabase->retrieveTaskForUpdate(prescriptionId);
+        serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+    }
+    model::MedicationDispenseOperationParameters getSample()
+    {
+        return DosageInstructionTestHelper::getDispenseSample(
+            prescriptionId, "valid/MedicationDispense-MD-Dosage-1020.json",
+            model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input);
+    }
+    DispenseTaskHandler handler;
+    Header requestHeader;
+    ServerRequest serverRequest;
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext;
+    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
+};
+
+TEST_F(DispenseTaskDosageValidatorTest, wrongScriptVersion)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/1/extension/0/valueString");
+    sample.setValue(ptr, "1");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                  "Validation of rendered dosage-instructions: The algorithm version 1 is unknown");
+}
+
+TEST_F(DispenseTaskDosageValidatorTest, wrongLanguage)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/1/extension/1/valueCode");
+    sample.setValue(ptr, "de");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                      "Validation of rendered dosage-instructions: The language de is unknown");
+}
+
+TEST_F(DispenseTaskDosageValidatorTest, wrongText)
+{
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/extension/0/valueMarkdown");
+    sample.setValue(ptr, "1-0-2-0  Stück");
+    serverRequest.setBody(sample.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
+        handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+        "Validation of rendered dosage-instructions: valueMarkdown does not match the expected string in extension "
+        "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction",
+        "expected: 1-0-2-0 Stück");
+}

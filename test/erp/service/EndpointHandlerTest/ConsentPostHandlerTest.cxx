@@ -114,7 +114,7 @@ TEST_F(ConsentPostHandlerTest, WrongProfileType)
 TEST_F(ConsentPostHandlerTest, WrongType)
 {
     auto chargeItemXML = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{"X764228538", model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{"X764228538"},
         .prescriptionId =
             model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 1000),
         .dispenseBundleBase64 = "SGFsbG8gV2VsdCE=",
@@ -145,7 +145,8 @@ struct ConsentPostValidityTestParam {
     std::string date;
     VersionType version;
     model::ConsentType consentType;
-    bool expectSuccess = true;
+    std::string errorMessage{};
+    std::string diagnosticMessage{};
 };
 
 class ConsentPostValidityTest : public EndpointHandlerTest,
@@ -183,7 +184,7 @@ TEST_P(ConsentPostValidityTest, run)
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
     ConsentPostHandler consentPostHandler({});
     EXPECT_NO_THROW(consentPostHandler.preHandleRequestHook(sessionContext));
-    if (GetParam().expectSuccess)
+    if (GetParam().errorMessage.empty())
     {
         EXPECT_NO_THROW(consentPostHandler.handleRequest(sessionContext));
         if (GetParam().consentType != model::ConsentType::EUDISPCONS)
@@ -195,8 +196,9 @@ TEST_P(ConsentPostValidityTest, run)
     }
     else
     {
-        EXPECT_ERP_EXCEPTION_WITH_MESSAGE(consentPostHandler.handleRequest(sessionContext), HttpStatus::BadRequest,
-                                          "parsing / validation error");
+
+        EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(consentPostHandler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                          GetParam().errorMessage, GetParam().diagnosticMessage);
     }
 }
 
@@ -204,57 +206,62 @@ INSTANTIATE_TEST_SUITE_P(success, ConsentPostValidityTest,
                          testing::ValuesIn(std::list<ConsentPostValidityTestParam>{
                              {
                                  .date = "2025-10-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
                                  .consentType = model::ConsentType::CHARGCONS,
                              },
                              {
                                  .date = "2025-10-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1,
-                                 .consentType = model::ConsentType::CHARGCONS,
-                             },
-                             {
-                                 .date = "2025-10-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1_2,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                              {
                                  .date = "2026-03-31",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
+                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
                                  .consentType = model::ConsentType::CHARGCONS,
                              },
                              {
                                  .date = "2026-03-31",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1,
-                                 .consentType = model::ConsentType::CHARGCONS,
-                             },
-                             {
-                                 .date = "2026-03-31",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1_2,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                              {
                                  .date = "2026-04-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1,
+                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
                                  .consentType = model::ConsentType::CHARGCONS,
                              },
                              {
                                  .date = "2026-04-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
+                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1_2,
                                  .consentType = model::ConsentType::EUDISPCONS,
                              },
                          }));
-INSTANTIATE_TEST_SUITE_P(fail, ConsentPostValidityTest,
-                         testing::ValuesIn(std::list<ConsentPostValidityTestParam>{
-                             {
-                                 .date = "2025-09-30",
-                                 .version = ResourceTemplates::Versions::GEM_ERPEU_1_1,
-                                 .consentType = model::ConsentType::EUDISPCONS,
-                                 .expectSuccess = false,
-                             },
-                             {
-                                 .date = "2026-04-01",
-                                 .version = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-                                 .consentType = model::ConsentType::CHARGCONS,
-                                 .expectSuccess = false,
-                             },
-                         }));
+
+INSTANTIATE_TEST_SUITE_P(
+    fail, ConsentPostValidityTest,
+    testing::ValuesIn(std::list<ConsentPostValidityTestParam>{
+        {.date = "2025-09-30",
+         .version = ResourceTemplates::Versions::GEM_ERPEU_1_1_2,
+         .consentType = model::ConsentType::EUDISPCONS,
+         .errorMessage = "FHIR-Validation error",
+         // at the provided date no profile is valid at all. Therefore we get different messages than below.
+         .diagnosticMessage = "Consent: error: profile unknown: "
+                             "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent; "},
+        {
+            .date = "2025-10-01",
+            .version = ResourceTemplates::Versions::GEM_ERPEU{"1.0"},
+            .consentType = model::ConsentType::EUDISPCONS,
+            .errorMessage = "parsing / validation error",
+            .diagnosticMessage =
+                "invalid profile https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent|1.0 "
+                "must be one of: https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent|1.1.2",
+        },
+        {
+            .date = "2026-04-01",
+            .version = ResourceTemplates::Versions::GEM_ERPCHRG{"1.0"},
+            .consentType = model::ConsentType::CHARGCONS,
+            .errorMessage = "parsing / validation error",
+            .diagnosticMessage =
+                "invalid profile https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.0 "
+                "must be one of: https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Consent|1.1.0",
+        },
+    }));

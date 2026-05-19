@@ -31,7 +31,7 @@ class EpaAccountLookupClient : public IEpaAccountLookupClient
 {
 public:
     EpaAccountLookupClient(MedicationExporterServiceContext& serviceContext, std::string_view consentDecisionsEndpoint,
-                           std::string_view userAgent);
+                           const std::string& xContextId);
 
     ClientResponse sendConsentDecisionsRequest(const std::string& xRequestId, const model::Kvnr& kvnr,
                                                const std::string& host, uint16_t port) override;
@@ -42,7 +42,6 @@ private:
     ClientResponse sendWithRetry(HttpsClient& client, ClientRequest& request) const;
     MedicationExporterServiceContext& mServiceContext;
     std::string mConsentDecisionsEndpoint;
-    std::string mUserAgent;
     BDEMessage::Data mBdeData;
 };
 

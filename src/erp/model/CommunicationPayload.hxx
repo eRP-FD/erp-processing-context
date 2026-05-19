@@ -16,6 +16,13 @@ class JsonValidator;
 
 namespace model
 {
+
+enum class CommunicationPayloadVersion
+{
+    V1,
+    V3
+};
+
 class CommunicationPayload
 {
 public:
@@ -27,6 +34,7 @@ public:
     void validateJsonSchema(const JsonValidator& validator, SchemaType schemaType) const;
     [[nodiscard]] bool empty() const;
     [[nodiscard]] std::string supplyOptionsType() const;
+    [[nodiscard]] CommunicationPayloadVersion version() const;
 
 private:
     rapidjson::Document getPayloadDoc() const;

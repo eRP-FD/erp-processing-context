@@ -15,7 +15,9 @@
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/Patient.hxx"
 #include "test/exporter/Epa4AllTransformerTest.hxx"
+#include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/ResourceManager.hxx"
+#include "test/util/TestUtils.hxx"
 
 #include <fstream>
 
@@ -33,20 +35,23 @@ enum class Type
     medicationFreeText,
     medicationIngredient,
     medicationPzn,
-    medicationDispense
+    medicationDispense,
+    autoDetect
 };
 struct Params {
     std::filesystem::path sampleDir;
     std::string sampleName;
     std::filesystem::path inputFile() const
     {
-        return sampleDir / "input.xml";
+        return sampleDir / inputFileName;
     }
     std::filesystem::path outputFile() const
     {
         return sampleDir / "output.xml";
     }
     Type type;
+    std::string inputFileName = "input.xml";
+    std::optional<std::string> shiftView{};
     friend std::ostream& operator<<(std::ostream& os, const Params& params)
     {
         os << params.sampleName;
@@ -58,10 +63,42 @@ struct Params {
 class Epa4AllTransformerGematikTestdataPrescription : public Epa4AllTransformerTest,
                                                       public testing::WithParamInterface<Params>
 {
+public:
+    Type detectMedicationType(const rapidjson::Value& medicationResource)
+    {
+        const rapidjson::Pointer profilePtr{"/meta/profile/0"};
+        const auto* profile = profilePtr.Get(medicationResource);
+        if (! profile)
+        {
+            return Type::autoDetect;
+        }
+        if (std::string_view{profile->GetString()}.find("KBV_PR_ERP_Medication_Compounding") != std::string_view::npos)
+        {
+            return Type::medicationCompounding;
+        }
+        if (std::string_view{profile->GetString()}.find("KBV_PR_ERP_Medication_Ingredient") != std::string_view::npos)
+        {
+            return Type::medicationIngredient;
+        }
+        if (std::string_view{profile->GetString()}.find("KBV_PR_ERP_Medication_FreeText") != std::string_view::npos)
+        {
+            return Type::medicationFreeText;
+        }
+        if (std::string_view{profile->GetString()}.find("KBV_PR_ERP_Medication_PZN") != std::string_view::npos)
+        {
+            return Type::medicationPzn;
+        }
+        return Type::autoDetect;
+    }
 };
 
 TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
 {
+    std::optional<testutils::ShiftFhirResourceViewsGuard> guard =
+        GetParam().shiftView.has_value()
+            ? std::make_optional<testutils::ShiftFhirResourceViewsGuard>(
+                  GetParam().shiftView.value_or(""), date::floor<date::days>(std::chrono::system_clock::now()))
+            : std::nullopt;
     const auto inputResourceXmlString = ResourceManager::instance().getStringResource(GetParam().inputFile().string());
 
     const auto kbvInputBundle = model::Bundle::fromXmlNoValidation(inputResourceXmlString);
@@ -94,7 +131,14 @@ TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
 
     const auto* medication = params->getMedication();
     ASSERT_TRUE(medication);
-    switch (GetParam().type)
+
+    auto type = GetParam().type;
+    if (type == Type::autoDetect)
+    {
+        type = detectMedicationType(kbvMedication.jsonDocument());
+    }
+
+    switch (type)
     {
         case Type::medicationCompounding:
             checkMedicationCompounding(kbvMedication.jsonDocument(), *medication);
@@ -110,6 +154,9 @@ TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
             break;
         case Type::medicationDispense:
             break;
+        case Type::autoDetect:
+            FAIL() << "not detected";
+            break;
     }
     checkOrganization(kbvInputBundle.getUniqueResourceByType<model::KbvOrganization>().jsonDocument(),
                       *params->getOrganization());
@@ -117,7 +164,7 @@ TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
                       *params->getPractitioner());
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                      "epa-op-provide-prescription-erp-input-parameters"},
              &params->jsonDocument());
 }
 
@@ -139,6 +186,23 @@ std::vector<Params> makeParams(std::string_view baseDir, Type type)
     }
     return params;
 }
+std::vector<Params> makeKbv14Params(const std::filesystem::path& path)
+{
+    std::vector<Params> params;
+    std::filesystem::directory_iterator dirIt{path};
+    for (const auto& file : dirIt)
+    {
+        if (std::filesystem::is_regular_file(file))
+        {
+            params.emplace_back(Params{.sampleDir = file.path().parent_path(),
+                                       .sampleName = file.path().filename().replace_extension("").string(),
+                                       .type = Type::autoDetect,
+                                       .inputFileName = file.path().filename().string(),
+                                       .shiftView = "epa.medication-1.3.2"});
+        }
+    }
+    return params;
+}
 }
 
 INSTANTIATE_TEST_SUITE_P(medicationCompounding, Epa4AllTransformerGematikTestdataPrescription,
@@ -152,6 +216,10 @@ INSTANTIATE_TEST_SUITE_P(medicationIngredient, Epa4AllTransformerGematikTestdata
 
 INSTANTIATE_TEST_SUITE_P(medicationPzn, Epa4AllTransformerGematikTestdataPrescription,
                          testing::ValuesIn(makeParams("medicationPzn", Type::medicationPzn)));
+
+INSTANTIATE_TEST_SUITE_P(
+    kbvItaErp1_4, Epa4AllTransformerGematikTestdataPrescription,
+    testing::ValuesIn(makeKbv14Params(ResourceManager::getAbsoluteFilename("test/fhir/examples/kbv.ita.erp-1.4.0"))));
 
 
 class Epa4AllTransformerGematikTestdataMedicationDispense : public Epa4AllTransformerTest,
@@ -206,6 +274,23 @@ TEST_P(Epa4AllTransformerGematikTestdataMedicationDispense, Test)
          MappedValue{.property = "Organization.type.0.coding.0.code",
                      .targetValue = std::string{profession_oid::oid_oeffentliche_apotheke}}});
 
+    checkPropertiesNotInTarget(*dispenses[0], {"MedicationDispense.dosageInstruction.0.patientInstruction"});
+    const rapidjson::Pointer patientInstructionPtr{"/dosageInstruction/0/patientInstruction"};
+    const rapidjson::Pointer textInstructionPtr{"/dosageInstruction/0/text"};
+    const auto* sourcePatientInstructionValue = patientInstructionPtr.Get(medicationDispense.jsonDocument());
+    const auto* sourceTextInstructionValue = textInstructionPtr.Get(medicationDispense.jsonDocument());
+    if (sourcePatientInstructionValue)
+    {
+        std::string expectedText;
+        if (sourceTextInstructionValue)
+        {
+            expectedText = str(*sourceTextInstructionValue) + "; ";
+        }
+        expectedText += str(*sourcePatientInstructionValue);
+        checkMappedValues(*dispenses[0], {MappedValue{.property = "MedicationDispense.dosageInstruction.0.text",
+                                                      .targetValue = expectedText}});
+    }
+
     auto sourceMedication = medicationDispense.containedResource<model::KbvMedicationGeneric>(0);
     ASSERT_TRUE(sourceMedication.has_value());
     static const rapidjson::Pointer metaProfilePtr{"/meta/profile/0"};
@@ -236,11 +321,11 @@ TEST_P(Epa4AllTransformerGematikTestdataMedicationDispense, Test)
     }
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-dispensation-erp-input-parameters|1.0"},
+                                      "epa-op-provide-dispensation-erp-input-parameters"},
              &params->jsonDocument());
     checkExpression("parameter[0].part[3].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                             "epa-op-provide-prescription-erp-input-parameters"},
                     &params->jsonDocument());
 }
 

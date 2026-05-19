@@ -259,10 +259,10 @@ void ActivateTaskHandler::handleGeneric(PcSessionContext& session, Database::Tas
     A_19999.finish();
 
     // GEMREQ-start A_19127
-    A_19127_02.start("store KVNR from prescription bundle in task");
+    A_19127_03.start("store KVNR from prescription bundle in task");
     const auto kvnr = getKvnrFromPatientResource(kbvOrEvdgaBundle);
     task.setKvnr(kvnr);
-    A_19127_02.finish();
+    A_19127_03.finish();
     // GEMREQ-end A_19127
 
     A_19128.start("status transition draft -> ready");
@@ -603,11 +603,11 @@ model::Kvnr ActivateTaskHandler::getKvnrFromPatientResource(const KbvOrEvdgaBund
     try
     {
         auto kvnr = patients[0].kvnr();
-        A_23890.start("Validate Kvnr Checksum");
+        A_23890_01.start("Validate Kvnr Checksum");
         ErpExpect(kvnr.validChecksum(), HttpStatus::BadRequest,
                   "Ungültige Versichertennummer (KVNR): Die übergebene Versichertennummer des Patienten entspricht "
                   "nicht den Prüfziffer-Validierungsregeln.");
-        A_23890.finish();
+        A_23890_01.finish();
         return kvnr;
     }
     catch (const model::ModelException& ex)

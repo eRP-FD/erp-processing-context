@@ -16,6 +16,7 @@
 
 InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, HsmPool& hsmPool)
 {
+    // GEMREQ-start A_20163#decrypt
     A_20163.start("2 - try to decrypt the outer request body");
     const auto message = OuterTeeRequest::disassemble(outerRequestBody);
     Expect3(message.version==1, "invalid TEE version", AesGcmException);
@@ -40,6 +41,7 @@ InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, Hs
         symmetricKey = ::SafeString{hsmSession.session().vauEcies128(clientPublicKey, false)};
         plaintext = decryptOuterRequestBody(message, symmetricKey);
     }
+    // GEMREQ-end A_20163#decrypt
     catch (const AesGcmException& exception)
     {
         try
@@ -55,12 +57,13 @@ InnerTeeRequest ErpTeeProtocol::decrypt (const std::string& outerRequestBody, Hs
         plaintext = decryptOuterRequestBody(message, symmetricKey);
     }
     A_20163.finish();
-
+    // GEMREQ-start A_20163#verify
     A_20163.start("3 - verify p structure");
     InnerTeeRequest innerTeeRequest (plaintext);
     Expect3(innerTeeRequest.version() == "1", "wrong version", AesGcmException);
     Expect3(innerTeeRequest.aesKey().size() == AesGcm128::KeyLength, "AES key has wrong size", AesGcmException);
     A_20163.finish();
+    // GEMREQ-end A_20163#verify
 
     return innerTeeRequest;
 }

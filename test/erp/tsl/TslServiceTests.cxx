@@ -149,6 +149,28 @@ TEST_F(TslServiceTest, verifyCertificatePolicyNoRestrictionsSuccessful)
 }
 
 
+TEST_F(TslServiceTest, poppCertificate)
+{
+    auto userCertificate = ResourceManager::instance().getStringResource(
+        "test/generated_pki/sub_ca1_ec/certificates/popp_zd_sig_ec/popp_zd_sig_ec.der");
+    UrlRequestSenderMock requestSender({});
+    X509Certificate certificate = X509Certificate::createFromAsnBytes(
+        {reinterpret_cast<const unsigned char*>(userCertificate.data()), userCertificate.size()});
+
+    auto iterator =
+        mTrustStore->mServiceInformationMap.find({certificate.getIssuer(), certificate.getAuthorityKeyIdentifier()});
+    ASSERT_NE(mTrustStore->mServiceInformationMap.end(), iterator);
+
+    TslTestHelper::setOcspUrlRequestHandler(requestSender, "http://ocsp-testref.tsl.telematik-test/ocsp",
+                                            {{Certificate::fromBinaryDer(userCertificate),
+                                              Certificate::fromBase64Der(iterator->second.certificate.toBase64()),
+                                              MockOcsp::CertificateOcspTestMode::SUCCESS}});
+
+    EXPECT_NO_THROW(TslService::checkCertificate(certificate, {CertificateType::C_ZD_SIG}, requestSender, *mTrustStore,
+                                                 TslTestHelper::getDefaultTestOcspCheckDescriptor()));
+}
+
+
 TEST_F(TslServiceTest, verifyCertificatePolicySuccessful)
 {
     UrlRequestSenderMock requestSender({});

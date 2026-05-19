@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-# Identical profiles also contained in de.basisprofil.r4 1.5.0
+# Identical profiles also contained in de.basisprofil.r4 1.5.4
 package/CodeSystem-alpha-id.json
 package/CodeSystem-anlage-6-vorsatzworte.json
 package/CodeSystem-anlage-7-namenszusaetze.json
@@ -16,7 +16,6 @@ package/CodeSystem-icd-10-gm.json
 package/CodeSystem-ops.json
 package/CodeSystem-pzn.json
 package/CodeSystem-wg14.json
-package/ValueSet-VitalSignDE-Body-Weight-Loinc.json
 
 # Removed due to undefined discriminator value
 package/StructureDefinition-observation-de-vitalsign.json

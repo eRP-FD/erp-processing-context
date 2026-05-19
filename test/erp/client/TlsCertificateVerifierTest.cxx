@@ -118,19 +118,23 @@ TEST_F(TlsCertificateVerifierTest, crlHappyPath)
 {
     auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
     makeServer(certData.certChain, certData.leafPrivateKeyPem);
-    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
-    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    for (const auto& mode : {TlsCertificateVerifier::CrlMode::HARD_FAIL, TlsCertificateVerifier::CrlMode::SOFT_FAIL})
+    {
+        TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+        const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
-        {"http://crl.example.com/unrevoked_ec.crl", certData.intermediateCertCrlDer},
-        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+        EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 
-    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
-    verifier.withCrl(*crlProvider);
+        auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+            {"http://crl.example.com/unrevoked_ec.crl", certData.intermediateCertCrlDer},
+            {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
 
-    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+        auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+        verifier.withCrl(*crlProvider, mode);
+
+        EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    }
 }
 
 /**
@@ -140,19 +144,23 @@ TEST_F(TlsCertificateVerifierTest, crlRevokedLeaf)
 {
     auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "revoked_ec");
     makeServer(certData.certChain, certData.leafPrivateKeyPem);
-    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
-    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    for (const auto& mode : {TlsCertificateVerifier::CrlMode::HARD_FAIL, TlsCertificateVerifier::CrlMode::SOFT_FAIL})
+    {
+        TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+        const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
-        {"http://crl.example.com/revoked_crt.crl", certData.intermediateCertCrlDer},
-        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+        EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 
-    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
-    verifier.withCrl(*crlProvider);
+        auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+            {"http://crl.example.com/revoked_crt.crl", certData.intermediateCertCrlDer},
+            {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
 
-    EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+        auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+        verifier.withCrl(*crlProvider, mode);
+
+        EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    }
 }
 
 /**
@@ -163,19 +171,24 @@ TEST_F(TlsCertificateVerifierTest, crlRevokedIntermediate)
     auto certData = loadCert("root_ca_ec", "revoked_ca_ec", "normal_ec");
 
     makeServer(certData.certChain, certData.leafPrivateKeyPem);
-    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
-    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    for (const auto& mode : {TlsCertificateVerifier::CrlMode::HARD_FAIL, TlsCertificateVerifier::CrlMode::SOFT_FAIL})
+    {
+        TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+        const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
-    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
-        {"http://crl.example.com/normal_ec.crl", certData.intermediateCertCrlDer},
-        {"http://crl.example.com/revoked_ca_ec.crl", certData.rootCaCrlDer}});
+        EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 
-    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
-    verifier.withCrl(*crlProvider);
+        auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+            {"http://crl.example.com/normal_ec.crl", certData.intermediateCertCrlDer},
+            {"http://crl.example.com/revoked_ca_ec.crl", certData.rootCaCrlDer}});
 
-    EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+        auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+        verifier.withCrl(*crlProvider, mode);
+
+
+        EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    }
 }
 
 
@@ -186,17 +199,120 @@ TEST_F(TlsCertificateVerifierTest, crlInvalidSigner)
 {
     auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
     makeServer(certData.certChain, certData.leafPrivateKeyPem);
+
+    for (const auto& mode : {TlsCertificateVerifier::CrlMode::HARD_FAIL, TlsCertificateVerifier::CrlMode::SOFT_FAIL})
+    {
+        TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+        const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
+
+        EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+
+        auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+            {"http://crl.example.com/unrevoked_ec.crl", certData.intermediateCertCrlDer},
+            {"http://crl.example.com/sub_ca1_ec.crl", certData.intermediateCertCrlDer}});
+
+        auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+        verifier.withCrl(*crlProvider, mode);
+
+        EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+    }
+}
+
+TEST_F(TlsCertificateVerifierTest, crlHardFailNoConnection)
+{
+    auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
+    makeServer(certData.certChain, certData.leafPrivateKeyPem);
     TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
     const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
 
     EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 
     auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
-        {"http://crl.example.com/unrevoked_ec.crl", certData.intermediateCertCrlDer},
-        {"http://crl.example.com/sub_ca1_ec.crl", certData.intermediateCertCrlDer}});
+        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+
+    crlRequestSender->setUrlHandler("http://crl.example.com/unrevoked_ec.crl", [](const auto&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::NotFound);
+        return {header, ""};
+    });
 
     auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
-    verifier.withCrl(*crlProvider);
+    verifier.withCrl(*crlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL);
+
+    EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+}
+
+
+TEST_F(TlsCertificateVerifierTest, crlSoftFail404)
+{
+    auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
+    makeServer(certData.certChain, certData.leafPrivateKeyPem);
+    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
+
+    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+
+    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+
+    crlRequestSender->setUrlHandler("http://crl.example.com/unrevoked_ec.crl", [](const auto&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::NotFound);
+        return {header, ""};
+    });
+
+    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+    verifier.withCrl(*crlProvider, TlsCertificateVerifier::CrlMode::SOFT_FAIL);
+
+    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+}
+
+
+TEST_F(TlsCertificateVerifierTest, crlSoftFailEmpty)
+{
+    auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
+    makeServer(certData.certChain, certData.leafPrivateKeyPem);
+    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
+
+    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+
+    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+
+    crlRequestSender->setUrlHandler("http://crl.example.com/unrevoked_ec.crl", [](const auto&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::OK);
+        return {header, ""};
+    });
+
+    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+    verifier.withCrl(*crlProvider, TlsCertificateVerifier::CrlMode::SOFT_FAIL);
+
+    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+}
+
+
+TEST_F(TlsCertificateVerifierTest, crlHardFailEmpty)
+{
+    auto certData = loadCert("root_ca_ec", "sub_ca1_ec", "unrevoked_ec");
+    makeServer(certData.certChain, certData.leafPrivateKeyPem);
+    TlsCertificateVerifier verifier = TlsCertificateVerifier::withCustomRootCertificates(certData.rootCaCertPem);
+    const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
+
+    EXPECT_NO_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
+
+    auto crlRequestSender = std::make_shared<UrlRequestSenderMock>(std::unordered_map<std::string, std::string>{
+        {"http://crl.example.com/sub_ca1_ec.crl", certData.rootCaCrlDer}});
+
+    crlRequestSender->setUrlHandler("http://crl.example.com/unrevoked_ec.crl", [](const auto&) -> ClientResponse {
+        Header header;
+        header.setStatus(HttpStatus::OK);
+        return {header, ""};
+    });
+
+    auto crlProvider = std::make_shared<CrlDownloadCache>(crlRequestSender);
+    verifier.withCrl(*crlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL);
 
     EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 }

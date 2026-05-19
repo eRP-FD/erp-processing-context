@@ -20,8 +20,10 @@ private:
     static void checkBna             (PcServiceContext& context);
     static void checkHsm             (PcServiceContext& context);
     static void checkCFdSigErp       (PcServiceContext& context);
+    static void checkPoPPService     (PcServiceContext& context);
     static void checkIdp             (PcServiceContext& context);
     static void checkPostgres        (PcServiceContext& context);
+    static void checkPostgresRO      (PcServiceContext& context);
     static void checkRedis           (PcServiceContext& context);
     static void checkSeedTimer       (PcServiceContext& context);
     static void checkTeeTokenUpdater (PcServiceContext& context);

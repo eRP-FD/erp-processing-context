@@ -291,9 +291,9 @@ FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
             config.getStringValue(ConfigurationKey::FHIR_VALIDATION_FULL_URL_AND_BUNDLE_REFERENCE_CHECK_FROM));
         if (referenceTimestamp >= (fullUrlCheckFrom + globalOffset))
         {
-            A_26229_01.start("activate id check.");
+            A_26229_02.start("activate id check.");
             options.levels.bundleFullUrlIdMissmatch.emplace(Severity::error);
-            A_26229_01.finish();
+            A_26229_02.finish();
             A_26233_01.start("activate fullUrl format check.");
             options.levels.bundleFullUrlInvalidFormat.emplace(Severity::error);
             A_26233_01.finish();
@@ -309,6 +309,7 @@ FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
         const bool rejectUnslicedExtensions = referenceTimestamp >= (rejectUnslicedExtensionsFrom + globalOffset);
         if (rejectUnslicedExtensions)
         {
+            A_22927_03.start("unsliced extension check for all resources");
             options.reportUnknownExtensions = fhirtools::ValidatorOptions::ReportUnknownExtensionsMode::closeSlicing;
         }
         if (profileType == model::ProfileType::KBV_PR_ERP_Bundle ||
@@ -318,6 +319,7 @@ FhirImpl<ProcessT>::defaultValidatorOptions(model::ProfileType profileType,
                 config.kbvValidationNonLiteralAuthorRef() == Configuration::NonLiteralAuthorRefMode::allow;
             if (! rejectUnslicedExtensions)
             {
+                A_22927_01.start("unsliced extension check only for KBV bundle.");
                 switch (config.kbvValidationOnUnknownExtension())
                 {
                     using enum Configuration::OnUnknownExtension;
@@ -365,6 +367,12 @@ void Fhir::init(Init init)
     mInstance = std::make_unique<FhirImpl<ProcessT>>();
     for (const auto profileType : magic_enum::enum_values<model::ProfileType>())
     {
+        if (profileType == model::ProfileType::MedicationDispenseBundle)
+        {
+            // used for internal representation only
+            continue;
+        }
+
         Expect3(ConfigurationBase::ERP::requiredProfiles.contains(profileType) ||
                     ConfigurationBase::MedicationExporter::requiredProfiles.contains(profileType),
                 "Profile type must be required by at least one ProcessType: " +

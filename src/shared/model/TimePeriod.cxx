@@ -43,7 +43,7 @@ namespace model {
 
         model::Timestamp addOneDay (const model::Timestamp t)
         {
-            return model::Timestamp(t.toChronoTimePoint() + std::chrono::hours(24));
+            return Timestamp{Timestamp::GermanTimezone, t.localDay() + date::days{1}};
         }
 
         model::Timestamp addOneMonth (const model::Timestamp t)

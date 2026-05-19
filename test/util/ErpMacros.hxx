@@ -130,26 +130,77 @@ inline void expectErpExceptionWithFHIRValidationError(const ErpException& ex, co
 
 namespace erp::test
 {
-inline auto softExpectTrue(const bool result, const bool allowFailure, std::string_view msg,
-                           const std::source_location loc)
-{
-    if (! result)
+struct SoftExpect {
+
+    explicit SoftExpect(size_t maxRetry = 10)
+        : mMaxRetry{maxRetry}
     {
-        if (! allowFailure)
-        {
-            EXPECT_TRUE(result) << msg << " at " << loc.file_name() << ":" << loc.line();
-        }
-        else
-        {
-            LOG(WARNING) << "failed, retrying: " << msg << " at " << loc.file_name() << ":" << loc.line();
-        }
-        return false;
     }
-    return true;
+    inline auto expectTrue(const bool result, std::string_view msg, const std::source_location loc)
+    {
+        if (! result)
+        {
+            if (mTries >= mMaxRetry)
+            {
+                EXPECT_TRUE(result) << msg << " at " << loc.file_name() << ":" << loc.line();
+            }
+            else
+            {
+                LOG(WARNING) << "failed, retrying: " << msg << " at " << loc.file_name() << ":" << loc.line();
+            }
+            mHadError = true;
+        }
+        return result;
+    };
+    void next()
+    {
+        EXPECT_LE(mTries, mMaxRetry);
+        ++mTries;
+        done = ::testing::Test::HasFailure() || !mHadError;
+        if (!done)
+        {
+            LOG(WARNING) << "Test failed: retrying(" << mTries << "/" << mMaxRetry << ")...";
+        }
+        mHadError = false;
+    }
+
+    template <typename PredicateT>
+    void waitFor(const PredicateT& predicate, std::string_view msg, const std::source_location loc,
+                 std::chrono::steady_clock::duration timeout = std::chrono::milliseconds{200})
+    {
+        auto end = timeout / std::chrono::milliseconds(20);
+        for (decltype(end) retries = 0; retries < end; ++retries)
+        {
+            if (predicate())
+            {
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+        expectTrue(predicate(), msg, loc);
+    }
+
+    bool done = false;
+    const size_t mMaxRetry = 10;
+    size_t mTries = 0;
+    bool mHadError = false;
+
+    SoftExpect(const SoftExpect&) = delete;
+    SoftExpect(SoftExpect&&) = delete;
+    SoftExpect& operator = (const SoftExpect&) = delete;
+    SoftExpect& operator = (SoftExpect&&) = delete;
+    ~SoftExpect() = default;
 };
+
 }
-#define SOFT_EXPECT_TRUE(expression, allowFailure, hadError)                                                           \
-    hadError =                                                                                                         \
-        ! erp::test::softExpectTrue(expression, allowFailure, #expression, std::source_location::current()) || hadError
+
+#define WITH_RETRIES(count)                                                                                            \
+    for (erp::test::SoftExpect WITH_RETRIES_SoftExpect{count}; !WITH_RETRIES_SoftExpect.done; WITH_RETRIES_SoftExpect.next())
+
+#define SOFT_EXPECT_TRUE(expression)                                                                                   \
+    (WITH_RETRIES_SoftExpect.expectTrue((expression), #expression, std::source_location::current()))
+
+#define SOFT_WAIT_FOR(predicate, ...) \
+    (WITH_RETRIES_SoftExpect.waitFor((predicate), #predicate, std::source_location::current() __VA_OPT__(,) __VA_ARGS__))
 
 #endif//ERP_PROCESSING_CONTEXT_ERPMACROS_HXX

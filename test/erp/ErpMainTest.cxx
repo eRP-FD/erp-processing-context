@@ -5,34 +5,32 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <gtest/gtest.h>// should be first or FRIEND_TEST would not work
-
 #include "erp/ErpMain.hxx"
-
-#include "shared/network/client/HttpsClient.hxx"
-#include "shared/common/Constants.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/registration/RegistrationManager.hxx"
-#include "shared/util/Condition.hxx"
-#include "shared/deprecated/TerminationHandler.hxx"
-#include "shared/util/ThreadNames.hxx"
-
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
-
+#include "pc/popp/PoPPCertificateVerifierServiceMock.hxx"
+#include "shared/common/Constants.hxx"
+#include "shared/deprecated/TerminationHandler.hxx"
+#include "shared/network/client/HttpsClient.hxx"
+#include "shared/util/Condition.hxx"
+#include "shared/util/ThreadNames.hxx"
+#include "test/erp/pc/CFdSigErpTestHelper.hxx"
+#include "test/erp/tsl/TslTestHelper.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/MockTerminationHandler.hxx"
+#include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/TestConfiguration.hxx"
-#include "test/erp/tsl/TslTestHelper.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
-#include "test/erp/pc/CFdSigErpTestHelper.hxx"
-#include "test/mock/RegistrationMock.hxx"
 
+#include <gtest/gtest.h>
 #include <csignal>
 
 /**
@@ -92,6 +90,11 @@ public:
                             {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}}}});
                     };
                 }
+                factories.poppServiceFactory = [](boost::asio::io_context*, TslManager&, std::shared_ptr<CrlProvider>) {
+                    auto poppServiceMock = std::make_unique<PoPPCertificateVerifierServiceMock>();
+                    setupDefaultMock(*poppServiceMock);
+                    return poppServiceMock;
+                };
                 ErpMain::runApplication(
                     std::move(factories),
                     state,
@@ -146,7 +149,7 @@ public:
             .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
-                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
         try
         {
             client.send(
@@ -175,7 +178,7 @@ public:
             .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
-                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/VAU/0", 11, {}, HttpStatus::Unknown),
@@ -194,7 +197,7 @@ public:
             .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = Constants::resolveTimeout,
             .tlsParameters = TlsConnectionParameters{
-                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
         const auto response = client.send(
             ClientRequest(
                 Header(HttpMethod::POST, "/", 11, {}, HttpStatus::Unknown),
@@ -240,7 +243,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdown)
                 .connectionTimeout = std::chrono::seconds{30},
                 .resolveTimeout = Constants::resolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
-                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                    .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
             const auto response =
                 client.send(ClientRequest(Header(HttpMethod::POST, "/admin/shutdown", 11,
                                                  {{Header::ContentType, ContentMimeType::xWwwFormUrlEncoded},
@@ -265,7 +268,7 @@ TEST_F(ErpMainTest, runProcessingContext_adminShutdownSIGTERM)
                 .connectionTimeout = std::chrono::seconds{30},
                 .resolveTimeout = Constants::resolveTimeout,
                 .tlsParameters = TlsConnectionParameters{
-                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                    .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
             const auto response = client.send(
                 ClientRequest(
                     Header(HttpMethod::POST, "/admin/shutdown", 11,

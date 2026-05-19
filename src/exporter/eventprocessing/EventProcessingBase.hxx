@@ -29,6 +29,9 @@ namespace eventprocessing
 
 class EventProcessingBase
 {
+public:
+    static std::optional<std::string> getFailureDiagnostics(const model::NumberAsStringParserDocument& doc);
+
 protected:
     explicit EventProcessingBase(gsl::not_null<IEpaMedicationClient*> client);
     gsl::not_null<IEpaMedicationClient*> mMedicationClient;

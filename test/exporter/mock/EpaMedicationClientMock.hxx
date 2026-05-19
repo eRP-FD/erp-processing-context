@@ -16,18 +16,13 @@ public:
     void setOperationOutcomeResponse(const std::string& response);
     void setExpectedInput(const std::string& input);
 
-    Response send(const model::Kvnr& kvnr, const std::string& payload);
+    Response send(const model::Kvnr& kvnr, const std::string& payload, BDEMessage& bdeMessage);
     Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                     const std::string& payload) override;
+                                     const std::string& payload, BDEMessage& bdeMessage) override;
     Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                     const std::string& payload) override;
+                                     const std::string& payload, BDEMessage& bdeMessage) override;
     Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                    const std::string& payload) override;
-    void addLogData(const BDEMessage::Data& data) override
-    {
-        (void) data;
-        // Not required in mock.
-    }
+                                    const std::string& payload, BDEMessage& bdeMessage) override;
 
 private:
     HttpStatus mHttpStatus{HttpStatus::OK};

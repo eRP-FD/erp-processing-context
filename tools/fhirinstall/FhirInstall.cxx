@@ -21,7 +21,7 @@ bool FhirInstall::run(const std::span<const char*>& args)
 
 
 FhirInstall::FhirInstall(const std::span<const char*>& args)
-    : mArgumemts{args}
+    : mArguments{args}
 {
     mBackend.load(
         {
@@ -37,25 +37,45 @@ FhirInstall::FhirInstall(const std::span<const char*>& args)
 
 bool FhirInstall::run()
 {
+    if (mArguments.tree)
+    {
+        return printTree();
+
+    }
+    return install();
+}
+
+bool FhirInstall::printTree()
+{
+    for (const auto& p: mArguments.packages)
+    {
+        auto packages = p->dependencies(mArguments.cacheFolder, mArguments.substitutions, true);
+        p->printTree(packages);
+    }
+    return true;
+}
+
+bool FhirInstall::install()
+{
     using namespace fhirtools::version_literal;
     // do not install fhir core:
     static const FhirPackage::Id fhirCore("hl7.fhir.r4.core", "4.0.1"_ver);
     FhirPackage::PtrSet installedPackages;
-    while (! mArgumemts.packages.empty())
+    while (! mArguments.packages.empty())
     {
-        auto pack = mArgumemts.packages.extract(mArgumemts.packages.begin());
+        auto pack = mArguments.packages.extract(mArguments.packages.begin());
         if (! installedPackages.contains(pack.value()) && pack.value()->id() != fhirCore)
         {
-            const bool ok = pack.value()->install(*mView, mArgumemts);
+            const bool ok = pack.value()->install(*mView, mArguments);
             mHadError |= !ok;
             auto deps = pack.value()->dependencies();
-            mArgumemts.packages.merge(std::move(deps));
+            mArguments.packages.merge(std::move(deps));
             installedPackages.insert(std::move(pack));
         }
     }
-    if (mArgumemts.configFolder)
+    if (mArguments.configFolder)
     {
-        std::filesystem::create_directories(*mArgumemts.configFolder);
+        std::filesystem::create_directories(*mArguments.configFolder);
         for (const auto& package: installedPackages)
         {
             installConfig(*package);
@@ -75,12 +95,12 @@ void FhirInstall::installConfig(const FhirPackage& package)
         fileName += to_string(packId.version);
     }
     fileName += ".config.json";
-    auto configPath = value(mArgumemts.configFolder) / fileName;
+    auto configPath = value(mArguments.configFolder) / fileName;
     if (! exists(configPath))
     {
         VLOG(1) << "Writing config: " << configPath;
         std::ofstream configFile{configPath};
-        package.writeConfigAfterInstall(configFile, mArgumemts.outputFolder);
+        package.writeConfigAfterInstall(configFile, mArguments.outputFolder);
     }
     else
     {

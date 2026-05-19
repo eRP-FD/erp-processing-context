@@ -68,7 +68,7 @@ public:
         {
             Expect(usePostgres(), "database support is disabled, database should not be used");
             mDatabase = std::make_unique<DatabaseFrontend>(
-                            std::make_unique<PostgresBackend>(), *mHsmPool, *mKeyDerivation);
+                            std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()), *mHsmPool, *mKeyDerivation);
         }
         return *mDatabase;
     }

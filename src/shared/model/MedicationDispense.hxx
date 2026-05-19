@@ -21,6 +21,7 @@
 
 namespace model
 {
+class DosageDgMP;
 
 class MedicationDispenseId;
 
@@ -40,6 +41,7 @@ public:
     [[nodiscard]] std::string_view medicationReference() const;
     [[nodiscard]] std::optional<Timestamp> getValidationReferenceTimestamp() const override;
     [[nodiscard]] std::optional<std::string_view> performerReference() const;
+    [[nodiscard]] std::vector<DosageDgMP> dosageInstruction() const;
 
     void setId(const MedicationDispenseId& id);
     void setPrescriptionId(const model::PrescriptionId& prescriptionId);
@@ -49,6 +51,7 @@ public:
     void setWhenPrepared(const model::Timestamp& whenPrepared);
     void setMedicationReference(std::string_view newReference);
     void setPerformerReference(std::string_view newReference);
+    void moveAppendPatientInstructionToText();
 
     static constexpr auto resourceTypeName = "MedicationDispense";
 

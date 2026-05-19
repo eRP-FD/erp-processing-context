@@ -218,6 +218,7 @@ public:
         std::string overrideExpectedPatientenrechnungVersion;
         std::string overrideExpectedKbvVersion;
         std::string overrideExpectedDavVersion;
+        std::string overrideTelematikId;
 
         std::optional<bde::UseCase> expectedBdeUseCase;
 
@@ -233,6 +234,7 @@ public:
     RequestArguments mCloseTaskRequestArgs;
     RequestArguments mChargeItemRequestArgs;
     RequestArguments mConsentItemRequestArgs;
+    RequestArguments mGetTaskRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
@@ -543,17 +545,21 @@ public:
 protected:
     virtual std::string dispenseOrCloseTaskBody(model::ProfileType profileType, const std::string& kvnr,
                                                 const std::string& prescriptionIdForMedicationDispense,
-                                                const std::string& whenHandedOver, size_t numMedicationDispenses);
+                                                const std::string& whenHandedOver, size_t numMedicationDispenses,
+                                                const std::string& telematikId = "3-SMC-B-Testkarte-883110000120312");
 
     virtual std::string medicationDispense(const std::string& kvnr,
                                            const std::string& prescriptionIdForMedicationDispense,
-                                           const std::string& whenHandedOver);
+                                           const std::string& whenHandedOver,
+                                           const std::string& telematikId = "3-SMC-B-Testkarte-883110000120312");
     virtual std::string medicationDispenseBundle(const std::string& kvnr,
                                                  const std::string& prescriptionIdForMedicationDispense,
-                                                 const std::string& whenHandedOver, size_t numMedicationDispenses);
+                                                 const std::string& whenHandedOver, size_t numMedicationDispenses,
+                                                 const std::string& telematikId = "3-SMC-B-Testkarte-883110000120312");
     virtual std::string dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
                                                       const std::string& prescriptionIdForMedicationDispense,
-                                                      const std::string& whenHandedOver, size_t numMedicationDispenses);
+                                                      const std::string& whenHandedOver, size_t numMedicationDispenses,
+                                                      const std::string& telematikId = "3-SMC-B-Testkarte-883110000120312");
 
     static std::string patchVersionsInBundle(const std::string& bundle);
 
@@ -750,8 +756,8 @@ public:
 
     virtual JWT jwtVersicherter() const { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }
     virtual JWT jwtArzt() const { return JwtBuilder::testBuilder().makeJwtArzt(); }
-    virtual JWT jwtApotheke() const { return JwtBuilder::testBuilder().makeJwtApotheke(); }
-    virtual JWT jwtKostentraeger() const { return JwtBuilder::testBuilder().makeJwtKostentraeger(); }
+    virtual JWT jwtApotheke(const std::string& telematikId = "") const { return JwtBuilder::testBuilder().makeJwtApotheke(telematikId); }
+    virtual JWT jwtKostentraeger(const std::string& telematikId = "") const { return JwtBuilder::testBuilder().makeJwtKostentraeger(telematikId); }
 
     JWT defaultJwt() const { return jwtVersicherter(); }
 

@@ -7,9 +7,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_FHIR_EPA4ALLTRANSFORMER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_FHIR_EPA4ALLTRANSFORMER_HXX
 
+#include "exporter/TransformerBase.hxx"
 #include "exporter/model/EpaOpProvideDispensationErpInputParameters.hxx"
 #include "exporter/model/EpaOpProvidePrescriptionErpInputParameters.hxx"
-#include "exporter/TransformerBase.hxx"
+
 
 namespace model
 {
@@ -63,8 +64,8 @@ private:
     static void removeMedicationCodeCodingsByAllowlist(rapidjson::Value& medicationResource);
     static void addToKeyValueArray(model::NumberAsStringParserDocument& document,
                                    const rapidjson::Pointer& arrayPointer, const rapidjson::Pointer& keyPtr,
-                                   const std::string_view key, const rapidjson::Pointer& valuePtr,
-                                   const std::string_view value, bool overwrite);
+                                   std::string_view key, const rapidjson::Pointer& valuePtr,
+                                   std::string_view value, bool overwrite);
     static void addTelematikIdentifier(model::NumberAsStringParserDocument& document,
                                        const std::string_view& telematikIdFromQes, bool overwrite);
     static void addMetaTagOriginLdap(model::NumberAsStringParserDocument& document);

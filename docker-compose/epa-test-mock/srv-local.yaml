@@ -1,20 +1,23 @@
 port: 8888
 keyfilename: "../tisim-pki/epa-as-1-mock.epa.telematik-test.p12"
 keypin: "00"
-vauServerKeys: "vau_server_keys.cbor"
+vauServerKeys: "../tisim-pki/vau_server_keys.cbor"
 vauSigKey: "../tisim-pki/epa-vau-aut-key.p8"
 vauSigCert: "../tisim-pki/epa-vau-aut.der"
 isProduction: false
+mockOcsp: true
+mockOcspTlsResponderCert: "../tisim-pki/ecc/gem-rca/fd4/ocsp-fd.pem"
+mockOcspTlsResponderKey: "../tisim-pki/ecc/gem-rca/fd4/ocsp-fd.pkcs8"
+mockOcspVauResponderCert: "../tisim-pki/ecc/gem-rca/fd1/ocsp-fd.pem"
+mockOcspVauResponderKey: "../tisim-pki/ecc/gem-rca/fd1/ocsp-fd.pkcs8"
 ocspResponseVauSig: "../tisim-pki/ocsp-response-vau-sig.der"
-ocspResponseValidForMinutes: 525960
-ocspURI: "https://erp.lu2.erezepttest.net/ocspf"
-# ocspURI: "https://erp.box2.erezepttest.net/ocspf"
-# ocspURI: "https://erp.dev2.erezepttest.net/ocspf"
+ocspResponseValidForMinutes: 720
+ocspURI: "https://erp.box2.erezepttest.net/ocspf"
 vauCert: "../tisim-pki/epa-vau-aut.der"
 vauCA: "../tisim-pki/ACLOS.FD-CA1.der"
 templatePath: "../lzconfig/templates"
 ocspResponseServerTLS: "../tisim-pki/ocsp-response-tls-epa-as-mock.der"
-ocspResponseServerTLSValidForMinutes: 525960
+ocspResponseServerTLSValidForMinutes: 50
 ocspResponseServerTLSOmit: false
 mode: default
 chaosRatio: 50

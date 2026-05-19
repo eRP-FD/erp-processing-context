@@ -22,6 +22,9 @@ public:
     using Parameters::Parameters;
     friend class Resource;
     EPAOperationOutcome::Issue getOperationOutcomeIssue() const;
+    std::optional<std::string> getOperationOutcomeDiagnostics() const;
+private:
+    EPAOperationOutcome::Issue getFirstIssue() const;
 };
 
 extern template class Resource<EPAOpRxDispensationERPOutputParameters>;

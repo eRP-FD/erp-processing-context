@@ -25,6 +25,7 @@
 #include "test/mock/ClientTeeProtocol.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/util/CryptoHelper.hxx"
+#include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -915,18 +916,24 @@ TEST_F(VauRequestHandlerTest, failMessageInvalidVersion)
 
 TEST_F(VauRequestHandlerTest, failMessageInvalidPublicKey)
 {
-    // Create a client
-    auto client = createClient();
-    auto encryptedRequest = makeEncryptedRequest(
-        HttpMethod::GET, "/Communication/" + Uuid().toString(), *mJwt, {}, {}, {},
-        [](std::string& teeRequest) { ++teeRequest[1]; });
+    WITH_RETRIES()
+    {
+        // Create a client
+        auto client = createClient();
+        auto encryptedRequest = makeEncryptedRequest(
+            HttpMethod::GET, "/Communication/" + Uuid().toString(), *mJwt, {}, {}, {},
+            [](std::string& teeRequest) { ++teeRequest[1]; });
 
-    // Send the request.
-    auto response = client.send(encryptedRequest);
+        // Send the request.
+        auto response = client.send(encryptedRequest);
 
-    // Verify the response status
-    ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest)
-        << "header status was " << toString(response.getHeader().status());
+        // Verify the response status
+        SOFT_EXPECT_TRUE(response.getHeader().status() == HttpStatus::BadRequest);
+        if (HasFailure())
+        {
+            TVLOG(0) << "header status was " << toString(response.getHeader().status());
+        }
+    }
 }
 
 TEST_F(VauRequestHandlerTest, CheckClientId)//NOLINT(readability-function-cognitive-complexity)

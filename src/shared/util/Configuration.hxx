@@ -12,6 +12,7 @@
 #include "fhirtools/validator/Severity.hxx"
 #include "shared/ErpConstants.hxx"
 #include "shared/model/ProfileType.hxx"
+#include "shared/network/client/ProxyParameters.hxx"
 #include "shared/util/Environment.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
 #include "shared/util/SafeString.hxx"
@@ -37,6 +38,10 @@ class FhirResourceGroupConfiguration;
 class FhirVersion;
 }
 
+namespace model
+{
+class Timestamp;
+}
 
 enum class ConfigurationKey
 {
@@ -74,6 +79,8 @@ enum class ConfigurationKey
     SERVICE_TASK_GET_ENFORCE_HCV_CHECK,
     SERVICE_TASK_GET_RATE_LIMIT,
     SERVICE_COMMUNICATION_MAX_MESSAGES,
+    SERVICE_COMMUNICATION_PAYLOAD_V1_VALID_UNTIL,
+    SERVICE_COMMUNICATION_PAYLOAD_V3_VALID_FROM,
     SERVICE_SUBSCRIPTION_SIGNING_KEY,
     PCR_SET,
     POSTGRES_HOST,
@@ -93,6 +100,23 @@ enum class ConfigurationKey
     POSTGRES_KEEPALIVES_COUNT,
     POSTGRES_TARGET_SESSION_ATTRS,
     POSTGRES_CONNECTION_MAX_AGE_MINUTES,
+    POSTGRES_RO_HOST,
+    POSTGRES_RO_PORT,
+    POSTGRES_RO_USER,
+    POSTGRES_RO_PASSWORD,
+    POSTGRES_RO_DATABASE,
+    POSTGRES_RO_SSL_ROOT_CERTIFICATE_PATH,
+    POSTGRES_RO_SSL_CERTIFICATE_PATH,
+    POSTGRES_RO_SSL_KEY_PATH,
+    POSTGRES_RO_USESSL,
+    POSTGRES_RO_CONNECT_TIMEOUT_SECONDS,
+    POSTGRES_RO_ENABLE_SCRAM_AUTHENTICATION,
+    POSTGRES_RO_TCP_USER_TIMEOUT_MS,
+    POSTGRES_RO_KEEPALIVES_IDLE_SEC,
+    POSTGRES_RO_KEEPALIVES_INTERVAL_SEC,
+    POSTGRES_RO_KEEPALIVES_COUNT,
+    POSTGRES_RO_TARGET_SESSION_ATTRS,
+    POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES,
     PUBLIC_E_PRESCRIPTION_SERVICE_URL,
     REGISTRATION_HEARTBEAT_INTERVAL_SEC,
     TSL_TI_OCSP_PROXY_URL,
@@ -133,6 +157,8 @@ enum class ConfigurationKey
     ZSTD_DICTIONARY_DIR,
     HTTPCLIENT_CONNECT_TIMEOUT_SECONDS,
     HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS,
+    HTTPS_PROXIES,
+    HTTP_PROXIES,
 
     REDIS_DATABASE,
     REDIS_USER,
@@ -156,6 +182,7 @@ enum class ConfigurationKey
     REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS,
 
     FEATURE_EU,
+    FEATURE_TREZEPT,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -200,7 +227,6 @@ enum class ConfigurationKey
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT,
-    MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN,
@@ -249,8 +275,15 @@ enum class ConfigurationKey
 
     MEDICATION_EXPORTER_ENABLE_EPA,
     MEDICATION_EXPORTER_ENABLE_T_REZEPT,
-    MEDICATION_EXPORTER_HTTP_PROXY,
     MEDICATION_EXPORTER_TRUSTED_CAS,
+
+    // PoPP
+    POPP_ENTITY_STATEMENT_URL,
+    POPP_UPDATE_INTERVAL_SECONDS,
+    POPP_UPDATE_MAX_AGE_SECONDS,
+    POPP_CONNECTION_TIMEOUT_SECONDS,
+    POPP_RESPONSE_TIMEOUT_SECONDS,
+    POPP_TOKEN_IAT_MAX_AGE_SECONDS,
 };
 
 
@@ -636,6 +669,9 @@ public:
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>> synthesizeValuesets() const;
     [[nodiscard]] fhirtools::VersionMapper::Config fhirVersionMapping() const;
 
+    [[nodiscard]] model::Timestamp communicationPayloadV1ValidUntil() const;
+    [[nodiscard]] model::Timestamp communicationPayloadV3ValidFrom() const;
+
     struct EpaFQDN {
         std::string hostName;
         uint16_t port{};
@@ -644,6 +680,9 @@ public:
 
     std::vector<EpaFQDN> epaFQDNs() const;
 
+    [[nodiscard]] std::chrono::seconds poppTokenIatMaxAge() const;
+
+    [[nodiscard]] std::vector<ProxyParameters> proxyParameters(ProxyMode mode) const;
 };
 
 

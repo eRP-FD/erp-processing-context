@@ -18,6 +18,8 @@ class Kvnr;
 class PrescriptionId;
 }
 
+class BDEMessage;
+
 class IEpaMedicationClient
 {
 public:
@@ -29,12 +31,11 @@ public:
 
     virtual ~IEpaMedicationClient() = default;
     virtual Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                             const std::string& payload) = 0;
+                                             const std::string& payload, BDEMessage& bdeMessage) = 0;
     virtual Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                             const std::string& payload) = 0;
+                                             const std::string& payload, BDEMessage& bdeMessage) = 0;
     virtual Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                            const std::string& payload) = 0;
-    virtual void addLogData(const BDEMessage::Data& bdeData) = 0;
+                                            const std::string& payload, BDEMessage& bdeMessage) = 0;
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_CLIENT_EPAMEDIACTIONCLIENT_HXX

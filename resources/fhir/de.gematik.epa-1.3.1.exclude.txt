@@ -1,0 +1,7 @@
+## exclude OpenAPI spec
+package/openapi/epa-audit-event-client.openapi.json
+package/openapi/epa-audit-event-server.openapi.json
+package/openapi/epa-basic-client.openapi.json
+package/openapi/epa-basic-server.openapi.json
+package/openapi/epa-patient-client.openapi.json
+package/openapi/epa-patient-server.openapi.json

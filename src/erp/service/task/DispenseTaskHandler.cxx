@@ -73,6 +73,9 @@ void DispenseTaskHandler::handleRequest(PcSessionContext& session)
     checkMedicationDispenses(bodyData.medicationDispenses, prescriptionId, kvnr.value(), telematikIdFromAccessToken.value());
     A_24281_02.finish();
 
+    A_28410.start("Update task.owner in $dispense");
+    task.setOwner(telematikIdFromAccessToken.value());
+    A_28410.finish();
     A_24285_01.start("Zeitpunkt des Aufrufes in Task.extension:lastMedicationDispense setzen");
     task.updateLastMedicationDispense();
     A_24285_01.finish();

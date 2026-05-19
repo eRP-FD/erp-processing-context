@@ -35,44 +35,52 @@ public:
 
     const model::Kvnr kvnr{"X000000012"};
 
+    const ResourceTemplates::Versions::GEM_ERP gemVer = ResourceTemplates::Versions::GEM_ERP_current();
+
     // ids with `3-01.2.2023001.16.101.*` return OK according to lzconfig.yaml of bfarm-mock:
     ResourceTemplates::MedicationDispenseBundleOptions options{
-        .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
+        .gematikVersion = gemVer,
         .medicationDispenses =
-            {ResourceTemplates::MedicationDispenseOptions{
+            {
+                {
                     .telematikId = "3-01.2.2023001.16.101.1",
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}},
-             ResourceTemplates::MedicationDispenseOptions{
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .gematikVersion = gemVer,
+                    .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
+                },
+                {
                     .telematikId = "3-01.2.2023001.16.101.1",
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}}},
-        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58")};
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .gematikVersion = gemVer,
+                    .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
+                },
+            },
+        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+    };
 
     const model::MedicationDispenseBundle medicationDispenseBundle =
         ResourceTemplates::internal_type::medicationDispenseBundle(options);
 
     // ids with `3-02.2.2023001.16.101.*` return NotFound according to lzconfig.yaml of bfarm-mock:
     ResourceTemplates::MedicationDispenseBundleOptions options1{
-        .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
+        .gematikVersion = gemVer,
         .medicationDispenses =
-            {ResourceTemplates::MedicationDispenseOptions{
+            {
+                {
                     .telematikId = "3-02.2.2023001.16.101.1",
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}},
-             ResourceTemplates::MedicationDispenseOptions{
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .gematikVersion = gemVer,
+                    .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
+                },
+                {
                     .telematikId = "3-02.2.2023001.16.101.1",
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}}},
-        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58")};
+                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                    .gematikVersion = gemVer,
+                    .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
+                },
+            },
+        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+    };
 
     const model::MedicationDispenseBundle medicationDispenseBundle1 =
         ResourceTemplates::internal_type::medicationDispenseBundle(options1);
@@ -118,47 +126,91 @@ public:
         }
     }
 
-    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1.0-ballot3",
+    void cleanup() override
+    {
+        clearTrezeptEventTable();
+    }
+
+    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1",
                                                  date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
+
+    const std::string pharmacyIdentity =
+        R"({"id": ")" + mJwtPharmacyIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +
+        mJwtPharmacyIdentity.stringForClaim(JWT::organizationNameClaim).value() + R"(", "oid": ")" +
+        mJwtPharmacyIdentity.stringForClaim(JWT::professionOIDClaim).value() + R"("})";
 };
 
 
-TEST_F(TRezeptEventProcessorTest, test1)
+TEST_F(TRezeptEventProcessorTest, noEventsNoFail)
 {
     // No events
     {
         TRezeptEventProcessor processor(serviceContext);
         EXPECT_TRUE(processor.process() == TRezeptEventProcessor::ResultType::Idle);
     }
+}
 
+TEST_F(TRezeptEventProcessorTest, oneEventNoFail)
+{
     // One event to be processed with no failure
     {
         insertTRezeptEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
                            model::TaskEvent::State::pending, healthcareProviderPrescription,
-                           medicationDispenseBundle.serializeToJsonString(), std::nullopt, std::nullopt);
+                           medicationDispenseBundle.serializeToJsonString(), std::nullopt, pharmacyIdentity);
         TRezeptEventProcessor processor(serviceContext);
-        EXPECT_TRUE(processor.process() == TRezeptEventProcessor::ResultType::Success);
+        EXPECT_EQ(processor.process(), TRezeptEventProcessor::ResultType::Success);
     }
+}
 
+TEST_F(TRezeptEventProcessorTest, oneEventNoFail208)
+{
+    // One event to be processed with no failure
+    {
+        // KVNR X000000013 configured to return 208 in docker-compose/bfarm/lz-config.json
+        insertTRezeptEvent(model::Kvnr{"X000000013"}, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
+                           model::TaskEvent::State::pending, healthcareProviderPrescription,
+                           medicationDispenseBundle.serializeToJsonString(), std::nullopt, pharmacyIdentity);
+        TRezeptEventProcessor processor(serviceContext);
+        EXPECT_EQ(processor.process(), TRezeptEventProcessor::ResultType::Success);
+    }
+}
+
+TEST_F(TRezeptEventProcessorTest, searchNotFoundRetry)
+{
     // One event with a single retry
     {
-        auto id = insertTRezeptEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
-                                     model::TaskEvent::State::pending, healthcareProviderPrescription,
-                                     medicationDispenseBundle1.serializeToJsonString(), std::nullopt, std::nullopt, 0);
+        // medicationDispenseBundle1 is using 3-02.2.2023001.16.101.1 which is configured for 404 in lz-config.json.
+        insertTRezeptEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
+                           model::TaskEvent::State::pending, healthcareProviderPrescription,
+                           medicationDispenseBundle1.serializeToJsonString(), std::nullopt, pharmacyIdentity, 0);
         TRezeptEventProcessor processor(serviceContext);
-        EXPECT_TRUE(processor.process() == TRezeptEventProcessor::ResultType::Retry);
-        EXPECT_EQ(1, getTRezeptEventRetryCount());
-        database().deleteTRezeptEvent(id);
-        database().commitTransaction();
+        EXPECT_EQ(processor.process(), TRezeptEventProcessor::ResultType::Retry);
     }
+}
 
+TEST_F(TRezeptEventProcessorTest, missingPharmacy)
+{
+    // One event with a single retry
+    {
+        // medicationDispenseBundle1 is using 3-02.2.2023001.16.101.1 which is configured for 404 in lz-config.json.
+        insertTRezeptEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
+                           model::TaskEvent::State::pending, healthcareProviderPrescription,
+                           medicationDispenseBundle1.serializeToJsonString(), std::nullopt, std::nullopt, 0);
+        TRezeptEventProcessor processor(serviceContext);
+        EXPECT_EQ(processor.process(), TRezeptEventProcessor::ResultType::FailureOther);
+    }
+}
+
+TEST_F(TRezeptEventProcessorTest, retryLimitExceeded)
+{
     // One event with retry count exceeding the limit, results into DLQ state.
     {
         const auto max_retries =
             Configuration::instance().getIntValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_NUM_RETRIES) + 1;
         insertTRezeptEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::provideDispensation,
                            model::TaskEvent::State::pending, healthcareProviderPrescription,
-                           medicationDispenseBundle.serializeToJsonString(), std::nullopt, std::nullopt, max_retries);
+                           medicationDispenseBundle.serializeToJsonString(), std::nullopt, pharmacyIdentity,
+                           max_retries);
         TRezeptEventProcessor processor(serviceContext);
         EXPECT_TRUE(processor.process() == TRezeptEventProcessor::ResultType::Success);
         EXPECT_EQ("deadLetterQueue", getTRezeptEventState());

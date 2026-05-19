@@ -11,6 +11,7 @@
 #include "erp/util/RuntimeConfiguration.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/audit/AuditEventCreator.hxx"
 #include "shared/compression/Deflate.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/hsm/VsdmKeyBlobDatabase.hxx"
@@ -19,7 +20,9 @@
 #include "shared/util/Demangle.hxx"
 #include "shared/util/Hash.hxx"
 #include "shared/util/Random.hxx"
+#include "test/erp/pc/popp/PoPPTokenBuilder.hxx"
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
+#include "test/erp/util/EgkProofUtils.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ErpMacros.hxx"
@@ -69,25 +72,6 @@ std::string makePzV1(const model::Kvnr& kvnr, const model::Timestamp& timestamp,
     return Base64::encode(output);
 }
 
-
-std::string createEncodedPnw(std::optional<std::string> pnwPzNumberInput = std::nullopt)
-{
-    std::string pnwXml{
-        R"(<?xml version="1.0" encoding="UTF-8" standalone="yes"?><PN xmlns="http://ws.gematik.de/fa/vsdm/pnw/v1.0" CDM_VERSION="1.0.0"><TS>20230303111110</TS>)"};
-    if (pnwPzNumberInput.has_value())
-    {
-        pnwXml += "<E>1</E><PZ>" + pnwPzNumberInput.value() + "</PZ>";
-    }
-    else
-    {
-        pnwXml += "<E>3</E><EC>12101</EC>";
-    }
-    pnwXml += "</PN>";
-    const auto gzippedPnw = Deflate().compress(pnwXml, Compression::DictionaryUse::Undefined);
-
-    return Base64::encode(gzippedPnw);
-}
-
 std::string createEncodedPnwWithError(std::optional<std::string> pnwResult = std::nullopt)
 {
     std::string pnwXml{
@@ -115,29 +99,7 @@ public:
     void SetUp() override
     {
         EndpointHandlerTest::SetUp();
-
-        const auto key = Random::randomBinaryData(VsdmHmacKey::keyLength);
-
-        keyPackage.setPlainTextKey(Base64::encode(key));
-
-        auto hsmPoolSession = mServiceContext.getHsmPool().acquire();
-        auto& hsmSession = hsmPoolSession.session();
-        try {
-            keyPackage.setPlainTextKey(Base64::encode(
-                mServiceContext.getVsdmKeyCache().getKey(keyPackage.operatorId(), keyPackage.version())));
-        }
-        catch (const std::exception&)
-        {
-            const ErpVector vsdmKeyData = ErpVector::create(keyPackage.serializeToString());
-            ErpBlob vsdmKeyBlob = hsmSession.wrapRawPayload(vsdmKeyData, 0);
-            auto& vsdmBlobDb = mServiceContext.getVsdmKeyBlobDatabase();
-            VsdmKeyBlobDatabase::Entry blobEntry;
-            blobEntry.operatorId = keyPackage.operatorId();
-            blobEntry.version = keyPackage.version();
-            blobEntry.createdDateTime = model::Timestamp::now().toChronoTimePoint();
-            blobEntry.blob = vsdmKeyBlob;
-            vsdmBlobDb.storeBlob(std::move(blobEntry));
-        }
+        enrolKey(mServiceContext, keyPackage);
     }
 
     void callHandler(const std::string& pnw, ServerResponse& serverResponse,
@@ -173,15 +135,16 @@ public:
 
         ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
         handler.handleRequest(sessionContext);
+        EXPECT_EQ(sessionContext.getBdeUseCase(),bde::GetTasksPharmacy_UC_4_12);
     }
 
-    void verifyTasksReady(ServerResponse serverResponse, size_t expectTasksSize = 2,
+    void verifyTasksReady(ServerResponse serverResponse, size_t expectTasksSize = 3,
                           const std::string& expectedHcvUrlParam = "")
     {
         model::Bundle taskBundle = model::Bundle::fromXmlNoValidation(serverResponse.getBody());
         EXPECT_NO_FATAL_FAILURE(testutils::validate(taskBundle));
         const auto tasks = taskBundle.getResourcesByType<model::Task>("Task");
-        A_23452_02.test("task.status=ready and task.for=kvnr");
+        A_23452_04.test("task.status=ready and task.for=kvnr and prescription_type in (160,166)");
         // see MockDatabase::fillWithStaticData() for the above KVNR with status ready
         EXPECT_EQ(tasks.size(), expectTasksSize);
         auto acceptedExpiryDate = model::Timestamp::fromGermanDate(model::Timestamp::now().toGermanDate());
@@ -192,7 +155,7 @@ public:
             EXPECT_EQ(task.kvnr(), kvnr);
             TLOG(INFO) << "GET task with expiryDate = " << task.expiryDate().toGermanDate();
             ASSERT_GE(task.expiryDate(), acceptedExpiryDate);
-            EXPECT_EQ(task.type(), model::PrescriptionType::apothekenpflichigeArzneimittel);
+            EXPECT_TRUE(isEgkRedeemable(task.type()));
             EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = task.accessCode());
         }
         if (!expectedHcvUrlParam.empty())
@@ -241,22 +204,7 @@ public:
             const int64_t databaseId,
             const model::Timestamp& expirydate)
     {
-        const auto taskId =
-            model::PrescriptionId::fromDatabaseId(prescriptionType, databaseId);
-        auto validUntil =
-            date::make_zoned(model::Timestamp::GermanTimezone, expirydate.toChronoTimePoint() + 24h);
-        validUntil = floor<date::days>(validUntil.get_local_time());
-        ResourceTemplates::TaskOptions taskOpts{
-            .taskType = taskType,
-            .prescriptionId = taskId,
-            .expirydate = model::Timestamp(validUntil.get_sys_time()),
-            .kvnr = kvnr.id(),
-        };
-        auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
-        auto task = model::Task::fromJson(doc);
-        task.setIsPkv(!model::canBeGkv(prescriptionType));
-        mockDatabase->insertTask(task);
-        TLOG(INFO) << "inserted task with expiry date " << taskOpts.expirydate;
+        EndpointHandlerTest::insertTask(prescriptionType, taskType, databaseId, expirydate, kvnr);
     }
 
 protected:
@@ -268,6 +216,7 @@ protected:
 
 TEST_F(GetTasksByPharmacyTest, PN2_success)
 {
+    insertTask(model::PrescriptionType::tRezept, ResourceTemplates::TaskType::Ready, 202831, model::Timestamp::now());
     auto encryptedProof = VsdmProof2::encrypt(
         keyPackage,
         VsdmProof2::DecryptedProof{.revoked = false, .hcv = hcv, .iat = model::Timestamp::now(), .kvnr = kvnr});
@@ -278,7 +227,7 @@ TEST_F(GetTasksByPharmacyTest, PN2_success)
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(pnw, serverResponse, kvnr, hcv));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-    verifyTasksReady(serverResponse, 2, "hcv=" + Base64::toBase64Url(Base64::encode(hcv)));
+    verifyTasksReady(serverResponse, 3, "hcv=" + Base64::toBase64Url(Base64::encode(hcv)));
 }
 
 TEST_F(GetTasksByPharmacyTest, PN2_rejectMissingHcv)
@@ -439,6 +388,7 @@ TEST_F(GetTasksByPharmacyTest, PN2_timestampTooNew)
 
 TEST_F(GetTasksByPharmacyTest, success)
 {
+    insertTask(model::PrescriptionType::tRezept, ResourceTemplates::TaskType::Ready, 202831, model::Timestamp::now());
     auto pz = makePzV1(kvnr, model::Timestamp::now(), 'U', keyPackage);
     auto pnw = createEncodedPnw(pz);
     ServerResponse serverResponse;
@@ -450,6 +400,7 @@ TEST_F(GetTasksByPharmacyTest, success)
 
 TEST_F(GetTasksByPharmacyTest, successAcceptPN3)
 {
+    insertTask(model::PrescriptionType::tRezept, ResourceTemplates::TaskType::Ready, 202831, model::Timestamp::now());
     setAcceptPN3(true, std::nullopt);
     auto pnw = createEncodedPnw();
     ServerResponse serverResponse;
@@ -498,6 +449,7 @@ TEST_F(GetTasksByPharmacyTest, RejectMissingKvnr)
 
 TEST_F(GetTasksByPharmacyTest, successAcceptPN3expired)
 {
+    insertTask(model::PrescriptionType::tRezept, ResourceTemplates::TaskType::Ready, 202831, model::Timestamp::now());
     using namespace std::chrono_literals;
     setAcceptPN3(true, model::Timestamp::now() - 1min);
     auto pnw = createEncodedPnw();
@@ -549,7 +501,7 @@ TEST_F(GetTasksByPharmacyTest, notExpired)
         model::Timestamp::now() +24h
     );
     // expired today but also good
-    insertTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
+    insertTask(model::PrescriptionType::tRezept,
         ResourceTemplates::TaskType::Ready,
         202831,
         model::Timestamp::now()
@@ -771,7 +723,7 @@ protected:
 
 TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
 {
-    A_24176.test("Calling Pharmacy is owner");
+    A_24176_01.test("Calling Pharmacy is owner");
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(model::PrescriptionId::fromDatabaseId(
                                     model::PrescriptionType::apothekenpflichigeArzneimittel, 4715),
@@ -788,12 +740,12 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
     ASSERT_NO_THROW(bundle.emplace(std::move(factory).getNoValidation()));
     auto tasks = bundle->getResourcesByType<model::Task>();
     ASSERT_EQ(tasks.size(), 1);
-    A_24179.test("Returned Task has secret");
+    A_24179_01.test("Returned Task has secret");
     auto taskSecret = tasks[0].secret();
     ASSERT_TRUE(taskSecret.has_value());
     EXPECT_EQ(*taskSecret, secret);
 
-    A_24179.test("Returned Bundle contains prescription");
+    A_24179_01.test("Returned Bundle contains prescription");
     auto prescriptionBinaryUuid = tasks[0].healthCarePrescriptionUuid();
     ASSERT_TRUE(prescriptionBinaryUuid.has_value());
     auto prescriptionBinary = bundle->getResourcesByType<model::Binary>();
@@ -803,7 +755,7 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecret)
 
 TEST_F(GetTaskByIdByPharmacyTest, recoverSecretDiga)
 {
-    A_24176.test("Calling Pharmacy is owner");
+    A_24176_01.test("Calling Pharmacy is owner");
     ServerResponse serverResponse;
     ASSERT_NO_THROW(callHandler(model::PrescriptionId::fromDatabaseId(
                                     model::PrescriptionType::digitaleGesundheitsanwendungen, 6002),
@@ -820,12 +772,12 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecretDiga)
     ASSERT_NO_THROW(bundle.emplace(std::move(factory).getNoValidation()));
     auto tasks = bundle->getResourcesByType<model::Task>();
     ASSERT_EQ(tasks.size(), 1);
-    A_24179.test("Returned Task has secret");
+    A_24179_01.test("Returned Task has secret");
     auto taskSecret = tasks[0].secret();
     ASSERT_TRUE(taskSecret.has_value());
     EXPECT_EQ(*taskSecret, secret);
 
-    A_24179.test("Returned Bundle contains prescription");
+    A_24179_01.test("Returned Bundle contains prescription");
     auto prescriptionBinaryUuid = tasks[0].healthCarePrescriptionUuid();
     ASSERT_TRUE(prescriptionBinaryUuid.has_value());
     auto prescriptionBinary = bundle->getResourcesByType<model::Binary>();
@@ -837,7 +789,7 @@ TEST_F(GetTaskByIdByPharmacyTest, recoverSecretDiga)
 
 TEST_F(GetTaskByIdByPharmacyTest, otherOwner)
 {
-    A_24176.test("Calling Pharmacy is not owner");
+    A_24176_01.test("Calling Pharmacy is not owner");
     ServerResponse serverResponse;
     try
     {
@@ -859,7 +811,7 @@ TEST_F(GetTaskByIdByPharmacyTest, otherOwner)
 
 TEST_F(GetTaskByIdByPharmacyTest, taskHasNoOwner)
 {
-    A_24176.test("Task of previous Software has no owner");
+    A_24176_01.test("Task of previous Software has no owner");
     ServerResponse serverResponse;
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 234571);
@@ -892,7 +844,7 @@ TEST_F(GetTaskByIdByPharmacyTest, taskHasNoOwner)
 
 TEST_F(GetTaskByIdByPharmacyTest, wrongAccessCode)
 {
-    A_24177.test("accesscode is checked");
+    A_24177_01.test("accesscode is checked");
     ServerResponse serverResponse;
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 234571);
@@ -924,9 +876,70 @@ TEST_F(GetTaskByIdByPharmacyTest, wrongAccessCode)
     }
 }
 
-TEST_F(GetTaskByIdByPharmacyTest, wrongTaskStatus)
+TEST_F(GetTaskByIdByPharmacyTest, wrongAccessCodeDiga)
 {
-    A_24178.test("status in progress");
+    A_24177_01.test("accesscode is checked");
+    ServerResponse serverResponse;
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 234571);
+    ResourceTemplates::TaskOptions taskOpts{
+        .taskType = ResourceTemplates::TaskType::InProgress,
+        .prescriptionId = taskId,
+    };
+    auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
+    static const rapidjson::Pointer owner{"/owner"};
+    owner.Erase(doc);
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(false);
+    mockDatabase->insertTask(task);
+    try
+    {
+        callHandler(
+            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 234571),
+            telematikID, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+            std::nullopt, serverResponse);
+        ADD_FAILURE() << "expected ErpException";
+    }
+    catch (const ErpException& ex)
+    {
+        ASSERT_EQ(ex.status(), HttpStatus::Forbidden);
+    }
+    catch (const std::exception& ex)
+    {
+        FAIL() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
+    }
+}
+
+class GetTaskByIdByPharmacyTestErneutAbrufenP : public GetTaskByIdByPharmacyTest,
+                                                  public ::testing::WithParamInterface<ResourceTemplates::TaskType>
+{
+public:
+    static std::string name(testing::TestParamInfo<ParamType> p)
+    {
+        return std::string{magic_enum::enum_name(p.param)};
+    }
+};
+TEST_P(GetTaskByIdByPharmacyTestErneutAbrufenP, Success)
+{
+    A_24178_02.test("status inProgress/closed");
+    ServerResponse serverResponse;
+    const auto taskId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 234571);
+    ResourceTemplates::TaskOptions taskOpts{
+        .taskType = GetParam(),
+        .prescriptionId = taskId,
+    };
+    auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(false);
+    mockDatabase->insertTask(task);
+    ASSERT_NO_THROW(callHandler(
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 234571),
+        telematikID, accessCode, std::nullopt, serverResponse));
+}
+TEST_P(GetTaskByIdByPharmacyTestErneutAbrufenP, wrongTaskStatus)
+{
+    A_24178_02.test("status ready");
     ServerResponse serverResponse;
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 234571);
@@ -950,13 +963,16 @@ TEST_F(GetTaskByIdByPharmacyTest, wrongTaskStatus)
     catch (const ErpException& ex)
     {
         EXPECT_EQ(ex.status(), HttpStatus::PreconditionFailed);
-        EXPECT_STREQ(ex.what(), "Task not in-progress.");
+        EXPECT_STREQ(ex.what(), "Task must be in-progress or completed.");
     }
     catch (const std::exception& ex)
     {
         FAIL() << "Unexpected exception: " << util::demangle(typeid(ex).name()) << ": " << ex.what();
     }
 }
+INSTANTIATE_TEST_SUITE_P(x, GetTaskByIdByPharmacyTestErneutAbrufenP,
+                         testing::Values(ResourceTemplates::TaskType::InProgress,
+                                         ResourceTemplates::TaskType::Completed), &GetTaskByIdByPharmacyTestErneutAbrufenP::name);
 
 TEST_F(GetTaskByIdByPharmacyTest, accessCodeAndSecret)
 {
@@ -1008,7 +1024,7 @@ public:
         std::vector<db_model::Task> retrieveAllTasksForPatient(const db_model::HashedKvnr& kvnrHashed,
                                                                const std::optional<UrlArguments>& search) override
         {
-            auto res = MockDatabase::retrieveAll160TasksWithAccessCode(kvnrHashed, search);
+            auto res = MockDatabase::retrieveAllEgkRedeemableTasksWithAccessCode(kvnrHashed, search);
             if (! res.empty())
             {
                 // force race condition:
@@ -1052,9 +1068,10 @@ public:
 
     std::unique_ptr<DatabaseFrontend> createDatabaseErp17667(HsmPool& hsmPool, KeyDerivation& keyDerivation)
     {
+        mockDatabase.reset();
         mockDatabase = std::make_unique<MockDatabaseErp17667>(hsmPool);
         mockDatabase->fillWithStaticData();
-        auto md = std::make_unique<MockDatabaseProxy>(*mockDatabase);
+        auto md = std::make_unique<MockDatabaseProxy>(mockDatabase);
         return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
     }
 

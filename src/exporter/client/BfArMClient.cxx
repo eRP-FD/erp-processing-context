@@ -11,6 +11,7 @@
 #include "exporter/model/TaskEvent.hxx"
 #include "exporter/model/trezept/ErpTPrescriptionCarbonCopy.hxx"
 #include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/UrlHelper.hxx"
@@ -20,11 +21,11 @@
 using namespace medication::exporter::exceptions;
 
 
-BfArMClient::BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider)
+BfArMClient::BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider, const std::string& xContextId)
     : OAuthClientBase(std::move(clientId),
                       Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_URL),
                       Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_PORT),
-                      std::move(crlProvider))
+                      std::move(crlProvider), xContextId)
     , mClientSecret(Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_SECRET))
 {
     Configuration::instance().check(Configuration::ProcessType::MedicationExporter);
@@ -39,26 +40,18 @@ void BfArMClient::sendCarbonCopy(const model::ErpTPrescriptionCarbonCopy& doc) c
     const auto reqId = Uuid{}.toString();
     const auto accessTokenStr = getOrRefreshAccessToken();
     const auto response = handleCommonHttpErrors([this, &doc, &path, &reqId, &accessTokenStr](BDEMessage& message) {
-        message.update(BDEMessage::Data{.innerOperation = path, .requestId = reqId});
-
-        auto client = createClient(getHost(), getPort());
-
+        message.update(BDEMessage::Data{.host = getHost(), .innerOperation = path, .requestId = reqId});
+        auto client = createClient();
         A_27822.start("Use access token as string in Auth Bearer");
         A_27827.start("Transfer carbon copy to bfarm");
-        auto request = ClientRequest{{HttpMethod::POST,
-                                      path,
-                                      Header::Version_1_1,
-                                      {{Header::Authorization, "Bearer " + accessTokenStr},
-                                       {Header::ContentType, "application/fhir+json"},
-                                       {Header::Host, getHost() + ":" + getPort()},
-                                       {Header::XRequestId, reqId}},
-                                      HttpStatus::Unknown},
-                                     doc.serializeToJsonString()};
+        client->setAdditionalHeaders({{Header::Authorization, "Bearer " + accessTokenStr}, {Header::XRequestId, reqId}});
+        const auto url = UrlHelper::UrlParts(UrlHelper::HTTPS_PROTOCOL, getHost(),
+                                             static_cast<int>(std::strtoll(getPort().c_str(), nullptr, 10)), path, "")
+                             .toString();
+        return client->send(url, HttpMethod::POST, doc.serializeToJsonString(), "application/fhir+json");
         A_27827.finish();
         A_27822.finish();
-
-        return client->send(request);
-    });
+    }, is2xxSuccess);
 }
 
 

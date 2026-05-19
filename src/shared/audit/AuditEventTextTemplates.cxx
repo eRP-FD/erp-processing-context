@@ -6,6 +6,7 @@
  */
 
 #include "shared/audit/AuditEventTextTemplates.hxx"
+#include "erp/pc/popp/PoPPToken.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/TLog.hxx"
 
@@ -213,6 +214,10 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 49,
           "textTemplate": "Der {practitioner} hat in {facility} in Land {countryCode} Ihr E-Rezept eingelöst."
+        },
+        {
+          "eventId": 50,
+          "textTemplate": "{agentName} hat die Liste der einlösbaren E-Rezepte abgerufen durch Autorisierung mittels {proofMethod}."
         }
       ]
     },
@@ -411,6 +416,10 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 49,
           "textTemplate": "{practitioner} at {facility} in country {countryCode} has redeemed your e-prescription."
+        },
+        {
+          "eventId": 50,
+          "textTemplate": "{agentName} retrieved a list of prescriptions to be redeemed by authorization with {proofMethod}."
         }
       ]
     }
@@ -482,6 +491,28 @@ AuditEventTextTemplates::TextTemplate AuditEventTextTemplates::retrieveTextTempl
                       << static_cast<std::underlying_type_t<model::AuditEventId>>(eventId);
         Fail2("No audit event text resource found for event id / language combination", std::logic_error);
     }
+}
+
+std::string AuditEventTextTemplates::proofMethodString(const std::string& proofMethodStr, const std::string& language)
+{
+    using namespace std::string_literals;
+    auto proofMethod = magic_enum::enum_cast<PoPPTokenProofMethodPrefix>(proofMethodStr);
+    if (proofMethod)
+    {
+        switch (*proofMethod)
+        {
+            case PoPPTokenProofMethodPrefix::healthid:
+                return "GesundheitsID"s;
+            case PoPPTokenProofMethodPrefix::ehc_practitioner:
+                return language == "de"s ? "Gesundheitskarte in der Apotheke" : "the health card at the pharmacy"s;
+            case PoPPTokenProofMethodPrefix::ehc_provider:
+                return language == "de"s ? "Gesundheitskarte über ein Endgerät des Versicherten"s
+                                         : "the insured person’s health card on their device"s;
+            case PoPPTokenProofMethodPrefix::unknown:
+                break;
+        }
+    }
+    return language == "de"s ? "eines Nachweises des Versorgungskontextes" : "a proof of presence";
 }
 
 

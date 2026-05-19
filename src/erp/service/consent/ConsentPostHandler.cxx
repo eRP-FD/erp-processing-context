@@ -34,7 +34,7 @@ void ConsentPostHandler::handleRequest(PcSessionContext& session)
     A_22289.start("Assure identical kvnr of access token and Consent patient identifier");
     const auto kvnrClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(kvnrClaim.has_value(), "JWT does not contain Kvnr");
-    const model::Kvnr kvnr{*kvnrClaim, model::Kvnr::Type::unspecified};
+    const model::Kvnr kvnr{*kvnrClaim};
     try
     {
         ErpExpect(consent.patientKvnr() == kvnr, HttpStatus::Forbidden,

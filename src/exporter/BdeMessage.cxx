@@ -5,11 +5,10 @@
  */
 
 #include "BdeMessage.hxx"
+#include "shared/util/Expect.hxx"
 #include "shared/util/JsonLog.hxx"
 
 #include <unordered_map>
-
-#include "shared/util/Expect.hxx"
 
 namespace
 {
@@ -49,9 +48,9 @@ const std::unordered_map<std::string, std::string> request_usecase_mapping =
 
 void BDEMessage::Data::merge(const BDEMessage::Data& data)
 {
-    if (data.startTime)
+    if (startTime > data.startTime)
     {
-        startTime = data.startTime.value();
+        startTime = data.startTime;
     }
     if (data.endTime)
     {
@@ -109,10 +108,15 @@ void BDEMessage::Data::merge(const BDEMessage::Data& data)
     {
         responseCode = data.responseCode;
     }
+    if (data.xContextId)
+    {
+        xContextId = data.xContextId;
+    }
 }
 
 BDEMessage::BDEMessage(Data data)
     : mData(std::move(data))
+    , mLog(std::make_unique<JsonLog>(LogId::INFO, JsonLog::makeInfoLogReceiver(), false))
 {
 }
 
@@ -135,23 +139,21 @@ void BDEMessage::publish()
 {
     const auto now = model::Timestamp::now();
 
-    const model::Timestamp startTime = mData.startTime.value_or(now);
     const model::Timestamp endTime = mData.endTime.value_or(now);
     const model::Timestamp lastModified = mData.lastModified.value_or(now);
 
-    JsonLog log(LogId::INFO, JsonLog::makeInfoLogReceiver(), false);
 
     auto logIfNotEmpty = [&](std::string_view key, const std::optional<std::string>& v) {
         if (v && ! v->empty())
         {
-            log.keyValue(key, *v);
+            mLog->keyValue(key, *v);
         }
     };
 
     auto logIfPresent = [&](std::string_view key, const auto& opt, auto transform) {
         if (opt)
         {
-            log.keyValue(key, transform(*opt));
+            mLog->keyValue(key, transform(*opt));
         }
     };
 
@@ -173,33 +175,34 @@ void BDEMessage::publish()
         return s;
     };
 
-    log.keyValue("log_type", BDEMessage::log_type);
+    mLog->keyValue("log_type", BDEMessage::log_type);
 
-    log.keyValue("timestamp", startTime.toXsDateTime());
-    log.keyValue("x_request_id", mData.requestId.value_or(""));
+    mLog->keyValue("timestamp", mData.startTime.toXsDateTime());
+    mLog->keyValue("x_context", mData.xContextId.value_or(""));
+    mLog->keyValue("x_request_id", mData.requestId.value_or(""));
 
     const auto innerOp = mData.innerOperation.value_or("");
-    log.keyValue("request_operation", innerOp);
+    mLog->keyValue("request_operation", innerOp);
 
     if (const auto it = request_usecase_mapping.find(innerOp); it != request_usecase_mapping.end())
     {
-        log.keyValue("operation", it->second);
+        mLog->keyValue("operation", it->second);
     }
     else
     {
-        log.keyValue("operation", "");
+        mLog->keyValue("operation", "");
     }
 
     logIfNotEmpty("endpoint_host", mData.host);
     logIfNotEmpty("endpoint_ip", mData.ip);
 
-    log.keyValue("response_code", static_cast<size_t>(mData.responseCode.value_or(0)));
+    mLog->keyValue("response_code", static_cast<size_t>(mData.responseCode.value_or(0)));
 
-    const auto startMs = toMsSinceEpoch(startTime);
+    const auto startMs = toMsSinceEpoch(mData.startTime);
     const auto endMs = toMsSinceEpoch(endTime);
     const auto modMs = toMsSinceEpoch(lastModified);
 
-    log.keyValue("response_time", static_cast<size_t>(endMs - startMs));
+    mLog->keyValue("response_time", static_cast<size_t>(endMs - startMs));
 
     // lastModified comes from the event and predates request processing.
     // If unset, the resulting value is 0, which is acceptable for logging.
@@ -207,14 +210,14 @@ void BDEMessage::publish()
     {
         // Log the data mismatch since this is usually a programming error.
         TVLOG(1) << "bde data mismatch, startTime is less than lastModified.";
-        log.keyValue("duration_in_ms", static_cast<size_t>(0));
+        mLog->keyValue("duration_in_ms", static_cast<size_t>(0));
     }
     else
     {
-        log.keyValue("duration_in_ms", static_cast<size_t>(startMs - modMs));
+        mLog->keyValue("duration_in_ms", static_cast<size_t>(startMs - modMs));
     }
 
-    log.keyValue("error", mData.error.value_or(""));
+    mLog->keyValue("error", mData.error.value_or(""));
 
     logIfNotEmpty("prescription_id", mData.prescriptionId);
     logIfNotEmpty("cid", mData.cid);
@@ -225,16 +228,16 @@ void BDEMessage::publish()
 
     if (mData.hashedKvnr)
     {
-        log << *mData.hashedKvnr;
+        *mLog << *mData.hashedKvnr;
     }
 
     if (mData.errorCode)
     {
-        log.keyValue("error_component", removePrefix(*mData.errorCode));
+        mLog->keyValue("error_component", removePrefix(*mData.errorCode));
     }
 
     if (mData.processor)
     {
-        log.keyValue("processor", *mData.processor);
+        mLog->keyValue("processor", *mData.processor);
     }
 }

@@ -36,7 +36,7 @@ public:
 
 TEST_P(DeGematikErpTPrescriptionTest, success)
 {
-    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1.0-ballot3",
+    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1",
                                                  date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const auto& fhirInstance = Fhir::instance();
     auto viewList = fhirInstance.allViews();

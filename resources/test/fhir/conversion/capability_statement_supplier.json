@@ -44,7 +44,6 @@
                     "type":"Communication",
                     "profile":"http://hl7.org/fhir/StructureDefinition/Communication",
                     "supportedProfile":[
-                        "https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq",
                         "https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply",
                         "https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq",
                         "https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"

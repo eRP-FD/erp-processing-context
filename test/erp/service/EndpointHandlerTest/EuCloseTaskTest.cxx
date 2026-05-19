@@ -33,8 +33,7 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
-class EuCloseTaskTest : public MedicationDispenseFixture,
-                        public testing::WithParamInterface<MedicationDispenseFixture::BodyType>
+class EuCloseTaskTest : public MedicationDispenseFixture
 {
 protected:
     // no need to shift. We are addressing the correct view by passing whenHandedOver
@@ -83,28 +82,28 @@ TEST_F(EuCloseTaskTest, test1)
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
     {
+        auto database = mServiceContext.databaseFactory();
         const auto kvnr = resource->kvnr();
-        sessionContext.database()->storeConsent(
+        database->storeConsent(
             model::Consent{model::ConsentType::EUDISPCONS, model::Kvnr{kvnr}, model::Timestamp::now()});
-        sessionContext.database()->commitTransaction();
+        database->commitTransaction();
     }
 
     {
+        auto database = mServiceContext.databaseFactory();
         const auto kvnr = resource->kvnr();
         auto accessCode = resource->accessCode();
         auto cc = resource->countryCode();
-        sessionContext.database()->createEuAccessPermission(
+        database->createEuAccessPermission(
             model::Kvnr{kvnr},
             model::EuAccessPermission{model::EuAccessCode{SafeString{std::move(accessCode.toString())}},
                                       model::CountryCode{cc}});
-        sessionContext.database()->commitTransaction();
+        database->commitTransaction();
     }
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext)) << serverRequest.getBody();
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
-
-    sessionContext.database()->commitTransaction();
 
     {
         const auto kvnr = resource->kvnr();

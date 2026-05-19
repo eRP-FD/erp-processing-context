@@ -10,6 +10,7 @@
 
 #include "shared/util/PeriodicTimer.hxx"
 
+class PostgresConnection;
 class DatabaseBackend;
 class ThreadPool;
 class PcServiceContext;
@@ -22,6 +23,7 @@ public:
 private:
     void timerHandler() override;
     static void refreshConnection();
+    static void refreshConnection(PostgresConnection& conn, std::string_view connName);
 
     ThreadPool& mThreadPool;
     PcServiceContext& mServiceContext;

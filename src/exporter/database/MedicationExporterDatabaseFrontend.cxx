@@ -78,8 +78,16 @@ MedicationExporterDatabaseFrontend::getAllEventsForKvnr(const model::EventKvnr& 
         auto keyForTask = taskKey(dbTaskEvent);
         SafeString keyForMedicationDispense{
             dbTaskEvent.medicationDispenseBundle.has_value() ? medicationDispenseKey(dbTaskEvent) : SafeString{}};
-        allTaskEvents.emplace_back(
-            TaskEventConverter(mCodec, mTelematikLookup).convert(dbTaskEvent, keyForTask, keyForMedicationDispense));
+        try
+        {
+            allTaskEvents.emplace_back(
+                TaskEventConverter(mCodec, mTelematikLookup).convert(dbTaskEvent, keyForTask, keyForMedicationDispense));
+        }
+        catch (ExceptionWrapperBase& ex)
+        {
+            ex.addContext("prescription_id", dbTaskEvent.prescriptionId.toString());
+            throw;
+        }
     }
     return allTaskEvents;
 }
@@ -105,10 +113,18 @@ MedicationExporterDatabaseFrontend::markFirstEventDeadLetter(const model::EventK
     {
         auto keyForTask = taskKey(minimalTaskEventAuditData->prescriptionId, minimalTaskEventAuditData->authoredOn,
                                   minimalTaskEventAuditData->blobId, minimalTaskEventAuditData->salt);
-        return TaskEventConverter(mCodec, mTelematikLookup)
-            .convertBareEvent(minimalTaskEventAuditData->kvnr, minimalTaskEventAuditData->hashedKvnr,
-                              minimalTaskEventAuditData->usecase, minimalTaskEventAuditData->prescriptionId,
-                              minimalTaskEventAuditData->prescriptionType, keyForTask);
+        try
+        {
+            return TaskEventConverter(mCodec, mTelematikLookup)
+                .convertBareEvent(minimalTaskEventAuditData->kvnr, minimalTaskEventAuditData->hashedKvnr,
+                                  minimalTaskEventAuditData->usecase, minimalTaskEventAuditData->prescriptionId,
+                                  minimalTaskEventAuditData->prescriptionType, keyForTask);
+        }
+        catch (ExceptionWrapperBase& ex)
+        {
+            ex.addContext("prescription_id", minimalTaskEventAuditData->prescriptionId.toString());
+            throw;
+        }
     }
     return std::nullopt;
 }
@@ -170,8 +186,16 @@ std::optional<std::unique_ptr<model::TRezeptEvent>> MedicationExporterDatabaseFr
     SafeString keyForMedicationDispense{dbModel->medicationDispenseBundle.has_value() ? medicationDispenseKey(*dbModel)
                                                                                       : SafeString{}};
 
-    return TaskEventConverter(mCodec, mTelematikLookup)
-        .convertToTRezeptEvent(*dbModel, keyForTask, keyForMedicationDispense);
+    try
+    {
+        return TaskEventConverter(mCodec, mTelematikLookup)
+            .convertToTRezeptEvent(*dbModel, keyForTask, keyForMedicationDispense);
+    }
+    catch (ExceptionWrapperBase& ex)
+    {
+        ex.addContext("prescription_id", dbModel->prescriptionId.toString());
+        throw;
+    }
 }
 
 void MedicationExporterDatabaseFrontend::deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) const

@@ -16,10 +16,10 @@
 #include "shared/util/TLog.hxx"
 
 EpaAccountLookupClient::EpaAccountLookupClient(MedicationExporterServiceContext& serviceContext,
-                                               std::string_view consentDecisionsEndpoint, std::string_view userAgent)
+                                               std::string_view consentDecisionsEndpoint, const std::string& xContextId)
     : mServiceContext(serviceContext)
     , mConsentDecisionsEndpoint(consentDecisionsEndpoint)
-    , mUserAgent(userAgent)
+    , mBdeData({.xContextId = xContextId})
 {
 }
 
@@ -28,11 +28,12 @@ ClientResponse EpaAccountLookupClient::sendConsentDecisionsRequest(const std::st
                                                                    uint16_t port)
 {
     A_25937.start("request to epa4all.de");
-    Header header{HttpMethod::GET,
+    A_22470_06.start("set x-useragent for outgoing requests");
+    const Header header{HttpMethod::GET,
                   std::string{mConsentDecisionsEndpoint},
                   Header::Version_1_1,
                   {{Header::Tee3::XInsurantId, kvnr.id()},
-                   {Header::Tee3::XUserAgent, mUserAgent},
+                   {Header::XUserAgent, Header::xUserAgentHeader()},
                    {Header::Host, host},
                    {Header::XRequestId, xRequestId}},
                   HttpStatus::Unknown};

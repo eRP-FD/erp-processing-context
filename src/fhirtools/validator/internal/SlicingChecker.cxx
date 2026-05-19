@@ -94,7 +94,7 @@ void SlicingChecker::finalize(std::string_view elementFullPath, const std::share
         std::ostringstream name;
         name << elementFullPath << '.' << rootElement->fieldName();
         mResult.merge(rootElement->cardinality().check(slice.count, name.str(), rootElement->fieldName(), slice.profile,
-                                                       element, slice.profile->rootElement()->typeId(), true));
+                                                       element, slice.profile->rootElement()->typeId(), true, mOptions));
     }
 }
 

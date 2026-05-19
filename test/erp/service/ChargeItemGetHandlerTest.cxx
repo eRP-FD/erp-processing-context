@@ -54,7 +54,7 @@ protected:
             auto db = createDatabase();
             model::Task task(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv,
                              "09409348029834029384023984209");
-            task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::pkv});
+            task.setKvnr(model::Kvnr{insurant});
             task.setIsPkv(true);
             std::optional<model::PrescriptionId> prescriptionId;
             ASSERT_NO_THROW(prescriptionId.emplace(db->storeTask(task)));

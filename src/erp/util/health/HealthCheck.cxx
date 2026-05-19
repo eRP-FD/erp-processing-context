@@ -7,6 +7,7 @@
 
 #include "erp/util/health/HealthCheck.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 #include "shared/database/DatabaseConnectionInfo.hxx"
 #include "shared/util/Configuration.hxx"
@@ -38,17 +39,29 @@ void HealthCheck::update (PcServiceContext& context)
     check(ApplicationHealth::Service::Hsm,          context, &checkHsm);
     check(ApplicationHealth::Service::Idp,          context, &checkIdp);
     check(ApplicationHealth::Service::Postgres,     context, &checkPostgres);
+    if (auto roHost = Configuration::instance().getOptionalStringValue(ConfigurationKey::POSTGRES_RO_HOST);
+        roHost && ! roHost->empty())
+    {
+        check(ApplicationHealth::Service::PostgresRO, context, &checkPostgresRO);
+    }
+    else
+    {
+        context.applicationHealth().skip(ApplicationHealth::Service::PostgresRO, "No read-only host configured");
+    }
     check(ApplicationHealth::Service::PrngSeed,     context, &checkSeedTimer);
     check(ApplicationHealth::Service::TeeToken,     context, &checkTeeTokenUpdater);
     check(ApplicationHealth::Service::Tsl,          context, &checkTsl);
     check(ApplicationHealth::Service::CFdSigErp,    context, &checkCFdSigErp);
+    check(ApplicationHealth::Service::PoPPService,  context, &checkPoPPService);
 
     if (Configuration::instance().getOptionalBoolValue(ConfigurationKey::DEBUG_DISABLE_DOS_CHECK, false))
-        context.applicationHealth().skip(
-            ApplicationHealth::Service::Redis,
-            "DEBUG_DISABLE_DOS_CHECK=true");
+    {
+        context.applicationHealth().skip(ApplicationHealth::Service::Redis, "DEBUG_DISABLE_DOS_CHECK=true");
+    }
     else
+    {
         check(ApplicationHealth::Service::Redis, context, &checkRedis);
+    }
     context.applicationHealth().setServiceDetails(
         ApplicationHealth::Service::Hsm, ApplicationHealth::ServiceDetail::HsmDevice,
         Configuration::instance().getStringValue(ConfigurationKey::HSM_DEVICE));
@@ -71,6 +84,7 @@ void HealthCheck::update (PcServiceContext& context)
         context.applicationHealth().setServiceDetails(
             ApplicationHealth::Service::CFdSigErp, ApplicationHealth::ServiceDetail::CFdSigErpExpiry,
             context.getCFdSigErpManager().getCertificateNotAfterTimestamp());
+        context.applicationHealth().setPoPPServiceDetails(context.getPoPPService().getHealthData());
     }
     catch (const std::exception& err)
     {
@@ -110,6 +124,11 @@ void HealthCheck::checkCFdSigErp (PcServiceContext& context)
     context.getCFdSigErpManager().healthCheck();
 }
 
+void HealthCheck::checkPoPPService(PcServiceContext& context)
+{
+    context.getPoPPService().healthCheck();
+}
+
 
 void HealthCheck::checkIdp (PcServiceContext& context)
 {
@@ -129,6 +148,20 @@ void HealthCheck::checkPostgres(PcServiceContext& context)
                                                       ApplicationHealth::ServiceDetail::DBConnectionInfo,
                                                       toString(*connectionInfo));
     }
+}
+
+void HealthCheck::checkPostgresRO(PcServiceContext& context)
+{
+        auto connectionRO = context.readOnlyDatabaseFactory();
+        connectionRO->healthCheck();
+        auto connectionInfoRO = connectionRO->getConnectionInfo();
+        connectionRO->commitTransaction();
+        if (connectionInfoRO)
+        {
+            context.applicationHealth().setServiceDetails(ApplicationHealth::Service::PostgresRO,
+                                                          ApplicationHealth::ServiceDetail::DBConnectionInfo,
+                                                          toString(*connectionInfoRO));
+        }
 }
 
 

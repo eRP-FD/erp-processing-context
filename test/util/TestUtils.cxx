@@ -245,7 +245,6 @@ std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::Numbe
         case fhir:// general FHIR schema
             break;
         case GEM_ERP_PR_Communication_DispReq:
-        case GEM_ERP_PR_Communication_InfoReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReq:
         case GEM_ERPCHRG_PR_Communication_ChargChangeReply:
         case GEM_ERP_PR_Communication_DiGA:
@@ -518,7 +517,7 @@ ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& view
 
 static bool enable166(model::PrescriptionType prescriptionType)
 {
-    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_4_0)
+    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_4_2)
     {
         return true;
     }

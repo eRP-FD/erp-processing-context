@@ -467,6 +467,7 @@ TEST_F(EndpointHandlerTest, GetAllTasks)//NOLINT(readability-function-cognitive-
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+    EXPECT_EQ(sessionContext.getBdeUseCase(), bde::GetTasksPatient_UC_3_1);
 
     std::string bodyActual;
     ASSERT_NO_FATAL_FAILURE(bodyActual = canonicalJson(serverResponse.getBody()));
@@ -720,6 +721,21 @@ TEST_F(EndpointHandlerTest, GetAllAuditEvents_delete_task)
     const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
     const std::string auditEventFileName = "audit_event_delete_task_" + gematikVersionStr + ".json";
     ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446697", auditEventFileName));
+}
+
+TEST_F(EndpointHandlerTest, GetAllAuditEventsPagingLinks)
+{
+    const std::string gematikVersionStr{ResourceTemplates::Versions::GEM_ERP_current().renderVersion()};
+    const std::string auditEventFileName = "audit_event_" + gematikVersionStr + ".json";
+    auto auditEvent = model::AuditEvent::fromJsonNoValidation(
+        ResourceManager::instance().getStringResource(fmt::format("{}/{}", dataPath, auditEventFileName)));
+    for (size_t i = 0; i < 50; ++i)
+    {
+        auditEvent.setRecorded(model::Timestamp::now());
+        auditEvent.setId(Uuid{}.toString());
+        mockDatabase->insertAuditEvent(auditEvent, model::AuditEventId::GET_Task);
+    }
+    ASSERT_NO_FATAL_FAILURE(checkGetAllAuditEvents("X122446685", auditEventFileName, 51));
 }
 
 TEST_F(EndpointHandlerTest, GetAuditEvent)//NOLINT(readability-function-cognitive-complexity)

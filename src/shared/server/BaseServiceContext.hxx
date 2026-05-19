@@ -87,6 +87,8 @@ public:
 
     void setupTslRefreshJob(std::chrono::seconds tslRefreshInterval);
 
+    std::shared_ptr<CrlProvider> crlProvider();
+
 protected:
     std::shared_ptr<Timer> mTimerManager;
     std::shared_ptr<BlobCache> mBlobCache;
@@ -99,6 +101,7 @@ protected:
     std::unique_ptr<BaseHttpsServer> mAdminServer;
     EnrolmentData mEnrolmentData;
     ApplicationHealth mApplicationHealth;
+    std::shared_ptr<CrlProvider> mCrlProvider;
 
 private:
     /**

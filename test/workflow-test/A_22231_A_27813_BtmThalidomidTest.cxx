@@ -25,9 +25,9 @@ class A_22231_A_27813_BtmThalidomidTest : public ErpWorkflowTest
 protected:
     void SetUp() override
     {
-        if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+        if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
         {
-            GTEST_SKIP() << "test disabled for KBV < KBV_ERP_1_4_0";
+            GTEST_SKIP() << "test disabled for KBV < " << ResourceTemplates::Versions::KBV_ERP_1_4_2;
         }
     }
 };
@@ -99,13 +99,13 @@ TEST_F(A_22231_A_27813_BtmThalidomidTest, category_01_tRezept)
     auto accessCode = std::string{task->accessCode()};
     ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
         task->prescriptionId(), accessCode, toCadesBesSignature(bundle, authoredOn), HttpStatus::BadRequest,
-        model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
+        model::OperationOutcome::Issue::Type::invalid, fmt::format("FHIR-Validation error",
         "Bundle: error: -erp-angabeReichdauerBtM-RezeptEinheit: Sofern die Reicherdauer bei einem BtM-Rezept angegeben "
         "wird, muss diese in Tagen angegeben werden. (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.4.0); Bundle: error: "
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}); Bundle: error: "
         "-erp-angabeT-RezeptAngabenVerbot: Wenn es sich nicht um eine Verordnung von T-Arzneimitteln handelt, dürfen "
         "T-Rezept-Angaben nicht vorhanden sein. (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.4.0); "));
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}); ", ResourceTemplates::Versions::KBV_ERP_1_4_2)));
 }
 
 

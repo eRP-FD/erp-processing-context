@@ -12,6 +12,7 @@
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/validator/ValidationResult.hxx"
+#include "fhirtools/validator/ValidatorOptions.hxx"
 
 #include <boost/algorithm/string/split.hpp>
 #include <magic_enum/magic_enum.hpp>
@@ -423,7 +424,8 @@ fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std
                                                              std::string_view subElementName,
                                                              const FhirStructureDefinition* profile,
                                                              const std::shared_ptr<const Element>& element,
-                                                             const std::string& typeId, bool isSlice) const
+                                                             const std::string& typeId, bool isSlice,
+                                                             const ValidatorOptions& options) const
 {
     using namespace std::string_literals;
     using std::to_string;
@@ -433,7 +435,7 @@ fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std
         if (min == 1)
         {
             result.add(Severity::error, "missing mandatory element", std::string{elementFullPath}, profile);
-            if (max == 1)
+            if (options.collectInfo && max == 1)
             {
                 result.addInfo(ValidationAdditionalInfo::MissingMandatoryElement, element, std::string{elementFullPath},
                                typeId);
@@ -450,7 +452,7 @@ fhirtools::ValidationResults FhirElement::Cardinality::check(uint32_t count, std
     {
         result.add(Severity::error, "At most " + to_string(*max) + " elements expected, but got " + to_string(count),
                    std::string{elementFullPath}, profile);
-        if (max == 0 && ! isSlice)
+        if (options.collectInfo && max == 0 && ! isSlice)
         {
             const auto subElements = element->subElements(std::string{subElementName});
             for (const auto& subElement : subElements)

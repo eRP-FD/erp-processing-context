@@ -118,6 +118,15 @@ Timestamp model::MedicationDispenseOperationParameters::maxWhenHandedOver() cons
     return whenHandedOver(*latestDispense);
 }
 
+void MedicationDispenseOperationParameters::additionalValidation() const
+{
+    Parameters<MedicationDispenseOperationParameters>::additionalValidation();
+    for (const auto& [medicationDispense, _] : collectMedicationDispenses())
+    {
+        medicationDispense.additionalValidation();
+    }
+}
+
 std::optional<model::Timestamp> model::MedicationDispenseOperationParameters::getValidationReferenceTimestamp() const
 {
     A_23384_05.start("Use maximum of whenHandedOver as reference timestamp for validation.");
@@ -131,12 +140,12 @@ std::list<MedicationDispense> MedicationDispenseOperationParameters::medicationD
     std::list<MedicationDispense> result;
     for (auto&& [medicationDispense, medication] : collectMedicationDispenses())
     {
-        A_26003.start("Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
+        A_26003_01.start("Task schließen - Flowtype 162 - Profilprüfung MedicationDispense");
         ErpExpect(medicationDispense.profileType() == ProfileType::GEM_ERP_PR_MedicationDispense_DiGA,
                   HttpStatus::BadRequest,
                   "Unzulässige Abgabeinformationen: Für diesen Workflow sind nur Abgabeinformationen für digitale "
                   "Gesundheitsanwendungen zulässig.");
-        A_26003.finish();
+        A_26003_01.finish();
         ModelExpect(! medication.has_value(), "unexpected medication part in Parameters.parameter");
         result.emplace_back(std::move(medicationDispense));
     }

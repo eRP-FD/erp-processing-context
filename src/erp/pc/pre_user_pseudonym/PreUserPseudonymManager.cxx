@@ -81,6 +81,7 @@ std::tuple<bool, CmacSignature> PreUserPseudonymManager::verifyAndReSign(const C
 
 void PreUserPseudonymManager::ensureKeysUptodate(std::shared_lock<std::shared_mutex>& sharedLock)
 {
+    // GEMREQ-start A_20163
     A_20163.start("6. Die E-Rezept-VAU MUSS einen 128-Bit-AES-CMAC-Schlüssel zufällig erzeugen und mindestens alle 10 Tage wechseln.");
     auto today = std::chrono::time_point_cast<date::days>(std::chrono::system_clock::now());
     if (today != mKeyDate)
@@ -101,4 +102,5 @@ void PreUserPseudonymManager::ensureKeysUptodate(std::shared_lock<std::shared_mu
         sharedLock.lock();
     }
     A_20163.finish();
+    // GEMREQ-end A_20163
 }

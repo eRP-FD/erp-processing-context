@@ -7983,6 +7983,14 @@
                 <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.78</ns:ExtensionOID>
                 <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_smc_b_osig</ns:ExtensionValue>
               </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.163</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_policy_gem_or_cp</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.287</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_zd_sig</ns:ExtensionValue>
+              </Extension>
             </ServiceInformationExtensions>
           </ServiceInformation>
         </TSPService>

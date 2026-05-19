@@ -84,7 +84,7 @@ public:
     void prepare() override;
 
 private:
-    void setSubjectSystem(model::Kvnr::Type kvnrType);
+    void setSubjectSystem();
     friend Resource<ChargeItem>;
     explicit ChargeItem(NumberAsStringParserDocument&& jsonTree);
     std::string supportingInfoTypeToReference(SupportingInfoType supportingInfoType) const;

@@ -55,3 +55,9 @@ std::ostream& operator<< (std::ostream& stream, const HttpStatus& status)
     stream << toString(status);
     return stream;
 }
+
+bool is2xxSuccess(HttpStatus status)
+{
+    const auto numericalValue = toNumericalValue(status);
+    return numericalValue >= 200 && numericalValue < 300;
+}

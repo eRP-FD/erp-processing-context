@@ -28,8 +28,6 @@ find_package(zstd REQUIRED)
 
 project(erp-medication-exporter)
 
-set(ERP_APP_NAME ${PROJECT_NAME})
-
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
 # Use gethostbyname() in boost for hostname lookups because

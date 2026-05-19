@@ -13,6 +13,7 @@
 
 #include <memory>
 
+class PostgresConnection;
 
 class StaticData : public CommonStaticData
 {
@@ -21,8 +22,11 @@ public:
 
     static Factories makeMockFactories();
     static Factories makeMockFactoriesWithServers();
-    static PcServiceContext
-    makePcServiceContext(std::optional<decltype(Factories::databaseFactory)> cutomDatabaseFactory = {});
+    static PcServiceContext makePcServiceContext(Database::Factory customDatabaseFactory = {});
+    static Factories::PoPPServiceFactoryT makePoPPServiceFactoryWithSenderMock();
+private:
+    using ConnectionFactory = PostgresConnection&(*)();
+    static Database::Factory makeDatabaseFactory(ConnectionFactory connFactory);
 };
 
 #endif

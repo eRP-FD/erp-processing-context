@@ -70,6 +70,7 @@ bool isEventCausedByPatient(AuditEventId eventId)
         case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_LIST:
         case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL:
         case AuditEventId::POST_TASK_EU_CLOSE:
+        case AuditEventId::GET_Tasks_by_pharmacy_with_popp:
             break;
     }
     return false;
@@ -97,6 +98,7 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case model::AuditEventId::GET_Tasks_by_pharmacy_pnw_check_failed:
         case model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3:
         case model::AuditEventId::GET_Tasks_by_pharmacy_with_pn3_failed:
+        case AuditEventId::GET_Tasks_by_pharmacy_with_popp:
             return "Task";
         case model::AuditEventId::GET_Task_id_insurant:
         case model::AuditEventId::GET_Task_id_representative:

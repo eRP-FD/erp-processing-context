@@ -428,7 +428,7 @@ void fhirtools::ProfileSetValidator::finalizeChildCounters(std::string_view elem
 {
     for (const auto& counter : mChildCounters)
     {
-        counter.second.check(mProfileValidators, counter.first, elementFullPath, element);
+        counter.second.check(mProfileValidators, counter.first, elementFullPath, element, options());
     }
     A_27698.start("Check that we have exactly one meta.profile");
     if (rootPointer() == mValidator.get().metaRootDefPtr() && isMandatory("profile"))

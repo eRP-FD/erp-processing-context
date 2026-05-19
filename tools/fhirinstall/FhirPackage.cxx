@@ -14,10 +14,6 @@
 #include "tools/fhirinstall/ShowHelp.hxx"
 #include "tools/fhirinstall/FhirInstallArgs.hxx"
 
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <libxml2/libxml/tree.h>
-#include <rapidjson/rapidjson.h>
 #include <algorithm>
 #include <cerrno>
 #include <fstream>
@@ -25,6 +21,13 @@
 #include <iostream>
 #include <system_error>
 #include <utility>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <libxml2/libxml/tree.h>
+#include <rapidjson/rapidjson.h>
+#include <fmt/color.h>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 static inline const rapidjson::Pointer resourceTypePtr{"/resourceType"};
 using Json = model::NumberAsStringParserDocument;
@@ -61,6 +64,56 @@ FhirPackage::FhirPackage(Id id)
     : mId{std::move(id)}
 {
 }
+//NOLINTNEXTLINE(misc-no-recursion)
+void FhirPackage::printTree(const PtrSet& packages, size_t indent)
+{
+    const auto samePackageName =[&](const Ptr& ptr) {
+        return ptr->id().name == mId.name;
+    };
+    Expect3(mPackageInfoLoaded, "Package info not loaded.", std::logic_error);
+    std::set<fhirtools::FhirVersion> conflicts;
+    for (auto it = packages.lower_bound(Id{mId.name, fhirtools::FhirVersion::notVersioned});
+         it != packages.end() && samePackageName(*it); ++it)
+    {
+        const auto& version = (*it)->id().version;
+        if (version != mId.version)
+        {
+            conflicts.emplace(version);
+        }
+    }
+    if (!conflicts.empty())
+    {
+        fmt::print(fmt::fg(fmt::color::red), "{:{}} {}@{} conflicts: {}\n", "", indent, mId.name, mId.version, fmt::join(conflicts, ", "));
+    }
+    else
+    {
+        fmt::println("{:{}} {}@{}", "", indent, mId.name, mId.version);
+    }
+    for (const auto& d: dependencies())
+    {
+        d->printTree(packages, indent + 4);
+    }
+}
+
+//NOLINTNEXTLINE(misc-no-recursion)
+FhirPackage::PtrSet FhirPackage::dependencies(const std::filesystem::path& cacheFolder,
+                                        const std::map<std::string, Id>& substitutions, bool recursive)
+{
+    const std::filesystem::path packageFolder{cacheFolder / (mId.name + '#' + to_string(mId.version))};
+    std::filesystem::directory_entry packageFile{packageFolder  / "package" / "package.json"};
+    Expect(packageFile.exists(), "packagefile not found: " + packageFile.path().native());
+    processPackageInfo(packageFile, substitutions, true);
+    auto result = dependencies();
+    if (recursive)
+    {
+        for (const auto& d: dependencies())
+        {
+            result.merge(d->dependencies(cacheFolder, substitutions, true));
+        }
+    }
+    return result;
+}
+
 
 bool FhirPackage::install(const fhirtools::FhirStructureRepositoryView& view, const FhirInstallArgs& arguments)
 {
@@ -349,9 +402,16 @@ void FhirPackage::install(const fhirtools::FhirStructureRepositoryView& view,
 }
 
 void FhirPackage::processPackageInfo(const std::filesystem::directory_entry& src,
-                                     const std::map<std::string, FhirPackage::Id>& substitutions)
+                                     const std::map<std::string, FhirPackage::Id>& substitutions, bool quiet)
 {
-    LOG(INFO) << "reading package info: " << src;
+    if (mPackageInfoLoaded)
+    {
+        return;
+    }
+    if (!quiet)
+    {
+        LOG(INFO) << "reading package info: " << src;
+    }
     auto pkgInfo = Json::fromJson(FileHelper::readFileAsString(src));
     static const rapidjson::Pointer dependenciesPtr{"/dependencies"};
     const auto* const dependencies = dependenciesPtr.Get(pkgInfo);
@@ -376,13 +436,17 @@ void FhirPackage::processPackageInfo(const std::filesystem::directory_entry& src
             // don't install fhir core or KBV-Schlüsseltabellen
             continue;
         }
-        Id depId = applySubstitutions(substitutions, Id{std::move(depName), std::move(depVersion)});
+        Id depId = applySubstitutions(substitutions, Id{std::move(depName), std::move(depVersion)}, quiet);
         const auto& depPkg = mDependencies.emplace(get(depId));
-        LOG(INFO) << mId << " depends on: " << (*depPkg.first)->id();
+        if (!quiet)
+        {
+            LOG(INFO) << mId << " depends on: " << (*depPkg.first)->id();
+        }
     }
+    mPackageInfoLoaded = true;
 }
 
-FhirPackage::Id FhirPackage::applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id)
+FhirPackage::Id FhirPackage::applySubstitutions(const std::map<std::string, FhirPackage::Id>& substitutions, const Id& id, bool quiet)
 {
     auto subst = substitutions.find(to_string(id));
     if (subst == substitutions.end())
@@ -391,7 +455,10 @@ FhirPackage::Id FhirPackage::applySubstitutions(const std::map<std::string, Fhir
     }
     if (subst != substitutions.end())
     {
-        LOG(INFO) << mId << ": substituting dependency " << id << " with " << subst->second;
+        if (!quiet)
+        {
+            LOG(INFO) << mId << ": substituting dependency " << id << " with " << subst->second;
+        }
         return subst->second;
     }
     return id;

@@ -39,16 +39,10 @@ Kvnr Patient::kvnr() const
     ModelExpect(array.Size() < 2, "identifier array has cardinality 0..1");
     for (auto item = array.Begin(), end = array.End(); item != end; ++item)
     {
-        const auto* typePointerValue = typePointer.Get(*item);
-        ModelExpect(typePointerValue && typePointerValue->IsString(),
-                    "missing identifier/system in identifier array entry");
-        const auto kvnrTypeString = NumberAsStringParserDocument::getStringValueFromValue(typePointerValue);
-        // for gkv we have the old and the new naming system, so compare with the pkv value only
-        const auto kvnrType = kvnrTypeString == resource::naming_system::pkvKvid10 ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
         const auto* kvnrPointerValue = kvnrPointer.Get(*item);
         ModelExpect(kvnrPointerValue && kvnrPointerValue->IsString(),
                     "missing identifier/value in identifier array entry");
-        return Kvnr{NumberAsStringParserDocument::getStringValueFromValue(kvnrPointerValue), kvnrType};
+        return Kvnr{NumberAsStringParserDocument::getStringValueFromValue(kvnrPointerValue)};
     }
     ModelFail("KVNR not found in identifier array.");
 }

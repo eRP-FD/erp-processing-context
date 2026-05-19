@@ -50,6 +50,7 @@ Checks: >-
   -readability-identifier-length,
   -modernize-use-nodiscard,
   -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
   -portability-avoid-pragma-once
 HeaderFilterRegex: '(src|test)/.*'
 CheckOptions:

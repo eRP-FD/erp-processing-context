@@ -12,6 +12,7 @@
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
 #include "erp/pc/SeedTimer.hxx"
+#include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/registration/RegistrationManager.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
@@ -20,6 +21,7 @@
 #include "shared/enrolment/EnrolmentServer.hxx"
 #include "shared/hsm/VsdmKeyBlobDatabase.hxx"
 #include "shared/hsm/VsdmKeyCache.hxx"
+#include "shared/network/client/CrlDownloadCache.hxx"
 #include "shared/server/BaseServiceContext.hxx"
 #include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
@@ -44,6 +46,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     : BaseServiceContext(factories)
     , idp()
     , mDatabaseFactory(factories.databaseFactory)
+    , mReadOnlyDatabaseFactory{factories.readOnlyDatabaseFactory}
     , mRedisClient(factories.redisClientFactory(
           std::chrono::milliseconds(configuration.getIntValue(ConfigurationKey::REDIS_DOS_SOCKET_TIMEOUT))))
     , mDosHandler(createRateLimiter(mRedisClient))
@@ -64,13 +67,28 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
             std::logic_error);
 
     using enum ApplicationHealth::Service;
-    applicationHealth().enableChecks({Bna, Hsm, Idp, Postgres, PrngSeed, Redis, TeeToken, Tsl, CFdSigErp});
+    applicationHealth().enableChecks(
+        {Bna, Hsm, Idp, Postgres, PostgresRO, PrngSeed, Redis, TeeToken, Tsl, CFdSigErp, PoPPService});
 
     RequestHandlerManager teeHandlers;
     ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
     mTeeServer =
         factories.teeServerFactory(HttpsServer::defaultHost, configuration.serverPort(), std::move(teeHandlers), *this,
                                    false, configuration.getSafeStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE));
+
+    {
+        auto requestSender = std::make_shared<UrlRequestSender>(
+            TlsCertificateVerifier::withCustomRootCertificates(""),
+            std::chrono::seconds{configuration.getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+            std::chrono::milliseconds{
+                configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
+        requestSender->setFollowRedirects(true);
+        requestSender->setProxies(configuration.proxyParameters(ProxyMode::HTTP));
+        mCrlProvider = std::make_shared<CrlDownloadCache>(std::move(requestSender));
+    }
+
+    mPoPPService =
+        factories.poppServiceFactory(&mTeeServer->getThreadPool().ioContext(), getTslManager(), crlProvider());
 
     RequestHandlerManager adminHandlers;
     AdminServer::addEndpoints(adminHandlers, getRuntimeConfiguration());
@@ -119,6 +137,15 @@ std::unique_ptr<Database> PcServiceContext::databaseFactory()
     return mDatabaseFactory(*mHsmPool, mKeyDerivation);
 }
 
+std::unique_ptr<ReadOnlyDatabase> PcServiceContext::readOnlyDatabaseFactory()
+{
+    if (mReadOnlyDatabaseFactory)
+    {
+        return mReadOnlyDatabaseFactory(*mHsmPool, mKeyDerivation);
+    }
+    return databaseFactory();
+}
+
 const RateLimiter& PcServiceContext::getDosHandler()
 {
     return *mDosHandler;
@@ -160,6 +187,10 @@ const SeedTimer* PcServiceContext::getPrngSeeder() const
     return mPrngSeeder.get();
 }
 
+const IPoPPCertificateVerifierService& PcServiceContext::getPoPPService() const
+{
+    return *mPoPPService;
+}
 
 std::shared_ptr<RegistrationInterface> PcServiceContext::registrationInterface() const
 {

@@ -38,6 +38,8 @@ public:
 
     void logDependencyTree(size_t indent = 0) const;
 
+    std::list<std::string> referencedGroups() const override;
+
 private:
     struct ResourceInfo {
         FhirVersion version;
@@ -206,6 +208,17 @@ void fhirtools::FhirResourceGroupConfiguration::Group::logDependencyTree(size_t 
             static_pointer_cast<const FhirResourceGroupConfiguration::Group>(g)->logDependencyTree(indent + 4);
         }
     }
+}
+
+std::list<std::string> fhirtools::FhirResourceGroupConfiguration::Group::referencedGroups() const
+{
+    static constexpr auto getId = [](const auto& g) {
+        return std::string{g->id()};
+    };
+    std::list<std::string> result;
+    std::ranges::transform(mIncludes, std::back_inserter(result), getId);
+    std::ranges::transform(mExtends, std::back_inserter(result), getId);
+    return result;
 }
 
 //NOLINTNEXTLINE(misc-no-recursion)

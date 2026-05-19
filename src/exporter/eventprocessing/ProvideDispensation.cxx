@@ -18,9 +18,10 @@ namespace eventprocessing
 {
 
 Outcome ProvideDispensation::process(gsl::not_null<IEpaMedicationClient*> client,
-                                     const model::ProvideDispensationTaskEvent& erpEvent)
+                                     const model::ProvideDispensationTaskEvent& erpEvent,
+                                     BDEMessage& bdeMessage)
 {
-    return ProvideDispensation{std::move(client)}.doProcess(erpEvent);
+    return ProvideDispensation{std::move(client)}.doProcess(erpEvent, bdeMessage);
 }
 
 ProvideDispensation::ProvideDispensation(gsl::not_null<IEpaMedicationClient*> medicationClient)
@@ -28,7 +29,7 @@ ProvideDispensation::ProvideDispensation(gsl::not_null<IEpaMedicationClient*> me
 {
 }
 
-Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent& taskEvent)
+Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent& taskEvent, BDEMessage& bdeMessage)
 {
     const auto& medicationDispenseBundle = taskEvent.getMedicationDispenseBundle();
     const auto& telematikIdFromJwt = taskEvent.getJwtPharmacyId();
@@ -54,7 +55,7 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
                   telematikIdFromJwt, organizationNameFromJwt, organizationProfessionOidFromJwt);
 
     auto response = mMedicationClient->sendProvideDispensation(taskEvent.getXRequestId(), taskEvent.getKvnr(),
-                                                               providePrescriptionErpOp.serializeToJsonString());
+                                                               providePrescriptionErpOp.serializeToJsonString(), bdeMessage);
 
     Outcome outcome = fromHttpStatus(response.httpStatus);
 
@@ -64,6 +65,7 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
         case Outcome::SuccessAuditFail: {
             const model::EPAOpRxDispensationERPOutputParameters responseParameters(std::move(response.body));
             const auto issue = responseParameters.getOperationOutcomeIssue();
+            bdeMessage.update(BDEMessage::Data{.error = responseParameters.getOperationOutcomeDiagnostics()});
             switch (issue.detailsCode)
             {
                 using enum model::EPAOperationOutcome::EPAOperationOutcomeCS;
@@ -115,6 +117,10 @@ Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent
         case Outcome::Retry:
         case Outcome::Conflict:
         case Outcome::ConsentRevoked:
+            if (auto diag = EventProcessingBase::getFailureDiagnostics(response.body))
+            {
+                bdeMessage.update(BDEMessage::Data{.error = diag});
+            }
             // no audit event
             logFailure(response.httpStatus, std::move(response.body));
             break;

@@ -143,6 +143,7 @@ namespace profession_oid
     constexpr static std::string_view oid_erp_vau = "1.2.276.0.76.4.258";
     constexpr static std::string_view oid_erezept = "1.2.276.0.76.4.259";
     constexpr static std::string_view oid_idpd = "1.2.276.0.76.4.260";
+    constexpr static std::string_view oid_popp_token = "1.2.276.0.76.4.320";
 
 
 /// @brief convert the profession OID into the Inner-Request-Role representaion (pharmacy, doctor, patient)

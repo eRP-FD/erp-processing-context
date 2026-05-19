@@ -36,6 +36,7 @@ public:
     Timestamp maxWhenHandedOver() const;
     std::optional<model::Timestamp> getValidationReferenceTimestamp() const override;
     MedicationDispenseBundle& addEuResource(const std::string& id, const rapidjson::Value& res);
+    void additionalValidation() const override;
 };
 
 

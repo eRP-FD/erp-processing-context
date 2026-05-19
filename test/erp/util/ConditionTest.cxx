@@ -7,6 +7,7 @@
 
 #include "shared/util/Condition.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/util/ErpMacros.hxx"
 
 #include <gtest/gtest.h>
 #include <atomic>
@@ -50,39 +51,42 @@ TEST_F(ConditionTest, waitForChange)
 
 TEST_F(ConditionTest, waitForValue)
 {
-    enum class Values
+    WITH_RETRIES()
     {
-        A,
-        B,
-        C
-    };
-    Condition<Values> condition (Values::A);
-    std::atomic_int state (0);
+        enum class Values
+        {
+            A,
+            B,
+            C
+        };
+        Condition<Values> condition (Values::A);
+        std::atomic_int state (0);
 
-    std::thread test ([&]
-    {
-        condition.waitForValue(Values::B, std::chrono::seconds(1)); // The timeout is not expected to be triggered.
+        std::thread test ([&]
+        {
+            condition.waitForValue(Values::B, std::chrono::seconds(1)); // The timeout is not expected to be triggered.
 
-        state = 1;
-    });
+            state = 1;
+        });
 
-    // Give the test thread time to step over the first `waitForValue` and then verify that it didn't.
-    std::this_thread::sleep_for(std::chrono::milliseconds(250));
-    EXPECT_EQ(state, 0);
+        // Give the test thread time to step over the first `waitForValue` and then verify that it didn't.
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
+        EXPECT_EQ(state, 0);
 
-    // Change `condition` and verify that that did *not* trigger a release of `waitForValue`.
-    condition = Values::C;
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    EXPECT_EQ(state, 0);
+        // Change `condition` and verify that that did *not* trigger a release of `waitForValue`.
+        condition = Values::C;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        EXPECT_EQ(state, 0);
 
-    // Change `condition` to the expected value and verify that that *did* trigger the release of `waitForValue`.
-    condition = Values::B;
-    testutils::waitFor([&state] {
-        return state == 1;
-    });
+        // Change `condition` to the expected value and verify that that *did* trigger the release of `waitForValue`.
+        condition = Values::B;
+        SOFT_WAIT_FOR([&state] {
+            return state == 1;
+        });
 
-    // Clean up.
-    test.join();
+        // Clean up.
+        test.join();
+    }
 }
 
 

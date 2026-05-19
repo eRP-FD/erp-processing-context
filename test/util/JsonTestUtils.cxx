@@ -88,14 +88,8 @@ const std::string_view& CommunicationJsonStringBuilder::actorRoleToResourceId(Ac
     {
         case ActorRole::Insurant:
         case ActorRole::Representative:
-            return naming_system::gkvKvid10;
         case ActorRole::PkvInsurant:
-            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >=
-                ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
-            {
-                return naming_system::gkvKvid10;
-            }
-            return naming_system::pkvKvid10;
+            return naming_system::gkvKvid10;
         case ActorRole::Doctor:
         case ActorRole::Pharmacists:
             return naming_system::telematicID;
@@ -205,56 +199,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
                 "contentString": %1%
               }
             ])--";
-    static constexpr const char* fmtSpecPayloadInfoReqContentString = R"--(
-            "payload": [
-              {
-                "extension":  [
-                    {
-                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_InsuranceProvider",
-                        "valueIdentifier": {
-                            "system": "http://fhir.de/sid/arge-ik/iknr",
-                            "value": "109500969"
-                        }
-                    },
-                    {
-                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SubstitutionAllowedType",
-                        "valueBoolean": false
-                    },
-                    {
-                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PrescriptionType",
-                        "valueCoding": {
-                            "system": "https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType",
-                            "code": "160"
-                        }
-                    },
-                    {
-                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_PackageQuantity",
-                        "valueQuantity": {
-                            "system": "http://unitsofmeasure.org",
-                            "value": 1
-                        }
-                    },
-                    {
-                        "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType",
-                        "extension":  [
-                            {
-                                "url": "onPremise",
-                                "valueBoolean": true
-                            },
-                            {
-                                "url": "shipment",
-                                "valueBoolean": false
-                            },
-                            {
-                                "url": "delivery",
-                                "valueBoolean": true
-                            }
-                        ]
-                    }
-                ],
-                "contentString": %1%
-              }
-            ])--";
+
     std::string body = R"({"resourceType": "Communication",)";
 
     const bool isChargeItemRelated =
@@ -266,8 +211,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
     const ResourceTemplates::Versions::GEM_ERP gemVersion{
         valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current())};
 
-    if (mMessageType == model::Communication::MessageType::DispReq &&
-        gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
+    if (mMessageType == model::Communication::MessageType::DispReq)
     {
         Expect3(mPrescriptionId && mPrescriptionId->size() >= 3,
                 "Cannot create Communication message: missing prescription id", std::logic_error);
@@ -300,11 +244,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
         body += "," + boost::str(boost::format(fmtSpecReceived) % mTimeReceived.value());
     if (mPayload.has_value())
     {
-        auto payload = std::quoted(mPayload.value());
-        if (mMessageType == Communication::MessageType::InfoReq)
-            body += "," + boost::str(boost::format(fmtSpecPayloadInfoReqContentString) % payload);
-        else
-            body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % payload);
+        body += "," + boost::str(boost::format(fmtSpecPayloadContentString) % std::quoted(*mPayload));
     }
     if (mAbout)
     {
@@ -320,14 +260,7 @@ std::string CommunicationJsonStringBuilder::createJsonString() const
             {
                 id = id.substr(1);
             }
-            if (gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4)
-            {
-                medicationOptions.version = gemVersion;
-            }
-            else
-            {
-                medicationOptions.version = ResourceTemplates::Versions::KBV_ERP_current(model::Timestamp::now());
-            }
+            medicationOptions.version = gemVersion;
             medicationOptions.id = id;
         }
         body += R"(, "contained": [)" +
@@ -351,31 +284,15 @@ std::string CommunicationJsonStringBuilder::senderIdentifierType() const
 {
     switch (mMessageType)
     {
-        case Communication::MessageType::InfoReq:
         case Communication::MessageType::DispReq:
         case Communication::MessageType::Representative:
-            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current()) >=
-                ResourceTemplates::Versions::GEM_ERP_1_4)
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
-            }
-            else
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "GKV"}]},)";
-            }
+            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
         case Communication::MessageType::Reply:
         case Communication::MessageType::ChargChangeReply:
         case Communication::MessageType::DiGA:
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::ChargChangeReq:
-            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
-            }
-            else
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
-            }
+            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
     }
     return "";
 }
@@ -384,31 +301,14 @@ std::string CommunicationJsonStringBuilder::receipientIdentifierType() const
 {
     switch (mMessageType)
     {
-        case Communication::MessageType::InfoReq:
         case Communication::MessageType::DispReq:
         case Communication::MessageType::ChargChangeReq:
             return R"("type":{"coding": [{"code": "PRN", "system": "http://terminology.hl7.org/CodeSystem/v2-0203"}]},)";
         case Communication::MessageType::Reply:
         case Communication::MessageType::Representative:
         case Communication::MessageType::DiGA:
-            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERP_current()) >=
-                ResourceTemplates::Versions::GEM_ERP_1_4)
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
-            }
-            else
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "GKV"}]},)";
-            }
         case Communication::MessageType::ChargChangeReply:
-            if (valueOr(mProfileVersion, ResourceTemplates::Versions::GEM_ERPCHRG_current()) >= ResourceTemplates::Versions::GEM_ERPCHRG_1_1)
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
-            }
-            else
-            {
-                return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "PKV"}]},)";
-            }
+            return R"("type":{"coding": [{"system": "http://fhir.de/CodeSystem/identifier-type-de-basis", "code": "KVZ10"}]},)";
     }
     return "";
 }

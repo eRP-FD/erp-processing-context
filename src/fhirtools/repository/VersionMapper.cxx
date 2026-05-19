@@ -6,12 +6,11 @@
  */
 
 #include "fhirtools/repository/VersionMapper.hxx"
-
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
 
-#include <ranges>
 #include <rapidjson/document.h>
+#include <ranges>
 #include <regex>
 
 namespace fhirtools
@@ -94,8 +93,8 @@ VersionMapper::VersionMapper(Config config)
 VersionMapper::~VersionMapper() = default;
 VersionMapper::VersionMapper(const VersionMapper&) = default;
 VersionMapper::VersionMapper(VersionMapper&&) noexcept = default;
-VersionMapper& VersionMapper::operator = (const VersionMapper&) = default;
-VersionMapper& VersionMapper::operator = (VersionMapper&&) noexcept = default;
+VersionMapper& VersionMapper::operator=(const VersionMapper&) = default;
+VersionMapper& VersionMapper::operator=(VersionMapper&&) noexcept = default;
 
 std::list<VersionMapper::Mapping> VersionMapper::toMapping(std::list<Config::Mapping> mapping)
 {
@@ -125,7 +124,8 @@ FhirVersion VersionMapper::realVersion(std::string_view url, FhirVersion version
 {
     const auto& versionStr = to_string(version);
     auto map = std::ranges::find_if(mMaps, [&](const Mapping& mapping) -> bool {
-        return std::regex_match(url.begin(), url.end(), mapping.urlRegex) && std::regex_match(versionStr, mapping.versionRegex);
+        return std::regex_match(url.begin(), url.end(), mapping.urlRegex) &&
+               std::regex_match(versionStr, mapping.versionRegex);
     });
     if (map == mMaps.end())
     {
@@ -134,7 +134,7 @@ FhirVersion VersionMapper::realVersion(std::string_view url, FhirVersion version
     return map->mapping.realVersion;
 }
 
-FhirVersion VersionMapper::renderVersion(const std::string& url, const FhirVersion& version) const
+FhirVersion VersionMapper::renderVersion(std::string_view url, const FhirVersion& version) const
 {
     auto map = std::ranges::find_if(mMaps, [&](const Mapping& mapping) -> bool {
         return std::regex_match(url.begin(), url.end(), mapping.urlRegex) && version == mapping.mapping.realVersion;
@@ -144,7 +144,6 @@ FhirVersion VersionMapper::renderVersion(const std::string& url, const FhirVersi
         return version;
     }
     return map->mapping.renderVersion;
-
 }
 
 }// namespace fhirtools

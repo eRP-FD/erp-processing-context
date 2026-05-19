@@ -15,9 +15,10 @@
 namespace eventprocessing
 {
 
-Outcome CancelPrescription::process(gsl::not_null<IEpaMedicationClient*> client, const model::CancelPrescriptionTaskEvent& erpEvent)
+    Outcome CancelPrescription::process(gsl::not_null<IEpaMedicationClient*> client, const model::CancelPrescriptionTaskEvent& erpEvent,
+                                        BDEMessage& bdeMessage)
 {
-    return CancelPrescription{std::move(client)}.doProcess(erpEvent);
+    return CancelPrescription{std::move(client)}.doProcess(erpEvent,  bdeMessage);
 }
 
 CancelPrescription::CancelPrescription(gsl::not_null<IEpaMedicationClient*> medicationClient)
@@ -25,17 +26,18 @@ CancelPrescription::CancelPrescription(gsl::not_null<IEpaMedicationClient*> medi
 {
 }
 
-Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& erpEvent)
+Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& erpEvent, BDEMessage& bdeMessage)
 {
     const model::EPAOpCancelPrescriptionERPInputParameters params{erpEvent.getPrescriptionId(), erpEvent.getMedicationRequestAuthoredOn()};
     auto response = mMedicationClient->sendCancelPrescription(erpEvent.getXRequestId(), erpEvent.getKvnr(),
-                                                              params.serializeToJsonString());
+                                                              params.serializeToJsonString(), bdeMessage);
     Outcome outcome = fromHttpStatus(response.httpStatus);
     switch (outcome)
     {
         case Outcome::Success:
         case Outcome::SuccessAuditFail: {
             const model::EPAOpRxPrescriptionERPOutputParameters responseParameters(std::move(response.body));
+            bdeMessage.update(BDEMessage::Data{.error = responseParameters.getOperationOutcomeDiagnostics()});
             const auto issue = responseParameters.getOperationOutcomeIssue();
             switch (issue.detailsCode)
             {
@@ -86,6 +88,10 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
         case Outcome::Retry:
         case Outcome::Conflict:
         case Outcome::ConsentRevoked:
+            if (auto diag = EventProcessingBase::getFailureDiagnostics(response.body))
+            {
+                bdeMessage.update(BDEMessage::Data{.error = diag});
+            }
             logFailure(response.httpStatus, std::move(response.body));
             break;
     }

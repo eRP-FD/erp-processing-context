@@ -15,8 +15,10 @@ enum class SchemaType
     BNA_tsl,
     Gematik_tsl,
     Pruefungsnachweis,
-    CommunicationDispReqPayload,
-    CommunicationReplyPayload,
+    CommunicationDispReqPayloadV1,
+    CommunicationReplyPayloadV1,
+    CommunicationDispReqPayloadV3,
+    CommunicationReplyPayloadV3,
 };
 
 #endif//ERP_PROCESSING_CONTEXT_SCHEMATYPE_HXX

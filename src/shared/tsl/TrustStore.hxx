@@ -195,8 +195,10 @@ private:
     FRIEND_TEST(TslServiceTest, verifyCertificatePolicyNoRestrictionsSuccessful);
     FRIEND_TEST(TslServiceTest, verifyCertificatePolicySuccessful);
     FRIEND_TEST(TslServiceTest, doNotCacheProvidedOcspResponse);
+    FRIEND_TEST(TslServiceTest, poppCertificate);
 
     friend class TslTestHelper;
+    friend class PoPPTest;
 
 #endif
 

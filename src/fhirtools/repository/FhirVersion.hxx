@@ -8,6 +8,7 @@
 
 #include <iosfwd>
 #include <optional>
+#include <fmt/format.h>
 
 namespace fhirtools
 {
@@ -63,6 +64,17 @@ struct std::hash<fhirtools::FhirVersion> {
     {
         return h(ver.mVersion);
     }
+};
+
+template <>
+struct fmt::formatter<fhirtools::FhirVersion>
+{
+    //NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    constexpr format_parse_context::iterator parse(format_parse_context& ctx)
+    {
+        return ctx.begin();
+    }
+    format_context::iterator format(const fhirtools::FhirVersion& ver, format_context& ctx) const;
 };
 
 

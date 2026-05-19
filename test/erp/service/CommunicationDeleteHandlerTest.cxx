@@ -50,12 +50,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     // Add Communication messages to database.
     //----------------------------------------
 
-    Communication infoReq = addCommunicationToDatabase({
-        task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, kvnrTask}, {ActorRole::Pharmacists, mPharmacy.id()},
-        "", InfoReqMessage, model::Timestamp::now() });
-    ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
-
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask},
@@ -80,35 +74,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_A_20258)//NOLINT(readability-funct
     auto client = createClient();
 
     auto database = createDatabase();
-
-    // Delete InfoReq message
-    //-----------------------
-    {
-        A_20260.test("Anwendungsfall Nachricht durch Versicherten löschen");
-
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
-        // Create the inner request
-        ClientRequest request(createDeleteHeader("/Communication/" + infoReq.id().value().toString(), jwtInsurant), "");
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NoContent);
-        ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::Warning));
-
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        // Verify that the communication no longer exist in the database.
-        ASSERT_EQ(countCurr, countPrev - 1);
-    }
 
     // Delete Reply message
     //----------------------
@@ -213,12 +178,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     // Add Communication messages to database.
     //----------------------------------------
 
-    Communication infoReq = addCommunicationToDatabase({
-        task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
-        "", InfoReqMessage, model::Timestamp::now() });
-    ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
-
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask.id()},
@@ -243,32 +202,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidId)//NOLINT(readability-fun
     auto client = createClient();
 
     auto database = createDatabase();
-
-    // Delete InfoReq message
-    //-----------------------
-    {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask.id()).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrTask) };
-        // Create the inner request
-        ClientRequest request(createDeleteHeader("/Communication/" + invalidId.toString(), jwtInsurant), "");
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
-
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask.id()).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        // Verify that no communication object has been removed from the database.
-        ASSERT_EQ(countCurr, countPrev);
-    }
 
     // Delete Reply message
     //----------------------
@@ -362,12 +295,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
     // Add Communication messages to database.
     //----------------------------------------
 
-    Communication infoReq = addCommunicationToDatabase({
-        task.prescriptionId(), Communication::MessageType::InfoReq,
-        {ActorRole::Insurant, kvnrTask.id()}, {ActorRole::Pharmacists, mPharmacy.id()},
-        "", InfoReqMessage, model::Timestamp::now() });
-    ASSERT_TRUE(infoReq.id().value().isValidIheUuid());
-
     Communication reply = addCommunicationToDatabase({
         task.prescriptionId(), Communication::MessageType::Reply,
         {ActorRole::Pharmacists, mPharmacy.id()}, {ActorRole::Insurant, kvnrTask.id()},
@@ -393,32 +320,6 @@ TEST_F(CommunicationDeleteHandlerTest, Delete_InvalidSender)//NOLINT(readability
 
     auto database = createDatabase();
 
-    // Delete InfoReq message
-    //-----------------------
-    {
-        uint64_t countPrev = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask.id()).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        // Pharmacy is not allowed to delete InfoReq sent by the insurant.
-        const JWT jwtPharmacy{ mJwtBuilder.makeJwtApotheke(mPharmacy.id()) };
-        // Create the inner request
-        ClientRequest request(createDeleteHeader("/Communication/" + infoReq.id().value().toString(), jwtPharmacy), "");
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request, jwtPharmacy));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
-
-        uint64_t countCurr = database->retrieveCommunicationIds(mPharmacy.id()).size()
-            + database->retrieveCommunicationIds(kvnrTask.id()).size()
-            + database->retrieveCommunicationIds(kvnrRepresentative).size();
-
-        // Verify that no communication object has been removed from the database.
-        ASSERT_EQ(countCurr, countPrev);
-    }
 
     // Delete Reply message
     //----------------------

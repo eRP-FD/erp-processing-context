@@ -111,7 +111,6 @@ TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfil
     const auto supported = Fhir::instance()
                                .structureRepository(model::Timestamp::now())
                                .supportedVersions({
-                                   // std::string{model::resource::structure_definition::communicationInfoReq},
                                    std::string{model::resource::structure_definition::communicationReply},
                                    std::string{model::resource::structure_definition::communicationDiGA},
                                    std::string{model::resource::structure_definition::communicationDispReq},
@@ -134,7 +133,7 @@ TEST_F(CommunicationPostEndpointTest, ERP_13187_POST_Communication_InvalidProfil
 
 TEST_F(CommunicationPostEndpointTest, UnslicedExtensionAllow)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
                                      (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
@@ -157,7 +156,7 @@ TEST_F(CommunicationPostEndpointTest, UnslicedExtensionAllow)
 
 TEST_F(CommunicationPostEndpointTest, UnslicedExtensionReject)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
                                       (model::Timestamp::now()).toGermanDate()};
@@ -223,47 +222,47 @@ public:
         using enum model::Communication::MessageType;
         using enum CommunicationPostEndpointTestParams::Result;
         return {
-        // NOTE: as ERP-27522 is not actually implemented we are testing the original behavior.
-            {accept, "2025-04-16", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
-            {accept, "2025-04-16", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
-            {reject, "2025-04-16", Representative, ResourceTemplates::Versions::GEM_ERP_1_2},
-            {reject, "2025-04-16", DispReq, ResourceTemplates::Versions::GEM_ERP_1_2},
-            {reject, "2025-04-16", Reply, ResourceTemplates::Versions::GEM_ERP_1_2},
-            {reject, "2025-04-16", Representative, ResourceTemplates::Versions::GEM_ERP_1_3},
-            {reject, "2025-04-16", DispReq, ResourceTemplates::Versions::GEM_ERP_1_3},
-            {reject, "2025-04-16", Reply, ResourceTemplates::Versions::GEM_ERP_1_3},
-            {accept, "2025-04-16", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2025-04-16", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2025-04-16", Reply, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {reject, "2025-04-16", DiGA, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2025-10-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
-            {accept, "2025-10-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
-            {accept, "2025-10-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2025-10-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2025-10-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2025-10-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-
-            {accept, "2026-01-12", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
-            {reject, "2026-01-12", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
-            {accept, "2026-01-12", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2026-01-12", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {reject, "2026-01-12", Reply, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2026-01-12", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
-            {accept, "2026-01-12", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
-            {accept, "2026-01-12", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2026-01-12", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2026-01-12", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-            {accept, "2026-01-12", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
-
-            {reject, "2026-04-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_0},
-            {reject, "2026-04-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {reject, "2026-04-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_4},
-            {accept, "2026-04-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
-            {accept, "2026-04-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1},
+            {accept, "2026-04-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2026-04-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
             {accept, "2026-04-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
             {accept, "2026-04-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
             {accept, "2026-04-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
             {accept, "2026-04-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {reject, "2026-04-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {reject, "2026-04-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {reject, "2026-04-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {reject, "2026-04-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+
+            {accept, "2026-07-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2026-07-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2026-07-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-07-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-07-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-07-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-07-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-07-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-07-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-07-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+
+            {accept, "2026-10-01", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2026-10-01", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2026-10-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-10-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {reject, "2026-10-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {reject, "2026-10-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2026-10-01", Representative, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-10-01", DispReq, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-10-01", Reply, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2026-10-01", DiGA, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+
+            {accept, "2027-01-15", ChargChangeReq, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {accept, "2027-01-15", ChargChangeReply, ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0},
+            {reject, "2027-01-15", Representative, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {reject, "2027-01-15", DispReq, ResourceTemplates::Versions::GEM_ERP_1_5_2},
+            {accept, "2027-01-15", Representative, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2027-01-15", DispReq, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2027-01-15", Reply, ResourceTemplates::Versions::GEM_ERP_1_6_2},
+            {accept, "2027-01-15", DiGA, ResourceTemplates::Versions::GEM_ERP_1_6_2},
         };
     }
 
@@ -286,8 +285,6 @@ TEST_P(CommunicationPostEndpointTestP, ProfileValidity)
     switch (GetParam().messageType)
     {
         using enum model::Communication::MessageType;
-        case InfoReq:
-            Fail("InfoReq not supported.");
         case Representative:
             builder.setSender(ActorRole::Insurant, kvnr).setRecipient(ActorRole::Insurant, kvnr2);
             builder.setPrescriptionId(gkvPrescriptionId.toString());

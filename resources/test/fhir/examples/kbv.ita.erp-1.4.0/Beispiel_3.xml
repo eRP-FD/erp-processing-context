@@ -7,7 +7,7 @@
   </meta>
   <identifier>
     <system value="https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId" />
-    <value value="160.100.000.000.007.22" />
+    <value value="160.100.000.000.007.21" />
   </identifier>
   <type value="document" />
   <timestamp value="2024-05-20T08:30:00Z" />
@@ -114,7 +114,7 @@
         </extension>
         <extension url="http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta">
           <extension url="algorithmVersion">
-            <valueString value="1.0.0" />
+            <valueString value="1.0.1" />
           </extension>
           <extension url="language">
             <valueCode value="de-DE" />

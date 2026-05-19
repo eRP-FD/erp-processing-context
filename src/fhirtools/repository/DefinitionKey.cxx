@@ -28,10 +28,17 @@ std::ostream& fhirtools::operator<<(std::ostream& out, const DefinitionKey& defi
 
 std::string fhirtools::to_string(const DefinitionKey& definitionKey)
 {
-    std::string result{definitionKey.url};
-    if (definitionKey.version)
+    return fmt::format("{}", definitionKey);
+}
+
+//NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+fmt::format_context::iterator fmt::formatter<fhirtools::DefinitionKey>::format(const fhirtools::DefinitionKey& key,
+                                                                               format_context& ctx) const
+{
+    fmt::format_to(ctx.out(), "{}", key.url);
+    if (key.version)
     {
-        result.append(1, '|').append(to_string(*definitionKey.version));
+        fmt::format_to(ctx.out(), "|{}", *key.version);
     }
-    return result;
+    return ctx.out();
 }

@@ -94,13 +94,13 @@ TEST_F(Base64Test, encodeDecodeRoundTrip)
 TEST_F(Base64Test, decodeErrors)//NOLINT(readability-function-cognitive-complexity)
 {
     // Invalid characters.
-    EXPECT_THROW(Base64::decode("ABC`"), std::invalid_argument);
-    EXPECT_THROW(Base64::decode(std::string(4, '\0')), std::invalid_argument);
+    EXPECT_THROW(Base64::decode("ABC`"), model::ModelException);
+    EXPECT_THROW(Base64::decode(std::string(4, '\0')), model::ModelException);
 
     // Invalid padding.
-    EXPECT_THROW(Base64::decode("====`"), std::invalid_argument);
-    EXPECT_THROW(Base64::decode("Zm9v====`"), std::invalid_argument);
-    EXPECT_THROW(Base64::decode("=m9v"), std::invalid_argument);
+    EXPECT_THROW(Base64::decode("====`"), model::ModelException);
+    EXPECT_THROW(Base64::decode("Zm9v====`"), model::ModelException);
+    EXPECT_THROW(Base64::decode("=m9v"), model::ModelException);
 }
 
 
@@ -161,4 +161,13 @@ TEST_F(Base64Test, cleanupForDecoding)
 TEST_F(Base64Test, toBase64Url)
 {
     ASSERT_EQ(Base64::toBase64Url("bXkgdmVy+/BzcGVjaWFsIHRlc3Q="), "bXkgdmVy-_BzcGVjaWFsIHRlc3Q");
+}
+
+TEST_F(Base64Test, decodePaddingBytes)
+{
+    EXPECT_THROW(Base64::decode(std::string_view{"TQ===="}), model::ModelException);
+    EXPECT_THROW(Base64::decode(std::string_view{"TQ==="}), model::ModelException);
+    EXPECT_EQ(util::bufferToString(Base64::decode(std::string_view{"TQ=="})), "M");
+    EXPECT_EQ(util::bufferToString(Base64::decode(std::string_view{"TQ="})), "M");
+    EXPECT_EQ(util::bufferToString(Base64::decode(std::string_view{"TQ"})), "M");
 }

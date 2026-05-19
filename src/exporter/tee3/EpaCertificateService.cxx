@@ -11,6 +11,7 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/HeaderLog.hxx"
+#include "shared/util/SharedRequirements.hxx"
 #include "shared/util/Uuid.hxx"
 #include "tee3/library/crypto/tee3/Tee3Protocol.hxx"
 #include "tee3/library/util/cbor/CborDeserializer.hxx"
@@ -96,8 +97,8 @@ boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInt
     Expect(! ec, "Connection failure while obtaining certificate");
     CoHttpsClient::Request req{boost::beast::http::verb::get,
                                "/CertData." + certId.hash + '-' + std::to_string(certId.version), 11};
-    req.set(Header::Tee3::XUserAgent,
-            config.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT));
+    A_22470_06.start("set x-useragent for outgoing requests");
+    req.set(Header::XUserAgent, Header::xUserAgentHeader());
     auto resp = co_await client.send(Uuid{}.toString(), req);
     Expect(! resp.has_error(), "certificate download failed: cert: " + certId.hash +
                                    " version: " + std::to_string(certId.version) + ": " + resp.error().message());

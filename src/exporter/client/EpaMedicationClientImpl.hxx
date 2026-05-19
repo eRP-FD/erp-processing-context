@@ -40,24 +40,22 @@ public:
                             std::shared_ptr<Tee3ClientPool> teeClientPool);
 
     Response sendProvidePrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                     const std::string& payload) override;
+                                     const std::string& payload, BDEMessage& bdeMessage) override;
     Response sendProvideDispensation(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                     const std::string& payload) override;
+                                     const std::string& payload, BDEMessage& bdeMessage) override;
     Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
-                                    const std::string& payload) override;
-    void addLogData(const BDEMessage::Data& bdeData) override;
+                                    const std::string& payload, BDEMessage& bdeMessage) override;
 
     bool testConnection();
 
 private:
-    Response sendRequestBlocking(const std::string& xRequestId, Tee3Client::Request req);
-    boost::asio::awaitable<Tee3Client::Response> sendRequest(std::string xRequestId, Tee3Client::Request req);
+    Response sendRequestBlocking(const std::string& xRequestId, Tee3Client::Request req, BDEMessage& bdeMessage);
+    boost::asio::awaitable<Tee3Client::Response> sendRequest(std::string xRequestId, Tee3Client::Request req, BDEMessage* bdeMessage);
     Tee3Client::Request request(boost::beast::http::verb verb, std::string_view target, const model::Kvnr& kvnr);
 
     boost::asio::io_context& mIoContext;
     std::string mHostname;
     std::shared_ptr<Tee3ClientPool> mTeeClientPool;
-    BDEMessage::Data mBdeData;
     Tee3ClientPool::Tee3ClientPtr mStickyClient;
     bool mUseStickyClient;
 };

@@ -11,6 +11,7 @@
 #include "exporter/model/EpaOpRxPrescriptionErpOutputParameters.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/model/Coding.hxx"
+#include "shared/model/OperationOutcome.hxx"
 #include "shared/model/Parameters.hxx"
 
 #include <utility>
@@ -19,9 +20,10 @@ namespace eventprocessing
 {
 
 Outcome eventprocessing::ProvidePrescription::process(gsl::not_null<IEpaMedicationClient*> client,
-                                                      const model::ProvidePrescriptionTaskEvent& erpEvent)
+                                                      const model::ProvidePrescriptionTaskEvent& erpEvent,
+                                                      BDEMessage& bdeMessage)
 {
-    return ProvidePrescription{std::move(client)}.doProcess(erpEvent);
+    return ProvidePrescription{std::move(client)}.doProcess(erpEvent, bdeMessage);
 }
 
 ProvidePrescription::ProvidePrescription(gsl::not_null<IEpaMedicationClient*> medicationClient)
@@ -29,13 +31,14 @@ ProvidePrescription::ProvidePrescription(gsl::not_null<IEpaMedicationClient*> me
 {
 }
 
-Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent& taskEvent) const
+Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent& taskEvent, BDEMessage& bdeMessage) const
 {
     const auto& kbvBundle = taskEvent.getKbvBundle();
     if (! taskEvent.getQesDoctorId().has_value())
     {
         return Outcome::DeadLetter;
     }
+
     const auto& telematikIdFromQes = taskEvent.getQesDoctorId();
     const auto& telematikIdFromJwt = taskEvent.getJwtDoctorId();
     const auto& organizationNameFromJwt = taskEvent.getJwtDoctorOrganizationName();
@@ -44,7 +47,7 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
         kbvBundle, *telematikIdFromQes, telematikIdFromJwt, organizationNameFromJwt, organizationProfessionOidFromJwt);
 
     auto response = mMedicationClient->sendProvidePrescription(taskEvent.getXRequestId(), taskEvent.getKvnr(),
-                                                               providePrescriptionErpOp.serializeToJsonString());
+                                                               providePrescriptionErpOp.serializeToJsonString(), bdeMessage);
 
     Outcome outcome = fromHttpStatus(response.httpStatus);
 
@@ -54,6 +57,7 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
         case Outcome::SuccessAuditFail: {
             const model::EPAOpRxPrescriptionERPOutputParameters responseParameters(std::move(response.body));
             const auto issue = responseParameters.getOperationOutcomeIssue();
+            bdeMessage.update(BDEMessage::Data{.error = responseParameters.getOperationOutcomeDiagnostics()});
             switch (issue.detailsCode)
             {
                 using enum model::EPAOperationOutcome::EPAOperationOutcomeCS;
@@ -104,6 +108,10 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
         case Outcome::Retry:
         case Outcome::Conflict:
         case Outcome::ConsentRevoked:
+            if (auto diag = EventProcessingBase::getFailureDiagnostics(response.body))
+            {
+                bdeMessage.update(BDEMessage::Data{.error = diag});
+            }
             // no audit event
             logFailure(response.httpStatus, std::move(response.body));
             break;

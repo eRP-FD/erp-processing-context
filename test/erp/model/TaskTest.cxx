@@ -207,7 +207,7 @@ TEST_F(TaskTest, SetKvnr)//NOLINT(readability-function-cognitive-complexity)
     ASSERT_EQ(rapidjson::Pointer(p_kvnr).Get(task.jsonDocument()), nullptr);
     ASSERT_FALSE(task.kvnr().has_value());
 
-    task.setKvnr(model::Kvnr{"X123456788"s, model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{"X123456788"s});
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnr)), "X123456788");
     ASSERT_EQ(task.jsonDocument().getStringValueFromPointer(rapidjson::Pointer(p_kvnrSystem)),
               model::resource::naming_system::gkvKvid10);

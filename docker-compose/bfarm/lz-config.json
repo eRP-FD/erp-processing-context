@@ -24,6 +24,12 @@
     },
     {
       "telematikId": "3-01.2.2023001.16.101.*",
+      "code": 200,
+      "template": "fdv_search_3services.json",
+      "delay": 50
+    },
+    {
+      "telematikId": "3-02.2.2023001.16.101.*",
       "code": 404,
       "template": "fdv_search_not_found.json",
       "delay": 50
@@ -45,8 +51,14 @@
   ],
   "bfarmCreateTRezept": [
     {
-      "kvnr": ".*",
-      "code": 200,
+      "kvnr": "X000000012",
+      "code": 201,
+      "payload": "",
+      "delay": 50
+    },
+    {
+      "kvnr": "X000000013",
+      "code": 208,
       "payload": "",
       "delay": 50
     }

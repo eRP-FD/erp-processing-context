@@ -98,7 +98,8 @@ public:
                                       BlobId medicationDispenseBlobId, const db_model::HashedTelematikId& telematikId,
                                       const model::Timestamp& whenHandedOver,
                                       const std::optional<model::Timestamp>& whenPrepared,
-                                      const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus = std::nullopt) const;
+                                      const db_model::Blob& medicationDispenseSalt, const std::optional<model::Task::Status>& taskStatus,
+                                      const db_model::EncryptedBlob& owner) const;
 
     void updateTaskMedicationDispenseReceipt(
         pqxx::transaction_base& transaction, const model::PrescriptionId& taskId, const model::Task::Status& taskStatus,
@@ -107,7 +108,7 @@ public:
         const model::Timestamp& whenHandedOver, const std::optional<model::Timestamp>& whenPrepared,
         const db_model::EncryptedBlob& receipt, const model::Timestamp& lastMedicationDispense,
         const db_model::Blob& medicationDispenseSalt, const db_model::EncryptedBlob& pharmacyIdentity,
-        const model::Timestamp& lastStatusUpdate) const;
+        const model::Timestamp& lastStatusUpdate, const db_model::EncryptedBlob& owner) const;
 
     void updateTaskDeleteMedicationDispense(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId,
                                             const model::Timestamp& lastModified) const;
@@ -136,10 +137,6 @@ public:
 
     [[nodiscard]] std::optional<db_model::Task>
     retrieveTaskAndPrescriptionAndReceipt(pqxx::transaction_base& transaction, const model::PrescriptionId& taskId);
-
-    [[nodiscard]] std::vector<db_model::Task> retrieveAllTasksWithAccessCode(::pqxx::transaction_base& transaction,
-                                                                             const db_model::HashedKvnr& kvnrHashed,
-                                                                             const std::optional<UrlArguments>& search);
 
     [[nodiscard]] static std::vector<db_model::Task> tasksFromQueryResult(const pqxx::result& result,
                                                                           std::optional<model::PrescriptionType> prescriptionType);
@@ -171,7 +168,6 @@ private:
         QueryDefinition retrieveTaskByIdPlusPrescription;
         QueryDefinition retrieveTaskWithSecretByIdPlusPrescription;
         QueryDefinition retrieveTaskByIdPlusPrescriptionPlusReceipt;
-        QueryDefinition retrieveAllTasksByKvnrWithAccessCode;
         QueryDefinition getTaskKeyData;
     };
     Queries mQueries;

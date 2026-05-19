@@ -35,65 +35,62 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/prettywriter.h>
-#include <regex>
 
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> ConfigurationBase::ERP::requiredProfiles{
     {model::ProfileType::ActivateTaskParameters, {}},
     {model::ProfileType::CreateTaskParameters, {}},
-    {model::ProfileType::GEM_ERP_PR_AuditEvent, {}},
-    {model::ProfileType::GEM_ERP_PR_Binary, {}},
+    {model::ProfileType::GEM_ERP_PR_AuditEvent, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Binary, {.from = "2025-10-01"}},
     {model::ProfileType::fhir, {}},// general FHIR schema
-    {model::ProfileType::GEM_ERP_PR_Communication_DispReq, {}},
-    {model::ProfileType::GEM_ERP_PR_Communication_InfoReq, { .until = "2026-03-31" }},
-    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq, {}},
-    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply, {}},
-    {model::ProfileType::GEM_ERP_PR_Communication_Reply, {}},
-    {model::ProfileType::GEM_ERP_PR_Communication_Representative, {}},
-    {model::ProfileType::GEM_ERP_PR_Composition, {}},
-    {model::ProfileType::GEM_ERP_PR_Device, {}},
-    {model::ProfileType::GEM_ERP_PR_Digest, {}},
-    {model::ProfileType::GEM_ERP_PR_Medication, {.from = "2025-01-15"}},
-    {model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, {.from = "2025-01-15"}},
-    {model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, {.from = "2025-01-15"}},
-    {model::ProfileType::KBV_PR_ERP_Bundle, {}},
-    {model::ProfileType::KBV_PR_ERP_Composition, {}},
-    {model::ProfileType::KBV_PR_ERP_Medication_Compounding, {}},
-    {model::ProfileType::KBV_PR_ERP_Medication_FreeText, {}},
-    {model::ProfileType::KBV_PR_ERP_Medication_Ingredient, {}},
-    {model::ProfileType::KBV_PR_ERP_Medication_PZN, {}},
-    {model::ProfileType::KBV_PR_ERP_PracticeSupply, {}},
-    {model::ProfileType::KBV_PR_ERP_Prescription, {}},
-    {model::ProfileType::KBV_PR_EVDGA_Bundle, {.from = "2025-01-15"}},
-    {model::ProfileType::KBV_PR_EVDGA_HealthAppRequest, { .from = "2025-01-15"}},
-    {model::ProfileType::KBV_PR_FOR_Coverage, {}},
-    {model::ProfileType::KBV_PR_FOR_Organization, {}},
-    {model::ProfileType::KBV_PR_FOR_Patient, {}},
-    {model::ProfileType::KBV_PR_FOR_Practitioner, {}},
-    {model::ProfileType::KBV_PR_FOR_PractitionerRole, {}},
-    {model::ProfileType::GEM_ERP_PR_MedicationDispense, {}},
-    {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, { .from = "2025-01-15"}},
-    {model::ProfileType::MedicationDispenseBundle, { .until = "2026-01-11" }},
-    {model::ProfileType::GEM_ERP_PR_Bundle, {}},
-    {model::ProfileType::GEM_ERP_PR_Task, {}},
-    {model::ProfileType::GEM_ERPCHRG_PR_ChargeItem, {}},
-    {model::ProfileType::GEM_ERPCHRG_PR_Consent, {}},
+    {model::ProfileType::GEM_ERP_PR_Communication_DispReq, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Communication_Reply, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Communication_Representative, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Composition, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Device, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Digest, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Medication, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Bundle, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Composition, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Medication_Compounding, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Medication_FreeText, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Medication_Ingredient, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Medication_PZN, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_PracticeSupply, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_ERP_Prescription, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_EVDGA_Bundle, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_EVDGA_HealthAppRequest, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_FOR_Coverage, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_FOR_Organization, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_FOR_Patient, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_FOR_Practitioner, {.from = "2025-10-01"}},
+    {model::ProfileType::KBV_PR_FOR_PractitionerRole, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_MedicationDispense, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_MedicationDispense_DiGA, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Bundle, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Task, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPCHRG_PR_ChargeItem, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPCHRG_PR_Consent, {.from = "2025-10-01"}},
     {model::ProfileType::PatchChargeItemParameters, {}},
     {model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle, {}},
     {model::ProfileType::Subscription, {}},
     {model::ProfileType::OperationOutcome, {}},
-    {model::ProfileType::GEM_ERPEU_PR_Consent, { .from = "2025-10-01"}},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_MedicationDispense, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_Medication, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_Practitioner, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_PractitionerRole, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPEU_PR_Organization, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input, { .from = "2025-10-01" }},
-    {model::ProfileType::GEM_ERP_PR_Communication_DiGA, { .from = "2025-10-01" }},
+    {model::ProfileType::GEM_ERPEU_PR_Consent, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Request, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_Access_Authorization_Response, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_PATCH_Task_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_GET_Prescription_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PAR_CloseOperation_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_MedicationDispense, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_Medication, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_Practitioner, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_PractitionerRole, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPEU_PR_Organization, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input, {.from = "2025-10-01"}},
+    {model::ProfileType::GEM_ERP_PR_Communication_DiGA, {.from = "2025-10-01"}},
 };
 
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement>
@@ -376,25 +373,44 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::SERVICE_TASK_GET_ENFORCE_HCV_CHECK             , {"ERP_SERVICE_TASK_GET_ENFORCE_HCV_CHECK"             , "/erp/service/task/get/enforceHcvCheck", Flags::categoryFunctional, "Enforce hcv check for pnv2"}},
     {ConfigurationKey::SERVICE_TASK_GET_RATE_LIMIT                    , {"ERP_SERVICE_TASK_GET_RATE_LIMIT"                    , "/erp/service/task/get/rateLimit", Flags::categoryFunctional, "Max. calls for a telematik ID within a day"}},
     {ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES             , {"ERP_SERVICE_COMMUNICATION_MAX_MESSAGES"             , "/erp/service/communication/maxMessageCount", Flags::categoryFunctional, "Maximum number of communication messages per task and representative"}},
+    {ConfigurationKey::SERVICE_COMMUNICATION_PAYLOAD_V1_VALID_UNTIL   , {"ERP_SERVICE_COMMUNICATION_PAYLOAD_V1_VALID_UNTIL"   , "/erp/service/communication/payloadV1ValidUntil", Flags::categoryFunctional, "Last day of Communication Payload V1 validity"}},
+    {ConfigurationKey::SERVICE_COMMUNICATION_PAYLOAD_V3_VALID_FROM    , {"ERP_SERVICE_COMMUNICATION_PAYLOAD_V3_VALID_FROM"    , "/erp/service/communication/payloadV3ValidFrom", Flags::categoryFunctional, "First day of Communication Payload V3 validity"}},
     {ConfigurationKey::SERVICE_SUBSCRIPTION_SIGNING_KEY               , {"ERP_SERVICE_SUBSCRIPTION_SIGNING_KEY"               , "/erp/service/subscription/signingKey", Flags::credential|Flags::categoryEnvironment, "Key to sign the header and payload of an incoming subscription"}},
     {ConfigurationKey::PCR_SET                                        , {"ERP_PCR_SET"                                        , "/erp/service/pcr-set", Flags::categoryEnvironment, "PCR register set to be used to calculate quote (TPM)"}},
-    {ConfigurationKey::POSTGRES_HOST                                  , {"ERP_POSTGRES_HOST"                                  , "/erp/postgres/host", Flags::categoryEnvironment, "Postgres server host"}},
-    {ConfigurationKey::POSTGRES_PORT                                  , {"ERP_POSTGRES_PORT"                                  , "/erp/postgres/port", Flags::categoryEnvironment, "Postgres server port number"}},
-    {ConfigurationKey::POSTGRES_USER                                  , {"ERP_POSTGRES_USER"                                  , "/erp/postgres/user", Flags::categoryEnvironment, "Postgres user name"}},
-    {ConfigurationKey::POSTGRES_PASSWORD                              , {"ERP_POSTGRES_PASSWORD"                              , "/erp/postgres/password", Flags::credential | Flags::categoryEnvironment, "Postgres user password"}},
-    {ConfigurationKey::POSTGRES_DATABASE                              , {"ERP_POSTGRES_DATABASE"                              , "/erp/postgres/database", Flags::categoryEnvironment, "Postgres database name"}},
-    {ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH             , {"ERP_POSTGRES_CERTIFICATE_PATH"                      , "/erp/postgres/certificatePath", Flags::categoryEnvironment, "This parameter specifies the name of a file containing SSL certificate authority (CA) certificate(s)"}},
-    {ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH                  , {"ERP_POSTGRES_SSL_CERTIFICATE_PATH"                  , "/erp/postgres/sslCertificatePath", Flags::categoryEnvironment, "This parameter specifies the file name of the client SSL certificate"}},
-    {ConfigurationKey::POSTGRES_SSL_KEY_PATH                          , {"ERP_POSTGRES_SSL_KEY_PATH"                          , "/erp/postgres/sslKeyPath", Flags::categoryEnvironment, "This parameter specifies the location for the secret key used for the client certificate"}},
-    {ConfigurationKey::POSTGRES_USESSL                                , {"ERP_POSTGRES_USESSL"                                , "/erp/postgres/useSsl", Flags::categoryEnvironment, "Sets Postgres connection parameter sslmode to require if true. sslmode remains on its default value otherwise"}},
-    {ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS               , {"ERP_POSTGRES_CONNECT_TIMEOUT_SECONDS"               , "/erp/postgres/connectTimeoutSeconds", Flags::categoryEnvironment, "Maximum time to wait while connecting, in seconds (write as a decimal integer, e.g., 10). Zero, negative, or not specified means wait indefinitely. The minimum allowed timeout is 2 seconds, therefore a value of 1 is interpreted as 2. This timeout applies separately to each host name or IP address. For example, if you specify two hosts and connect_timeout is 5, each host will time out if no connection is made within 5 seconds, so the total time spent waiting for a connection might be up to 10 seconds"}},
-    {ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION           , {"ERP_POSTGRES_ENABLE_SCRAM_AUTHENTICATION"           , "/erp/postgres/enableScramAuthentication", Flags::categoryEnvironment, "Sets Postgres connection parameter channel_binding to 'require'. channel_binding remains on its default value otherwise"}},
-    {ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS                   , {"ERP_POSTGRES_TCP_USER_TIMEOUT_MS"                   , "/erp/postgres/tcpUserTimeoutMs", Flags::categoryEnvironment, "Controls the number of milliseconds that transmitted data may remain unacknowledged before a connection is forcibly closed. A value of zero uses the system default. This parameter is ignored for connections made via a Unix-domain socket. It is only supported on systems where TCP_USER_TIMEOUT is available; on other systems, it has no effect."}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC                   , {"ERP_POSTGRES_KEEPALIVES_IDLE_SEC"                   , "/erp/postgres/keepalivesIdleSec", Flags::categoryEnvironment, "Controls the number of seconds of inactivity after which TCP should send a keepalive message to the server. A value of zero uses the system default."}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC               , {"ERP_POSTGRES_KEEPALIVES_INTERVAL_SEC"               , "/erp/postgres/keepalivesIntervalSec", Flags::categoryEnvironment, "Controls the number of seconds after which a TCP keepalive message that is not acknowledged by the server should be retransmitted. A value of zero uses the system default."}},
-    {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT                      , {"ERP_POSTGRES_KEEPALIVES_COUNT"                      , "/erp/postgres/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the server is considered dead. A value of zero uses the system default"}},
-    {ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS                  , {"ERP_POSTGRES_TARGET_SESSION_ATTRS"                  , "/erp/postgres/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable."}},
-    {ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES            , {"ERP_POSTGRES_CONNECTION_MAX_AGE_MINUTES"            , "/erp/postgres/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections will be closed and re-opened."}},
+    {ConfigurationKey::POSTGRES_HOST                                  , {"ERP_POSTGRES_HOST"                                  , "/erp/postgres/main/host", Flags::categoryEnvironment, "Postgres server host"}},
+    {ConfigurationKey::POSTGRES_PORT                                  , {"ERP_POSTGRES_PORT"                                  , "/erp/postgres/main/port", Flags::categoryEnvironment, "Postgres server port number"}},
+    {ConfigurationKey::POSTGRES_USER                                  , {"ERP_POSTGRES_USER"                                  , "/erp/postgres/main/user", Flags::categoryEnvironment, "Postgres user name"}},
+    {ConfigurationKey::POSTGRES_PASSWORD                              , {"ERP_POSTGRES_PASSWORD"                              , "/erp/postgres/main/password", Flags::credential | Flags::categoryEnvironment, "Postgres user password"}},
+    {ConfigurationKey::POSTGRES_DATABASE                              , {"ERP_POSTGRES_DATABASE"                              , "/erp/postgres/main/database", Flags::categoryEnvironment, "Postgres database name"}},
+    {ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH             , {"ERP_POSTGRES_CERTIFICATE_PATH"                      , "/erp/postgres/main/certificatePath", Flags::categoryEnvironment, "This parameter specifies the name of a file containing SSL certificate authority (CA) certificate(s)"}},
+    {ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH                  , {"ERP_POSTGRES_SSL_CERTIFICATE_PATH"                  , "/erp/postgres/main/sslCertificatePath", Flags::categoryEnvironment, "This parameter specifies the file name of the client SSL certificate"}},
+    {ConfigurationKey::POSTGRES_SSL_KEY_PATH                          , {"ERP_POSTGRES_SSL_KEY_PATH"                          , "/erp/postgres/main/sslKeyPath", Flags::categoryEnvironment, "This parameter specifies the location for the secret key used for the client certificate"}},
+    {ConfigurationKey::POSTGRES_USESSL                                , {"ERP_POSTGRES_USESSL"                                , "/erp/postgres/main/useSsl", Flags::categoryEnvironment, "Sets Postgres connection parameter sslmode to require if true. sslmode remains on its default value otherwise"}},
+    {ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS               , {"ERP_POSTGRES_CONNECT_TIMEOUT_SECONDS"               , "/erp/postgres/main/connectTimeoutSeconds", Flags::categoryEnvironment, "Maximum time to wait while connecting, in seconds (write as a decimal integer, e.g., 10). Zero, negative, or not specified means wait indefinitely. The minimum allowed timeout is 2 seconds, therefore a value of 1 is interpreted as 2. This timeout applies separately to each host name or IP address. For example, if you specify two hosts and connect_timeout is 5, each host will time out if no connection is made within 5 seconds, so the total time spent waiting for a connection might be up to 10 seconds"}},
+    {ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION           , {"ERP_POSTGRES_ENABLE_SCRAM_AUTHENTICATION"           , "/erp/postgres/main/enableScramAuthentication", Flags::categoryEnvironment, "Sets Postgres connection parameter channel_binding to 'require'. channel_binding remains on its default value otherwise"}},
+    {ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS                   , {"ERP_POSTGRES_TCP_USER_TIMEOUT_MS"                   , "/erp/postgres/main/tcpUserTimeoutMs", Flags::categoryEnvironment, "Controls the number of milliseconds that transmitted data may remain unacknowledged before a connection is forcibly closed. A value of zero uses the system default. This parameter is ignored for connections made via a Unix-domain socket. It is only supported on systems where TCP_USER_TIMEOUT is available; on other systems, it has no effect."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC                   , {"ERP_POSTGRES_KEEPALIVES_IDLE_SEC"                   , "/erp/postgres/main/keepalivesIdleSec", Flags::categoryEnvironment, "Controls the number of seconds of inactivity after which TCP should send a keepalive message to the server. A value of zero uses the system default."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC               , {"ERP_POSTGRES_KEEPALIVES_INTERVAL_SEC"               , "/erp/postgres/main/keepalivesIntervalSec", Flags::categoryEnvironment, "Controls the number of seconds after which a TCP keepalive message that is not acknowledged by the server should be retransmitted. A value of zero uses the system default."}},
+    {ConfigurationKey::POSTGRES_KEEPALIVES_COUNT                      , {"ERP_POSTGRES_KEEPALIVES_COUNT"                      , "/erp/postgres/main/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the server is considered dead. A value of zero uses the system default"}},
+    {ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS                  , {"ERP_POSTGRES_TARGET_SESSION_ATTRS"                  , "/erp/postgres/main/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable."}},
+    {ConfigurationKey::POSTGRES_CONNECTION_MAX_AGE_MINUTES            , {"ERP_POSTGRES_CONNECTION_MAX_AGE_MINUTES"            , "/erp/postgres/main/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections will be closed and re-opened."}},
+    {ConfigurationKey::POSTGRES_RO_HOST                               , {"ERP_POSTGRES_RO_HOST"                               , "/erp/postgres/readOnly/host", Flags::categoryEnvironment, "Read Only Postgres server host; disables read only Postgres if empty or not provided"}},
+    {ConfigurationKey::POSTGRES_RO_PORT                               , {"ERP_POSTGRES_RO_PORT"                               , "/erp/postgres/readOnly/port", Flags::categoryEnvironment, "Read Only Postgres server port number; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_USER                               , {"ERP_POSTGRES_RO_USER"                               , "/erp/postgres/readOnly/user", Flags::categoryEnvironment, "Read Only Postgres user name; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_PASSWORD                           , {"ERP_POSTGRES_RO_PASSWORD"                           , "/erp/postgres/readOnly/password", Flags::credential | Flags::categoryEnvironment, "Read Only Postgres user password; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_DATABASE                           , {"ERP_POSTGRES_RO_DATABASE"                           , "/erp/postgres/readOnly/database", Flags::categoryEnvironment, "Read Only Postgres database name; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_SSL_ROOT_CERTIFICATE_PATH          , {"ERP_POSTGRES_RO_CERTIFICATE_PATH"                   , "/erp/postgres/readOnly/certificatePath", Flags::categoryEnvironment, "This parameter specifies the name of a file containing SSL certificate authority (CA) certificate(s) for read only Postgres; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_SSL_CERTIFICATE_PATH               , {"ERP_POSTGRES_RO_SSL_CERTIFICATE_PATH"               , "/erp/postgres/readOnly/sslCertificatePath", Flags::categoryEnvironment, "This parameter specifies the file name of the client SSL certificate for read only Postgres; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_SSL_KEY_PATH                       , {"ERP_POSTGRES_RO_SSL_KEY_PATH"                       , "/erp/postgres/readOnly/sslKeyPath", Flags::categoryEnvironment, "This parameter specifies the location for the secret key used for the client certificate for read only Postgres; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_USESSL                             , {"ERP_POSTGRES_RO_USESSL"                             , "/erp/postgres/readOnly/useSsl", Flags::categoryEnvironment, "Sets read only Postgres connection parameter sslmode to require if true. defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_CONNECT_TIMEOUT_SECONDS            , {"ERP_POSTGRES_RO_CONNECT_TIMEOUT_SECONDS"            , "/erp/postgres/readOnly/connectTimeoutSeconds", Flags::categoryEnvironment, "Maximum time to wait while connecting to read only Postgres, in seconds (write as a decimal integer, e.g., 10). Zero, negative, or not specified means wait indefinitely. The minimum allowed timeout is 2 seconds, therefore a value of 1 is interpreted as 2. This timeout applies separately to each host name or IP address. For example, if you specify two hosts and connect_timeout is 5, each host will time out if no connection is made within 5 seconds, so the total time spent waiting for a connection might be up to 10 seconds; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_ENABLE_SCRAM_AUTHENTICATION        , {"ERP_POSTGRES_RO_ENABLE_SCRAM_AUTHENTICATION"        , "/erp/postgres/readOnly/enableScramAuthentication", Flags::categoryEnvironment, "Sets read only Postgres connection parameter channel_binding to 'require'. Defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_TCP_USER_TIMEOUT_MS                , {"ERP_POSTGRES_RO_TCP_USER_TIMEOUT_MS"                , "/erp/postgres/readOnly/tcpUserTimeoutMs", Flags::categoryEnvironment, "Controls the number of milliseconds that transmitted data may remain unacknowledged before a connection to read only Postgres is forcibly closed. A value of zero uses the system default. This parameter is ignored for connections made via a Unix-domain socket. It is only supported on systems where TCP_USER_TIMEOUT is available; on other systems, it has no effect.; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_KEEPALIVES_IDLE_SEC                , {"ERP_POSTGRES_RO_KEEPALIVES_IDLE_SEC"                , "/erp/postgres/readOnly/keepalivesIdleSec", Flags::categoryEnvironment, "Controls the number of seconds of inactivity after which TCP should send a keepalive message to the read only Postgres server. A value of zero uses the system default. Defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_KEEPALIVES_INTERVAL_SEC            , {"ERP_POSTGRES_RO_KEEPALIVES_INTERVAL_SEC"            , "/erp/postgres/readOnly/keepalivesIntervalSec", Flags::categoryEnvironment, "Controls the number of seconds after which a TCP keepalive message that is not acknowledged by the read only Postgres server should be retransmitted. A value of zero uses the system default. Defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_KEEPALIVES_COUNT                   , {"ERP_POSTGRES_RO_KEEPALIVES_COUNT"                   , "/erp/postgres/readOnly/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the read pnly Postgres server is considered dead. A value of zero uses the system default; defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_TARGET_SESSION_ATTRS               , {"ERP_POSTGRES_RO_TARGET_SESSION_ATTRS"               , "/erp/postgres/readOnly/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable. Defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES         , {"ERP_POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES"         , "/erp/postgres/readOnly/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections to the read only Postgres server will be closed and re-opened. Defaults to value from main"}},
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
@@ -425,6 +441,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
     {ConfigurationKey::FEATURE_EU                                     , {"ERP_FEATURE_EU"                                     , "/erp/feature/eu", Flags::categoryFunctional, "Feature-toggle for the EU-Prescription feature"}},
+    {ConfigurationKey::FEATURE_TREZEPT                                , {"ERP_FEATURE_TREZEPT"                                     , "/erp/feature/t-rezept", Flags::categoryFunctional, "Feature-toggle for the T-Rezept Workflow 166 feature"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
@@ -462,6 +479,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ADMIN_CREDENTIALS                              , {"ERP_ADMIN_CREDENTIALS"                              , "/erp/admin/credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for admin server."}},
     {ConfigurationKey::ADMIN_RC_CREDENTIALS                           , {"ERP_ADMIN_RC_CREDENTIALS"                           , "/erp/admin/runtime_config_credentials", Flags::credential|Flags::categoryEnvironment, "HTTP Basic Authentication credential for runtime configuration through admin server."}},
     {ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS                    , {"ERP_PROOF_VALIDITY_SECONDS"                         , "/erp/vsdmValiditySeconds", Flags::categoryFunctional, "Validity period for VSDM++ proofs, in seconds"}},
+    {ConfigurationKey::HTTPS_PROXIES                                  , {"ERP_HTTPS_PROXIES"                                  , "/https-proxies", Flags::categoryEnvironment|Flags::array, "HTTPS proxy urls"}},
+    {ConfigurationKey::HTTP_PROXIES                                   , {"ERP_HTTP_PROXIES"                                   , "/http-proxies", Flags::categoryEnvironment|Flags::array, "HTTP proxy urls"}},
 
     {ConfigurationKey::MEDICATION_EXPORTER_IS_PRODUCTION                                  , {"ERP_MEDICATION_EXPORTER_IS_PRODUCTION"                                  , "/erp-medication-exporter/is-production", Flags::categoryEnvironment, "Set to true if medication-exporter instance is for production environment; false otherwise"}},
 
@@ -490,7 +509,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL         , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DNS_REFRESH_INTERVAL"         , "/erp-medication-exporter/epa-account-lookup/dnsRefreshInterval", Flags::categoryEnvironment, "DNS refresh interval for ePAs [HH:MM:SS]"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_RESOLVE_TIMEOUT_MILLISECONDS" , "/erp-medication-exporter/epa-account-lookup/resolveTimeoutMilliseconds", Flags::categoryEnvironment, "HTTPs Client configuration"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT                     , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT"                     , "/erp-medication-exporter/epa-account-lookup/endpoint", Flags::categoryEnvironment, "Lookup endpoint on the EPA side"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT                   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT"                   , "/erp-medication-exporter/epa-account-lookup/userAgent", Flags::categoryEnvironment, "Our user agent used in lookup request"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID   , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ERP_SUBMISSION_FUNCTION_ID"   , "/erp-medication-exporter/epa-account-lookup/erpSubmissionFunctionId", Flags::categoryEnvironment, "The name of the function ID for our consent decision"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN                  , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN"                  , "/erp-medication-exporter/epa-account-lookup/epaAsFqdn", Flags::categoryEnvironment|Flags::array, "List of EPA FQDN adresses and TEE connection count (default 8) in the format <host>`:`<port>[`+`<connections>] separated by semicolon"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN           , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN"           , "/erp-medication-exporter/epa-account-lookup/poolSizePerFqdn", Flags::categoryEnvironment, "Number of connections per ePA FQDN"}},
@@ -539,8 +557,14 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA, {"ERP_MEDICATION_EXPORTER_ENABLE_EPA", "/erp-medication-exporter/enable-epa", Flags::categoryEnvironment, "Enable the EPA-exporter"}},
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT, {"ERP_MEDICATION_EXPORTER_ENABLE_T_REZEPT", "/erp-medication-exporter/enable-t-rezept", Flags::categoryEnvironment, "Enable the T-Rezept-exporter"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_HTTP_PROXY, {"ERP_MEDICATION_EXPORTER_HTTP_PROXY", "/erp-medication-exporter/http-proxy", Flags::categoryEnvironment, "Proxy used /only/ for indirect lookup of CRL urls."}},
     {ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS, {"ERP_MEDICATION_EXPORTER_TRUSTED_CAS", "/erp-medication-exporter/trusted-cas", Flags::categoryEnvironment, "Trusted root certificates for bfarm and vzd TLS client connections."}},
+
+    {ConfigurationKey::POPP_ENTITY_STATEMENT_URL, {"ERP_POPP_ENTITY_STATEMENT_URL", "/erp/popp/entityStatementUrl", Flags::categoryEnvironment, "Entity statement URL."}},
+    {ConfigurationKey::POPP_UPDATE_INTERVAL_SECONDS, {"ERP_POPP_UPDATE_INTERVAL_SECONDS", "/erp/popp/updateIntervalSeconds", Flags::categoryEnvironment, "Interval for certificate check."}},
+    {ConfigurationKey::POPP_UPDATE_MAX_AGE_SECONDS, {"ERP_POPP_UPDATE_MAX_AGE_SECONDS", "/erp/popp/updateMaxAgeSeconds", Flags::categoryEnvironment, "Threshold for aged certificates to discard."}},
+    {ConfigurationKey::POPP_CONNECTION_TIMEOUT_SECONDS, {"ERP_POPP_CONNECTION_TIMEOUT_SECONDS", "/erp/popp/connectionTimeoutSeconds", Flags::categoryEnvironment, "Duration until a connection attempt is invalidated."}},
+    {ConfigurationKey::POPP_RESPONSE_TIMEOUT_SECONDS, {"ERP_POPP_RESPONSE_TIMEOUT_SECONDS", "/erp/popp/responseTimeoutSeconds", Flags::categoryEnvironment, "Duration until waiting for a response it invalidated."}},
+    {ConfigurationKey::POPP_TOKEN_IAT_MAX_AGE_SECONDS, {"ERP_POPP_TOKEN_IAT_MAX_AGE_SECONDS", "/erp/popp/tokenIatMaxAgeSeconds", Flags::categoryEnvironment, "The maximum IAT age of the PoPP Token."}},
 
     // */
     });
@@ -903,6 +927,8 @@ void Configuration::check(ProcessType processType) const
     (void) kbvValidationNonLiteralAuthorRef();
     (void) anrChecksumValidationMode();
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
+    (void) proxyParameters(ProxyMode::HTTP);
+    (void) proxyParameters(ProxyMode::SNI);
     switch (processType)
     {
         case ConfigurationBase::ProcessType::ERP:
@@ -1003,6 +1029,22 @@ fhirtools::VersionMapper::Config Configuration::fhirVersionMapping() const
     Fail2("missing "s.append(Common::versionMappingPath).append(" in config"), std::logic_error);
 }
 
+model::Timestamp Configuration::communicationPayloadV1ValidUntil() const
+{
+    auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
+    auto configured = model::Timestamp::fromGermanDate(
+        getStringValue(ConfigurationKey::SERVICE_COMMUNICATION_PAYLOAD_V1_VALID_UNTIL));
+    return model::Timestamp{model::Timestamp::GermanTimezone, configured.localDay() + date::days{globalOffset}};
+}
+
+model::Timestamp Configuration::communicationPayloadV3ValidFrom() const
+{
+    auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
+    auto configured =
+        model::Timestamp::fromGermanDate(getStringValue(ConfigurationKey::SERVICE_COMMUNICATION_PAYLOAD_V3_VALID_FROM));
+    return model::Timestamp{model::Timestamp::GermanTimezone, configured.localDay() + date::days{globalOffset}};
+}
+
 bool Configuration::timingLoggingEnabled(const std::string& category) const
 {
     static const std::unordered_set<std::string> configArray = [this] {
@@ -1064,6 +1106,39 @@ std::vector<Configuration::EpaFQDN> Configuration::epaFQDNs() const
     }
     Expect(!result.empty(), envVarName + " doesn't contain any valid entries");
     return result;
+}
+
+std::vector<ProxyParameters> Configuration::proxyParameters(ProxyMode mode) const
+{
+    ConfigurationKey key = ConfigurationKey::HTTP_PROXIES;
+    switch (mode)
+    {
+        case ProxyMode::SNI:
+            key = ConfigurationKey::HTTPS_PROXIES;
+            break;
+        case ProxyMode::HTTP:
+            key = ConfigurationKey::HTTP_PROXIES;
+            break;
+    }
+    std::vector<ProxyParameters> proxyConfigurations;
+    const auto proxyUrls = getOptionalArray(key);
+    try
+    {
+        std::ranges::transform(proxyUrls, std::back_inserter(proxyConfigurations), [mode](const std::string& url) {
+            return ProxyParameters::fromUrl(url, mode);
+        });
+    }
+    catch (const std::exception& e)
+    {
+        TLOG(ERROR) << "Unable to parse proxy configuration for " << magic_enum::enum_name(key);
+        throw;
+    }
+    return proxyConfigurations;
+}
+
+std::chrono::seconds Configuration::poppTokenIatMaxAge() const
+{
+    return std::chrono::seconds{getIntValue(ConfigurationKey::POPP_TOKEN_IAT_MAX_AGE_SECONDS)};
 }
 
 template fhirtools::Severity

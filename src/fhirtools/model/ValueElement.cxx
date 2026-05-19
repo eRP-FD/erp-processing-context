@@ -52,11 +52,12 @@ std::vector<std::shared_ptr<const Element>> ValueElement::subElements(const std:
 
 bool fhirtools::ValueElement::hasValue() const
 {
-    if (type() == Type::Structured)
+    const auto* profile = definitionPointer().profile();
+    if ((profile->kind() == FhirStructureDefinition::Kind::primitiveType) || profile->isSystemType())
     {
-        return false;
+        return mValue->attributes().contains("value");
     }
-    return mValue->attributes().contains("value");
+    return false;
 }
 
 bool fhirtools::ValueElement::hasSubElement(const std::string& name) const
@@ -66,12 +67,13 @@ bool fhirtools::ValueElement::hasSubElement(const std::string& name) const
 
 std::vector<std::string> ValueElement::subElementNames() const
 {
-    bool isPrimitive = (definitionPointer().profile()->kind() == FhirStructureDefinition::Kind::primitiveType);
+    const auto* profile = definitionPointer().profile();
+    bool skipValue = (profile->kind() == FhirStructureDefinition::Kind::primitiveType) || profile->isSystemType();
     std::vector<std::string> result;
     result.reserve(mValue->children().size() + mValue->attributes().size());
     for (const auto& attr : mValue->attributes())
     {
-        if (isPrimitive && attr.first == "value")
+        if (skipValue && attr.first == "value")
         {
             continue;
         }

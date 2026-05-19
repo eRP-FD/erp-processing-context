@@ -22,7 +22,8 @@ namespace
 
 void usage(std::string_view app, std::ostream& out)
 {
-    out << "Usage: " << app << " -p <package_cache_folder> -o <output_folder> [-c <config_folder>] [--] <packages>...\n";
+    out << "Usage: " << app << " -p <package_cache_folder> -o <output_folder> [-c <config_folder>] [(-s <package_substitution>)...] [--] <packages>...\n";
+    out << "Usage: " << app << " -p <package_cache_folder> --tree  [(-s <package_substitution>)...] [--] <packages>...\n";
     out << "\n";
     out << "installs packages from fhirly terminal cache into output folder\n";
     out << "files are converted to xml if their source is json\n";
@@ -31,6 +32,8 @@ void usage(std::string_view app, std::ostream& out)
     out << "        path to fhirly terminal package cache\n";
     out << "-o <output_folder>\n";
     out << "        path to package output folder\n";
+    out << "--tree\n";
+    out << "        show dependency trees and exit\n";
     out << "-c <config_folder>\n";
     out << "        target folder for configuration file templates\n";
     out << "        Even though these files can be loaded, they probably need editing.\n";

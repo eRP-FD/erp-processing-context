@@ -8,7 +8,11 @@
 
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "erp/crypto/VsdmProof.hxx"
+#include "erp/database/redis/TaskRateLimiter.hxx"
 #include "erp/model/Task.hxx"
+#include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
+#include "erp/pc/popp/PoPPToken.hxx"
+#include "erp/pc/popp/PoPPVerifier.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/ErpRequirements.hxx"
@@ -21,7 +25,6 @@
 #include "shared/util/Hash.hxx"
 #include "shared/util/String.hxx"
 #include "shared/xml/XmlDocument.hxx"
-#include "erp/database/redis/TaskRateLimiter.hxx"
 
 
 namespace
@@ -243,19 +246,19 @@ void validateProofV2(SessionContext& context, const VsdmProof2& proofContent,
                      const std::optional<std::string>& urlHcv, const model::Kvnr& urlKvnr,
                      const std::string& hashedTelematikId)
 {
-    SafeString sharedSecret;
     std::optional<VsdmProof2::DecryptedProof> decryptedProof;
     try
     {
         // A_27279: step 4, key exists
-        sharedSecret =
+        const SafeString sharedSecret =
             context.serviceContext.getVsdmKeyCache().getKey(proofContent.keyOperatorId(), proofContent.keyVersion());
         // A_27279: step 5: can be decrypted
         decryptedProof = proofContent.decrypt(sharedSecret);
     }
     catch (const std::exception& e)
     {
-        TLOG(WARNING) << e.what();
+        TLOG(WARNING) << e.what() << " OperatorId=" << proofContent.keyOperatorId()
+                      << " Version=" << proofContent.keyVersion();
         ErpFail(HttpStatus::Forbidden, "Anwesenheitsnachweis konnte nicht erfolgreich durchgeführt werden (VSDM "
                                        "Schlüssel nicht vorhanden oder Inhalte nicht entschlüsselbar).");
     }
@@ -271,7 +274,7 @@ void validateProofV2(SessionContext& context, const VsdmProof2& proofContent,
         {
             hcv = util::bufferToString(Base64::decode(urlHcv.value()));
         }
-        catch (const std::invalid_argument& ia)
+        catch (const model::ModelException& ia)
         {
             TVLOG(1) << ia.what();
             ErpFailWithDiagnostics(HttpStatus::BadRequest, "HCV Base64-Dekodierung fehlgeschlagen.", ia.what());
@@ -334,11 +337,31 @@ void GetAllTasksHandler::handleRequest(PcSessionContext& session)
     const auto& accessToken = session.request.getAccessToken();
     if (accessToken.stringForClaim(JWT::professionOIDClaim) == profession_oid::oid_versicherter)
     {
+        session.setBdeUseCase(bde::GetTasksPatient_UC_3_1);
         handleRequestFromInsurant(session);
     }
     else
     {
-        handleRequestFromPharmacist(session);
+        // GEMREQ-start A_22432-02#handleRequest
+        const auto poppToken = session.request.header().header(Header::XPoPPToken);
+        if (poppToken.has_value())
+        {
+            session.setBdeUseCase(bde::GetTasksPoPP_UC_4_15);
+            try
+            {
+                handleRequestWithPoPPToken(session, poppToken.value());
+            }
+            catch (const model::ModelException& me)
+            {
+                ErpFailWithDiagnostics(HttpStatus::BadRequest, "Error during PoPP-Token processing.", me.what());
+            }
+        }
+        else
+        {
+            session.setBdeUseCase(bde::GetTasksPharmacy_UC_4_12);
+            handleRequestWithPnw(session);
+        }
+        // GEMREQ-end A_22432-02#handleRequest
     }
 }
 
@@ -357,15 +380,15 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     auto arguments = urlArgumentsForTasks();
     arguments->parse(session.request, session.serviceContext.getKeyDerivation());
 
-    auto* databaseHandle = session.database();
+    auto roDB = session.serviceContext.readOnlyDatabaseFactory();
     A_19115_01.start("use KVNR to filter tasks");
-    auto resultSet = databaseHandle->retrieveAllTasksForPatient(kvnr, arguments);
+    auto resultSet = roDB->retrieveAllTasksForPatient(kvnr, arguments);
     A_19115_01.finish();
     // GEMREQ-end A_19115-01
 
     model::Bundle responseBundle(model::BundleType::searchset, ::model::FhirResourceBase::NoProfile);
     std::size_t totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), resultSet.size())
-                                         ? databaseHandle->countAllTasksForPatient(kvnr, arguments)
+                                         ? roDB->countAllTasksForPatient(kvnr, arguments)
                                          : resultSet.size();
 
     const auto links = arguments->createBundleLinks(getLinkBase(), "/Task", totalSearchMatches);
@@ -395,7 +418,7 @@ void GetAllTasksHandler::handleRequestFromInsurant(PcSessionContext& session)
     A_19514.finish();
 }
 
-void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
+void GetAllTasksHandler::handleRequestWithPnw(PcSessionContext& session)
 {
     const auto& config = Configuration::instance();
     const std::optional<std::string> telematikId = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
@@ -431,7 +454,10 @@ void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
         // fallback to 'PNW' for compatibility with old implementation
         pnw = session.request.getQueryParameter("PNW");
     }
-    ErpExpect(pnw.has_value() && ! pnw->empty(), HttpStatus::Forbidden, "Missing or invalid PNW query parameter");
+    A_22432_02.start("reaching PNW handling also means there was no PoPP token in the Header");
+    ErpExpect(pnw.has_value() && ! pnw->empty(), HttpStatus::Forbidden,
+              "Missing or invalid PNW query parameter and X-PoPP-Token header");
+    A_22432_02.finish();
 
     const auto proofInformation = proofInformationFromPnw(session, *pnw);
     // GEMREQ-end A_23451-01#pnw
@@ -506,17 +532,66 @@ void GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session)
 
         const auto response = handleRequestFromPharmacist(session, kvnr);
 
-        A_25209.start("HttpStatus 202 for successful GET");
+        A_25209_01.start("HttpStatus 202 for successful GET");
         makeResponse(session, HttpStatus::Accepted, &response);
-        A_25209.finish();
+        A_25209_01.finish();
     }
     A_23450.finish();
 }
 
+namespace
+{
+// GEMREQ-start A_22432-02
+PoPPToken getVerifiedToken(PcSessionContext& session, const std::string& poppTokenStr)
+{
+    A_22432_02.start("Verify PoPP token");
+    try
+    {
+        PoPPToken poppToken{poppTokenStr};
+        const auto entityStatement = session.serviceContext.getPoPPService().getEntityStatement();
+        ErpExpect(entityStatement.has_value(), HttpStatus::Forbidden, "EntityStatement for POPP Token is missing");
+        const PoPPVerifier poppVerifier;
+        PoPPVerifier::verifyTokenSignature(session.serviceContext.getPoPPService(), poppToken);
+        poppVerifier.verifyTokenClaims(poppToken, *entityStatement, session.request.getAccessToken());
+        return poppToken;
+    }
+    catch (const std::runtime_error& ex)
+    {
+        ErpFailWithDiagnostics(HttpStatus::Forbidden, "POPP-Token verification error.", ex.what());
+    }
+    A_22432_02.finish();
+}
+}
+
+void GetAllTasksHandler::handleRequestWithPoPPToken(PcSessionContext& session, const std::string& poppTokenStr)
+{
+    TVLOG(1) << name() << " with PoPP-Token: " << poppTokenStr;
+    const PoPPToken poppToken = getVerifiedToken(session, poppTokenStr);
+
+    A_22431_02.start("get KVNR from PoPP token");
+    const auto kvnr = poppToken.kvnr();
+    A_22431_02.finish();
+    const auto proofMethod{poppToken.proofMethodPrefix()};
+
+    session.auditDataCollector()
+        .setEventId(model::AuditEventId::GET_Tasks_by_pharmacy_with_popp)
+        .setAction(model::AuditEvent::Action::read)
+        .setPoPPTokenProofMethod(proofMethod)
+        .setInsurantKvnr(kvnr);
+
+    const auto response = handleRequestFromPharmacist(session, kvnr);
+
+    A_19514.start("HttpStatus 200 for successful GET");
+    makeResponse(session, HttpStatus::OK, &response);
+    A_19514.finish();
+}
+// GEMREQ-end A_22432-02
+
 model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& session, const model::Kvnr& kvnr)
 {
-    A_25209.start("Read tasks according to KVNR and with status 'ready'");
-    A_23452_02.start("Read tasks according to KVNR and with status 'ready'");
+    A_25209_01.start("VSDM - PN3: Read tasks according to KVNR and with status 'ready', !expired, 160&166");
+    A_23452_04.start("VSDM: Read tasks according to KVNR and with status 'ready', !expired, 160&166");
+    A_22431_02.start("PoPP: Read tasks according to KVNR and with status 'ready', !expired, 160&166");
     // GEMREQ-start A_23452-02#retrieveAllTasksForPatient
     std::vector<std::pair<std::string, std::string>> queryParameters
         {{"status", "ready"},{"expiry-date", "ge" + model::Timestamp::now().toGermanDate()}};
@@ -531,15 +606,15 @@ model::Bundle GetAllTasksHandler::handleRequestFromPharmacist(PcSessionContext& 
     auto arguments = urlArgumentsForTasks();
     arguments->parse(queryParameters, session.serviceContext.getKeyDerivation());
 
-    auto* database = session.database();
-    auto tasks = database->retrieveAll160TasksWithAccessCode(kvnr, arguments);
+    auto roDB = session.serviceContext.readOnlyDatabaseFactory();
+    auto tasks = roDB->retrieveAllEgkRedeemableTasksWithAccessCode(kvnr, arguments);
     // GEMREQ-end A_23452-02#retrieveAllTasksForPatient
-    A_23452_02.finish();
-    A_25209.finish();
+    A_23452_04.finish();
+    A_25209_01.finish();
 
     model::Bundle responseBundle{model::BundleType::searchset, model::FhirResourceBase::NoProfile};
     std::size_t totalSearchMatches = responseIsPartOfMultiplePages(arguments->pagingArgument(), tasks.size())
-                                         ? database->countAll160Tasks(kvnr, arguments)
+                                         ? roDB->countAllEgkRedeemableTasks(kvnr, arguments)
                                          : tasks.size();
 
     auto argumentsResp = urlArgumentsForTasks({
@@ -761,13 +836,14 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
         session.setBdeUseCase(bde::GetTaskPharmacySecretRecovery_UC_4_17);
         std::tie(task, prescriptionBinary) = databaseHandle->retrieveTaskWithSecretAndPrescription(prescriptionId);
         checkTaskState(task, false);
-        A_24177.start("check AccessCode");
+        A_24177_01.start("check AccessCode");
         checkAccessCodeMatches(session.request, value(task));
-        A_24177.finish();
-        A_24178.start("only allow secrect recovery for Tasks that are in-progress");
-        ErpExpect(value(task).status()== model::Task::Status::inprogress, HttpStatus::PreconditionFailed,
-                  "Task not in-progress.");
-        A_24178.finish();
+        A_24177_01.finish();
+        A_24178_02.start("only allow secret recovery for Tasks that are in-progress or completed");
+        ErpExpect(value(task).status() == model::Task::Status::inprogress ||
+                      value(task).status() == model::Task::Status::completed,
+                  HttpStatus::PreconditionFailed, "Task must be in-progress or completed.");
+        A_24178_02.finish();
         checkPharmacyIsOwner(value(task), accessToken);
         task->setHealthCarePrescriptionUuid();
     }
@@ -777,7 +853,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     // GEMREQ-end A_24176#Call
     task->deleteAccessCode();
 
-    A_19226_01.start("create response bundle for pharmacist");
+    A_19226_02.start("create response bundle for pharmacist");
     const auto selfLink = makeFullUrl("/Task/" + task.value().prescriptionId().toString());
     model::Bundle responseBundle(model::BundleType::collection, ::model::FhirResourceBase::NoProfile);
     responseBundle.setLink(model::Link::Type::Self, selfLink);
@@ -803,7 +879,7 @@ void GetTaskHandler::handleRequestFromPharmacist(PcSessionContext& session, cons
     {
         responseBundle.addResource(receipt->getId().toUrn(), {}, {}, receipt->jsonDocument());
     }
-    A_19226_01.finish();
+    A_19226_02.finish();
 
     A_19514.start("HttpStatus 200 for successful GET");
     makeResponse(session, HttpStatus::OK, &responseBundle);
@@ -832,12 +908,12 @@ void GetTaskHandler::checkTaskState(const std::optional<model::Task>& task, bool
 // GEMREQ-start A_24176#checkPharmacyIsOwner
 void GetTaskHandler::checkPharmacyIsOwner(const model::Task& task, const JWT& accessToken)
 {
-    A_24176.start("compare Task.owner to idNumberClaim in ACCESS_TOKEN");
+    A_24176_01.start("compare Task.owner to idNumberClaim in ACCESS_TOKEN");
     auto telematikId = accessToken.stringForClaim(JWT::idNumberClaim);
     ErpExpect(telematikId.has_value(), HttpStatus::BadRequest, "Missing Telematik-ID in ACCESS_TOKEN");
     const auto& owner = task.owner();
     ErpExpect(owner && *owner == *telematikId, HttpStatus::PreconditionFailed,
               "Task.owner doesn't match idNumberClaim in ACCESS_TOKEN");
-    A_24176.finish();
+    A_24176_01.finish();
 }
 // GEMREQ-end A_24176#checkPharmacyIsOwner

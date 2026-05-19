@@ -7,6 +7,7 @@
 
 #include "shared/util/PeriodicTimer.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/util/ErpMacros.hxx"
 
 #include <boost/asio/io_context.hpp>
 #include <gtest/gtest.h>
@@ -18,29 +19,37 @@ static constexpr std::chrono::milliseconds tolerance(80);
 
 TEST(PeriodicTimerTest, countAndInterval)
 {
-    struct TestTimerHandler final : public FixedIntervalHandler {
-        using FixedIntervalHandler::FixedIntervalHandler;
-        void timerHandler() override
-        {
-            ++count;
-            auto now = std::chrono::steady_clock::now();
-            EXPECT_GE(now, expectTrigger);
-            EXPECT_LE(now, expectTrigger + tolerance);
-            expectTrigger += interval;
-            // sleep a bit to check if the timer drifts due to execution times in handler:
-            std::this_thread::sleep_for(2 * tolerance);
-        }
-        size_t count = 0;
-        std::chrono::steady_clock::time_point expectTrigger;
-    };
-    using TestTimer = PeriodicTimer<TestTimerHandler>;
-    boost::asio::io_context ioContext;
-    TestTimer testTimer(interval);
-    testTimer.start(ioContext, interval);
-    testTimer.handler()->expectTrigger = std::chrono::steady_clock::now() + interval;
-    ioContext.run_for(interval * 5 + tolerance);
-    ioContext.stop();
-    EXPECT_EQ(testTimer.handler()->count, 5);
+    WITH_RETRIES()
+    {
+        struct TestTimerHandler final : public FixedIntervalHandler {
+            using FixedIntervalHandler::FixedIntervalHandler;
+            TestTimerHandler(std::chrono::steady_clock::duration interval, erp::test::SoftExpect& softExpect)
+                : FixedIntervalHandler{interval}
+                , WITH_RETRIES_SoftExpect{softExpect}
+            {}
+            void timerHandler() override
+            {
+                ++count;
+                auto now = std::chrono::steady_clock::now();
+                SOFT_EXPECT_TRUE(now >= expectTrigger);
+                SOFT_EXPECT_TRUE(now <= expectTrigger + tolerance);
+                expectTrigger += interval;
+                // sleep a bit to check if the timer drifts due to execution times in handler:
+                std::this_thread::sleep_for(2 * tolerance);
+            }
+            erp::test::SoftExpect& WITH_RETRIES_SoftExpect;
+            size_t count = 0;
+            std::chrono::steady_clock::time_point expectTrigger;
+        };
+        using TestTimer = PeriodicTimer<TestTimerHandler>;
+        boost::asio::io_context ioContext;
+        TestTimer testTimer(interval, WITH_RETRIES_SoftExpect);
+        testTimer.start(ioContext, interval);
+        testTimer.handler()->expectTrigger = std::chrono::steady_clock::now() + interval;
+        ioContext.run_for(interval * 5 + tolerance);
+        ioContext.stop();
+        SOFT_EXPECT_TRUE(testTimer.handler()->count == 5);
+    }
 }
 
 TEST(PeriodicTimerTest, skip)

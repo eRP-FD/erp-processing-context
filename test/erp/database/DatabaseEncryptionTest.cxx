@@ -53,7 +53,7 @@ protected:
         model::Task task{prescriptionType, accessCode};
         task.setAcceptDate(model::Timestamp{1.0});
         task.setExpiryDate(model::Timestamp{2.0});
-        task.setKvnr(model::Kvnr{std::string{InsurantA}, model::Kvnr::Type::gkv});
+        task.setKvnr(model::Kvnr{std::string{InsurantA}});
         task.updateLastUpdate(model::Timestamp{3.0});
         task.setStatus(model::Task::Status::completed);
         task.setSecret(secret);
@@ -312,17 +312,13 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
         };
     };
     auto& db = database();
-    // TODO: The question https://dth01.ibmgcloud.net/jira/browse/ERP-5579 to Gematik is pending.
-    // If the format of the prescription id in the reference implementation of the communication
-    // resources has been updated the builder can be replaced again by the example as provided
-    // by Gematik with "test/fhir/conversion/communication_info_req.json".
-    auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::InfoReq);
+    auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::DispReq);
     builder.setPrescriptionId(
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel,815).toString());
     builder.setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.");
     builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
     auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
-    communication.setSender(model::Kvnr{InsurantA, model::Kvnr::Type::gkv});
+    communication.setSender(model::Kvnr{InsurantA});
     communication.setRecipient(model::TelematikId{mPharmacy});
     communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
     auto id = db.insertCommunication(communication);

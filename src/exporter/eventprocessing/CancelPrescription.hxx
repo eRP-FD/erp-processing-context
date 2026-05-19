@@ -9,6 +9,8 @@
 
 #include "exporter/eventprocessing/EventProcessingBase.hxx"
 
+class BDEMessage;
+
 namespace model
 {
 class CancelPrescriptionTaskEvent;
@@ -19,11 +21,11 @@ namespace eventprocessing
 class CancelPrescription : public EventProcessingBase
 {
 public:
-    static Outcome process(gsl::not_null<IEpaMedicationClient*> client, const model::CancelPrescriptionTaskEvent& erpEvent);
+    static Outcome process(gsl::not_null<IEpaMedicationClient*> client, const model::CancelPrescriptionTaskEvent& erpEvent, BDEMessage& bdeMessage);
 
 private:
     explicit CancelPrescription(gsl::not_null<IEpaMedicationClient*> medicationClient);
-    Outcome doProcess(const model::CancelPrescriptionTaskEvent& erpEvent);
+    Outcome doProcess(const model::CancelPrescriptionTaskEvent& erpEvent, BDEMessage& bdeMessage);
 };
 
 }

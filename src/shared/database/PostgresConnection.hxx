@@ -30,9 +30,8 @@ public:
 
     [[nodiscard]]
     static std::string defaultConnectString();
-
     [[nodiscard]]
-    static std::string connectStringSslMode();
+    static std::string readOnlyConnectString();
 
     /// @brief (re-) connects if not already connected. Should not be called in the middle of a transaction.
     void connectIfNeeded();
@@ -40,8 +39,6 @@ public:
     std::unique_ptr<pqxx::transaction_base> createTransaction(TransactionMode mode = TransactionMode::transaction);
 
     operator pqxx::connection&() const;// NOLINT(google-explicit-constructor)
-
-    void setConnectionString(const std::string_view& connectionString);
 
     std::optional<DatabaseConnectionInfo> getConnectionInfo() const;
 

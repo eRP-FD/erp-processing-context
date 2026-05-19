@@ -6,11 +6,13 @@
  */
 
 #include "shared/network/message/Header.hxx"
-
+#include "shared/erp-serverinfo.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/SharedRequirements.hxx"
 #include "shared/util/UrlHelper.hxx"
 
 #include <boost/algorithm/string.hpp>
+#include <fmt/format.h>
 #include <sstream>
 
 const std::string Header::Accept = "Accept";
@@ -46,9 +48,9 @@ const std::string Header::PnTelematikId = "pn_telematikID";
 const std::string Header::PnIpaddress = "pn_ipaddress";
 
 const std::string Header::Tee3::VauCid = "VAU-CID";
-const std::string Header::Tee3::XUserAgent = "x-useragent";
+const std::string Header::XUserAgent = "x-useragent";
 const std::string Header::Tee3::XInsurantId = "x-insurantid";
-const std::string Header::Tee3::VauNP = "VAU-NP";
+const std::string Header::Tee3::VauNP = "vau-np";
 const std::string Header::Tee3::VauNonPuTracing = "VAU-nonPU-Tracing";
 
 const std::string Header::Location = "Location";
@@ -65,6 +67,7 @@ const std::string Header::Warning = "Warning";
 const std::string Header::XAccessCode = "X-AccessCode";
 const std::string Header::XRequestId = "X-Request-Id";
 const std::string Header::XForwardedFor = "X-Forwarded-For";
+const std::string Header::XPoPPToken = "X-PoPP-Token";
 
 const std::string Header::ConnectionClose = "close";
 const std::string Header::ConnectionKeepAlive = "keep-alive";
@@ -407,7 +410,6 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
         case model::ProfileType::GEM_ERP_PR_Binary:
         case model::ProfileType::GEM_ERP_PR_Communication_DiGA:
         case model::ProfileType::GEM_ERP_PR_Communication_DispReq:
-        case model::ProfileType::GEM_ERP_PR_Communication_InfoReq:
         case model::ProfileType::GEM_ERP_PR_Communication_Reply:
         case model::ProfileType::GEM_ERP_PR_Communication_Representative:
         case model::ProfileType::GEM_ERP_PR_Composition:
@@ -476,6 +478,12 @@ std::string Header::profileVersionHeader(model::ProfileType profileType)
             return DavAbgabedaten;
     }
     return {};
+}
+
+std::string Header::xUserAgentHeader()
+{
+    A_22470_06.start("build x-useragent");
+    return fmt::format("{}/{}", ErpServerInfo::GematikClientId(), ErpServerInfo::ReleaseVersion());
 }
 
 void Header::setContentLengthZeroMethodUnknown()

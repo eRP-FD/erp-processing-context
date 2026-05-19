@@ -6,10 +6,12 @@
  */
 
 #include "erp/database/PostgresBackend.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "shared/database/PostgresConnection.hxx"
 #include "shared/hsm/ErpTypes.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "shared/enrolment/EnrolmentServer.hxx"
 #include "tools/EnrolmentApiClient.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/TestConfiguration.hxx"
@@ -88,7 +90,7 @@ private:
                 .resolveTimeout = std::chrono::milliseconds{configuration.getIntValue(
                     ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
                 .tlsParameters = TlsConnectionParameters{
-                    .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()}});
+                    .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}});
         }
     }
 
@@ -124,8 +126,11 @@ public:
                 mConnection = std::make_unique<PostgresConnection>(PostgresConnection::defaultConnectString());
                 mConnection->connectIfNeeded();
                 mTransaction = mConnection->createTransaction();
+
             }
-            mTestClient = TestClient::create(nullptr, TestClient::Target::ENROLMENT);
+            auto context = client->getContext();
+            Expect(context != nullptr, "invalid context");
+            context->getEnrolmentServer()->serve(1, "enroll-test");
         }
     }
 
@@ -231,7 +236,6 @@ protected:
 
     ::std::unique_ptr<::PostgresConnection> mConnection;
     ::std::unique_ptr<::pqxx::transaction_base> mTransaction;
-    ::std::unique_ptr<TestClient> mTestClient;
 };
 
 class TestTask

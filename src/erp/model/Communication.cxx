@@ -43,7 +43,6 @@ namespace
 const rj::Pointer payloadContentStringPointer(ElementName::path(elements::payload, 0, elements::contentString));
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToString = {
-    { Communication::MessageType::InfoReq,          "InfoReq"          },
     { Communication::MessageType::ChargChangeReq,   "ChargChangeReq"   },
     { Communication::MessageType::ChargChangeReply, "ChargChangeReply" },
     { Communication::MessageType::Reply,            "Reply"            },
@@ -53,7 +52,6 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToString
 };
 
 const std::map<Communication::MessageType, std::string_view> MessageTypeToProfileUrl = {
-    { Communication::MessageType::InfoReq,          structure_definition::communicationInfoReq          },
     { Communication::MessageType::ChargChangeReq,   structure_definition::communicationChargChangeReq   },
     { Communication::MessageType::ChargChangeReply, structure_definition::communicationChargChangeReply },
     { Communication::MessageType::Reply,            structure_definition::communicationReply            },
@@ -63,7 +61,6 @@ const std::map<Communication::MessageType, std::string_view> MessageTypeToProfil
 };
 
 const std::map<std::string_view, Communication::MessageType> ProfileUrlToMessageType = {
-    {structure_definition::communicationInfoReq,          Communication::MessageType::InfoReq          },
     {structure_definition::communicationChargChangeReq,   Communication::MessageType::ChargChangeReq   },
     {structure_definition::communicationChargChangeReply, Communication::MessageType::ChargChangeReply },
     {structure_definition::communicationReply,            Communication::MessageType::Reply            },
@@ -77,8 +74,8 @@ std::string retrievePrescriptionIdFromReference(
     const model::Communication::MessageType messageType)
 {
     // Reference may look like:
-    // InfoReq and Reply:           "[baseUrl/]Task/160.123.456.789.123.58" or
-    // DispReq and Representative:  "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" or
+    // Reply:                      "[baseUrl/]Task/160.123.456.789.123.58" or
+    // DispReq and Representative: "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea" or
     // ChargChangeReq and ChargChangeReply: "[baseUrl/]ChargeItem/200.000.000.006.522.02"
     std::string path;
     std::tie(path, std::ignore, std::ignore) = UrlHelper::splitTarget(std::string(reference));
@@ -95,7 +92,6 @@ std::string retrievePrescriptionIdFromReference(
                 matches = std::regex_match(path.c_str(), result, pathRegexChargeItemId);
             }
             break;
-            case Communication::MessageType::InfoReq:
             case Communication::MessageType::DiGA:
             case Communication::MessageType::DispReq:
             case Communication::MessageType::Representative:
@@ -114,7 +110,6 @@ std::string retrievePrescriptionIdFromReference(
             case Communication::MessageType::ChargChangeReq:
             case Communication::MessageType::ChargChangeReply:
                 ModelFail("Invalid reference for this message type");
-            case Communication::MessageType::InfoReq:
             case Communication::MessageType::DiGA:
             case Communication::MessageType::DispReq:
             case Communication::MessageType::Representative:
@@ -137,8 +132,8 @@ std::string retrievePrescriptionIdFromReference(
 std::optional<std::string> retrieveAccessCodeFromTaskReference(std::string_view taskReference)
 {
     // taskReference may look like:
-    // InfoReq and Reply:           "[baseUrl/]Task/160.123.456.789.123.58" or
-    // DispReq and Representative:  "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
+    // Reply:                      "[baseUrl/]Task/160.123.456.789.123.58" or
+    // DispReq and Representative: "[baseUrl/]Task/160.123.456.789.123.58/$accept?ac=777bea0e13cc9c42ceec14aec3ddee2263325dc2c6c699db115f58fe423607ea"
     // The access code starts after "$accept?ac=" and goes to the end.
     const auto& [path, query, fragment] = UrlHelper::splitTarget(std::string(taskReference));
     const std::vector<std::pair<std::string, std::string>> queryParameters = UrlHelper::splitQuery(query);
@@ -193,8 +188,6 @@ ProfileType Communication::messageTypeToProfileType(MessageType messageType)
 {
     switch (messageType)
     {
-        case MessageType::InfoReq:
-            return ProfileType::GEM_ERP_PR_Communication_InfoReq;
         case MessageType::ChargChangeReq:
             return ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq;
         case MessageType::ChargChangeReply:
@@ -215,8 +208,6 @@ Communication::MessageType Communication::profileTypeToMessageType(ProfileType p
 {
     switch (profileType)
     {
-        case ProfileType::GEM_ERP_PR_Communication_InfoReq:
-            return MessageType::InfoReq;
         case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReq:
             return MessageType::ChargChangeReq;
         case ProfileType::GEM_ERPCHRG_PR_Communication_ChargChangeReply:
@@ -349,7 +340,6 @@ bool Communication::isRequest() const
     {
         case MessageType::ChargChangeReq:
         case MessageType::DispReq:
-        case MessageType::InfoReq:
             return true;
         case MessageType::ChargChangeReply:
         case MessageType::DiGA:
@@ -367,7 +357,6 @@ bool Communication::isDispenseRequest() const
         case MessageType::DispReq:
             return true;
         case MessageType::ChargChangeReq:
-        case MessageType::InfoReq:
         case MessageType::ChargChangeReply:
         case MessageType::DiGA:
         case MessageType::Representative:
@@ -385,7 +374,6 @@ bool Communication::isReply() const
         case MessageType::ChargChangeReply:
         case MessageType::DiGA:
             return true;
-        case MessageType::InfoReq:
         case MessageType::DispReq:
         case MessageType::Representative:
         case MessageType::ChargChangeReq:
@@ -398,7 +386,6 @@ bool Communication::requiresTask() const
 {
     switch (messageType())
     {
-        case MessageType::InfoReq:
         case MessageType::DiGA:
         case MessageType::DispReq:
         case MessageType::Reply:
@@ -555,9 +542,10 @@ void Communication::verifyPayload(const JsonValidator& validator) const
     if (!payload.empty())
     {
         payload.verifyLength();
-        const auto schema = payloadSchema();
+        const auto schema = payloadSchema(payload);
         if (schema.has_value())
         {
+            verifySchemaValidityTime(*schema);
             payload.validateJsonSchema(validator, *schema);
         }
     }
@@ -579,7 +567,6 @@ void Communication::verifySupplyOptionsType(PrescriptionType prescriptionType) c
             }
             A_23878_01.finish();
             break;
-        case MessageType::InfoReq:
         case MessageType::Reply:
         case MessageType::Representative:
         case MessageType::ChargChangeReq:
@@ -590,7 +577,7 @@ void Communication::verifySupplyOptionsType(PrescriptionType prescriptionType) c
 }
 
 
-std::optional<SchemaType> Communication::payloadSchema() const
+std::optional<SchemaType> Communication::payloadSchema(const CommunicationPayload& payload) const
 {
     using enum MessageType;
     switch (messageType())
@@ -598,15 +585,59 @@ std::optional<SchemaType> Communication::payloadSchema() const
         case ChargChangeReq:
         case ChargChangeReply:
         case DiGA:
-        case InfoReq:
         case Representative:
             return std::nullopt;
         case DispReq:
-            return SchemaType::CommunicationDispReqPayload;
+            switch (payload.version())
+            {
+
+                case CommunicationPayloadVersion::V1:
+                    return SchemaType::CommunicationDispReqPayloadV1;
+                case CommunicationPayloadVersion::V3:
+                    return SchemaType::CommunicationDispReqPayloadV3;
+            }
+            break;
         case Reply:
-            return SchemaType::CommunicationReplyPayload;
+            switch (payload.version())
+            {
+                case CommunicationPayloadVersion::V1:
+                    return SchemaType::CommunicationReplyPayloadV1;
+                case CommunicationPayloadVersion::V3:
+                    return SchemaType::CommunicationReplyPayloadV3;
+            }
+            break;
     }
     Fail2("Unexpected value for 'messageType': " + std::to_string(intmax_t(messageType())), std::logic_error);
+}
+
+void Communication::verifySchemaValidityTime(SchemaType schemaType)
+{
+    const auto& config = Configuration::instance();
+    const auto today = Timestamp::fromGermanDate(Timestamp::now().toGermanDate());
+    switch (schemaType)
+    {
+        case SchemaType::fhir:
+        case SchemaType::BNA_tsl:
+        case SchemaType::Gematik_tsl:
+        case SchemaType::Pruefungsnachweis:
+            break;
+        case SchemaType::CommunicationDispReqPayloadV1:
+        case SchemaType::CommunicationReplyPayloadV1: {
+            const auto validUntil = config.communicationPayloadV1ValidUntil();
+            ModelExpect(validUntil >= today,
+                        "Communication payload version 1 was valid until " + validUntil.toGermanDate());
+            return;
+        }
+        case SchemaType::CommunicationDispReqPayloadV3:
+        case SchemaType::CommunicationReplyPayloadV3: {
+            const auto validFrom = config.communicationPayloadV3ValidFrom();
+            ModelExpect(validFrom <= today,
+                        "Communication payload version 3 will be valid from " + validFrom.toGermanDate());
+            return;
+        }
+    }
+    ModelFail("Wrong SchemaType for Communication::verifySchemaValidityTime: " +
+              std::to_string(gsl::narrow<intmax_t>(schemaType)));
 }
 
 std::optional<model::Timestamp> model::Communication::getValidationReferenceTimestamp() const

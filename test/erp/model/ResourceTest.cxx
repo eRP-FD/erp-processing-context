@@ -21,11 +21,12 @@
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
-#include <boost/algorithm/string.hpp>
-#include <gtest/gtest.h>
 #include <array>
 #include <memory>
 #include <utility>
+#include <boost/algorithm/string.hpp>
+#include <fmt/ranges.h>
+#include <gtest/gtest.h>
 
 using namespace ::std::literals::string_view_literals;
 
@@ -64,14 +65,6 @@ TEST(ResourceFactoryTest, invalid_profile)
     auto supported = fhirInstance.structureRepository(model::Timestamp::now())
                          .supportedVersions({std::string{model::resource::structure_definition::prescriptionItem}});
     ASSERT_FALSE(supported.empty());
-    std::string_view sep{};
-    std::string profileList;
-    for (const auto& profile: supported)
-    {
-        profileList += sep;
-        profileList += to_string(profile);
-        sep = ", ";
-    }
     std::string goodProfile{model::resource::structure_definition::prescriptionItem};
     goodProfile.append(1, '|').append(ResourceTemplates::Versions::KBV_ERP_current().renderVersion());
     const auto badProfile = makeBroken(goodProfile);
@@ -85,7 +78,8 @@ TEST(ResourceFactoryTest, invalid_profile)
     catch (const ErpException& ex)
     {
         ASSERT_TRUE(ex.diagnostics().has_value());
-        EXPECT_EQ( *ex.diagnostics(), "invalid profile " + badProfile + " must be one of: " + profileList);
+        EXPECT_EQ(*ex.diagnostics(),
+                  fmt::format("invalid profile {} must be one of: {}", badProfile, fmt::join(supported, ", ")));
     }
     catch (const std::exception& ex)
     {

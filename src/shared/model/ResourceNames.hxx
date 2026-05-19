@@ -59,7 +59,6 @@ namespace naming_system
 constexpr std::string_view accessCode = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_AccessCode";
 constexpr std::string_view argeIknr = "http://fhir.de/sid/arge-ik/iknr";
 constexpr std::string_view gkvKvid10 = "http://fhir.de/sid/gkv/kvid-10";
-constexpr std::string_view pkvKvid10 = "http://fhir.de/sid/pkv/kvid-10";
 constexpr std::string_view prescriptionID = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId";
 constexpr std::string_view secret = "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_Secret";
 constexpr std::string_view telematicID = "https://gematik.de/fhir/sid/telematik-id";
@@ -102,7 +101,6 @@ constexpr std::string_view communication = "http://hl7.org/fhir/StructureDefinit
 constexpr std::string_view communicationChargChangeReply = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReply";
 constexpr std::string_view communicationChargChangeReq = "https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_Communication_ChargChangeReq";
 constexpr std::string_view communicationDispReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq";
-constexpr std::string_view communicationInfoReq = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_InfoReq";
 constexpr std::string_view communicationLocation = "http://prescriptionserver.telematik/Communication/";
 constexpr std::string_view communicationDiGA = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DiGA";
 constexpr std::string_view communicationReply = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply";
@@ -197,6 +195,12 @@ constexpr std::string_view erp_tprescription_organization =
     "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-organization";
 constexpr std::string_view erp_tprescription_carbon_copy =
     "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy";
+constexpr std::string_view GeneratedDosageInstructionsMeta =
+    "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta";
+constexpr std::string_view extension_MedicationDispense_renderedDosageInstruction =
+    "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction";
+constexpr std::string_view extension_MedicationRequest_renderedDosageInstruction =
+    "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction";
 } // namespace structure_definition
 
 namespace operation_definition
@@ -289,6 +293,7 @@ const ElementName amount{ "amount" };
 const ElementName assigner{ "assigner" };
 const ElementName author{ "author" };
 const ElementName basedOn{ "basedOn" };
+const ElementName boundsDuration{ "boundsDuration" };
 const ElementName category{ "category" };
 const ElementName code{ "code" };
 const ElementName codeCodeableConcept{ "codeCodeableConcept" };
@@ -302,9 +307,12 @@ const ElementName contentType{ "contentType" };
 const ElementName creation{ "creation" };
 const ElementName data{ "data" };
 const ElementName dateTime{ "dateTime" };
+const ElementName dayOfWeek{ "dayOfWeek" };
 const ElementName denominator{ "denominator" };
 const ElementName deviceName{ "deviceName" };
 const ElementName display{ "display" };
+const ElementName doseAndRate{ "doseAndRate" };
+const ElementName doseQuantity{ "doseQuantity" };
 const ElementName end{ "end" };
 const ElementName enterer{ "enterer" };
 const ElementName enteredDate{ "enteredDate" };
@@ -314,6 +322,7 @@ const ElementName family{ "family" };
 const ElementName _family{ "_family" };
 const ElementName form{ "form" };
 const ElementName fullUrl{"fullUrl"};
+const ElementName frequency{"frequency"};
 const ElementName hash{ "hash" };
 const ElementName id{ "id" };
 const ElementName identifier{ "identifier" };
@@ -332,10 +341,12 @@ const ElementName parameter{ "parameter" };
 const ElementName part{ "part" };
 const ElementName path{ "path" };
 const ElementName patient{ "patient" };
+const ElementName patientInstruction{ "patientInstruction" };
 const ElementName payload{ "payload" };
 const ElementName payor{ "payor" };
 const ElementName performer{ "performer" };
 const ElementName period{ "period" };
+const ElementName periodUnit{ "periodUnit" };
 const ElementName practitioner{ "practitioner" };
 const ElementName prefix{ "prefix" };
 const ElementName _prefix{ "_prefix" };
@@ -345,6 +356,7 @@ const ElementName qualification{ "qualification" };
 const ElementName received{ "received" };
 const ElementName recipient{ "recipient" };
 const ElementName reference{ "reference" };
+const ElementName repeat{ "repeat" };
 const ElementName resource{ "resource" };
 const ElementName resourceType{ "resourceType" };
 const ElementName search{ "search" };
@@ -361,6 +373,8 @@ const ElementName system{ "system" };
 const ElementName tag{ "tag" };
 const ElementName telecom{ "telecom" };
 const ElementName text{ "text" };
+const ElementName timeOfDay{ "timeOfDay" };
+const ElementName timing{ "timing" };
 const ElementName title{ "title" };
 const ElementName type{ "type" };
 const ElementName unit{ "unit" };
@@ -375,8 +389,10 @@ const ElementName valuePeriod{ "valuePeriod" };
 const ElementName valueRatio{ "valueRatio" };
 const ElementName valueIdentifier{ "valueIdentifier" };
 const ElementName valueInstant{ "valueInstant" };
+const ElementName valueMarkdown{ "valueMarkdown" };
 const ElementName valueString{ "valueString" };
 const ElementName version{ "version" };
+const ElementName when{ "when" };
 const ElementName whenHandedOver{ "whenHandedOver" };
 const ElementName whenPrepared{ "whenPrepared" };
 const ElementName lastMedicationDispense{ "lastMedicationDispense" };

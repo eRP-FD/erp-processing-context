@@ -32,7 +32,7 @@ Then the docker image can be built from the top-level of the source tree using t
 docker build \
     --file docker/erp-fhir-ws/Dockerfile \
     --build-arg ERP_BUILD_VERSION=LOCAL \
-    --build-arg ERP_RELEASE_VERSION=1.21.0 \
+    --build-arg ERP_RELEASE_VERSION=1.22.0 \
     --secret id=conan_credentials.json \
     --tag de.icr.io/erp_dev/erp-fhir-ws .
 ```

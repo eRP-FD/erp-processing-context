@@ -42,9 +42,20 @@ JwtBuilder::JwtBuilder(shared_EVP_PKEY key)
 {
 }
 
+JwtBuilder::JwtBuilder(shared_EVP_PKEY key, JoseHeader header)
+    : mKey(std::move(key))
+    , mJoseHeader(std::move(header))
+{
+}
+
 JwtBuilder JwtBuilder::testBuilder()
 {
     return JwtBuilder{MockCryptography::getIdpPrivateKey()};
+}
+
+JwtBuilder JwtBuilder::testBuilder(JoseHeader header)
+{
+    return JwtBuilder{MockCryptography::getIdpPrivateKey(), std::move(header)};
 }
 
 JWT JwtBuilder::getJWT(const rapidjson::Document& claims)
@@ -87,15 +98,17 @@ JWT JwtBuilder::makeValidJwt(rapidjson::Document&& claims)
     return getJWT(claims);
 }
 
-JWT JwtBuilder::makeJwtApotheke(const std::optional<std::string>& telematicId)
+JWT JwtBuilder::makeJwtApotheke(const std::string& telematikId)
 {
     static auto constexpr templateResource = "test/jwt/claims_apotheke.json";
     auto& resourceManager = ResourceManager::instance();
     const auto& claimTemplate = resourceManager.getJsonResource(templateResource);
     rapidjson::Document claims;
     claims.CopyFrom(claimTemplate, claims.GetAllocator());
-    if(telematicId.has_value())
-        setIdNummer(claims, telematicId.value());
+    if(!telematikId.empty())
+    {
+        setIdNummer(claims, telematikId);
+    }
     return makeValidJwt(std::move(claims));
 }
 
@@ -127,16 +140,16 @@ JWT JwtBuilder::makeJwtVersicherter(const model::Kvnr& kvnr)
     return makeJwtVersicherter(kvnr.id());
 }
 
-JWT JwtBuilder::makeJwtKostentraeger(const std::optional<std::string>& telematicId)
+JWT JwtBuilder::makeJwtKostentraeger(const std::string& telematikId)
 {
     static auto constexpr templateResource = "test/jwt/claims_kostentraeger.json";
     auto& resourceManager = ResourceManager::instance();
     const auto& claimTemplate = resourceManager.getJsonResource(templateResource);
     rapidjson::Document claims;
     claims.CopyFrom(claimTemplate, claims.GetAllocator());
-    if (telematicId.has_value())
+    if (!telematikId.empty())
     {
-        setIdNummer(claims, telematicId.value());
+        setIdNummer(claims, telematikId);
     }
     return makeValidJwt(std::move(claims));
 }

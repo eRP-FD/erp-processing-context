@@ -26,6 +26,13 @@ public:
                         std::chrono::milliseconds resolveTimeout);
     explicit HttpClient(const boost::asio::ip::tcp::endpoint& ep, const std::string& host,
                         std::chrono::milliseconds connectionTimeout);
+
+    /// Use this constructor to create a Http client using a
+    /// specific endpoint
+    explicit HttpClient(const boost::asio::ip::tcp::endpoint& ep, const ConnectionParameters& params);
+    /// Use this constructor to create a Https client using the given
+    /// host name and port number, TLS parameters are ignored
+    explicit HttpClient(const ConnectionParameters& params);
 };
 
 

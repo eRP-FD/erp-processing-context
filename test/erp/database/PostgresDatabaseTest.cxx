@@ -49,7 +49,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-co
     // should create entry in DB
     std::optional<CmacKey> cmac1st;
     { // scope
-        PostgresBackend db;
+        PostgresBackend db{PostgresBackend::mainConnection()};
 
         mockRng.SetRandomBytesOffset(0);
 
@@ -70,7 +70,7 @@ TEST_F(PostgresDatabaseTest, acquireCMACCommits)//NOLINT(readability-function-co
     // test with second DB instance
     // should read existing entry
     { // scope
-        PostgresBackend db;
+        PostgresBackend db{PostgresBackend::mainConnection()};
 
         mockRng.SetRandomBytesOffset(1);
 
@@ -184,7 +184,7 @@ TEST_F(PostgresDatabaseTest, countAllTasksForPatient)
         GTEST_SKIP();
     }
     auto allTypes = magic_enum::enum_values<model::PrescriptionType>();
-    const model::Kvnr kvnr{"X012345676", model::Kvnr::Type::gkv};
+    const model::Kvnr kvnr{"X012345676"};
     SearchParameter paramStatus{"status", "status", SearchParameter::Type::TaskStatus};
     auto taskCount = [&](const std::optional<UrlArguments>& search = std::nullopt) {
         auto count = database().countAllTasksForPatient(kvnr, search);

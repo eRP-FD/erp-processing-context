@@ -30,7 +30,8 @@ void ErrorHandler::throwOnServerError (const std::string& message, const FileNam
         default:
             std::stringstream s;
             s << message << " : " << ec.message();
-            throw ExceptionWrapper<ServerException>::create(fileAndLineNumber, s.str());
+            LOG(ERROR) << s.view();
+            throw ExceptionWrapper<ServerException>::create(fileAndLineNumber, std::move(s).str());
     }
 }
 

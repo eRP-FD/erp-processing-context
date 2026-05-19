@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "test/erp/model/JsonMaintainNumberPrecisionTest.hxx"
+#include "test/erp/model/JsonMaintainNumberPrecisionTestModel.hxx"
 #include "erp/model/Communication.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"
 #include "shared/model/ModelException.hxx"
@@ -13,6 +13,7 @@
 #include "shared/util/FileHelper.hxx"
 
 #include <boost/format.hpp>
+#include <gtest/gtest.h>
 
 using namespace model;
 using namespace model::resource;
@@ -31,219 +32,19 @@ namespace {
     }
 }
 
-std::string JsonMaintainNumberPrecisionTest::createJsonStringCommunicationInfoReq()
-{
-    // To be able to compare the json input string parsed by the document with
-    // the serialized string of the ParseNumberAsStrings document the input string
-    // is neither read from a file nor created using a hard coded resource string.
-    // Both methods would insert line feeds into the input string.
-
-    rj::StringBuffer s;
-    rj::Writer<rj::StringBuffer> writer(s);
-
-    writer.StartObject();
-        writer.Key(elements::resourceType);
-        writer.String("Communication");
-        writer.Key(elements::meta);
-        writer.StartObject();
-            writer.Key(elements::profile);
-            writer.StartArray();
-                writer.String(structure_definition::communicationInfoReq.data());
-            writer.EndArray();
-        writer.EndObject();
-        writer.Key(elements::contained);
-        writer.StartArray();
-            writer.StartObject();
-                writer.Key(elements::resourceType);
-                writer.String("Medication");
-                writer.Key(elements::id);
-                writer.String("5fe6e06c-8725-46d5-aecd-e65e041ca3de");
-                writer.Key(elements::meta);
-                writer.StartObject();
-                    writer.Key(elements::profile);
-                    writer.StartArray();
-                        writer.String("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN|1.00.000");
-                    writer.EndArray();
-                writer.EndObject();
-                writer.Key(elements::extension);
-                writer.StartArray();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category");
-                        writer.Key(elements::valueCoding);
-                        writer.StartObject();
-                            writer.Key(elements::system);
-                            writer.String("https://fhir.kbv.de/CodeSystem/KBV_CS_ERP_Medication_Category");
-                            writer.Key(elements::code);
-                            writer.String("00");
-                        writer.EndObject();
-                    writer.EndObject();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Vaccine");
-                        writer.Key(elements::valueBoolean);
-                        writer.Bool(false);
-                    writer.EndObject();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("http://fhir.de/StructureDefinition/normgroesse");
-                        writer.Key(elements::valueCode);
-                        writer.String("N1");
-                    writer.EndObject();
-                writer.EndArray();
-                writer.Key(elements::code);
-                writer.StartObject();
-                    writer.Key(elements::coding);
-                    writer.StartArray();
-                        writer.StartObject();
-                            writer.Key(elements::system);
-                            writer.String("http://fhir.de/CodeSystem/ifa/pzn");
-                            writer.Key(elements::code);
-                            writer.String("06313728");
-                        writer.EndObject();
-                    writer.EndArray();
-                    writer.Key(elements::text);
-                    writer.String("Sumatriptan-1a Pharma 100 mg Tabletten");
-                writer.EndObject();
-                writer.Key(elements::form);
-                writer.StartObject();
-                    writer.Key(elements::coding);
-                    writer.StartArray();
-                        writer.StartObject();
-                            writer.Key(elements::system);
-                            writer.String("https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM");
-                            writer.Key(elements::code);
-                            writer.String("TAB");
-                        writer.EndObject();
-                    writer.EndArray();
-                    writer.Key(elements::text);
-                    writer.String("Sumatriptan-1a Pharma 100 mg Tabletten");
-                writer.EndObject();
-                writer.Key(elements::amount);
-                writer.StartObject();
-                    writer.Key(elements::numerator);
-                    writer.StartObject();
-                        writer.Key(elements::value);
-                        writer.Int(12);
-                        writer.Key(elements::unit);
-                        writer.String("TAB");
-                        writer.Key(elements::system);
-                        writer.String("http://unitsofmeasure.org");
-                        writer.Key(elements::code);
-                        writer.String("{tbl}");
-                    writer.EndObject();
-                    writer.Key(elements::denominator);
-                    writer.StartObject();
-                        writer.Key(elements::value);
-                        writer.Int(1);
-                    writer.EndObject();
-                writer.EndObject();
-            writer.EndObject();
-        writer.EndArray();
-        writer.Key(elements::status);
-        writer.String("unknown");
-        writer.Key(elements::about);
-        writer.StartArray();
-            writer.StartObject();
-                writer.Key(elements::reference);
-                writer.String("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
-            writer.EndObject();
-        writer.EndArray();
-        writer.Key(elements::recipient);
-        writer.StartArray();
-            writer.StartObject();
-                writer.Key(elements::identifier);
-                writer.StartObject();
-                    writer.Key(elements::system);
-                    writer.String(std::string(naming_system::telematicID));
-                    writer.Key(elements::value);
-                    writer.String("606358757");
-                writer.EndObject();
-            writer.EndObject();
-        writer.EndArray();
-        writer.Key(elements::payload);
-        writer.StartArray();
-            writer.StartObject();
-                writer.Key(elements::extension);
-                writer.StartArray();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://gematik.de/fhir/StructureDefinition/InsuranceProvider");
-                        writer.Key(elements::valueIdentifier);
-                        writer.StartObject();
-                            writer.Key(elements::system);
-                            writer.String("http://fhir.de/NamingSystem/arge-ik/iknr");
-                            writer.Key(elements::value);
-                            writer.String("104212059");
-                        writer.EndObject();
-                    writer.EndObject();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://gematik.de/fhir/StructureDefinition/SupplyOptionsType");
-                        writer.Key(elements::extension);
-                        writer.StartArray();
-                            writer.StartObject();
-                                writer.Key(elements::url);
-                                writer.String("onPremise");
-                                writer.Key(elements::valueBoolean);
-                                writer.Bool(true);
-                            writer.EndObject();
-                            writer.StartObject();
-                                writer.Key(elements::url);
-                                writer.String("delivery");
-                                writer.Key(elements::valueBoolean);
-                                writer.Bool(true);
-                            writer.EndObject();
-                            writer.StartObject();
-                                writer.Key(elements::url);
-                                writer.String("shipment");
-                                writer.Key(elements::valueBoolean);
-                                writer.Bool(false);
-                            writer.EndObject();
-                        writer.EndArray();
-                    writer.EndObject();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://gematik.de/fhir/StructureDefinition/SubstitutionAllowedType");
-                        writer.Key(elements::valueBoolean);
-                        writer.Bool(true);
-                    writer.EndObject();
-                    writer.StartObject();
-                        writer.Key(elements::url);
-                        writer.String("https://gematik.de/fhir/StructureDefinition/PrescriptionType");
-                        writer.Key(elements::valueCoding);
-                        writer.StartObject();
-                            writer.Key(elements::system);
-                            writer.String("https://gematik.de/fhir/CodeSystem/Flowtype");
-                            writer.Key(elements::code);
-                            writer.String("160");
-                            writer.Key(elements::display);
-                            writer.String("Muster 16 (Apothekenpflichtige Arzneimittel)");
-                        writer.EndObject();
-                    writer.EndObject();
-                writer.EndArray();
-                writer.Key(elements::contentString);
-                writer.String("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.");
-            writer.EndObject();
-        writer.EndArray();
-    writer.EndObject(); // root
-
-    return std::string(s.GetString(), s.GetLength());
-}
-
-TEST_F(JsonMaintainNumberPrecisionTest, EmptyString)
+TEST(JsonMaintainNumberPrecisionTest, EmptyString)
 {
     std::string jsonString;
     EXPECT_THROW(JsonMaintainNumberPrecisionTestModel::fromJson(jsonString), ModelException);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, InvalidDocument)
+TEST(JsonMaintainNumberPrecisionTest, InvalidDocument)
 {
     std::string jsonString = R"({{})";
     EXPECT_THROW(JsonMaintainNumberPrecisionTestModel::fromJson(jsonString), ModelException);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectEmpty)
+TEST(JsonMaintainNumberPrecisionTest, RootObjectEmpty)
 {
     std::string jsonStringIn = R"({})";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
@@ -251,7 +52,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootObjectEmpty)
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayEmpty)
+TEST(JsonMaintainNumberPrecisionTest, RootArrayEmpty)
 {
     std::string jsonStringIn = R"([])";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
@@ -259,63 +60,63 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootArrayEmpty)
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneMember)
+TEST(JsonMaintainNumberPrecisionTest, RootObjectOneMember)
 {
     const rj::Pointer profilePointer(ElementName::path("profile"));
-    std::string jsonStringIn = R"({"profile":"https://gematik.de/ErxCommunicationInfoReq"})";
+    std::string jsonStringIn = R"({"profile":"https://erp-test.net/some/profile"})";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
     ASSERT_NE(profilePointer.Get(model.jsonDocument()), nullptr);
-    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(profilePointer), "https://gematik.de/ErxCommunicationInfoReq");
+    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(profilePointer), "https://erp-test.net/some/profile");
     std::string jsonStringOut = model.serializeToJsonString();
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneElement)
+TEST(JsonMaintainNumberPrecisionTest, RootArrayOneElement)
 {
     const rj::Pointer element0Pointer(ElementName::path(0));
-    std::string jsonStringIn = R"(["https://gematik.de/ErxCommunicationInfoReq"])";;
+    std::string jsonStringIn = R"(["https://erp-test.net/some/profile"])";;
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
     ASSERT_NE(element0Pointer.Get(model.jsonDocument()), nullptr);
-    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element0Pointer), "https://gematik.de/ErxCommunicationInfoReq");
+    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element0Pointer), "https://erp-test.net/some/profile");
     std::string jsonStringOut = model.serializeToJsonString();
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectTopLevelMembers)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, RootObjectTopLevelMembers)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer resourceTypePointer(ElementName::path("resourceType"));
     const rj::Pointer metaPointer(ElementName::path("meta"));
     const rj::Pointer profilePointer(ElementName::path("profile"));
-    std::string jsonStringIn = R"({"resourceType":"TestModel","meta":"StringValue","profile":"https://gematik.de/ErxCommunicationInfoReq"})";
+    std::string jsonStringIn = R"({"resourceType":"TestModel","meta":"StringValue","profile":"https://erp-test.net/some/profile"})";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
     ASSERT_NE(resourceTypePointer.Get(model.jsonDocument()), nullptr);
     EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(resourceTypePointer), "TestModel");
     ASSERT_NE(metaPointer.Get(model.jsonDocument()), nullptr);
     EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(metaPointer), "StringValue");
     ASSERT_NE(profilePointer.Get(model.jsonDocument()), nullptr);
-    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(profilePointer), "https://gematik.de/ErxCommunicationInfoReq");
+    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(profilePointer), "https://erp-test.net/some/profile");
     std::string jsonStringOut = model.serializeToJsonString();
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayTopLevelElements)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, RootArrayTopLevelElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(0));
     const rj::Pointer element1Pointer(ElementName::path(1));
     const rj::Pointer element2Pointer(ElementName::path(2));
-    std::string jsonStringIn = R"(["TestModel","StringValue","https://gematik.de/ErxCommunicationInfoReq"])";
+    std::string jsonStringIn = R"(["TestModel","StringValue","https://erp-test.net/some/profile"])";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
     ASSERT_NE(element0Pointer.Get(model.jsonDocument()), nullptr);
     EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element0Pointer), "TestModel");
     ASSERT_NE(element1Pointer.Get(model.jsonDocument()), nullptr);
     EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element1Pointer), "StringValue");
     ASSERT_NE(element2Pointer.Get(model.jsonDocument()), nullptr);
-    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element2Pointer), "https://gematik.de/ErxCommunicationInfoReq");
+    EXPECT_EQ(model.jsonDocument().getStringValueFromPointer(element2Pointer), "https://erp-test.net/some/profile");
     std::string jsonStringOut = model.serializeToJsonString();
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithOneNullElement)
+TEST(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithOneNullElement)
 {
     std::string jsonStringIn = R"({"contained":[]})";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
@@ -323,7 +124,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithOneNullEle
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithEmptyArray)
+TEST(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithEmptyArray)
 {
     std::string jsonStringIn = R"([{"contained":[]}])";
     JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
@@ -331,7 +132,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithEmptyArray
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralElements)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(elements::contained, 0));
     const rj::Pointer element1Pointer(ElementName::path(elements::contained, 1));
@@ -348,7 +149,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootObjectOneTopLevelArrayWithSeveralEle
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithSeveralArrayElements)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithSeveralArrayElements)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer element0Pointer(ElementName::path(0, "contained", 0));
     const rj::Pointer element1Pointer(ElementName::path(0, "contained", 1));
@@ -365,15 +166,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, RootArrayOneTopLevelObjectWithSeveralArr
     EXPECT_EQ(jsonStringIn, jsonStringOut);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, CommunicationInfoReq)
-{
-    std::string jsonStringIn = createJsonStringCommunicationInfoReq();
-    JsonMaintainNumberPrecisionTestModel model = JsonMaintainNumberPrecisionTestModel::fromJson(jsonStringIn);
-    std::string jsonStringOut = model.serializeToJsonString();
-    EXPECT_EQ(jsonStringIn, jsonStringOut);
-}
-
-TEST_F(JsonMaintainNumberPrecisionTest, Numbers)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, Numbers)//NOLINT(readability-function-cognitive-complexity)
 {
     const rj::Pointer elementNotUsedPointer(ElementName::path("not_used"));
     const rj::Pointer elementStatusPointer(ElementName::path("status"));
@@ -551,7 +344,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, Numbers)//NOLINT(readability-function-co
     EXPECT_EQ(model.getValueAsDouble("double_1_1"), 1.1);
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, ArrayHelpers)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, ArrayHelpers)//NOLINT(readability-function-cognitive-complexity)
 {
     std::string jsonString = R"({
         "resourceType":"TestModel",
@@ -801,7 +594,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, ArrayHelpers)//NOLINT(readability-functi
     }
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, makeBool)
+TEST(JsonMaintainNumberPrecisionTest, makeBool)
 {
     model::NumberAsStringParserDocument doc;
     doc.SetObject();
@@ -810,7 +603,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, makeBool)
     EXPECT_EQ(doc.serializeToJsonString(), R"({"valueTrue":true,"valueFalse":false})");
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, makeNumber)
+TEST(JsonMaintainNumberPrecisionTest, makeNumber)
 {
     model::NumberAsStringParserDocument doc;
     doc.SetObject();
@@ -820,7 +613,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, makeNumber)
     EXPECT_EQ(doc.serializeToJsonString(), R"({"noTrailingZero":0.123,"trailingZero":0.1230,"preciseZero":0.0000})");
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, makeString)
+TEST(JsonMaintainNumberPrecisionTest, makeString)
 {
     model::NumberAsStringParserDocument doc;
     doc.SetObject();
@@ -831,7 +624,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, makeString)
               R"({"aString":"some test string","trailingSpace":"Space-> ","leadingSpace":" <-Space"})");
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, validNumbers)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, validNumbers)//NOLINT(readability-function-cognitive-complexity)
 {
     model::NumberAsStringParserDocument doc;
     EXPECT_NO_THROW((void)doc.makeNumber("0"));
@@ -849,7 +642,7 @@ TEST_F(JsonMaintainNumberPrecisionTest, validNumbers)//NOLINT(readability-functi
     EXPECT_NO_THROW((void)doc.makeNumber("1.100"));
 }
 
-TEST_F(JsonMaintainNumberPrecisionTest, invalidNumbers)//NOLINT(readability-function-cognitive-complexity)
+TEST(JsonMaintainNumberPrecisionTest, invalidNumbers)//NOLINT(readability-function-cognitive-complexity)
 {
     model::NumberAsStringParserDocument doc;
     EXPECT_THROW((void)doc.makeNumber(" 1.100"), ModelException);

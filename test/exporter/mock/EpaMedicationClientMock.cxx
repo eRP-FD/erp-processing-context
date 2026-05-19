@@ -23,7 +23,7 @@ void EpaMedicationClientMock::setExpectedInput(const std::string& input)
     mExpectedInput = input;
 }
 
-IEpaMedicationClient::Response EpaMedicationClientMock::send(const model::Kvnr&, const std::string& payload)
+IEpaMedicationClient::Response EpaMedicationClientMock::send(const model::Kvnr&, const std::string& payload, BDEMessage& bdeMessage [[maybe_unused]])
 {
     if (mExpectedInput)
     {
@@ -35,18 +35,20 @@ IEpaMedicationClient::Response EpaMedicationClientMock::send(const model::Kvnr&,
 }
 IEpaMedicationClient::Response EpaMedicationClientMock::sendProvidePrescription(const std::string&,
                                                                                 const model::Kvnr& kvnr,
-                                                                                const std::string& payload)
+                                                                                const std::string& payload,
+                                                                                BDEMessage& bdeMessage)
 {
-    return send(kvnr, payload);
+    return send(kvnr, payload, bdeMessage);
 }
 IEpaMedicationClient::Response EpaMedicationClientMock::sendProvideDispensation(const std::string&,
                                                                                 const model::Kvnr& kvnr,
-                                                                                const std::string& payload)
+                                                                                const std::string& payload,
+                                                                                BDEMessage& bdeMessage)
 {
-    return send(kvnr, payload);
+    return send(kvnr, payload, bdeMessage);
 }
 IEpaMedicationClient::Response
-EpaMedicationClientMock::sendCancelPrescription(const std::string&, const model::Kvnr& kvnr, const std::string& payload)
+EpaMedicationClientMock::sendCancelPrescription(const std::string&, const model::Kvnr& kvnr, const std::string& payload, BDEMessage& bdeMessage)
 {
-    return send(kvnr, payload);
+    return send(kvnr, payload, bdeMessage);
 }

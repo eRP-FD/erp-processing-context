@@ -6,6 +6,8 @@
  */
 
 #include "shared/database/PostgresConnection.hxx"
+
+#include "shared/database/PostgresConnectString.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/JsonLog.hxx"
@@ -22,83 +24,73 @@ PostgresConnection::PostgresConnection(const std::string_view& connectionString)
 {
 }
 
-void PostgresConnection::setConnectionString(const std::string_view& connectionString)
-{
-    mConnectionString = connectionString;
-}
-
 std::string PostgresConnection::defaultConnectString()
 {
     const auto& configuration = Configuration::instance();
-
-    const std::string host = configuration.getStringValue(ConfigurationKey::POSTGRES_HOST);
-    const std::string port = configuration.getStringValue(ConfigurationKey::POSTGRES_PORT);
-    const std::string user = configuration.getStringValue(ConfigurationKey::POSTGRES_USER);
-    const std::string password = configuration.getStringValue(ConfigurationKey::POSTGRES_PASSWORD);
-    const std::string dbname = configuration.getStringValue(ConfigurationKey::POSTGRES_DATABASE);
-    const std::string connectTimeout = configuration.getStringValue(ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS);
-    bool enableScramAuthentication = configuration.getBoolValue(ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION);
-    const std::string tcpUserTimeoutMs = configuration.getStringValue(ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS);
-    const std::string keepalivesIdleSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC);
-    const std::string keepalivesIntervalSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC);
-    const std::string keepalivesCountSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_COUNT);
-    const std::string targetSessionAttrs = configuration.getStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS);
-
-    std::string sslmode = connectStringSslMode();
-
-    std::string connectionString = "host='" + host
-    + "' port='" + port
-    + "' dbname='" + dbname
-    + "' user='" + user + "'"
-    + (password.empty() ? "" : " password='" + password + "'")
-    + sslmode
-    + (targetSessionAttrs.empty() ? "" : (" target_session_attrs=" + targetSessionAttrs))
-    + " connect_timeout=" + connectTimeout
-    + " tcp_user_timeout=" + tcpUserTimeoutMs
-    + " keepalives=1"
-    + " keepalives_idle=" + keepalivesIdleSec
-    + " keepalives_interval=" + keepalivesIntervalSec
-    + " keepalives_count=" + keepalivesCountSec
-    + (enableScramAuthentication ? " channel_binding=require" : "");
-
-    JsonLog(LogId::INFO, JsonLog::makeVLogReceiver(0))
-    .message("postgres connection string")
-    .keyValue("value", boost::replace_all_copy(connectionString, password, "******"));
-    TVLOG(2) << "using connection string '" << boost::replace_all_copy(connectionString, password, "******") << "'";
-
-    return connectionString;
+    return PostgresConnectString{
+        .host = configuration.getStringValue(ConfigurationKey::POSTGRES_HOST),
+        .port = configuration.getStringValue(ConfigurationKey::POSTGRES_PORT),
+        .user = configuration.getStringValue(ConfigurationKey::POSTGRES_USER),
+        .password = configuration.getStringValue(ConfigurationKey::POSTGRES_PASSWORD),
+        .dbname = configuration.getStringValue(ConfigurationKey::POSTGRES_DATABASE),
+        .connectTimeout = configuration.getStringValue(ConfigurationKey::POSTGRES_CONNECT_TIMEOUT_SECONDS),
+        .enableScramAuthentication = configuration.getBoolValue(ConfigurationKey::POSTGRES_ENABLE_SCRAM_AUTHENTICATION),
+        .tcpUserTimeoutMs = configuration.getStringValue(ConfigurationKey::POSTGRES_TCP_USER_TIMEOUT_MS),
+        .keepalivesIdleSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_IDLE_SEC),
+        .keepalivesIntervalSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_INTERVAL_SEC),
+        .keepalivesCountSec = configuration.getStringValue(ConfigurationKey::POSTGRES_KEEPALIVES_COUNT),
+        .targetSessionAttrs = configuration.getStringValue(ConfigurationKey::POSTGRES_TARGET_SESSION_ATTRS),
+        .useSsl = configuration.getBoolValue(ConfigurationKey::POSTGRES_USESSL),
+        .serverRootCertPath = configuration.getStringValue(ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH),
+        .sslCertificatePath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH),
+        .sslKeyPath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_KEY_PATH),
+    };
 }
-
-
-std::string PostgresConnection::connectStringSslMode()
+std::string PostgresConnection::readOnlyConnectString()
 {
+    using enum ConfigurationKey;
     const auto& configuration = Configuration::instance();
-
-    const bool useSsl = configuration.getBoolValue(ConfigurationKey::POSTGRES_USESSL);
-    const std::string serverRootCertPath = configuration.getStringValue(ConfigurationKey::POSTGRES_SSL_ROOT_CERTIFICATE_PATH);
-    const auto sslCertificatePath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_CERTIFICATE_PATH);
-    const auto sslKeyPath = configuration.getOptionalStringValue(ConfigurationKey::POSTGRES_SSL_KEY_PATH);
-
-    if (serverRootCertPath.empty())
-    {
-        if (useSsl)
-            return " sslmode=require";
-        else
-            return "";
-    }
-    else
-    {
-        std::string sslmode =  " sslmode=verify-full sslrootcert='" + serverRootCertPath + "'";
-        if (sslCertificatePath.has_value() && !String::trim(sslCertificatePath.value()).empty()
-            && sslKeyPath.has_value() && !String::trim(sslKeyPath.value()).empty())
+    auto readOnlyDBHost = configuration.getOptionalStringValue(POSTGRES_RO_HOST);
+    Expect3(readOnlyDBHost.has_value(), "readOnlyDatabaseFactory is set, but readonly DB is not configured", std::logic_error);
+    const auto strValue = [&configuration](ConfigurationKey key, ConfigurationKey fallbackKey){
+        if (auto str = configuration.getOptionalStringValue(key))
         {
-            const auto sslcert = String::trim(sslCertificatePath.value());
-            const auto sslkey = String::trim(sslKeyPath.value());
-            if ( ! (sslcert.empty() || sslkey.empty()))
-                sslmode += " sslcert='" + sslcert + "' sslkey='" + sslkey + "'";
+            return *str;
         }
-        return sslmode;
-    }
+        return configuration.getStringValue(fallbackKey);
+    };
+    const auto strOptValue = [&configuration](ConfigurationKey key, ConfigurationKey fallbackKey){
+        if (auto str = configuration.getOptionalStringValue(key))
+        {
+            return str;
+        }
+        return configuration.getOptionalStringValue(fallbackKey);
+    };
+    const auto boolValue = [&configuration](ConfigurationKey key, ConfigurationKey fallbackKey){
+        if (auto str = configuration.getOptionalStringValue(key))
+        {
+            return String::toBool(*str);
+        }
+        return configuration.getBoolValue(fallbackKey);
+    };
+    return PostgresConnectString{
+        .host = value(std::move(readOnlyDBHost)),
+        .port = strValue(POSTGRES_RO_PORT, POSTGRES_PORT),
+        .user = strValue(POSTGRES_RO_USER, POSTGRES_USER),
+        .password = strValue(POSTGRES_RO_PASSWORD, POSTGRES_PASSWORD),
+        .dbname = strValue(POSTGRES_RO_DATABASE, POSTGRES_DATABASE),
+        .connectTimeout = strValue(POSTGRES_RO_CONNECT_TIMEOUT_SECONDS, POSTGRES_CONNECT_TIMEOUT_SECONDS),
+        .enableScramAuthentication = boolValue(POSTGRES_RO_ENABLE_SCRAM_AUTHENTICATION, POSTGRES_ENABLE_SCRAM_AUTHENTICATION),
+        .tcpUserTimeoutMs = strValue(POSTGRES_RO_TCP_USER_TIMEOUT_MS, POSTGRES_TCP_USER_TIMEOUT_MS),
+        .keepalivesIdleSec = strValue(POSTGRES_RO_KEEPALIVES_IDLE_SEC, POSTGRES_KEEPALIVES_IDLE_SEC),
+        .keepalivesIntervalSec = strValue(POSTGRES_RO_KEEPALIVES_INTERVAL_SEC, POSTGRES_KEEPALIVES_INTERVAL_SEC),
+        .keepalivesCountSec = strValue(POSTGRES_RO_KEEPALIVES_COUNT, POSTGRES_KEEPALIVES_COUNT),
+        .targetSessionAttrs = strValue(POSTGRES_RO_TARGET_SESSION_ATTRS, POSTGRES_TARGET_SESSION_ATTRS),
+        .useSsl = boolValue(POSTGRES_RO_USESSL, POSTGRES_USESSL),
+        .serverRootCertPath = strValue(POSTGRES_RO_SSL_ROOT_CERTIFICATE_PATH, POSTGRES_SSL_ROOT_CERTIFICATE_PATH),
+        .sslCertificatePath = strOptValue(POSTGRES_RO_SSL_CERTIFICATE_PATH, POSTGRES_SSL_CERTIFICATE_PATH),
+        .sslKeyPath = strOptValue(POSTGRES_RO_SSL_KEY_PATH, POSTGRES_SSL_KEY_PATH),
+    };
 }
 
 

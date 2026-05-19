@@ -5,6 +5,8 @@
 #
 # non-exclusively licensed to gematik GmbH
 
+conan_download_parallel=4
+
 # Do not stop on address sanitizer errors.
 export halt_on_error=0
 
@@ -60,6 +62,8 @@ readargs()
 }
 
 readargs "$@"
+
+conan_args+=(--core-conf "core.download:parallel=${conan_download_parallel}")
 
 if "${with_ccache}" ; then
     CCACHE_DIR=$(mount | awk '/ccache/ {print $3}')

@@ -22,15 +22,17 @@ TEST_F(ErpWorkflowTest, AuthoredOnEqualsQesDate)
     ASSERT_TRUE(prescriptionId.has_value());
     ASSERT_FALSE(accessCode.empty());
 
-    using zoned_ms = date::zoned_time<std::chrono::milliseconds>;
-    auto yesterdayTime = model::Timestamp::now() - 24h;
-    auto yesterday = zoned_ms{model::Timestamp::GermanTimezone, yesterdayTime.localDay()};
-    auto signedTime = model::Timestamp(yesterday.get_sys_time()) + 23h + 59min + 59s;
-    auto authoredOn = model::Timestamp(yesterday.get_sys_time());
+    auto yesterdayDate = model::Timestamp::now().localDay() - date::days(1);
+    auto authoredOn =
+        model::Timestamp{model::Timestamp::GermanTimezone, yesterdayDate};
+    auto signedTime =
+        model::Timestamp{model::Timestamp::GermanTimezone, yesterdayDate + date::days(1)} - 1s;
     const auto& kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
-    auto bundle = kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn, .kbvVersion = kbvVersion });
-    taskActivateWithOutcomeValidation(prescriptionId.value(), accessCode, toCadesBesSignature(bundle, signedTime), HttpStatus::OK);
+    auto bundle =
+        kbvBundleXml({.prescriptionId = prescriptionId.value(), .authoredOn = authoredOn, .kbvVersion = kbvVersion});
+    taskActivateWithOutcomeValidation(prescriptionId.value(), accessCode, toCadesBesSignature(bundle, signedTime),
+                                      HttpStatus::OK);
 }
 
 TEST_F(ErpWorkflowTest, AuthoredOnNotEqualsQesDate)

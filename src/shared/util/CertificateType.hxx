@@ -27,6 +27,7 @@ enum class CertificateType
      */
     C_HP_ENC,
     C_ZD_TLS_S,
+    C_ZD_SIG,
 };
 
 #endif

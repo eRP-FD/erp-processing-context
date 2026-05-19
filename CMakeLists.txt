@@ -60,7 +60,7 @@ if(NOT ERP_RELEASE_VERSION)
     message(FATAL_ERROR "ERP_RELEASE_VERSION not set")
 endif()
 
-### Pattern/length according to A_22470-05
+### Pattern/length according to A_22470-06
 set(ERP_RELEASE_VERSION_PATTERN "^[a-zA-Z0-9.-]+$")
 if (NOT ERP_RELEASE_VERSION MATCHES "${ERP_RELEASE_VERSION_PATTERN}")
     message(FATAL_ERROR "ERP_RELEASE_VERSION (\"${ERP_RELEASE_VERSION}\") doesn't match pattern ${ERP_RELEASE_VERSION_PATTERN}")
@@ -74,6 +74,7 @@ string(TIMESTAMP ERP_RELEASE_DATE "%Y-%m-%dT%H:%M:%S+00:00" UTC)
 message(NOTICE "ERP_RELEASE_DATE: ${ERP_RELEASE_DATE}")
 
 find_package(Boost REQUIRED)
+find_package(fmt REQUIRED)
 find_package(GTest REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(PostgreSQL REQUIRED)

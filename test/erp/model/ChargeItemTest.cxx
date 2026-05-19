@@ -109,7 +109,7 @@ class ChargeItemTest : public testing::Test
 {
 public:
     std::string chargeItemXml = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{"X234567891", model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{"X234567891"},
         .prescriptionId = model::PrescriptionId::fromDatabaseId(
             model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 123'456'789'123),
         .dispenseBundleBase64 = "UEtWIGRpc3BlbnNlIGl0ZW0gYnVuZGxl",
@@ -141,7 +141,7 @@ TEST_F(ChargeItemTest, ConstructFromIndividualData)//NOLINT(readability-function
 
     EXPECT_FALSE(chargeItem.subjectKvnr());
     ASSERT_TRUE(sourceChargeItem->subjectKvnr());
-    chargeItem.setSubjectKvnr(model::Kvnr{sourceChargeItem->subjectKvnr()->id(), model::Kvnr::Type::unspecified});
+    chargeItem.setSubjectKvnr(model::Kvnr{sourceChargeItem->subjectKvnr()->id()});
     ASSERT_TRUE(chargeItem.subjectKvnr());
     EXPECT_EQ(chargeItem.subjectKvnr(), sourceChargeItem->subjectKvnr());
 

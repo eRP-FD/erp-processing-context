@@ -31,6 +31,7 @@ class ErpProcessingContext(ConanFile):
         'boost/*:bzip2': False,
         'boost/*:header_only': True,
         'date/*:tz_db': 'system',
+        'fmt/*:header_only': True,
         'glog/*:with_gflags': False,
         'gtest/*:build_gmock': True,
         'gsl-lite/*:on_contract_violation': 'throw',
@@ -51,7 +52,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.21.0-DEVELOP",
+        'release_version': "1.22.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -63,20 +64,24 @@ class ErpProcessingContext(ConanFile):
     exports_sources = "."
     requires = [
         'antlr4-cppruntime/4.13.2',
-        'boost/1.88.0',
-        'botan/3.9.0',
+        'boost/1.90.0',
+        'botan/3.11.1',
         'date/3.0.4',  # date can be removed as soon as we use C++20
+        'fmt/12.1.0',
         'glog/0.7.1',
         'gsl-lite/0.41.0',
         'gtest/1.17.0',
-        'libpqxx/7.10.1',
-        'libxml2/2.14.5',
+        'hiredis/1.3.0',
+        'libpq/16.8',
+        'libpqxx/7.10.5',
+        'libunwind/1.8.3',
+        'libxml2/2.15.2',
         'magic_enum/0.9.7',
         'openssl/3.5.5+erp',
         'prometheus-cpp/1.3.0',
-        'rapidjson/cci.20230929',
+        'rapidjson/cci.20250205',
         'redis-plus-plus/1.3.15',
-        'xmlsec/1.3.8',
+        'xmlsec/1.3.9',
         'zlib/1.3.1',
         'zstd/1.5.7'  # database compression
     ]
@@ -90,9 +95,6 @@ class ErpProcessingContext(ConanFile):
         if self.options.with_hsm_tpm_production:
             self.requires('tpmclient/0.15.0-b40')
             self.requires('hsmclient/2.19.0-b00')
-        self.requires('libunwind/1.8.1', override=True) # Conflict originates from glog/0.7.1
-        self.requires('libpq/16.8', override=True) # Conflict originates from libpqxx/7.10.1
-        self.requires('hiredis/1.3.0', override=True) # Conflict originates from redis-plus-plus/1.3.15
 
     def build_requirements(self):
         self.tool_requires('xmlsec/1.3.8', options={"shared": False})

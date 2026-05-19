@@ -301,10 +301,6 @@ void ErpWorkflowTestBase::checkTaskDispense(
         const std::string& secret,
         size_t numMedicationDispenses)
 {
-    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
-    const auto telematicId = jwt.stringForClaim(JWT::idNumberClaim);
-    ASSERT_TRUE(telematicId.has_value());
-
     // invoke /Task/<id>/$dispense
     auto lastMedicationDispenseReferenceTimestamp =
         model::Timestamp::fromXsDateTime(model::Timestamp::now().toXsDateTimeWithoutFractionalSeconds());
@@ -336,7 +332,7 @@ void ErpWorkflowTestBase::checkTaskClose(
     ASSERT_TRUE(telematicId.has_value());
 
     // The following communication messages have been sent:
-    // InfoReq (Insurant -> Pharmacy), Reply (Pharmacy -> Insurant),
+    // DispReq (Insurant -> Pharmacy), Reply (Pharmacy -> Insurant),
     // Representative (Insurant -> Representative), Representative (Representative -> Insurant)
     // DispReq(Insurant->Pharmacy)
     JWT jwtInsurant = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
@@ -528,8 +524,6 @@ void ErpWorkflowTestBase::checkCommunicationsDeleted(
         JWT jwt2;
         switch (communication.messageType())
         {
-        case model::Communication::MessageType::InfoReq:
-            [[fallthrough]];
         case model::Communication::MessageType::ChargChangeReq:
             jwt1 = JwtBuilder::testBuilder().makeJwtVersicherter(model::getIdentityString(communication.sender().value()));
             jwt2 = JwtBuilder::testBuilder().makeJwtApotheke(model::getIdentityString(communication.recipient()));
@@ -825,8 +819,7 @@ ErpWorkflowTestBase::toExpectedProfileVersions(const RequestArguments& args) con
         if (args.vauPath.find("/ChargeItem") != std::string::npos)
         {
             if (args.method != HttpMethod::PATCH ||
-                (ResourceTemplates::Versions::GEM_ERPCHRG_current() > ResourceTemplates::Versions::GEM_ERPCHRG_1_0 &&
-                    args.clearTextBody.find("GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input") != std::string::npos))
+                args.clearTextBody.find("GEM_ERPCHRG_PR_PAR_Patch_ChargeItem_Input") != std::string::npos)
             {
                 patientenrechnung = ResourceTemplates::Versions::GEM_ERPCHRG_current().renderVersion();
             }
@@ -1064,11 +1057,6 @@ void ErpWorkflowTestBase::communicationPostInternal(
     {
         builder.setPayload(content);
     }
-    if (messageType == model::Communication::MessageType::InfoReq)
-    {
-        // The info request is the only communication profile whose element "about" is mandatory.
-        builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
-    }
     MimeType contentType = MimeType::fhirJson;
     MimeType accept = MimeType::fhirJson;
     std::string communicationPath = "/Communication";
@@ -1184,7 +1172,8 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         endpointPath += "?pnw=" + *encodedPnw + "&kvnr=" + kvnr;
     }
 
-    RequestArguments args(HttpMethod::GET, endpointPath, {});
+    RequestArguments args =
+        RequestArguments{mGetTaskRequestArgs}.withHttpMethod(HttpMethod::GET).withVauPath(endpointPath);
     if (!searchArguments.empty())
     {
         if(args.vauPath.find('?') == std::string::npos)
@@ -1198,11 +1187,12 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         args.vauPath.append(searchArguments);
     }
 
-    args.jwt = encodedPnw.has_value() ? JwtBuilder::testBuilder().makeJwtApotheke(telematikId)
-                                      : JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    bool pharmacy = encodedPnw.has_value() || telematikId.has_value() || args.headerFields.contains(Header::XPoPPToken);
+    args.jwt = pharmacy ? JwtBuilder::testBuilder().makeJwtApotheke(telematikId.value_or(""))
+                        : JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
     args.headerFields.emplace(Header::Authorization, getAuthorizationBearerValueForJwt(args.jwt.value()));
     args.expectedInnerStatus = expectedStatus;
-    args.expectedBdeUseCase = encodedPnw.has_value() ? bde::GetTasksPharmacy_UC_4_12 : bde::GetTasksPatient_UC_3_1;
+    args.expectedBdeUseCase = pharmacy ? bde::GetTasksPharmacy_UC_4_12 : bde::GetTasksPatient_UC_3_1;
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), expectedStatus);
@@ -1212,11 +1202,11 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
         ASSERT_TRUE(contentType);
 
         std::string expectedContentType{"application/fhir+"};
-        expectedContentType += encodedPnw.has_value() ? "xml" : "json";
+        expectedContentType += pharmacy ? "xml" : "json";
         expectedContentType += ";charset=utf-8";
         EXPECT_EQ(contentType.value(), expectedContentType);
 
-        const auto deserializationFunction = encodedPnw.has_value() ? model::Bundle::fromXmlNoValidation
+        const auto deserializationFunction = pharmacy ? model::Bundle::fromXmlNoValidation
                                                                     : model::Bundle::fromJsonNoValidation;
 
         ASSERT_NO_THROW(taskBundle = deserializationFunction(response.getBody()));
@@ -1245,7 +1235,7 @@ void ErpWorkflowTestBase::taskGetInternal(std::optional<model::Bundle>& taskBund
     {
         Expect3(expectedErrorCode.has_value(), "expected error code must be set", std::logic_error);
         ASSERT_NO_FATAL_FAILURE(
-            checkOperationOutcome(operationOutcomeFromResponse(response.getBody(), ! encodedPnw.has_value() /*isJson*/),
+            checkOperationOutcome(operationOutcomeFromResponse(response.getBody(), ! pharmacy /*isJson*/),
                                   expectedErrorCode.value(), expectedErrorText));
     }
 }
@@ -1330,6 +1320,7 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
                     ASSERT_FALSE(tasks[0].patientConfirmationUuid().has_value());
                     if (tasks[0].status() == model::Task::Status::completed)
                     {
+                        A_19226_02.test("Quittung erneut abrufen");
                         ASSERT_TRUE(tasks[0].receiptUuid().has_value());
                     }
                     else
@@ -1386,34 +1377,32 @@ void ErpWorkflowTestBase::taskGetIdInternal(std::optional<model::Bundle>& taskBu
 std::string ErpWorkflowTestBase::dispenseOrCloseTaskBody(model::ProfileType profileType, const std::string& kvnr,
                                                          const std::string& prescriptionIdForMedicationDispense,
                                                          const std::string& whenHandedOver,
-                                                         size_t numMedicationDispenses)
+                                                         size_t numMedicationDispenses,
+                                                         const std::string& telematikId)
 {
-    if (serverGematikProfileVersion() >= ResourceTemplates::Versions::GEM_ERP_1_4)
-    {
-        return dispenseOrCloseTaskParameters(profileType, kvnr,
-                                             prescriptionIdForMedicationDispense, whenHandedOver,
-                                             numMedicationDispenses);
-    }
-    if (numMedicationDispenses == 1)
-    {
-        return medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
-    }
-    return medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+    return dispenseOrCloseTaskParameters(profileType, kvnr, prescriptionIdForMedicationDispense, whenHandedOver,
+                                         numMedicationDispenses, telematikId);
 }
 
 std::string ErpWorkflowTestBase::medicationDispense(const std::string& kvnr,
                                                     const std::string& prescriptionIdForMedicationDispense,
-                                                    const std::string& whenHandedOver)
+                                                    const std::string& whenHandedOver, const std::string& telematikId)
 {
-
-    return ResourceTemplates::medicationDispenseXml(
-        {.prescriptionId = prescriptionIdForMedicationDispense, .kvnr = kvnr, .whenHandedOver = whenHandedOver});
+    ResourceTemplates::MedicationDispenseOptions options{.prescriptionId = prescriptionIdForMedicationDispense,
+                                                     .kvnr = kvnr,
+                                                     .whenHandedOver = whenHandedOver};
+    if (!telematikId.empty())
+    {
+        options.telematikId = telematikId;
+    }
+    return ResourceTemplates::medicationDispenseXml(options);
 }
 
 std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvnr,
                                                           const std::string& prescriptionIdForMedicationDispense,
                                                           const std::string& whenHandedOver,
-                                                          size_t numMedicationDispenses)
+                                                          size_t numMedicationDispenses,
+                                                          const std::string& telematikId)
 {
     fhirtools::DefinitionKey profileKey{std::string{model::resource::structure_definition::medicationDispenseBundle},
                                         serverGematikProfileVersion()};
@@ -1421,7 +1410,7 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvn
     for (size_t i = 0; i < numMedicationDispenses; ++i)
     {
         auto dispense = model::MedicationDispense::fromXmlNoValidation(
-            medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver));
+            medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, telematikId));
         closeBody.addResource({}, {}, {}, dispense.jsonDocument());
     }
     return closeBody.serializeToXmlString();
@@ -1429,7 +1418,8 @@ std::string ErpWorkflowTestBase::medicationDispenseBundle(const std::string& kvn
 
 std::string ErpWorkflowTestBase::dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
                                                                const std::string& prescriptionIdForMedicationDispense,
-                                                               const std::string& whenHandedOver, size_t numMedicationDispenses)
+                                                               const std::string& whenHandedOver, size_t numMedicationDispenses,
+                                                               const std::string& telematikId)
 {
     const auto& gemVersion= serverGematikProfileVersion();
     Expect3(gemVersion >= ResourceTemplates::Versions::GEM_ERP_1_4,
@@ -1458,6 +1448,10 @@ std::string ErpWorkflowTestBase::dispenseOrCloseTaskParameters(model::ProfileTyp
                 .prescriptionId = prescriptionIdForMedicationDispense,
                 .kvnr = kvnr,
             });
+            if (!telematikId.empty())
+            {
+                parametersOptions.medicationDispensesDiGA.back().telematikId = telematikId;
+            }
         }
         else
         {
@@ -1471,6 +1465,10 @@ std::string ErpWorkflowTestBase::dispenseOrCloseTaskParameters(model::ProfileTyp
                     .version = gemVersion,
                     .id = Uuid{},
                 }});
+            if (!telematikId.empty())
+            {
+                parametersOptions.medicationDispenses.back().telematikId = telematikId;
+            }
         }
     }
     return ResourceTemplates::medicationDispenseOperationParametersXml(parametersOptions);
@@ -1533,28 +1531,13 @@ void ErpWorkflowTestBase::taskDispenseInternal(
     const std::optional<std::string>& expectedIssueDiagnostics,
     const std::string& whenHandedOver, size_t numMedicationDispenses)
 {
-    std::string dispenseBody;
-    if (serverGematikProfileVersion() < ResourceTemplates::Versions::GEM_ERP_1_4)
-    {
-        if (numMedicationDispenses == 1)
-        {
-            dispenseBody = medicationDispense(kvnr, prescriptionIdForMedicationDispense, whenHandedOver);
-        }
-        else
-        {
-            dispenseBody =
-                medicationDispenseBundle(kvnr, prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
-        }
-    }
-    else
-    {
-        dispenseBody =
-            dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, kvnr,
-                                    prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
-    }
+    std::string dispenseBody = dispenseOrCloseTaskBody(
+        model::ProfileType::GEM_ERP_PR_PAR_DispenseOperation_Input, kvnr, prescriptionIdForMedicationDispense,
+        whenHandedOver, numMedicationDispenses, mDispenseTaskRequestArgs.overrideTelematikId);
     std::string dispensePath = "/Task/" + prescriptionId.toString() + "/$dispense?secret=" + secret;
     ClientResponse serverResponse;
-    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke();
+    auto jwt = isDiga(prescriptionId.type()) ? jwtKostentraeger(mDispenseTaskRequestArgs.overrideTelematikId)
+                                             : jwtApotheke(mDispenseTaskRequestArgs.overrideTelematikId);
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
                                 send(RequestArguments{mDispenseTaskRequestArgs}
                                          .withHttpMethod(HttpMethod::POST)
@@ -1587,13 +1570,14 @@ void ErpWorkflowTestBase::taskCloseInternal(
     std::string closeBody;
     if (numMedicationDispenses > 0)
     {
-        closeBody =
-            dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
-                                    prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses);
+        closeBody = dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
+                                            prescriptionIdForMedicationDispense, whenHandedOver, numMedicationDispenses,
+                                            mCloseTaskRequestArgs.overrideTelematikId);
     }
     std::string closePath = "/Task/" + prescriptionId.toString() + "/$close?secret=" + secret;
     ClientResponse serverResponse;
-    JWT jwt{isDiga(prescriptionId.type()) ? jwtKostentraeger() : jwtApotheke()};
+    JWT jwt{isDiga(prescriptionId.type()) ? jwtKostentraeger(mCloseTaskRequestArgs.overrideTelematikId)
+                                          : jwtApotheke(mCloseTaskRequestArgs.overrideTelematikId)};
     auto withExpectedActivationCode162 =
         isDiga(prescriptionId.type()) && expectedInnerStatus == HttpStatus::OK ? "1" : "XXX";
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
@@ -1742,15 +1726,9 @@ void ErpWorkflowTestBase::taskCreateInternal(std::optional<model::Task>& task, H
     using namespace std::string_view_literals;
     using model::Task;
     using model::Timestamp;
-    std::string profile = "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4";
-    if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_5_2)
-    {
-        // GEM_ERP_PR_PAR_CreateOperation_Input has been removed in 1.5
-        profile = "http://hl7.org/fhir/StructureDefinition/Parameters";
-    }
     std::string create = "<Parameters xmlns=\"http://hl7.org/fhir\">\n"
                          "  <meta>\n"
-                         "    <profile value=\"" + profile + "\"/>\n"
+                         "    <profile value=\"http://hl7.org/fhir/StructureDefinition/Parameters\"/>\n"
                          "  </meta>\n"
                          "  <parameter>\n"
                          "    <name value=\"workflowType\"/>\n"
@@ -1963,7 +1941,7 @@ void ErpWorkflowTestBase::consentGetInternal(
         std::optional<model::Bundle> consentBundle;
 
         const auto& allGroups = Fhir::instance().backend().allGroups();
-        ASSERT_TRUE(allGroups.contains("de.gematik.erezept.eu-1.1.1"))
+        ASSERT_TRUE(allGroups.contains("de.gematik.erezept.eu-1.1"))
             << "please craft a new view containing all consent resources";
         ASSERT_TRUE(allGroups.contains("KBV-Schluesseltabellen-Q2/25"))
             << "please craft a new view containing all consent resources";
@@ -1975,7 +1953,7 @@ void ErpWorkflowTestBase::consentGetInternal(
         ASSERT_EQ(def->typeId(), "Consent");
 
         std::set<fhirtools::FhirResourceViewGroupSet::GroupSharedRef> groups{
-            allGroups.at("de.gematik.erezept.eu-1.1.1"),
+            allGroups.at("de.gematik.erezept.eu-1.1"),
             allGroups.at("KBV-Schluesseltabellen-Q2/25"),
             def->resourceGroup(),
         };
@@ -2015,7 +1993,6 @@ void ErpWorkflowTestBase::chargeItemPostInternal(
     const std::optional<std::function<std::string(const std::string&)>>& signFunction)
 {
     const auto dispenseBundleString = ResourceTemplates::davDispenseItemXml({.prescriptionId = prescriptionId});
-    const auto serviceContext = StaticData::makePcServiceContext();
 
     std::optional<std::string> cadesBesSignature{};
     if (signFunction.has_value())
@@ -2477,10 +2454,16 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
             << " OperationOutcome: " << outerResponse.getBody();
         ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
         ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), "application/octet-stream");
+        ASSERT_FALSE(outerResponse.getHeader().hasHeader(Header::XUserAgent));
+        ASSERT_FALSE(outerResponse.getHeader().hasHeader(Header::UserAgent));
     }
 
     if(outerResponse.getHeader().status() != HttpStatus::OK) // in this case there is no encrypted inner response
+    {
+        TLOG(WARNING) << "outer response status: " << toString(outerResponse.getHeader().status()) << "\n";
+        TLOG(WARNING) << "outer response body: " << outerResponse.getBody() << "\n";
         return;
+    }
 
     // the inner response;
     try
@@ -2501,6 +2484,8 @@ void ErpWorkflowTestBase::sendInternal(std::tuple<ClientResponse, ClientResponse
         {
             EXPECT_EQ(innerResponse.getHeader().status(), args.expectedInnerStatus) << innerResponse.getBody();
         }
+        ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::XUserAgent));
+        ASSERT_FALSE(innerResponse.getHeader().hasHeader(Header::UserAgent));
     }
     catch (std::exception&)
     {

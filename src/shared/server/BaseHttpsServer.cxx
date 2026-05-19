@@ -42,7 +42,7 @@ void configureSslContext(boost::asio::ssl::context& sslContext, SafeString&& ser
 }
 };
 
-
+// GEMREQ-start A_19714#https
 BaseHttpsServer::BaseHttpsServer(const std::string_view address, uint16_t port,
                                  bool enforceClientAuthentication /* = false */,
                                  const SafeString& caCertificates /* = SafeString() */)
@@ -60,6 +60,7 @@ BaseHttpsServer::BaseHttpsServer(const std::string_view address, uint16_t port,
     configureSslContext(mSslContext, std::move(serverCertificate), std::move(serverPrivateKey),
                         enforceClientAuthentication, caCertificates);
 }
+// GEMREQ-end A_19714#https
 
 void BaseHttpsServer::serve(const size_t threadCount, std::string_view threadBaseName)
 {

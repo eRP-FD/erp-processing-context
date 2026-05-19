@@ -48,8 +48,7 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr,
-        const std::string& headerFieldHost = "") const override;
+        const boost::asio::ip::tcp::endpoint* ep = nullptr) const override;
     ClientResponse doSend (
         const UrlHelper::UrlParts& url,
         const HttpMethod method,
@@ -57,8 +56,7 @@ protected:
         const std::string& contentType = std::string(),
         const std::optional<std::string>& forcedCiphers = std::nullopt,
         const bool trustCn = false,
-        const boost::asio::ip::tcp::endpoint* ep = nullptr,
-        const std::string& headerFieldHost = "") const override;
+        const boost::asio::ip::tcp::endpoint* ep = nullptr) const override;
 
 private:
     mutable std::mutex mMutex;

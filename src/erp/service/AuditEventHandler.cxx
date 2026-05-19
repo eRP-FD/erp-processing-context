@@ -68,7 +68,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << "GetAllAuditEventHandler: processing request to " << session.request.header().target();
 
     // Set up a DB query with filters that are based on path and query parameters of the request
-    auto* database = session.database();
+    auto roDB = session.serviceContext.readOnlyDatabaseFactory();
     A_19399.start("Support parameters date and subType for audit event search"); // Parameter "agent" not supported, see ERP-4978
     SearchParameter::SearchToDbValue searchToDbValue = [](const std::string_view& val)
         {
@@ -103,7 +103,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
     const auto kvnr = getKvnrFromAccessToken(session.request.getAccessToken());
 
     A_19396.start("Filter audit events using Kvnr from access token");
-    auto auditEvents = database->retrieveAuditEventData(
+    auto auditEvents = roDB->retrieveAuditEventData(
         kvnr,
         { }, // id
         { }, // prescriptionId
@@ -122,6 +122,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
         hasNextPage = auditEvents.size() >= arguments->pagingArgument().getCount();
         linkMode = UrlArguments::LinkMode::id;
     }
+    A_24443_01.start("paging without prev");
     const auto links = arguments->createBundleLinks(hasNextPage, getLinkBase(), "/AuditEvent", linkMode);
     for (const auto& link : links)
     {
@@ -130,6 +131,7 @@ void GetAllAuditEventsHandler::handleRequest (PcSessionContext& session)
             bundle.setLink(link.first, link.second);
         }
     }
+    A_24443_01.finish();
     A_19397.finish();
 
     if (entitySearchArgument.has_value() && entitySearchArgument->valuesCount() == 1)

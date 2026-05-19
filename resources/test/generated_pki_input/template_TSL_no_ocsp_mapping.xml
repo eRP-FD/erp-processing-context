@@ -144,6 +144,56 @@
           </ServiceInformation>
         </TSPService>
         <!-- required for unit tests communicating with epa-test-mock - begin -->
+        <!-- This root ca comes from epa-test-mock/tisim-pki/ACLOSE.FD-CA4.pem -->
+        <TSPService>
+          <ServiceInformation>
+            <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/CA/PKC</ServiceTypeIdentifier>
+            <ServiceName>
+              <Name xml:lang="DE">CN=ACLOS.FD-CA4 TEST-ONLY,OU=Fachanwendungsspezifischer Dienst-CA der Telematikinfrastruktur,O=achelos GmbH NOT-VALID,C=DE</Name>
+            </ServiceName>
+            <ServiceDigitalIdentity>
+              <DigitalId>
+                <X509Certificate>MIIDFjCCAr2gAwIBAgIRAMnZAEP59UEkqApPRGzTIZQwCgYIKoZIzj0EAwIwgYIxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRlciBUZWxlbWF0aWtpbmZyYXN0cnVrdHVyMRwwGgYDVQQDDBNBQ0xPUy5SQ0EgVEVTVC1PTkxZMB4XDTI2MDEyMTIzMDAwMFoXDTI4MDEyMDIzMDAwMFowgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBNCBURVNULU9OTFkwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAATFSeoCMWAKO5yRaw+q/oy/80dfcNyJ31FUmfVH4CAbFp3ESZv3m3WQWnfjp6uV8tL2S27ZSurk8Y7oaDrLeQqno4H6MIH3MB0GA1UdDgQWBBSJ0NwvaY2Ni3AwnRR/jnHmaOLlbTAOBgNVHQ8BAf8EBAMCAQYwEgYDVR0TAQH/BAgwBgEB/wIBADBSBgNVHSAESzBJMEcGCCqCFABMBIEjMDswOQYIKwYBBQUHAgEWLWh0dHA6Ly93d3cuYWNoZWxvcy5kZS9wb2xpY2llcy9FRV9wb2xpY3kuaHRtbDA9BggrBgEFBQcBAQQxMC8wLQYIKwYBBQUHMAGGIWh0dHA6Ly9vY3NwLmFjaGVsb3MuZGU6ODA4MC9vY3NwLzAfBgNVHSMEGDAWgBQs+aTU4k/7s8/KhGI4+POC65AZojAKBggqhkjOPQQDAgNHADBEAiBfbuPO5R6eKDsYYit9tFZFxJnxaUsJ1XznQgUBPAgipwIgB6QsORZe70CrKqutbQOXcDeF1JdFWdj+QIfoQ8hEmA8=</X509Certificate>
+              </DigitalId>
+            </ServiceDigitalIdentity>
+            <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
+            <StatusStartingTime>2024-08-08T22:00:00Z</StatusStartingTime>
+            <ServiceSupplyPoints>
+              <ServiceSupplyPoint>http://ocsp-test.ocsp.telematik-test:8080/</ServiceSupplyPoint>
+            </ServiceSupplyPoints>
+            <ServiceInformationExtensions>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.175</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_cm_tls_c</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.168</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_c</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.169</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_tls_s</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.155</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_aut</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.203</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_sig</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.202</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_enc</ns:ExtensionValue>
+              </Extension>
+              <Extension Critical="false">
+                <ns:ExtensionOID xmlns:ns="http://uri.etsi.org/02231/v2#">1.2.276.0.76.4.283</ns:ExtensionOID>
+                <ns:ExtensionValue xmlns:ns="http://uri.etsi.org/02231/v2#">oid_fd_osig</ns:ExtensionValue>
+              </Extension>
+            </ServiceInformationExtensions>
+          </ServiceInformation>
+        </TSPService>
+        <!-- This (client) crt comes from epa-test-mock/tisim-pki/ecc/gem-rca/fd4/ocsp-fd.pem -->
         <TSPService>
           <ServiceInformation>
             <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP</ServiceTypeIdentifier>
@@ -152,7 +202,7 @@
             </ServiceName>
             <ServiceDigitalIdentity>
               <DigitalId>
-                <X509Certificate>MIIDBDCCAqqgAwIBAgIRANXJ9ZaDyEiRuWvZAfKTuHkwCgYIKoZIzj0EAwIwgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBNCBURVNULU9OTFkwHhcNMjQwODA4MjIwMDAwWhcNMjYwODA3MjIwMDAwWjBRMQswCQYDVQQGEwJERTEfMB0GA1UECgwWYWNoZWxvcyBHbWJIIFRFU1QtT05MWTEhMB8GA1UEAwwYQUNMT1MuT0NTUC1GRDQgTk9ULVZBTElEMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEwzyUzmG/EhTg2OstO2dwW4C9zUtTNUc+VO1jfc2FiibpKPX+zlRzqK01U5DeOeGEhBfta83BgWm/xkFn3SmjvqOCARgwggEUMB0GA1UdDgQWBBRh3/KZ0WC1lWoQ9+f/FgHB5GBupjAOBgNVHQ8BAf8EBAMCBkAwDAYDVR0TAQH/BAIwADBGBgNVHSAEPzA9MDsGCCqCFABMBIEjMC8wLQYIKwYBBQUHAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qub2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBQJA9CWhRcWg/pebFn5sV0l17uNrzATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgkrBgEFBQcwAQUEAgUAMAoGCCqGSM49BAMCA0gAMEUCIHSd2GZth5ABsTllajZhLH1Vin6obeF73aTleLDIqhtCAiEA00SImPYU8eR5CPaIKzwgUnJW9m83B0z4BHDS10jNNaI=</X509Certificate>
+                <X509Certificate>MIIDBDCCAqqgAwIBAgIRALEhtfd2NEXzpO7YSdBWh8gwCgYIKoZIzj0EAwIwgZkxCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggTk9ULVZBTElEMUgwRgYDVQQLDD9GYWNoYW53ZW5kdW5nc3NwZXppZmlzY2hlciBEaWVuc3QtQ0EgZGVyIFRlbGVtYXRpa2luZnJhc3RydWt0dXIxHzAdBgNVBAMMFkFDTE9TLkZELUNBNCBURVNULU9OTFkwHhcNMjYwMTIxMjMwMDAwWhcNMjgwMTIwMjMwMDAwWjBRMQswCQYDVQQGEwJERTEfMB0GA1UECgwWYWNoZWxvcyBHbWJIIFRFU1QtT05MWTEhMB8GA1UEAwwYQUNMT1MuT0NTUC1GRDQgTk9ULVZBTElEMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAENhNW0evdqJygq88yYyhWHMfSqevODBYpRh65o1obFHFqUHRmllRhAqqVCKo7ka6C5Fv4pHsL/2qlyzNDz8IOB6OCARgwggEUMB0GA1UdDgQWBBQHLcGOqMRxVs6v5QfhXmC5zeAfYzAOBgNVHQ8BAf8EBAMCBkAwDAYDVR0TAQH/BAIwADBGBgNVHSAEPzA9MDsGCCqCFABMBIEjMC8wLQYIKwYBBQUHAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qub2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBSJ0NwvaY2Ni3AwnRR/jnHmaOLlbTATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgkrBgEFBQcwAQUEAgUAMAoGCCqGSM49BAMCA0gAMEUCIQDpyvlHD18MsvwQfphDOcYKLZFslInlgB1eXyT5teunOQIgM6FDEYRnuMTnLkeHpt3ygPxWoahe2KJmSLGX7D72gxA=</X509Certificate>
               </DigitalId>
             </ServiceDigitalIdentity>
             <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>
@@ -168,6 +218,7 @@
             </ServiceInformationExtensions>
           </ServiceInformation>
         </TSPService>
+        <!-- This (client) crt comes from epa-test-mock/tisim-pki/ecc/gem-rca/fd1/ocsp-fd.pem -->
         <TSPService>
           <ServiceInformation>
             <ServiceTypeIdentifier>http://uri.etsi.org/TrstSvc/Svctype/Certstatus/OCSP</ServiceTypeIdentifier>
@@ -176,7 +227,7 @@
             </ServiceName>
             <ServiceDigitalIdentity>
               <DigitalId>
-                <X509Certificate>MIIDBDCCAqqgAwIBAgIQDFNnzw3sRImipu/kfzZPpjAKBggqhkjOPQQDAjCBmTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxSDBGBgNVBAsMP0ZhY2hhbndlbmR1bmdzc3BlemlmaXNjaGVyIERpZW5zdC1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UEAwwWQUNMT1MuRkQtQ0ExIFRFU1QtT05MWTAeFw0yMjAxMzAyMzAwMDBaFw0yNzAxMzEyMzAwMDBaMFExCzAJBgNVBAYTAkRFMR8wHQYDVQQKDBZhY2hlbG9zIEdtYkggVEVTVC1PTkxZMSEwHwYDVQQDDBhBQ0xPUy5PQ1NQLUZEMSBOT1QtVkFMSUQwWjAUBgcqhkjOPQIBBgkrJAMDAggBAQcDQgAEJl+TPxTAfdpP9WUQGoqatGXMZ9/5jPwjDHYH5+5+qa1nLwUmYQ+7GpT5EUIIJmyMEFW1Yvr3TkWsVatUBR68Z6OCARgwggEUMB0GA1UdDgQWBBSJmD5dBnNd6DRmcyv/+kyi/47x0jAOBgNVHQ8BAf8EBAMCBkAwDAYDVR0TAQH/BAIwADBGBgNVHSAEPzA9MDsGCCqCFABMBIEjMC8wLQYIKwYBBQUHAgEWIWh0dHA6Ly93d3cuZ2VtYXRpay5kZS9nby9wb2xpY2llczBGBggrBgEFBQcBAQQ6MDgwNgYIKwYBBQUHMAGGKmh0dHA6Ly9vY3NwLXRlc3Qub2NzcC50ZWxlbWF0aWstdGVzdDo4MDgwLzAfBgNVHSMEGDAWgBR7DFUnTuWmL10dEdexG/Z7ueFFJTATBgNVHSUEDDAKBggrBgEFBQcDCTAPBgkrBgEFBQcwAQUEAgUAMAoGCCqGSM49BAMCA0gAMEUCIQCmrzKJigu5aEjI6U4Oh+qSejGka41lowyzNeiMBhV9iQIgToJT+PQ3edUdJhXMn7+G/vUCRFFmyg5Qms+WcaYa68Q=</X509Certificate>
+                <X509Certificate>MIIDRzCCAu6gAwIBAgIQa1klu+RvQ9eDi9A1ifrW9jAKBggqhkjOPQQDAjCBmTELMAkGA1UEBhMCREUxHzAdBgNVBAoMFmFjaGVsb3MgR21iSCBOT1QtVkFMSUQxSDBGBgNVBAsMP0ZhY2hhbndlbmR1bmdzc3BlemlmaXNjaGVyIERpZW5zdC1DQSBkZXIgVGVsZW1hdGlraW5mcmFzdHJ1a3R1cjEfMB0GA1UEAwwWQUNMT1MuRkQtQ0ExIFRFU1QtT05MWTAeFw0yNjAxMjEyMzAwMDBaFw0yODAxMjAyMzAwMDBaMEYxCzAJBgNVBAYTAkRFMSkwJwYDVQQKDCBJQk0gRGV1dHNjaGxhbmQgR21iSCAtIE5PVC1WQUxJRDEMMAoGA1UEAwwDZXBhMFowFAYHKoZIzj0CAQYJKyQDAwIIAQEHA0IABCqPYjuxQCk/psKxULeu9C+8ZhYph0MLMCKDu8KLCINqGBtJiffLUOHTIMZVzlDoTJHv0Qt4L/IpSDxn+RcZE1mjggFnMIIBYzAdBgNVHQ4EFgQUP8mCyIuPgATbHhp6/t/6JMBlBYEwDgYDVR0PAQH/BAQDAgWgMBcGA1UdEQQQMA6CDEVQQS5JQk0uVEVTVDAMBgNVHRMBAf8EAjAAMFIGA1UdIARLMEkwOwYIKoIUAEwEgSMwLzAtBggrBgEFBQcCARYhaHR0cDovL3d3dy5nZW1hdGlrLmRlL2dvL3BvbGljaWVzMAoGCCqCFABMBIEbMEYGCCsGAQUFBwEBBDowODA2BggrBgEFBQcwAYYqaHR0cDovL29jc3AtdGVzdC5vY3NwLnRlbGVtYXRpay10ZXN0OjgwODAvMB8GA1UdIwQYMBaAFHsMVSdO5aYvXR0R17Eb9nu54UUlME4GBSskCAMDBEUwQzBBMD8wPTA7MC0MK2VQQSB2ZXJ0cmF1ZW5zd8O8cmRpZ2UgQXVzZsO8aHJ1bmdzdW1nZWJ1bmcwCgYIKoIUAEwEgVEwCgYIKoZIzj0EAwIDRwAwRAIgIRhYskf14rNT1slwzZk7jWf7dIsgoagBdPE3g3pPsuECIG/S0PB+R3vzybLnIbbUD4Q2vRPi9QWyuFZPJWhPFYq2</X509Certificate>
               </DigitalId>
             </ServiceDigitalIdentity>
             <ServiceStatus>http://uri.etsi.org/TrstSvc/Svcstatus/inaccord</ServiceStatus>

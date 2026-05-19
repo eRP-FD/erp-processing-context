@@ -58,7 +58,13 @@ void TimerJobBase::start (void)
 
 TimerJobBase::~TimerJobBase() noexcept
 {
-    if(mJobThread.joinable())
+    {
+        std::lock_guard lock(mMutex);
+        // At this point, we are in termination:
+        mIsAborted = true;
+    }
+    mAbortCondition.notify_all();
+    if (mJobThread.joinable())
         mJobThread.join();
 }
 

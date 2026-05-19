@@ -85,7 +85,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItem)//NOLINT(readability-function-c
 {
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
 
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
                                         ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId}),
@@ -171,7 +171,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItem)//NOLINT(readability-function-c
 
     {
         A_22136_01.test("Validate input ChargeItem resource: Kvnr");
-        model::Kvnr pkvKvnr{"X500000017", model::Kvnr::Type::pkv};
+        model::Kvnr pkvKvnr{"X500000017"};
         const auto chargeItemXml =
             ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                               .prescriptionId = pkvTaskId,
@@ -198,7 +198,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItem)//NOLINT(readability-function-c
     }
     {
         A_22133.test("Check consent");
-        model::Kvnr pkvKvnr{"X500000017", model::Kvnr::Type::pkv};
+        model::Kvnr pkvKvnr{"X500000017"};
         const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                               .prescriptionId = pkvTaskId,
                                               .dispenseBundleBase64 = cadesBesSignature.getBase64(),
@@ -227,7 +227,7 @@ TEST_F(ChargeItemPostHandlerTest, DISABLED_PostChargeItemNonQes)//NOLINT(readabi
 
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50022);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
 
     CadesBesSignature cadesBesSignature{nonQesSmcbCert, nonQesSmcbPrivateKey,
                                         ResourceTemplates::davDispenseItemXml({.prescriptionId = pkvTaskId}),
@@ -310,7 +310,7 @@ TEST_F(ChargeItemPostHandlerTest, DISABLED_PostChargeItemNonQes)//NOLINT(readabi
 
     {
         A_22136_01.test("Validate input ChargeItem resource: Kvnr");
-        const auto pkvKvnr = model::Kvnr{"X500000017", model::Kvnr::Type::pkv};
+        const auto pkvKvnr = model::Kvnr{"X500000017"};
         const auto chargeItemXml =
             ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                               .prescriptionId = pkvTaskId,
@@ -337,7 +337,7 @@ TEST_F(ChargeItemPostHandlerTest, DISABLED_PostChargeItemNonQes)//NOLINT(readabi
     }
     {
         A_22133.test("Check consent");
-        const auto pkvKvnr = model::Kvnr{"X500000017", model::Kvnr::Type::pkv};
+        const auto pkvKvnr = model::Kvnr{"X500000017"};
         const auto chargeItemXml = ResourceTemplates::chargeItemXml({.kvnr = pkvKvnr,
                                                                  .prescriptionId = pkvTaskId,
                                                                  .dispenseBundleBase64 = cadesBesSignature.getBase64(),
@@ -352,7 +352,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundle)//NOLINT(readabili
 {
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
 
     auto& resourceManager = ResourceManager::instance();
     auto dispenseBundleXml = resourceManager.getStringResource(
@@ -389,7 +389,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidBundleVersion)//NOLINT(re
     const std::string davDispenseItemProfile{profile(model::ProfileType::DAV_PKV_PR_ERP_AbgabedatenBundle).value()};
     const auto pkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
-    const auto pkvKvnr = model::Kvnr{"X500000056", model::Kvnr::Type::pkv};
+    const auto pkvKvnr = model::Kvnr{"X500000056"};
     const auto davPkvVersion = ResourceTemplates::Versions::DAV_PKV_current();
     auto dispenseBundleXml = ResourceTemplates::davDispenseItemXml({
         .davPkvVersion = davPkvVersion,
@@ -424,7 +424,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItem)//NOLINT(reada
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
     auto chargeItemXml = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{pkvKvnr},
         .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
         .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
         .operation = OperationType::Post,
@@ -453,7 +453,7 @@ TEST_F(ChargeItemPostHandlerTest, PostChargeItemInvalidChargeItemVersion)//NOLIN
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 50020);
     const char* const pkvKvnr = "X500000056";
     auto chargeItemXml = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{pkvKvnr, model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{pkvKvnr},
         .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
         .dispenseBundleBase64 = "MmEzN2MyZDItNTFjNy00YTU3LTk3MGQtMTFmMWI4MjA0YmYyCg==",
         .operation = OperationType::Post,
@@ -480,7 +480,7 @@ TEST_F(ChargeItemPostHandlerTest, PostNonPkvFails)
 {
     const auto gkvTaskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711);
-    const auto gkvKvnr = model::Kvnr{"X123456788", model::Kvnr::Type::gkv};
+    const auto gkvKvnr = model::Kvnr{"X123456788"};
 
     CadesBesSignature cadesBesSignature{CryptoHelper::cHpQes(), CryptoHelper::cHpQesPrv(),
                                         ResourceTemplates::davDispenseItemXml({.prescriptionId = gkvTaskId}),

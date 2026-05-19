@@ -6,9 +6,10 @@
  */
 
 #include "shared/fhir/Fhir.hxx"
+#include "shared/model/DosageDgMP.hxx"
+#include "shared/model/MedicationDispense.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
-#include "shared/model/MedicationDispense.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -18,7 +19,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <gtest/gtest.h>
-
 
 
 TEST(MedicationDispenseTest, WrongSchemaMissingIdentifier)
@@ -603,13 +603,41 @@ TEST(MedicationDispenseTest, WrongSchemaMissingWhenHandedOver)
     EXPECT_THROW((void) model::MedicationDispense::fromJson(json, *StaticData::getJsonValidator()), ErpException);
 }
 
+TEST(MedicationDispenseTest, moveAppendPatientInstructionToText)
+{
+    auto medicationDispense = model::MedicationDispense::fromXmlNoValidation(ResourceTemplates::medicationDispenseXml({}));
+    const rapidjson::Pointer patientInstructionPointer("/dosageInstruction/0/patientInstruction");
+    const rapidjson::Pointer textInstructionPointer("/dosageInstruction/0/text");
+    auto doc = std::move(medicationDispense).jsonDocument();
+    doc.setValue(patientInstructionPointer, "hello");
+    doc.setValue(textInstructionPointer, "world");
+    medicationDispense = model::MedicationDispense::fromJson(std::move(doc));
+    medicationDispense.moveAppendPatientInstructionToText();
+    EXPECT_EQ(medicationDispense.dosageInstruction().at(0).text(), "world; hello");
+    EXPECT_EQ(patientInstructionPointer.Get(medicationDispense.jsonDocument()), nullptr);
+}
+
+TEST(MedicationDispenseTest, moveAppendPatientInstructionToText2)
+{
+    auto medicationDispense = model::MedicationDispense::fromXmlNoValidation(ResourceTemplates::medicationDispenseXml({}));
+    const rapidjson::Pointer patientInstructionPointer("/dosageInstruction/0/patientInstruction");
+    const rapidjson::Pointer textInstructionPointer("/dosageInstruction/0/text");
+    auto doc = std::move(medicationDispense).jsonDocument();
+    doc.setValue(patientInstructionPointer, "hello");
+    textInstructionPointer.Erase(doc);
+    medicationDispense = model::MedicationDispense::fromJson(std::move(doc));
+    medicationDispense.moveAppendPatientInstructionToText();
+    EXPECT_EQ(medicationDispense.dosageInstruction().at(0).text(), "hello");
+    EXPECT_EQ(patientInstructionPointer.Get(medicationDispense.jsonDocument()), nullptr);
+}
+
 
 struct MedicationDispenseDateTimeTestParam {
     ResourceTemplates::Versions::GEM_ERP version;
     std::string whenHandedOver;
     std::string whenPrepared;
     bool expectOK;
-    std::string diag;
+    std::string diag{};
 };
 
 class MedicationDispenseDateTimeTest : public testing::TestWithParam<MedicationDispenseDateTimeTestParam>
@@ -625,6 +653,9 @@ TEST_P(MedicationDispenseDateTimeTest, whenHandedOverWhenPreparedDateTime)
         .whenHandedOver = GetParam().whenHandedOver,
         .whenPrepared = GetParam().whenPrepared,
         .gematikVersion = GetParam().version,
+        .medication = ResourceTemplates::MedicationOptions{
+            .version = GetParam().version,
+        }
     });
 
     if (GetParam().expectOK)
@@ -649,90 +680,61 @@ TEST_P(MedicationDispenseDateTimeTest, whenHandedOverWhenPreparedDateTime)
 INSTANTIATE_TEST_SUITE_P(valid, MedicationDispenseDateTimeTest,
                          ::testing::ValuesIn(std::list<MedicationDispenseDateTimeTestParam>{
                              {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01T00:00:00+01:00",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2025-03-01T00:00:00+01:00",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2025-03-01",
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_5_2,
+                                 .whenHandedOver = "2025-10-02",
+                                 .whenPrepared = "2025-10-01",
                                  .expectOK = true,
-                                 .diag = ""
                              },
                              {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_3,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2024-11-01T00:00:00+01:00",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_3,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2025-03-01",
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_6_2,
+                                 .whenHandedOver = "2026-07-02",
+                                 .whenPrepared = "2026-07-01",
                                  .expectOK = true,
-                                 .diag = ""
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_4,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2025-03-01",
-                                 .expectOK = true,
-                                 .diag = ""
                              },
                          }));
 
 INSTANTIATE_TEST_SUITE_P(invalidDateTime, MedicationDispenseDateTimeTest,
                          ::testing::ValuesIn(std::list<MedicationDispenseDateTimeTestParam>{
                              {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_3,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01T00:00:00+01:00",
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_5_2,
+                                 .whenHandedOver = "2025-10-02T00:00:00+01:00",
+                                 .whenPrepared = "2025-10-01T00:00:00+01:00",
+                                 .expectOK = false,
+                                 // whenHandedOver is reference date and therefore accessed before FHIR-Validation
+                                 .diag = "date does not match YYYY-MM-DD"
+                             },
+                             {
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_5_2,
+                                 .whenHandedOver = "2025-10-02T00:00:00+01:00",
+                                 .whenPrepared = "2025-10-01",
                                  .expectOK = false,
                                  .diag = "date does not match YYYY-MM-DD"
                              },
                              {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_3,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_4,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01T00:00:00+01:00",
-                                 .expectOK = false,
-                                 .diag = "date does not match YYYY-MM-DD"
-                             },
-                             {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_4,
-                                 .whenHandedOver = "2025-03-02",
-                                 .whenPrepared = "2025-03-01T00:00:00+01:00",
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_5_2,
+                                 .whenHandedOver = "2025-10-02",
+                                 .whenPrepared = "2025-10-01T00:00:00+01:00",
                                  .expectOK = false,
                                  .diag = "workflow-abgabeDatumsFormat"
                              },
                              {
-                                 .version = ResourceTemplates::Versions::GEM_ERP_1_4,
-                                 .whenHandedOver = "2025-03-02T00:00:00+01:00",
-                                 .whenPrepared = "2025-03-01",
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_6_2,
+                                 .whenHandedOver = "2026-07-02T00:00:00+01:00",
+                                 .whenPrepared = "2026-07-01T00:00:00+01:00",
+                                 .expectOK = false,
+                                 .diag = "date does not match YYYY-MM-DD"
+                             },
+                             {
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_6_2,
+                                 .whenHandedOver = "2026-07-02",
+                                 .whenPrepared = "2026-07-01T00:00:00+01:00",
+                                 .expectOK = false,
+                                 .diag = "workflow-abgabeDatumsFormat"
+                             },
+                             {
+                                 .version = ResourceTemplates::Versions::GEM_ERP_1_6_2,
+                                 .whenHandedOver = "2026-07-02T00:00:00+01:00",
+                                 .whenPrepared = "2026-07-01",
                                  .expectOK = false,
                                  .diag = "date does not match YYYY-MM-DD"
                              },

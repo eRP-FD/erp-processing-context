@@ -144,6 +144,7 @@ void BaseServerSession::onTlsHandshakeComplete (boost::beast::error_code ec)
     if (ec.value() != 0)
     {
         ErrorHandler(ec).reportServerError("handshake");
+        // GEMREQ-start A_19417#httpUnsupported
         switch(ec.value())
         {
             case 336130204:
@@ -154,6 +155,7 @@ void BaseServerSession::onTlsHandshakeComplete (boost::beast::error_code ec)
             default:
                 break;
         }
+        // GEMREQ-end A_19417#httpUnsupported
         // Regard any error at this stage as not recoverable.
 
         // In case the error is due to a HTTP request then there is not much use in sending a response

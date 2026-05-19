@@ -34,6 +34,7 @@ private:
     void checkPatients() const;
     void checkMedications() const;
     void checkCoverage() const;
+    void checkRenderedDosageInstruction() const;
 };
 
 extern template class BundleBase<KbvBundle>;

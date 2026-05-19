@@ -35,14 +35,13 @@ namespace EpaMedicationRequest
 // clang-format off
 std::vector<std::string> propertyValuesWillBeRetained{
 "MedicationRequest.authoredOn",
-"MedicationRequest.dispenseRequest",
-"MedicationRequest.dispenseRequest.quantity",
-"MedicationRequest.dispenseRequest.quantity.code",
-"MedicationRequest.dispenseRequest.quantity.system",
+"MedicationRequest.basedOn",
 "MedicationRequest.dispenseRequest.quantity.value",
-"MedicationRequest.dosageInstruction.patientInstruction",
-"MedicationRequest.dosageInstruction.text",
-"MedicationRequest.medicationReference",
+"MedicationRequest.dispenseRequest.quantity.unit",
+"MedicationRequest.dosageInstruction.0.text",
+"MedicationRequest.dosageInstruction.0.timing",
+"MedicationRequest.dosageInstruction.0.doseAndRate",
+"MedicationRequest.dispenseRequest.expectedSupplyDuration",
 "MedicationRequest.meta.id",
 "MedicationRequest.meta.extension",
 "MedicationRequest.meta.versionId",
@@ -58,44 +57,23 @@ std::vector<std::string> propertyValuesWillBeRetained{
 
 std::vector<std::string> propertyValuesNotInTarget {
 // Will remain empty for now, as no source information is available:
-"MedicationRequest.insurance",
-"MedicationRequest.basedOn",
+"MedicationRequest.insurance", // https://gematik.github.io/api-erp/erp_epa_mapping_details/2026_07_01/mapping-prescription-medicationrequest.html
 "MedicationRequest.category",
 "MedicationRequest.contained",
 "MedicationRequest.courseOfTherapyType",
 "MedicationRequest.detectedIssue",
 "MedicationRequest.dispenseRequest.dispenseInterval",
-"MedicationRequest.dispenseRequest.expectedSupplyDuration",
 "MedicationRequest.dispenseRequest.initialFill",
 "MedicationRequest.dispenseRequest.initialFill.duration",
 "MedicationRequest.dispenseRequest.initialFill.quantity",
 "MedicationRequest.dispenseRequest.numberOfRepeatsAllowed",
 "MedicationRequest.dispenseRequest.performer",
-"MedicationRequest.dispenseRequest.quantity.unit",
 "MedicationRequest.dispenseRequest.validityPeriod",
 "MedicationRequest.doNotPerform",
-"MedicationRequest.dosageInstruction.additionalInstruction",
-"MedicationRequest.dosageInstruction.asNeeded[x]",
-"MedicationRequest.dosageInstruction.doseAndRate",
-"MedicationRequest.dosageInstruction.doseAndRate.dose[x]",
-"MedicationRequest.dosageInstruction.doseAndRate.rate[x]",
-"MedicationRequest.dosageInstruction.doseAndRate.type",
-"MedicationRequest.dosageInstruction.maxDosePerAdministration",
-"MedicationRequest.dosageInstruction.maxDosePerLifetime",
-"MedicationRequest.dosageInstruction.maxDosePerPeriod",
-"MedicationRequest.dosageInstruction.method",
-"MedicationRequest.dosageInstruction.route",
-"MedicationRequest.dosageInstruction.sequence",
-"MedicationRequest.dosageInstruction.site",
-"MedicationRequest.dosageInstruction.timing",
 "MedicationRequest.encounter",
 "MedicationRequest.eventHistory",
-"MedicationRequest.extension:isBvg  (https://gematik.de/fhir/epa-medication/StructureDefinition/indicator-bvg-extension)",
-"MedicationRequest.extension:multiplePrescription  (https://gematik.de/fhir/epa-medication/StructureDefinition/multiple-prescription-extension)",
 "MedicationRequest.groupIdentifier",
 "MedicationRequest.identifier",
-"MedicationRequest.identifier:RxOriginatorProcessIdentifier",
-"MedicationRequest.identifier:RxPrescriptionProcessIdentifier",
 "MedicationRequest.implicitRules",
 "MedicationRequest.instantiatesCanonical",
 "MedicationRequest.instantiatesUri",
@@ -104,8 +82,7 @@ std::vector<std::string> propertyValuesNotInTarget {
 "MedicationRequest.meta.security",
 "MedicationRequest.meta.source",
 "MedicationRequest.meta.tag",
-"MedicationRequest.meta.versionId",
-"MedicationRequest.note.author[x]",
+"MedicationRequest.note.author",
 "MedicationRequest.note.time",
 "MedicationRequest.performer",
 "MedicationRequest.performerType",
@@ -114,7 +91,7 @@ std::vector<std::string> propertyValuesNotInTarget {
 "MedicationRequest.reasonCode",
 "MedicationRequest.reasonReference",
 "MedicationRequest.recorder",
-"MedicationRequest.reported[x]",
+"MedicationRequest.reported",
 "MedicationRequest.statusReason",
 "MedicationRequest.substitution.reason",
 "MedicationRequest.supportingInformation",
@@ -126,30 +103,65 @@ std::vector<std::string> propertyValuesNotInTarget {
 // Set by the Medication Service:
 "MedicationRequest.requester.reference",
 "MedicationRequest.subject.reference",
-"MedicationRequest.dosageInstruction.extension.0"
+"MedicationRequest.dosageInstruction.extension"
 };
 
-// F_004.test("")
+// F_004.test("mapping of MedicationRequest.extension:Mehrfachverordnung to MedicationRequest.extension:multiplePrescription");
+// F_005.test("Mapping von Extensions und CodeSystems ANFERP-2637");
 std::vector<ExtensionMapping> mappedExtensions
 {
 {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription", "https://gematik.de/fhir/epa-medication/StructureDefinition/multiple-prescription-extension",
 std::vector<MappedValue>{{"Extension.extension.0.url", "indicator"},{"Extension.extension.1.url", "counter", true},{"Extension.extension.2.url", "period", true},{"Extension.extension.3.url", "id", true}},
 std::vector<std::string>{"Extension.extension.0.valueBoolean", "Extension.extension.1.valueRatio", "Extension.extension.2.valuePeriod", "Extension.extension.3.valueIdentifier"},
-std::vector<std::string>{}}
+std::vector<std::string>{}},
+    {.sourceUrl = "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction",
+        .targetUrl = "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction",
+        .mappedValues = {}, .retainedValues = {"Extension.valueMarkdown"}, .emptyInTarget = {}, .optional = true,
+        .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+    {.sourceUrl = "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta",
+        .targetUrl = "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta",
+        .mappedValues = {}, .retainedValues = {"Extension.extension.0.valueString","Extension.extension.1.valueCode"},
+        .emptyInTarget = {}, .optional = true, .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+{.sourceUrl = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_SER",
+    .targetUrl = "https://gematik.de/fhir/epa-medication/StructureDefinition/indicator-ser-extension" ,
+    .mappedValues = {}, .retainedValues={"Extension.valueBoolean"}, .emptyInTarget={}, .optional=true,
+    .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+{.sourceUrl = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Narcotic",
+    .targetUrl = "https://gematik.de/fhir/epa-medication/StructureDefinition/narcotics-extension",
+    .mappedValues = std::vector<MappedValue>{{"Extension.extension.0.url", "narcotics-markings", true},{"Extension.extension.1.url", "additional-information-substitutes", true}},
+    .retainedValues={"Extension.extension.0.valueCoding","Extension.extension.1.valueString"}, .emptyInTarget{}, .optional=true,
+    .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+{.sourceUrl = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Patient_ID",
+    .targetUrl = "https://gematik.de/fhir/epa-medication/StructureDefinition/patient-id-extension",
+    .mappedValues = {},
+    .retainedValues={"Extension.valueIdentifier"}, .emptyInTarget{}, .optional=true,
+    .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+{.sourceUrl = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Prescriber_ID",
+    .targetUrl = "https://gematik.de/fhir/epa-medication/StructureDefinition/prescriber-id-extension",
+    .mappedValues = {},
+    .retainedValues={"Extension.valueIdenfifier"}, .emptyInTarget{}, .optional=true,
+    .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
+    {.sourceUrl = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Teratogenic",
+    .targetUrl = "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension",
+    .mappedValues = {{"Extension.extension.0.url", "off-label"},
+        {"Extension.extension.1.url", "childbearing-potential"},
+    {"Extension.extension.2.url", "security-compliance"},
+    {"Extension.extension.3.url", "hand-out-information-material"},
+    {"Extension.extension.4.url", "declaration-of-expertise"}},
+    .retainedValues={"Extension.extension.0.valueBoolean","Extension.extension.1.valueBoolean","Extension.extension.2.valueBoolean","Extension.extension.3.valueBoolean", "Extension.extension.4.valueBoolean"},
+    .emptyInTarget{}, .optional=true, .sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_3_0},
 };
 
 std::vector<MappedValue> mappedValues{
 //A_25946.test("KBV_PR_ERP_Prescription: Setzen des Pattern \"filler-order\" für .intent");
 {"MedicationRequest.intent", "filler-order"},
-//{"MedicationRequest.subject.reference.extension.0.url", "http://hl7.org/fhir/StructureDefinition/data-absent-reason"},
-//{"MedicationRequest.subject.reference.extension.0.valueCode", "unknown"},
+    //F_021.test("Add code and system defaults");
+{"MedicationRequest.dispenseRequest.quantity.system", "http://unitsofmeasure.org"},
+{"MedicationRequest.dispenseRequest.quantity.code", "{Package}"}
 };
-
-// TODO: Die Referenz der KBV-Medikation wird durch eine Referenz auf eine EPA-Medikation ersetzt:
-// MedicationRequest.medication[x]:medicationReference
-
-// TODO: Die Referenz ergibt sich aus der neu erzeugten EPA-Medikation:
-// MedicationRequest.medication[x]:medicationReference.reference
+const std::vector<CopiedValue> copiedValues{
+    {"MedicationRequest.dosageInstruction.0.patientInstruction", "MedicationRequest.dosageInstruction.0.text"}
+};
 
 // clang-format on
 }
@@ -172,6 +184,7 @@ std::vector<std::string> propertyValuesWillBeRetained{
 "Medication.form.coding",
 // F_005.finish();
 "Medication.form.text",
+"Medication.meta.versionId",
 };
 
 std::vector<std::string> propertyValuesNotInTarget {
@@ -195,8 +208,7 @@ std::vector<std::string> propertyValuesNotInTarget {
 "Medication.meta.security", 
 "Medication.meta.source", 
 "Medication.meta.tag",
-"Medication.meta.versionId", 
-"Medication.status", 
+"Medication.status",
 "Medication.text",
     // Former F_008,F_009 data absent reasons:
     // Testing ingredient.0 and .1 hits some cases in the gematik testdata.
@@ -219,7 +231,7 @@ std::vector<std::string> propertyValuesNotInTarget {
 std::vector<ExtensionMapping> mappedExtensions{
 // F_005.start("Medication.extension:drugCategory");
 {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Category", "https://gematik.de/fhir/epa-medication/StructureDefinition/drug-category-extension",
-std::vector<MappedValue>{},
+std::vector<MappedValue>{{.property="Extension.valueCoding.system", .targetValue="https://gematik.de/fhir/epa-medication/CodeSystem/epa-drug-category-cs"}},
 std::vector<std::string>{},
 std::vector<std::string>{}},
 // F_005.finish();
@@ -321,6 +333,7 @@ std::vector<std::string> propertyValuesWillBeRetained {
 "Organization.address.state",
 "Organization.address.postalCode",
 "Organization.address.country",
+"Organization.extension", // F_007.test("extensions retained")
 };
 std::vector<std::string> propertyValuesNotInTarget {
 "Organization.active",
@@ -341,10 +354,11 @@ std::vector<std::string> propertyValuesNotInTarget {
 "Organization.meta.tag.0.display",
 "Organization.meta.tag.0.userSelected",
 "Organization.meta.tag.0.version",
-"Organization.meta.versionId",
 "Organization.partOf",
 "Organization.text"
 };
+// F_006a.test("Defaultwerte bei Organization (provideDispensation) ANFERP-2604");
+// F_006b.test("Mapping der Organization (providePrescrition) ANFERP-2604");
 std::vector<MappedValue> mappedValues {
 {"Organization.type.0.coding.0.system", "https://gematik.de/fhir/directory/CodeSystem/OrganizationProfessionOID"},
 {"Organization.type.0.coding.0.code", std::string{profession_oid::oid_oeffentliche_apotheke}},
@@ -377,7 +391,9 @@ void Epa4AllTransformerTest::checkMedicationRequest(const rapidjson::Value& sour
     checkRetainedProperties(source, target, EpaMedicationRequest::propertyValuesWillBeRetained);
     checkPropertiesNotInTarget(target, EpaMedicationRequest::propertyValuesNotInTarget);
     checkMappedValues(target, EpaMedicationRequest::mappedValues);
-    checkExtensions(source, target, EpaMedicationRequest::mappedExtensions);
+    checkCopiedValues(source, target, EpaMedicationRequest::copiedValues);
+    std::vector<ExtensionMapping> mappedExtensions{EpaMedicationRequest::mappedExtensions};
+    checkExtensions(source, target, mappedExtensions);
 
     F_010.test("Das Befüllen des MedicationRequest.subject");
     std::vector<MappedValue> mappedKvnr{
@@ -405,8 +421,7 @@ void Epa4AllTransformerTest::checkMedicationRequest(const rapidjson::Value& sour
     }
 
     validate(
-        fhirtools::DefinitionKey{
-            "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0"},
+        fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request"},
         &target);
 }
 
@@ -419,6 +434,8 @@ void Epa4AllTransformerTest::checkMedicationCompounding(const rapidjson::Value& 
     checkExtensions(source, target, mappedExtensions);
     checkMedicationIngredientArray(source, target, true);
     checkMedicationCodingArray(source, target);
+
+    F_017.test("convert Medication.ingredient to Medication.contained");
     checkMedicationContainedArray(source, target);
 
     F_020.test("5.: Rezeptur ohne PZNs in Rezepturbestandteilen");
@@ -436,7 +453,7 @@ void Epa4AllTransformerTest::checkMedicationCompounding(const rapidjson::Value& 
     A_25946.test("KBV_PR_ERP_Medication_Compounding: Keine Übernahme von \"extension:Kategorie\"-Elementen");
     checkExtensionRemoved(source, target, "https://fhir.kbv.de/StructureDefinition/KBV_EX_Base_Medication_Type", true);
 
-    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication"},
              &target);
 }
 
@@ -452,7 +469,7 @@ void Epa4AllTransformerTest::checkMedicationFreeText(const rapidjson::Value& sou
     F_020.test("4.: Freitextverordnung");
     expectEpaMedicationTypeExtension(target, "");
 
-    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication"},
              &target);
 }
 
@@ -469,7 +486,7 @@ void Epa4AllTransformerTest::checkMedicationIngredient(const rapidjson::Value& s
     F_020.test("3.: Wirkstoffverordnung");
     expectEpaMedicationTypeExtension(target, model::EPAMedicationTypeExtension::MedicinalProductPackageCode);
 
-    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication"},
              &target);
 }
 
@@ -511,7 +528,7 @@ void Epa4AllTransformerTest::checkMedicationPzn(const rapidjson::Value& source, 
 
     checkMedicationCodingArray(source, target);
 
-    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"},
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication"},
              &target);
 }
 
@@ -524,12 +541,12 @@ void Epa4AllTransformerTest::checkOrganization(const rapidjson::Value& source, c
 
     A_25946.test("Überschreiben/Setzen des \"identifier:TelematikID\" mit der idNummer aus dem ACCESS_TOKEN des "
                  "verwendeten Operationsaufrufes ");
-    checkIdentifier(target, model::resource::naming_system::telematicID, telematikIdFromAccessToken.id());
+    // F_006b.test("telematikId from access token");
+    checkIdentifier(target, model::resource::naming_system::telematicID, telematikIdFromAccessToken.id(), 1);
 
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11"},
-        &target);
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkPractitioner(const rapidjson::Value& source, const rapidjson::Value& target)
@@ -538,11 +555,11 @@ void Epa4AllTransformerTest::checkPractitioner(const rapidjson::Value& source, c
     checkPropertiesNotInTarget(target, Practitioner::propertyValuesNotInTarget);
 
     A_25946.test("Überschreiben/Setzen der \"identifier:Telematik-ID\" des Arztes aus dem Signaturzertifikat der QES");
+    F_013.test("telematikId from QES signature");
     checkIdentifier(target, model::resource::naming_system::telematicID, telematikIdFromQes.id());
 
-    validate(
-        fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11"},
-        &target);
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory"},
+             &target);
 }
 
 void Epa4AllTransformerTest::checkRetainedProperties(const rapidjson::Value& source, const rapidjson::Value& target,
@@ -593,7 +610,30 @@ void Epa4AllTransformerTest::checkMappedValues(const rapidjson::Value& target, c
             EXPECT_EQ(mapping.targetValue, str(*targetValue)) << mapping.property;
         }
     }
+    if (auto* profile = rapidjson::Pointer{"/meta/profile/0"}.Get(target))
+    {
+        const std::string_view profileStr = profile->GetString();
+        EXPECT_EQ(profileStr.find('|'), std::string_view::npos) << profileStr;
+    }
 }
+
+void Epa4AllTransformerTest::checkCopiedValues(const rapidjson::Value& source, const rapidjson::Value& target,
+                                               const std::vector<CopiedValue>& mappings)
+{
+    for (const auto& mapping : mappings)
+    {
+        const auto sourcePointer = makePointer(mapping.sourceProperty);
+        const auto* sourceValue = sourcePointer.Get(source);
+        if (sourceValue)
+        {
+            const auto targetPointer = makePointer(mapping.targetProperty);
+            const auto* targetValue = targetPointer.Get(target);
+            ASSERT_TRUE(targetValue) << mapping.targetProperty;
+            EXPECT_EQ(str(*sourceValue), str(*targetValue)) << mapping.sourceProperty;
+        }
+    }
+}
+
 void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, const rapidjson::Value& target,
                                              std::vector<ExtensionMapping>& mappings)
 {
@@ -626,10 +666,16 @@ void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, con
             EXPECT_TRUE(foundMapping) << "Found extension not allowed in target: " << str(*url);
         }
     }
+
+    const fhirtools::DefinitionKey def{"https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-provide-prescription-erp-input-parameters"};
+    auto epaVer = getRepo(def, model::Timestamp::now())->findStructure(def)->version();
     for (auto& mapping : mappings)
     {
-        EXPECT_EQ(mapping.found, (mapping.sourceUrl.empty() || findExtension(source, mapping.sourceUrl) != nullptr))
-            << "extension not found in target: " << mapping.targetUrl;
+        if (mapping.sinceVersion <= epaVer)
+        {
+            EXPECT_EQ(mapping.found, mapping.sourceUrl.empty() || findExtension(source, mapping.sourceUrl) != nullptr)
+                << "extension not found in target: " << mapping.targetUrl;
+        }
     }
 }
 void Epa4AllTransformerTest::checkExtensionRemoved(const rapidjson::Value& source, const rapidjson::Value& target,
@@ -646,10 +692,15 @@ void Epa4AllTransformerTest::checkExtensionRemoved(const rapidjson::Value& sourc
     ASSERT_FALSE(targetExtension.has_value());
 }
 void Epa4AllTransformerTest::checkIdentifier(const rapidjson::Value& resource, const std::string_view& expectedSystem,
-                                             const std::string_view& expectedValue)
+                                             const std::string_view& expectedValue,
+                                             std::optional<size_t> expectedEntries)
 {
     const auto* identifiers = rapidjson::Pointer{"/identifier"}.Get(resource);
     ASSERT_TRUE(identifiers && identifiers->IsArray());
+    if (expectedEntries.has_value())
+    {
+        EXPECT_EQ(identifiers->GetArray().Size(), expectedEntries.value());
+    }
     bool found = false;
     for (const auto& identifier : identifiers->GetArray())
     {
@@ -797,6 +848,8 @@ void Epa4AllTransformerTest::checkMedicationContainedArray(const rapidjson::Valu
 }
 void Epa4AllTransformerTest::checkMedicationCodingArray(const rapidjson::Value& source, const rapidjson::Value& target)
 {
+    F_015.test("Beim Mapping von Medication.code.coding müssen alle Codings entfernt werden welche nicht explizit "
+               "unter coding im EPA Medication Profil profiliert sind");
     static const std::unordered_set<std::string_view> allowList{
         model::resource::code_system::pzn, model::resource::code_system::atc, model::resource::code_system::ask,
         model::resource::code_system::sct};
@@ -942,14 +995,30 @@ std::shared_ptr<const fhirtools::FhirStructureRepositoryView>
 Epa4AllTransformerTest::getRepo(fhirtools::DefinitionKey targetProfileKey, const model::Timestamp& timestamp)
 {
     auto viewList = Fhir::instance().structureRepository(timestamp);
-    auto repoView = viewList.match(targetProfileKey.url, *targetProfileKey.version);
+    auto repoView = viewList.match(targetProfileKey);
     Expect(repoView, "No repository view found for " + to_string(targetProfileKey));
+    std::cout << "key: " << targetProfileKey << " view: " << repoView->id() << std::endl;
     return repoView;
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationRequestTest)
+struct Versions {
+    ResourceTemplates::Versions::KBV_ERP kbvVersion;
+    ResourceTemplates::Versions::GEM_ERP gemVersion;
+};
+class Epa4AllTransformerTestP : public Epa4AllTransformerTest, public testing::WithParamInterface<Versions>
 {
-    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml();
+public:
+    static std::string name(testing::TestParamInfo<ParamType> p)
+    {
+        return String::replaceAll(
+            "KBV" + p.param.kbvVersion.version().value() + "__GEM" + p.param.gemVersion.version().value(), ".", "_");
+    }
+};
+
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationRequestTest)
+{
+    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = GetParam().kbvVersion});
+    LOG(INFO) << "Bundle: \n" << kbvBundleXml;
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvMedicationRequest = kbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>();
 
@@ -960,7 +1029,10 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationRequestTest)
     ASSERT_TRUE(params);
     std::cout << params->serializeToJsonString() << std::endl;
     EXPECT_EQ(params->getPrescriptionId(), kbvBundle.getIdentifier());
+
+    F_001.test("Parameters.authoredOn wird aus MedicationRequest.authoredOn übernommen");
     EXPECT_EQ(params->getAuthoredOn(), kbvMedicationRequest.authoredOn());
+
     const auto* medicationRequest = params->getMedicationRequest();
     ASSERT_NE(medicationRequest, nullptr);
 
@@ -968,28 +1040,11 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationRequestTest)
                            kbvBundle.getUniqueResourceByType<model::Patient>().kvnr());
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvoTest)
-{
-    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml();
-    auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
-    auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
-
-    std::optional<model::EPAOpProvidePrescriptionERPInputParameters> params;
-    ASSERT_NO_THROW(params = Epa4AllTransformer::transformPrescription(
-                        kbvBundle, telematikIdFromQes, telematikIdFromAccessToken, organizationNameFromJwt,
-                        std::string{profession_oid::oid_oeffentliche_apotheke}));
-    ASSERT_TRUE(params);
-
-    const auto* medication = params->getMedication();
-    ASSERT_TRUE(medication);
-    checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
-}
-
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvo_KBV_V_1_3)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationMvoTest)
 {
     F_021.test("Test for presence of all expected properties");
     // test that the transformer adds code and system, since these are missing in v 1.3.
-    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"}});
+    auto kbvBundleXml = ResourceTemplates::kbvBundleMvoXml({.kbvVersion = GetParam().kbvVersion});
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
 
@@ -1004,12 +1059,13 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationMvo_KBV_V_1_3)
     checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationPZNTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationPZNTest)
 {
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .kbvVersion = GetParam().kbvVersion,
         .medicationOptions =
             {
-                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .version = GetParam().kbvVersion,
                 .templatePrefix = ResourceTemplates::MedicationOptions::PZN,
             },
     });
@@ -1027,35 +1083,13 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationPZNTest)
     checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationPZNTest_V_1_3)
-{
-    auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP{"1.3"},
-        .medicationOptions =
-            {
-                .version = ResourceTemplates::Versions::KBV_ERP{"1.3"},
-                .templatePrefix = ResourceTemplates::MedicationOptions::PZN,
-            },
-    });
-    auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
-    auto kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
-
-    std::optional<model::EPAOpProvidePrescriptionERPInputParameters> params;
-    ASSERT_NO_THROW(params = Epa4AllTransformer::transformPrescription(
-                        kbvBundle, telematikIdFromQes, telematikIdFromAccessToken, organizationNameFromJwt,
-                        std::string{profession_oid::oid_oeffentliche_apotheke}));
-    ASSERT_TRUE(params);
-
-    const auto* medication = params->getMedication();
-    ASSERT_TRUE(medication);
-    checkMedicationPzn(kbvMedication.jsonDocument(), *medication);
-}
-
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationCompoundingTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationCompoundingTest)
 {
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .kbvVersion = GetParam().kbvVersion,
         .medicationOptions =
             {
-                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .version = GetParam().kbvVersion,
                 .templatePrefix = ResourceTemplates::MedicationOptions::COMPOUNDING,
             },
     });
@@ -1073,12 +1107,13 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationCompoundingTest)
     checkMedicationCompounding(kbvMedication.jsonDocument(), *medication);
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationFreeTextTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationFreeTextTest)
 {
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .kbvVersion = GetParam().kbvVersion,
         .medicationOptions =
             {
-                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .version = GetParam().kbvVersion,
                 .templatePrefix = ResourceTemplates::MedicationOptions::FREETEXT,
             },
     });
@@ -1097,12 +1132,13 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationFreeTextTest)
 }
 
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationIngredientTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionMedicationIngredientTest)
 {
     auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .kbvVersion = GetParam().kbvVersion,
         .medicationOptions =
             {
-                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .version = GetParam().kbvVersion,
                 .templatePrefix = ResourceTemplates::MedicationOptions::INGREDIENT,
             },
     });
@@ -1121,18 +1157,20 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionMedicationIngredientTest)
     ASSERT_TRUE(medication);
     checkMedicationIngredient(kbvMedication.jsonDocument(), *medication);
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                      "epa-op-provide-prescription-erp-input-parameters"},
              &params->jsonDocument());
 
+    F_002.test("Regel für Referenzen");
+    F_003.test("Umschreiben von Referenzen");
     checkExpression("parameter[0].part[2].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                             "epa-op-provide-prescription-erp-input-parameters"},
                     &params->jsonDocument());
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionOrganizationTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionOrganizationTest)
 {
-    auto kbvBundleXml = ResourceTemplates::kbvBundleXml();
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.kbvVersion = GetParam().kbvVersion});
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvOrganization = kbvBundle.getUniqueResourceByType<model::KbvOrganization>();
 
@@ -1149,9 +1187,9 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionOrganizationTest)
     checkOrganization(kbvOrganization.jsonDocument(), *organization);
 }
 
-TEST_F(Epa4AllTransformerTest, transformPrescriptionPractitionerTest)
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionPractitionerTest)
 {
-    auto kbvBundleXml = ResourceTemplates::kbvBundleXml();
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml({.kbvVersion = GetParam().kbvVersion});
     auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
     auto kbvPractitioner = kbvBundle.getUniqueResourceByType<model::KbvPractitioner>();
 
@@ -1171,14 +1209,56 @@ TEST_F(Epa4AllTransformerTest, transformPrescriptionPractitionerTest)
 
     checkPractitioner(kbvPractitioner.jsonDocument(), *practitioner);
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                      "epa-op-provide-prescription-erp-input-parameters"},
              &params->jsonDocument());
     checkMappedValues(*practitioner, {MappedValue{.property = "Practitioner.name.0.text",
                                                   .targetValue = "AC Dr. med. Hans Topp-Glücklich"}});
 }
 
+TEST_P(Epa4AllTransformerTestP, transformPrescriptionTwoPractitionersTest)
+{
+    F_016.test("Beim Mapping für provide-prescription muss der Practitioner übernommen werden, welcher in der "
+               "Composition unter “author” referenziert wird");
+    auto kbvBundleXml =
+        ResourceTemplates::kbvBundleXml({.kbvVersion = GetParam().kbvVersion,
+                                         .medicationOptions = {
+                                             .version = GetParam().kbvVersion,
+                                             .templatePrefix = ResourceTemplates::MedicationOptions::INGREDIENT,
+                                         }});
+    auto kbvBundle = model::Bundle::fromXmlNoValidation(kbvBundleXml);
+
+    using namespace std::string_literals;
+    model::KbvPractitioner additionalPractioner = model::KbvPractitioner::fromXmlNoValidation(
+        ResourceTemplates::kbvPractitionerXml({.id = "number-2", .telematikId = "number-2", .givenName = "Number 2"}));
+    kbvBundle.addResource("http://pvs.praxis.local/fhir/Practitioner/"s.append(*additionalPractioner.getId()), {}, {},
+                          additionalPractioner.jsonDocument());
+    const rapidjson::Pointer authorPointer("/entry/0/resource/author/0/reference");
+    kbvBundle.setValue(authorPointer, "Practitioner/"s.append(*additionalPractioner.getId()));
+
+    std::cout << kbvBundle.serializeToJsonString() << std::endl;
+    auto kbvPractitioners = kbvBundle.getResourcesByType<model::KbvPractitioner>();
+    ASSERT_EQ(kbvPractitioners.size(), 2);
+
+    std::optional<model::EPAOpProvidePrescriptionERPInputParameters> params;
+    ASSERT_NO_THROW(params = Epa4AllTransformer::transformPrescription(
+                        kbvBundle, telematikIdFromQes, telematikIdFromAccessToken, organizationNameFromJwt,
+                        std::string{profession_oid::oid_oeffentliche_apotheke}));
+    ASSERT_TRUE(params);
+
+    const auto* practitioner = params->getPractitioner();
+    ASSERT_TRUE(practitioner);
+
+    checkPractitioner(additionalPractioner.jsonDocument(), *practitioner);
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
+                                      "epa-op-provide-prescription-erp-input-parameters"},
+             &params->jsonDocument());
+    checkMappedValues(*practitioner, {MappedValue{.property = "Practitioner.name.0.text",
+                                                  .targetValue = "AC Dr. med. Number 2 Topp-Glücklich"}});
+}
+
 TEST_F(Epa4AllTransformerTest, buildPractitionerName)
 {
+    F_011.test("Der Practitioner.name.text ist ein Pflichtfeld und muss aus den Namensinformationen erzeugt werden");
     const std::string nameJson =
         R"_({"use": "official", "_family": {"extension": [{"url": "http://fhir.de/StructureDefinition/humanname-namenszusatz", "valueString": "von"}, {"url": "http://hl7.org/fhir/StructureDefinition/humanname-own-name", "valueString": "Müller"}, {"url": "http://hl7.org/fhir/StructureDefinition/humanname-own-prefix", "valueString": "Dr."}]}, "family": "Müller", "given": ["Hans"], "_prefix": [{"extension": [{"url": "http://hl7.org/fhir/StructureDefinition/iso21090-EN-qualifier", "valueCode": "AC"}]}], "prefix": ["Prof."]})_";
     auto doc = model::NumberAsStringParserDocument::fromJson(nameJson);
@@ -1186,25 +1266,32 @@ TEST_F(Epa4AllTransformerTest, buildPractitionerName)
     EXPECT_EQ(name, "AC Prof. Hans Dr. Müller von");
 }
 
-TEST_F(Epa4AllTransformerTest, transformMedicationDispense14)
+TEST_P(Epa4AllTransformerTestP, transformMedicationDispense)
 {
     ResourceTemplates::MedicationDispenseBundleOptions options{
-        .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-        .medicationDispenses =
-            {ResourceTemplates::MedicationDispenseOptions{
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}},
-             ResourceTemplates::MedicationDispenseOptions{
-                 .whenHandedOver = model::Timestamp::now().toGermanDate(),
-                 .gematikVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                 .medication =
-                     ResourceTemplates::MedicationOptions{.version = ResourceTemplates::Versions::GEM_ERP_1_4}}},
+        .gematikVersion = GetParam().gemVersion,
+        .medicationDispenses = {ResourceTemplates::MedicationDispenseOptions{
+                                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                                    .gematikVersion = GetParam().gemVersion,
+                                    .medication =
+                                        ResourceTemplates::MedicationOptions{.version = GetParam().gemVersion}},
+                                ResourceTemplates::MedicationDispenseOptions{
+                                    .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                                    .gematikVersion = GetParam().gemVersion,
+                                    .medication =
+                                        ResourceTemplates::MedicationOptions{.version = GetParam().gemVersion}}},
         .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58")};
     auto medicationDispenseBundle1 = ResourceTemplates::internal_type::medicationDispenseBundle(options);
     auto medicationDispenseBundle =
         model::Bundle::fromXmlNoValidation(medicationDispenseBundle1.serializeToXmlString());
+
+    if (GetParam().gemVersion < ResourceTemplates::Versions::GEM_ERP_1_6_2)
+    {
+        // not allowed in 1.6
+        const rapidjson::Pointer patientInstructionPointer("/entry/3/resource/dosageInstruction/0/patientInstruction");
+        medicationDispenseBundle.setValue(patientInstructionPointer, "Patientenanweisung");
+    }
+
     std::optional<model::EPAOpProvideDispensationERPInputParameters> params;
     ASSERT_NO_THROW(params = Epa4AllTransformer::transformMedicationDispense(
                         medicationDispenseBundle, options.prescriptionId, model::Timestamp::now(),
@@ -1218,10 +1305,26 @@ TEST_F(Epa4AllTransformerTest, transformMedicationDispense14)
     EXPECT_EQ(params->getMedicationDispenses().size(), options.medicationDispenses.size());
 
     validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                      "epa-op-provide-dispensation-erp-input-parameters|1.0"},
-             &params->jsonDocument(), model::Timestamp::fromGermanDate("2025-01-16"));
+                                      "epa-op-provide-dispensation-erp-input-parameters"},
+             &params->jsonDocument());
     checkExpression("parameter[0].part[3].resource.medicationReference.reference.resolve()",
                     fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
-                                             "epa-op-provide-prescription-erp-input-parameters|1.0"},
+                                             "epa-op-provide-prescription-erp-input-parameters"},
                     &params->jsonDocument());
+
+    auto dispenses = params->getMedicationDispenses();
+    ASSERT_EQ(dispenses.size(), 2);
+    checkPropertiesNotInTarget(*dispenses[1], {"MedicationDispense.dosageInstruction.0.patientInstruction"});
+    if (GetParam().gemVersion < ResourceTemplates::Versions::GEM_ERP_1_6_2)
+    {
+        checkMappedValues(*dispenses[1], {MappedValue{.property = "MedicationDispense.dosageInstruction.0.text",
+                                                      .targetValue = "1-0-1-0; Patientenanweisung"}});
+    }
 }
+
+INSTANTIATE_TEST_SUITE_P(Epa4AllTransformerTest, Epa4AllTransformerTestP,
+                         testing::Values(Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3,
+                                                  .gemVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2},
+                                         Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_2,
+                                                  .gemVersion = ResourceTemplates::Versions::GEM_ERP_1_6_2}),
+                         &Epa4AllTransformerTestP::name);

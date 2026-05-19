@@ -59,26 +59,10 @@ TEST_F(KbvItaErp_1_3_2_Test, kbvBundleMvoXml)
         validateKbv(ResourceTemplates::kbvBundleMvoXml({.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3})));
 }
 
-TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_pkvKvnr)
-{
-    ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
-        .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::pkv},
-        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
-    })));
-}
-
 TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_gkvKvnr)
 {
     ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
-        .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::gkv},
-        .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
-    })));
-}
-
-TEST_F(KbvItaErp_1_3_2_Test, kbvBundlePkvXml_unspecKvnr)
-{
-    ASSERT_NO_FATAL_FAILURE(validateKbv(ResourceTemplates::kbvBundlePkvXml({
-        .kvnr = model::Kvnr{"X123456789", model::Kvnr::Type::unspecified},
+        .kvnr = model::Kvnr{"X123456789"},
         .kbvVersion{ResourceTemplates::Versions::KBV_ERP_1_3_3},
     })));
 }

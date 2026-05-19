@@ -32,6 +32,7 @@ class TelematicPseudonymManager;
 class JsonValidator;
 template<typename>
 class PeriodicTimer;
+class IPoPPCertificateVerifierService;
 class RegistrationInterface;
 class SeedTimerHandler;
 class Tpm;
@@ -54,9 +55,13 @@ using SeedTimer = PeriodicTimer<SeedTimerHandler>;
  */
 struct Factories : BaseFactories {
     Database::Factory databaseFactory;
+    ReadOnlyDatabase::Factory readOnlyDatabaseFactory;
     std::function<std::unique_ptr<RedisInterface>(std::chrono::milliseconds socketTimeout)> redisClientFactory;
     HttpsServerFactoryT teeServerFactory;
     std::function<std::shared_ptr<JsonValidator>()> jsonValidatorFactory;
+    using PoPPServiceFactoryT = std::function<std::unique_ptr<IPoPPCertificateVerifierService>(
+        boost::asio::io_context* context, TslManager& tslManager, std::shared_ptr<CrlProvider>)>;
+    PoPPServiceFactoryT poppServiceFactory;
 };
 
 
@@ -77,6 +82,7 @@ public:
     void setPrngSeeder(std::unique_ptr<SeedTimer>&& prngTimer);
 
     std::unique_ptr<Database> databaseFactory();
+    std::unique_ptr<ReadOnlyDatabase> readOnlyDatabaseFactory();
     const RateLimiter& getDosHandler();
     std::shared_ptr<RedisInterface> getRedisClient();
     PreUserPseudonymManager& getPreUserPseudonymManager();
@@ -90,6 +96,8 @@ public:
     const AuditEventTextTemplates& auditEventTextTemplates() const;
 
     const SeedTimer* getPrngSeeder() const;
+
+    const IPoPPCertificateVerifierService& getPoPPService() const;
 
     Idp idp;
 
@@ -112,6 +120,7 @@ private:
      * are created on demand and destroyed as soon as possible.
      */
     Database::Factory mDatabaseFactory;
+    ReadOnlyDatabase::Factory mReadOnlyDatabaseFactory;
     std::shared_ptr<RedisInterface> mRedisClient;
     std::unique_ptr<RateLimiter> mDosHandler;
     const std::shared_ptr<JsonValidator> mJsonValidator;
@@ -126,6 +135,8 @@ private:
 
     std::unique_ptr<BaseHttpsServer> mTeeServer;
     gsl::not_null<std::shared_ptr<erp::RuntimeConfiguration>> mRuntimeConfiguration;
+
+    std::unique_ptr<IPoPPCertificateVerifierService> mPoPPService;
 };
 
 class SessionContext;

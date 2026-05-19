@@ -17,7 +17,7 @@
           "name": "prescriptionId",
           "valueIdentifier": {
             "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
-            "value": "166.100.000.000.001.39"
+            "value": "166.100.000.000.001.12"
           }
         },
         {
@@ -48,7 +48,24 @@
                     "valueBoolean": true
                   }
                 ],
-                "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-teratogenic-extension"
+                "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension"
+              },
+              {
+                "extension": [
+                  {
+                    "url": "algorithmVersion",
+                    "valueString": "1.0.1"
+                  },
+                  {
+                    "url": "language",
+                    "valueCode": "de-DE"
+                  }
+                ],
+                "url": "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta"
+              },
+              {
+                "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction",
+                "valueMarkdown": "0-0-1-0 Stück"
               }
             ],
             "status": "completed",
@@ -57,12 +74,12 @@
               "reference": "urn:uuid:a3ca01a4-92c1-422a-87d9-ef046e94527f"
             },
             "subject": {
-              "extension": [
-                {
-                  "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
-                  "valueCode": "not-permitted"
+              "identifier": {
+                "system": "http://fhir.de/sid/gkv/kvid-10",
+                "_value": {
+                  "extension": [{"url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason", "valueCode": "not-permitted"}]
                 }
-              ]
+              }
             },
             "authoredOn": "2025-05-20",
             "dosageInstruction": [

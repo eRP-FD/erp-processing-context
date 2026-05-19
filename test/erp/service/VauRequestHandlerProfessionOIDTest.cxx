@@ -198,7 +198,7 @@ public:
 
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksSuccess)
 {
-    A_21558_01.test("Valid professionOID claim in JWT");
+    A_21558_02.test("Valid professionOID claim in JWT");
     testEndpoint(HttpMethod::GET, "/Task", jwtVersicherter, HttpStatus::OK);
     testEndpoint(HttpMethod::GET, "/Task", jwtOeffentliche_apotheke, HttpStatus::RejectMissingKvnr,
                  "Ein Prüfnachweis ohne KVNR wird nicht akzeptiert.");
@@ -211,7 +211,7 @@ TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksSuccess)
 }
 TEST_F(VauRequestHandlerProfessionOIDTest, GetAllTasksForbidden)
 {
-    A_21558_01.test("Invalid professionOID claim in JWT");
+    A_21558_02.test("Invalid professionOID claim in JWT");
     testEndpoint(HttpMethod::GET, "/Task", jwtArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtZahnArzt, HttpStatus::Forbidden);
     testEndpoint(HttpMethod::GET, "/Task", jwtPraxisArzt, HttpStatus::Forbidden);

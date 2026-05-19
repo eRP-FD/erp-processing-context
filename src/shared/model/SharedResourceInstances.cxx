@@ -1,3 +1,4 @@
+#include "extensions/GeneratedDosageInstructionsMeta.hxx"
 #include "shared/model/AuditData.hxx"
 #include "shared/model/AuditEvent.hxx"
 #include "shared/model/Binary.hxx"
@@ -34,10 +35,10 @@ template class Resource<Binary>;
 template class Resource<Bundle>;
 template class Resource<Composition>;
 template class Resource<Device>;
-template class Resource<Dosage>;
+template class Resource<DosageDgMP>;
 template class Resource<GemErpExRedeemCode>;
 template class Resource<GemErpPrMedication>;
-template class Resource<KbvBundle >;
+template class Resource<KbvBundle>;
 template class Resource<KbvComposition>;
 template class Resource<KbvCoverage>;
 template class Resource<KBVMedicationCategory>;
@@ -61,5 +62,7 @@ template class Resource<Signature>;
 template class BundleBase<Bundle>;
 template class BundleBase<KbvBundle>;
 template class BundleBase<MedicationDispenseBundle>;
+
+template class Resource<GeneratedDosageInstructionsMeta>;
 
 }

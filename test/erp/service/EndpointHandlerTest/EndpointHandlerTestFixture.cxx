@@ -1,18 +1,19 @@
 #include "EndpointHandlerTestFixture.hxx"
-
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/service/AuditEventHandler.hxx"
 #include "erp/service/MedicationDispenseHandler.hxx"
 #include "mock/crypto/MockCryptography.hxx"
-#include "test/test_config.h"
+#include "shared/util/FileHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/test_config.h"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
-#include "shared/util/FileHelper.hxx"
+
+#include <date/tz.h>
 
 class HsmPool;
 class KeyDerivation;
@@ -31,14 +32,15 @@ std::unique_ptr<DatabaseFrontend> EndpointHandlerTest::createDatabase(HsmPool& h
 {
     if (! mockDatabase)
     {
-        mockDatabase = std::make_unique<MockDatabase>(hsmPool);
+        mockDatabase = std::make_shared<MockDatabase>(hsmPool);
         mockDatabase->fillWithStaticData();
     }
-    auto md = std::make_unique<MockDatabaseProxy>(*mockDatabase);
+    auto md = std::make_unique<MockDatabaseProxy>(mockDatabase);
     return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
 }
 
-void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename)
+void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const std::string& expectedResultFilename,
+                                                 size_t expectedCount)
 {
     GetAllAuditEventsHandler handler({});
 
@@ -62,8 +64,18 @@ void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const 
         model::NumberAsStringParserDocumentConverter::copyToOriginalFormat(auditEventBundle.jsonDocument()),
         SchemaType::fhir));
     EXPECT_NO_FATAL_FAILURE(testutils::validate(auditEventBundle));
+
+    A_24443_01.test("paging without prev");
+    EXPECT_TRUE(auditEventBundle.getLink(model::Link::Self).has_value());
+    EXPECT_TRUE(auditEventBundle.getLink(model::Link::First).has_value());
+    EXPECT_FALSE(auditEventBundle.getLink(model::Link::Prev).has_value());
+    if (expectedCount > 50)
+    {
+        EXPECT_TRUE(auditEventBundle.getLink(model::Link::Next).has_value());
+    }
+
     auto auditEvents = auditEventBundle.getResourcesByType<model::AuditEvent>("AuditEvent");
-    ASSERT_EQ(auditEvents.size(), 1);
+    ASSERT_GE(auditEvents.size(), 1);
 
     auto& auditEvent = auditEvents.front();
     ASSERT_NO_THROW(
@@ -76,15 +88,35 @@ void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const 
               canonicalJson(expectedAuditEvent.serializeToJsonString()));
 }
 
+void EndpointHandlerTest::insertTask(model::PrescriptionType prescriptionType, ResourceTemplates::TaskType taskType,
+                                     const int64_t databaseId, const model::Timestamp& expirydate,
+                                     const model::Kvnr& kvnr)
+{
+    const auto taskId = model::PrescriptionId::fromDatabaseId(prescriptionType, databaseId);
+    auto validUntil = date::make_zoned(model::Timestamp::GermanTimezone, expirydate.toChronoTimePoint() + 24h);
+    validUntil = floor<date::days>(validUntil.get_local_time());
+    ResourceTemplates::TaskOptions taskOpts{
+        .taskType = taskType,
+        .prescriptionId = taskId,
+        .expirydate = model::Timestamp(validUntil.get_sys_time()),
+        .kvnr = kvnr.id(),
+    };
+    auto doc = model::NumberAsStringParserDocument::fromJson(ResourceTemplates::taskJson(taskOpts));
+    auto task = model::Task::fromJson(doc);
+    task.setIsPkv(! model::canBeGkv(prescriptionType));
+    mockDatabase->insertTask(task);
+    TLOG(INFO) << "inserted task with expiry date " << taskOpts.expirydate;
+}
+
 model::Task EndpointHandlerTest::addTaskToDatabase(SessionContext& sessionContext, model::Task::Status taskStatus,
                                                    const std::string& accessCode, const std::string& insurant,
                                                    const model::Timestamp lastUpdate)
 {
-    auto* database = sessionContext.database();
+    auto database = sessionContext.serviceContext.databaseFactory();
     model::Task task{model::PrescriptionType::apothekenpflichigeArzneimittel, accessCode};
     task.setAcceptDate(model::Timestamp{.0});
     task.setExpiryDate(model::Timestamp{.0});
-    task.setKvnr(model::Kvnr{insurant, model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{insurant});
     task.updateLastUpdate(lastUpdate);
     task.setStatus(taskStatus);
     task.setIsPkv(false);

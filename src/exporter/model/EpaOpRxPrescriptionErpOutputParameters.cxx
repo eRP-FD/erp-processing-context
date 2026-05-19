@@ -11,6 +11,16 @@ namespace model
 
 EPAOperationOutcome::Issue EPAOpRxPrescriptionERPOutputParameters::getOperationOutcomeIssue() const
 {
+    return getFirstIssue();
+}
+
+std::optional<std::string> EPAOpRxPrescriptionERPOutputParameters::getOperationOutcomeDiagnostics() const
+{
+    return getFirstIssue().diagnostics;
+}
+
+EPAOperationOutcome::Issue EPAOpRxPrescriptionERPOutputParameters::getFirstIssue() const
+{
     const auto* parameter = findParameter("rxPrescription");
     ModelExpect(parameter, "invalid EPAOpRxPrescriptionERPOutputParameters: rxPrescription not found");
     const auto* ooPart = findPart(*parameter, "operationOutcome");

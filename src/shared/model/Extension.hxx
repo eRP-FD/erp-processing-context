@@ -31,6 +31,8 @@ public:
     static constexpr auto resourceTypeName = "Extension";
 
     using Resource<ExtensionT>::Resource;
+    [[nodiscard]] std::string_view url() const;
+
     [[nodiscard]] std::optional<bool> valueBoolean() const;
 
     [[nodiscard]] std::optional<std::string_view> valueCode() const;
@@ -40,6 +42,7 @@ public:
     [[nodiscard]] std::optional<std::string_view> valueCodingDisplay() const;
 
     [[nodiscard]] std::optional<std::string_view> valueString() const;
+    [[nodiscard]] std::optional<std::string_view> valueMarkdown() const;
 
     [[nodiscard]] std::optional<model::Timestamp> valueDate() const;
 

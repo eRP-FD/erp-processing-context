@@ -6,8 +6,12 @@
  */
 
 #include "shared/model/KbvMedicationRequest.hxx"
+#include "DosageDgMP.hxx"
+#include "extensions/GeneratedDosageInstructionsMeta.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/extensions/KBVMultiplePrescription.hxx"
+#include "shared/util/dosagetext/Validator.hxx"
 
 #include <date/tz.h>
 
@@ -52,15 +56,9 @@ std::optional<date::year_month_day> KbvMedicationRequest::mvoEndDate() const
     return std::nullopt;
 }
 
-std::optional<Dosage> KbvMedicationRequest::dosageInstruction() const
+std::vector<DosageDgMP> KbvMedicationRequest::dosageInstruction() const
 {
-    static const rapidjson::Pointer dosageInstructionPointer(resource::ElementName::path("dosageInstruction", "0"));
-    const auto* entry = getValue(dosageInstructionPointer);
-    if (entry)
-    {
-        return Dosage::fromJson(*entry);
-    }
-    return std::nullopt;
+    return getDosageInstructionFromResource(*this);
 }
 
 model::Timestamp KbvMedicationRequest::authoredOn() const
@@ -70,21 +68,50 @@ model::Timestamp KbvMedicationRequest::authoredOn() const
     return model::Timestamp::fromGermanDate(std::string{authoredOnStr});
 }
 
-Dosage::Dosage(NumberAsStringParserDocument&& document)
-    : Resource<Dosage>(std::move(document))
-{
-}
-
-std::optional<std::string_view> Dosage::text() const
-{
-    static const rapidjson::Pointer textPointer(resource::ElementName::path(resource::elements::text));
-    return getOptionalStringValue(textPointer);
-}
-
-
 std::optional<model::Timestamp> KbvMedicationRequest::getValidationReferenceTimestamp() const
 {
     return authoredOn();
+}
+
+void KbvMedicationRequest::additionalValidation() const
+{
+    if (getProfileVersionChecked() < version::KBV_1_4)
+    {
+        return;
+    }
+    A_28567.start("Anwendung der Validierung wenn dosageInstruction vorhanden ist");
+    A_28570.start("Task aktivieren - Prüfung strukturierte Dosierung");
+    const auto& dosage = dosageInstruction();
+    if (! dosage.empty())
+    {
+        const auto& renderedDosageExtension =
+            getExtension(resource::structure_definition::extension_MedicationRequest_renderedDosageInstruction);
+        ErpExpect(renderedDosageExtension.has_value(), HttpStatus::BadRequest,
+                  "Missing MedicationRequest_renderedDosageInstruction extension.");
+        const auto& metaExtension = getExtension<GeneratedDosageInstructionsMeta>();
+        ErpExpect(metaExtension.has_value(), HttpStatus::BadRequest,
+                  "Missing GeneratedDosageInstructionsMeta extension.");
+        dosagetext::Validator::validate(dosage, *renderedDosageExtension, *metaExtension);
+    }
+}
+
+void KbvMedicationRequest::movePatientInstructionToText()
+{
+    static const rapidjson::Pointer dosageInstructionPointer(resource::ElementName::path("dosageInstruction"));
+    static const rapidjson::Pointer patientInstructionPointer(resource::ElementName::path("patientInstruction"));
+    static const rapidjson::Pointer textPointer(resource::ElementName::path("text"));
+    auto* dosageInstructionArray = getValue(dosageInstructionPointer);
+    if (dosageInstructionArray != nullptr && dosageInstructionArray->IsArray())
+    {
+        for (auto& dosageInstruction : dosageInstructionArray->GetArray())
+        {
+            if (const auto* patientInstruction = patientInstructionPointer.Get(dosageInstruction))
+            {
+                setKeyValue(dosageInstruction, textPointer, NumberAsStringParserDocument::getStringValueFromValue(patientInstruction));
+            }
+            patientInstructionPointer.Erase(dosageInstruction);
+        }
+    }
 }
 
 }

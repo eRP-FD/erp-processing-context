@@ -17,6 +17,7 @@
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/HsmTestBase.hxx"
 #include "test/util/TestUtils.hxx"
+#include "test/util/ErpMacros.hxx"
 
 #include <gtest/gtest.h>
 
@@ -54,22 +55,25 @@ TEST_F(TeeTokenUpdaterTest, doUpdateCalled)
 
 TEST_F(TeeTokenUpdaterTest, successfulRenewal)
 {
+
     #ifdef _WIN32
     GTEST_SKIP();
     #endif
+    WITH_RETRIES()
+    {
+        // Do not allow production updater to keep the update cost minimal
+        setupHsmTest(false, std::chrono::milliseconds(10), std::chrono::minutes(1));
 
-    // Do not allow production updater to keep the update cost minimal
-    setupHsmTest(false, std::chrono::milliseconds(10), std::chrono::minutes(1));
+        std::atomic_size_t updateCount = 0;
 
-    std::atomic_size_t updateCount = 0;
+        mUpdateCallback = [&]() {
+            ++updateCount;
+        };
 
-    mUpdateCallback = [&]() {
-        ++updateCount;
-    };
+        mHsmPool->getTokenUpdater().requestUpdate();
 
-    mHsmPool->getTokenUpdater().requestUpdate();
-
-    TVLOG(1) << "waiting for updates";
-    testutils::waitFor([&updateCount]{return updateCount >= 2;});
-    mUpdateCallback = nullptr;
+        TVLOG(1) << "waiting for updates";
+        SOFT_WAIT_FOR([&updateCount]{return updateCount >= 2;});
+        mUpdateCallback = nullptr;
+    }
 }

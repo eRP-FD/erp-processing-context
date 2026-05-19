@@ -10,7 +10,10 @@
 
 #include <cstddef>
 #include <iosfwd>
+#include <list>
 #include <optional>
+#include <string>
+#include <tuple>
 #include <utility>
 
 
@@ -42,6 +45,11 @@ public:
     {}
     virtual ~ExceptionWrapperBase() = default;
 
+    void addContext(std::string_view key, std::string_view value)
+    {
+        keyValueExceptionContextList.emplace_back(key, value);
+    }
+
     template<typename AnyExceptionT>
     static std::optional<Location> getLocation (const AnyExceptionT& ex)
     {
@@ -52,7 +60,18 @@ public:
             return std::nullopt;
     }
 
+    template<typename AnyExceptionT>
+    static std::list<std::tuple<std::string, std::string>> getContext(const AnyExceptionT& ex)
+    {
+        if (const auto* wrapper = dynamic_cast<const ExceptionWrapperBase*>(&ex))
+        {
+            return wrapper->keyValueExceptionContextList;
+        }
+        return {};
+    }
+
     const Location location;
+    std::list<std::tuple<std::string, std::string>> keyValueExceptionContextList;
 
 protected:
     static FileNameAndLineNumber getRootLocation(const FileNameAndLineNumber& location);
@@ -70,7 +89,6 @@ public:
         return ExceptionWrapper<ExceptionT>(getRootLocation(fileNameAndLineNumber), fileNameAndLineNumber,
                                             std::forward<Arguments>(arguments)...);
     }
-
 
 private:
     template <typename... ExceptionArgs>

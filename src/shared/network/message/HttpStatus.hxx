@@ -23,5 +23,6 @@ HttpStatus fromBoostBeastStatus (uint32_t status);
 const char* toString (HttpStatus status);
 size_t toNumericalValue (HttpStatus status);
 std::ostream& operator <<(std::ostream& stream, const HttpStatus& status);
+bool is2xxSuccess(HttpStatus status);
 
 #endif

@@ -71,7 +71,6 @@ set(ERP_TEST_UTIL_SOURCES
         util/JwtBuilder.cxx
         util/ResourceTemplates.cxx
         util/TestUtils.cxx
-
     )
 
 if(ERP_WITH_HSM_TPM_PRODUCTION)
@@ -98,6 +97,9 @@ target_link_libraries(erp-test-util-lib
     )
 
 set(ERP_TEST_LIB_SOURCES
+        erp/pc/popp/PoPPTokenBuilder.cxx
+        erp/service/EndpointHandlerTest/DosageInstructionTestHelper.cxx
+        erp/util/EgkProofUtils.cxx
         mock/ClientTeeProtocol.cxx
         mock/MockRedisStore.cxx
         mock/MockDatabase.cxx
@@ -307,6 +309,7 @@ list(
         erp/model/BundleTest.cxx
         erp/model/ChargeItemTest.cxx
         erp/model/CommunicationTest.cxx
+        erp/model/CommunicationPayloadTest.cxx
         erp/model/CompositionTest.cxx
         erp/model/ConsentTest.cxx
         erp/model/DeviceTest.cxx
@@ -319,6 +322,7 @@ list(
         erp/model/JsonMaintainNumberPrecisionTest.cxx
         erp/model/JsonMaintainNumberPrecisionTestModel.cxx
         erp/model/KbvBundleTest.cxx
+        erp/model/KbvMedicationRequestTest.cxx
         erp/model/KvnrTest.cxx
         erp/model/MedicationDispenseOperationParametersTest.cxx
         erp/model/MedicationDispenseTest.cxx
@@ -338,7 +342,9 @@ list(
         erp/pc/CFdSigErpManagerTest.cxx
         erp/pc/CFdSigErpTestHelper.hxx
         erp/pc/PcServiceContextTest.cxx
+        erp/pc/PoPPTest.cxx
         erp/pc/PseudonameKeyRefreshJobTest.cxx
+        erp/pc/popp/PoPPVerifierTest.cxx
         erp/requirements/A_19714_SecureTransportChannel.cxx
         erp/registration/ApplicationHealthAndRegistrationUpdaterTest.cxx
         erp/registration/RegistrationManagerTest.cxx
@@ -366,6 +372,8 @@ list(
         erp/service/EndpointErrorTest.cxx
         erp/service/EndpointHandlerTest/AcceptTaskTest.cxx
         erp/service/EndpointHandlerTest/ActivateTaskTest.cxx
+        erp/service/EndpointHandlerTest/DispenseTaskTest.cxx
+        erp/service/EndpointHandlerTest/CloseTaskTest.cxx
 )
 list(
     APPEND erp-test-source-files-5
@@ -374,14 +382,11 @@ list(
         erp/service/EndpointHandlerTest/ChargeItemPatchEndpointTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/ChargeItemPutHandlerTest.cxx
-        erp/service/EndpointHandlerTest/CommunicationGetEndpointTest.cxx
         erp/service/EndpointHandlerTest/CreateTaskTest.cxx
-        erp/service/EndpointHandlerTest/DispenseTaskTest.cxx
-        erp/service/EndpointHandlerTest/CloseTaskTest.cxx
+        erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
 )
 list(
     APPEND erp-test-source-files-6
-        erp/service/EndpointHandlerTest/CommunicationPostEndpointTest.cxx
         erp/service/EndpointHandlerTest/ConsentPostHandlerTest.cxx
         erp/service/EndpointHandlerTest/EndpointHandlerTest.cxx
         erp/service/EndpointHandlerTest/EuFixture.cxx
@@ -391,8 +396,10 @@ list(
         erp/service/EndpointHandlerTest/EuReadHandlerTest.cxx
         erp/service/EndpointHandlerTest/EuRevokeHandlerTest.cxx
         erp/service/EndpointHandlerTest/GetTaskByPharmacyTest.cxx
+        erp/service/EndpointHandlerTest/GetTaskByPharmacyTestPoPP.cxx
         erp/service/EndpointHandlerTest/MedicationDispenseGetEndpointTest.cxx
         erp/service/EndpointHandlerTest/PatchTaskHandlerTest.cxx
+        erp/service/EndpointHandlerTest/ReadOnlyDBTest.cxx
         erp/service/EndpointHandlerTest/RejectTaskTest.cxx
         erp/service/ErpRequestHandlerTest.cxx
 )
@@ -448,6 +455,8 @@ list(
         erp/util/TimerTest.cxx
         erp/util/UrlHelperTest.cxx
         erp/util/UuidTest.cxx
+        erp/util/dosagetext/GeneratorTest.cxx
+        erp/util/dosagetext/LocalizationTest.cxx
         erp/util/search/PagingArgumentTest.cxx
         erp/util/search/SearchArgumentTest.cxx
         erp/util/search/SortArgumentTest.cxx

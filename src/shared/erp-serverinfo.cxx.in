@@ -7,6 +7,7 @@
 
 
 #include "shared/erp-serverinfo.hxx"
+#include "shared/util/SharedRequirements.hxx"
 
 std::string_view ErpServerInfo::BuildVersion()
 {
@@ -28,7 +29,8 @@ std::string_view ErpServerInfo::ReleaseDate()
     return "@ERP_RELEASE_DATE@";
 }
 
-std::string_view ErpServerInfo::AppName()
+std::string_view ErpServerInfo::GematikClientId()
 {
-    return "@ERP_APP_NAME@";
+    A_22470_06.start("Client-ID for x-useragent header provided by Gematik:");
+    return "ERP-FD";
 }

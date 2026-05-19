@@ -17,6 +17,7 @@ target_link_libraries(fhirtools
         antlr4_static
     PUBLIC
         boost::boost
+        fmt::fmt-header-only
         date::date
         glog::glog
         gsl::gsl-lite

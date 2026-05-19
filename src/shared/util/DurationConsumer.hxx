@@ -70,6 +70,7 @@ public:
 
     void initialize(const std::string& sessionIdentifier, DurationTimer::Receiver&& receiver,
                     std::map<DurationCategory, std::chrono::milliseconds> loggingThresholds);
+    void setContextId(const std::string& contextId);
     void reset() noexcept;
     bool isInitialized() const;
     std::optional<std::string> getSessionIdentifier() const;
@@ -91,11 +92,12 @@ public:
      * Return a timer that measures how long it takes until its destructor is called.
      */
     DurationTimer getTimer(DurationCategory category, const std::string& metric,
-                           const std::unordered_map<std::string, std::string>& keyValueMap = {});
+                           std::unordered_map<std::string, std::string> keyValueMap = {});
 
 private:
     bool mIsInitialized = false;
     std::optional<std::string> mSessionIdentifier;
+    std::optional<std::string> mContextId;
     DurationTimer::Receiver mReceiver;
     std::map<DurationCategory, std::chrono::milliseconds> mLoggingThresholds;
 };
@@ -111,6 +113,8 @@ public:
     explicit DurationConsumerGuard(const std::string& sessionIdentifier,
                                    std::map<DurationCategory, std::chrono::milliseconds>&& loggingThresholds = {},
                                    DurationTimer::Receiver&& receiver = nullptr);
+
+    DurationConsumerGuard& withContextId(const std::string& contextId);
 
     ~DurationConsumerGuard ();
 };

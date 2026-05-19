@@ -33,18 +33,16 @@
 namespace
 {
 const fhirtools::DefinitionKey EpaMedicationRequestProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request|1.0"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-request"};
 const fhirtools::DefinitionKey EpaMedicationProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication|1.0"};
-const fhirtools::DefinitionKey EpaMedicationIngredientProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-pzn-ingredient|1.0"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication"};
 const fhirtools::DefinitionKey EpaOrganizationProfile{
-    "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory|0.11"};
+    "https://gematik.de/fhir/directory/StructureDefinition/OrganizationDirectory"};
 const fhirtools::DefinitionKey EpaPractitionerProfile{
-    "https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory|0.11"};
+    "https://gematik.de/fhir/directory/StructureDefinition/PractitionerDirectory"};
 const fhirtools::DefinitionKey BundleProfile{"http://hl7.org/fhir/StructureDefinition/Bundle|4.0.1"};
 const fhirtools::DefinitionKey EpaMedicationDispenseProfile{
-    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-dispense|1.0"};
+    "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-medication-dispense"};
 }
 
 
@@ -58,36 +56,65 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     parameters.setId(Uuid{}.toString());
     parameters.setPrescriptionId(kbvBundle.getIdentifier());
 
-    const auto& medicationRequest = kbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>();
+    auto medicationRequest = kbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>();
     const auto& kbvMedication = kbvBundle.getUniqueResourceByType<model::KbvMedicationGeneric>();
     Expect(kbvMedication.getId().has_value(), "Medication resource without ID");
     F_001.start("set provide-prescription.authoredOn to MedicationRequest.authoredOn");
     parameters.setAuthoredOn(medicationRequest.authoredOn());
     F_001.finish();
 
+    if (medicationRequest.getProfileVersionChecked() < model::version::KBV_1_4)
+    {
+        medicationRequest.movePatientInstructionToText();
+    }
+
     const auto& patient = kbvBundle.getUniqueResourceByType<model::Patient>();
 
     // medicationRequest
-    Uuid medicationRequestId{};
+    const Uuid medicationRequestId{};
     F_004.start("mapping of MedicationRequest.extension:Mehrfachverordnung to "
                 "MedicationRequest.extension:multiplePrescription");
-    std::vector<fhirtools::ValueMapping> medicationRequestValueMappings = {
+    const std::vector<fhirtools::ValueMapping> medicationRequestValueMappings = {
         {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription",
          .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/multiple-prescription-extension"},
         {.from = "Kennzeichen", .to = "indicator", .restrictFieldName = "url"},
         {.from = "Nummerierung", .to = "counter", .restrictFieldName = "url"},
         {.from = "Zeitraum", .to = "period", .restrictFieldName = "url"},
         {.from = "ID", .to = "id", .restrictFieldName = "url"},
+        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_SER",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/indicator-ser-extension",
+         .restrictFieldName = "url"},
+        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Narcotic",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/narcotics-extension",
+         .restrictFieldName = "url"},
+        {.from = "ErgaenzendeAngabenSubstitutionsmittel",
+         .to = "additional-information-substitutes",
+         .restrictFieldName = "url"},
+        {.from = "BtM-Sonderkennzeichen", .to = "narcotics-markings", .restrictFieldName = "url"},
+        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Patient_ID",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/patient-id-extension",
+         .restrictFieldName = "url"},
+        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Prescriber_ID",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/prescriber-id-extension",
+         .restrictFieldName = "url"},
+        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Teratogenic",
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension",
+         .restrictFieldName = "url"},
+        {.from = "GebaerfaehigeFrau", .to = "childbearing-potential", .restrictFieldName = "url"},
+        {.from = "ErklaerungSachkenntnis", .to = "declaration-of-expertise", .restrictFieldName = "url"},
+        {.from = "AushaendigungInformationsmaterialien",
+         .to = "hand-out-information-material",
+         .restrictFieldName = "url"},
+        {.from = "Off-Label", .to = "off-label", .restrictFieldName = "url"},
+        {.from = "EinhaltungSicherheitsmassnahmen", .to = "security-compliance", .restrictFieldName = "url"},
     };
     A_25946.start("KBV_PR_ERP_Prescription: Setzen des Pattern \"filler-order\" für .intent");
     F_010.start("Das Befüllen des MedicationRequest.subject");
     F_002.start("rewrite /medicationReference/reference");
     F_021.start("Add code and system defaults");
-    std::vector<FixedValue> medicationRequestFixedValues{
-        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/code"},
-         .value = "{Package}"},
-        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/system"},
-         .value = "http://unitsofmeasure.org"},
+    const std::vector<FixedValue> medicationRequestFixedValues{
+        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/code"}, .value = "{Package}"},
+        {.ptr = rapidjson::Pointer{"/dispenseRequest/quantity/system"}, .value = "http://unitsofmeasure.org"},
         {.ptr = rapidjson::Pointer{"/intent"}, .value = "filler-order"},
         {.ptr = rapidjson::Pointer{"/id"}, .value = medicationRequestId.toString()},
         {.ptr = rapidjson::Pointer{"/subject/identifier/system"},
@@ -99,8 +126,9 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     F_002.finish();
     F_010.finish();
     A_25946.finish();
-    auto transformedMedicationRequest = transformResource(EpaMedicationRequestProfile, medicationRequest,
-                                                          medicationRequestValueMappings, medicationRequestFixedValues);
+    auto transformedMedicationRequest =
+        transformResource(EpaMedicationRequestProfile, medicationRequest,
+                          medicationRequestValueMappings, medicationRequestFixedValues);
     A_25946.start("KBV_PR_ERP_Prescription: Keine Übernahme von \"requester.reference\"-Elementen");
     remove(transformedMedicationRequest, rapidjson::Pointer("/requester/reference"));
     A_25946.finish();
@@ -117,17 +145,19 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     parameters.setMedication(transformKbvMedication(kbvMedication));
 
     // organization
-    std::vector<fhirtools::ValueMapping> organizationValueMappings = {};
+    const std::vector<fhirtools::ValueMapping> organizationValueMappings = {};
     F_006b.start("organizationName → aus dem ACCESS_TOKEN der Anfrage");
-    std::vector<FixedValue> organizationFixedValues{
+    const std::vector<FixedValue> organizationFixedValues{
         {.ptr = rapidjson::Pointer{"/name"}, .value = std::string{organizationNameFromJwt}}};
 
     F_007.start(
         "Beim Mapping der Organization bei providePrescription (siehe 006b) sollen die Extensions in das OpenSlicing "
         "des Organization-Profils des VZD übernommen werden, auch wenn diese nicht explizit dort modelliert sind.");
-    auto transformedOrganization =
-        transformResource(EpaOrganizationProfile, kbvBundle.getUniqueResourceByType<model::KbvOrganization>(),
-                          organizationValueMappings, organizationFixedValues);
+    auto transformedOrganization = transformResource(EpaOrganizationProfile,
+                                                     kbvBundle.getUniqueResourceByType<model::KbvOrganization>(),
+                                                     organizationValueMappings, organizationFixedValues);
+    // according to https://gematik.github.io/api-erp/erp_epa_mapping_details/2026_07_01/mapping-prescription-organization.html
+    remove(transformedOrganization, rapidjson::Pointer{"/identifier"});
     F_006b.start("professionOid from ACCESS_TOKEN");
     addTypeProfessionOid(transformedOrganization, organizationProfessionOid);
     F_006b.finish();
@@ -141,8 +171,8 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     parameters.setOrganization(transformedOrganization);
 
     // practitioner
-    std::vector<fhirtools::ValueMapping> practitionerValueMappings = {};
-    std::vector<FixedValue> practitionerFixedValues{};
+    const std::vector<fhirtools::ValueMapping> practitionerValueMappings = {};
+    const std::vector<FixedValue> practitionerFixedValues{};
     const auto* backend = std::addressof(Fhir::instance().backend());
     auto repoView = getRepo(BundleProfile);
     const auto* bundleProfile = repoView->findStructure(BundleProfile);
@@ -167,8 +197,8 @@ Epa4AllTransformer::transformPrescription(const model::Bundle& kbvBundle, const 
     const auto* humanNameElement = rapidjson::Pointer{"/name/0"}.Get(practitioner.jsonDocument());
     Expect(humanNameElement, "name field missing in practitioner");
     practitioner.setValue(rapidjson::Pointer{"/name/0/text"}, buildPractitionerName(*humanNameElement));
-    auto transformedPractitioner =
-        transformResource(EpaPractitionerProfile, practitioner, practitionerValueMappings, practitionerFixedValues);
+    auto transformedPractitioner = transformResource(EpaPractitionerProfile, practitioner,
+                                                     practitionerValueMappings, practitionerFixedValues);
     A_25946.start("Überschreiben/Setzen der \"identifier:Telematik-ID\" des Arztes aus dem Signaturzertifikat der QES");
     F_013.start("Beim Mapping von KBV_PR_FOR_Practitioner soll bei identifier:Telematik-ID die Telematik-ID "
                 "des Arztes gesetzt werden welche auch im Signaturzertifikat der QES angegeben ist (siehe auch "
@@ -198,7 +228,7 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
 
     for (size_t i = 0, end = medicationDispenseBundle.getResourceCount(); i < end; ++i)
     {
-        const auto sourceResource = model::UnspecifiedResource::fromJson(medicationDispenseBundle.getResource(i));
+        auto sourceResource = model::MedicationDispense::fromJson(medicationDispenseBundle.getResource(i));
         auto containedMedicationOpt = sourceResource.containedResource<model::KbvMedicationGeneric>(0);
         Expect(containedMedicationOpt, "MedicationDispense without contained Medication");
         containedMedicationOpt->setId(Uuid{}.toString());
@@ -206,14 +236,19 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
         auto transformedMedication = transformKbvMedication(*containedMedicationOpt);
 
         F_014.start("Eine Unterscheidung nach GKV und PKV im System findet beim Mapping nicht mehr statt.");
-        std::vector<fhirtools::ValueMapping> dispenseValueMappings{
+        const std::vector<fhirtools::ValueMapping> dispenseValueMappings{
             {.from = "http://fhir.de/sid/pkv/kvid-10", .to = "http://fhir.de/sid/gkv/kvid-10"}};
         F_014.finish();
-        std::vector<FixedValue> dispenseFixedValues{
+        const std::vector<FixedValue> dispenseFixedValues{
             {.ptr = rapidjson::Pointer{"/medicationReference/reference"},
              .value = "Medication/" + std::string{*containedMedicationOpt->getId()}}};
+        if (sourceResource.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+        {
+            sourceResource.moveAppendPatientInstructionToText();
+        }
         auto transformedMedicationDispense =
-            transformResource(EpaMedicationDispenseProfile, sourceResource, dispenseValueMappings, dispenseFixedValues);
+            transformResource(EpaMedicationDispenseProfile, sourceResource,
+                              dispenseValueMappings, dispenseFixedValues);
         remove(transformedMedicationDispense,
                rapidjson::Pointer{model::resource::ElementName::path(model::resource::elements::contained)});
         parameters.addMedicationAndDispense(transformedMedicationDispense, transformedMedication);
@@ -234,10 +269,14 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
     for (auto& medicationDispense : medicationDispenseBundle.getResourcesByType<model::MedicationDispense>())
     {
         medicationDispense.setMetaProfile0(to_string(EpaMedicationDispenseProfile));
-        Uuid medicationReference{medicationDispense.medicationReference()};
+        const Uuid medicationReference{medicationDispense.medicationReference()};
         if (medicationReference.isValidIheUuid())
         {
             medicationDispense.setMedicationReference("Medication/" + medicationReference.toString());
+        }
+        if (medicationDispense.getProfileVersionChecked() < model::version::GEM_ERP_1_6)
+        {
+            medicationDispense.moveAppendPatientInstructionToText();
         }
         parameters.addMedicationDispense(medicationDispense.jsonDocument());
     }
@@ -253,6 +292,7 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
 
 std::string Epa4AllTransformer::buildPractitionerName(const rapidjson::Value& humanNameElement)
 {
+    F_011.start("Der Practitioner.name.text ist ein Pflichtfeld und muss aus den Namensinformationen erzeugt werden");
     static const rapidjson::Pointer familyPtr{"/family"};
     const auto familyOpt = model::NumberAsStringParserDocument::getOptionalStringValue(humanNameElement, familyPtr);
     Expect(familyOpt.has_value(), "HumanName.family is mandatory in KBV_PR_Base_Datatype_Name");
@@ -327,12 +367,15 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
 
     A_25947.start("identifier:TelematikID and name from JWT");
     F_006a.start("Defaultwerte bei Organization");
-    model::OrganizationDirectory organization{actorTelematikId,
-                                              model::Coding{model::resource::naming_system::organizationProfessionOid,
-                                                            profession_oid::oid_oeffentliche_apotheke},
-                                              actorOrganizationName, organizationProfessionOid};
+    model::OrganizationDirectory organization{
+        actorTelematikId,
+        model::Coding{model::resource::naming_system::organizationProfessionOid,
+                      profession_oid::oid_oeffentliche_apotheke},
+        actorOrganizationName, organizationProfessionOid};
     F_006a.finish();
     A_25947.finish();
+    // Set profile without version
+    organization.setMetaProfile0(to_string(EpaOrganizationProfile));
     parameters.setOrganization(organization.jsonDocument());
     return parameters;
 }
@@ -384,7 +427,8 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
         F_005.finish();
     }
 
-    auto transformedMedication = transformResource(EpaMedicationProfile, kbvMedication, medicationValueMappings, {});
+    auto transformedMedication =
+        transformResource(EpaMedicationProfile, kbvMedication, medicationValueMappings, {});
     F_015.start("Medication.code.coding allowlist");
     removeMedicationCodeCodingsByAllowlist(transformedMedication);
     F_015.finish();
@@ -392,7 +436,8 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
     {
         case model::ProfileType::KBV_PR_ERP_Medication_Compounding: {
             F_017.start("convert Medication.ingredient to Medication.contained");
-            const auto kbvMedicationCompounding = model::KbvMedicationCompounding::fromJson(kbvMedication.jsonDocument());
+            const auto kbvMedicationCompounding =
+                model::KbvMedicationCompounding::fromJson(kbvMedication.jsonDocument());
             convertPZNIngredients(transformedMedication, kbvMedicationCompounding);
             F_017.finish();
             F_020.start("5.: Rezeptur ohne PZNs in Rezepturbestandteilen");
@@ -484,7 +529,8 @@ void Epa4AllTransformer::convertPZNIngredients(model::NumberAsStringParserDocume
 }
 
 void Epa4AllTransformer::convertPZNIngredient(model::NumberAsStringParserDocument& transformedMedication,
-                                              rapidjson::Value& epaIngredient, const model::Pzn& pzn, std::string_view text)
+                                              rapidjson::Value& epaIngredient, const model::Pzn& pzn,
+                                              std::string_view text)
 {
     model::EPAMedicationPZNIngredient containedMedication{pzn, text};
 

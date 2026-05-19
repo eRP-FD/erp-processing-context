@@ -42,7 +42,10 @@ public:
         }
         return std::nullopt;
     }
-
+    std::list<std::string> referencedGroups() const override
+    {
+        return {};
+    }
     const std::string mId;
     std::unordered_map<std::string, FhirVersion> mVersions;
 };

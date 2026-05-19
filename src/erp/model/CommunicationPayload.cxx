@@ -26,6 +26,7 @@ const rj::Pointer pickUpCodeHRPointer("/pickUpCodeHR");
 const rj::Pointer pickUpCodeDMCPointer("/pickUpCodeDMC");
 const rj::Pointer supplyOptionsTypePointer("/supplyOptionsType");
 const rj::Pointer urlPointer("/url");
+const rj::Pointer versionPointer("/version");
 }// namespace
 
 
@@ -73,7 +74,7 @@ void CommunicationPayload::validateJsonSchema(const JsonValidator& validator, Sc
                 std::string{"Invalid payload: does not conform to expected JSON schema: "}.append(ex.what()));
     }
 
-    if (schemaType == SchemaType::CommunicationReplyPayload)
+    if (schemaType == SchemaType::CommunicationReplyPayloadV1)
     {
         if (pickUpCodeHRPointer.Get(payloadDoc) || pickUpCodeDMCPointer.Get(payloadDoc))
         {
@@ -109,6 +110,22 @@ std::string CommunicationPayload::supplyOptionsType() const
     const auto* supplyOptionType = supplyOptionsTypePointer.Get(payloadDoc);
     ModelExpect(supplyOptionType && supplyOptionType->IsString(), "supplyOptionsType must be 'string'");
     return supplyOptionType->GetString();
+}
+
+CommunicationPayloadVersion CommunicationPayload::version() const
+{
+    ModelExpect(mPayloadValue != nullptr, "Payload must not be null.");
+    const auto& versionValue = versionPointer.Get(getPayloadDoc());
+    ModelExpect(versionValue != nullptr && versionValue->IsInt(), "version must be 'integer'");
+    if (versionValue->GetInt() == 1)
+    {
+        return CommunicationPayloadVersion::V1;
+    }
+    if (versionValue->GetInt() == 3)
+    {
+        return CommunicationPayloadVersion::V3;
+    }
+    ModelFail("Invalid payload version: " + std::to_string(versionValue->GetInt()));
 }
 
 rapidjson::Document CommunicationPayload::getPayloadDoc() const

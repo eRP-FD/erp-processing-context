@@ -7,7 +7,6 @@
 #ifndef MEDICATION_EXPORTER_TEE3CLIENT_HXX
 #define MEDICATION_EXPORTER_TEE3CLIENT_HXX
 
-#include "exporter/BdeMessage.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/network/client/CoHttpsClient.hxx"
 #include "library/crypto/tee3/Tee3Context.hxx"
@@ -21,6 +20,8 @@ namespace epa
 class BinaryBuffer;
 class ClientTeeHandshake;
 }
+
+class BDEMessage;
 
 class Certificate;
 class EpaCertificateService;
@@ -57,7 +58,7 @@ public:
     [[nodiscard]] boost::asio::awaitable<void> ensureConnected();
 
     [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>>
-    sendInner(std::string xRequestId, Request request, const BDEMessage::Data& bdeData);
+    sendInner(std::string xRequestId, Request request, BDEMessage& bdeMessage);
 
 
     static const boost::system::error_category& errorCategory();
@@ -75,7 +76,6 @@ public:
         std::size_t retryCount = 0;
         std::chrono::steady_clock::time_point nextRetry;
     };
-
 
 private:
     boost::asio::awaitable<boost::system::error_code> tee3Handshake();
@@ -104,8 +104,7 @@ private:
     [[nodiscard]] boost::asio::awaitable<boost::system::result<Response>> sendOuter(std::string xRequestId,
                                                                                     Request request);
 
-    static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType,
-                                      std::string_view userAgent);
+    static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType);
     Request createEncryptedOuterRequest(Request& innerRequest, epa::Tee3Context::SessionContexts& sessionContexts);
 
     Certificate provideCertificate(const epa::BinaryBuffer& hash, uint64_t version);
@@ -118,7 +117,6 @@ private:
     std::shared_ptr<epa::Tee3Context> mTee3Context;
     boost::asio::steady_timer mTeeContextRefreshTimer;
     EpaCertificateService& mCertificateService;
-    std::string mDefaultUserAgent;
     bool mIsAuthorized = false;
     std::atomic_int64_t mRequestCounter;
 };

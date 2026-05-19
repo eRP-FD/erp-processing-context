@@ -13,6 +13,8 @@
 
 namespace eu {
 
+
+
 PatchTaskHandler::PatchTaskHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
     : TaskHandlerBase(Operation::PATCH_Task_id_mark, allowedProfessionOiDs)
 {
@@ -42,31 +44,30 @@ void PatchTaskHandler::handleRequest(PcSessionContext& session)
     auto* databaseHandle = session.database();
     const model::Kvnr kvnr{*kvnrClaim};
     auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
-    std::optional<model::Task> task;
-    if (taskAndKey.has_value())
-    {
-        task = std::move(taskAndKey->task);
-    }
-    Expect3(task->kvnr().has_value(), "Task has no KV number", std::logic_error);
-    ErpExpect(task->kvnr() == kvnr, HttpStatus::Forbidden, "Only insurant prescription allowed.");
+    ErpExpect(taskAndKey.has_value(), HttpStatus::NotFound, "No such task.");
+    model::Task& task{taskAndKey->task};
+    ErpExpect(task.kvnr() && task.kvnr() == kvnr && task.status() == model::Task::Status::ready, HttpStatus::Forbidden,
+              "Operation only allowed by insurant owning the task and task status is ready");
     A_27550.finish();
 
+    A_28500.start("Task markieren - Versicherter - nur einlösbare E-Rezepte");
     try
     {
-        ErpExpect(task->isEuRedeemableByProperties(), HttpStatus::Forbidden, "Only eu redeemable prescriptions allowed.");
+        ErpExpect(task.isEuRedeemableByProperties(), HttpStatus::Conflict, "Only eu redeemable prescriptions allowed.");
     }
     catch (const model::ModelException& exception)
     {
-        ErpFail(HttpStatus::Forbidden, "Only eu redeemable prescriptions allowed.");
+        ErpFail(HttpStatus::Conflict, "Only eu redeemable prescriptions allowed.");
     }
+    A_28500.finish();
 
     A_27552.start("Update task redeemable flag.");
-    task->updateLastUpdate();
-    databaseHandle->setTaskEuRedeemableByPatient(*task, validatedDoc);
-    task->setEuRedeemableByPatient(validatedDoc.isEuRedeemableByPatientAuthorization());
+    task.updateLastUpdate();
+    databaseHandle->setTaskEuRedeemableByPatient(task, validatedDoc);
+    task.setEuRedeemableByPatient(validatedDoc.isEuRedeemableByPatientAuthorization());
     A_27552.finish();
 
-    makeResponse(session, HttpStatus::OK, std::addressof(task.value()));
+    makeResponse(session, HttpStatus::OK, &task);
 
     // Collect Audit data
     session.auditDataCollector()

@@ -8,24 +8,53 @@
 #ifndef ERP_UTIL_EXPECT_HXX
 #define ERP_UTIL_EXPECT_HXX
 
+#include "shared/model/ModelException.hxx"
+#include "shared/network/message/HttpStatus.hxx"
 #include "shared/util/ErpException.hxx"
 #include "shared/util/ErpServiceException.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
-#include "shared/model/ModelException.hxx"
-
 #include "shared/util/TLog.hxx"
-#include "shared/network/message/HttpStatus.hxx"
 
+#include <magic_enum/magic_enum_iostream.hpp>
+#include <openssl/err.h>
 #include <cstddef>
 #include <source_location>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <openssl/err.h>
 
 // to be intended to be used internal only, but due to templating it is needed in the header
 namespace local
 {
+    // Helper for arguments... logging
+    template <class T>
+    std::ostream& operator<< (std::ostream& out, const std::optional<T>& optional)
+    {
+        if (optional.has_value())
+        {
+            return out << *optional;
+        }
+        return out;
+    }
+    using magic_enum::ostream_operators::operator<<;
+    inline std::ostream& operator<<(std::ostream& out, const std::exception& ex)
+    {
+        return out << ex.what();
+    }
+    template<class... Arguments>
+    std::string logArgs(const Arguments&... arguments [[maybe_unused]])
+    {
+#ifdef ENABLE_DEBUG_LOG
+        if constexpr (sizeof...(Arguments) > 0)
+        {
+            std::ostringstream oss;
+            oss << " arguments: ";
+            ((oss << arguments << ", "), ...);
+            return oss.str();
+        }
+#endif
+        return "";
+    }
 
     template<class Exception, class ... Arguments>
     [[noreturn]]
@@ -34,7 +63,8 @@ namespace local
         const FileNameAndLineNumber& fileNameAndLineNumber,
         Arguments&& ... arguments)
     {
-        TVLOG(1) << message << " at " << fileNameAndLineNumber.fileName << ':' << fileNameAndLineNumber.line;
+        TVLOG(1) << message << " at " << fileNameAndLineNumber.fileName << ':' << fileNameAndLineNumber.line << " "
+                 << logArgs(arguments...);
         throw ExceptionWrapper<Exception>::create(fileNameAndLineNumber, message,
                                                   std::forward<Arguments>(arguments)...);
     }
@@ -54,7 +84,7 @@ namespace local
             auto message = messageFunc();
             TVLOG(1) << message << " at " << fileNameAndLineNumber.fileName << ':'
                     << fileNameAndLineNumber.line << "\n    " << expression
-                    << " did not evaluate to true";
+                    << " did not evaluate to true " << logArgs(arguments...);
             throw ExceptionWrapper<Exception>::create(fileNameAndLineNumber, message,
                                                       std::forward<Arguments>(arguments)...);
         }
@@ -86,7 +116,7 @@ namespace local
             const std::string detailedMessage{message + " " + errors};
             TVLOG(1) << detailedMessage << " at " << fileNameAndLineNumber.fileName << ':'
                     << fileNameAndLineNumber.line << "\n    " << expression
-                    << " did not evaluate to true";
+                    << " did not evaluate to true " << logArgs(arguments...);
             throw ExceptionWrapper<Exception>::create(fileNameAndLineNumber, detailedMessage,
                                                       std::forward<Arguments>(arguments)...);
         }
@@ -186,6 +216,22 @@ decltype(auto) value(const std::optional<T>& opt, std::source_location loc = std
 #undef ModelExpect
 #define ModelExpect(expression, message) \
     local::throwIfNot<::model::ModelException>(static_cast<bool>(expression), #expression, [&]{ return (message); }, fileAndLine)
+
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
+#define ModelExpectNoThrow(expression, message)                                                                        \
+    try                                                                                                                \
+    {                                                                                                                  \
+        (expression);                                                                                                  \
+    }                                                                                                                  \
+    catch (const std::exception& ex)                                                                                   \
+    {                                                                                                                  \
+        local::throwIfNot<::model::ModelException>(                                                                    \
+            false, #expression,                                                                                        \
+            [&] {                                                                                                      \
+                return (std::string{message} + " // " + ex.what());                                                    \
+            },                                                                                                         \
+            fileAndLine);                                                                                              \
+    }
 
 #undef ModelFail
 #define ModelFail(message) \

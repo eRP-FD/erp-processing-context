@@ -5,6 +5,10 @@
 # non-exclusively licensed to gematik GmbH
 #
 
+# The following files are patched in 7.0.1 but still use the same version number:
+# use the updated version from 7.0.1
+package/CodeSystem-insurance-plan-type.json
+
 # Skip unchanged files from terminology 6.3.0
 # use the following command to remove .text.div, .date and .meta :
 # $ find -name '*.json' -exec sh -c 'jq "del((.entry[]?.resource, .)|(.text.div,.date,.meta))" {} | sponge {}' \;

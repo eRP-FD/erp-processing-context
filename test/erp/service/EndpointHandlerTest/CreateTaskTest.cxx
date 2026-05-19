@@ -6,153 +6,119 @@
 #include "test/util/ErpMacros.hxx"
 #include "test/util/TestUtils.hxx"
 
+static constexpr char bodyFmt[] = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+{}   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="160"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+static constexpr char metaProfileFmt[] = R"(
+   <meta>
+      <profile value="{}"/>
+   </meta>
+)";
+
+
 class CreateTaskTest : public EndpointHandlerTest
 {
 };
 
-TEST_F(CreateTaskTest, multiView)
+struct CreateTaskMultiviewTestParam {
+    std::string name;
+    std::optional<std::string> profile;
+    bool expectSuccess = true;
+};
+
+class CreateTaskMultiviewTest : public CreateTaskTest, public testing::WithParamInterface<CreateTaskMultiviewTestParam>
+{
+public:
+    std::string body(const std::optional<std::string>& profile)
+    {
+        std::string metaProfile;
+        if (profile)
+        {
+            metaProfile = fmt::format(metaProfileFmt, *profile);
+        }
+        return fmt::format(bodyFmt, metaProfile);
+    }
+};
+
+TEST_P(CreateTaskMultiviewTest, multiView)
 {
     const auto now{model::Timestamp::now()};
-    testutils::ShiftFhirResourceViewsGuard shiftView("2024-11-01", floor<std::chrono::days>(now.toChronoTimePoint()));
+    testutils::ShiftFhirResourceViewsGuard shiftView("GEM_WF_1_6_NON_FDV", floor<std::chrono::days>(now.toChronoTimePoint()));
     auto views = Fhir::instance().structureRepository(now);
     ASSERT_GE(views.size(), 2);
-
-    std::string body = R"(
-<Parameters xmlns="http://hl7.org/fhir">
-   <parameter>
-      <name value="workflowType"/>
-      <valueCoding>
-         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
-         <code value="160"/>
-      </valueCoding>
-   </parameter>
-</Parameters>
-)";
-
     CreateTaskHandler handler({});
     ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
                                  {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
-    request.setBody(body);
+    request.setBody(body(GetParam().profile));
     ServerResponse serverResponse;
     AccessLog accessLog;
     SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
     handler.preHandleRequestHook(sessionContext);
-    handler.handleRequest(sessionContext);
-    EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
+    if (GetParam().expectSuccess)
+    {
+        handler.handleRequest(sessionContext);
+        EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
+    }
+    else
+    {
+        auto diag = fmt::format("invalid profile {} must "
+                                "be one of: http://hl7.org/fhir/StructureDefinition/Parameters|4.0.1",
+                                value(GetParam().profile));
+        EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                              "parsing / validation error", diag);
+    }
 }
 
-TEST_F(CreateTaskTest, multiViewERP26615)
-{
-    const auto now{model::Timestamp::now()};
-    const auto today = date::floor<date::days>(now.toChronoTimePoint());
-    const auto gematik13End = date::year_month_day{date::year{2025}, date::month{4}, date::day{16}};
-    const auto offset = today - date::sys_days{gematik13End};
-    testutils::ShiftFhirResourceViewsGuard shiftViews(offset);
-    auto views = Fhir::instance().structureRepository(now);
-    ASSERT_GE(views.size(), 2);
+INSTANTIATE_TEST_SUITE_P(valid, CreateTaskMultiviewTest,
+                         ::testing::ValuesIn<std::list<CreateTaskMultiviewTestParam>>({
+                             {"no_profile", std::nullopt},
+                             {"base_profile_no_ver", "http://hl7.org/fhir/StructureDefinition/Parameters"},
+                             {"base_profile_with_ver", "http://hl7.org/fhir/StructureDefinition/Parameters|4.0.1"},
+                         }));
 
-    std::string body = R"(
-<Parameters xmlns="http://hl7.org/fhir">
-   <meta>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4"/>
-   </meta>
-   <parameter>
-      <name value="workflowType"/>
-      <valueCoding>
-         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
-         <code value="160"/>
-      </valueCoding>
-   </parameter>
-</Parameters>
-)";
-
-    CreateTaskHandler handler({});
-    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
-                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
-    request.setBody(body);
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
-    handler.preHandleRequestHook(sessionContext);
-    handler.handleRequest(sessionContext);
-    EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
-}
-
-TEST_F(CreateTaskTest, multiViewERP26615_2)
-{
-    const auto now{model::Timestamp::now()};
-    const auto today = date::floor<date::days>(now.toChronoTimePoint());
-    const auto gematik13End = date::year_month_day{date::year{2025}, date::month{4}, date::day{16}};
-    const auto offset = today - date::sys_days{gematik13End};
-    testutils::ShiftFhirResourceViewsGuard shiftViews(offset);
-    auto views = Fhir::instance().structureRepository(now);
-    ASSERT_GE(views.size(), 2);
-
-    std::string body = R"(
-<Parameters xmlns="http://hl7.org/fhir">
-   <meta>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input"/>
-   </meta>
-   <parameter>
-      <name value="workflowType"/>
-      <valueCoding>
-         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
-         <code value="160"/>
-      </valueCoding>
-   </parameter>
-</Parameters>
-)";
-
-    CreateTaskHandler handler({});
-    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
-                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
-    request.setBody(body);
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
-    handler.preHandleRequestHook(sessionContext);
-    handler.handleRequest(sessionContext);
-    EXPECT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
-}
-
-TEST_F(CreateTaskTest, multiViewERP26615_3)
-{
-    const auto now{model::Timestamp::now()};
-    const auto today = date::floor<date::days>(now.toChronoTimePoint());
-    const auto gematik13End = date::year_month_day{date::year{2025}, date::month{4}, date::day{16}};
-    const auto offset = today - date::sys_days{gematik13End};
-    testutils::ShiftFhirResourceViewsGuard shiftViews(offset);
-    auto views = Fhir::instance().structureRepository(now);
-    ASSERT_GE(views.size(), 2);
-
-    std::string body = R"(
-<Parameters xmlns="http://hl7.org/fhir">
-   <meta>
-      <profile value="https://gematik.de/fhir/erp/StructureDefinition/Mumpiz"/>
-   </meta>
-   <parameter>
-      <name value="workflowType"/>
-      <valueCoding>
-         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
-         <code value="160"/>
-      </valueCoding>
-   </parameter>
-</Parameters>
-)";
-
-    CreateTaskHandler handler({});
-    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
-                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
-    request.setBody(body);
-    ServerResponse serverResponse;
-    AccessLog accessLog;
-    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
-    handler.preHandleRequestHook(sessionContext);
-    EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
-                                          "parsing / validation error",
-                                          "invalid profile https://gematik.de/fhir/erp/StructureDefinition/Mumpiz must "
-                                          "be one of: http://hl7.org/fhir/StructureDefinition/Parameters|4.0.1");
-}
+INSTANTIATE_TEST_SUITE_P(
+    invalid, CreateTaskMultiviewTest,
+    ::testing::ValuesIn<std::list<CreateTaskMultiviewTestParam>>({
+        {
+            "removed_profile_no_version",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input",
+            false,
+        },
+        {
+            "removed_profile_old_ver",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.4",
+            false,
+        },
+        {
+            "removed_profile_current_ver1",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.5",
+            false,
+        },
+        {
+            "removed_profile_current_ver2",
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CreateOperation_Input|1.6",
+            false,
+        },
+        {
+            "unknown_profile_no_ver",
+            "https://gematik.de/fhir/erp/StructureDefinition/Mumpiz",
+            false,
+        },
+        {
+            "unknown_profile_with_ver",
+            "https://gematik.de/fhir/erp/StructureDefinition/Mumpiz|1.5",
+            false,
+        },
+    }));
 
 TEST_F(CreateTaskTest, invalidERP27183)
 {
@@ -182,7 +148,7 @@ TEST_F(CreateTaskTest, invalidERP27183)
 
 TEST_F(CreateTaskTest, UnslicedExtensionReject)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{
         "ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM", model::Timestamp::now().toGermanDate()};
@@ -221,7 +187,7 @@ TEST_F(CreateTaskTest, UnslicedExtensionReject)
 
 TEST_F(CreateTaskTest, UnslicedExtensionAllow)
 {
-    A_22927_02.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
+    A_22927_03.test("FHIR-Ressource validieren - Ausschluss unspezifizierter Extensions");
     testutils::ShiftFhirResourceViewsGuard shiftGuard{testutils::ShiftFhirResourceViewsGuard::asConfigured};
     EnvironmentVariableGuard envGuard{"ERP_FHIR_VALIDATION_REJECT_UNSLICED_EXTENSIONS_FROM",
                                       (model::Timestamp::now() + std::chrono::days{1}).toGermanDate()};
@@ -253,4 +219,56 @@ TEST_F(CreateTaskTest, UnslicedExtensionAllow)
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
 }
 
+TEST_F(CreateTaskTest, TRezeptFeatureTrue)
+{
+    EnvironmentVariableGuard envGuard{"ERP_FEATURE_TREZEPT", "true"};
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="166"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
 
+    CreateTaskHandler handler({});
+    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
+                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
+    request.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    handler.preHandleRequestHook(sessionContext);
+    EXPECT_NO_THROW(handler.handleRequest(sessionContext));
+    ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
+}
+
+TEST_F(CreateTaskTest, TRezeptFeatureFalse)
+{
+    EnvironmentVariableGuard envGuard{"ERP_FEATURE_TREZEPT", "false"};
+    std::string body = R"(
+<Parameters xmlns="http://hl7.org/fhir">
+   <parameter>
+      <name value="workflowType"/>
+      <valueCoding>
+         <system value="https://gematik.de/fhir/erp/CodeSystem/GEM_ERP_CS_FlowType"/>
+         <code value="166"/>
+      </valueCoding>
+   </parameter>
+</Parameters>
+)";
+
+    CreateTaskHandler handler({});
+    ServerRequest request(Header(HttpMethod::POST, "/Task/$create", 0,
+                                 {{Header::ContentType, ContentMimeType::fhirXmlUtf8}}, HttpStatus::Unknown));
+    request.setBody(body);
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, request, serverResponse, accessLog};
+    handler.preHandleRequestHook(sessionContext);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                      "Erstellung von Tasks mit flowtype 166 noch nicht zulässig");
+}

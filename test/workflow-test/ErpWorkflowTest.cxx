@@ -104,9 +104,9 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(communicationsBundle = communicationsGet(jwtInsurant));
     ASSERT_TRUE(communicationsBundle);
     EXPECT_EQ(countTaskBasedCommunications(*communicationsBundle, *prescriptionId), communications.size());
-    const auto closeBody =
-        dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
-                                prescriptionId->toString(), model::Timestamp::now().toGermanDate(), 1);
+    const auto closeBody = dispenseOrCloseTaskBody(model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input, kvnr,
+                                                   prescriptionId->toString(), model::Timestamp::now().toGermanDate(),
+                                                   1, telematicId.value());
     const std::string closePath = "/Task/" + prescriptionId->toString() + "/$close?secret=" + secret;
     ClientResponse serverResponse;
 
@@ -863,6 +863,52 @@ TEST_P(ErpWorkflowTestP, TaskCancelled) // NOLINT
                                       HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
     ASSERT_NO_FATAL_FAILURE(taskReject(prescriptionId, {},
                                        HttpStatus::Gone, model::OperationOutcome::Issue::Type::processing));
+}
+
+TEST_P(ErpWorkflowTestP, CloseTaskUpdateOwner)
+{
+    A_28411.test("update owner of closed task");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
+    ASSERT_TRUE(task);
+    const std::string accessCode(task->accessCode());
+    const auto prescriptionId = task->prescriptionId();
+    const std::string kvnr{"X101010104"};
+
+    const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
+    ASSERT_TRUE(task);
+    ASSERT_NO_FATAL_FAILURE(task = taskAccept(prescriptionId, accessCode)->getUniqueResourceByType<model::Task>());
+    EXPECT_NE("3-SMC-B-Testkarte-883110000120999", task->owner());
+    mCloseTaskRequestArgs.overrideTelematikId = "3-SMC-B-Testkarte-883110000120999";
+    ASSERT_NO_FATAL_FAILURE(taskClose(prescriptionId, std::string{value(task->secret())}, kvnr));
+    ASSERT_NO_FATAL_FAILURE(task = taskGetId(prescriptionId, kvnr, accessCode)->getUniqueResourceByType<model::Task>());
+    EXPECT_EQ(task->owner(), "3-SMC-B-Testkarte-883110000120999");
+}
+
+TEST_P(ErpWorkflowTestP, DispenseTaskUpdateOwner)
+{
+    if (isDiga(GetParam()))
+    {
+        GTEST_SKIP();
+    }
+    A_28411.test("update owner of closed task");
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(GetParam()));
+    ASSERT_TRUE(task);
+    const std::string accessCode(task->accessCode());
+    const auto prescriptionId = task->prescriptionId();
+    const std::string kvnr{"X101010104"};
+
+    const auto [qesBundle, _] = makeQESBundle(kvnr, prescriptionId, model::Timestamp::now());
+    ASSERT_NO_FATAL_FAILURE(task = taskActivateWithOutcomeValidation(prescriptionId, accessCode, qesBundle));
+    ASSERT_TRUE(task);
+    ASSERT_NO_FATAL_FAILURE(task = taskAccept(prescriptionId, accessCode)->getUniqueResourceByType<model::Task>());
+    EXPECT_NE("3-SMC-B-Testkarte-883110000120999", task->owner());
+    mDispenseTaskRequestArgs.overrideTelematikId = "3-SMC-B-Testkarte-883110000120999";
+    ASSERT_NO_FATAL_FAILURE(taskDispense(prescriptionId, std::string{value(task->secret())}, kvnr));
+    ASSERT_NO_FATAL_FAILURE(task = taskGetId(prescriptionId, kvnr, accessCode)->getUniqueResourceByType<model::Task>());
+    EXPECT_EQ(task->owner(), "3-SMC-B-Testkarte-883110000120999");
 }
 
 TEST_F(ErpWorkflowTest, RejectTaskInvalidId) // NOLINT

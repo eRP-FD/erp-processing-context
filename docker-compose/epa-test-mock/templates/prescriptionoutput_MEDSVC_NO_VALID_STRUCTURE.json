@@ -1,0 +1,55 @@
+{
+  "resourceType": "Parameters",
+  "id": "example-epa-op-rx-prescription-erp-output-parameters-1",
+  "meta": {
+    "profile": [
+      "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-op-rx-prescription-erp-output-parameters"
+    ]
+  },
+  "parameter": [
+    {
+      "name": "rxPrescription",
+      "part": [
+        {
+          "name": "prescriptionId",
+          "valueIdentifier": {
+            "system": "https://gematik.de/fhir/erp/NamingSystem/GEM_ERP_NS_PrescriptionId",
+            "value": "%prescriptionId%"
+          }
+        },
+        {
+          "name": "authoredOn",
+          "valueDate": "%authoredOn%"
+        },
+        {
+          "name": "operationOutcome",
+          "resource": {
+            "resourceType": "OperationOutcome",
+            "id": "255002c7-aa1b-4163-bdd4-ede482453cca",
+            "meta": {
+              "profile": [
+                "https://gematik.de/fhir/epa-medication/StructureDefinition/epa-ms-operation-outcome"
+              ]
+            },
+            "issue": [
+              {
+                "severity": "information",
+                "code": "informational",
+                "details": {
+                  "coding": [
+                    {
+                      "code": "MEDSVC_NO_VALID_STRUCTURE",
+                      "system": "https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-details",
+                      "display": "Invalid Data Structure in Medication Service"
+                    }
+                  ]
+                },
+				"diagnostics": "complex issue \n with line breaks \t\n Invalid Code : Code 'MEDSVC_NO_VALIDa_STRUCTURE' from system 'https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-details' does not exist in the value set 'EPA Medication Service Operation Outcome ValueSet' (https://gematik.de/fhir/epa-medication/ValueSet/epa-ms-operation-outcome-details) Parameters.parameter[0].part[2].resource[0].issue[0].details[0]"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

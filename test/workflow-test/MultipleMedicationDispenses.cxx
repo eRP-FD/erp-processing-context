@@ -30,7 +30,7 @@ protected:
     void SetUp() override
     {
         if (isTRezept(GetParam().mPrescriptionType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
         {
             GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
         }

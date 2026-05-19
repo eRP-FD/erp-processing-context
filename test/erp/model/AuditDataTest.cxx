@@ -15,7 +15,7 @@ TEST(AuditDataTest, ConstructFromData)//NOLINT(readability-function-cognitive-co
     using namespace std::string_literals;
     const model::AuditEventId eventId = model::AuditEventId::GET_Task_id_representative;
     const model::AuditEvent::Action action = model::AuditEvent::Action::update;
-    const model::Kvnr insurantKvnr{"X123456788"s, model::Kvnr::Type::gkv};
+    const model::Kvnr insurantKvnr{"X123456788"s};
     const std::int16_t deviceId = 1234;
     const model::PrescriptionId prescriptionId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4241);
@@ -56,7 +56,7 @@ TEST(AuditDataTest, ConstructFromJson)//NOLINT(readability-function-cognitive-co
     const model::AuditEventId eventId = model::AuditEventId::POST_Task_abort_doctor;
     const model::AuditEvent::Action action = model::AuditEvent::Action::del;
 
-    const model::Kvnr insurantKvnr{std::string{"X123456788"}, model::Kvnr::Type::gkv};
+    const model::Kvnr insurantKvnr{std::string{"X123456788"}};
     const std::int16_t deviceId = 5678;
 
     const model::PrescriptionId prescriptionId =

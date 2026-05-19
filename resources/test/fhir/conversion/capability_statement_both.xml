@@ -39,7 +39,6 @@
         <resource>
             <type value="Communication"/>
             <profile value="http://hl7.org/fhir/StructureDefinition/Communication"/>
-            <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationInfoReq"/>
             <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationReply"/>
             <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationDispReq"/>
             <supportedProfile value="https://gematik.de/fhir/StructureDefinition/ErxCommunicationRepresentative"/>

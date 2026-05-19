@@ -39,11 +39,12 @@
                   "coding": [
                     {
                       "code": "MEDICATIONSVC_NO_VALID_STRUCTURE",
-                      "system": "https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-codes-cs",
+                      "system": "https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-details",
                       "display": "Invalid Data Structure in Medication Service"
                     }
                   ]
-                }
+                },
+                "diagnostics": "complex issue \n with line breaks \t\n Invalid Code : Code 'MEDICATIONSVC_NO_VALID_STRUCTURE' from system 'https://gematik.de/fhir/epa-medication/CodeSystem/epa-ms-operation-outcome-details' does not exist in the value set 'EPA Medication Service Operation Outcome ValueSet' (https://gematik.de/fhir/epa-medication/ValueSet/epa-ms-operation-outcome-details) Parameters.parameter[0].part[2].resource[0].issue[0].details[0]"
               }
             ]
           }

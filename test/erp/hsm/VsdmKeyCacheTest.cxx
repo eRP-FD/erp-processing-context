@@ -5,17 +5,20 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include <gtest/gtest.h> // MUST BE FIRST (for friend tests)
+//clang-format off
+#include <gtest/gtest.h>// MUST BE FIRST (for friend tests)
+//clang-format on
 
-#include "shared/hsm/VsdmKeyCache.hxx"
 #include "mock/hsm/HsmMockClient.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/hsm/HsmPool.hxx"
+#include "shared/hsm/VsdmKeyCache.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Random.hxx"
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockVsdmKeyBlobDatabase.hxx"
+#include "test/util/ErpMacros.hxx"
 
 #include <memory>
 
@@ -106,7 +109,8 @@ TEST_F(VsdmKeyCacheTest, getKey_success)
     vsdmKeyCache->getKey(defaultVsdmKeyPackage.operatorId(), defaultVsdmKeyPackage.version());
     ASSERT_EQ(unwrapPayloadCounter, 1);
 
-    ASSERT_THROW(vsdmKeyCache->getKey('V', '3'), ErpException);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(vsdmKeyCache->getKey('V', '3'), HttpStatus::NotFound,
+                                      "Vsdm hmac key for operator V version 3 not present in db");
     ASSERT_EQ(unwrapPayloadCounter, 1);
 }
 

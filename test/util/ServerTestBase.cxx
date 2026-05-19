@@ -12,6 +12,7 @@
 #include "erp/model/ErxReceipt.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
@@ -115,7 +116,18 @@ void ServerTestBase::startServer (void)
     mMockDatabase = std::make_unique<MockDatabase>(*mHsmPool);
 
     auto factories = StaticData::makeMockFactories();
-    factories.databaseFactory = createDatabaseFactory();
+    factories.databaseFactory = createDatabaseFactory(&PostgresBackend::mainConnection);
+    if (PostgresBackend::haveReadOnlyConnection())
+    {
+        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
+        {
+            factories.readOnlyDatabaseFactory = createDatabaseFactory(&PostgresBackend::readOnlyConnection);
+        }
+        else
+        {
+            factories.readOnlyDatabaseFactory = factories.databaseFactory;
+        }
+    }
     factories.redisClientFactory = [](std::chrono::milliseconds){return createRedisInstance();};
     mContext = std::make_unique<PcServiceContext>(Configuration::instance(), std::move(factories));
     initializeIdp(mContext->idp);
@@ -195,7 +207,7 @@ HttpsReconnectingClient ServerTestBase::createClient (void)
         .connectionTimeout = std::chrono::seconds{30},
         .resolveTimeout = Constants::resolveTimeout,
         .tlsParameters = TlsConnectionParameters{
-            .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+            .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()
         }
     });
 }
@@ -345,25 +357,25 @@ void ServerTestBase::verifyGenericInnerResponse (
     }
 }
 
-Database::Factory ServerTestBase::createDatabaseFactory (void)
+Database::Factory ServerTestBase::createDatabaseFactory(ConnectionFactory connFactory)
 {
     if (mHasPostgresSupport)
     {
-        return [](HsmPool& hsmPool, KeyDerivation& keyDerivation){
-            return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool, keyDerivation); };
+        return [connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation){
+            return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(connFactory()), hsmPool, keyDerivation); };
     }
     else
     {
         return [this](HsmPool& hsmPool, KeyDerivation& keyDerivation){
                 return std::make_unique<DatabaseFrontend>(
-                    std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool, keyDerivation);
+                    std::make_unique<MockDatabaseProxy>(mMockDatabase), hsmPool, keyDerivation);
             };
     }
 }
 
 std::unique_ptr<Database> ServerTestBase::createDatabase()
 {
-    return createDatabaseFactory()(mContext->getHsmPool(), mContext->getKeyDerivation());
+    return createDatabaseFactory(&PostgresBackend::mainConnection)(mContext->getHsmPool(), mContext->getKeyDerivation());
 }
 
 
@@ -468,10 +480,10 @@ Task ServerTestBase::createTask(
 void ServerTestBase::activateTask(Task& task, const std::string& kvnrPatient,
                                   std::optional<model::Timestamp> expiryDate,
                                   std::optional<ResourceTemplates::KbvBundleMvoOptions> mvoOptions,
-                                  bool isPkv)
+                                  bool)
 {
     const PrescriptionId prescriptionId = task.prescriptionId();
-    const Kvnr kvnr{kvnrPatient, isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv};
+    const Kvnr kvnr{kvnrPatient};
     task.setKvnr(kvnr);
 
     const auto prescriptionBundleXmlString = mvoOptions.has_value()
@@ -542,6 +554,7 @@ std::vector<MedicationDispense> ServerTestBase::closeTask(
     task.setStatus(Task::Status::completed);
     task.updateLastUpdate();
     task.updateLastMedicationDispense();
+    task.setOwner(telematicIdPharmacy);
 
 
     std::vector<model::MedicationDispense> medicationDispenses;
@@ -659,10 +672,6 @@ model::Communication ServerTestBase::addCommunicationToDatabase(const Communicat
     if (descriptor.received.has_value())
     {
         builder.setTimeReceived(descriptor.received->toXsDateTime());
-    }
-    if (descriptor.messageType == model::Communication::MessageType::InfoReq)
-    {
-        builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
     }
     model::Communication communication = Communication::fromJsonNoValidation(builder.createJsonString());
     auto database = createDatabase();

@@ -12,6 +12,7 @@
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/TelematikId.hxx"
 #include "shared/model/Timestamp.hxx"
+#include "test/util/ResourceTemplates.hxx"
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
@@ -24,21 +25,27 @@ struct MappedValue {
     bool canBeMissing{false};
 };
 
+struct CopiedValue {
+    std::string sourceProperty;
+    std::string targetProperty;
+};
+
 struct ExtensionMapping {
     std::string sourceUrl;
     std::string targetUrl;
     std::vector<MappedValue> mappedValues;
     std::vector<std::string> retainedValues;
     std::vector<std::string> emptyInTarget;
+    bool optional = false;
     bool found = false;
+    ResourceTemplates::Versions::EPA_MEDICATION sinceVersion = ResourceTemplates::Versions::EPA_MEDICATION_1_0;
 };
 
 
 class Epa4AllTransformerTest : public testing::Test
 {
 public:
-    void checkMedicationRequest(const rapidjson::Value& source, const rapidjson::Value& target,
-                                const model::Kvnr& kvnr);
+    void checkMedicationRequest(const rapidjson::Value& source, const rapidjson::Value& target, const model::Kvnr& kvnr);
     void checkMedicationCompounding(const rapidjson::Value& source, const rapidjson::Value& target);
     void checkMedicationFreeText(const rapidjson::Value& source, const rapidjson::Value& target);
     void checkMedicationIngredient(const rapidjson::Value& source, const rapidjson::Value& target);
@@ -52,18 +59,21 @@ public:
     void checkPropertiesNotInTarget(const rapidjson::Value& target, const std::vector<std::string>& properties);
 
     void checkMappedValues(const rapidjson::Value& target, const std::vector<MappedValue>& mappings);
+    void checkCopiedValues(const rapidjson::Value& source, const rapidjson::Value& target,
+                           const std::vector<CopiedValue>& mappings);
 
     void checkExtensions(const rapidjson::Value& source, const rapidjson::Value& target,
                          std::vector<ExtensionMapping>& mappings);
     void checkExtensionRemoved(const rapidjson::Value& source, const rapidjson::Value& target,
                                const std::string& extensionUrl, bool forceSource);
     void checkIdentifier(const rapidjson::Value& resource, const std::string_view& expectedSystem,
-                         const std::string_view& expectedValue);
+                         const std::string_view& expectedValue, std::optional<size_t> expectedEntries = std::nullopt);
     void checkMedicationIngredientArray(const rapidjson::Value& source, const rapidjson::Value& target,
                                         bool checkTransformedPzn);
     void checkMedicationContainedArray(const rapidjson::Value& source, const rapidjson::Value& target);
     void checkMedicationCodingArray(const rapidjson::Value& source, const rapidjson::Value& target);
-    void checkContainedMedicationTypeExtensions(const rapidjson::Value& epaMedication, const std::string& expectedValue);
+    void checkContainedMedicationTypeExtensions(const rapidjson::Value& epaMedication,
+                                                const std::string& expectedValue);
     void expectEpaMedicationTypeExtension(const rapidjson::Value& epaMedication, const std::string& expectedValue);
 
 

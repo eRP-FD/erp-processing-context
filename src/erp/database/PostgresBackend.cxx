@@ -110,7 +110,7 @@ namespace
               AND ($3::bigint IS NULL OR (prescription_id = $3::bigint AND prescription_type = $4::smallint)))--")
 
     QUERY(retrieveAllMedicationDispensesByKvnr, R"--(
-        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, salt, prescription_type, is_pkv from erp.task_view
+        SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id, medication_dispense_salt, prescription_type, is_pkv from erp.task_view
         WHERE kvnr_hashed = $1 AND ($2::bigint IS NULL OR (prescription_id = $2::bigint AND prescription_type = $3::smallint))
             AND medication_dispense_bundle IS NOT NULL
         )--")
@@ -124,9 +124,17 @@ namespace
         )--")
 // GEMREQ-end A_19115-01#query
 
-    QUERY(countAllTasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task_view WHERE kvnr_hashed = $1)--")
+// GEMREQ-start A_23452-02#query
+QUERY(retrieveAllTasksByKvnrWithAccessCode, R"--(
+        SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
+            EXTRACT(EPOCH FROM expiry_date) as expiry_date, EXTRACT(EPOCH FROM accept_date) as accept_date, status, EXTRACT(EPOCH FROM last_status_update) as last_status_update, salt, task_key_blob_id, prescription_type,
+            access_code, eu_redeemable_patient, eu_redeemable, is_pkv
+        FROM erp.task_view
+        WHERE kvnr_hashed = $1
+        )--")
+// GEMREQ-end A_23452-02#query
 
-    QUERY(countAll160TasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task WHERE kvnr_hashed = $1)--")
+    QUERY(countAllTasksByKvnr, R"--( SELECT COUNT(*) FROM erp.task_view WHERE kvnr_hashed = $1)--")
 
     QUERY(retrieveAllTasksForEuStatement, R"--(
         SELECT prescription_id, kvnr, EXTRACT(EPOCH FROM last_modified) as last_modified, EXTRACT(EPOCH FROM authored_on) as authored_on,
@@ -166,11 +174,10 @@ namespace
 
 }  // anonymous namespace
 
-thread_local PostgresConnection PostgresBackend::mConnection{PostgresConnection::defaultConnectString()};
 
-
-PostgresBackend::PostgresBackend()
-    : CommonPostgresBackend(mConnection, PostgresConnection::defaultConnectString())
+PostgresBackend::PostgresBackend(PostgresConnection& connection)
+    : CommonPostgresBackend(connection)
+    , mConnection{connection}
     , mBackendTask(model::PrescriptionType::apothekenpflichigeArzneimittel)
     , mBackendTask162(model::PrescriptionType::digitaleGesundheitsanwendungen)
     , mBackendTask166(model::PrescriptionType::tRezept)
@@ -178,11 +185,6 @@ PostgresBackend::PostgresBackend()
     , mBackendTask200(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv)
     , mBackendTask209(model::PrescriptionType::direkteZuweisungPkv)
 {
-}
-
-/* static */ void PostgresBackend::recreateConnection()
-{
-    mConnection.recreateConnection();
 }
 
 std::vector<db_model::MedicationDispense>
@@ -222,7 +224,7 @@ PostgresBackend::retrieveAllMedicationDispenses(const db_model::HashedKvnr& kvnr
         Expect(not res.at(0).is_null(), "prescription_id is null.");
         Expect(not res.at(1).is_null(), "medication_dispense_bundle is null.");
         Expect(not res.at(2).is_null(), "medication_dispense_blob_id is null.");
-        Expect(not res.at(3).is_null(), "salt is null.");
+        Expect(not res.at(3).is_null(), "medication_dispense_salt is null.");
         Expect(not res.at(4).is_null(), "prescription_type is null.");
         Expect(not res.at(5).is_null(), "is_pkv is null.");
         const auto prescription_type_opt =
@@ -347,13 +349,14 @@ void PostgresBackend::updateTaskMedicationDispense(
     const model::Timestamp& whenHandedOver,
     const std::optional<model::Timestamp>& whenPrepared,
     const db_model::Blob& medicationDispenseSalt,
-    const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
+    const std::optional<model::Task::Status>& taskStatus,
+    const db_model::EncryptedBlob& owner)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispense(*transaction(), taskId, lastModified, lastMedicationDispense, medicationDispense,
                                       medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
-                                      medicationDispenseSalt, taskStatus);
+                                      medicationDispenseSalt, taskStatus, owner);
 }
 
 void PostgresBackend::updateTaskMedicationDispenseReceipt(
@@ -363,14 +366,15 @@ void PostgresBackend::updateTaskMedicationDispenseReceipt(
     const std::optional<model::Timestamp>& whenPrepared, const db_model::EncryptedBlob& receipt,
     const model::Timestamp& lastMedicationDispense, const db_model::Blob& medicationDispenseSalt,
     const db_model::EncryptedBlob& pharmacyIdentity,
-    const model::Timestamp& lastStatusUpdate)
+    const model::Timestamp& lastStatusUpdate,
+    const db_model::EncryptedBlob& owner)
 {
     checkCommonPreconditions();
     getTaskBackend(taskId.type())
         .updateTaskMedicationDispenseReceipt(*transaction(), taskId, taskStatus, lastModified, medicationDispense,
                                              medicationDispenseBlobId, telematikId, whenHandedOver, whenPrepared,
                                              receipt, lastMedicationDispense, medicationDispenseSalt, pharmacyIdentity,
-                                             lastStatusUpdate);
+                                             lastStatusUpdate, owner);
 }
 
 void PostgresBackend::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId,
@@ -551,12 +555,35 @@ std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForPatient (
 }
 
 std::vector<db_model::Task>
-PostgresBackend::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
-                                                   const std::optional<UrlArguments>& search)
+PostgresBackend::retrieveAllEgkRedeemableTasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+                                                             const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
-    return getTaskBackend(model::PrescriptionType::apothekenpflichigeArzneimittel)
-        .retrieveAllTasksWithAccessCode(*transaction(), kvnrHashed, search);
+    auto prescriptionTypesView{magic_enum::enum_values<model::PrescriptionType>() |
+                               std::views::filter(model::isEgkRedeemable)};
+    const std::vector<model::PrescriptionType> prescriptionTypes{prescriptionTypesView.begin(),
+                                                                 prescriptionTypesView.end()};
+
+    std::string completeQuery = retrieveAllTasksByKvnrWithAccessCode.query;
+    appendWherePrescriptionTypeIn(completeQuery, prescriptionTypes);
+    if (search.has_value())
+    {
+        completeQuery.append(search->getSqlExpression(transaction()->conn(), "                "));
+    }
+    TVLOG(2) << completeQuery;
+
+    const auto transactionTimer =
+        ::DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "retrievealltasksbykvnrwithaccesscode");
+
+    const auto results = transaction()->exec(completeQuery, pqxx::params{kvnrHashed.binarystring()});
+
+    TVLOG(2) << "got " << results.size() << " results";
+    if (! results.empty())
+    {
+        Expect(results.front().size() == 15,
+               "Invalid number of fields in result row: " + std::to_string(results.front().size()));
+    }
+    return PostgresBackendTask::tasksFromQueryResult(results, std::nullopt);
 }
 
 uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
@@ -568,12 +595,17 @@ uint64_t PostgresBackend::countAllTasksForPatient(const db_model::HashedKvnr& kv
     return executeCountQuery(*transaction(), countAllTasksByKvnr.query, kvnr, search, "tasks");
 }
 
-uint64_t PostgresBackend::countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search)
+uint64_t PostgresBackend::countAllEgkRedeemableTasks(const db_model::HashedKvnr& kvnr,
+                                                     const std::optional<UrlArguments>& search)
 {
     checkCommonPreconditions();
+    auto prescriptionTypesView{magic_enum::enum_values<model::PrescriptionType>() |
+                               std::views::filter(model::isEgkRedeemable)};
+    const std::vector<model::PrescriptionType> prescriptionTypes{prescriptionTypesView.begin(),
+                                                                 prescriptionTypesView.end()};
     const auto timerKeepAlive =
         DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "countall160tasksbykvnr");
-    return executeCountQuery(*transaction(), countAll160TasksByKvnr.query, kvnr, search, "tasks");
+    return executeCountQuery(*transaction(), countAllTasksByKvnr.query, kvnr, search, "tasks", prescriptionTypes);
 }
 
 std::vector<db_model::Task> PostgresBackend::retrieveAllTasksForEu(const db_model::HashedKvnr& kvnrHashed,
@@ -712,9 +744,9 @@ std::vector<db_model::Communication> PostgresBackend::retrieveCommunications (
 
     // We don't use a prepared statement for this query because search arguments lead to dynamically generated
     // WHERE and SORT clauses. Paging can add LIMIT and OFFSET expressions.
-    A_19520_01.start("filtering by user as either sender or recipient is done by the constant part of the query");
+    A_19520_02.start("filtering by user as either sender or recipient is done by the constant part of the query");
     std::string query = retrieveCommunicationsStatement.query;
-    A_19520_01.finish();
+    A_19520_02.finish();
 
     // Append a an expression to the query for the search, sort and paging arguments, if there are any.
     A_19534.start("add SQL expressions for searching, sorting and paging");
@@ -1002,6 +1034,30 @@ PostgresBackendTask& PostgresBackend::getTaskBackend(const model::PrescriptionTy
     Fail("invalid prescriptionType: " + std::to_string(std::uintmax_t(prescriptionType)));
 }
 
+void PostgresBackend::appendWherePrescriptionTypeIn(std::string& query,
+                                                    const std::vector<model::PrescriptionType>& presciptionTypes)
+{
+    if (query.find("WHERE") == std::string::npos)
+    {
+        query.append(" WHERE prescription_type IN (");
+    }
+    else
+    {
+        query.append(" AND prescription_type IN (");
+    }
+    std::string prescriptionTypeParamStr;
+    for (const auto& type : presciptionTypes)
+    {
+        if (! prescriptionTypeParamStr.empty())
+        {
+            prescriptionTypeParamStr.append(",");
+        }
+        prescriptionTypeParamStr.append(pqxx::to_string(gsl::narrow<int16_t>(magic_enum::enum_integer(type))))
+            .append("::smallint");
+    }
+    query.append(prescriptionTypeParamStr).append(")");
+}
+
 PostgresBackend::~PostgresBackend (void) = default;
 
 PostgresConnection& PostgresBackend::connection() const
@@ -1009,12 +1065,34 @@ PostgresConnection& PostgresBackend::connection() const
     return mConnection;
 }
 
+PostgresConnection& PostgresBackend::mainConnection()
+{
+    static thread_local PostgresConnection connection{PostgresConnection::defaultConnectString()};
+    return connection;
+}
+
+bool PostgresBackend::haveReadOnlyConnection()
+{
+    return Configuration::instance().getOptionalStringValue(ConfigurationKey::POSTGRES_RO_HOST).has_value();
+}
+
+PostgresConnection& PostgresBackend::readOnlyConnection()
+{
+    static thread_local PostgresConnection connection{PostgresConnection::readOnlyConnectString()};
+    return connection;
+}
+
 uint64_t PostgresBackend::executeCountQuery(pqxx::transaction_base& transaction, const std::string_view& query,
                                             const db_model::Blob& paramValue, const std::optional<UrlArguments>& search,
-                                            const std::string_view& context)
+                                            const std::string_view& context,
+                                            const std::vector<model::PrescriptionType>& prescriptionTypeParam)
 {
     std::string completeQuery(query);
 
+    if (!prescriptionTypeParam.empty())
+    {
+        appendWherePrescriptionTypeIn(completeQuery, prescriptionTypeParam);
+    }
     // Append an expression to the query for the search arguments, if there are any.
     if (search.has_value())
     {
@@ -1026,7 +1104,7 @@ uint64_t PostgresBackend::executeCountQuery(pqxx::transaction_base& transaction,
         }
     }
 
-    TVLOG(2) << completeQuery;
+    TVLOG(1) << completeQuery;
     const pqxx::result result = transaction.exec(completeQuery, pqxx::params{paramValue.binarystring()});
 
     TVLOG(2) << "got " << result.size() << " results";

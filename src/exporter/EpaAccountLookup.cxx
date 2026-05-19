@@ -15,8 +15,10 @@
 #include <random>
 #include <ranges>
 
-namespace {
-std::vector<std::tuple<std::string, uint16_t>> epaFqdns() {
+namespace
+{
+std::vector<std::tuple<std::string, uint16_t>> epaFqdns()
+{
     const auto& fqdns = Configuration::instance().epaFQDNs();
     std::vector<std::tuple<std::string, uint16_t>> hostPortList;
     hostPortList.reserve(fqdns.size());
@@ -34,12 +36,11 @@ EpaAccountLookup::EpaAccountLookup(std::unique_ptr<IEpaAccountLookupClient>&& lo
 {
 }
 
-EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceContext)
+EpaAccountLookup::EpaAccountLookup(MedicationExporterServiceContext& serviceContext, const std::string& xContextId)
     : EpaAccountLookup(std::make_unique<EpaAccountLookupClient>(
           serviceContext,
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_ENDPOINT),
-          Configuration::instance().getStringValue(
-              ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_USER_AGENT)))
+          xContextId))
 {
 }
 
@@ -79,7 +80,11 @@ EpaAccount EpaAccountLookup::lookup(const std::string& xRequestId, const model::
             case EpaAccount::Code::allowed:
             case EpaAccount::Code::deny:
             case EpaAccount::Code::conflict:
-                return EpaAccount{.kvnr = kvnr, .host = host, .port = port, .lookupResult = result, .failingHosts = failingHosts};
+                return EpaAccount{.kvnr = kvnr,
+                                  .host = host,
+                                  .port = port,
+                                  .lookupResult = result,
+                                  .failingHosts = failingHosts};
             case EpaAccount::Code::notFound:
                 break;
             case EpaAccount::Code::unknown:

@@ -81,7 +81,7 @@ const std::set<model::PrescriptionType> ErpProcessingContextTest::allWorkflows{
 
 TEST_F(ErpProcessingContextTest, GetAllTasks_ProfessionOIDs)
 {
-    A_21558_01.test("Unit test of allowedForProfessionOID() function");
+    A_21558_02.test("Unit test of allowedForProfessionOID() function");
     checkAllOids(HttpMethod::GET, "/Task", {
             "1.2.276.0.76.4.49", // oid_versicherter
             "1.2.276.0.76.4.54", // oid_oeffentliche_apotheke
@@ -491,9 +491,15 @@ TEST_F(ErpProcessingContextTest, PostTaskEuClose_ProfessionOIDs)
 
 TEST_F(ErpProcessingContextTest, BdeUseCaseExists)
 {
+    EnvironmentVariableGuard feat{ConfigurationKey::FEATURE_EU, "true"};
+    std::set<std::string> handlersWithDynamicUsecase{"GET /Task", "POST /$get-eu-prescriptions"};
     ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
-    for (const auto& [name, handler] : mRequestHandlerManager.getRequestHandlers())
+    const auto& handlers = mRequestHandlerManager.getRequestHandlers();
+    for (const auto& [name, handler] : handlers)
     {
-        EXPECT_TRUE(handler->isErpUseCaseSet()) << name;
+        if (! handlersWithDynamicUsecase.contains(name))
+        {
+            EXPECT_TRUE(handler->isErpUseCaseSet()) << name;
+        }
     }
 }

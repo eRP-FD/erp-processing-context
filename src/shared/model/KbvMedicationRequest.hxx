@@ -13,7 +13,7 @@
 namespace model
 {
 
-class Dosage;
+class DosageDgMP;
 
 // NOLINTNEXTLINE(bugprone-exception-escape)
 class KbvMedicationRequest : public Resource<KbvMedicationRequest>
@@ -25,30 +25,21 @@ public:
     bool isMultiplePrescription() const;
     [[nodiscard]] std::optional<date::year_month_day> mvoEndDate() const;
 
-    std::optional<Dosage> dosageInstruction() const;
+    [[nodiscard]] std::vector<DosageDgMP> dosageInstruction() const;
     [[nodiscard]] model::Timestamp authoredOn() const;
 
     std::optional<Timestamp> getValidationReferenceTimestamp() const override;
+    void additionalValidation() const override;
+
+    void movePatientInstructionToText();
 
 private:
     friend Resource<KbvMedicationRequest>;
     explicit KbvMedicationRequest(NumberAsStringParserDocument&& document);
 };
 
-class Dosage : public Resource<Dosage>
-{
-public:
-    static constexpr auto resourceTypeName = "Dosage";
-    [[nodiscard]] std::optional<std::string_view> text() const;
-
-private:
-    friend Resource<Dosage>;
-    explicit Dosage(NumberAsStringParserDocument&& document);
-};
-
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<KbvMedicationRequest>;
-extern template class Resource<Dosage>;
 // NOLINTEND(bugprone-exception-escape)
 }
 

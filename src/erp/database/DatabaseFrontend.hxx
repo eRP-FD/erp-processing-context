@@ -92,10 +92,10 @@ public:
     [[nodiscard]] std::vector<model::Task>
     retrieveAllTasksForPatient(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<model::Task>
-    retrieveAll160TasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
+    retrieveAllEgkRedeemableTasksWithAccessCode(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
     [[nodiscard]] uint64_t
     countAllTasksForPatient (const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;
-    [[nodiscard]] uint64_t countAll160Tasks(const model::Kvnr& kvnr,
+    [[nodiscard]] uint64_t countAllEgkRedeemableTasks(const model::Kvnr& kvnr,
                                             const std::optional<UrlArguments>& search) override;
     [[nodiscard]] std::vector<std::tuple<model::Task, model::Binary>>
     retrieveAllTasksForEu(const model::Kvnr& kvnr, const std::optional<UrlArguments>& search) override;

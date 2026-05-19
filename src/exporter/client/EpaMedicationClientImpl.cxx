@@ -46,41 +46,45 @@ EpaMedicationClientImpl::EpaMedicationClientImpl(boost::asio::io_context& ioCont
 
 EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvidePrescription(const std::string& xRequestId,
                                                                                    const model::Kvnr& kvnr,
-                                                                                   const std::string& payload)
+                                                                                   const std::string& payload,
+                                                                                   BDEMessage& bdeMessage)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$provide-prescription-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(xRequestId, std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req), bdeMessage);
 }
 
 
 EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendProvideDispensation(const std::string& xRequestId,
                                                                                    const model::Kvnr& kvnr,
-                                                                                   const std::string& payload)
+                                                                                   const std::string& payload,
+                                                                                   BDEMessage& bdeMessage)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$provide-dispensation-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(xRequestId, std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req), bdeMessage);
 }
 
 EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendCancelPrescription(const std::string& xRequestId,
                                                                                   const model::Kvnr& kvnr,
-                                                                                  const std::string& payload)
+                                                                                  const std::string& payload,
+                                                                                  BDEMessage& bdeMessage)
 {
     using boost::beast::http::verb;
     auto req = request(verb::post, "/epa/medication/api/v1/fhir/$cancel-prescription-erp", kvnr);
     req.body() = payload;
-    return sendRequestBlocking(xRequestId, std::move(req));
+    return sendRequestBlocking(xRequestId, std::move(req), bdeMessage);
 }
 
 EpaMedicationClientImpl::Response EpaMedicationClientImpl::sendRequestBlocking(const std::string& xRequestId,
-                                                                               Tee3Client::Request req)
+                                                                               Tee3Client::Request req,
+                                                                               BDEMessage& bdeMessage)
 {
     std::future<Tee3Client::Response> fut = co_spawn(
         mIoContext,
-        sendRequest(xRequestId, std::move(req)),
+        sendRequest(xRequestId, std::move(req), &bdeMessage),
         boost::asio::use_future);
     auto response = fut.get();
     return Response{.httpStatus = fromBoostBeastStatus(static_cast<uint32_t>(response.result_int())),
@@ -109,7 +113,8 @@ bool EpaMedicationClientImpl::testConnection()
 
 
 boost::asio::awaitable<Tee3Client::Response> EpaMedicationClientImpl::sendRequest(std::string xRequestId,
-                                                                                  Tee3Client::Request req)
+                                                                                  Tee3Client::Request req,
+                                                                                  BDEMessage* bdeMessage)
 {
     if (!mStickyClient)
     {
@@ -118,7 +123,7 @@ boost::asio::awaitable<Tee3Client::Response> EpaMedicationClientImpl::sendReques
     boost::system::result<Tee3Client::Response> resp;
 
     // GEMREQ-start A_24773#reconnect
-    while (mStickyClient && isGracefulError((resp = co_await mStickyClient->sendInner(xRequestId, req, mBdeData)).error()))
+    while (mStickyClient && isGracefulError((resp = co_await mStickyClient->sendInner(xRequestId, req, *bdeMessage)).error()))
     {
         mStickyClient.reset();
         mStickyClient = co_await mTeeClientPool->acquire(mHostname);
@@ -146,9 +151,4 @@ Tee3Client::Request EpaMedicationClientImpl::request(boost::beast::http::verb ve
     req.set(Header::Tee3::XInsurantId, kvnr.id());
     req.set(Header::ContentType, static_cast<std::string>(MimeType::fhirJson));
     return req;
-}
-
-void EpaMedicationClientImpl::addLogData(const BDEMessage::Data& bdeData)
-{
-    mBdeData.merge(bdeData);
 }

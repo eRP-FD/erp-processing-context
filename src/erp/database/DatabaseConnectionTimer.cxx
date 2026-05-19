@@ -8,6 +8,7 @@
 #include "PostgresBackend.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "shared/hsm/production/ProductionVsdmKeyBlobDatabase.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/TLog.hxx"
 
 DatabaseConnectionTimerHandler::DatabaseConnectionTimerHandler(PcServiceContext& serviceContext,
@@ -42,18 +43,28 @@ void DatabaseConnectionTimerHandler::timerHandler()
     }
 }
 
-void DatabaseConnectionTimerHandler::refreshConnection()
+
+void DatabaseConnectionTimerHandler::refreshConnection(PostgresConnection& conn, std::string_view connName)
 {
     try
     {
-        PostgresBackend::recreateConnection();
+        conn.recreateConnection();
     }
     catch (const std::exception& ex)
     {
-        TLOG(ERROR) << "exception during refresh of database connection: " << ex.what();
+        TLOG(ERROR) << "exception during refresh of " << connName << " database connection: " << ex.what();
     }
     catch (...)
     {
-        TLOG(ERROR) << "unknown exception during refresh of database connection";
+        TLOG(ERROR) << "unknown exception during refresh of " << connName << " database connection";
+    }
+}
+
+void DatabaseConnectionTimerHandler::refreshConnection()
+{
+    refreshConnection(PostgresBackend::mainConnection(), "main");
+    if (PostgresBackend::haveReadOnlyConnection())
+    {
+        refreshConnection(PostgresBackend::readOnlyConnection(), "read only");
     }
 }

@@ -5,10 +5,12 @@
  */
 
 #include "exporter/eventprocessing/EventProcessingBase.hxx"
+#include "exporter/BdeMessage.hxx"
 #include "exporter/model/EpaErrorType.hxx"
 #include "exporter/model/EpaOperationOutcome.hxx"
 #include "exporter/model/HashedKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 
 #include <gsl/gsl-lite.hpp>
 #include <utility>
@@ -62,9 +64,18 @@ JsonLog EventProcessingBase::log(JsonLog::LogReceiver&& logReceiver, const model
     JsonLog log(LogId::INFO, std::move(logReceiver), false);
     log << model::HashedKvnr(event.getHashedKvnr()) << KeyValue("prescription_id", event.getPrescriptionId().toString())
         << KeyValue("usecase", magic_enum::enum_name(event.getUseCase()))
-        << KeyValue("x-request-id", event.getXRequestId());
+        << KeyValue("x_request_id", event.getXRequestId());
     return log;
 }
 
+std::optional<std::string> EventProcessingBase::getFailureDiagnostics(const model::NumberAsStringParserDocument& doc)
+{
+    auto oo = model::OperationOutcome::fromJson(doc);
+    if (! oo.issues().empty() && oo.issues()[0].diagnostics.has_value())
+    {
+        return oo.issues()[0].diagnostics;
+    }
+    return std::nullopt;
+}
 
 }

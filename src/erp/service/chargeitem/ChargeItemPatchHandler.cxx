@@ -54,7 +54,7 @@ void ChargeItemPatchHandler::handleRequest(PcSessionContext& session)
     session.auditDataCollector()
         .setPrescriptionId(prescriptionId)
         .setEventId(model::AuditEventId::PATCH_ChargeItem_id)
-        .setInsurantKvnr(model::Kvnr{*idClaim, model::Kvnr::Type::pkv})
+        .setInsurantKvnr(model::Kvnr{*idClaim})
         .setAction(model::AuditEvent::Action::update);
 }
 

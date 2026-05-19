@@ -8,6 +8,7 @@
 #include "FhirVersion.hxx"
 
 #include <iosfwd>
+#include <fmt/format.h>
 
 namespace fhirtools
 {
@@ -42,6 +43,16 @@ struct std::hash<fhirtools::DefinitionKey> {
     {
         return urlHash(key.url) % versionHash(key.version);
     }
+};
+
+template<>
+struct fmt::formatter<fhirtools::DefinitionKey> {
+    //NOLINTNEXTLINE(readability-convert-member-functions-to-static)
+    constexpr format_parse_context::iterator parse(format_parse_context& ctx)
+    {
+        return ctx.begin();
+    }
+    format_context::iterator format(const fhirtools::DefinitionKey& key, format_context& ctx) const;
 };
 
 #endif// FHIRTOOLS_DEFINITION_KEY_HXX

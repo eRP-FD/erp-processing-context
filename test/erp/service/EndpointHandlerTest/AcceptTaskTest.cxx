@@ -17,6 +17,7 @@
 #include "test/erp/service/EndpointHandlerTest/EndpointHandlerTestFixture.hxx"
 #include "test/erp/tsl/TslTestHelper.hxx"
 #include "test/mock/MockDatabase.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ErpMacros.hxx"
 #include "test/util/JwtBuilder.hxx"
@@ -35,7 +36,7 @@ namespace
 //NOLINTNEXTLINE(readability-function-cognitive-complexity)
 void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, PcServiceContext& serviceContext,
                                   const std::string_view& taskJson, const std::string_view& kbvBundleXml,
-                                  unsigned int numOfExpectedResources)
+                                  unsigned int numOfExpectedResources, JWT jwt = JwtBuilder::testBuilder().makeJwtApotheke())
 {
     const auto& task = model::Task::fromJsonNoValidation(taskJson);
 
@@ -49,7 +50,7 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     ServerRequest serverRequest{std::move(requestHeader)};
     serverRequest.setPathParameters({"id"}, {task.prescriptionId().toString()});
     serverRequest.setQueryParameters({{"ac", std::string(task.accessCode())}});
-    serverRequest.setAccessToken(JwtBuilder::testBuilder().makeJwtApotheke());
+    serverRequest.setAccessToken(jwt);
 
     ServerResponse serverResponse;
     AccessLog accessLog;
@@ -74,7 +75,7 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
     EXPECT_NO_FATAL_FAILURE((void)ByteHelper::fromHex(*tasks[0].secret()));
 
     // GEMREQ-start A_24174#test2
-    A_24174.test("owner has been stored");
+    A_24174_01.test("owner has been stored");
     EXPECT_TRUE(tasks[0].owner().has_value());
     EXPECT_EQ(tasks[0].owner(), serverRequest.getAccessToken().stringForClaim(JWT::idNumberClaim));
     // GEMREQ-end A_24174#test2
@@ -96,12 +97,25 @@ void checkAcceptTaskSuccessCommon(std::optional<model::Bundle>& resultBundle, Pc
 TEST_F(AcceptTaskTest, AcceptTaskSuccess)
 {
     auto kbvBundle = ResourceTemplates::kbvBundleXml();
+    TVLOG(1) << "kbvBundle: " << kbvBundle;
+    fmt::println("{}", kbvBundle);
     std::optional<model::Bundle> resultBundle;
     const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4714);
     ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
         resultBundle, mServiceContext,
         ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId}),
         kbvBundle, 2 /*numOfExpectedResources*/));
+}
+
+TEST_F(AcceptTaskTest, AcceptTaskSuccess162)
+{
+    std::optional<model::Bundle> resultBundle;
+    const auto taskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6003);
+    auto kbvBundle = ResourceTemplates::evdgaBundleXml({.prescriptionId = taskId.toString()});
+    ASSERT_NO_FATAL_FAILURE(checkAcceptTaskSuccessCommon(
+        resultBundle, mServiceContext,
+        ResourceTemplates::taskJson({.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId}),
+        kbvBundle, 2 /*numOfExpectedResources*/, JwtBuilder::testBuilder().makeJwtKostentraeger()));
 }
 
 // Regression test for ERP-10628
@@ -124,10 +138,8 @@ TEST_F(AcceptTaskTest, AcceptTaskSuccessNoQesCheck)
             {}, {}, {{ocspUrl, {{cert, certCA, MockOcsp::CertificateOcspTestMode::REVOKED}}}});
         return tslManager;
     };
-    factories.databaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
-        auto md = std::make_unique<MockDatabase>(hsmPool);
-        md->fillWithStaticData();
-        return std::make_unique<DatabaseFrontend>(std::move(md), hsmPool, keyDerivation);
+    factories.databaseFactory = [this](HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
+        return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(mockDatabase), hsmPool, keyDerivation);
     };
 
     PcServiceContext serviceContext(Configuration::instance(), std::move(factories));
@@ -153,7 +165,7 @@ TEST_F(AcceptTaskTest, AcceptTaskInvalidMvoDate)
     const auto taskId = db->storeTask(task);
     task.setPrescriptionId(taskId);
     task.setHealthCarePrescriptionUuid();
-    task.setKvnr(model::Kvnr{"X234567891", model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{"X234567891"});
     task.setAcceptDate(model::Timestamp::fromGermanDate("2022-04-02"));
     using namespace std::chrono_literals;
     const auto tomorrow = model::Timestamp(std::chrono::system_clock::now() + 24h);

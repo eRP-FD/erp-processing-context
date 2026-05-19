@@ -140,8 +140,6 @@ TEST_P(MetaDataProfileTest, ProfileVersions)//NOLINT(readability-function-cognit
     {
         bool isSupported = GetParam().workflowVersion == workflowVer;
         EXPECT_NO_FATAL_FAILURE(checkProfile(resourceArray, isSupported, "Task", task, workflowVer));
-        // EXPECT_NO_FATAL_FAILURE(
-        //     checkProfile(resourceArray, isSupported, "Communication", communicationInfoReq, workflowVer));
         EXPECT_NO_FATAL_FAILURE(
             checkProfile(resourceArray, isSupported, "Communication", communicationReply, workflowVer));
         EXPECT_NO_FATAL_FAILURE(
@@ -172,32 +170,18 @@ TEST_P(MetaDataProfileTest, ProfileVersions)//NOLINT(readability-function-cognit
 INSTANTIATE_TEST_SUITE_P(Combinations, MetaDataProfileTest,
                          ::testing::ValuesIn(std::list<MetaDataProfileTestParam>{
                              {
-                                 .name = "v_2023_07_01",
-                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2023-07-01"),
-                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                                 .name = "v_2025_10_01",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2025-10-01"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3,
                              },
                              {
-                                 .name = "v_2024_10_01",
-                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2024-10-01"),
-                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_2,
-                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
-                             },
-                             {
-                                 .name = "v_2024_11_01",
-                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2024-11-01"),
-                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_3,
-                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
-                             },
-                             {
-                                 .name = "v_2025_01_15",
-                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2025-01-15"),
-                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_4,
-                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_0,
-                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_1_0,
+                                 .name = "v_2026_07_01",
+                                 .referenceTimestamp = model::Timestamp::fromGermanDate("2026-07-01"),
+                                 .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_6_2,
+                                 .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_2,
                              },
                          }),
                          [](const auto& info) {

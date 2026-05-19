@@ -7,6 +7,7 @@
 
 #include "test/util/ResourceTemplates.hxx"
 #include "erp/model/WorkflowParameters.hxx"
+#include "fhirtools/repository/VersionMapper.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/GemErpPrMedication.hxx"
@@ -88,16 +89,10 @@ static constexpr char practitionerRoleSection[] = R"(
 namespace {
 std::string renderVersion(const std::string_view url, const fhirtools::FhirVersion& version)
 {
-    std::string urlString{url};
-    auto viewList = Fhir::instance().allViews().matchAll(urlString, version);
-    if (viewList.empty())
-    {
-        return to_string(version);
-    }
-    auto renderVersion = viewList.latestRenderVersion(urlString);
-    Expect3(renderVersion.version.has_value(),
-            "could not find render version for: " + urlString + '|' + to_string(version), std::logic_error);
-    return to_string(*renderVersion.version);
+    const auto& config = Configuration::instance();
+    const fhirtools::VersionMapper mapper{config.fhirVersionMapping()};
+    return to_string(mapper.renderVersion(url, version));
+
 }
 }
 
@@ -126,27 +121,21 @@ Versions::KBV_EVDGA::KBV_EVDGA(FhirVersion ver)
 }
 
 std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
-    Versions::GEM_ERP_1_2,
-    Versions::GEM_ERP_1_3,
-    Versions::GEM_ERP_1_4,
     Versions::GEM_ERP_1_5_2,
-    Versions::GEM_ERP_1_6_0,
+    Versions::GEM_ERP_1_6_2,
 };
 
 std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
-    Versions::KBV_ERP_1_1_0,
     Versions::KBV_ERP_1_3_3,
-    Versions::KBV_ERP_1_4_0,
+    Versions::KBV_ERP_1_4_2,
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
-    Versions::KBV_EVDGA_1_1,
     Versions::KBV_EVDGA_1_2_2,
 };
 
 std::initializer_list<Versions::GEM_ERPCHRG> Versions::GEM_ERPCHRG_all{
-    Versions::GEM_ERPCHRG_1_0,
-    Versions::GEM_ERPCHRG_1_1,
+    Versions::GEM_ERPCHRG_1_1_0,
 };
 
 std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
@@ -156,7 +145,7 @@ std::initializer_list<Versions::DAV_PKV> Versions::DAV_PKV_all{
 };
 
 std::initializer_list<Versions::GEM_ERPEU> Versions::GEM_ERPEU_all{
-    Versions::GEM_ERPEU_1_1,
+    Versions::GEM_ERPEU_1_1_2,
 };
 
 
@@ -175,25 +164,25 @@ fhirtools::DefinitionKey Versions::latest(std::string_view profileUrl, const mod
 Versions::GEM_ERPCHRG Versions::GEM_ERPCHRG_current(const model::Timestamp& reference)
 {
     auto chrgKey = latest(model::resource::structure_definition::chargeItem, reference);
-    return chrgKey.version ? GEM_ERPCHRG{std::move(*chrgKey.version)} : GEM_ERPCHRG_1_0;
+    return chrgKey.version ? GEM_ERPCHRG{std::move(*chrgKey.version)} : GEM_ERPCHRG_1_1_0;
 }
 
 Versions::KBV_ERP Versions::KBV_ERP_current(const model::Timestamp& reference)
 {
     auto prescriptionKey = latest(model::resource::structure_definition::prescriptionItem, reference);
-    return KBV_ERP{prescriptionKey.version.value_or(KBV_ERP_1_1_0)};
+    return KBV_ERP{prescriptionKey.version.value_or(KBV_ERP_1_3_3)};
 }
 
 Versions::KBV_EVDGA Versions::KBV_EVDGA_current(const model::Timestamp& reference)
 {
     auto evdgaBundleKey = latest(model::resource::structure_definition::kbv_pr_evdga_bundle, reference);
-    return KBV_EVDGA{evdgaBundleKey.version.value_or(KBV_EVDGA_1_1)};
+    return KBV_EVDGA{evdgaBundleKey.version.value_or(KBV_EVDGA_1_2_2)};
 }
 
 Versions::GEM_ERP Versions::GEM_ERP_current(const model::Timestamp& reference)
 {
     auto taskKey = latest(model::resource::structure_definition::task, reference);
-    return GEM_ERP{taskKey.version.value_or(GEM_ERP_1_4)};
+    return GEM_ERP{taskKey.version.value_or(GEM_ERP_1_5_2)};
 }
 
 Versions::DAV_PKV::DAV_PKV(FhirVersion ver)
@@ -209,13 +198,13 @@ Versions::DAV_PKV ResourceTemplates::Versions::DAV_PKV_current(const model::Time
 
 Versions::GEM_ERPEU Versions::GEM_ERPEU_current(const model::Timestamp& reference [[maybe_unused]])
 {
-    return GEM_ERPEU_1_1;
+    return GEM_ERPEU_1_1_2;
 }
 
 Versions::KBV_FOR Versions::KBV_FOR_current(const model::Timestamp& reference)
 {
     auto practitionerKey = latest(model::resource::structure_definition::kbv_for_practitioner, reference);
-    return KBV_FOR{practitionerKey.version.value_or(KBV_FOR_1_3_0)};
+    return KBV_FOR{practitionerKey.version.value_or(KBV_FOR_1_3_1)};
 }
 
 std::string Versions::KBV_ERP::renderVersion() const
@@ -258,6 +247,17 @@ std::string Versions::KBV_FOR::renderVersion() const
     return ::renderVersion(model::resource::structure_definition::kbv_for_practitioner, *this);
 }
 
+Versions::EPA_MEDICATION::EPA_MEDICATION(FhirVersion ver)
+    : FhirVersion{std::move(ver)}
+{
+}
+
+std::string Versions::EPA_MEDICATION::renderVersion() const
+{
+    return ::renderVersion(model::resource::structure_definition::epa_op_provide_dispensation_erp_input_parameters,
+                           *this);
+}
+
 std::string Versions::KBV_EVDGA::renderVersion() const
 {
     return ::renderVersion(model::resource::structure_definition::kbv_pr_evdga_bundle, *this);
@@ -295,13 +295,11 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
             insuranceType = "PKV";
             boost::replace_all(bundle, "###PKV_ASSIGNER###",
                                R"(<assigner><display value="Assigning organization"/></assigner>)");
-            kvid10Ns = std::string{model::resource::naming_system::pkvKvid10};
             break;
         case model::PrescriptionType::tRezept:
             if (bundleOptions.tRezeptIsPkv)
             {
                 insuranceType = "PKV";
-                kvid10Ns = model::resource::naming_system::pkvKvid10;
                 boost::replace_all(bundle, "###PKV_ASSIGNER###",
                                    R"(<assigner><display value="Assigning organization"/></assigner>)");
             }
@@ -445,7 +443,7 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     boost::replace_all(bundle, "###PRACTITIONER_ROLE_SECTION###", withPractitionerRole?practitionerRoleSection:std::string_view{});
     boost::replace_all(bundle, "###PRACTITIONER_ROLE###", withPractitionerRole?practitionerRole:std::string_view{});
     std::string versionId;
-    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_4_0)
+    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_4_2)
     {
         versionId = R"(<versionId value="1"/>)";
     }
@@ -625,7 +623,7 @@ std::string medicationDispenseXml(const MedicationDispenseOptions& medicationDis
             {
                 if (medicationDispenseOptions.gematikVersion >= Versions::GEM_ERP_1_4)
                 {
-                    medicationOptions.version = Versions::GEM_ERP_1_4;
+                    medicationOptions.version = medicationDispenseOptions.gematikVersion;
                 }
                 else
                 {
@@ -741,19 +739,7 @@ std::string taskJson(const TaskOptions& taskOptions)
     auto kvnrNamingSystem = taskOptions.kvnrNamingSystem;
     if (!kvnrNamingSystem)
     {
-        switch (taskOptions.prescriptionId.type())
-        {
-            case model::PrescriptionType::apothekenpflichigeArzneimittel:
-            case model::PrescriptionType::digitaleGesundheitsanwendungen:
-            case model::PrescriptionType::direkteZuweisung:
-            case model::PrescriptionType::tRezept:
-                kvnrNamingSystem = model::resource::naming_system::gkvKvid10;
-                break;
-            case model::PrescriptionType::apothekenpflichtigeArzneimittelPkv:
-            case model::PrescriptionType::direkteZuweisungPkv:
-                kvnrNamingSystem = model::resource::naming_system::pkvKvid10;
-                break;
-        }
+        kvnrNamingSystem = model::resource::naming_system::gkvKvid10;
     }
     boost::replace_all(task, "###KVNR_NAMING_SYSTEM###", std::string(*kvnrNamingSystem));
 
@@ -823,8 +809,9 @@ std::string constructMarkingFlagElement(const std::string& extensionName, bool v
 
     return result;
 }
+} // anonymous namespace
 
-std::string constructLegacyPatchChargeItemBody(const PatchChargeItemOptions& patchChargeItemOptions)
+std::string legacyPatchChargeItemBodyJson(const PatchChargeItemOptions& patchChargeItemOptions)
 {
     std::string result{R"^(
         {
@@ -859,13 +846,12 @@ std::string constructLegacyPatchChargeItemBody(const PatchChargeItemOptions& pat
 
     return result;
 }
-}
 
 std::string patchChargeItemJson(const PatchChargeItemOptions& patchChargeItemOptions)
 {
-    if (patchChargeItemOptions.version < Versions::GEM_ERPCHRG_1_1)
+    if (patchChargeItemOptions.version < Versions::GEM_ERPCHRG_1_1_0)
     {
-        return constructLegacyPatchChargeItemBody(patchChargeItemOptions);
+        return legacyPatchChargeItemBodyJson(patchChargeItemOptions);
     }
 
     const std::string partTemplate = R"({
@@ -1154,6 +1140,17 @@ std::string vzdSearchSetJson(const std::string_view path, const VzdSearchSetOpti
     auto resource =
         resourceManager.getStringResource(path);
     boost::replace_all(resource, "##TELEMATIKID##", options.telematikId);
+    return resource;
+}
+
+std::string kbvPractitionerXml(const KbvPractitionerOptions& options)
+{
+    auto& resourceManager = ResourceManager::instance();
+    auto resource = resourceManager.getStringResource("test/EndpointHandlerTest/KBV_PR_FOR_Practitioner_template_" +
+                                                      options.kbvPrForVersion.renderVersion() + ".xml");
+    boost::replace_all(resource, "##ID##", options.id);
+    boost::replace_all(resource, "##TELEMATIKID##", options.telematikId);
+    boost::replace_all(resource, "##GIVEN_NAME##", options.givenName);
     return resource;
 }
 

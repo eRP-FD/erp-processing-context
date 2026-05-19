@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ChargeItem xmlns="http://hl7.org/fhir">
   <meta>
-    <profile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.0" />
+    <profile value="https://gematik.de/fhir/erpchrg/StructureDefinition/GEM_ERPCHRG_PR_ChargeItem|1.1" />
     <tag>
       <display value="Example for PKV billing information." />
     </tag>
@@ -37,7 +37,7 @@
   </code>
   <subject>
     <identifier>
-      <system value="http://fhir.de/sid/pkv/kvid-10" />
+      <system value="http://fhir.de/sid/gkv/kvid-10" />
       <value value="X234567891" />
     </identifier>
   </subject>

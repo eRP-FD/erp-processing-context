@@ -21,7 +21,11 @@
 #include <thread>
 
 
-TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
+class ErpWorkflowCommunicationTestP : public ErpWorkflowTestP
+{
+};
+
+TEST_P(ErpWorkflowCommunicationTestP, Communications_GetById) // NOLINT
 {
     std::string kvnr;
     generateNewRandomKVNR(kvnr);
@@ -66,7 +70,7 @@ TEST_P(ErpWorkflowTestP, Communications_GetById) // NOLINT
     ASSERT_NO_FATAL_FAILURE(checkTaskAbort(*prescriptionId1, jwtArzt(), kvnr, accessCode1, {}, communications1));
 }
 
-TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
+TEST_P(ErpWorkflowCommunicationTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
 {
     using namespace std::chrono_literals;
 
@@ -169,7 +173,7 @@ TEST_P(ErpWorkflowTestP, SearchCommunicationsByReceivedTimeRange) // NOLINT
     EXPECT_EQ(communications[1].id(), communicationResponseB->id());
 }
 
-INSTANTIATE_TEST_SUITE_P(ErpWorkflowCommunicationTestPInst, ErpWorkflowTestP,
+INSTANTIATE_TEST_SUITE_P(ErpWorkflowCommunicationTestPInst, ErpWorkflowCommunicationTestP,
                          testing::ValuesIn(testutils::allPrescriptionTypes()));
 
 TEST_F(ErpWorkflowTest, CommunicationJsonValidationError)
@@ -216,10 +220,6 @@ TEST_F(ErpWorkflowTest, CommunicationPayloadJsonValidationError)
 
 TEST_F(ErpWorkflowTest, CommunicationDigaReject)
 {
-    if (ResourceTemplates::Versions::GEM_ERP_current() < ResourceTemplates::Versions::GEM_ERP_1_5_2)
-    {
-        GTEST_SKIP();
-    }
     auto task = taskCreate();
     auto kvnr = generateNewRandomKVNR();
     taskActivate(task->prescriptionId(), task->accessCode(), std::get<0>(makeQESBundle(kvnr.id(), task->prescriptionId(), model::Timestamp::now())));

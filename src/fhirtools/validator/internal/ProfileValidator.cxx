@@ -35,7 +35,8 @@ fhirtools::ProfileValidatorCounterKey::ProfileValidatorCounterKey(std::string in
 void fhirtools::ProfileValidatorCounterData::check(ProfileValidator::Map& profMap,
                                                    const fhirtools::ProfileValidatorCounterKey& cKey,
                                                    std::string_view elementFullPath,
-                                                   const std::shared_ptr<const Element>& parentElement) const
+                                                   const std::shared_ptr<const Element>& parentElement,
+                                                   const ValidatorOptions& options) const
 {
     using namespace std::string_view_literals;
     for (const auto& element : elementMap)
@@ -53,7 +54,8 @@ void fhirtools::ProfileValidatorCounterData::check(ProfileValidator::Map& profMa
         profMap.at(element.first)
             .appendResults(element.second.element()->cardinality().check(count, subElementPath.str(), cKey.name,
                                                                          element.second.profile(), parentElement,
-                                                                         element.second.element()->typeId(), !cKey.slice.empty()));
+                                                                         element.second.element()->typeId(), !cKey.slice.empty(),
+                                                                         options));
     }
 }
 

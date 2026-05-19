@@ -16,6 +16,7 @@ class MedicationDispenseOperationParameters : public model::Parameters<Medicatio
 {
 public:
     using Parameters::Parameters;
+    using Resource<MedicationDispenseOperationParameters>::setValue;
 
     [[nodiscard]] model::ProfileType profileType() const;
 
@@ -28,6 +29,7 @@ public:
     [[nodiscard]] std::list<std::pair<MedicationDispense, GemErpPrMedication>> medicationDispenses() const;
 
     [[nodiscard]] Timestamp maxWhenHandedOver() const;
+    void additionalValidation() const override;
 
 private:
     [[nodiscard]] std::list<std::pair<MedicationDispense, std::optional<GemErpPrMedication>>>

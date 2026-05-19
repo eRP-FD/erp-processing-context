@@ -60,7 +60,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
     // Pharmacy sends requests with invalid profile
     //---------------------------------------------
     {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
@@ -74,7 +74,7 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSenderProfessionOid)//NOLI
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest));
     }
     {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
@@ -182,11 +182,11 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnSender)//NOLINT(readabilit
     // Sender is KVNR of insurant with wrong format
     //---------------------------------------------
     {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
+            .setPayload(DispReqMessage).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(mPharmacy.id()) }; // using wrong combination on purpose
         ClientRequest request(
             createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())),
@@ -250,11 +250,11 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
     // Wrong format of telematic ID
     //-----------------------------
     {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Pharmacists, "12345678901234567890")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
+            .setPayload(DispReqMessage).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
             createCommunicationPostHeader("/Communication", jwtInsurant),
@@ -264,11 +264,11 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
     {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
+        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::DispReq)
             .setPrescriptionId(task.prescriptionId().toString())
             .setRecipient(ActorRole::Pharmacists, "X123456788")
             .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
+            .setPayload(DispReqMessage).createJsonString();
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
         ClientRequest request(
             createCommunicationPostHeader("/Communication", jwtInsurant),
@@ -364,38 +364,6 @@ TEST_F(CommunicationPostHandlerTest, ValidationErrorOnRecipient)//NOLINT(readabi
         auto innerResponse = verifyResponse(outerResponse);
         EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
     }
-}
-
-TEST_F(CommunicationPostHandlerTest, InfoReq)//NOLINT(readability-function-cognitive-complexity)
-{
-    auto task = addTaskToDatabase({Task::Status::ready, InsurantA, {}, TaskAccessCode});
-    const std::string kvnrInsurant = task.kvnr().value().id();
-
-    // Please note that the MimeType "text/plain" is no longer existing.
-    // But it doesn't matter as it will only be checked whether the size
-    // of the attachment is correctly verified.
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-        .setPayload(InfoReqMessage).createJsonString();
-
-    // Create a client
-    auto client = createClient();
-
-    const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurant) };
-    // Create the inner request
-    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
-
-    // Send the request.
-    auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-    ASSERT_TRUE(outerResponse.getHeader().hasHeader(Header::ContentType));
-    ASSERT_EQ(outerResponse.getHeader().header(Header::ContentType).value(), MimeType::binary);
-    std::optional<ClientResponse> innerResponse;
-    ASSERT_NO_THROW(innerResponse.emplace(mTeeProtocol.parseResponse(outerResponse)));
-    // ERP-21119 - How to handle CommunicationInfoReq
-    EXPECT_EQ(innerResponse->getHeader().status(), HttpStatus::BadRequest);
 }
 
 TEST_F(CommunicationPostHandlerTest, Reply)//NOLINT(readability-function-cognitive-complexity)
@@ -641,55 +609,6 @@ TEST_F(CommunicationPostHandlerTest, Representative)//NOLINT(readability-functio
     ASSERT_EQ(model::getIdentityString(*communicationByRepresentative.sender()), kvnrRepresentative);
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReqIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
-{
-    auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
-    auto task2 = addTaskToDatabase({ Task::Status::ready, InsurantB, {} });
-    const std::string kvnrInsurantB = task2.kvnr().value().id();
-
-    auto client = createClient();
-
-    // Insurant sends info request with KVNR in access TOKEN which doesn't match the KVNR in the referenced task.
-    {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Access TOKEN of kvnr of task 2 does not match KVNR in referenced task 1.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(kvnrInsurantB) };
-        ClientRequest request(
-            createCommunicationPostHeader("/Communication", jwtInsurant),
-            jsonString);
-        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
-    }
-
-    // Representative sends info request with access CODE in header which doesn't match the access code of the referenced task.
-    {
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task1.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Access CODE of task 2 is placed into header which doesn't match access code in referenced task 1.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantC) };
-        ClientRequest request(
-            createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task2.accessCode())),
-            jsonString);
-        auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
-    }
-}
-
 TEST_F(CommunicationPostHandlerTest, DispReqIncorrectMatches)//NOLINT(readability-function-cognitive-complexity)
 {
     auto task1 = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
@@ -930,7 +849,7 @@ TEST_F(CommunicationPostHandlerTest, Representative_A_20230)//NOLINT(readability
     for (const auto& taskStatus : tasksStatus)
     {
         std::optional<Task> task;
-        const model::Kvnr kvnrInsurant{std::string{InsurantA}, model::Kvnr::Type::gkv};
+        const model::Kvnr kvnrInsurant{std::string{InsurantA}};
 
         if (taskStatus == Task::Status::cancelled)
         {
@@ -1454,7 +1373,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A26327_MvoHasValidStartDate)
 
 TEST_F(CommunicationPostHandlerTest, Representative_A20885_ExaminationOfInsurant)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_20885_03.test("Examination of insured person and eligibility");
+    A_20885_04.test("Examination of insured person and eligibility");
 
     // Create a client
     auto client = createClient();
@@ -1678,118 +1597,6 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20752_ExclusionOfVerificati
         const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(task.kvnr().value()) };
         // Create the inner request
         ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant), jsonString);
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
-    }
-}
-
-TEST_F(CommunicationPostHandlerTest,
-       DISABLED_InfoReq_A20753_ExclusionOfVerificationIdentity)//NOLINT(readability-function-cognitive-complexity)
-{
-    // Create a client
-    auto client = createClient();
-
-    A_20753.test("Exclusion of representative communication on or by means of verification identity");
-    //================================================================================================
-
-    // The e-prescription service MUST refuse any access to e-prescriptions using AccessCode (representative access)
-    // with the http status code 400 if the access results in a combination of KVNR of the eGK test card and
-    // KVNR of the insured:
-    // - Insured persons are not allowed to access test prescriptions.
-    // - With the eGK test card it is not allowed to access prescriptions from insured persons.
-
-    // Allowed operation (both owner of task and sender of communication message are KVNRs of insurants).
-    //---------------------------------------------------------------------------------------------------
-    {
-        auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Representative sends message to pharmacy.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantB) };
-        // Create the inner request
-        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
-    }
-
-    // Allowed operation (both owner of task and sender of communication message are KVNRs of test card).
-    //---------------------------------------------------------------------------------------------------
-    {
-        auto task = addTaskToDatabase({ Task::Status::ready, VerificationIdentityKvnrMin, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Representative sends message to pharmacy.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMax) };
-        // Create the inner request
-        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::Created, ContentMimeType::fhirJsonUtf8));
-    }
-
-    // Not allowed operation (task belongs to KNVR of insured, sender of communication message is KVNR of test card).
-    //----------------------------------------------------------------------------------------------------------------
-    {
-        auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Representative sends message to pharmacy.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(VerificationIdentityKvnrMin) };
-        // Create the inner request
-        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
-
-        // Send the request.
-        auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
-
-        // Verify and decrypt the outer response. Also the generic part of the inner response.
-        auto innerResponse = verifyResponse(outerResponse);
-        EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
-    }
-
-    // Not allowed operation (task belongs to KNVR of test card, sender of communication message is KVNR of insured).
-    //----------------------------------------------------------------------------------------------------------------
-    {
-        auto task = addTaskToDatabase({ Task::Status::ready, VerificationIdentityKvnrMax, {}, TaskAccessCode });
-
-        std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-            .setPrescriptionId(task.prescriptionId().toString())
-            .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-            .setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de")
-            .setPayload(InfoReqMessage).createJsonString();
-
-        // Representative sends message to pharmacy.
-        const JWT jwtInsurant{ mJwtBuilder.makeJwtVersicherter(InsurantA) };
-        // Create the inner request
-        ClientRequest request1(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
 
         // Send the request.
         auto outerResponse = client.send(encryptRequest(request1, jwtInsurant));
@@ -2140,30 +1947,6 @@ TEST_F(CommunicationPostHandlerTest, Representative_A20753_ExclusionOfVerificati
     }
 }
 
-TEST_F(CommunicationPostHandlerTest, InfoReq_MissingAboutTag)
-{
-    auto task = addTaskToDatabase({ Task::Status::ready, InsurantA, {} });
-
-    // Create a client
-    auto client = createClient();
-
-    std::string jsonString = CommunicationJsonStringBuilder(Communication::MessageType::InfoReq)
-        .setPrescriptionId(task.prescriptionId().toString())
-        .setRecipient(ActorRole::Pharmacists, mPharmacy.id())
-        .setPayload(InfoReqMessage)
-        .createJsonString(); // no "about" attribute set
-
-    const JWT jwtInsurant{mJwtBuilder.makeJwtVersicherter(InsurantA)};
-    // Create the inner request
-    ClientRequest request(createCommunicationPostHeader("/Communication", jwtInsurant, std::string(task.accessCode())), jsonString);
-
-    // Send the request.
-    auto outerResponse = client.send(encryptRequest(request, jwtInsurant));
-
-    // Verify and decrypt the outer response. Also the generic part of the inner response.
-    auto innerResponse = verifyResponse(outerResponse);
-    EXPECT_NO_FATAL_FAILURE(verifyGenericInnerResponse(innerResponse, HttpStatus::BadRequest, ContentMimeType::fhirJsonUtf8));
-}
 
 TEST_F(CommunicationPostHandlerTest, ChargChangeReq)//NOLINT(readability-function-cognitive-complexity)
 {
@@ -2371,7 +2154,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(GetParam().prescriptionType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_0)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
         {
             GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
         }

@@ -9,8 +9,6 @@ cmake_minimum_required(VERSION 3.16)
 
 project(erp-processing-context)
 
-set(ERP_APP_NAME ${PROJECT_NAME})
-
 set(ERP_ENROLMENT_DIR "${CMAKE_SOURCE_DIR}/resources/enrolment")
 
 # Use gethostbyname() in boost for hostname lookups because
@@ -81,6 +79,10 @@ list(
         model/Task.cxx
         model/WorkflowParameters.cxx
         model/eu/GemErpEuPrTaskInput.cxx
+        pc/popp/PoPPCertificateVerifier.cxx
+        pc/popp/PoPPCertificateVerifierService.cxx
+        pc/popp/PoPPToken.cxx
+        pc/popp/PoPPVerifier.cxx
         pc/CFdSigErpManager.cxx
         pc/PcServiceContext.cxx
         pc/SeedTimer.cxx

@@ -27,7 +27,7 @@ pipeline {
         )
     }
     environment {
-        ERP_RELEASE_VERSION = "1.21.0"
+        ERP_RELEASE_VERSION = "1.22.0"
         ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
         ERP_POSTGRES_IMAGE = "erp-test-database:${dbImageUUID}"
         GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
@@ -259,28 +259,6 @@ pipeline {
                         }
                     }
                 }
-                stage ("Run Tests (exporter) Testzeitraum heute") {
-                    options {
-                        throttle(['unit-test-category'])
-                    }
-                    steps {
-                        inside(env.ERP_BUILD_IMAGE, "--user root:sudo --volume '${env.WORKSPACE}:/media/erp'") {
-                            sh """#!/bin/bash
-                                cd build/RelWithDebInfo/bin
-                                set -o pipefail
-                                ./exporter-test --gtest_output=xml:exporter-test.xml 2>&1 |
-                                    tee unfiltered_exporter-test.log |
-                                    ${env.WORKSPACE}/scripts/filter_gtest_output.py
-                            """
-                        }
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
-                            junit "build/RelWithDebInfo/bin/exporter-test.xml"
-                        }
-                    }
-                }
                 stage('Static Analysis') {
                     options {
                         throttle(['gcc-build-category'])
@@ -314,6 +292,40 @@ pipeline {
                 }
             }
         }
+        stage("Exporter Matrix Tests") {
+            matrix {
+                axes {
+                    axis {
+                        name 'ERP_TEST_DATE'
+                        values 'today', '2026-07-01'
+                    }
+                }
+                stages {
+                    stage ("exporter-test") {
+                        options {
+                            throttle(['unit-test-category'])
+                        }
+                        steps {
+                            inside(env.ERP_BUILD_IMAGE, "--user root:sudo --volume '${env.WORKSPACE}:/media/erp'") {
+                                sh """#!/bin/bash
+                                    cd build/RelWithDebInfo/bin
+                                    set -o pipefail
+                                    ./exporter-test --erp_testdate=${ERP_TEST_DATE} --gtest_output=xml:exporter-test-${ERP_TEST_DATE}.xml 2>&1 |
+                                        tee unfiltered_exporter-test-${ERP_TEST_DATE}.log |
+                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
+                                """
+                            }
+                        }
+                        post {
+                            always {
+                                archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
+                                junit "build/RelWithDebInfo/bin/exporter-test-${ERP_TEST_DATE}.xml"
+                            }
+                        }
+                    }
+                }
+            }
+        }
         stage("Tests inside the Matrix") {
             matrix {
                 axes {
@@ -323,11 +335,14 @@ pipeline {
                     }
                     axis {
                         name 'ERP_TEST_DATE'
-                        values 'today', '2026-04-01', '2026-07-01'
+                        values 'today', '2026-07-01'
                     }
                 }
                 stages{
                     stage ("erp-test-shard"){
+                        options {
+                            throttle(['unit-test-category'])
+                        }
                         steps {
                             script {
                                 runTestWithDB """

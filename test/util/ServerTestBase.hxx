@@ -35,6 +35,7 @@ std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const JWT& jwt)
 std::pair<std::string, std::string> getAuthorizationHeaderForJwt(const std::string& jwt);
 
 class MockDatabase;
+class PostgresConnection;
 
 class HttpsReconnectingClient : public ClientInterface
 {
@@ -72,8 +73,6 @@ class ServerTestBase
     : public testing::Test
 {
 public:
-    const std::string InfoReqMessage =
-        "Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.";
     const std::string ReplyMessage =
         R"({"version":1,"supplyOptionsType":"onPremise","info_text":"Hallo, wir haben das Medikament vorraetig. Kommen Sie gern in die Filiale oder wir schicken einen Boten."})";
     const std::string DispReqMessage =
@@ -189,8 +188,8 @@ protected:
 
     // Jwt of InsurantF ("X234567891"):
     std::unique_ptr<JWT> mJwt;
-    std::unique_ptr<MockDatabase> mMockDatabase;
     std::unique_ptr<HsmPool> mHsmPool;
+    std::shared_ptr<MockDatabase> mMockDatabase;
 
     ClientTeeProtocol mTeeProtocol;
     const bool mHasPostgresSupport;
@@ -226,8 +225,9 @@ protected:
 
     std::unique_ptr<PcServiceContext> mContext;
 
-    Database::Factory createDatabaseFactory (void);
-    std::unique_ptr<Database> createDatabase (void);
+    using ConnectionFactory = PostgresConnection&(*)();
+    Database::Factory createDatabaseFactory(ConnectionFactory connFactory);
+    std::unique_ptr<Database> createDatabase();
     virtual void addAdditionalPrimaryHandlers (RequestHandlerManager&) {}
     virtual void addAdditionalSecondaryHandlers (RequestHandlerManager&) {}
 

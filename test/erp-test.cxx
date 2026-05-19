@@ -28,7 +28,13 @@ int main(int argc, char** argv)
     static constexpr auto erp_testdate = "--erp_testdate="sv;
     static constexpr auto erp_instance = "--erp_instance="sv;
     static constexpr size_t instance_offset = 2;
-    CrashHandler::registerSignalHandlers({SIGILL, SIGABRT, SIGSEGV, SIGSYS, SIGFPE});
+
+    CrashHandler::registerSignalHandlers({
+#if ! defined(__SANITIZE_ADDRESS__)
+        SIGSEGV,
+#endif
+        SIGILL, SIGABRT, SIGSYS, SIGFPE});
+
 
     if (!Environment::get("ERP_VLOG_MAX_VALUE"))
     {

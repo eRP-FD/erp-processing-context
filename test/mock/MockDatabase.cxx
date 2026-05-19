@@ -30,12 +30,16 @@
 #include "shared/util/Uuid.hxx"
 #include "test_config.h"
 #include "test/mock/TestUrlArguments.hxx"
+#include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
 #include <boost/algorithm/string/replace.hpp>
 #include <test/util/CryptoHelper.hxx>
 #include <tuple>
+
+
+std::atomic_bool MockDatabase::mHaveInstance = false;
 
 
 namespace {
@@ -77,14 +81,7 @@ std::map<model::PrescriptionType, MockTaskTable> makeMockTaskTables(MockAccountT
 
 } // anonymous namespace
 
-
-
-std::unique_ptr<Database> MockDatabase::createMockDatabase(HsmPool& hsmPool, KeyDerivation& keyDerivation)
-{
-    return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabase>(hsmPool), hsmPool, keyDerivation);
-}
 using namespace model;
-
 
 MockDatabase::MockDatabase(HsmPool& hsmPool)
     : mAccounts{}
@@ -94,6 +91,12 @@ MockDatabase::MockDatabase(HsmPool& hsmPool)
     , mHsmPool{hsmPool}
     , mCodec{compressionInstance()}
 {
+    Expect3(not mHaveInstance.exchange(true), "Another instance of MockDatabase already exists.", std::logic_error);
+}
+
+MockDatabase::~MockDatabase()
+{
+    mHaveInstance = false;
 }
 
 std::tuple<BlobId, db_model::Blob, model::Timestamp>
@@ -119,13 +122,14 @@ std::vector<db_model::Task> MockDatabase::retrieveAllTasksForPatient(const db_mo
 }
 
 std::vector<db_model::Task>
-MockDatabase::retrieveAll160TasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
+MockDatabase::retrieveAllEgkRedeemableTasksWithAccessCode(const db_model::HashedKvnr& kvnrHashed,
                                                           const std::optional<UrlArguments>& search)
 {
     std::vector<db_model::Task> allTasks;
-    for (const auto& table: mTasks)
+    for (const auto& tableKey : mTasks | std::views::keys | std::views::filter(model::isEgkRedeemable))
     {
-        auto&& tasks = table.second.retrieveAllTasksForPatient(kvnrHashed, {}, true, false, true);
+        auto& table = mTasks.at(tableKey);
+        auto&& tasks = table.retrieveAllTasksForPatient(kvnrHashed, {}, false, false, true);
         std::move(tasks.begin(), tasks.end(), std::back_inserter(allTasks));
     }
     if (search.has_value())
@@ -146,12 +150,14 @@ uint64_t MockDatabase::countAllTasksForPatient(const db_model::HashedKvnr& kvnr,
     return count;
 }
 
-uint64_t MockDatabase::countAll160Tasks(const db_model::HashedKvnr& kvnr, const std::optional<UrlArguments>& search)
+uint64_t MockDatabase::countAllEgkRedeemableTasks(const db_model::HashedKvnr& kvnr,
+                                                  const std::optional<UrlArguments>& search)
 {
     uint64_t count = 0;
-    for (const auto& table : mTasks)
+    for (const auto& tableKey : mTasks | std::views::keys | std::views::filter(model::isEgkRedeemable))
     {
-        count += table.second.countAll160Tasks(kvnr, search);
+        auto& table = mTasks.at(tableKey);
+        count += table.countAllTasksForPatient(kvnr, search);
     }
     return count;
 }
@@ -571,6 +577,11 @@ void MockDatabase::fillWithStaticData ()
         {.taskType = ResourceTemplates::TaskType::InProgress, .prescriptionId = taskId8}));
     task8.setIsPkv(false);
 
+    const auto taskId9 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4719);
+    auto task9 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+        {.taskType = ResourceTemplates::TaskType::Completed, .prescriptionId = taskId9}));
+    task9.setIsPkv(false);
+
     const auto taskId169 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 4711);
     auto task169 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskId169, .kvnr = kvnr}));
@@ -595,6 +606,10 @@ void MockDatabase::fillWithStaticData ()
     const auto healthCarePrescriptionUuid8 = task8.healthCarePrescriptionUuid().value();
     const auto healthCarePrescriptionBundle8 = model::Binary(healthCarePrescriptionUuid8, kbvBundle8).serializeToJsonString();
 
+    const auto& kbvBundle9 = CryptoHelper::toCadesBesSignature(ResourceTemplates::kbvBundleXml({.prescriptionId = taskId9}));
+    const auto healthCarePrescriptionUuid9 = task9.healthCarePrescriptionUuid().value();
+    const auto healthCarePrescriptionBundle9 = model::Binary(healthCarePrescriptionUuid9, kbvBundle9).serializeToJsonString();
+
     const auto medicationDispense1Xml = ResourceTemplates::medicationDispenseXml({.prescriptionId = taskId1});
     auto medicationDispense1 = model::MedicationDispense::fromXmlNoValidation(medicationDispense1Xml);
     medicationDispense1.setId(model::MedicationDispenseId{taskId1, 0});
@@ -605,6 +620,11 @@ void MockDatabase::fillWithStaticData ()
     medicationDispense8.setId(model::MedicationDispenseId{taskId8, 0});
     const auto medicationDispense8Content = medicationDispense8.serializeToJsonString();
 
+    const auto medicationDispense9Xml = ResourceTemplates::medicationDispenseXml({.prescriptionId = taskId9});
+    auto medicationDispense9 = model::MedicationDispense::fromXmlNoValidation(medicationDispense9Xml);
+    medicationDispense9.setId(model::MedicationDispenseId{taskId9, 0});
+    const auto medicationDispense9Content = medicationDispense9.serializeToJsonString();
+
     insertTask(task1, medicationDispense1Content);
     insertTask(task2);
     insertTask(task3);
@@ -613,6 +633,7 @@ void MockDatabase::fillWithStaticData ()
     insertTask(task6);
     insertTask(task7);
     insertTask(task8, medicationDispense8Content, healthCarePrescriptionBundle8);
+    insertTask(task9, medicationDispense9Content, healthCarePrescriptionBundle9);
     insertTask(task169);
     insertTask(task169Draft);
     insertTask(task166);
@@ -726,8 +747,9 @@ void MockDatabase::fillWithStaticData ()
     insertTask(taskPkvCreated209);
 
     // add static consent entry for kvnr1
-    const auto consentTemplate = resourceManager.getStringResource(dataPath + "/consent_template.json");
+    auto consentTemplate = resourceManager.getStringResource(dataPath + "/consent_template.json");
     const char* const dateTimeStr = "2021-06-01T07:13:00+05:00";
+    consentTemplate = String::replaceAll(consentTemplate, "##KVNR-NS##", "http://fhir.de/sid/gkv/kvid-10");
     const auto consent = model::Consent::fromJsonNoValidation(String::replaceAll(replaceKvnr(consentTemplate, pkvKvnr1), "##DATETIME##", dateTimeStr));
     storeConsent(mDerivation.hashKvnr(consent.patientKvnr()), consent.dateTime(), db_model::ConsentCategory::CHARGCONS);
     // add static consent entry for pkvKvnr209
@@ -738,7 +760,7 @@ void MockDatabase::fillWithStaticData ()
 
     // add static chargeItem entry for kvnr1
     auto chargeItemInput = ResourceTemplates::chargeItemXml({
-        .kvnr = model::Kvnr{pkvKvnr1, model::Kvnr::Type::pkv},
+        .kvnr = model::Kvnr{pkvKvnr1},
         .prescriptionId = pkvTaskId1,
         .dispenseBundleBase64 = "UEtWIGRpc3BlbnNlIGl0ZW0gYnVuZGxl",
         .operation = ResourceTemplates::ChargeItemOptions::OperationType::Put,
@@ -906,6 +928,16 @@ void MockDatabase::fillWithStaticData ()
         const auto prescriptionUuidDiga2 = taskDiga2.healthCarePrescriptionUuid().value();
         const auto prescriptionBundleDiga2 = model::Binary(prescriptionUuidDiga2, kbvBundleDiga2).serializeToJsonString();
         insertTask(taskDiga2, std::nullopt, prescriptionBundleDiga2);
+
+        const auto taskIdDiga3 = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::digitaleGesundheitsanwendungen, 6003);
+        auto taskDiga3 = model::Task::fromJsonNoValidation(ResourceTemplates::taskJson(
+            {.taskType = ResourceTemplates::TaskType::Ready, .prescriptionId = taskIdDiga3,
+             .timestamp = model::Timestamp::fromFhirDateTime("2021-02-02T16:18:43.036+00:00")}));
+        taskDiga3.setIsPkv(false);
+        const auto& kbvBundleDiga3 = CryptoHelper::toCadesBesSignature(ResourceTemplates::evdgaBundleXml({.prescriptionId = taskIdDiga3.toString()}));
+        const auto prescriptionUuidDiga3 = taskDiga3.healthCarePrescriptionUuid().value();
+        const auto prescriptionBundleDiga3 = model::Binary(prescriptionUuidDiga3, kbvBundleDiga3).serializeToJsonString();
+        insertTask(taskDiga3, std::nullopt, prescriptionBundleDiga3);
     }
 
 }
@@ -972,11 +1004,12 @@ void MockDatabase::updateTaskMedicationDispense(const model::PrescriptionId& tas
                                                 const model::Timestamp& whenHandedOver,
                                                 const std::optional<model::Timestamp>& whenPrepared,
                                                 const db_model::Blob& medicationDispenseSalt,
-                                                const std::optional<model::Task::Status>& taskStatus /* = std::nullopt */)
+                                                const std::optional<model::Task::Status>& taskStatus,
+                                                const db_model::EncryptedBlob& owner)
 {
     mTasks.at(taskId.type())
         .updateTaskMedicationDispense(taskId, lastModified, lastMedicationDispense, medicationDispense, medicationDispenseBlobId, telematikId,
-                                      whenHandedOver, whenPrepared, medicationDispenseSalt, taskStatus);
+                                      whenHandedOver, whenPrepared, medicationDispenseSalt, taskStatus, owner);
 }
 
 void MockDatabase::updateTaskMedicationDispenseReceipt(
@@ -986,12 +1019,13 @@ void MockDatabase::updateTaskMedicationDispenseReceipt(
     const std::optional<model::Timestamp>& whenPrepared, const db_model::EncryptedBlob& taskReceipt,
     const model::Timestamp& lastMedicationDispense, const db_model::Blob& medicationDispenseSalt,
     const db_model::EncryptedBlob&,
-    const model::Timestamp& lastStatusUpdate)
+    const model::Timestamp& lastStatusUpdate,
+    const db_model::EncryptedBlob& owner)
 {
     mTasks.at(taskId.type())
         .updateTaskMedicationDispenseReceipt(
             taskId, taskStatus, lastModified, medicationDispense, medicationDispenseBlobId, telematicId, whenHandedOver,
-            whenPrepared, taskReceipt, lastMedicationDispense, medicationDispenseSalt, lastStatusUpdate);
+            whenPrepared, taskReceipt, lastMedicationDispense, medicationDispenseSalt, lastStatusUpdate, owner);
 }
 
 void MockDatabase::updateTaskDeleteMedicationDispense(const model::PrescriptionId& taskId, const model::Timestamp& lastModified)

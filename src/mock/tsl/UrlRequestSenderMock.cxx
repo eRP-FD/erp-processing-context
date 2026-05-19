@@ -36,8 +36,7 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep,
-    const std::string& headerFieldHost) const
+    const boost::asio::ip::tcp::endpoint* ep) const
 {
     std::lock_guard lock(mMutex);
 
@@ -56,8 +55,7 @@ ClientResponse UrlRequestSenderMock::doSend(
             {
                 LOG(INFO) << "Following redirect to " << url;
                 const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
-                return UrlRequestSenderMock::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep,
-                                                headerFieldHost);
+                return UrlRequestSenderMock::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
             }
 
             if (mStrict)
@@ -67,8 +65,7 @@ ClientResponse UrlRequestSenderMock::doSend(
 
             LOG(INFO) << "Passing request to RequestSender for " << url;
             const UrlHelper::UrlParts parts = UrlHelper::parseUrl(url);
-            return UrlRequestSender::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep,
-                                            headerFieldHost);
+            return UrlRequestSender::doSend(parts, method, body, contentType, forcedCiphers, trustCn, ep);
         }
 
         Header header;
@@ -87,10 +84,9 @@ ClientResponse UrlRequestSenderMock::doSend(
     const std::string& contentType,
     const std::optional<std::string>& forcedCiphers,
     const bool trustCn,
-    const boost::asio::ip::tcp::endpoint* ep,
-    const std::string& headerFieldHost) const
+    const boost::asio::ip::tcp::endpoint* ep) const
 {
-    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn, ep, headerFieldHost);
+    return doSend(url.toString(), method, body, contentType, forcedCiphers, trustCn, ep);
 }
 
 void UrlRequestSenderMock::setUrlHandler(

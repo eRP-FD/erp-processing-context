@@ -74,10 +74,10 @@ model::Bundle CommunicationGetHandlerBase::createBundle (const std::vector<model
 // GEMREQ-start A_19520-01#getValidatedCaller
 std::string CommunicationGetHandlerBase::getValidatedCaller (PcSessionContext& session) const
 {
-    A_19520_01.start("extract caller from the access token");
+    A_19520_02.start("extract caller from the access token");
     const auto callerClaim = session.request.getAccessToken().stringForClaim(JWT::idNumberClaim);
     Expect(callerClaim.has_value(), "JWT does not contain a claim for the caller");
-    A_19520_01.finish();
+    A_19520_02.finish();
     return callerClaim.value();
 }
 // GEMREQ-end A_19520-01#getValidatedCaller
@@ -115,12 +115,12 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
     const auto caller = getValidatedCaller(session);
 
     // GEMREQ-start A_19520-01#allPassCaller
-    A_19520_01.start("pass caller to database filter");
+    A_19520_02.start("pass caller to database filter");
     auto communications = database->retrieveCommunications(
         caller, // Used to filter by sender or recipient according to A_19520
         {},     // No filter by communication id for getAll. Also, per ERP-3862, we don't have to support the _id parameter.
         arguments);
-    A_19520_01.finish();
+    A_19520_02.finish();
     // GEMREQ-end A_19520-01#allPassCaller
     try
     {
@@ -163,12 +163,12 @@ void CommunicationGetByIdHandler::handleRequest (PcSessionContext& session)
     const auto communicationId = getValidatedCommunicationId(session);
 
     // GEMREQ-start A_19520-01#byIdPassCaller
-    A_19520_01.start("pass caller to database filter");
+    A_19520_02.start("pass caller to database filter");
     auto communications = database->retrieveCommunications(
         caller,                 // Used to filter by sender or recipient according to A_19520
         communicationId,        // Filter by communication id, according to A_19520
         UrlArguments({}));      // No additional search parameters for getById
-    A_19520_01.finish();
+    A_19520_02.finish();
     // GEMREQ-end A_19520-01#byIdPassCaller
 
     ErpExpect(!communications.empty(), HttpStatus::NotFound, "no Communication found for id");

@@ -91,4 +91,14 @@ MedicationDispenseBundle& MedicationDispenseBundle::addEuResource(const std::str
     return *this;
 }
 
+void MedicationDispenseBundle::additionalValidation() const
+{
+    BundleBase<MedicationDispenseBundle>::additionalValidation();
+    const auto& medicationDispenses = getResourcesByType<model::MedicationDispense>();
+    for (const auto& medicationDispense : medicationDispenses)
+    {
+        medicationDispense.additionalValidation();
+    }
+}
+
 }// namespace model

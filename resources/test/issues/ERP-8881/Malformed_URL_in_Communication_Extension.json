@@ -11,7 +11,7 @@
         "resourceType": "Communication",
         "meta": {
           "profile": [
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.2"
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|1.6"
           ]
         },
         "basedOn": [
@@ -32,7 +32,7 @@
           {
             "extension": [
               {
-                "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType|1.2",
+                "url": "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_EX_SupplyOptionsType|1.6",
                 "extension": [
                   {
                     "url": "onPremise",

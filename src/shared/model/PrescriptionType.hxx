@@ -33,6 +33,7 @@ bool isDirectAssignment(PrescriptionType prescriptionType);
 bool canBeGkv(PrescriptionType prescriptionType);
 bool canBePkv(PrescriptionType prescriptionType);
 bool isTRezept(PrescriptionType prescriptionType);
+bool isEgkRedeemable(PrescriptionType prescriptionType);
 
 // mappings defined in A_19445 AND in profile https://simplifier.net/erezept-workflow/gem-erp-cs-flowtype
 static const std::unordered_map<PrescriptionType, std::string_view> PrescriptionTypeDisplay_UntilWorkflow15{

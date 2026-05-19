@@ -88,6 +88,11 @@ std::unique_ptr<model::TRezeptEvent> TaskEventConverter::convertToTRezeptEvent(c
     const auto orgTelematikId = mds[0].telematikId();
 
     const model::Timestamp qesSigningTime = cadesBesSignature.getSigningTime().has_value() ? cadesBesSignature.getSigningTime().value() : model::Timestamp::now();
+
+    Expect(dbTaskEvent.pharmacyIdentity, "no pharmacy identity in task event.");
+    const auto decryptedPharmacyIdentity = mCodec.decode(*dbTaskEvent.pharmacyIdentity, key);
+    const auto pharmacyIdentityData = db_model::AccessTokenIdentity::fromJson(std::string(decryptedPharmacyIdentity));
+
     result = std::make_unique<model::TRezeptEvent>(
                                                    dbTaskEvent.id,
                                                    dbTaskEvent.prescriptionId,
@@ -101,7 +106,8 @@ std::unique_ptr<model::TRezeptEvent> TaskEventConverter::convertToTRezeptEvent(c
                                                    orgTelematikId,
                                                    std::move(medicationDispenseBundle),
                                                    qesSigningTime,
-                                                   dbTaskEvent.retryCount);
+                                                   dbTaskEvent.retryCount,
+                                                   pharmacyIdentityData.getName());
     return result;
 }
 

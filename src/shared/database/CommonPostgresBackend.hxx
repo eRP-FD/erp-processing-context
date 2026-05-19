@@ -23,8 +23,7 @@ namespace pqxx {class connection;}
 class CommonPostgresBackend : virtual public DatabaseBackend
 {
 public:
-    CommonPostgresBackend(PostgresConnection& connection, const std::string_view& connectionString,
-                          TransactionMode mode = TransactionMode::transaction);
+    CommonPostgresBackend(PostgresConnection& connection, TransactionMode mode = TransactionMode::transaction);
     CommonPostgresBackend() = delete;
     ~CommonPostgresBackend (void) override;
 

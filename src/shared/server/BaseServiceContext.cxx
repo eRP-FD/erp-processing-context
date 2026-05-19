@@ -111,3 +111,8 @@ void BaseServiceContext::setupTslRefreshJob(std::chrono::seconds tslRefreshInter
     mTslRefreshJob->start();
     GS_A_4899.finish();
 }
+
+std::shared_ptr<CrlProvider> BaseServiceContext::crlProvider()
+{
+    return mCrlProvider;
+}

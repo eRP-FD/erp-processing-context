@@ -12,20 +12,22 @@
 #include "shared/model/Bundle.hxx"
 #include "shared/model/ResourceFactory.hxx"
 #include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/client/UrlRequestSender.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/UrlHelper.hxx"
 #include "shared/util/Uuid.hxx"
+#include <cstdlib>
 
 
 using namespace medication::exporter::exceptions;
 
 
-FhirVzdClient::FhirVzdClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider)
+FhirVzdClient::FhirVzdClient(std::string clientId, std::shared_ptr<CrlProvider> crlProvider, const std::string& xContextId)
     : OAuthClientBase(
           std::move(clientId),
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_URL),
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_TOKEN_PORT),
-          std::move(crlProvider))
+          std::move(crlProvider), xContextId)
     , mClientSecret(
           Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_SECRET))
     , mApiUrl(Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VZD_CLIENT_API_URL))
@@ -46,8 +48,8 @@ model::Bundle FhirVzdClient::performSearch(const std::string& orgId) const
     const auto* const path = "/fdv/search/HealthcareService";
     const auto authToken = getOrRefreshAuthToken();
     auto response = handleCommonHttpErrors([this, &orgId, &reqId, &path, &authToken](BDEMessage& message) {
-        message.update(BDEMessage::Data{.innerOperation = path, .requestId = reqId});
-        auto client = createClient(mApiUrl, mApiPort);
+        message.update(BDEMessage::Data{.host = mApiUrl, .innerOperation = path, .requestId = reqId});
+        auto client = createClient();
 
         A_27825.start("Actual fhir vzd search request");
         std::stringstream ss{};
@@ -55,17 +57,12 @@ model::Bundle FhirVzdClient::performSearch(const std::string& orgId) const
            << UrlHelper::escapeUrl(orgId) << "&_tag=ldap&_include=HealthcareService:organization"
            << "&_include=HealthcareService:location";
 
-        auto request = ClientRequest{{HttpMethod::GET,
-                                      ss.str(),
-                                      Header::Version_1_1,
-                                      {{Header::Authorization, "Bearer " + authToken},
-                                       {Header::Host, mApiUrl + ":" + mApiPort},
-                                       {Header::XRequestId, reqId}},
-                                      HttpStatus::Unknown},
-                                     ""};
-
         A_27825.finish();
-        return client->send(request);
+        client->setAdditionalHeaders({{Header::Authorization, "Bearer " + authToken}, {Header::XRequestId, reqId}});
+        const auto url = UrlHelper::UrlParts(UrlHelper::HTTPS_PROTOCOL, mApiUrl,
+                                             static_cast<int>(std::strtol(mApiPort.c_str(), nullptr, 10)), ss.str(), "")
+                             .toString();
+        return client->send(url, HttpMethod::GET, "");
     });
 
     const model::ResourceFactoryBase::Options opts{
@@ -85,11 +82,11 @@ bool FhirVzdClient::testConnection() const
     }
     try
     {
-        auto client = createClient(mApiUrl, mApiPort);
-        if (client->testConnection())
-        {
-            return true;
-        }
+        auto client = createClient();
+        const auto url = UrlHelper::UrlParts(UrlHelper::HTTPS_PROTOCOL, mApiUrl,
+                                             static_cast<int>(std::strtol(mApiPort.c_str(), nullptr, 10)), "", "")
+                             .toString();
+        auto response = client->send(url, HttpMethod::HEAD, "");
     }
     catch (const std::exception& e)
     {

@@ -5,12 +5,15 @@
  * non-exclusively licensed to gematik GmbH
  */
 #include "fhirtools/converter/FhirConverter.hxx"
+#include "fhirtools/repository/FhirStructureDefinition.hxx"
+#include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 #include <date/tz.h>
+#include <fmt/ranges.h>
 #include <gtest/gtest.h>
 
 class RegressionTest : public ErpWorkflowTest
@@ -90,13 +93,9 @@ class RegressionTestErp8170 : public ErpWorkflowTest
 {
 protected:
     std::string medicationDispense(const std::string& kvnr, const std::string& prescriptionIdForMedicationDispense,
-                                   const std::string&) override
+                                   const std::string&, const std::string&) override
     {
-        std::string whenPrepared = "0001-01-01T00:00:00Z";
-        if (ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4)
-        {
-            whenPrepared = "0001-01-01";
-        }
+        std::string whenPrepared = "0001-01-01";
         auto xml = ResourceTemplates::medicationDispenseXml({
             .prescriptionId = prescriptionIdForMedicationDispense,
             .kvnr = kvnr,
@@ -109,7 +108,7 @@ protected:
     std::string dispenseOrCloseTaskParameters(model::ProfileType profileType, const std::string& kvnr,
                                               const std::string& prescriptionIdForMedicationDispense,
                                               const std::string& whenHandedOver [[maybe_unused]],
-                                              size_t numMedicationDispenses) override
+                                              size_t numMedicationDispenses, const std::string&) override
     {
         return ErpWorkflowTest::dispenseOrCloseTaskParameters(profileType, kvnr, prescriptionIdForMedicationDispense,
                                                               "0001-01-01", numMedicationDispenses);
@@ -134,7 +133,9 @@ TEST_F(RegressionTestErp8170, Erp8170)
 
 TEST_F(RegressionTest, Erp11142)
 {
-    auto authoredOn = model::Timestamp::fromGermanDate("2021-06-08");
+    const std::string KBV_PR_ERP_Bundle{model::resource::structure_definition::prescriptionItem};
+    auto authoredOn = model::Timestamp::now();
+    auto supportedVersions = Fhir::instance().structureRepository(authoredOn).supportedVersions({KBV_PR_ERP_Bundle});
     auto kbvVersion = ResourceTemplates::Versions::KBV_ERP_current(authoredOn);
     auto task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel);
     ASSERT_TRUE(task.has_value());
@@ -145,30 +146,37 @@ TEST_F(RegressionTest, Erp11142)
         .authoredOn = authoredOn,
         .kbvVersion = kbvVersion,
     });
+    const auto& renderVersion = kbvVersion.renderVersion();
     auto kbv_bundle_xml = String::replaceAll(kbv_bundle_orig_xml,
-                                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbvVersion.renderVersion(),
+                                             "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + renderVersion,
                                              "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle");
     mActivateTaskRequestArgs.overrideExpectedKbvVersion = "XXX";
-    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode,
-        toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
-        ";Bundle.meta.profile[0]: error: value must match fixed value: "
-        "\"https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0\" (but is "
-        "\"https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle\") (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0)"));
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateWithOutcomeValidation(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
+            fmt::format(R"(;Bundle.meta.profile[0]: error: value must match fixed value: )"
+                        R"("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}" (but is )"
+                        R"("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle") (from profile: )"
+                        R"(https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}))",
+                        renderVersion, kbvVersion));//
+    );
 
     // additional test with duplicate version, KBV_PR_ERP_Bundle|1.0.3|1.0.3
     kbv_bundle_xml =
         String::replaceAll(kbv_bundle_orig_xml, "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle",
                            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + kbvVersion.renderVersion());
     mActivateTaskRequestArgs.overrideExpectedKbvVersion = kbvVersion.renderVersion();
-    ASSERT_NO_FATAL_FAILURE(taskActivateWithOutcomeValidation(
-        task->prescriptionId(), accessCode,
-        toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
-        HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "parsing / validation error",
-        "invalid profile https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0|1.1.0 must be one of: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|1.1.0"));
+    ASSERT_NO_FATAL_FAILURE(
+        taskActivateWithOutcomeValidation(
+            task->prescriptionId(), accessCode,
+            toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
+            HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "parsing / validation error",
+            fmt::format(
+                "invalid profile https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{0}|{0} must be one of: {1}",
+                renderVersion, fmt::join(supportedVersions, ", ")));//
+    );
 }
 
 TEST_F(RegressionTest, Erp10892)
@@ -222,9 +230,23 @@ TEST_F(RegressionTest, Erp11050)
 
 TEST_F(RegressionTest, Erp16393)
 {
+    const fhirtools::DefinitionKey kbvBundleKey{model::resource::structure_definition::prescriptionItem};
+    const fhirtools::DefinitionKey normgroesseKey{"http://fhir.de/StructureDefinition/normgroesse"};
+    const auto& fhirInstance = Fhir::instance();
+    const auto& viewList = fhirInstance.structureRepository(model::Timestamp::now());
+    const auto view = viewList.match(kbvBundleKey);
+    ASSERT_NE(view, nullptr);
+    const auto* kbvBundelDef = view->findStructure(kbvBundleKey);
+    ASSERT_NE(kbvBundelDef, nullptr);
+    const auto* normgroesseDef = view->findStructure(normgroesseKey);
+    ASSERT_NE(normgroesseDef, nullptr);
+    ResourceTemplates::Versions::KBV_ERP kbvVersion{kbvBundelDef->version()};
+    const auto& kbvVerStr = to_string(kbvVersion);
+
+
     std::string expectedDiagnostics{
         // clang-format off
-        "Bundle.entry[2].resource{Medication}.extension[3].valueCode: error: "
+        "Bundle.entry[4].resource{Medication}.extension[3].valueCode: error: "
             "Value ABC not allowed for ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE|1.00, allowed are "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KA, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KTP, "
@@ -233,8 +255,8 @@ TEST_F(RegressionTest, Erp16393)
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]N3, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]NB, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]Sonstiges "
-                "(from profile: http://fhir.de/StructureDefinition/normgroesse|1.3.2); "
-        "Bundle.entry[2].resource{Medication}.extension[3].valueCode: error: "
+                "(from profile: " + to_string(normgroesseDef->key()) + "); "
+        "Bundle.entry[4].resource{Medication}.extension[3].valueCode: error: "
             "Value ABC not allowed for ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE|1.00, allowed are "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KA, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KTP, "
@@ -243,8 +265,8 @@ TEST_F(RegressionTest, Erp16393)
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]N3, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]NB, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]Sonstiges "
-                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse:valueCode|1.1.0); "
-        "Bundle.entry[2].resource{Medication}.extension[3].valueCode: error: "
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse:valueCode|" + kbvVerStr + "); "
+        "Bundle.entry[4].resource{Medication}.extension[3].valueCode: error: "
             "Value ABC not allowed for ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_NORMGROESSE|1.00, allowed are "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KA, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]KTP, "
@@ -253,21 +275,25 @@ TEST_F(RegressionTest, Erp16393)
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]N3, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]NB, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]Sonstiges "
-                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse|1.1.0); "};
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse|" + kbvVerStr + "); "};
     // clang-format on
-    auto kbvBundleXml = ResourceManager::instance().getStringResource(
-        "test/validation/xml/v_2023_07_01/kbv/bundle/Bundle_invalid_ERP-16393_ABC.xml");
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));
     ASSERT_TRUE(task.has_value());
-    kbvBundleXml = String::replaceAll(kbvBundleXml, "160.000.006.388.698.96", task->prescriptionId().toString());
+    const auto authoredOn = model::Timestamp::now();
+    auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = task->prescriptionId(),
+        .authoredOn = authoredOn,
+        .kbvVersion = kbvVersion,
+    });
+    kbvBundleXml = String::replaceAll(kbvBundleXml, R"(<valueCode value="N1"/>)", R"(<valueCode value="ABC"/>)");
     std::string accessCode{task->accessCode()};
-    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion("1.1.0");
+    mActivateTaskRequestArgs.withOverrideExpectedKbvVersion(kbvVersion.renderVersion());
     std::optional<model::Task> taskActivateResult;
     ASSERT_NO_FATAL_FAILURE(
         taskActivateResult = taskActivateWithOutcomeValidation(
             task->prescriptionId(), accessCode,
-            toCadesBesSignature(kbvBundleXml, model::Timestamp::fromXsDateTime("2023-09-29T08:44:35.864+02:00")),
+            toCadesBesSignature(kbvBundleXml, authoredOn),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
             expectedDiagnostics));
 }

@@ -24,12 +24,10 @@ protected:
 
 TEST_P(GemErpPrMedicationTest, validateTemplate)
 {
-    const auto currentVersion = ResourceTemplates::Versions::GEM_ERP_current();
-    if (currentVersion < ResourceTemplates::Versions::GEM_ERP_1_4)
-    {
-        GTEST_SKIP_("Needs Workflow 1.4 or later");
-    }
-    auto medicationXml = ResourceTemplates::medicationXml({.version = currentVersion, .templatePrefix = GetParam()});
+    auto medicationXml = ResourceTemplates::medicationXml({
+        .version = ResourceTemplates::Versions::GEM_ERP_current(),
+        .templatePrefix = GetParam(),
+    });
     using TestMedicationFactory = model::ResourceFactory<TestMedication>;
     std::optional<TestMedicationFactory> testMedicationFactory;
     ASSERT_NO_THROW(

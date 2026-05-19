@@ -28,6 +28,7 @@ FhirInstallArgs::FhirInstallArgs(const std::span<const char*>& args)
             ++argPtr;
             Expect3(argPtr != args.end(), "missing output_folder argument to `-o`", ShowHelp);
             Expect3(! outputFolderOption.has_value(), "`-o` supported only once", ShowHelp);
+            Expect3(! tree, "`--tree` and `-o` are mutually exclusive", ShowHelp);
             outputFolderOption.emplace(*argPtr);
         }
         else if (arg == "-c")
@@ -44,6 +45,11 @@ FhirInstallArgs::FhirInstallArgs(const std::span<const char*>& args)
             Expect3(! excludeFileFolder.has_value(), "`-x` supported only once", ShowHelp);
             excludeFileFolder.emplace(*argPtr);
         }
+        else if (arg == "--tree")
+        {
+            Expect3(! outputFolderOption.has_value(), "`--tree` and `-o` are mutually exclusive", ShowHelp);
+            tree = true;
+        }
         else if (arg == "-s")
         {
             ++argPtr;
@@ -57,7 +63,7 @@ FhirInstallArgs::FhirInstallArgs(const std::span<const char*>& args)
         }
         else if (! arg.starts_with('-'))
         {
-            break;
+            packages.emplace(FhirPackage::get(FhirPackage::Id{arg}));
         }
     }
     for (; argPtr != args.end(); ++argPtr)
@@ -68,8 +74,12 @@ FhirInstallArgs::FhirInstallArgs(const std::span<const char*>& args)
 
     Expect3(cacheFolderOption.has_value(), "missing package cache folder `-p` argument", ShowHelp);
     cacheFolder = std::move(*cacheFolderOption);
-    Expect3(outputFolderOption.has_value(), "missing output folder `-o` argument", ShowHelp);
-    outputFolder = std::move(*outputFolderOption);
+
+    Expect3(outputFolderOption.has_value() || tree, "missing output folder `-o` or `--tree` argument", ShowHelp);
+    if (outputFolderOption)
+    {
+        outputFolder = std::move(*outputFolderOption);
+    }
     Expect3(! packages.empty(), "no pacakges selected", ShowHelp);
 }
 

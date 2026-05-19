@@ -80,8 +80,6 @@ protected:
         std::map<std::string, std::vector<std::string>>& prescriptionIdsByPharmacies,
         std::map<std::string, std::string>& medicationDispensesInputXmlStrings)
     {
-        bool whenPreparedIsDateOnly = ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4;
-
         for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
         {
             auto kvnrPatient = std::get<0>(patientAndPharmacy);
@@ -108,14 +106,11 @@ protected:
             ASSERT_EQ(medicationDispenses[0].whenHandedOver().localDay(), Timestamp::now().localDay());
 
             std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispenses[0].whenPrepared();
-            if (whenPreparedIsDateOnly && medicationDispenseWhenPrepared.has_value() && whenPrepared.has_value())
+            if (whenPrepared)
             {
-                ASSERT_EQ(medicationDispenseWhenPrepared->localDay(), whenPrepared->localDay());
+                whenPrepared.emplace(model::Timestamp::GermanTimezone, whenPrepared->localDay());
             }
-            else
-            {
-                ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
-            }
+            ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
 
             for (size_t i = 0; i  < GetParam(); ++i)
             {

@@ -75,7 +75,8 @@ enum class AuditEventId : std::int16_t
     POST_EU_Consent = 47,
     DELETE_EU_Consent = 48,
     POST_TASK_EU_CLOSE = 49,
-    MAX = POST_TASK_EU_CLOSE
+    GET_Tasks_by_pharmacy_with_popp = 50,
+    MAX = GET_Tasks_by_pharmacy_with_popp
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);

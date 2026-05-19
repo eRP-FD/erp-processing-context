@@ -185,6 +185,12 @@ namespace
         return certificate.checkCertificatePolicy(TslService::oid_zd_tls_s);
     }
 
+    bool checkC_ZD_SIG(const X509Certificate& certificate) // NOLINT(readability-identifier-naming)
+    {
+        return certificate.checkCertificatePolicy(TslService::oid_zd_sig) &&
+               certificate.checkRoles({std::string(profession_oid::oid_popp_token)});
+    }
+
     bool isCertificateOfType(const X509Certificate& certificate, CertificateType certificateType)
     {
         switch (certificateType)
@@ -215,6 +221,8 @@ namespace
                 return checkC_HP_ENC(certificate);
             case CertificateType::C_ZD_TLS_S:
                 return checkC_ZD_TLS_S(certificate);
+            case CertificateType::C_ZD_SIG:
+                return checkC_ZD_SIG(certificate);
         }
         return false;
     }
@@ -239,6 +247,7 @@ namespace
             case CertificateType::C_HP_QES:
             case CertificateType::C_CH_QES:
             case CertificateType::C_HP_ENC:
+            case CertificateType::C_ZD_SIG:
                 return std::vector<ExtendedKeyUsage>{};
             case CertificateType::C_ZD_TLS_S:
                 return {ExtendedKeyUsage::sslServer};
@@ -295,6 +304,7 @@ namespace
             case CertificateType::C_HP_QES:
             case CertificateType::C_CH_QES:
             case CertificateType::C_HP_ENC:
+            case CertificateType::C_ZD_SIG:
                 return {KeyUsage::nonRepudiation};
         }
 
@@ -345,6 +355,8 @@ namespace
                 return "C_HP_ENC";
             case CertificateType::C_ZD_TLS_S:
                 return "C_ZD_TLS_S";
+            case CertificateType::C_ZD_SIG:
+                return "C_ZD_SIG";
         }
 
         TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
@@ -382,6 +394,8 @@ namespace
                 return TslService::oid_vk_eaa_enc;
             case CertificateType::C_ZD_TLS_S:
                 return TslService::oid_zd_tls_s;
+            case CertificateType::C_ZD_SIG:
+                return TslService::oid_zd_sig;
         }
 
         TLOG(ERROR) << "CertificateType enum was extended, but this implementation was not";
@@ -406,6 +420,7 @@ namespace
             case CertificateType::C_CH_QES:
             case CertificateType::C_HP_ENC:
             case CertificateType::C_ZD_TLS_S:
+            case CertificateType::C_ZD_SIG:
                 return {NID_key_usage, NID_basic_constraints};
         }
 

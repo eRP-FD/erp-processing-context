@@ -32,7 +32,7 @@ TEST_F(TransactionTest, rollback)
     std::optional<model::PrescriptionId> prescriptionId;
     {
         BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
-        PostgresBackend database;
+        PostgresBackend database{PostgresBackend::mainConnection()};
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
                                                                model::Timestamp::now(), model::Timestamp::now())));
@@ -45,7 +45,7 @@ TEST_F(TransactionTest, rollback)
     ASSERT_TRUE(prescriptionId);
 
     {
-        PostgresBackend database;
+        PostgresBackend database{PostgresBackend::mainConnection()};
         auto taskOptional = database.retrieveTaskAndPrescription(*prescriptionId);
         ASSERT_FALSE(taskOptional);
     }
@@ -61,7 +61,7 @@ TEST_F(TransactionTest, commit)
     std::optional<model::PrescriptionId> prescriptionId;
     {
         BlobId blobId = blobCache()->getBlob(BlobType::TaskKeyDerivation).id;
-        PostgresBackend database;
+        PostgresBackend database{PostgresBackend::mainConnection()};
         prescriptionId.emplace(std::get<0>(database.createTask(model::PrescriptionType::apothekenpflichigeArzneimittel,
                                                                model::Task::Status::draft, model::Timestamp::now(),
                                                                model::Timestamp::now(), model::Timestamp::now())));
@@ -75,7 +75,7 @@ TEST_F(TransactionTest, commit)
     ASSERT_TRUE(prescriptionId);
 
     {
-        PostgresBackend database;
+        PostgresBackend database{PostgresBackend::mainConnection()};
         auto taskOptional = database.retrieveTaskAndPrescription(*prescriptionId);
         ASSERT_TRUE(taskOptional);
     }

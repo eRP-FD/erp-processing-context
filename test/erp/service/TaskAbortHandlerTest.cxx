@@ -184,11 +184,11 @@ TEST_F(TaskAbortHandlerTest, deletionOfCommunications)//NOLINT(readability-funct
     // Store Task related communication in database
     std::vector<Uuid> communicationIds;
     communicationIds.emplace_back(addCommunicationToDatabase({
-        task.prescriptionId(), model::Communication::MessageType::InfoReq,
+        task.prescriptionId(), model::Communication::MessageType::DispReq,
         {ActorRole::Insurant, task.kvnr().value().id()},
         {ActorRole::Pharmacists, telematicId},
         {},
-        InfoReqMessage, model::Timestamp::now() }).id().value());
+                                                              DispReqMessage, model::Timestamp::now() }).id().value());
 
     // Check prepared data before abort call
     ASSERT_NO_FATAL_FAILURE(checkCreatedData(task.prescriptionId(), telematicId, communicationIds));

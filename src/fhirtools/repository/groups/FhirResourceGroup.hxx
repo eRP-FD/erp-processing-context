@@ -6,6 +6,7 @@
 #define FHIRTOOLS_FHIRGROUPRESOLVER_HXX
 
 #include <filesystem>
+#include <list>
 #include <map>
 #include <optional>
 #include <set>
@@ -26,6 +27,8 @@ public:
     virtual std::optional<FhirVersion> findVersionLocal(const DefinitionKey& key) const = 0;
     virtual std::pair<std::optional<FhirVersion>, std::shared_ptr<const FhirResourceGroup>>
     findVersion(const DefinitionKey& key) const = 0;
+
+    virtual std::list<std::string> referencedGroups() const = 0;
 
     std::pair<DefinitionKey, std::shared_ptr<const FhirResourceGroup>> find(const DefinitionKey& key) const;
 

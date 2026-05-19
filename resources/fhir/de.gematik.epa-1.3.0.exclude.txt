@@ -1,0 +1,21 @@
+## exclude OpenAPI spec
+package/openapi/epa-audit-event-client.openapi.json
+package/openapi/epa-audit-event-server.openapi.json
+package/openapi/epa-basic-client.openapi.json
+package/openapi/epa-basic-server.openapi.json
+package/openapi/epa-patient-client.openapi.json
+package/openapi/epa-patient-server.openapi.json
+# in group de.gematik.epa-1.3.0+1.3.1
+package/CodeSystem-epa-auditevent-agent-type-client-cs.json
+package/StructureDefinition-identifier-epa-fhir-data-service.json
+package/ValueSet-epa-auditevent-service-type-vs.json
+package/CodeSystem-epa-auditevent-sourcetype-cs.json
+package/ValueSet-epa-auditevent-type-vs.json
+package/ValueSet-epa-audit-event-agent-type-user-vs.json
+package/ValueSet-epa-activity-provenance-type-vs.json
+package/StructureDefinition-epa-healthcare-facility-type-extension.json
+package/ValueSet-epa-provenance-participant-type-vs.json
+package/StructureDefinition-epa-auditevent.json
+package/StructureDefinition-epa-activity-provenance.json
+package/ValueSet-epa-operation-outcome-details.json
+package/ValueSet-epa-audit-event-agent-type-client-vs.json

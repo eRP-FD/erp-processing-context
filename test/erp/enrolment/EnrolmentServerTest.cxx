@@ -31,29 +31,30 @@
 #if !defined __APPLE__ && !defined _WIN32
 #include "shared/tpm/TpmProduction.hxx"
 #endif
-#include "shared/util/Base64.hxx"
-#include "shared/util/ByteHelper.hxx"
-#include "shared/util/Hash.hxx"
-#include "shared/util/Random.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "mock/hsm/MockBlobCache.hxx"
 #include "mock/tpm/TpmMock.hxx"
 #include "mock/tpm/TpmTestData.hxx"
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
+#include "shared/util/Base64.hxx"
+#include "shared/util/ByteHelper.hxx"
+#include "shared/util/Hash.hxx"
+#include "shared/util/Random.hxx"
+#include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/util/BlobDatabaseHelper.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/MockAndProductionTestBase.hxx"
-#include "test/util/TestConfiguration.hxx"
-#include "test/mock/MockBlobDatabase.hxx"
-#include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/util/StaticData.hxx"
+#include "test/util/TestConfiguration.hxx"
 
-#include <pqxx/pqxx>
-#include <rapidjson/writer.h>
 #include <gtest/gtest.h>
+#include <rapidjson/writer.h>
+#include <pqxx/pqxx>
 
 #ifdef _WINNT_
 #ifdef DELETE
@@ -153,7 +154,7 @@ public:
             .connectionTimeout = std::chrono::seconds{30},
             .resolveTimeout = std::chrono::milliseconds{1000},
             .tlsParameters = TlsConnectionParameters{
-                .certificateVerifier = TlsCertificateVerifier::withVerificationDisabledForTesting()
+                .certificateVerifier = TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()
             }
         });
     }
@@ -560,7 +561,7 @@ private:
     std::unique_ptr<HsmPool> mHsmPool;
     std::unique_ptr<HttpsServer> mServer;
     std::unique_ptr<KeyDerivation> mKeyDerivation;
-    std::unique_ptr<MockDatabase> mMockDatabase;
+    std::shared_ptr<MockDatabase> mMockDatabase;
 
     HsmPool& hsmPool();
     KeyDerivation& keyDerivation();
@@ -604,16 +605,17 @@ inline std::unique_ptr<Database> EnrolmentServerTest::database()
 {
     if (usePostgres)
     {
-        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(), hsmPool(), keyDerivation());
+        return std::make_unique<DatabaseFrontend>(std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()),
+                                                  hsmPool(), keyDerivation());
     }
     else
     {
         if (!mMockDatabase)
         {
-            mMockDatabase = std::make_unique<MockDatabase>(hsmPool());
+            mMockDatabase = std::make_shared<MockDatabase>(hsmPool());
         }
         return std::make_unique<DatabaseFrontend>(
-            std::make_unique<MockDatabaseProxy>(*mMockDatabase), hsmPool(), keyDerivation());
+            std::make_unique<MockDatabaseProxy>(mMockDatabase), hsmPool(), keyDerivation());
     }
 }
 

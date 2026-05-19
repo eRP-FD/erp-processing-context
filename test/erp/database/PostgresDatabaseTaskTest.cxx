@@ -140,9 +140,8 @@ public:
             const auto id1 = database().storeTask(task1);
             // The database generates the ID
             task1.setPrescriptionId(id1);
-            const auto type = isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv;
             // assign KVNRs
-            task1.setKvnr(model::Kvnr{kvnr.id(), type});
+            task1.setKvnr(model::Kvnr{kvnr.id()});
             task1.setExpiryDate(model::Timestamp::now());
             task1.setAcceptDate(model::Timestamp::now());
             task1.setStatus(model::Task::Status::ready);
@@ -227,8 +226,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskActivate)//NOLINT(readability-functio
     }
 
     model::Task task1(prescriptionType(), "access_code");
-    const auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    const auto kvnr = model::Kvnr{InsurantA, kvnrType};
+    const auto kvnr = model::Kvnr{InsurantA};
     task1.setKvnr(kvnr);
 
     // does not store the KVNR:
@@ -286,8 +284,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
     }
 
     model::Task task1(prescriptionType(), "access_code");
-    auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    task1.setKvnr(model::Kvnr{std::string{InsurantA}, kvnrType});
+    task1.setKvnr(model::Kvnr{std::string{InsurantA}});
 
     // does not store the KVNR:
     task1.setPrescriptionId(database().storeTask(task1));
@@ -311,7 +308,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecret)
         const auto taskFromDb = std::get<0>(database().retrieveTaskAndReceipt(task1.prescriptionId()));
         ASSERT_EQ(taskFromDb->status(), model::Task::Status::ready);
         ASSERT_EQ(taskFromDb->secret(), "secret");
-        A_24174.test("owner has been stored in Database");
+        A_24174_01.test("owner has been stored in Database");
         // GEMREQ-start A_24174#test1
         ASSERT_EQ(taskFromDb->owner(), "owner");
         // GEMREQ-end A_24174#test1
@@ -351,8 +348,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskStatusAndSecretNoOwner)
     }
 
     model::Task task1(prescriptionType(), "access_code");
-    auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    task1.setKvnr(model::Kvnr{std::string{InsurantA}, kvnrType});
+    task1.setKvnr(model::Kvnr{std::string{InsurantA}});
 
     // does not store the KVNR:
     task1.setPrescriptionId(database().storeTask(task1));
@@ -418,7 +414,7 @@ TEST_P(PostgresDatabaseTaskTest, retrieveHealthCareProviderPrescription)
     const auto id = database().storeTask(task);
     database().commitTransaction();
     task.setPrescriptionId(id);
-    task.setKvnr(model::Kvnr{std::string{"X123456788"}, isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}});
     task.setAcceptDate(model::Timestamp::now());
     task.setExpiryDate(model::Timestamp::now());
     task.setIsPkv(isPkv());
@@ -444,9 +440,8 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatient)//NOLINT(readability
 
     A_19115_01.test("Ensure only own tasks can be retrieved by KVNR");
 
-    const auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    const model::Kvnr kvnr1{"X678901238", kvnrType};
-    const model::Kvnr kvnr2{"X012345676", kvnrType};
+    const model::Kvnr kvnr1{"X678901238"};
+    const model::Kvnr kvnr2{"X012345676"};
 
     // cleanup
     {
@@ -582,10 +577,12 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(r
     std::vector<model::Task> tasks;
     setupTasks(1, kvnr, tasks);
 
-    A_23452_02.test("Ensure only tasks for workflow 160 can be retrieved by KVNR");
+    A_23452_04.test("Ensure only tasks for workflow 160 and 166 can be retrieved by KVNR");
     {
-        auto result = database().retrieveAll160TasksWithAccessCode(kvnr, searchForStatus("ready"));
-        if(prescriptionType() == ::model::PrescriptionType::apothekenpflichigeArzneimittel)
+        auto result = database().retrieveAllEgkRedeemableTasksWithAccessCode(kvnr, searchForStatus("ready"));
+        auto count = database().countAllEgkRedeemableTasks(kvnr, searchForStatus("ready"));
+        EXPECT_EQ(count, result.size());
+        if(isEgkRedeemable(prescriptionType()))
         {
             ASSERT_EQ(result.size(), 1);
             EXPECT_NO_THROW(auto accessCode [[maybe_unused]] = result[0].accessCode());
@@ -604,14 +601,13 @@ TEST_P(PostgresDatabaseTaskTest, retrieveAllTasksForPatientAsPharmacy)//NOLINT(r
 TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispense)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace ResourceTemplates;
-    if (!usePostgres() || Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3)
+    if (!usePostgres())
     {
         GTEST_SKIP();
     }
     model::Task task(prescriptionType(), "access_code");
     task.setPrescriptionId(database().storeTask(task));
-    auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    task.setKvnr(model::Kvnr{std::string{"X123456788"}, kvnrType});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}});
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
@@ -622,6 +618,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispense)//NOLINT(readabili
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/erx_receipt1_1_1.json");
     const model::ErxReceipt receipt = model::ErxReceipt::fromJsonNoValidation(receiptJson);
 
+    task.setOwner("OW-NER");
     task.updateLastMedicationDispense();
 
     std::vector<model::MedicationDispense> medicationDispenses;
@@ -651,7 +648,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispense)//NOLINT(readabili
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // performer
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_blob_id
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
-    ASSERT_TRUE(result.front().at(row++).is_null()); // owner
+    ASSERT_FALSE(result.front().at(row++).is_null()); // owner
     if (task.lastMedicationDispense())
     {
         ASSERT_FALSE(result.front().at(row++).is_null()); // last_medication_dispense
@@ -666,8 +663,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     }
     model::Task task(prescriptionType(), "access_code");
     task.setPrescriptionId(database().storeTask(task));
-    auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    task.setKvnr(model::Kvnr{std::string{"X123456788"}, kvnrType});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}});
 
     const auto medicationDispenseJson =
         FileHelper::readFileAsString(std::string(TEST_DATA_DIR) + "/EndpointHandlerTest/medication_dispense_output1.json");
@@ -679,6 +675,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     const model::ErxReceipt receipt = model::ErxReceipt::fromJsonNoValidation(receiptJson);
 
     task.setStatus(model::Task::Status::completed);
+    task.setOwner("OW-NER");
     task.updateLastMedicationDispense();
 
     std::vector<model::MedicationDispense> medicationDispenses;
@@ -708,7 +705,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskMedicationDispenseReceipt)//NOLINT(re
     ASSERT_NE(result.front().at(row++).as<std::string>(), ""); // performer
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_blob_id
     ASSERT_FALSE(result.front().at(row++).is_null()); // medication_dispense_bundle
-    ASSERT_TRUE(result.front().at(row++).is_null()); // owner
+    ASSERT_FALSE(result.front().at(row++).is_null()); // owner
     if (task.lastMedicationDispense())
     {
         ASSERT_FALSE(result.front().at(row++).is_null()); // last_medication_dispense
@@ -736,8 +733,7 @@ TEST_P(PostgresDatabaseTaskTest, updateTaskClearPersonalData)//NOLINT(readabilit
     task.setPrescriptionId(id);
 
     {
-        const auto kvnrType = !isPkv() ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-        const model::Kvnr kvnr{InsurantA, kvnrType};
+        const model::Kvnr kvnr{InsurantA};
         const auto hashedKvnr = getKeyDerivation().hashKvnr(kvnr);
         const char* const healthCareProviderPrescription = "HealthCareProviderPrescription";
         const char* const receipt = "Receipt";
@@ -1181,8 +1177,7 @@ TEST_P(PostgresDatabaseTaskTest, createAndReadAuditEventData)//NOLINT(readabilit
     {
         GTEST_SKIP();
     }
-    const auto kvnrType = static_cast<int>(prescriptionType()) < 200 ? model::Kvnr::Type::gkv : model::Kvnr::Type::pkv;
-    const model::Kvnr kvnr{InsurantA, kvnrType};
+    const model::Kvnr kvnr{InsurantA};
 
     cleanKvnr(kvnr, taskTableName());
 
@@ -1305,7 +1300,7 @@ TEST_P(PostgresDatabaseTaskTest, setRedeemableByPatientAuthorization_Validate_tr
 
     // Activate task
     task.setPrescriptionId(id);
-    task.setKvnr(model::Kvnr{std::string{"X123456788"}, isPkv() ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{std::string{"X123456788"}});
     task.setAcceptDate(model::Timestamp::now());
     task.setExpiryDate(model::Timestamp::now());
     task.setEuRedeemableByProperties(true);

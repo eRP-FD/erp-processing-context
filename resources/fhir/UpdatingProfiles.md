@@ -66,6 +66,14 @@ There are various reasons, why files are ignored. Some of the reasons are:
 
 When omitting any `StructureDefinition`, `ValueSet` or `CodeSystem` that isn't provided otherwise, make sure to clarify with gematik first.
 
+The `fhir_exclude_txt.sh` script (in scripts folder) can assists in generating the `.exclude.txt` file.
+
+Run it as follows:
+```sh
+fhir_exclude_txt.sh <old_package_folder> <new_package_folder>
+```
+The exclude file is a template for the package in `<old_package_folder>`
+
 ### File list configuration
 Once the packages are installed to the target folder, the Validator needs to know, that they should be loaded.
 The file `resources/production/001_fhir-resource-groups.config.json.in` contains a list of files or folders to load in the section `fhir/structure-files`.
@@ -78,6 +86,10 @@ The file `resources/production/001_fhir-resource-groups.config.json.in` also con
 A _Resource-Group_ is very simmilar to a package. They group multiple profiles and assign it an ID.
 In contrast to a package a group must not contain more than one profile with the same URL and a profile with same URL and version
 can only be present in one group. Sometimes this makes it necessary to split packages into multiple groups.
+
+This is particularly required, when an updated version of a package contains "identical" (for validation purposes) files.
+Add a new group, that matches all definitions that are present in both versions and include it in both groups.
+
 They can be configured as follows:
 
 ```json
@@ -105,6 +117,17 @@ The fields have the following meaning:
 | `match.url` | A regular expression matching the profile url |
 | `match.version` | The version of the profile (no regular expression). It can also be `null` to refer to a profile where no version is defined. |
 | `match.file` | A regular expression matching the source file name. (as converted by the installer) |
+
+#### Configuring terminology groups
+Make sure any Group, you consider a *Terminology Group*, only consists of `ValueSets`, `CodeSystems` and `NamingSystems` (not loaded).
+If needed, split out any StructureDefiniton into a separate Group. (Naming convention `<package>-<version>-structures` and `<package>-<version>-terminology` respectively).
+
+`ValueSet` and `CodeSystem` dependencies will be resolved inside the *View*, therefore it is not necessary to have all
+dependencies in the same *Group* or its included/extended groups.
+
+As a result *Terminology Groups* generally don't need to include other *Groups*. However for `hl7.terminology` gematik allows use of `extend`to extend and override terminology from earlier versions.
+
+
 
 ### View Configuration
 The Files `resources/production/01_production.config.json.in` (for processing-context) and `resources/production/01_production-medication-exporter.config.json.in` (for exporter) contain the configuration for _Views_ in the section `fhir/resource-views`.
@@ -196,3 +219,29 @@ The fields have the following meaning:
 
 Note that _synthesized_ `ValueSet`s and `CodeSystem`s must also belong to a group. (see [Group configuration](#group-configuration))
 
+### Example updating hl7.terminology 7.1.0
+```
+fhir_package_tmp$ ../../../scripts/fhir_exclude_txt.sh hl7.terminology.r4#7.0.1 hl7.terminology.r4#7.1.0>fhir_exclude_txt-hl7.terminology.r4#7.1.0_7.0.1
+```
+
+Supporting Tools
+----------------
+### fhirinstall
+`fhirinstall` is the installer for packages. It also has a `--tree` function to show the package dependency tree highlighting any conflicting package versions.
+
+e.g. `build/RelWithDebInfo/bin/fhirinstall -p build/RelWithDebInfo/fhir_package_tmp/ --tree de.gematik.erezept-workflow.r4@1.6.2-rc1`
+### fhir_exclude_txt.sh
+`fhir_exclude_txt.sh` is a script that can generate a template for an `.exclude.txt` file as used by `fhirinstall`.
+
+### unit test
+`FhirStructureRepositoryTest`
+
+
+Glossar
+-------
+| term       | description |
+| ---------- | ----------- |
+| Definition | CodeSystem, ValueSet or StructureDefinition |
+| Group      | When *Definitions* are loaded they are composed into a Group for easier Referencing. Dependencies from `StructureDefinition`  must always be resolvable in their Group (or `include`/`extend` Group) |
+| Terminology Group | A group that contains only Terminology *Definitions* (i.e. `CodeSystem`, `ValueSet`)
+| View       | Combines *Groups* and associates them with a validity date range |

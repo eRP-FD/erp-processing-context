@@ -16,7 +16,7 @@ class C11574Test : public ErpWorkflowTestP
 TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity)
 {
     using namespace ResourceTemplates;
-    if (Versions::GEM_ERP_current() < Versions::GEM_ERP_1_3 || isDiga(GetParam()))
+    if (isDiga(GetParam()))
     {
         GTEST_SKIP();
     }

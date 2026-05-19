@@ -80,7 +80,6 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
     std::map<std::string, std::string>& medicationDispensesInputXmlStrings,
     model::PrescriptionType prescriptionType)
 {
-    bool whenPreparedIsDateOnly = ResourceTemplates::Versions::GEM_ERP_current() >= ResourceTemplates::Versions::GEM_ERP_1_4;
     for (const auto& patientAndPharmacy : patientsPharmaciesMedicationWhenPrepared)
     {
         auto kvnrPatient = std::get<0>(patientAndPharmacy);
@@ -103,16 +102,11 @@ void PostgresDatabaseMedicationDispenseTest::insertTasks(
         auto medicationDispenseTelematicId = medicationDispense.telematikId();
         ASSERT_EQ(medicationDispenseTelematicId, pharmacy);
         ASSERT_EQ(medicationDispense.whenHandedOver().localDay(), Timestamp::now().localDay());
-
-        std::optional<Timestamp> medicationDispenseWhenPrepared = medicationDispense.whenPrepared();
-        if (whenPreparedIsDateOnly && medicationDispenseWhenPrepared.has_value() && whenPrepared.has_value())
+        if (whenPrepared)
         {
-            ASSERT_EQ(medicationDispenseWhenPrepared->localDay(), whenPrepared->localDay());
+            whenPrepared.emplace(model::Timestamp::GermanTimezone, whenPrepared->localDay());
         }
-        else
-        {
-            ASSERT_EQ(medicationDispenseWhenPrepared, whenPrepared);
-        }
+        ASSERT_EQ(medicationDispense.whenPrepared(), whenPrepared);
 
         for (const auto& item : medicationDispenses)
         {
@@ -197,7 +191,7 @@ Task PostgresDatabaseMedicationDispenseTestBase::createAcceptedTask(const std::s
                                                                     bool isPkv)
 {
     Task task = createTask(prescriptionType);
-    task.setKvnr(model::Kvnr{kvnrPatient, isPkv ? model::Kvnr::Type::pkv : model::Kvnr::Type::gkv});
+    task.setKvnr(model::Kvnr{kvnrPatient});
     task.setIsPkv(isPkv);
     activateTask(task);
     acceptTask(task);
@@ -238,6 +232,7 @@ std::vector<MedicationDispense> PostgresDatabaseMedicationDispenseTestBase::clos
         Uuid(task.receiptUuid().value()), linkBase + "/Task/" + prescriptionId.toString() + "/$close/", prescriptionId,
         compositionResource, authorIdentifier, deviceResource, "TestDigest", prescriptionDigestResource);
 
+    task.setOwner(telematicIdPharmacy);
     task.updateLastMedicationDispense();
     database().updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}},
                                                    responseReceipt, mJwtBuilder.makeJwtApotheke());

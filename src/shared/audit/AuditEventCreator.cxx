@@ -61,7 +61,7 @@ std::string replaceTextTemplateVariables(
     const std::string& agentName,
     const std::string& prescriptionId,
     const std::string& countryCode,
-    const std::map<std::string, std::string>& variables)
+    const std::map<std::string, std::string>& variables, const std::string& language)
 {
     std::string result = String::replaceAll(text, std::string(AuditEventTextTemplates::selfVariableName), agentName);
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::agentNameVariableName), agentName);
@@ -69,7 +69,15 @@ std::string replaceTextTemplateVariables(
     result = String::replaceAll(result, std::string(AuditEventTextTemplates::countryCodeVariableName), countryCode);
     for (const auto& [key, value] : variables)
     {
-        result = String::replaceAll(result, std::string{"{"}.append(key).append("}"), value);
+        if (key == AuditEventTextTemplates::proofMethodVariableNameRaw)
+        {
+            result = String::replaceAll(result, std::string{AuditEventTextTemplates::proofMethodVariableName},
+                                        AuditEventTextTemplates::proofMethodString(value, language));
+        }
+        else
+        {
+            result = String::replaceAll(result, fmt::format("{{{}}}", key), value);
+        }
     }
 
     return result;
@@ -156,7 +164,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
     const auto [text, usedLanguage] =  textResources.retrieveTextTemplate(auditData.eventId(), language);
     auditEvent.setTextDiv(
         R"--(<div xmlns="http://www.w3.org/1999/xhtml">)--" +
-        replaceTextTemplateVariables(text, agentName, resourceIdStr, countryCodeStr, variables) + "</div>");
+        replaceTextTemplateVariables(text, agentName, resourceIdStr, countryCodeStr, variables, usedLanguage) + "</div>");
     auditEvent.setLanguage(usedLanguage);
 
     return auditEvent;

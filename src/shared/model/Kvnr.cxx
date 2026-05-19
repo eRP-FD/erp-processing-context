@@ -13,7 +13,7 @@
 #include "shared/util/String.hxx"
 
 #include <regex>
-#include <sstream>
+#include <fmt/format.h>
 
 namespace model
 {
@@ -29,39 +29,27 @@ std::string charToAlphabetNumber(char c)
 }
 } // namespace
 
-Kvnr::Kvnr(std::string kvnr, Type type)
+Kvnr::Kvnr(std::string kvnr)
     : mValue{std::move(kvnr)}
-    , mType{type}
 {
 }
 
-Kvnr::Kvnr(std::string_view kvnr, Type type)
+Kvnr::Kvnr(std::string_view kvnr)
     : mValue{kvnr}
-    , mType{type}
 {
 }
 
-Kvnr::Kvnr(const char* kvnr, Type type)
+Kvnr::Kvnr(const char* kvnr)
     : mValue{kvnr}
-    , mType{type}
 {
 }
 
 Kvnr::Kvnr(std::string_view kvnr, std::string_view namingSystem)
     : mValue{kvnr}
 {
-    if (namingSystem == resource::naming_system::gkvKvid10)
-    {
-        mType = Type::gkv;
-    }
-    else if (namingSystem == resource::naming_system::pkvKvid10)
-    {
-        mType = Type::pkv;
-    }
-    else
-    {
-        mType = Type::unspecified;
-    }
+    ModelExpect(namingSystem == resource::naming_system::gkvKvid10,
+                fmt::format("{} is the only accepted KVNR naming system, given: {}", resource::naming_system::gkvKvid10,
+                            namingSystem));
 }
 
 const std::string& Kvnr::id() const&
@@ -76,30 +64,12 @@ void Kvnr::setId(std::string_view id)
 
 std::string_view Kvnr::namingSystem() const
 {
-    switch (mType)
-    {
-        case Type::pkv:
-            return resource::naming_system::pkvKvid10;
-        case Type::gkv:
-        case Type::unspecified:// not super important - see ERP-19763
-            return resource::naming_system::gkvKvid10;
-    }
-    Fail2("Invalid value for mType: " + std::to_string(static_cast<uintmax_t>(mType)), std::logic_error);
+    return resource::naming_system::gkvKvid10;
 }
 
 std::string Kvnr::id() &&
 {
     return std::move(mValue);
-}
-
-Kvnr::Type Kvnr::getType() const
-{
-    return mType;
-}
-
-void Kvnr::setType(Type type)
-{
-    mType = type;
 }
 
 bool Kvnr::validFormat() const

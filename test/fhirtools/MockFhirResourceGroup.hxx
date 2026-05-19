@@ -20,6 +20,7 @@ public:
     MOCK_METHOD(std::optional<fhirtools::FhirVersion>, findVersionLocal, (const fhirtools::DefinitionKey& url), (const override));
     MOCK_METHOD((std::pair<std::optional<fhirtools::FhirVersion>, std::shared_ptr<const FhirResourceGroup>>),
                 findVersion, (const fhirtools::DefinitionKey& url), (const, override));
+    MOCK_METHOD(std::list<std::string>, referencedGroups, (), (const, override));
 };
 
 class MockResourceGroupResolver : public fhirtools::FhirResourceGroupResolver

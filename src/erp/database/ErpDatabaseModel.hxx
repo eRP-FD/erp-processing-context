@@ -60,11 +60,11 @@ class MedicationDispense
 {
 public:
     explicit MedicationDispense(model::PrescriptionId initPrescriptionId, EncryptedBlob initMedicationDispense,
-                                BlobId initKeyBlobId, Blob initSalt);
+                                BlobId initKeyBlobId, Blob initMedicationDispenseSalt);
     model::PrescriptionId prescriptionId;
     EncryptedBlob medicationDispense;
     BlobId blobId;
-    Blob salt;
+    Blob medicationDispenseSalt;
 };
 
 class Communication

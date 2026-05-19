@@ -9,15 +9,16 @@
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
 namespace {
-rapidjson::Pointer statusPointer("/status");
-rapidjson::Pointer postgresStatusPointer("/checks/0/status");
-rapidjson::Pointer hsmStatusPointer("/checks/2/status");
-rapidjson::Pointer redisStatusPointer("/checks/1/status");
-rapidjson::Pointer tslStatusPointer("/checks/3/status");
-rapidjson::Pointer bnaStatusPointer("/checks/4/status");
-rapidjson::Pointer idpStatusPointer("/checks/5/status");
-rapidjson::Pointer seedTimerStatusPointer("/checks/6/status");
-rapidjson::Pointer teeTokenUpdaterStatusPointer("/checks/7/status");
+const rapidjson::Pointer statusPointer("/status");
+const rapidjson::Pointer postgresStatusPointer("/checks/0/status");
+const rapidjson::Pointer hsmStatusPointer("/checks/2/status");
+const rapidjson::Pointer redisStatusPointer("/checks/1/status");
+const rapidjson::Pointer tslStatusPointer("/checks/3/status");
+const rapidjson::Pointer bnaStatusPointer("/checks/4/status");
+const rapidjson::Pointer idpStatusPointer("/checks/5/status");
+const rapidjson::Pointer seedTimerStatusPointer("/checks/6/status");
+const rapidjson::Pointer teeTokenUpdaterStatusPointer("/checks/7/status");
+const rapidjson::Pointer poppServiceStatusPointer("/checks/8/status");
 }
 
 class ErpHealthTest : public ::testing::TestWithParam<TestClient::Target> {
@@ -77,6 +78,8 @@ TEST_P(ErpHealthTest, HealthCheck)//NOLINT(readability-function-cognitive-comple
                 << seedTimerStatusPointer.Get(healthDocument)->GetString();
     EXPECT_TRUE(healthStates.count(teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString()))
                 << teeTokenUpdaterStatusPointer.Get(healthDocument)->GetString();
+    EXPECT_TRUE(healthStates.count(poppServiceStatusPointer.Get(healthDocument)->GetString()))
+                << poppServiceStatusPointer.Get(healthDocument)->GetString();
 }
 
 

@@ -6,12 +6,15 @@
  */
 
 #include "shared/model/MedicationDispense.hxx"
+#include "DosageDgMP.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/Extension.txx"
 #include "shared/model/MedicationDispenseId.hxx"
 #include "shared/model/RapidjsonDocument.hxx"
 #include "shared/model/ResourceNames.hxx"
-#include "shared/ErpRequirements.hxx"
+#include "shared/model/extensions/GeneratedDosageInstructionsMeta.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/dosagetext/Validator.hxx"
 
 #include <rapidjson/pointer.h>
 #include <mutex>// for call_once
@@ -63,10 +66,12 @@ const rapidjson::Pointer telematicIdSystemPointer(ElementName::path(elements::pe
                                                                     elements::identifier, elements::value));
 const rapidjson::Pointer telematikIdValuePointer(ElementName::path(elements::performer, 0, elements::actor,
                                                                    elements::identifier, elements::value));
-const rapidjson::Pointer performerReferencePointer(ElementName::path(elements::performer, 0, elements::actor, elements::reference));
+const rapidjson::Pointer performerReferencePointer(ElementName::path(elements::performer, 0, elements::actor,
+                                                                     elements::reference));
 const rapidjson::Pointer whenHandedOverPointer(ElementName::path(elements::whenHandedOver));
 const rapidjson::Pointer whenPreparedPointer(ElementName::path(elements::whenPrepared));
-const rapidjson::Pointer medicationReferencePointer(ElementName::path(elements::medicationReference, elements::reference));
+const rapidjson::Pointer medicationReferencePointer(ElementName::path(elements::medicationReference,
+                                                                      elements::reference));
 
 }// anonymous namespace
 
@@ -168,12 +173,57 @@ void MedicationDispense::setPerformerReference(std::string_view newReference)
     setValue(performerReferencePointer, newReference);
 }
 
+void MedicationDispense::moveAppendPatientInstructionToText()
+{
+    static const rapidjson::Pointer dosageInstructionPointer(resource::ElementName::path("dosageInstruction"));
+    static const rapidjson::Pointer patientInstructionPointer(resource::ElementName::path("patientInstruction"));
+    static const rapidjson::Pointer textPointer(resource::ElementName::path("text"));
+    auto* dosageInstructionArray = getValue(dosageInstructionPointer);
+    if (dosageInstructionArray != nullptr && dosageInstructionArray->IsArray())
+    {
+        for (auto& dosageInstruction : dosageInstructionArray->GetArray())
+        {
+            if (const auto* patientInstruction = patientInstructionPointer.Get(dosageInstruction))
+            {
+                std::string text;
+                if (const auto* textValue = textPointer.Get(dosageInstruction))
+                {
+                    text = NumberAsStringParserDocument::getStringValueFromValue(textValue);
+                    text.append("; ");
+                }
+                setKeyValue(dosageInstruction, textPointer,
+                            text.append(NumberAsStringParserDocument::getStringValueFromValue(patientInstruction)));
+            }
+            patientInstructionPointer.Erase(dosageInstruction);
+        }
+    }
+}
+
 void MedicationDispense::additionalValidation() const
 {
     Resource<MedicationDispense>::additionalValidation();
     A_22073_01.start("check for date format YYYY-MM-DD");
     static_cast<void>(whenHandedOver());
     static_cast<void>(whenPrepared());
+    if (const auto profileVersion = getProfileVersionChecked();
+        profileVersion.has_value() && profileVersion >= version::GEM_ERP_1_6)
+    {
+        A_28567.start("Anwendung der Validierung wenn dosageInstruction vorhanden ist");
+        A_28571.start("Dispensierinformationen bereitstellen - Prüfung strukturierte Dosierung");
+        A_28572.start("Task schließen - Prüfung strukturierte Dosierung");
+        const auto& dosage = dosageInstruction();
+        if (! dosage.empty())
+        {
+            const auto& renderedDosageExtension =
+                getExtension(resource::structure_definition::extension_MedicationDispense_renderedDosageInstruction);
+            ErpExpect(renderedDosageExtension.has_value(), HttpStatus::BadRequest,
+                      "Missing MedicationDispense_renderedDosageInstruction extension.");
+            const auto& metaExtension = getExtension<GeneratedDosageInstructionsMeta>();
+            ErpExpect(metaExtension.has_value(), HttpStatus::BadRequest,
+                      "Missing GeneratedDosageInstructionsMeta extension.");
+            dosagetext::Validator::validate(dosage, *renderedDosageExtension, *metaExtension);
+        }
+    }
 }
 
 std::optional<Timestamp> MedicationDispense::getValidationReferenceTimestamp() const
@@ -185,6 +235,10 @@ std::optional<std::string_view> MedicationDispense::performerReference() const
 {
     // This pointer is only available for EuMedicationDispense resources.
     return getOptionalStringValue(performerReferencePointer);
+}
+std::vector<DosageDgMP> MedicationDispense::dosageInstruction() const
+{
+    return getDosageInstructionFromResource(*this);
 }
 
 template class Extension<GemErpExRedeemCode>;

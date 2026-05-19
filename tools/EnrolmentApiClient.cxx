@@ -7,6 +7,7 @@
 
 #include "EnrolmentApiClient.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "shared/common/Constants.hxx"
 #include "shared/enrolment/EnrolmentRequestHandler.hxx"
 #include "shared/network/message/HttpMethod.hxx"
@@ -124,7 +125,7 @@ EnrolmentApiClient::EnrolmentApiClient()
           .resolveTimeout = std::chrono::milliseconds{Configuration::instance().getIntValue(
               ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
           .tlsParameters = TlsConnectionParameters{.certificateVerifier =
-                                                       TlsCertificateVerifier::withVerificationDisabledForTesting()}}}
+                                                       TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}}}
 {
 }
 

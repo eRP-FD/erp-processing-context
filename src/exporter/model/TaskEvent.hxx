@@ -39,6 +39,9 @@ public:
     virtual const std::string& getXRequestId() const;
     virtual Timestamp getMedicationRequestAuthoredOn() const;
 
+    void setXContextId(std::string_view xContextId);
+    const std::string& getXContextId() const;
+
 private:
     id_t mId;
     PrescriptionId mPrescriptionId;
@@ -49,6 +52,7 @@ private:
     model::Timestamp mLastModified;
     std::int32_t mRetryCount{0};
     std::string mXRequestId{Uuid{}.toString()};
+    std::string mXContextId{"not set"};
 };
 
 class TaskEvent : public TaskEventBase
@@ -169,11 +173,9 @@ public:
 
     TRezeptEvent(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, const Kvnr& kvnr,
                  std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified,
-                 TaskEvent::UseCase useCase, State state,
-                 model::TelematikId orgTelematikId,
-                 Bundle&& medicationDispenseBundle,
-                 model::Timestamp qesSigningTime,
-                 std::int32_t retryCount);
+                 TaskEvent::UseCase useCase, State state, model::TelematikId orgTelematikId,
+                 Bundle&& medicationDispenseBundle, model::Timestamp qesSigningTime, std::int32_t retryCount,
+                 std::string jwtPharmacyOrganizationName);
 
     TaskEvent::UseCase getUseCase() const;
     State getState() const;
@@ -184,12 +186,15 @@ public:
 
     const Timestamp& getQesSigningTime() const;
 
+    const std::string& getJwtPharmacyOrganizationName() const;
+
 private:
     TaskEvent::UseCase mUseCase;
     State mState;
     model::TelematikId mOrgTelematikId;
     Bundle mMedicationDispenseBundle;
     Timestamp mQesSigningTime;
+    std::string mJwtPharmacyOrganizationName;
 };
 
 }// model

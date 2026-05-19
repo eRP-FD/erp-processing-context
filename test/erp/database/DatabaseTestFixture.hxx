@@ -28,7 +28,8 @@ protected:
     {
         if (usePostgres())
         {
-            return DatabaseFrontend(std::make_unique<PostgresBackend>(), mHsmPool, mKeyDerivation);
+            return DatabaseFrontend(std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()), mHsmPool,
+                                    mKeyDerivation);
         }
         return DatabaseFrontend(std::make_unique<MockDatabaseProxy>(mMockDatabase), mHsmPool, mKeyDerivation);
     }
@@ -51,7 +52,7 @@ private:
                                          MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm)),
         TeeTokenUpdater::createMockTeeTokenUpdaterFactory(), std::make_shared<Timer>()};
     KeyDerivation mKeyDerivation{mHsmPool};
-    MockDatabase mMockDatabase{mHsmPool};
+    std::shared_ptr<MockDatabase> mMockDatabase = std::make_shared<MockDatabase>(mHsmPool);
 };
 
 

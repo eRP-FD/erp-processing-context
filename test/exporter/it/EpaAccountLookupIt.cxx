@@ -17,8 +17,8 @@ class EpaAccountLookupIt : public testing::Test
 
 TEST_F(EpaAccountLookupIt, DISABLED_useMock)
 {
-    model::Kvnr kvnr{"X123456788", model::Kvnr::Type::gkv};
-    /*auto result = EpaAccountLookup{TlsCertificateVerifier::withVerificationDisabledForTesting()}.lookup(kvnr);
+    model::Kvnr kvnr{"X123456788"};
+    /*auto result = EpaAccountLookup{TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting()}.lookup(kvnr);
     EXPECT_EQ(result.lookupResult, EpaAccount::Code::allowed);
     EXPECT_EQ(result.kvnr, kvnr);
     auto cfg = Configuration::instance().getArray(ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN);
