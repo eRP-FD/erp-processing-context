@@ -208,19 +208,23 @@ void MedicationDispense::additionalValidation() const
     if (const auto profileVersion = getProfileVersionChecked();
         profileVersion.has_value() && profileVersion >= version::GEM_ERP_1_6)
     {
-        A_28567.start("Anwendung der Validierung wenn dosageInstruction vorhanden ist");
+        A_28567_01.start("Anwendung der Validierung wenn dosageInstruction oder renderedDosageInstruction vorhanden ist");
         A_28571.start("Dispensierinformationen bereitstellen - Prüfung strukturierte Dosierung");
         A_28572.start("Task schließen - Prüfung strukturierte Dosierung");
         const auto& dosage = dosageInstruction();
-        if (! dosage.empty())
+        const auto& renderedDosageExtension =
+            getExtension(resource::structure_definition::extension_MedicationDispense_renderedDosageInstruction);
+        if (! dosage.empty() || renderedDosageExtension.has_value())
         {
-            const auto& renderedDosageExtension =
-                getExtension(resource::structure_definition::extension_MedicationDispense_renderedDosageInstruction);
             ErpExpect(renderedDosageExtension.has_value(), HttpStatus::BadRequest,
-                      "Missing MedicationDispense_renderedDosageInstruction extension.");
+                      "Validation of rendered dosage-instructions: Missing "
+                      "MedicationDispense.MedicationDispense_renderedDosageInstruction extension.");
+            ErpExpect(! dosage.empty(), HttpStatus::BadRequest,
+                      "Validation of rendered dosage-instructions: Missing MedicationDispense.dosageInstruction.");
             const auto& metaExtension = getExtension<GeneratedDosageInstructionsMeta>();
             ErpExpect(metaExtension.has_value(), HttpStatus::BadRequest,
-                      "Missing GeneratedDosageInstructionsMeta extension.");
+                      "Validation of rendered dosage-instructions: MedicationDispense.Missing "
+                      "GeneratedDosageInstructionsMeta extension.");
             dosagetext::Validator::validate(dosage, *renderedDosageExtension, *metaExtension);
         }
     }

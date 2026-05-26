@@ -1161,6 +1161,20 @@ TEST_P(CloseTaskDosageValidatorTest, wrongText)
         "expected: 1-0-2-0 Stück");
 }
 
+TEST_P(CloseTaskDosageValidatorTest, missingDosageInstruction)
+{
+    A_28567_01.test("Missing MedicationDispense.dosageInstruction");
+    auto sample = getSample();
+    const rapidjson::Pointer ptr("/parameter/0/part/0/resource/dosageInstruction");
+    auto&& json = std::move(sample).jsonDocument();
+    ptr.Erase(json);
+    const model::MedicationDispenseOperationParameters params{std::move(json)};
+    serverRequest.setBody(params.serializeToXmlString());
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
+        handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+        "Validation of rendered dosage-instructions: Missing MedicationDispense.dosageInstruction.");
+}
+
 INSTANTIATE_TEST_SUITE_P(validator, CloseTaskDosageValidatorTest,
                          testing::Values("valid/MedicationDispense-MD-Dosage-1020.json"),
                          &DosageInstructionTestHelper::paramToString);

@@ -1929,6 +1929,27 @@ TEST_P(ActivateTaskDosageValidatorTest, wrongText)
         "expected: 1-0-0-0 Stück");
 }
 
+TEST_P(ActivateTaskDosageValidatorTest, missingInstruction)
+{
+    A_28567_01.test("Missing MedicationRequest.dosageInstruction");
+    const rapidjson::Pointer ptr("/entry/6/resource/dosageInstruction");
+    // KBV_EX_ERP_DosageFlag:
+    const rapidjson::Pointer ptr2("/entry/6/resource/extension/4");
+    auto&& json = std::move(patchedBundle).jsonDocument();
+    ptr.Erase(json);
+    ptr2.Erase(json);
+    const model::KbvBundle bundle{std::move(json)};
+
+    std::exception_ptr exceptionPtr;
+    checkActivateTask(
+        mServiceContext, taskJson, bundle.serializeToXmlString(), options.kvnr,
+        {.expectedStatus = HttpStatus::BadRequest, .signingTime = signingTime, .outExceptionPtr = exceptionPtr});
+    ASSERT_NE(exceptionPtr, nullptr);
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(
+        std::rethrow_exception(exceptionPtr), HttpStatus::BadRequest,
+        "Validation of rendered dosage-instructions: Missing MedicationRequest.dosageInstruction.");
+}
+
 INSTANTIATE_TEST_SUITE_P(validator, ActivateTaskDosageValidatorTest,
                          testing::Values("valid/MedicationRequest-Example-MR-Dosage-1000.json"),
                          &DosageInstructionTestHelper::paramToString);

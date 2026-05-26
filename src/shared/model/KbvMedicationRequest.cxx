@@ -79,18 +79,22 @@ void KbvMedicationRequest::additionalValidation() const
     {
         return;
     }
-    A_28567.start("Anwendung der Validierung wenn dosageInstruction vorhanden ist");
+    A_28567_01.start("Anwendung der Validierung wenn dosageInstruction oder renderedDosageInstruction vorhanden ist");
     A_28570.start("Task aktivieren - Prüfung strukturierte Dosierung");
     const auto& dosage = dosageInstruction();
-    if (! dosage.empty())
+    const auto& renderedDosageExtension =
+        getExtension(resource::structure_definition::extension_MedicationRequest_renderedDosageInstruction);
+    if (! dosage.empty() || renderedDosageExtension.has_value())
     {
-        const auto& renderedDosageExtension =
-            getExtension(resource::structure_definition::extension_MedicationRequest_renderedDosageInstruction);
         ErpExpect(renderedDosageExtension.has_value(), HttpStatus::BadRequest,
-                  "Missing MedicationRequest_renderedDosageInstruction extension.");
+                  "Validation of rendered dosage-instructions: Missing "
+                  "MedicationRequest.MedicationRequest_renderedDosageInstruction extension.");
+        ErpExpect(! dosage.empty(), HttpStatus::BadRequest,
+                  "Validation of rendered dosage-instructions: Missing MedicationRequest.dosageInstruction.");
         const auto& metaExtension = getExtension<GeneratedDosageInstructionsMeta>();
         ErpExpect(metaExtension.has_value(), HttpStatus::BadRequest,
-                  "Missing GeneratedDosageInstructionsMeta extension.");
+                  "Validation of rendered dosage-instructions: Missing "
+                  "MedicationRequest.GeneratedDosageInstructionsMeta extension.");
         dosagetext::Validator::validate(dosage, *renderedDosageExtension, *metaExtension);
     }
 }

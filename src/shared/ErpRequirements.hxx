@@ -462,7 +462,7 @@ static constexpr Requirement A_28428("E-Rezept-Fachdienst - Verarbeitung von Dat
 // Dosiertexte
 static constexpr Requirement A_28565("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Implementierung der Dosiertexterzeugung");
 static constexpr Requirement A_28566("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Bereitstellen von Versionen und Sprachen");
-static constexpr Requirement A_28567("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Anwendung der Validierung");
+static constexpr Requirement A_28567_01("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Anwendung der Validierung");
 static constexpr Requirement A_28568("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Validierung von Version und Sprache");
 static constexpr Requirement A_28569("E-Rezept-Fachdienst - Validierung von strukturierten Dosierungen - Validierung der generierten Dosierungsangabe");
 static constexpr Requirement A_28570("E-Rezept-Fachdienst - Task aktivieren - Prüfung strukturierte Dosierung");
