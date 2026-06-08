@@ -105,7 +105,7 @@ std::string_view germanEventTiming(model::EventTiming eventTiming)
         case model::EventTiming::EVE:
             return "abends";
         case model::EventTiming::NIGHT:
-            return "nachts";
+            return "zur Nacht";
     }
     ModelFail("invalid eventTiming: " + std::to_string(static_cast<uintmax_t>(eventTiming)));
 }

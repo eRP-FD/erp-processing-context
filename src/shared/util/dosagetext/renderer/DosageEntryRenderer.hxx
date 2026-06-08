@@ -30,8 +30,9 @@ private:
     render4Pattern(const std::map<std::optional<model::DaysOfWeek>, QuantitiesPerTime>& daysOfWeekQuanities);
     static std::string
     renderLinePattern(const std::map<std::optional<model::DaysOfWeek>, QuantitiesPerTime>& daysOfWeekQuanities,
-                      bool shouldMergeTimes);
+                      bool shouldMergeTimes, bool shouldReplicateTimesSortBug);
     static bool shouldMergeTimes(const std::vector<model::DosageDgMP>& dosages);
+    static bool replicateTimesSortBug(const std::vector<model::DosageDgMP>& dosages);
     std::string mText;
 };
 

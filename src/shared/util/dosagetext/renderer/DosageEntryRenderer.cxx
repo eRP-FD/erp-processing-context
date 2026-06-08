@@ -6,8 +6,8 @@
  */
 
 #include "shared/util/dosagetext/renderer/DosageEntryRenderer.hxx"
-#include "shared/util/dosagetext/renderer/Localization.hxx"
 #include "shared/model/DosageDgMP.hxx"
+#include "shared/util/dosagetext/renderer/Localization.hxx"
 
 #include <map>
 #include <utility>
@@ -40,18 +40,20 @@ struct DosageEntryRenderer::QuantitiesPerTime {
     void insert(model::SimpleQuantity inQuantity, std::optional<std::string> timeOfDay,
                 std::optional<model::EventTiming> eventTiming)
     {
-        timeToQuantity.emplace(QuantityPerTime{.timeOfDay = std::move(timeOfDay), .eventTiming = eventTiming},
-                               std::move(inQuantity));
+        originalSortOrder.emplace_back(QuantityPerTime{.timeOfDay = std::move(timeOfDay), .eventTiming = eventTiming});
+        timeToQuantity.emplace(originalSortOrder.back(), std::move(inQuantity));
     }
     void merge(const QuantitiesPerTime& other)
     {
-        for (const auto& [perTime, quantity] : other.timeToQuantity)
+        for (const auto& perTime : other.originalSortOrder)
         {
+            const auto& quantity = other.timeToQuantity.at(perTime);
             insert(quantity, perTime.timeOfDay, perTime.eventTiming);
         }
     }
 
     std::map<QuantityPerTime, model::SimpleQuantity> timeToQuantity;
+    std::vector<QuantityPerTime> originalSortOrder;
 };
 
 void DosageEntryRenderer::doRender(const std::vector<model::DosageDgMP>& dosages)
@@ -100,7 +102,7 @@ void DosageEntryRenderer::doRender(const std::vector<model::DosageDgMP>& dosages
     }
     else
     {
-        mText = renderLinePattern(daysOfWeekQuantities, shouldMergeTimes(dosages));
+        mText = renderLinePattern(daysOfWeekQuantities, shouldMergeTimes(dosages), replicateTimesSortBug(dosages));
     }
 }
 
@@ -147,8 +149,10 @@ std::string DosageEntryRenderer::render4Pattern(
     return whenString;
 }
 
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
 std::string DosageEntryRenderer::renderLinePattern(
-    const std::map<std::optional<model::DaysOfWeek>, QuantitiesPerTime>& daysOfWeekQuanities, bool shouldMergeTimes)
+    const std::map<std::optional<model::DaysOfWeek>, QuantitiesPerTime>& daysOfWeekQuanities, bool shouldMergeTimes,
+    bool shouldReplicateTimesSortBug)
 {
     std::string text;
     for (const auto& [dayOfWeek, quantitiesPerTime] : daysOfWeekQuanities)
@@ -165,8 +169,16 @@ std::string DosageEntryRenderer::renderLinePattern(
         }
         std::string_view sepLine;
         std::optional<model::SimpleQuantity> lastQuantity;
-        for (const auto& [perTime, quantity] : quantitiesPerTime.timeToQuantity)
+        auto sortOrder = quantitiesPerTime.originalSortOrder;
+        if (! shouldReplicateTimesSortBug)
         {
+            // Note times in the same dosage are already sorted. this here additionally sorts times from different dosages
+            // src/shared/model/DosageDgMP.cxx:122
+            std::ranges::sort(sortOrder);
+        }
+        for (const auto& perTime : sortOrder)
+        {
+            const auto& quantity = quantitiesPerTime.timeToQuantity.at(perTime);
             // merge times with the same quantity
             if (lastQuantity.has_value() && (quantity != *lastQuantity || ! shouldMergeTimes))
             {
@@ -219,6 +231,26 @@ bool DosageEntryRenderer::shouldMergeTimes(const std::vector<model::DosageDgMP>&
         case Schema::DAY_OF_WEEK:
         case Schema::INTERVAL:
         case Schema::DAY_TIME_COMBO:
+            return true;
+    }
+    return false;
+}
+
+bool DosageEntryRenderer::replicateTimesSortBug(const std::vector<model::DosageDgMP>& dosages)
+{
+    // The 1.0.1 script does not sort times for Schema 5: TimeOfDay, although it should according to specification
+    // https://ig.fhir.de/igs/medication/dosierung-textgenerierung.html#4-konkrete-zeiten-timeofday
+    switch (detectSchema(dosages))
+    {
+        case Schema::UNKNOWN:
+        case Schema::FREE_TEXT:
+        case Schema::FOUR_PATTERN:
+        case Schema::INTERVAL_TIME_COMBO:
+        case Schema::DAY_OF_WEEK:
+        case Schema::INTERVAL:
+        case Schema::DAY_TIME_COMBO:
+            break;
+        case Schema::TIME_OF_DAY:
             return true;
     }
     return false;
