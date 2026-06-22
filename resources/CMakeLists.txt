@@ -95,6 +95,11 @@ fhir_install(de.ihe-d.terminology 3.0.1)
 
 fhir_install(de.fhir.medication 1.0.3)
 fhir_install(de.fhir.medication 1.0.4)
+fhir_patch(de.fhir.medication 1.0.4
+    JQ SCRIPT "fhir/ERP-36392-patch-Timing.repeat-TimingOnlyWhenOrTimeOfDay.jq"
+        package/StructureDefinition-TimingDgMP.json
+)
+
 
 fhir_install(kbv.basis 1.7.0)
 fhir_install(kbv.ita.for 1.2.1)
@@ -237,6 +242,13 @@ list(TRANSFORM SCHEMA_FILES PREPEND "${ERP_RUNTIME_RESOURCE_DIR}/")
 
 set(ERP_SCHEMA_DIR "${ERP_RUNTIME_RESOURCE_DIR}/schema/")
 
+add_custom_command(
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1"
+    COMMAND "${CMAKE_COMMAND}" -E chdir "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1"
+                "${CMAKE_COMMAND}" -E tar x "${CMAKE_CURRENT_SOURCE_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1.zip"
+    COMMAND "${CMAKE_COMMAND}" -E touch "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
+)
 
 message(STATUS "ZDICT_FILES=${ZDICT_FILES}")
 foreach(dictionary ${ZDICT_FILES})
@@ -268,6 +280,7 @@ add_custom_target(resource_files ALL
         ${ZDICT_FILES}
         ${ERP_EASTER_LIST}
         ${FHIR_PROFILES_DIRS}
+        "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
 )
 
 if (NOT TARGET resources)

@@ -18,8 +18,14 @@ endmacro()
 set(ERP_FHIR_PATCH_ID 0)
 
 find_program(jq_EXECUTABLE jq REQUIRED)
-find_program(bash_EXECUTABLE bash REQUIRED)
 
+# Applies patches to a FHIR package in the local cache
+# Supported patch types (passed as the third argument):
+# - SCRIPT: Executes a CMake script against the package directory using -P.
+# - JQ <expression>: Uses jq to transform a file within the package.
+# - JQ SCRIPT <jq_script_file> use expression from jq_script_file
+# - FIX_PARAMETERS_PART_TYPE: A specialized patch for fixing parameter part types.
+# - DEPENDS additional dependencies to consider berfore patching
 function(fhir_patch package version)
     set(targetBase "${package}-${version}")
     set(patch_type "${ARGV2}")
@@ -54,16 +60,24 @@ function(fhir_patch package version)
         )
     elseif("${patch_type}" STREQUAL "JQ")
         cmake_parse_arguments(PARSE_ARGV 2 arg "" "" "JQ;DEPENDS")
-        list(POP_FRONT arg_JQ expression)
+        list(POP_FRONT arg_JQ action)
+        set(jq_command "${jq_EXECUTABLE}" "${action}")
+        if ("${action}" STREQUAL "SCRIPT")
+            list(POP_FRONT arg_JQ script_file)
+            set(jq_command "${jq_EXECUTABLE}" -f "${CMAKE_CURRENT_SOURCE_DIR}/${script_file}")
+            # for comment only:
+            set(action "-f ${script_file}")
+        endif()
         list(POP_FRONT arg_JQ file)
         add_custom_command(
-            COMMENT "Apply ${expression} to ${file} in package ${package_reference}"
+            COMMENT "Apply ${action} to ${file} in package ${package_reference}"
             OUTPUT "${patchedmarker}"
+            BYPRODUCTS "${package_dir}/${file}.orig"
             COMMAND "${CMAKE_COMMAND}" -E rename "${package_dir}/${file}" "${package_dir}/${file}.orig"
-            COMMAND "${bash_EXECUTABLE}" -c "${jq_EXECUTABLE} '${expression}' '${package_dir}/${file}.orig' > '${package_dir}/${file}'"
+            COMMAND ${jq_command} "${package_dir}/${file}.orig" > "${package_dir}/${file}"
             COMMAND "${CMAKE_COMMAND}" -E touch "${patchedmarker}"
             DEPENDS "${targetBase}-extract"
-            DEPENDS ${arg_DEPENDS}
+            DEPENDS ${arg_DEPENDS} "${script_file}"
             VERBATIM
         )
     elseif("${patch_type}" STREQUAL "FIX_PARAMETERS_PART_TYPE")

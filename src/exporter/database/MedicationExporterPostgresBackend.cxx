@@ -214,7 +214,7 @@ MedicationExporterPostgresBackend::MedicationExporterPostgresBackend(Transaction
 {
 }
 
-std::string MedicationExporterPostgresBackend::defaultConnectString(void)
+std::string MedicationExporterPostgresBackend::defaultConnectString()
 {
     const auto& cfg = Configuration::instance();
     return PostgresConnectString{

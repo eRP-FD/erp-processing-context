@@ -277,16 +277,17 @@ list(
         erp/fhir/DeAbdaERezeptabgabedatenPkv_1_4_0_Test.cxx
         erp/fhir/DeGematikERezeptEuR4_1_0_0_Test.cxx
         erp/fhir/DeGematikERezeptWorkflowR4Test.cxx
-        erp/fhir/KbvItaErp_1_3_2_Test.cxx
-        erp/fhir/KbvItaErpTest.cxx
-        erp/fhir/KbvItvEvdga_1_2_1_Test.cxx
         erp/fhir/ERP-30139-data-absent-uri.cxx
+        erp/fhir/ERP-36392-patch-Timing.repeat-TimingOnlyWhenOrTimeOfDay.cxx
         erp/fhir/FhirConverterTest.cxx
         erp/fhir/FhirElementTest.cxx
         erp/fhir/FhirStructureDefinitionParserTest.cxx
         erp/fhir/FhirStructureDefinitionTest.cxx
         erp/fhir/FhirStructureRepositoryTest.cxx
         erp/fhir/FhirTransformatorTest.cxx
+        erp/fhir/KbvItaErp_1_3_2_Test.cxx
+        erp/fhir/KbvItaErpTest.cxx
+        erp/fhir/KbvItvEvdga_1_2_1_Test.cxx
         erp/hsm/BlobCacheTest.cxx
         erp/hsm/BlobDatabaseEntryTest.cxx
         erp/hsm/BlobDatabaseTest.cxx
