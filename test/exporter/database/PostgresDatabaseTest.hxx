@@ -252,7 +252,7 @@ protected:
         Expect(usePostgres(), "database support is disabled, database should not be used");
         if (! mConnection)
         {
-            mConnection = std::make_unique<pqxx::connection>(MedicationExporterPostgresBackend::defaultConnectString());
+            mConnection = std::make_unique<pqxx::connection>(MedicationExporterPostgresBackend::defaultConnectParameters().str());
         }
         return *mConnection;
     }
@@ -284,7 +284,7 @@ protected:
         Expect(usePostgres(), "database support is disabled, database should not be used");
         if (! mErpDbConnection)
         {
-            mErpDbConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
+            mErpDbConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
         }
         return *mErpDbConnection;
     }

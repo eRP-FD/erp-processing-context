@@ -385,7 +385,7 @@ public:
         {
             if (parent.usePostgres)
             {
-                pqxx::connection conn{PostgresConnection::defaultConnectString()};
+                pqxx::connection conn{PostgresConnection::defaultConnectParameters().str()};
                 pqxx::work txn{conn};
                 txn.exec("DELETE FROM erp.task WHERE prescription_id = $1", pqxx::params{prescriptionId.toDatabaseId()})
                     .no_rows();
@@ -403,7 +403,7 @@ public:
         {
             if (parent.usePostgres)
             {
-                pqxx::connection conn{PostgresConnection::defaultConnectString()};
+                pqxx::connection conn{PostgresConnection::defaultConnectParameters().str()};
                 pqxx::work txn{conn};
                 txn.exec("DELETE FROM erp.auditevent WHERE id = $1", pqxx::params{std::string{eventId}}).no_rows();
                 txn.commit();

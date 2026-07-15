@@ -123,7 +123,7 @@ public:
         {
             if (::TestConfiguration::instance().getOptionalBoolValue(::TestConfigurationKey::TEST_USE_POSTGRES, false))
             {
-                mConnection = std::make_unique<PostgresConnection>(PostgresConnection::defaultConnectString());
+                mConnection = std::make_unique<PostgresConnection>(std::vector{PostgresConnection::defaultConnectParameters()});
                 mConnection->connectIfNeeded();
                 mTransaction = mConnection->createTransaction();
 

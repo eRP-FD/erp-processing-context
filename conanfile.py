@@ -77,12 +77,12 @@ class ErpProcessingContext(ConanFile):
         'libunwind/1.8.3',
         'libxml2/2.15.2',
         'magic_enum/0.9.7',
-        'openssl/3.5.5+erp',
+        'openssl/3.5.7+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20250205',
         'redis-plus-plus/1.3.15',
         'xmlsec/1.3.9',
-        'zlib/1.3.1',
+        'zlib/1.3.2',
         'zstd/1.5.7'  # database compression
     ]
 

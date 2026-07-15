@@ -180,7 +180,7 @@ private:
             mIsIntialCleanupRequested = false;
 
             const std::string query = "DELETE FROM erp.communication WHERE sender = '\\x" + hashedHex(sender) + "'";
-            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
+            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
             pqxx::work transaction (*connection);
             const auto result = transaction.exec(query);
             transaction.commit();

@@ -40,7 +40,7 @@ public:
         {
             mIsInitialCleanupRequired = false;
 
-            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
+            auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
 
             // There is no predefined method for this. Run an adhoc SQL query.
             for (const std::string user : {InsurantF, InsurantG, InsurantH})

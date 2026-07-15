@@ -16,18 +16,18 @@
 | libunwind       | 1.8.3        | MIT          | https://github.com/libunwind/libunwind/releases/tag/v1.8.3           |
 | libxml2         | 2.15.2       | MIT          | https://github.com/GNOME/libxml2/tree/v2.15.2                        |
 | magic_enum      | 0.9.7        | MIT          | https://github.com/Neargye/magic_enum/releases/tag/v0.9.7            |
-| openssl*        | 3.5.5        | OpenSSL      | https://github.com/openssl/openssl/tree/openssl-3.5.5                |
+| openssl*        | 3.5.7        | OpenSSL      | https://github.com/openssl/openssl/tree/openssl-3.5.7                |
 | prometheus-cpp  | 1.3.0        | MIT          | https://github.com/jupp0r/prometheus-cpp/releases/tag/v1.3.0         |
 | rapidjson       | cci.20250205 | MIT          | https://github.com/Tencent/rapidjson                                 |
 | redis-plus-plus | 1.3.15       | Apache-2.0   | https://github.com/sewenew/redis-plus-plus/releases/tag/1.3.15       |
 | xmlsec          | 1.3.9        | MIT          | https://github.com/lsh123/xmlsec/releases/tag/1.3.9                  |
-| zlib            | 1.3.1        | Zlib License | https://github.com/madler/zlib/tree/v1.3.1                           |
+| zlib            | 1.3.2        | Zlib License | https://github.com/madler/zlib/tree/v1.3.2                           |
 | zstd            | 1.5.7        | BSD-3-Clause | https://github.com/facebook/zstd/tree/v1.5.7                         |
 
-\* openssl 3.5.5: The openssl 3.5.5 is based on the version provided by conan-center (https://conan.io/center/)
+\* openssl 3.5.7: The openssl 3.5.7 is based on the version provided by conan-center (https://conan.io/center/)
 additionally a patch has been applied to access the embedded OCSP response.
 The changed package recipes and the patch are located in the subfolder `conan-recipes/openssl`
 
-\* openssl 3.5.5: Die verwendete openssl 3.5.5 basiert auf der auf conan-center (https://conan.io/center/) verfügbaren.
+\* openssl 3.5.7: Die verwendete openssl 3.5.7 basiert auf der auf conan-center (https://conan.io/center/) verfügbaren.
 zusätzlich wird ein weiterer Patch angewandt, der den Zugriff auf die eingebettete OCSP-Response ermöglicht.
 Das geänderte Conan-Rezept und der Patch befinden sich im Unterordner `conan-recipes/openssl`

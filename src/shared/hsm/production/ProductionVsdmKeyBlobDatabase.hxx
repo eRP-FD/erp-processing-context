@@ -13,6 +13,8 @@
 
 #include <mutex>
 
+class PostgresConnectionParameters;
+
 /**
  * The production version of the VSDM Key blob database where all data is stored and
  * retrieved from a PostgreSQL database.
@@ -21,7 +23,7 @@ class ProductionVsdmKeyBlobDatabase : public VsdmKeyBlobDatabase
 {
 public:
     ProductionVsdmKeyBlobDatabase();
-    explicit ProductionVsdmKeyBlobDatabase(const std::string& connectionString);
+    explicit ProductionVsdmKeyBlobDatabase(const PostgresConnectionParameters& connectionParameters);
     Entry getBlob(char operatorId, char version) const override;
     std::vector<Entry> getAllBlobs() const override;
 

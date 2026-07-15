@@ -34,7 +34,7 @@ public:
 
     void checkPostgresConnectionString (void)//NOLINT(readability-function-cognitive-complexity)
     {
-        const auto connectionString = PostgresConnection::defaultConnectString();
+        const auto connectionString = PostgresConnection::defaultConnectParameters().str();
         const auto& configuration = Configuration::instance();
 
         expectContains(connectionString, "host='%%'", configuration.getStringValue(ConfigurationKey::POSTGRES_HOST));
@@ -211,7 +211,7 @@ TEST_F(PostgresBackendTest, recreateConnectionTimer)
 
 TEST_F(PostgresBackendTest, duplicateTransaction)
 {
-    PostgresConnection conn{PostgresConnection::defaultConnectString()};
+    PostgresConnection conn{{PostgresConnection::defaultConnectParameters()}};
     conn.connectIfNeeded();
     std::list<std::unique_ptr<pqxx::transaction_base>> txs;
     ASSERT_NO_THROW(txs.emplace_back(conn.createTransaction()));

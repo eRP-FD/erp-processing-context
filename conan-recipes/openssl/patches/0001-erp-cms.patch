@@ -1,6 +1,6 @@
-From c6038ac7d53f6732593aa43f462935f7de06387f Mon Sep 17 00:00:00 2001
+From 748957df833f99db6bf4c452022bc9552c62f73f Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
-Date: Wed, 28 Jan 2026 11:10:26 +0100
+Date: Thu, 25 Jun 2026 11:23:14 +0200
 Subject: [PATCH 1/2] erp-cms
 
 ---
@@ -11,7 +11,7 @@ Subject: [PATCH 1/2] erp-cms
  4 files changed, 82 insertions(+), 1 deletion(-)
 
 diff --git a/crypto/cms/cms_asn1.c b/crypto/cms/cms_asn1.c
-index 580850b..3be300f 100644
+index fb87f6c6ad..b576b2aa4f 100644
 --- a/crypto/cms/cms_asn1.c
 +++ b/crypto/cms/cms_asn1.c
 @@ -60,7 +60,8 @@ ASN1_SEQUENCE_cb(CMS_SignerInfo, cms_si_cb) = {
@@ -21,17 +21,17 @@ index 580850b..3be300f 100644
 -} static_ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
 +} ASN1_SEQUENCE_END(CMS_OtherRevocationInfoFormat)
 +
-
-     ASN1_CHOICE(CMS_RevocationInfoChoice)
+ 
+ ASN1_CHOICE(CMS_RevocationInfoChoice)
      = { ASN1_SIMPLE(CMS_RevocationInfoChoice, d.crl, X509_CRL), ASN1_IMP(CMS_RevocationInfoChoice, d.other, CMS_OtherRevocationInfoFormat, 1) } ASN1_CHOICE_END(CMS_RevocationInfoChoice)
 diff --git a/crypto/cms/cms_lib.c b/crypto/cms/cms_lib.c
-index e3fe76e..0ef1e36 100644
+index e3fe76e206..0ef1e36d0a 100644
 --- a/crypto/cms/cms_lib.c
 +++ b/crypto/cms/cms_lib.c
 @@ -637,6 +637,26 @@ int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl)
      return 0;
  }
-
+ 
 +int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
 +                                       ASN1_OBJECT* formatObject,
 +                                       ASN1_TYPE* data)
@@ -58,7 +58,7 @@ index e3fe76e..0ef1e36 100644
 @@ -682,6 +702,57 @@ int ossl_cms_get1_certs_ex(CMS_ContentInfo *cms, STACK_OF(X509) **certs)
      return 1;
  }
-
+ 
 +int CMS_get_anotherRevocationInfo_by_format(CMS_ContentInfo *cms,
 +                                            ASN1_OBJECT* formatObject,
 +                                            int lastpos)
@@ -114,10 +114,10 @@ index e3fe76e..0ef1e36 100644
  {
      STACK_OF(X509_CRL) *crls = NULL;
 diff --git a/crypto/cms/cms_local.h b/crypto/cms/cms_local.h
-index b412a74..3ec9613 100644
+index 94496b3823..d44b4afb62 100644
 --- a/crypto/cms/cms_local.h
 +++ b/crypto/cms/cms_local.h
-@@ -499,6 +499,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
+@@ -498,6 +498,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_KeyTransRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_OriginatorPublicKey)
  DECLARE_ASN1_ITEM(CMS_OtherKeyAttribute)
@@ -126,13 +126,13 @@ index b412a74..3ec9613 100644
  DECLARE_ASN1_ITEM(CMS_ReceiptRequest)
  DECLARE_ASN1_ITEM(CMS_RecipientEncryptedKey)
 diff --git a/include/openssl/cms.h.in b/include/openssl/cms.h.in
-index dc87758..2fcaa9b 100644
+index dc87758514..2fcaa9b391 100644
 --- a/include/openssl/cms.h.in
 +++ b/include/openssl/cms.h.in
 @@ -282,6 +282,14 @@ int CMS_add0_crl(CMS_ContentInfo *cms, X509_CRL *crl);
  int CMS_add1_crl(CMS_ContentInfo *cms, X509_CRL *crl);
  STACK_OF(X509_CRL) *CMS_get1_crls(CMS_ContentInfo *cms);
-
+ 
 +int CMS_add0_otherRevocationInfoChoice(CMS_ContentInfo *cms,
 +                                       ASN1_OBJECT* formatObject,
 +                                       ASN1_TYPE* data);
@@ -144,5 +144,6 @@ index dc87758..2fcaa9b 100644
  int CMS_SignedData_init(CMS_ContentInfo *cms);
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
      X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
---
-2.52.0
+-- 
+2.53.0
+

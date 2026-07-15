@@ -29,7 +29,7 @@ class ProductionBlobDatabase : public BlobDatabase
 {
 public:
     ProductionBlobDatabase();
-    explicit ProductionBlobDatabase (const std::string& connectionString);
+    explicit ProductionBlobDatabase (const PostgresConnectionParameters& connectionParameters);
 
     Entry getBlob (
         BlobType type,

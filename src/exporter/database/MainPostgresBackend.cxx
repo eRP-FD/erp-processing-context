@@ -42,6 +42,6 @@ PostgresConnection& MainPostgresBackend::connection() const
 
 PostgresConnection& exporter::MainPostgresBackend::threadConnection()
 {
-    static thread_local PostgresConnection connection{PostgresConnection::defaultConnectString()};
+    static thread_local PostgresConnection connection{{PostgresConnection::defaultConnectParameters()}};
     return connection;
 }

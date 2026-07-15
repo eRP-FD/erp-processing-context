@@ -14,14 +14,14 @@
 using postgres_bytea = std::basic_string<std::byte>;
 using postgres_bytea_view = std::basic_string_view<std::byte>;
 
-ProductionVsdmKeyBlobDatabase::ProductionVsdmKeyBlobDatabase(const std::string& connectionString)
-    : mConnection(connectionString)
+ProductionVsdmKeyBlobDatabase::ProductionVsdmKeyBlobDatabase(const PostgresConnectionParameters& connectionParameters)
+    : mConnection({connectionParameters})
 {
 }
 
 
 ProductionVsdmKeyBlobDatabase::ProductionVsdmKeyBlobDatabase()
-    : ProductionVsdmKeyBlobDatabase(PostgresConnection::defaultConnectString())
+    : ProductionVsdmKeyBlobDatabase(PostgresConnection::defaultConnectParameters())
 {
 }
 

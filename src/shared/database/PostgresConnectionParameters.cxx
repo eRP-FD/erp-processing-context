@@ -5,7 +5,7 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-#include "shared/database/PostgresConnectString.hxx"
+#include "shared/database/PostgresConnectionParameters.hxx"
 
 #include "shared/util/TLog.hxx"
 #include "shared/util/JsonLog.hxx"
@@ -13,7 +13,7 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
-std::string PostgresConnectString::str() &&
+std::string PostgresConnectionParameters::str() const
 {
     auto sslmode = connectStringSslMode();
     std::string connectionString =
@@ -32,7 +32,7 @@ std::string PostgresConnectString::str() &&
 }
 
 
-std::string PostgresConnectString::connectStringSslMode()
+std::string PostgresConnectionParameters::connectStringSslMode() const
 {
     if (serverRootCertPath.empty())
     {
@@ -50,9 +50,4 @@ std::string PostgresConnectString::connectStringSslMode()
         }
     }
     return sslmode;
-}
-
-PostgresConnectString::operator std::string() &&
-{
-    return std::move(*this).str();
 }

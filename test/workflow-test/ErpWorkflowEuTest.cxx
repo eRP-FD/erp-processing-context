@@ -53,7 +53,7 @@ public:
             else
             {
                 db.reset();
-                auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
+                auto connection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
                 auto txn = pqxx::work{*connection};
                 txn.exec("DELETE FROM erp.eu_country_codes");
                 txn.exec("INSERT INTO erp.eu_country_codes (iso_3166_alpha_2) VALUES ('FR')");

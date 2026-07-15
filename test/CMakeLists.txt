@@ -258,6 +258,7 @@ list(
         erp/database/EuAccessPermissionTableTest.cxx
         erp/database/EuCountryCodeTableTest.cxx
         erp/database/PostgresBackendTest.cxx
+        erp/database/PostgresConnectionTest.cxx
         erp/database/PostgresDatabaseTest.cxx
         erp/database/PostgresDatabaseCommunicationTest.cxx
         erp/database/PostgresDatabaseChargeItemTest.cxx

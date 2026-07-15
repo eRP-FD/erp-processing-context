@@ -9,7 +9,7 @@
 #include "exporter/model/EventKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/database/PostgresConnection.hxx"
-#include "shared/database/PostgresConnectString.hxx"
+#include "shared/database/PostgresConnectionParameters.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/PrescriptionType.hxx"
 #include "shared/util/Configuration.hxx"
@@ -207,17 +207,17 @@ WHERE
 )");
 }
 
-thread_local PostgresConnection MedicationExporterPostgresBackend::mConnection{defaultConnectString()};
+thread_local PostgresConnection MedicationExporterPostgresBackend::mConnection{{defaultConnectParameters()}};
 
 MedicationExporterPostgresBackend::MedicationExporterPostgresBackend(TransactionMode mode)
     : CommonPostgresBackend(mConnection, mode)
 {
 }
 
-std::string MedicationExporterPostgresBackend::defaultConnectString()
+PostgresConnectionParameters MedicationExporterPostgresBackend::defaultConnectParameters()
 {
     const auto& cfg = Configuration::instance();
-    return PostgresConnectString{
+    return PostgresConnectionParameters{
         .host = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_HOST),
         .port = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_PORT),
         .user = cfg.getStringValue(ConfigurationKey::MEDICATION_EXPORTER_POSTGRES_USER),

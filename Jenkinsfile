@@ -297,7 +297,7 @@ pipeline {
                 axes {
                     axis {
                         name 'ERP_TEST_DATE'
-                        values 'today', '2026-07-01'
+                        values 'today'
                     }
                 }
                 stages {
@@ -335,7 +335,7 @@ pipeline {
                     }
                     axis {
                         name 'ERP_TEST_DATE'
-                        values 'today', '2026-07-01'
+                        values 'today'
                     }
                 }
                 stages{

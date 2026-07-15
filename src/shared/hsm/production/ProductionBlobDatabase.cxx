@@ -152,14 +152,14 @@ namespace
 }
 
 
-ProductionBlobDatabase::ProductionBlobDatabase (const std::string& connectionString)
-    : mConnection(connectionString)
+ProductionBlobDatabase::ProductionBlobDatabase (const PostgresConnectionParameters& connectionParameters)
+    : mConnection({connectionParameters})
 {
 }
 
 
 ProductionBlobDatabase::ProductionBlobDatabase()
-    : ProductionBlobDatabase(PostgresConnection::defaultConnectString())
+    : ProductionBlobDatabase(PostgresConnection::defaultConnectParameters())
 {
 }
 

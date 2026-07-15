@@ -1067,18 +1067,19 @@ PostgresConnection& PostgresBackend::connection() const
 
 PostgresConnection& PostgresBackend::mainConnection()
 {
-    static thread_local PostgresConnection connection{PostgresConnection::defaultConnectString()};
+    static thread_local PostgresConnection connection{{PostgresConnection::defaultConnectParameters()}};
     return connection;
 }
 
 bool PostgresBackend::haveReadOnlyConnection()
 {
-    return Configuration::instance().getOptionalStringValue(ConfigurationKey::POSTGRES_RO_HOST).has_value();
+    const auto& postgresRoHost = Configuration::instance().getOptionalStringValue(ConfigurationKey::POSTGRES_RO_HOST);
+    return postgresRoHost.has_value() && ! postgresRoHost->empty();
 }
 
 PostgresConnection& PostgresBackend::readOnlyConnection()
 {
-    static thread_local PostgresConnection connection{PostgresConnection::readOnlyConnectString()};
+    static thread_local PostgresConnection connection{PostgresConnection::readOnlyConnectParameters()};
     return connection;
 }
 

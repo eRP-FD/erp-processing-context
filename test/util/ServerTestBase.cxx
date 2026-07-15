@@ -384,7 +384,7 @@ pqxx::connection& ServerTestBase::getConnection()
     Expect(mHasPostgresSupport, "can not return Postgres connection because postgres support is disabled");
     if ( ! mConnection)
     {
-        mConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectString());
+        mConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
     }
     return *mConnection;
 }

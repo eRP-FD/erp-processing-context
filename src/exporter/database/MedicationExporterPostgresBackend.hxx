@@ -86,7 +86,7 @@ public:
     };
 
     [[nodiscard]]
-    static std::string defaultConnectString();
+    static PostgresConnectionParameters defaultConnectParameters();
 
 private:
     /**

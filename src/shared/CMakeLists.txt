@@ -51,7 +51,7 @@ add_library(erp-shared STATIC
     database/DatabaseConnectionInfo.cxx
     database/DatabaseModel.cxx
     database/PostgresConnection.cxx
-    database/PostgresConnectString.cxx
+    database/PostgresConnectionParameters.cxx
     deprecated/SignalHandler.cxx
     deprecated/TerminationHandler.cxx
     deprecated/Timer.cxx

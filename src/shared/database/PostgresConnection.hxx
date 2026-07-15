@@ -9,9 +9,13 @@
 #define ERP_PROCESSING_CONTEXT_POSTGRESCONNECTION_HXX
 
 #include "shared/database/DatabaseConnectionInfo.hxx"
+#include "shared/database/PostgresConnectionParameters.hxx"
 #include "shared/database/TransactionMode.hxx"
 
 #include <memory>
+#include <string>
+#include <string_view>
+#include <vector>
 #if defined (__GNUC__) && __GNUC__ == 12
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
@@ -26,12 +30,12 @@
 class PostgresConnection
 {
 public:
-    explicit PostgresConnection(const std::string_view& connectionString);
+    explicit PostgresConnection(std::vector<PostgresConnectionParameters> connectionParameters);
 
     [[nodiscard]]
-    static std::string defaultConnectString();
+    static PostgresConnectionParameters defaultConnectParameters();
     [[nodiscard]]
-    static std::string readOnlyConnectString();
+    static std::vector<PostgresConnectionParameters> readOnlyConnectParameters();
 
     /// @brief (re-) connects if not already connected. Should not be called in the middle of a transaction.
     void connectIfNeeded();
@@ -44,10 +48,15 @@ public:
 
     void recreateConnection();
 
+    bool isPreferReadOnly() const;
+
 private:
+    void connect(const PostgresConnectionParameters& connectionParameters);
+    void connectMulti();
+
     std::unique_ptr<pqxx::transaction_base> createTransactionInternal(TransactionMode mode);
 
-    std::string mConnectionString;
+    std::vector<PostgresConnectionParameters> mConnectionParameters;
     std::unique_ptr<pqxx::connection> mConnection;
     std::optional<DatabaseConnectionInfo> mConnectionInfo;
 };
