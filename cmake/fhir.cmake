@@ -130,28 +130,20 @@ function(fhir_install package version)
 
     set_property(GLOBAL APPEND PROPERTY CONFIGURE_DEPENDS "${archive_filename}")
 
-    execute_process(
-        COMMAND "${CMAKE_COMMAND}" -E tar tf "${archive}"
-        OUTPUT_VARIABLE files
-    )
-    string(REGEX REPLACE "\n" ";" files "${files}")
-    list(FILTER files INCLUDE REGEX "^package/")
-    list(REMOVE_DUPLICATES files)
-    list(TRANSFORM files PREPEND "${package_dir}/")
-
-
     add_custom_command(
         COMMENT "Extracting ${archive_filename}"
-        OUTPUT ${files}
+        OUTPUT "${package_dir}/.extract.stamp"
         VERBATIM
+        COMMAND "${CMAKE_COMMAND}" -E rm -r "${package_dir}"
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${package_dir}"
         COMMAND "${CMAKE_COMMAND}" -E chdir "${package_dir}" "${CMAKE_COMMAND}" -E tar xJf "${archive}"
+        COMMAND "${CMAKE_COMMAND}" -E touch "${package_dir}/.extract.stamp"
         MAIN_DEPENDENCY "${archive}"
         DEPENDS ${arg_DEPENDS}
     )
 
     # these two targets allow squeezing patch targets inbetween
-    add_custom_target("${target}-extract" DEPENDS ${files})
+    add_custom_target("${target}-extract" DEPENDS "${package_dir}/.extract.stamp")
     add_custom_target("${target}-patched" DEPENDS "${target}-extract")
 
     add_custom_command(

@@ -83,7 +83,7 @@ struct Versions {
     static inline GEM_ERP GEM_ERP_1_6_2{"1.6.2"};
     static inline KBV_ERP KBV_ERP_1_1_0{"1.1.0"};
     static inline KBV_ERP KBV_ERP_1_3_3{"1.3.3"};
-    static inline KBV_ERP KBV_ERP_1_4_2{"1.4.2"};
+    static inline KBV_ERP KBV_ERP_1_4_4{"1.4.4"};
     static inline KBV_EVDGA KBV_EVDGA_1_1{"1.1"};
     static inline KBV_EVDGA KBV_EVDGA_1_2_2{"1.2.2"};
     static inline GEM_ERPCHRG GEM_ERPCHRG_1_0{"1.0"};

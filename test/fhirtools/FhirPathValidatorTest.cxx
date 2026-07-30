@@ -37,7 +37,7 @@ public:
             "fhir/profiles/hl7.terminology.r4-6.3.0/package-legacy-validation/CodeSystem-v2-0203.xml",
             "fhir/profiles/hl7.fhir.uv.extensions.r4-5.2.0/package/ValueSet-practitionerrole-employmentStatus.xml",
             "fhir/profiles/de.fhir.medication-1.0.3/package",
-            "fhir/profiles/kbv.ita.erp-1.4.2/package",
+            "fhir/profiles/kbv.ita.erp-1.4.4/package",
             "fhir/profiles/kbv.ita.for-1.3.1/package",
             "fhir/profiles/de.basisprofil.r4-1.5.2/package",
             "fhir/profiles/kbv.basis-1.7.0/package",
@@ -132,7 +132,7 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
     using namespace fhirtools::version_literal;
     {
         const auto* valueSet =
-            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Accident_Type", "1.4.2"_ver});
+            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Accident_Type", "1.4.4"_ver});
         ASSERT_TRUE(valueSet);
         auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
         ASSERT_TRUE(codes);
@@ -144,7 +144,7 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
     }
     {
         const auto* valueSet =
-            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Medication_Category", "1.4.2"_ver});
+            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_Medication_Category", "1.4.4"_ver});
         ASSERT_TRUE(valueSet);
         auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
         EXPECT_TRUE(codes->canValidate());
@@ -154,7 +154,7 @@ TEST_F(FhirPathValidatorTest, OperationalValueSets)
     }
     {
         const auto* valueSet =
-            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_StatusCoPayment", "1.4.2"_ver});
+            repo().findValueSet({"https://fhir.kbv.de/ValueSet/KBV_VS_ERP_StatusCoPayment", "1.4.4"_ver});
         ASSERT_TRUE(valueSet);
         auto codes = fhirtools::FhirValueSetCodes::create(std::addressof(repo()), valueSet);
         ASSERT_TRUE(codes);

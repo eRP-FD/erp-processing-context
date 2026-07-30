@@ -221,7 +221,7 @@ Note that _synthesized_ `ValueSet`s and `CodeSystem`s must also belong to a grou
 
 ### Example updating hl7.terminology 7.1.0
 ```
-fhir_package_tmp$ ../../../scripts/fhir_exclude_txt.sh hl7.terminology.r4#7.0.1 hl7.terminology.r4#7.1.0>fhir_exclude_txt-hl7.terminology.r4#7.1.0_7.0.1
+fhir_package_tmp$ ../../../scripts/fhir_exclude_txt.sh hl7.terminology.r4#7.1.0 hl7.terminology.r4#7.2.0>fhir_exclude_txt-hl7.terminology.r4#7.2.0_7.1.0
 ```
 
 Supporting Tools

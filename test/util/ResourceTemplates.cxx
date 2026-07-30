@@ -127,7 +127,7 @@ std::initializer_list<Versions::GEM_ERP> Versions::GEM_ERP_all{
 
 std::initializer_list<Versions::KBV_ERP> Versions::KBV_ERP_all{
     Versions::KBV_ERP_1_3_3,
-    Versions::KBV_ERP_1_4_2,
+    Versions::KBV_ERP_1_4_4,
 };
 
 std::initializer_list<Versions::KBV_EVDGA> Versions::KBV_EVDGA_all{
@@ -443,7 +443,7 @@ std::string kbvBundleMvoXml(const KbvBundleMvoOptions& bundleOptions)
     boost::replace_all(bundle, "###PRACTITIONER_ROLE_SECTION###", withPractitionerRole?practitionerRoleSection:std::string_view{});
     boost::replace_all(bundle, "###PRACTITIONER_ROLE###", withPractitionerRole?practitionerRole:std::string_view{});
     std::string versionId;
-    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_4_2)
+    if (bundleOptions.kbvVersion >= Versions::KBV_ERP_1_4_4)
     {
         versionId = R"(<versionId value="1"/>)";
     }

@@ -25,9 +25,9 @@ class A_22231_A_27813_BtmThalidomidTest : public ErpWorkflowTest
 protected:
     void SetUp() override
     {
-        if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
+        if (ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_4)
         {
-            GTEST_SKIP() << "test disabled for KBV < " << ResourceTemplates::Versions::KBV_ERP_1_4_2;
+            GTEST_SKIP() << "test disabled for KBV < " << ResourceTemplates::Versions::KBV_ERP_1_4_4;
         }
     }
 };
@@ -105,7 +105,7 @@ TEST_F(A_22231_A_27813_BtmThalidomidTest, category_01_tRezept)
         "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}); Bundle: error: "
         "-erp-angabeT-RezeptAngabenVerbot: Wenn es sich nicht um eine Verordnung von T-Arzneimitteln handelt, dürfen "
         "T-Rezept-Angaben nicht vorhanden sein. (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}); ", ResourceTemplates::Versions::KBV_ERP_1_4_2)));
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}); ", ResourceTemplates::Versions::KBV_ERP_1_4_4)));
 }
 
 

@@ -128,6 +128,9 @@
                 <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_SER">
                     <valueBoolean value="false" />
                 </extension>
+                <extension url="https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag">
+                    <valueBoolean value="true" />
+                </extension>
                 <extension url="http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction">
                     <valueMarkdown value="1x, im Bedarfsfall noch 1x nach 1h (max. 3 Stk in 48 h)" />
                 </extension>

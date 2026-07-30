@@ -1,0 +1,210 @@
+{
+  "resourceType": "MedicationRequest",
+  "id": "25461652-ab23-465a-859b-6e95e69cad86",
+  "meta": {
+    "versionId": "1",
+    "profile": [
+      "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription|1.4"
+    ]
+  },
+  "extension": [
+    {
+      "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_StatusCoPayment",
+      "valueCoding": {
+        "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_FOR_StatusCoPayment",
+        "code": "0"
+      }
+    },
+    {
+      "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_EmergencyServicesFee",
+      "valueBoolean": false
+    },
+    {
+      "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_FOR_SER",
+      "valueBoolean": false
+    },
+    {
+      "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription",
+      "extension": [
+        {
+          "url": "Kennzeichen",
+          "valueBoolean": false
+        }
+      ]
+    },
+    {
+      "url": "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta",
+      "extension": [
+        {
+          "url": "language",
+          "valueCode": "de-DE"
+        },
+        {
+          "url": "algorithmVersion",
+          "valueString": "1.0.1"
+        }
+      ]
+    },
+    {
+      "url": "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_DosageFlag",
+      "valueBoolean": true
+    },
+    {
+      "url": "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationRequest.renderedDosageInstruction",
+      "valueMarkdown": "für 14 Tage: montags 0-2-0-0 Stück; mittwochs 1-0-1-0 Stück; freitags 0-2-0-0 Stück; sonntags 0-0-0-1 Stück"
+    }
+  ],
+  "status": "active",
+  "intent": "order",
+  "medicationReference": {
+    "reference": "Medication/ad297333-3488-4fe8-8e14-15be99d6c4ec"
+  },
+  "subject": {
+    "reference": "Patient/3cb7b71f-6dba-41e0-a057-ac03ae28759f"
+  },
+  "authoredOn": "2026-07-15",
+  "requester": {
+    "reference": "Practitioner/72e65f4c-5f55-478c-a8af-3602e9395678"
+  },
+  "insurance": [
+    {
+      "reference": "Coverage/0791fc6d-b953-4876-b44f-611aec265b47"
+    }
+  ],
+  "dosageInstruction": [
+    {
+      "timing": {
+        "repeat": {
+          "boundsDuration": {
+            "value": 14.0,
+            "unit": "Tag(e)",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          },
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "wk",
+          "dayOfWeek": [
+            "mon"
+          ],
+          "when": [
+            "NOON"
+          ]
+        }
+      },
+      "doseAndRate": [
+        {
+          "doseQuantity": {
+            "value": 2.0,
+            "unit": "Stück",
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT",
+            "code": "1"
+          }
+        }
+      ]
+    },
+    {
+      "timing": {
+        "repeat": {
+          "boundsDuration": {
+            "value": 14.0,
+            "unit": "Tag(e)",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          },
+          "frequency": 2,
+          "period": 1,
+          "periodUnit": "wk",
+          "dayOfWeek": [
+            "wed"
+          ],
+          "when": [
+            "EVE",
+            "MORN"
+          ]
+        }
+      },
+      "doseAndRate": [
+        {
+          "doseQuantity": {
+            "value": 1,
+            "unit": "Stück",
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT",
+            "code": "1"
+          }
+        }
+      ]
+    },
+    {
+      "timing": {
+        "repeat": {
+          "boundsDuration": {
+            "value": 14.0,
+            "unit": "Tag(e)",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          },
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "wk",
+          "dayOfWeek": [
+            "fri"
+          ],
+          "when": [
+            "NOON"
+          ]
+        }
+      },
+      "doseAndRate": [
+        {
+          "doseQuantity": {
+            "value": 2.0,
+            "unit": "Stück",
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT",
+            "code": "1"
+          }
+        }
+      ]
+    },
+    {
+      "timing": {
+        "repeat": {
+          "boundsDuration": {
+            "value": 14.0,
+            "unit": "Tag(e)",
+            "system": "http://unitsofmeasure.org",
+            "code": "d"
+          },
+          "frequency": 1,
+          "period": 1,
+          "periodUnit": "wk",
+          "dayOfWeek": [
+            "sun"
+          ],
+          "when": [
+            "NIGHT"
+          ]
+        }
+      },
+      "doseAndRate": [
+        {
+          "doseQuantity": {
+            "value": 1,
+            "unit": "Stück",
+            "system": "https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_BMP_DOSIEREINHEIT",
+            "code": "1"
+          }
+        }
+      ]
+    }
+  ],
+  "dispenseRequest": {
+    "quantity": {
+      "value": 1,
+      "unit": "Packung"
+    }
+  },
+  "substitution": {
+    "allowedBoolean": true
+  }
+}

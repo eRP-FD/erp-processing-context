@@ -515,14 +515,6 @@ ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const std::string& view
 {
 }
 
-static bool enable166(model::PrescriptionType prescriptionType)
-{
-    if (ResourceTemplates::Versions::KBV_ERP_current() >= ResourceTemplates::Versions::KBV_ERP_1_4_2)
-    {
-        return true;
-    }
-    return prescriptionType != model::PrescriptionType::tRezept;
-}
 static bool canBeEu(model::PrescriptionType prescriptionType)
 {
     switch (prescriptionType)
@@ -543,8 +535,7 @@ std::vector<model::PrescriptionType> gkvPrescriptionTypes()
 {
     std::vector<model::PrescriptionType> prescriptionTypes;
     for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
-                                     std::ranges::views::filter(&model::canBeGkv) |
-                                     std::ranges::views::filter(&enable166))
+                                     std::ranges::views::filter(&model::canBeGkv))
     {
         prescriptionTypes.emplace_back(prescriptionType);
     }
@@ -554,8 +545,7 @@ std::vector<model::PrescriptionType> pkvPrescriptionTypes()
 {
     std::vector<model::PrescriptionType> prescriptionTypes;
     for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
-                                     std::ranges::views::filter(&model::canBePkv) |
-                                     std::ranges::views::filter(&enable166))
+                                     std::ranges::views::filter(&model::canBePkv))
     {
         prescriptionTypes.emplace_back(prescriptionType);
     }
@@ -565,8 +555,7 @@ std::vector<model::PrescriptionType> euPrescriptionTypes()
 {
     std::vector<model::PrescriptionType> prescriptionTypes;
     for (auto prescriptionType : magic_enum::enum_values<model::PrescriptionType>() |
-                                     std::ranges::views::filter(&canBeEu) |
-                                     std::ranges::views::filter(&enable166))
+                                     std::ranges::views::filter(&canBeEu))
     {
         prescriptionTypes.emplace_back(prescriptionType);
     }
@@ -578,7 +567,7 @@ std::vector<model::PrescriptionType> nonEuPrescriptionTypes()
     for (auto prescriptionType :
          magic_enum::enum_values<model::PrescriptionType>() | std::ranges::views::filter([](auto t) {
              return ! canBeEu(t);
-         }) | std::ranges::views::filter(&enable166))
+         }))
     {
         prescriptionTypes.emplace_back(prescriptionType);
     }
@@ -588,7 +577,7 @@ std::vector<model::PrescriptionType> allPrescriptionTypes()
 {
     std::vector<model::PrescriptionType> prescriptionTypes;
     for (auto prescriptionType :
-         magic_enum::enum_values<model::PrescriptionType>() | std::ranges::views::filter(&enable166))
+         magic_enum::enum_values<model::PrescriptionType>())
     {
         prescriptionTypes.emplace_back(prescriptionType);
     }

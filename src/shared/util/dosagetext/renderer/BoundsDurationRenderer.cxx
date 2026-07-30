@@ -22,10 +22,11 @@ void BoundsDurationRenderer::doRender(const std::vector<model::DosageDgMP>& dosa
     {
         if (timing->boundsDuration.has_value())
         {
+            const auto value = germanDecimal(timing->boundsDuration->value);
             mText.append("für ")
-                .append(timing->boundsDuration->value)
+                .append(value)
                 .append(" ")
-                .append(germanTimeUnit(timing->boundsDuration->code, timing->boundsDuration->value == "1"
+                .append(germanTimeUnit(timing->boundsDuration->code, value == "1"
                                                                  ? GrammaticalNumber::SINGULAR
                                                                  : GrammaticalNumber::PLURAL));
         }

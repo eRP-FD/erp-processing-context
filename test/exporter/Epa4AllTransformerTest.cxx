@@ -1325,6 +1325,6 @@ TEST_P(Epa4AllTransformerTestP, transformMedicationDispense)
 INSTANTIATE_TEST_SUITE_P(Epa4AllTransformerTest, Epa4AllTransformerTestP,
                          testing::Values(Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_3_3,
                                                   .gemVersion = ResourceTemplates::Versions::GEM_ERP_1_5_2},
-                                         Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_2,
+                                         Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_4,
                                                   .gemVersion = ResourceTemplates::Versions::GEM_ERP_1_6_2}),
                          &Epa4AllTransformerTestP::name);

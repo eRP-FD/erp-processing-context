@@ -50,6 +50,7 @@ bool FhirInstall::printTree()
     for (const auto& p: mArguments.packages)
     {
         auto packages = p->dependencies(mArguments.cacheFolder, mArguments.substitutions, true);
+        packages.insert(p);
         p->printTree(packages);
     }
     return true;

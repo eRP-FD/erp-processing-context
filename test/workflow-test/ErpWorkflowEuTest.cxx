@@ -572,7 +572,7 @@ class ErpWorkflowEuTestPatchTaskP : public ErpWorkflowEuTestP
 TEST_P(ErpWorkflowEuTestPatchTaskP, PatchTask)
 {
     if (isTRezept(GetParam().workflowType) &&
-        ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
+        ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_4)
     {
         GTEST_SKIP() << "KBV_ERP_1_4_0 is required for this test";
     }
@@ -637,7 +637,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(GetParam().workflowType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_4)
         {
             GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
         }
@@ -843,7 +843,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(GetParam().workflowType) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_4)
         {
             GTEST_SKIP_("T-Rezept test requires KBV_ERP_1_4_0 or higher.");
         }

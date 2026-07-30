@@ -51,6 +51,8 @@ fhir_substitute(de.gematik.epa.medication@dev=@1.2.1-dev1)
 fhir_substitute(de.gematik.fhir.directory@1.0.0=@1.0.1)
 fhir_substitute(de.gematik.terminology@1.0.8=@1.0.9)
 fhir_substitute(de.gematik.ti@1.3.0=@1.3.1)
+# hl7.terminology.r4@7.2.0 depends on 5.3.0 but it is only used by de.fhir.medication@1.0.7 which overrides it to the older 5.2.0
+fhir_substitute(hl7.fhir.uv.extensions.r4@5.3.0=@5.2.0)
 
 fhir_install(hl7.fhir.uv.extensions.r4 5.2.0)
 fhir_install(hl7.terminology.r4 6.3.0)
@@ -64,6 +66,7 @@ fhir_patch(hl7.terminology.r4 7.0.1 JQ [[.version="5.0.1"]] "package/CodeSystem-
 fhir_patch(hl7.terminology.r4 7.0.1 SCRIPT fhir/hl7.terminology.r4-7.0.1.split-updated-codes.cmake)
 
 fhir_install(hl7.terminology.r4 7.1.0)
+fhir_install(hl7.terminology.r4 7.2.0)
 
 fhir_install(de.basisprofil.r4 1.5.2)
 fhir_install(de.basisprofil.r4 1.5.4)
@@ -99,6 +102,7 @@ fhir_patch(de.fhir.medication 1.0.4
     JQ SCRIPT "fhir/ERP-36392-patch-Timing.repeat-TimingOnlyWhenOrTimeOfDay.jq"
         package/StructureDefinition-TimingDgMP.json
 )
+fhir_install(de.fhir.medication 1.0.7)
 
 
 fhir_install(kbv.basis 1.7.0)
@@ -182,7 +186,7 @@ fhir_patch(de.gematik.erezept-workflow.r4 1.6.2
 
 fhir_install(kbv.ita.erp 1.3.3)
 fhir_install(kbv.itv.evdga 1.2.2)
-fhir_install(kbv.ita.erp 1.4.2)
+fhir_install(kbv.ita.erp 1.4.4)
 
 fhir_install(de.gematik.erp.t-prescription 1.1.0)
 fhir_patch(de.gematik.erp.t-prescription 1.1.0
@@ -190,6 +194,35 @@ fhir_patch(de.gematik.erp.t-prescription 1.1.0
         package/StructureDefinition-erp-tprescription-carbon-copy.json
 )
 
+add_custom_command(
+             OUTPUT "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/.overrides.stamp"
+             COMMENT "Overriding missing snapshot files in kbv.ita.erp 1.4.4"
+             DEPENDS
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_Compounding_simplifier_snapshot.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_FreeText_simplifier_snapshot.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_Ingredient_simplifier_snapshot.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_PZN_simplifier_snapshot.json"
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Prescription_simplifier_snapshot.json"
+             DEPENDS "kbv.ita.erp-1.4.4-extract"
+             COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_Compounding_simplifier_snapshot.json"
+                "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/package/KBV_PR_ERP_Medication_Compounding.json"
+             COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_FreeText_simplifier_snapshot.json"
+                "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/package/KBV_PR_ERP_Medication_FreeText.json"
+             COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_Ingredient_simplifier_snapshot.json"
+                "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/package/KBV_PR_ERP_Medication_Ingredient.json"
+             COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Medication_PZN_simplifier_snapshot.json"
+                "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/package/KBV_PR_ERP_Medication_PZN.json"
+             COMMAND "${CMAKE_COMMAND}" -E copy
+                "${CMAKE_CURRENT_SOURCE_DIR}/fhir/kbv.ita.erp-1.4.4/KBV_PR_ERP_Prescription_simplifier_snapshot.json"
+                "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/package/KBV_PR_ERP_Prescription.json"
+             COMMAND "${CMAKE_COMMAND}" -E touch "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/.overrides.stamp"
+)
+add_custom_target("kbv.ita.erp-1.4.4-overrides" DEPENDS "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/.overrides.stamp")
+add_dependencies("kbv.ita.erp-1.4.4-patched" "kbv.ita.erp-1.4.4-overrides")
 
 set(SCHEMA_FILES
         "schema/hl7.fhir.r4.core/4.0.1/json/fhir.json"
@@ -242,14 +275,6 @@ list(TRANSFORM SCHEMA_FILES PREPEND "${ERP_RUNTIME_RESOURCE_DIR}/")
 
 set(ERP_SCHEMA_DIR "${ERP_RUNTIME_RESOURCE_DIR}/schema/")
 
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1"
-    COMMAND "${CMAKE_COMMAND}" -E chdir "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1"
-                "${CMAKE_COMMAND}" -E tar x "${CMAKE_CURRENT_SOURCE_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1.zip"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
-)
-
 message(STATUS "ZDICT_FILES=${ZDICT_FILES}")
 foreach(dictionary ${ZDICT_FILES})
     add_custom_command (
@@ -280,8 +305,23 @@ add_custom_target(resource_files ALL
         ${ZDICT_FILES}
         ${ERP_EASTER_LIST}
         ${FHIR_PROFILES_DIRS}
-        "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/ERP-36392-negative-examples-v1/.stamp"
 )
+
+function(extract_samples stem)
+    set(out_folder "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/${stem}")
+    set(stamp_file "${out_folder}/.stamp")
+    set(zip_file "${CMAKE_CURRENT_SOURCE_DIR}/test/fhir/examples/${stem}.zip")
+    add_custom_command(
+        OUTPUT "${stamp_file}"
+        COMMAND "${CMAKE_COMMAND}" -E make_directory "${out_folder}"
+        COMMAND "${CMAKE_COMMAND}" -E chdir "${out_folder}" "${CMAKE_COMMAND}" -E tar x "${zip_file}"
+        COMMAND "${CMAKE_COMMAND}" -E touch "${stamp_file}"
+    )
+    add_custom_target("extract_samples-${stem}" DEPENDS "${stamp_file}")
+    add_dependencies(resource_files "extract_samples-${stem}")
+endfunction()
+
+extract_samples(ERP-36392-negative-examples-v1)
 
 if (NOT TARGET resources)
     add_custom_target(resources)

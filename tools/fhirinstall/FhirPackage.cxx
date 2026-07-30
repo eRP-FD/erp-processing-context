@@ -64,8 +64,9 @@ FhirPackage::FhirPackage(Id id)
     : mId{std::move(id)}
 {
 }
+
 //NOLINTNEXTLINE(misc-no-recursion)
-void FhirPackage::printTree(const PtrSet& packages, size_t indent)
+void FhirPackage::printTree(const PtrSet& packages, size_t indent, std::set<Id> printed)
 {
     const auto samePackageName =[&](const Ptr& ptr) {
         return ptr->id().name == mId.name;
@@ -83,15 +84,24 @@ void FhirPackage::printTree(const PtrSet& packages, size_t indent)
     }
     if (!conflicts.empty())
     {
-        fmt::print(fmt::fg(fmt::color::red), "{:{}} {}@{} conflicts: {}\n", "", indent, mId.name, mId.version, fmt::join(conflicts, ", "));
+        fmt::print(fmt::fg(fmt::color::red), "{:{}}{}@{} conflicts: {}\n", "", indent, mId.name, mId.version, fmt::join(conflicts, ", "));
     }
     else
     {
-        fmt::println("{:{}} {}@{}", "", indent, mId.name, mId.version);
+        fmt::println("{:{}}{}@{}", "", indent, mId.name, mId.version);
     }
+    printed.insert(mId);
     for (const auto& d: dependencies())
     {
-        d->printTree(packages, indent + 4);
+        if (!printed.contains(d->id()))
+        {
+            d->printTree(packages, indent + 4, printed);
+        }
+        else
+        {
+            fmt::print(fmt::fg(fmt::color::blue), "{:{}}{}@{} circular dependency\n", "", indent + 4, d->id().name,
+                       d->id().version);
+        }
     }
 }
 
@@ -99,19 +109,27 @@ void FhirPackage::printTree(const PtrSet& packages, size_t indent)
 FhirPackage::PtrSet FhirPackage::dependencies(const std::filesystem::path& cacheFolder,
                                         const std::map<std::string, Id>& substitutions, bool recursive)
 {
+    PtrSet result;
+    dependencies(result, cacheFolder, substitutions, recursive);
+    return result;
+}
+
+//NOLINTNEXTLINE(misc-no-recursion)
+void FhirPackage::dependencies(PtrSet& result, const std::filesystem::path& cacheFolder,
+                                        const std::map<std::string, Id>& substitutions, bool recursive)
+{
     const std::filesystem::path packageFolder{cacheFolder / (mId.name + '#' + to_string(mId.version))};
     std::filesystem::directory_entry packageFile{packageFolder  / "package" / "package.json"};
     Expect(packageFile.exists(), "packagefile not found: " + packageFile.path().native());
     processPackageInfo(packageFile, substitutions, true);
-    auto result = dependencies();
-    if (recursive)
+    auto ownDeps = dependencies();
+    for (const auto& d: ownDeps)
     {
-        for (const auto& d: dependencies())
+        if (result.emplace(d).second && recursive)
         {
-            result.merge(d->dependencies(cacheFolder, substitutions, true));
+            d->dependencies(result, cacheFolder, substitutions, true);
         }
     }
-    return result;
 }
 
 

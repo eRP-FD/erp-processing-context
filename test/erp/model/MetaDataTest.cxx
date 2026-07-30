@@ -181,7 +181,7 @@ INSTANTIATE_TEST_SUITE_P(Combinations, MetaDataProfileTest,
                                  .referenceTimestamp = model::Timestamp::fromGermanDate("2026-07-01"),
                                  .workflowVersion = ResourceTemplates::Versions::GEM_ERP_1_6_2,
                                  .chargeInfoVersion = ResourceTemplates::Versions::GEM_ERPCHRG_1_1_0,
-                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_2,
+                                 .kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_4,
                              },
                          }),
                          [](const auto& info) {

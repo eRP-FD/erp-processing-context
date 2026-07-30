@@ -50,7 +50,7 @@ public:
     Id id() const;
     const PtrSet& dependencies() const;
     const std::set<fhirtools::DefinitionKey>& resources() const;
-    void printTree(const FhirPackage::PtrSet& packages, size_t indent = 0);
+    void printTree(const FhirPackage::PtrSet& packages, size_t indent = 0, std::set<Id> printed = {});
     PtrSet dependencies(const std::filesystem::path& cacheFolder, const std::map<std::string, Id>& substitutions, bool recursive);
 
 
@@ -108,6 +108,9 @@ private:
 
     std::set<std::filesystem::path> readExcludeFile(const std::filesystem::path& excludeFile,
                                                     const std::filesystem::path& srcFolder);
+
+    void dependencies(PtrSet& result, const std::filesystem::path& cacheFolder,
+                      const std::map<std::string, Id>& substitutions, bool recursive);
 
     Id mId;
     PtrSet mDependencies;

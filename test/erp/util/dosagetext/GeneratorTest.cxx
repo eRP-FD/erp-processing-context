@@ -34,7 +34,7 @@ public:
 TEST_F(GeneratorTest, Test)
 {
     ResourceTemplates::KbvBundleOptions options;
-    options.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_2;
+    options.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_4;
     const auto kbvBundle =
         model::KbvBundle::fromXml(ResourceTemplates::kbvBundleXml(options), *StaticData::getXmlValidator());
     const auto dosage = kbvBundle.getUniqueResourceByType<model::KbvMedicationRequest>().dosageInstruction();

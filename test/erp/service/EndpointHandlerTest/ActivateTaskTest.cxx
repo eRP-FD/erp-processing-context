@@ -1499,7 +1499,7 @@ public:
     void SetUp() override
     {
         if (isTRezept(std::get<model::PrescriptionId>(GetParam()).type()) &&
-            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_2)
+            ResourceTemplates::Versions::KBV_ERP_current() < ResourceTemplates::Versions::KBV_ERP_1_4_4)
         {
             GTEST_SKIP_("Test requires KBV 1.4.0 or higher");
         }
