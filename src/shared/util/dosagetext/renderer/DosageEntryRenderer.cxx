@@ -248,8 +248,8 @@ bool DosageEntryRenderer::replicateTimesSortBug(const std::vector<model::DosageD
         case Schema::INTERVAL_TIME_COMBO:
         case Schema::DAY_OF_WEEK:
         case Schema::INTERVAL:
-        case Schema::DAY_TIME_COMBO:
             break;
+        case Schema::DAY_TIME_COMBO:
         case Schema::TIME_OF_DAY:
             return true;
     }
