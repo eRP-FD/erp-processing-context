@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -90,8 +90,8 @@ TEST_F(PostgresDatabaseSchemaVersionTest, readVersion)//NOLINT(readability-funct
     {
         GTEST_SKIP();
     }
-    ASSERT_NO_FATAL_FAILURE(insertOrUpdateSchemaVersion("42"));
-    EXPECT_EQ(database().retrieveSchemaVersion(), "42");
+    ASSERT_NO_FATAL_FAILURE(insertOrUpdateSchemaVersion("44"));
+    EXPECT_EQ(database().retrieveSchemaVersion(), "44");
     database().commitTransaction();
     ASSERT_NO_FATAL_FAILURE(insertOrUpdateSchemaVersion(Database::expectedSchemaVersion));
     EXPECT_EQ(database().retrieveSchemaVersion(), Database::expectedSchemaVersion);

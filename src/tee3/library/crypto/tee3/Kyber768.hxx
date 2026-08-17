@@ -1,18 +1,18 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
 #ifndef EPA_LIBRARY_CRYPTO_TEE3_KYBER768_HXX
 #define EPA_LIBRARY_CRYPTO_TEE3_KYBER768_HXX
 
-#include "library/crypto/SensitiveDataGuard.hxx"
+#include "shared/crypto/SensitiveDataGuard.hxx"
+
+class BinaryBuffer;
 
 namespace epa
 {
-
-class BinaryBuffer;
 
 /**
  * The Kyber768 class hides the choice of library that is used to implement the cryptographic

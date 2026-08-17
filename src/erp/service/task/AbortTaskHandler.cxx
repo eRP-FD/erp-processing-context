@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -174,4 +174,11 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
         .setInsurantKvnr(*kvnr)
         .setPrescriptionId(prescriptionId)
         .setAction(model::AuditEvent::Action::del);
+    A_28115.start("Collect push event data.");
+    A_28131.start("Data from Abort Task handler.");
+    session.pushEventDataCollector()
+        .setKvnr(*kvnr)
+        .setPrescriptionId(task.prescriptionId());
+    A_28131.finish();
+    A_28115.finish();
 }

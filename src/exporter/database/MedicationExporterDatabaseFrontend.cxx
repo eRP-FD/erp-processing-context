@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,8 @@
 #include "exporter/database/TaskEventConverter.hxx"
 #include "exporter/model/EventKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
+#include "exporter/model/push/PushNotification.hxx"
+#include "exporter/model/push/PushNotificationEvent.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/crypto/SignedPrescription.hxx"
 #include "shared/model/Binary.hxx"
@@ -216,4 +218,25 @@ bool MedicationExporterDatabaseFrontend::isDeadLetter(const model::TRezeptEvent&
 int MedicationExporterDatabaseFrontend::markDeadLetter(const model::TRezeptEvent& eventData) const
 {
     return mBackend->markDeadLetter(eventData);
+}
+
+std::optional<model::PushNotificationEvent> MedicationExporterDatabaseFrontend::processNextPushNotification() const
+{
+    if (auto dbModel = mBackend->processNextPushNotification())
+    {
+        return model::PushNotificationEvent{dbModel->id, dbModel->channelId,  dbModel->prescriptionId.toString(),
+                                            "TaskId",    dbModel->kvnrHashed, dbModel->retryCount, dbModel->created, dbModel->notificationIdentifier};
+    }
+    return std::nullopt;
+}
+void MedicationExporterDatabaseFrontend::deletePushNotification(const model::HashedKvnr& hashedKvnr, int64_t eventId) const
+{
+    mBackend->deletePushNotification(hashedKvnr.toDbModel(), eventId);
+}
+
+void MedicationExporterDatabaseFrontend::updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                                                   const model::HashedKvnr& hashedKvnr,
+                                                                   int64_t id) const
+{
+    mBackend->updatePushProcessingDelay(newRetry, delay, hashedKvnr.toDbModel(), id);
 }

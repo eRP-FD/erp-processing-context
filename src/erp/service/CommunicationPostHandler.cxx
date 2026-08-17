@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -65,6 +65,26 @@ void checkTaskReadyNotExpiredAndMvoAlreadyStarted(const Task& task, const std::o
     A_26327.finish();
 }
 
+bool canCreatePushNotification(const Communication::MessageType& messageType)
+{
+    switch (messageType)
+    {
+        case Communication::MessageType::Reply:
+            return true;
+        case Communication::MessageType::Representative:
+            return true;
+        case Communication::MessageType::ChargChangeReply:
+            return true;
+        case Communication::MessageType::DiGA:
+            return true;
+        case Communication::MessageType::ChargChangeReq:
+            return false;
+        case Communication::MessageType::DispReq:
+            return false;
+    }
+    TVLOG(1) << "No push notification for MessageType " << magic_enum::enum_name(messageType);
+    return false;
+}
 }
 
 CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<std::string_view>& allowedProfessionOiDs)
@@ -73,7 +93,6 @@ CommunicationPostHandler::CommunicationPostHandler(const std::initializer_list<s
           Configuration::instance().getIntValue(ConfigurationKey::SERVICE_COMMUNICATION_MAX_MESSAGES)))
 {
 }
-
 
 // GEMREQ-start A_19450-01#deserialize
 void CommunicationPostHandler::handleRequest (PcSessionContext& session)
@@ -226,6 +245,20 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         if (id.has_value())
         {
             session.response.setHeader(Header::Location, std::string(structure_definition::communicationLocation) + id->toString());
+            A_28135_01.start("Use audit event id as notification identifier for erp.communication.new");
+            A_28132.start("Data from Communication handler.");
+            session.pushEventDataCollector().setNotificationIdentifier(id->toString());
+            A_28132.finish();
+            A_28135_01.finish();
+        }
+
+        if (canCreatePushNotification(messageType))
+        {
+            A_28115.start("Collect push event data.");
+            A_28132.start("Data from Communication handler.");
+            session.pushEventDataCollector().setKvnr( std::get<model::Kvnr>(recipient) ).setPrescriptionId(prescriptionId);
+            A_28132.finish();
+            A_28115.finish();
         }
 
         makeResponse(session, HttpStatus::Created, &communication);

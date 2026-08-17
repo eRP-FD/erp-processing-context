@@ -1,11 +1,12 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/crypto/CertificateChainAndKey.hxx"
+#include "shared/crypto/Certificate.hxx"
 #include "shared/tsl/X509Certificate.hxx"
 #include "shared/util/Expect.hxx"
 
@@ -17,18 +18,15 @@ namespace
     {
         std::vector<std::string> result;
 
-        const std::string header = "-----BEGIN CERTIFICATE-----\n";
-        const std::string trailer = "\n-----END CERTIFICATE-----";
-
         for (size_t index = 0;;)
         {
-            size_t startIndex = certificates.find(header, index);
+            size_t startIndex = certificates.find(Certificate::PEM_BEGIN_TAG, index);
             if (startIndex == std::string::npos)
                 break;
 
-            size_t endIndex = certificates.find(trailer, startIndex + header.size());
+            size_t endIndex = certificates.find(Certificate::PEM_END_TAG, startIndex + Certificate::PEM_BEGIN_TAG.size());
             Expect(endIndex != std::string::npos, "failed to find end marker of PEM certificate");
-            endIndex += trailer.size();
+            endIndex += Certificate::PEM_END_TAG.size();
 
             std::string certificate = certificates.substr(startIndex, endIndex - startIndex) + "\n";
             result.push_back(certificate);

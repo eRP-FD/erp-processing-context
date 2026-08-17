@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -38,6 +38,11 @@
 #include "erp/service/task/RejectTaskHandler.hxx"
 #include "erp/service/task/eu/EuCloseTaskHandler.hxx"
 #include "erp/service/task/eu/PatchTaskHandler.hxx"
+#include "service/push/GetChannels.hxx"
+#include "service/push/GetChannelsPushkey.hxx"
+#include "service/push/GetPushers.hxx"
+#include "service/push/PostChannels.hxx"
+#include "service/push/PostPushersSet.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/util/Configuration.hxx"
@@ -50,6 +55,7 @@ void addPrimaryEndpoints (
     RequestHandlerManager&& secondaryManager)
 {
     addSecondaryEndpoints(secondaryManager);
+    addPushEndpoints(secondaryManager);
     primaryManager.onPostDo("/VAU/{UP}",
         std::make_unique<VauRequestHandler>(std::move(secondaryManager)));
     primaryManager.onGetDo("/health", std::make_unique<HealthHandler>());
@@ -383,4 +389,22 @@ void addSecondaryEndpoints (RequestHandlerManager& handlerManager)
         // GEMREQ-end A_27068
     }
 }
+
+// GEMREQ-start A_28114
+void addPushEndpoints(RequestHandlerManager& handlerManager)
+{
+    A_27104.start("Endpunkte GET /pushers und POST /pushers/set anbieten");
+    A_28111.start("Endpunkte GET /pushers und POST /pushers/set gemäß [OpenAPI_FD] bereitstellen.");
+    A_28114.start("unzulässige Operationen Pushers");
+    handlerManager.onPostDo("/pushers/v1/set", std::make_unique<PostPushersSet>())
+        .setErpUseCase(bde::PostPushersSet_UC_3_20);
+    handlerManager.onGetDo("/pushers/v1", std::make_unique<GetPushers>()).setErpUseCase(bde::GetPushers_UC_3_21);
+
+    A_28117.start("Endpunkte GET /channels, GET /channels/{pushkey} und POST /channels/{pushkey} gemäß [OpenAPI_FD] bereitstellen.");
+    A_28121.start("unzulässige Operationen Channels");
+    handlerManager.onGetDo("/channels/v1", std::make_unique<GetChannels>()).setErpUseCase(bde::GetChannels_UC_3_22);
+    handlerManager.onGetDo("/channels/v1/{pushkey}", std::make_unique<GetChannelsPushkey>()).setErpUseCase(bde::GetChannelsPushkey_UC_3_23);
+    handlerManager.onPostDo("/channels/v1/{pushkey}", std::make_unique<PostChannels>()).setErpUseCase(bde::PostChannelsPushkey_UC_3_24);
+}
+// GEMREQ-end A_28114
 }

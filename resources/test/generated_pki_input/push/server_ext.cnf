@@ -1,0 +1,27 @@
+.include $ENV::GENERATE_PKI_INPUT/openssl.cnf
+
+[ CA_default ]
+policy = policy_anything
+x509_extensions=req_ext
+
+[ req ]
+default_bits       = 256
+distinguished_name = req_distinguished_name
+req_extensions     = req_ext
+prompt             = no
+
+[ req_ext ]
+subjectAltName   = @alt_names
+basicConstraints = CA:FALSE
+keyUsage         = digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+crlDistributionPoints = URI:http://localhost:19080/mock-ca.crl
+
+[ alt_names ]
+DNS.1 = localhost
+DNS.2 = pushgateway-mock
+DNS.3 = pushgateway-mock-1
+DNS.4 = pushgateway-mock-2
+DNS.5 = pushgateway-mock.erp-system.svc.cluster.local
+DNS.6 = pushgateway-mock.erp-system-2.svc.cluster.local
+

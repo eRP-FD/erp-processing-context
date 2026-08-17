@@ -1,6 +1,7 @@
 #include "test/util/StaticData.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushExporterPostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
 #include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
@@ -13,6 +14,8 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/mock/MockPushExporterDatabase.hxx"
+#include "test/mock/MockPushExporterDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/MockVsdmKeyBlobDatabase.hxx"
 #include "test/mock/RegistrationMock.hxx"
@@ -59,6 +62,26 @@ Database::Factory StaticData::makeDatabaseFactory(ConnectionFactory connFactory)
     };
 }
 
+PushExporterDatabase::Factory StaticData::makePushExporterDatabaseFactory(ConnectionFactory connFactory)
+{
+    return [md = std::shared_ptr<MockPushExporterDatabase>{}, connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
+        std::unique_ptr<PushExporterBackend> backend;
+        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
+        {
+            backend = std::make_unique<PushExporterPostgresBackend>(connFactory());
+        }
+        else
+        {
+            if (!md)
+            {
+                md = std::make_shared<MockPushExporterDatabase>();
+            }
+            backend = std::make_unique<MockPushExporterDatabaseProxy>(md);
+        }
+        return std::make_unique<PushExporterDatabase>(std::move(backend), hsmPool, keyDerivation);
+    };
+}
+
 Factories StaticData::makeMockFactories()
 {
     Factories factories;
@@ -75,6 +98,7 @@ Factories StaticData::makeMockFactories()
             factories.readOnlyDatabaseFactory = factories.databaseFactory;
         }
     }
+    factories.pushExporterDatabaseFactory = makePushExporterDatabaseFactory(&PushExporterPostgresBackend::mainConnection);
     factories.redisClientFactory = [](std::chrono::milliseconds socketTimeout) {
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_REDIS_MOCK, true)
                    ? std::unique_ptr<RedisInterface>(new MockRedisStore())

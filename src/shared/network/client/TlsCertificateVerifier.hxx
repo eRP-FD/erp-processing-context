@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -15,6 +15,7 @@
 #include <boost/asio/ssl/verify_context.hpp>
 
 #include <chrono>
+#include <filesystem>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -28,10 +29,10 @@ namespace boost::asio::ssl
 }
 
 
+enum class ConfigurationKey;
 class CrlProvider;
-class X509Certificate;
 class TslManager;
-
+class X509Certificate;
 
 class TlsCertificateVerifier
 {
@@ -44,6 +45,12 @@ public:
      * be used. Instead, specific root certificates are to be used.
      */
     static TlsCertificateVerifier withCustomRootCertificates(std::string customRootCertificates);
+
+    static TlsCertificateVerifier withCustomRootCertificateFile(const std::filesystem::path& pemFileName);
+
+    // uses CAs as defined by `INTERNET_TLS_ROOT_CA_PATH`
+    // fallbacKKey is used if INTERNET_TLS_ROOT_CA_PATH is not defined
+    static TlsCertificateVerifier withInternetRootCAsWithFallback(ConfigurationKey fallbackKey);
 
     struct TslValidationParameters {
         TslMode tslMode = TslMode::TSL;

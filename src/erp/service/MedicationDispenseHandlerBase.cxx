@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -115,6 +115,11 @@ model::ProfileType MedicationDispenseHandlerBase::parameterTypeFor(Operation ope
         case Operation::DELETE_revoke_eu_access_permission:
         case Operation::GET_read_eu_access_permission:
         case Operation::GET_eu_prescriptions:
+        case Operation::POST_PUSHERS_SET:
+        case Operation::GET_PUSHERS:
+        case Operation::POST_CHANNELS:
+        case Operation::GET_CHANNELS_PUSHKEY:
+        case Operation::GET_CHANNELS:
             Fail2("MedicationDispenseHandlerBase: invalid operation:" + std::string{magic_enum::enum_name(operation)},
                   std::logic_error);
     }

@@ -1,9 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
+
+#include <utility>
 
 #include "exporter/database/TaskEvent.hxx"
 
@@ -38,5 +40,33 @@ TaskEvent::TaskEvent(id_t id, const model::PrescriptionId& prescriptionId, std::
     , doctorIdentity(doctorIdentity)
     , pharmacyIdentity(pharmacyIdentity)
     , retryCount(retryCount)
+{
+}
+
+PushEvent::PushEvent(id_t id, HashedKvnr kvnrHashed, model::PrescriptionId prescriptionId, std::string channelId,
+                     std::string notificationIdentifier, std::int32_t retryCount, model::Timestamp created)
+    : id(id)
+    , kvnrHashed(std::move(kvnrHashed))
+    , prescriptionId(prescriptionId)
+    , channelId(std::move(channelId))
+    , notificationIdentifier(std::move(notificationIdentifier))
+    , retryCount(retryCount)
+    , created(created)
+{
+}
+
+AppRegistration::AppRegistration(HashedId pushKeyHashed, HashedId appIdHashed, HashedKvnr kvnrHashed, BlobId blobId,
+                                 Blob salt, EncryptedBlob payload, std::string url, EncryptedBlob encryptionKey,
+                                 model::Timestamp timeCreated, model::Timestamp lastModified)
+    : pushKeyHashed(std::move(pushKeyHashed))
+    , appIdHashed(std::move(appIdHashed))
+    , kvnrHashed(std::move(kvnrHashed))
+    , blobId(blobId)
+    , salt(std::move(salt))
+    , payload(std::move(payload))
+    , url(std::move(url))
+    , encryptionKey(std::move(encryptionKey))
+    , timeCreated(timeCreated)
+    , lastModified(lastModified)
 {
 }

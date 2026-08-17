@@ -83,9 +83,10 @@ void EndpointHandlerTest::checkGetAllAuditEvents(const std::string& kvnr, const 
 
     auto expectedAuditEvent =
         model::AuditEvent::fromJsonNoValidation(FileHelper::readFileAsString(dataPath + "/" + expectedResultFilename));
+    auto expected = canonicalJson(expectedAuditEvent.serializeToJsonString());
+    auto actual = canonicalJson(auditEvent.serializeToJsonString());
 
-    ASSERT_EQ(canonicalJson(auditEvent.serializeToJsonString()),
-              canonicalJson(expectedAuditEvent.serializeToJsonString()));
+    ASSERT_EQ(expected, actual) << expected << " != " << actual;
 }
 
 void EndpointHandlerTest::insertTask(model::PrescriptionType prescriptionType, ResourceTemplates::TaskType taskType,

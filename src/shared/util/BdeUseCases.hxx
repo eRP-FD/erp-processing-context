@@ -1,8 +1,10 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #pragma once
+
+#include "shared/ErpRequirements.hxx"
 
 #include <string>
 
@@ -10,6 +12,7 @@ namespace bde
 {
 
 struct UseCase {
+    static constexpr auto implements = A_20165_12.implements("definition of BDE event types aka use cases");
     enum UC
     {
         UC_1_1,
@@ -44,6 +47,11 @@ struct UseCase {
         UC_3_17,
         UC_3_18,
         UC_3_19,
+        UC_3_20,
+        UC_3_21,
+        UC_3_22,
+        UC_3_23,
+        UC_3_24,
 
         UC_4_1,
         UC_4_2,
@@ -103,6 +111,12 @@ static constexpr UseCase GrantEuAuthorization_UC_3_16{.fdOperation = UseCase::UC
 static constexpr UseCase RevokeEuAuthorization_UC_3_17{.fdOperation = UseCase::UC_3_17};
 static constexpr UseCase ReadEuAuthorization_UC_3_18{.fdOperation = UseCase::UC_3_18};
 static constexpr UseCase PatchTask_UC_3_19{.fdOperation = UseCase::UC_3_19};
+
+static constexpr UseCase PostPushersSet_UC_3_20{.fdOperation = UseCase::UC_3_20};
+static constexpr UseCase GetPushers_UC_3_21{.fdOperation = UseCase::UC_3_21};
+static constexpr UseCase GetChannels_UC_3_22{.fdOperation = UseCase::UC_3_22};
+static constexpr UseCase GetChannelsPushkey_UC_3_23{.fdOperation = UseCase::UC_3_23};
+static constexpr UseCase PostChannelsPushkey_UC_3_24{.fdOperation = UseCase::UC_3_24};
 
 static constexpr UseCase AcceptTask_UC_4_1{.fdOperation = UseCase::UC_4_1};
 static constexpr UseCase RejectTask_UC_4_2{.fdOperation = UseCase::UC_4_2};

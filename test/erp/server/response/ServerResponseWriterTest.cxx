@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -28,7 +28,7 @@ TEST_F(ServerResponseWriterTest, toString)//NOLINT(readability-function-cognitiv
         "Content-Length: 16\r\n"
         "\r\n"
         "this is the body";
-    ClientResponseReader reader;
+    ClientResponseReader reader(ErpConstants::DefaultMaxResponseBodySize);
     auto clientResponse = reader.read(request);
 
     ServerResponse serverResponse{
@@ -83,7 +83,7 @@ TEST_F(ServerResponseWriterTest, nonStandardHttpCode)//NOLINT(readability-functi
         "Content-Length: 16\r\n"
         "\r\n"
         "this is the body";
-    ClientResponseReader reader;
+    ClientResponseReader reader(ErpConstants::DefaultMaxResponseBodySize);
     auto clientResponse = reader.read(request);
     ServerResponse serverResponse{
         clientResponse.getHeader(),

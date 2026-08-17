@@ -1,12 +1,13 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
-#include "erp/service/eu/PostGetPrescriptionsHandler.hxx"
 #include "erp/database/Database.hxx"
 #include "erp/model/Consent.hxx"
 #include "erp/model/eu/EuAccessPermission.hxx"
 #include "erp/model/eu/GemErpEuPrParGetPrescriptionInput.hxx"
+#include "erp/model/push/Channels.hxx"
+#include "erp/service/eu/PostGetPrescriptionsHandler.hxx"
 #include "erp/util/search/UrlArguments.hxx"
 #include "shared/crypto/SignedPrescription.hxx"
 #include "shared/model/KbvBundle.hxx"
@@ -42,6 +43,42 @@ bde::UseCase mapToBdeUseCase(model::GemErpEuPrParGetPrescriptionInput::RequestTy
             return bde::GetPrescriptionsRetrieval_UC_4_21;
     }
     ErpFail(HttpStatus::BadRequest, "Invalid request type");
+}
+
+void collectPushEventData(PcSessionContext& session,
+                          bool prescriptionIdsProvided,
+                          const model::Kvnr& kvnr,
+                          const std::vector<std::tuple<model::Task, model::KbvBundle>>& euTasks)
+{
+    std::optional<model::ChannelId> channelId{};
+    if (not prescriptionIdsProvided)
+    {
+        A_28204.start("Data from GetPrescription handler.");
+        channelId = model::ChannelId::erp_eu_prescription_get;
+        A_28204.finish();
+    }
+    else
+    {
+        A_28205.start("Data from GetPrescription handler.");
+        channelId = model::ChannelId::erp_eu_prescription_redeem;
+        A_28205.finish();
+    }
+    if (channelId)
+    {
+        A_28115.start("Collect push event data.");
+        A_28204.start("Data from GetPrescription handler.");
+        A_28205.start("Data from GetPrescription handler.");
+        std::vector<model::PrescriptionId> taskPrescriptions;
+        taskPrescriptions.reserve(euTasks.size());
+        for (const auto& [task, kbvBundle] : euTasks)
+        {
+            taskPrescriptions.push_back(task.prescriptionId());
+        }
+        session.pushEventDataCollector().setKvnr(kvnr).setPrescriptions(taskPrescriptions).setChannelId(*channelId);
+        A_28204.finish();
+        A_28205.finish();
+        A_28115.finish();
+    }
 }
 }
 
@@ -237,6 +274,8 @@ void PostGetPrescriptionsHandler::handleRequest(PcSessionContext& session)
             .setAgentName(std::string{practitionerRole} + " " + std::string{practitionerName})
             .setVariable("hftpoc", std::string{healthcareFacilityType} + " " + std::string{pointOfCare})
             .setCountryCode(countryCode);
+
+        collectPushEventData(session, not prescriptionIds.empty(), kvnr, euTasks);
     }
     catch (const model::ModelException& e)
     {

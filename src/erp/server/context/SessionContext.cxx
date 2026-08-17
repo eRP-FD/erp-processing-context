@@ -1,11 +1,12 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/server/context/SessionContext.hxx"
+#include "erp/database/push/PushErpDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/model/extensions/KBVMultiplePrescription.hxx"
@@ -25,22 +26,50 @@ SessionContext::SessionContext(
 
 AuditDataCollector& SessionContext::auditDataCollector()
 {
-    if(!mAuditDataCollector)
+    if (! mAuditDataCollector)
+    {
         mAuditDataCollector = std::make_unique<AuditDataCollector>();
+    }
     return *mAuditDataCollector;
+}
+
+
+PushEventDataCollector& SessionContext::pushEventDataCollector()
+{
+    if (! mPushEventDataCollector)
+    {
+        mPushEventDataCollector = std::make_unique<PushEventDataCollector>();
+    }
+    return *mPushEventDataCollector;
 }
 
 
 Database* SessionContext::database()
 {
     if (! mDatabase)
+    {
         mDatabase = serviceContext.databaseFactory();
+    }
     return mDatabase.get();
 }
 
 std::unique_ptr<Database> SessionContext::releaseDatabase()
 {
     return std::move(mDatabase);
+}
+
+PushErpDatabase* SessionContext::pushDatabase()
+{
+    if (!mPushDatabase)
+    {
+        mPushDatabase = serviceContext.pushDatabaseFactory();
+    }
+    return mPushDatabase.get();
+}
+
+std::unique_ptr<PushErpDatabase> SessionContext::releasePushDatabase()
+{
+    return std::move(mPushDatabase);
 }
 
 const model::Timestamp& SessionContext::sessionTime() const

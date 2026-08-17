@@ -2,6 +2,7 @@
   "erp-medication-exporter": {
     "enable-epa": "true",
     "enable-t-rezept": "true",
+    "enable-push-notifications": "true",
     "is-production": "true",
     "server": {
       "thread-count": "8",
@@ -43,6 +44,13 @@
       "port": "443",
       "numRetries": "20",
       "maxExponentialBackoff": "8"
+    },
+    "push": {
+      "client": {
+        "use-proxy": "true"
+      },
+      "maxRetryCount": "10",
+      "gatewayCooldownAfterErrorSeconds": "900"
     },
     "vau-https-client": {
       "connectTimeoutMilliseconds": "1500",
@@ -135,5 +143,8 @@
     }
   },
   "https-proxies": [],
-  "http-proxies": []
+  "http-proxies": [],
+  "push": {
+    "fqdnAllowList": ["pushgw.erezept.gematik.de"]
+  }
 }

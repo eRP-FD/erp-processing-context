@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "id": "{{id}}",
+      "status": "success",
+      "rejected": [],
+      "error": null
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0,
+    "partial": 0
+  }
+}

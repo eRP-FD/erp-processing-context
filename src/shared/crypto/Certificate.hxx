@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -24,6 +24,10 @@
 class Certificate
 {
 public:
+    static constexpr std::string_view PEM_BEGIN_TAG = "-----BEGIN CERTIFICATE-----\n";
+    static constexpr std::string_view PEM_END_TAG = "\n-----END CERTIFICATE-----";
+
+
     explicit Certificate (shared_X509 x509Certificate);
     static Certificate fromBinaryDer(const std::string& binaryDer);
     static Certificate fromBase64(const std::string& base64);

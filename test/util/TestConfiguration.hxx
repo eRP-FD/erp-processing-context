@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -25,7 +25,7 @@ enum class TestConfigurationKey
     TEST_RESOURCE_MANAGER_PATH,
     TEST_VSDM_KEYS,
     TEST_ECIES_CERTIFICATE,
-
+    TEST_USE_PUSH_GATEWAY_CLIENT,
 };
 
 class TestConfigKeyNames : public ConfigurationKeyNamesBase<TestConfigurationKey>

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,6 +9,7 @@
 #include "TestUtils.hxx"
 #include "fhirtools/converter/FhirConverter.hxx"
 #include "shared/fhir/Fhir.hxx"
+#include "shared/fhir/FhirCanonicalizer.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/ResourceNames.hxx"
 #include "test/util/ResourceTemplates.hxx"

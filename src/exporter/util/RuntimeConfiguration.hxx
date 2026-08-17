@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #ifndef ERP_EXPORTER_UTIL_RUNTIMECONFIGURATION_HXX
@@ -19,6 +19,7 @@ public:
     static constexpr std::string_view parameter_pause = "Pause";
     static constexpr std::string_view parameter_epa = "epa";
     static constexpr std::string_view parameter_t_rezept = "t-rezept";
+    static constexpr std::string_view parameter_push = "push";
     static constexpr std::string_view parameter_resume = "Resume";
     static constexpr std::string_view parameter_throttle = "Throttle";
 
@@ -33,7 +34,8 @@ public:
     enum class ProcessorType
     {
         EPA,
-        T_REZEPT
+        T_REZEPT,
+        PUSH
     };
 
     RuntimeConfiguration();

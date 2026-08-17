@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -913,9 +913,9 @@ TEST_P(ErpWorkflowTestP, DispenseTaskUpdateOwner)
 
 TEST_F(ErpWorkflowTest, RejectTaskInvalidId) // NOLINT
 {
-    // This is already failing in the VauRequestHandler (tests therefore also the other Task endpoints with id) :
-    ASSERT_NO_FATAL_FAILURE(taskReject("thi$-is_an-invalid-ta$k-id_#§&?ß", {},
-                                       HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid));
+    mRejectTaskRequestArgs.overrideExpectedInnerOperation = "POST /Task/<id>/$reject";
+    ASSERT_NO_FATAL_FAILURE(taskReject("this-is_an-invalid-task-id", {},
+                                       HttpStatus::NotFound, model::OperationOutcome::Issue::Type::not_found));
 }
 
 namespace

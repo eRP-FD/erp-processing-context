@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -43,12 +43,14 @@ public:
     static const std::set<model::PrescriptionType> allWorkflows;
 
     // GEMREQ-start checkAllOids
-    void checkAllOids(const HttpMethod method, const std::string& target, const std::set<std::string>& allowedOIDs,
+    void checkAllOids(const HttpMethod method, std::string target, const std::set<std::string>& allowedOIDs,
                       std::set<model::PrescriptionType> allowedWorkflows = allWorkflows)
     {
         ErpProcessingContext::addSecondaryEndpoints(mRequestHandlerManager);
         ErpProcessingContext::addPrimaryEndpoints(mRequestHandlerManager);
-        auto matchingHandler = mRequestHandlerManager.findMatchingHandler(method, target);
+        ErpProcessingContext::addPushEndpoints(mRequestHandlerManager);
+        const Header header{method, std::move(target), Header::Version_1_1, {}, HttpStatus::Unknown};
+        auto matchingHandler = mRequestHandlerManager.findMatchingHandler(header);
         ASSERT_TRUE(matchingHandler.handlerContext);
         ASSERT_TRUE(matchingHandler.handlerContext->handler);
 
@@ -503,3 +505,58 @@ TEST_F(ErpProcessingContextTest, BdeUseCaseExists)
         }
     }
 }
+
+// GEMREQ-start A_28112
+TEST_F(ErpProcessingContextTest, PostPushersSet_ProfessionOIDs)
+{
+    A_28112.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/pushers/v1/set",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_28112
+
+// GEMREQ-start A_28113
+TEST_F(ErpProcessingContextTest, GetPushers_ProfessionOIDs)
+{
+    A_28113.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/pushers/v1",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_28113
+
+// GEMREQ-start A_28120
+TEST_F(ErpProcessingContextTest, PostChannels_ProfessionOIDs)
+{
+    A_28120.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::POST, "/channels/v1/{pushkey}",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_28120
+
+// GEMREQ-start A_28118
+TEST_F(ErpProcessingContextTest, GetChannels_ProfessionOIDs)
+{
+    A_28119.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/channels/v1",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_28118
+
+// GEMREQ-start A_28119
+TEST_F(ErpProcessingContextTest, GetChannelsPushkey_ProfessionOIDs)
+{
+    A_28119.test("Unit test of allowedForProfessionOID() function");
+    checkAllOids(HttpMethod::GET, "/channels/v1/{pushkey}",
+                 {
+                     "1.2.276.0.76.4.49"// oid_versicherter
+                 });
+}
+// GEMREQ-end A_28119

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,7 +8,9 @@
 #ifndef E_LIBRARY_UTIL_BASE64_HXX
 #define E_LIBRARY_UTIL_BASE64_HXX
 
+#include "SafeString.hxx"
 #include "shared/util/Buffer.hxx"
+#include "shared/util/BinaryView.hxx"
 
 #include <ranges>
 #include <string>
@@ -27,7 +29,11 @@ public:
     /**
      * Encodes a binary buffer into a Base64 string.
      */
-    static std::string encode(std::string_view data);
+    // NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+    static std::pair<std::unique_ptr<char[]>, size_t> encodeToCharArray(std::string_view data);
+    static std::string encode (std::string_view data);
+    static std::string encode(BinaryView data);
+    static SafeString encodeToSafeString(const SafeString& data);
 
     template<std::ranges::contiguous_range RangeT>
     static std::string encode(const RangeT& data);
@@ -51,6 +57,7 @@ public:
     static util::Buffer decode(const RangeT& base64, bool skipWhiteSpace = false);
 
     static std::string decodeToString(const std::string_view& base64, bool skipWhiteSpace = false);
+    static SafeString decodeToSafeString(const std::string_view& base64, bool skipWhiteSpace = false);
 
     /**
      * Return the size of a document that it will have after being Base64 encoded.

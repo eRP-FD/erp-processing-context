@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -27,6 +27,7 @@ public:
 private:
     using ConnectionFactory = PostgresConnection&(*)();
     static Database::Factory makeDatabaseFactory(ConnectionFactory connFactory);
+    static PushExporterDatabase::Factory makePushExporterDatabaseFactory(ConnectionFactory connFactory);
 };
 
 #endif

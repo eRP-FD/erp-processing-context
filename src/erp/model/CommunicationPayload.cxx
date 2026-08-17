@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -115,7 +115,8 @@ std::string CommunicationPayload::supplyOptionsType() const
 CommunicationPayloadVersion CommunicationPayload::version() const
 {
     ModelExpect(mPayloadValue != nullptr, "Payload must not be null.");
-    const auto& versionValue = versionPointer.Get(getPayloadDoc());
+    const auto payloadDoc = getPayloadDoc();
+    const auto& versionValue = versionPointer.Get(payloadDoc);
     ModelExpect(versionValue != nullptr && versionValue->IsInt(), "version must be 'integer'");
     if (versionValue->GetInt() == 1)
     {

@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -103,6 +103,8 @@ set(ERP_TEST_LIB_SOURCES
         mock/ClientTeeProtocol.cxx
         mock/MockRedisStore.cxx
         mock/MockDatabase.cxx
+        mock/MockPushExporterDatabase.cxx
+        mock/MockPushExporterDatabaseProxy.cxx
         mock/MockAccountTable.cxx
         mock/MockCommunicationTable.cxx
         mock/MockConsentTable.cxx
@@ -113,6 +115,7 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockChargeItemTable.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
+        mock/PushErpMockBackend.cxx
         mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
         util/JsonTestUtils.cxx
@@ -160,6 +163,7 @@ set(ERP_TEST_CASES_LIB_SOURCES_4
 )
 set(ERP_TEST_CASES_LIB_SOURCES_5
         workflow-test/ErpWorkflowEuTest.cxx
+        workflow-test/ErpWorkflowPushTest.cxx
 )
 set(ERP_TEST_CASES_LIB_SOURCES_6
         workflow-test/ErpWorkflowPkvTest.cxx
@@ -167,6 +171,7 @@ set(ERP_TEST_CASES_LIB_SOURCES_6
         workflow-test/GetTaskByPharmacyWfTest.cxx
         workflow-test/MultipleMedicationDispenses.cxx
         workflow-test/RegressionTest.cxx
+        workflow-test/ErpWorkflowPushEventsTest.cxx
 )
 
 add_library(erp-test-lib OBJECT ${ERP_TEST_LIB_SOURCES})
@@ -266,6 +271,9 @@ list(
         erp/database/PostgresDatabaseSchemaVersionTest.cxx
         erp/database/RedisClientTest.cxx
         erp/database/TransactionTest.cxx
+        erp/database/push/ErpAppRegistrationTableTest.cxx
+        erp/database/push/ErpExporterDatabaseTest.cxx
+        erp/database/push/PushEventDataCollectorTest.cxx
 )
 list(
     APPEND erp-test-source-files-2
@@ -304,6 +312,9 @@ list(
         erp/model/eu/GemErpEuPrParAccessAuthorizationRequestTest.cxx
         erp/model/eu/GemErpEuPrParAccessAuthorizationResponseTest.cxx
         erp/model/eu/GemErpEuPrParCloseOperationInputTest.cxx
+        erp/model/push/ChannelsTest.cxx
+        erp/model/push/EncryptionKeyTest.cxx
+        erp/model/push/PusherTest.cxx
         erp/mock/ClientTeeProtocolTest.cxx
         erp/model/AuditDataTest.cxx
         erp/model/AuditEventTest.cxx
@@ -636,3 +647,4 @@ add_dependencies(test erp-integration-test erp-connection-test)
 
 add_subdirectory(fhirtools)
 add_subdirectory(exporter)
+add_dependencies(test push-pki)

@@ -1,6 +1,6 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2025
-* (C) Copyright IBM Corp. 2021, 2025
+* (C) Copyright IBM Deutschland GmbH 2021, 2026
+* (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
 */
@@ -49,7 +49,7 @@ std::tuple<bool, std::vector<std::string>> RequestHandlerContext::matches(const 
     parameterValues.reserve(pathParameterNames.size());
     for (size_t index = 1; index < result.size(); ++index)
     {
-        parameterValues.emplace_back(result.str(index));
+        parameterValues.emplace_back(UrlHelper::unescapeUrl(result.str(index)));
     }
     return {true, parameterValues};
 }

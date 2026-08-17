@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -203,6 +203,17 @@ JsonLog& JsonLog::keyValue(const std::string_view key, const std::string_view va
 
 
 JsonLog& JsonLog::keyValue(const std::string_view key, const size_t value)
+{
+    if (mLogReceiver)
+    {
+        mDocument.AddMember(
+            rapidjson::Value{key.data(), gsl::narrow<rapidjson::SizeType>(key.size()), mDocument.GetAllocator()},
+            rapidjson::Value{value}, mDocument.GetAllocator());
+    }
+    return *this;
+}
+
+JsonLog& JsonLog::keyValue(std::string_view key, int64_t value)
 {
     if (mLogReceiver)
     {

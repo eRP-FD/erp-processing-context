@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/admin/PutRuntimeConfigHandler.hxx"
@@ -26,6 +26,10 @@ std::optional<RuntimeConfiguration::ProcessorType> processorTypeFromParam(const 
     if (processorLower == RuntimeConfiguration::parameter_t_rezept)
     {
         return RuntimeConfiguration::ProcessorType::T_REZEPT;
+    }
+    if (processorLower == RuntimeConfiguration::parameter_push)
+    {
+        return RuntimeConfiguration::ProcessorType::PUSH;
     }
     if (processorLower.empty() || processorLower == "true")
     {

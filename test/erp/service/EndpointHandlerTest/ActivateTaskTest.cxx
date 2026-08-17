@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -811,20 +811,27 @@ TEST_F(ActivateTaskTest, UnslicedExtension)
         diagnostics);
 }
 
-
-TEST_F(ActivateTaskTest, authoredOnReference)
+struct ActivateTaskReferenceTimeTestParam
 {
-    if (!enableDarreichungsformTest())
-    {
-        // consider adapting this test when two darreichungsform versions are present again!
-        GTEST_SKIP();
-    }
+    std::string date;
+    std::string darreichungsform = "TAB";
+    std::string dmpKennzeichen = "00";
+    bool expectSuccess = true;
+};
 
-    auto now = std::chrono::system_clock::now();
-    auto today{date::floor<date::days>(now)};
-    auto yesterday{today - date::days{1}};
+class ActivateTaskReferenceTimeTest : public ActivateTaskTest,
+                                      public testing::WithParamInterface<ActivateTaskReferenceTimeTestParam>
+{
 
-    const testutils::ShiftFhirResourceViewsGuard viewGuard{"KBV_1_4", fhirtools::Date{today, fhirtools::Date::Precision::day}};
+};
+
+TEST_P(ActivateTaskReferenceTimeTest, authoredOnReference)
+{
+    static constexpr auto& GermanTimezone = model::Timestamp::GermanTimezone;
+    auto now = model::Timestamp::now();
+    auto testDate = model::Timestamp::fromGermanDate(GetParam().date);
+    const testutils::ShiftFhirResourceViewsGuard viewGuard{now.localDay(GermanTimezone) -
+                                                           testDate.localDay(GermanTimezone)};
 
     using namespace std::chrono_literals;
     const auto* kvnr = "X234567891";
@@ -834,37 +841,40 @@ TEST_F(ActivateTaskTest, authoredOnReference)
                                                        .taskType = ResourceTemplates::TaskType::Ready,
                                                        .prescriptionId = taskId});
 
-    // authoredOn is in DARREICHUNGSFORM 1.15 period (yesterday)
+    const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
+        .prescriptionId = taskId,
+        .authoredOn = now,
+        .dmpKennzeichen = GetParam().dmpKennzeichen,
+        .medicationOptions =
+            {
+                .version = ResourceTemplates::Versions::KBV_ERP_current(),
+                .darreichungsform = GetParam().darreichungsform,
+            },
+    });
+    if (GetParam().expectSuccess)
     {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
-            .prescriptionId = taskId,
-            .authoredOn = model::Timestamp{yesterday},
-            .medicationOptions =
-                {
-                    .version = ResourceTemplates::Versions::KBV_ERP_current(),
-                    .darreichungsform = "RKT",
-                },
-        });
-        ASSERT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
-                              {.expectedStatus = HttpStatus::BadRequest, .signingTime = model::Timestamp{yesterday}}));
+        ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = now}));
     }
-
-    // authoredOn is in DARREICHUNGSFORM 1.16 period (today)
+    else
     {
-        const auto kbvBundleXml = ResourceTemplates::kbvBundleXml({
-            .prescriptionId = taskId,
-            .authoredOn = model::Timestamp{today},
-            .medicationOptions =
-                {
-                    .version = ResourceTemplates::Versions::KBV_ERP_current(),
-                    .darreichungsform = "RKT",
-                },
-        });
-        ASSERT_NO_FATAL_FAILURE(
-            checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr, {.signingTime = model::Timestamp{today}}));
+        ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, kvnr,
+                                                  {.expectedStatus = HttpStatus::BadRequest, .signingTime = now}));
     }
 }
+
+INSTANTIATE_TEST_SUITE_P(failure, ActivateTaskReferenceTimeTest,
+                         testing::ValuesIn(std::list<ActivateTaskReferenceTimeTestParam>{
+                             {.date = "2026-06-30", .darreichungsform = "RKT", .expectSuccess = false},
+                             {.date = "2026-09-30", .dmpKennzeichen = "13", .expectSuccess = false},
+                         }));
+
+INSTANTIATE_TEST_SUITE_P(success, ActivateTaskReferenceTimeTest,
+                         testing::ValuesIn(std::list<ActivateTaskReferenceTimeTestParam>{
+                             {.date = "2026-07-01", .darreichungsform = "RKT", .expectSuccess = true},
+                             {.date = "2026-10-01", .darreichungsform = "RKT", .expectSuccess = true},
+                             {.date = "2026-10-01", .dmpKennzeichen = "13", .expectSuccess = true},
+                         }));
+
 
 TEST_F(ActivateTaskTest, ERP12860_WrongProfile)
 {

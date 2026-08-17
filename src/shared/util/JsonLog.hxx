@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -89,6 +89,7 @@ public:
     JsonLog& details (std::string_view details);
     JsonLog& keyValue (std::string_view key, std::string_view value);
     JsonLog& keyValue (std::string_view key, size_t value);
+    JsonLog& keyValue (std::string_view key, int64_t value);
     JsonLog& keyValue (std::string_view key, uint16_t value);
     JsonLog& keyValue (std::string_view key, double value);
 

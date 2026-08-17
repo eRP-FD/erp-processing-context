@@ -8,6 +8,8 @@
 #include "erp/crypto/VsdmProof.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "erp/service/CommunicationPostHandler.hxx"
+#include "erp/service/task/CreateTaskHandler.hxx"
 #include "erp/service/task/GetTaskHandler.hxx"
 #include "shared/enrolment/VsdmHmacKey.hxx"
 #include "shared/util/Base64.hxx"
@@ -16,13 +18,21 @@
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
+#include "test/util/JsonTestUtils.hxx"
 #include "test/util/JwtBuilder.hxx"
 #include "test/util/StaticData.hxx"
 #undef Expect
+#include "erp/ErpProcessingContext.hxx"
+#include "erp/server/RequestHandler.hxx"
+#include "mock/crypto/MockCryptography.hxx"
+#include "mock/idp/MockIdpUpdater.hxx"
+#include "test/mock/PushErpMockBackend.hxx"
+#include "test/util/ServerTestBase.hxx"
+
+#include <erp/service/AuditEventHandler.hxx>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <test/erp/pc/popp/PoPPCertificateVerifierServiceMock.hxx>
-#include <erp/service/AuditEventHandler.hxx>
 
 
 class GMockDatabaseProxy : public MockDatabaseProxy
@@ -62,6 +72,10 @@ public:
     }
 };
 
+class ROPushErpMockBackend : public PushErpMockBackend
+{
+};
+
 class ReadOnlyDBTest : public testing::Test
 {
 protected:
@@ -80,7 +94,11 @@ protected:
         EnvironmentVariableGuard noPostgres{TestConfigurationKey::TEST_USE_POSTGRES, "false"};
         auto factories = StaticData::makeMockFactories();
         factories.databaseFactory = std::bind_front(&ReadOnlyDBTest::createDatabase<MockDatabaseProxy>, this);
+        factories.pushErpDatabaseFactory =
+            std::bind_front(&ReadOnlyDBTest::createPushDatabase<PushErpMockBackend>, this);
         factories.readOnlyDatabaseFactory = std::bind_front(&ReadOnlyDBTest::createDatabase<GMockDatabaseProxy>, this);
+        factories.readOnlyPushErpDatabaseFactory =
+            std::bind_front(&ReadOnlyDBTest::createPushDatabase<ROPushErpMockBackend>, this);
         factories.poppServiceFactory = [](boost::asio::io_context*, TslManager&, std::shared_ptr<CrlProvider>) {
             auto poppServiceMock = std::make_unique<testing::NiceMock<PoPPCertificateVerifierServiceMock>>();
             setupDefaultMock(*poppServiceMock);
@@ -90,6 +108,7 @@ protected:
     }
 
     MOCK_METHOD(std::unique_ptr<GMockDatabaseProxy>, readOnlyProxy, (HsmPool & hsmPool));
+    MOCK_METHOD(std::unique_ptr<ROPushErpMockBackend>, readOnlyPushDb, (HsmPool & hsmPool));
 
     void expectRetrieveAllEgkRedeemableTasksWithAccessCode()
     {
@@ -125,6 +144,11 @@ private:
     {
         return std::make_unique<DatabaseFrontend>(makeProxy<ProxyT>(hsmPool), hsmPool, keyDerivation);
     }
+    template<typename ProxyT>
+    std::unique_ptr<PushErpDatabase> createPushDatabase(HsmPool& hsmPool, KeyDerivation& keyDerivation)
+    {
+        return std::make_unique<PushErpDatabase>(makeProxy<ProxyT>(hsmPool), hsmPool, keyDerivation);
+    }
 };
 
 template<>
@@ -136,6 +160,16 @@ template<>
 std::unique_ptr<GMockDatabaseProxy> ReadOnlyDBTest::makeProxy(HsmPool& hsmPool)
 {
     return readOnlyProxy(hsmPool);
+}
+template<>
+std::unique_ptr<PushErpMockBackend> ReadOnlyDBTest::makeProxy(HsmPool&)
+{
+    return std::make_unique<PushErpMockBackend>();
+}
+template<>
+std::unique_ptr<ROPushErpMockBackend> ReadOnlyDBTest::makeProxy(HsmPool& hsmPool)
+{
+    return readOnlyPushDb(hsmPool);
 }
 
 TEST_F(ReadOnlyDBTest, GetTasksPharmacy_UC_4_12)
@@ -258,4 +292,63 @@ TEST_F(ReadOnlyDBTest, GetAuditEvent_UC_3_5)
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
+}
+
+TEST_F(ReadOnlyDBTest, isPushRegistered)
+{
+    // expect a single call to create an instance of ReadOnlyDatabase
+    EXPECT_CALL(*this, readOnlyPushDb).Times(1).WillOnce([&](HsmPool&) {
+        auto backend = std::make_unique<ROPushErpMockBackend>();
+        EXPECT_CALL(*backend, isPushRegistered).Times(1).WillOnce(testing::Return(true));
+        return backend;
+    });
+
+    auto serviceContext = makePcServiceContext();
+    mockDatabase(serviceContext.getHsmPool());
+
+    RequestHandlerManager teeHandlers;
+    ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
+    RequestHandler requestHandler(teeHandlers, serviceContext);
+
+
+    auto jwt = JwtBuilder::testBuilder().makeJwtApotheke();
+    auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::Reply);
+    builder.setPrescriptionId(
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4711)
+            .toString());
+    //builder.setAccessCode("access");
+    builder.setRecipient(ActorRole::Insurant, kvnr);
+    builder.setPayload(R"({"version":1, "supplyOptionsType": "onPremise"})");
+
+    const model::Communication c1 = model::Communication::fromJsonNoValidation(builder.createJsonString());
+
+    Header requestHeader{HttpMethod::POST, "/Communication/", Header::Version_1_1, {}, HttpStatus::Unknown};
+    requestHeader.addHeaderField(Header::ContentType, ContentMimeType::fhirJsonUtf8);
+    requestHeader.addHeaderField(Header::Authorization, "Bearer " + jwt.serialize());
+    ClientRequest clientRequest{std::move(requestHeader), c1.serializeToJsonString()};
+
+    ClientTeeProtocol mTeeProtocol;
+    auto teeRequest = mTeeProtocol.createRequest(MockCryptography::getEciesPublicKeyCertificate(), clientRequest, jwt);
+
+    ServerRequest encryptedRequest(Header(HttpMethod::POST, "/VAU/0", Header::Version_1_1,
+                                          {{Header::ContentType, "application/octet-stream"}}, HttpStatus::Unknown));
+    encryptedRequest.setBody(teeRequest);
+
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{serviceContext, encryptedRequest, serverResponse, accessLog};
+
+    boost::asio::io_context ioContext;
+    auto idpUpdater = IdpUpdater::create<MockIdpUpdater>(
+    serviceContext.idp,
+    serviceContext.getTslManager(),
+    ioContext);
+
+    AccessLog al;
+    std::optional<HandlerResult> handlerResult;
+    ASSERT_NO_THROW(handlerResult.emplace(requestHandler.handleRequest(encryptedRequest, al)));
+    ASSERT_TRUE(handlerResult);
+    ASSERT_TRUE(handlerResult->success);
+    ASSERT_TRUE(handlerResult->postCallback);
+    ASSERT_NO_THROW(handlerResult->postCallback());
 }

@@ -19,7 +19,7 @@ class HttpServer
 
 public:
     using RequestType = boost::beast::http::request<boost::beast::http::string_body>;
-    using ResponseType = boost::beast::http::response<boost::beast::http::dynamic_body>;
+    using ResponseType = boost::beast::http::response<boost::beast::http::string_body>;
     using RequestHandler = std::function<ResponseType(tcp::socket&, const RequestType&)>;
 
     HttpServer(const boost::asio::ip::address& address, uint16_t port, RequestHandler requestHandler)
@@ -107,8 +107,8 @@ private:
         }
         tcp::socket socket;
         boost::beast::flat_buffer buffer{100000};
-        boost::beast::http::request<boost::beast::http::string_body> request;
-        boost::beast::http::response<boost::beast::http::dynamic_body> response;
+        RequestType request;
+        ResponseType response;
         RequestHandler mRequestHandler;
     };
 };

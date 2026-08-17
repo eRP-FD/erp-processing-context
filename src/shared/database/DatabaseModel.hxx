@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -19,6 +19,11 @@
 #include <string>
 #include <vector>
 
+namespace model
+{
+enum class ChannelId : uint8_t;
+class HashedKvnr;
+}
 class ErpVector;
 class SafeString;
 
@@ -62,6 +67,9 @@ class HashedId: public EncryptedBlob
 public:
     using EncryptedBlob::EncryptedBlob;
     explicit HashedId(EncryptedBlob&& hashedId);
+
+    // Creates a SHA256 string from s and returns as HashedId.
+    static db_model::HashedId fromString(const std::string& s);
 };
 
 
@@ -101,6 +109,21 @@ public:
 
     std::string id;           // filled after storing in or if loaded from DB;
     model::Timestamp recorded;// filled after storing in or if loaded from DB;
+};
+
+class PushEventData
+{
+public:
+    PushEventData(std::string&& notificationIdentifier, model::ChannelId  channelId, db_model::HashedKvnr&& hashedKvnr, std::vector<model::PrescriptionId>&& prescriptions);
+    const std::string& notificationIdentifier() const;
+    const model::ChannelId& channelId() const;
+    const db_model::HashedKvnr& hashedKvnr() const;
+    const std::vector<model::PrescriptionId>& prescriptions() const;
+private:
+    std::string mNotificationIdentifier;
+    model::ChannelId mChannelId;
+    db_model::HashedKvnr mHashedKvnr;
+    std::vector<model::PrescriptionId> mPrescriptions;
 };
 
 }// namespace db_model

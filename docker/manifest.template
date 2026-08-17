@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -92,6 +92,9 @@ sgx.allowed_files = [
 "file:/var/config/erp/config/POSTGRES_SSL_KEY",
 "file:/var/config/erp/config/sslRootCaPath",
 "file:/var/config/erp/config/TSL_SSL_cert_chain.pem",
+"file:/var/config/erp/config/MEDICATION_EXPORTER_PUSH_CLIENT_KEY.pem",
+"file:/var/config/erp/config/MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE.pem",
+"file:/var/config/erp/config/INTERNET_TLS_ROOT_CA.pem",
 "file:/var/config/erp/hsm/work-keyspec",
 "file:/var/config/haproxy/secrets/ca.crt",
 "file:{type}/erp/bin/001_fhir-resource-groups.config.json",

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -495,12 +495,7 @@ std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNex
 
     Expect(res.size() == idx.total, "Invalid number of fields in result row: " + std::to_string(res.size()));
 
-    auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(
-        map<uint8_t, int16_t>(res, idx.prescriptionType, "prescription_type is null"));
-    Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
-
-    const auto& prescriptionId = model::PrescriptionId::fromDatabaseId(
-        *prescription_type_opt, map<int64_t>(res, idx.prescriptionId, "prescription_id is null"));
+    const auto& prescriptionId = prescriptionIdFromRow(res, idx.prescriptionType, idx.prescriptionId);
     timerKeepAlive.keyValue(std::string{"prescription_id"}, prescriptionId.toString());
     db_model::TaskEvent dbModel(
         map<db_model::TaskEvent::id_t, model::TaskEvent::id_t>(res, idx.id, "id is null"),
@@ -580,3 +575,87 @@ int MedicationExporterPostgresBackend::markDeadLetter(const model::TRezeptEvent&
     const auto result = transaction()->exec(sqlMarkDeadletterTRezeptEvent.query, pqxx::params{eventData.getId()});
     return result.affected_rows();
 }
+
+std::optional<db_model::PushEvent> MedicationExporterPostgresBackend::processNextPushNotification()
+{
+    checkCommonPreconditions();
+    constexpr auto query = R"(
+UPDATE erp_event.push_notification_event SET state='processing', next_export= NOW() + (5 * interval '1 minute')
+WHERE id = (
+    SELECT id FROM erp_event.push_notification_event
+    WHERE next_export < NOW() AND state in ('processing', 'pending')
+    ORDER BY next_export
+    LIMIT 1 FOR UPDATE SKIP LOCKED
+)
+RETURNING id, kvnr_hashed, prescription_id, prescription_type, channel_id, notification_identifier, retry_count, EXTRACT(EPOCH FROM created);
+)";
+
+    struct PushEventQueryIndexes {
+        pqxx::row::size_type id = 0;
+        pqxx::row::size_type kvnrHashed = 1;
+        pqxx::row::size_type prescriptionId = 2;
+        pqxx::row::size_type prescriptionType = 3;
+        pqxx::row::size_type channelId = 4;
+        pqxx::row::size_type notificationIdentifier = 5;
+        pqxx::row::size_type retryCount = 6;
+        pqxx::row::size_type created = 7;
+        pqxx::row::size_type SIZE = 8; // NOLINT
+    };
+    static constexpr PushEventQueryIndexes idx;
+
+    TVLOG(2) << query;
+    auto dt = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "processnextpushnotification");
+    const auto result = transaction()->exec(query);
+    TVLOG(2) << "got " << result.size() << " results";
+    if (auto row = result.opt_row())
+    {
+        Expect(row->size() == idx.SIZE, "Invalid number of fields in result row: " + std::to_string(row->size()));
+        auto prescriptionId = prescriptionIdFromRow(*row, idx.prescriptionType, idx.prescriptionId);
+        dt.keyValue("prescription_id", prescriptionId.toString());
+        return db_model::PushEvent{
+            map<int64_t>(*row, idx.id, "id is null"),
+            map<db_model::HashedKvnr, db_model::postgres_bytea>(*row, idx.kvnrHashed, "kvnr_hashed is null"),
+            prescriptionId,
+            map<std::string>(*row, idx.channelId, "channel_id is null"),
+            map<std::string>(*row, idx.notificationIdentifier, "notification_identifier is null"),
+            map<std::int32_t>(*row, idx.retryCount, "retry_count is null"),
+            map<model::Timestamp, double>(*row, idx.created, "created is null")};
+    }
+    return std::nullopt;
+}
+
+void MedicationExporterPostgresBackend::deletePushNotification(const db_model::HashedKvnr& hashedKvnr, int64_t eventId)
+{
+    checkCommonPreconditions();
+    constexpr auto query = R"(DELETE FROM erp_event.push_notification_event WHERE kvnr_hashed = $1 AND id = $2;)";
+    TVLOG(2) << query;
+    const auto dt = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "deletepushnotification");
+    const auto _ = transaction()->exec(query, pqxx::params{hashedKvnr.binarystring(), eventId}).no_rows();
+}
+
+void MedicationExporterPostgresBackend::updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                                                  const db_model::HashedKvnr& hashedKvnr, int64_t id)
+{
+    checkCommonPreconditions();
+    constexpr auto query = R"(
+UPDATE erp_event.push_notification_event SET state='pending', next_export=NOW() + ($3 * interval '1 second'), retry_count=$4
+WHERE kvnr_hashed = $1 AND id = $2;
+)";
+    TVLOG(2) << query;
+    const auto dt = DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "updatepushprocessingdelay");
+    const auto _ =
+        transaction()->exec(query, pqxx::params{hashedKvnr.binarystring(), id, delay.count(), newRetry}).no_rows();
+}
+
+model::PrescriptionId MedicationExporterPostgresBackend::prescriptionIdFromRow(const pqxx::row& resultRow,
+                                                                               pqxx::row::size_type typeIndex,
+                                                                               pqxx::row::size_type idIndex)
+{
+    auto prescription_type_opt = magic_enum::enum_cast<model::PrescriptionType>(
+        map<uint8_t, int16_t>(resultRow, typeIndex, "prescription_type is null"));
+    Expect(prescription_type_opt.has_value(), "could not cast to PrescriptionType");
+
+    return model::PrescriptionId::fromDatabaseId(
+        *prescription_type_opt, map<int64_t>(resultRow, idIndex, "prescription_id is null"));
+}
+

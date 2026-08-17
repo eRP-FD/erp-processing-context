@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -155,7 +155,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
     LANGUAGE plpgsql
     AS
     $$
-        DECLARE 
+        DECLARE
             v_id bigint;
             v_usecase erp_event.usecase_type;
             v_prescription_type smallint;
@@ -169,7 +169,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
             ELSE
                 v_prescription_type = 160;
             END IF;
-          
+
             /* Set the intital values for these variables to the values from the new task */
             v_kvnr = NEW.kvnr;
             v_task_key_blob_id = NEW.task_key_blob_id;
@@ -237,7 +237,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
                         usecase,
                         prescription_type,
                         doctor_identity,
-                        pharmacy_identity                     
+                        pharmacy_identity
                     )
                 VALUES
                     (

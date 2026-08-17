@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -79,19 +79,18 @@ bool Kvnr::validFormat() const
 
 bool Kvnr::verificationIdentity() const
 {
-    A_20751.start("Recognize the verification identity");
-    if (! isKvnr(mValue) || ! String::starts_with(mValue, "X0000"))
+    A_20751_01.start("Recognize the verification identity");
+    // follow the rules by A_23426:
+    // ?0000nnnnP, where ? = A..Z, nnnn = 0001..9999, P = 0..9
+    if (! isKvnr(mValue) || std::string_view(mValue).substr(1, 4) != "0000")
     {
         return false;
     }
     const std::string subset = mValue.substr(5, 4);
     try
     {
-        int value = std::stoi(subset);
-        if (value >= 1 && value <= 5000)
-        {
-            return true;
-        }
+        const int value = std::stoi(subset);
+        return value > 0;
     }
     catch (const std::invalid_argument&)
     {
@@ -101,7 +100,7 @@ bool Kvnr::verificationIdentity() const
     {
         return false;
     }
-    A_20751.finish();
+    A_20751_01.finish();
     return false;
 }
 

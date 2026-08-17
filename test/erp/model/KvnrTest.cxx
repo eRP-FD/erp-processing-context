@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -20,6 +20,20 @@ TEST(KvnrTest, isKvnr)
     ASSERT_FALSE(model::Kvnr::isKvnr("XY34567890"));
     ASSERT_FALSE(model::Kvnr::isKvnr("X3456789"));
     ASSERT_FALSE(model::Kvnr::isKvnr("a123456789"));
+}
+
+
+TEST(KvnrTest, verificationIdentity)
+{
+    ASSERT_FALSE(model::Kvnr{"X123456788"}.verificationIdentity());
+    ASSERT_TRUE (model::Kvnr{"X000067888"}.verificationIdentity());
+    ASSERT_TRUE (model::Kvnr{"A000000011"}.verificationIdentity());
+    ASSERT_TRUE (model::Kvnr{"Z000099991"}.verificationIdentity());
+    ASSERT_FALSE(model::Kvnr{"Ü000099991"}.verificationIdentity());
+    ASSERT_FALSE(model::Kvnr{"A100000011"}.verificationIdentity());
+    ASSERT_FALSE(model::Kvnr{"A010000011"}.verificationIdentity());
+    ASSERT_FALSE(model::Kvnr{"A001000011"}.verificationIdentity());
+    ASSERT_FALSE(model::Kvnr{"A000100011"}.verificationIdentity());
 }
 
 TEST(KvnrTest, checksum)

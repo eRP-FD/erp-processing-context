@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 # non-exclusively licensed to gematik GmbH
 #
 
@@ -19,9 +19,7 @@ add_library(tee3 STATIC
     library/crypto/DiffieHellman.cxx
     library/crypto/EllipticCurve.cxx
     library/crypto/Key.cxx
-    library/crypto/KeyDerivationUtils.cxx
     library/crypto/SecureRandomGenerator.cxx
-    library/crypto/SensitiveDataGuard.cxx
     library/crypto/SignatureVerifier.cxx
     library/crypto/tee/KeyId.cxx
     library/crypto/tee/MessageCounter.cxx
@@ -52,7 +50,6 @@ add_library(tee3 STATIC
     library/log/LogTrace.cxx
     library/log/PlainLogImplementation.cxx
     library/log/SessionId.cxx
-    library/ocsp/OcspHelper.cxx
     library/server/ErrorHandler.cxx
     library/stream/ReadableByteStream.cxx
     library/stream/ReadableStreamImplementationStreamBuf.cxx
@@ -70,7 +67,6 @@ add_library(tee3 STATIC
     library/stream/StreamFactory.cxx
     library/tsl/CertificateId.cxx
     library/util/Assert.cxx
-    library/util/BinaryBuffer.cxx
     library/util/ByteHelper.cxx
     library/util/Configuration.cxx
     library/util/EnumTable.cxx

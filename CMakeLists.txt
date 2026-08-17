@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -193,6 +193,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 add_subdirectory(resources)
+add_subdirectory(docker-compose)
 add_subdirectory(scripts)
 add_subdirectory(src/shared)
 add_subdirectory(src/tee3)

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -66,6 +66,12 @@ enum class Operation
     DELETE_revoke_eu_access_permission,
 
     GET_eu_prescriptions,
+
+    POST_PUSHERS_SET,
+    GET_PUSHERS,
+    POST_CHANNELS,
+    GET_CHANNELS,
+    GET_CHANNELS_PUSHKEY
 };
 
 const std::string_view& toString (Operation operation);

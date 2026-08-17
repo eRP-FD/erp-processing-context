@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -35,12 +35,14 @@ add_library(erp-shared STATIC
     crypto/EllipticCurve.cxx
     crypto/EllipticCurveUtils.cxx
     crypto/EssCertificateHelper.cxx
+    crypto/KeyDerivationUtils.cxx
     crypto/Jws.cxx
     crypto/Jwt.cxx
     crypto/OpenSslHelper.cxx
     crypto/Pbkdf2Hmac.cxx
     crypto/RandomSource.cxx
     crypto/SecureRandomGenerator.cxx
+    crypto/SensitiveDataGuard.cxx
     crypto/Seeder.cxx
     crypto/Sha256.cxx
     crypto/SignedPrescription.cxx
@@ -101,6 +103,7 @@ add_library(erp-shared STATIC
     model/GemErpEuPrPractitioner.cxx
     model/GemErpEuPrPractitionerRole.cxx
     model/GemErpEuPrOrganization.cxx
+    model/HashedKvnr.cxx
     model/Health.cxx
     model/Iknr.cxx
     model/Kvnr.cxx
@@ -118,6 +121,8 @@ add_library(erp-shared STATIC
     model/MedicationDispenseId.cxx
     model/MedicationDispenseOperationParameters.cxx
     model/Patient.cxx
+    model/push/EncryptionKey.cxx
+    model/push/Pusher.cxx
     model/ModelException.cxx
     model/OperationOutcome.cxx
     model/Parameters.cxx
@@ -136,6 +141,7 @@ add_library(erp-shared STATIC
     model/TimePeriod.cxx
     model/Timestamp.cxx
     model/Pzn.cxx
+    model/push/EncryptionKey.cxx
     network/client/ClientBase.cxx
     network/client/CoHttpsClient.cxx
     network/client/CrlDownloadCache.cxx
@@ -166,6 +172,7 @@ add_library(erp-shared STATIC
     server/BaseHttpsServer.cxx
     server/BaseServerSession.cxx
     server/BaseServiceContext.cxx
+    server/BaseSessionContext.cxx
     server/ErrorHandler.cxx
     server/PartialRequestHandler.cxx
     server/RequestHandler.cxx
@@ -203,6 +210,8 @@ add_library(erp-shared STATIC
     util/Base64.cxx
     util/BdeUseCases.cxx
     util/Buffer.cxx
+    util/BinaryBuffer.cxx
+    util/BinaryView.cxx
     util/ByteHelper.cxx
     util/Condition.cxx
     util/Configuration.cxx

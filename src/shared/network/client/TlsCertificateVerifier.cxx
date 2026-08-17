@@ -1,23 +1,27 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/network/client/TlsCertificateVerifier.hxx"
+#include "shared/crypto/Certificate.hxx"
 #include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/network/client/CrlProvider.hxx"
 #include "shared/tsl/OcspHelper.hxx"
 #include "shared/tsl/TslManager.hxx"
 #include "shared/tsl/X509Certificate.hxx"
 #include "shared/tsl/error/TslError.hxx"
+#include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "shared/util/TLog.hxx"
 
+#include <optional>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/beast/core/error.hpp>
-#include <optional>
+#include <fmt/format.h>
 
 namespace
 {
@@ -212,7 +216,7 @@ public:
         if (ec.failed())
         {
             LOG(ERROR) << "loading custom CA certificates failed";
-            throw boost::beast::system_error{ec};
+            throw ExceptionWrapper<boost::beast::system_error>::create(fileAndLine, ec);
         }
     }
 
@@ -366,6 +370,46 @@ TlsCertificateVerifier TlsCertificateVerifier::withCustomRootCertificates(
 {
     return TlsCertificateVerifier(
         std::make_unique<CustomRootCertificatesImplementation>(std::move(customRootCertificates)));
+}
+
+TlsCertificateVerifier TlsCertificateVerifier::withCustomRootCertificateFile(const std::filesystem::path& pemFileName)
+{
+    std::string pem = FileHelper::readFileAsString(pemFileName);
+    return withCustomRootCertificates(std::move(pem));
+}
+
+
+TlsCertificateVerifier TlsCertificateVerifier::withInternetRootCAsWithFallback(ConfigurationKey fallbackKey)
+{
+    const auto& config = Configuration::instance();
+    const std::string internetCaPath =
+        config.getOptionalStringValue(ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH, {});
+    if (!internetCaPath.empty())
+    {
+        return withCustomRootCertificateFile(internetCaPath);
+    }
+    try {
+        if (auto pem = config.getOptionalPemValue(fallbackKey))
+        {
+            return withCustomRootCertificates(*pem);
+        }
+    }
+    catch (const IllegalPemPrefixError&)
+    {
+        // ignored because we try file and pem by inspecting value otherwise
+    }
+    const std::string fallback = config.getOptionalStringValue(fallbackKey, {});
+    if (fallback.empty())
+    {
+        return withCustomRootCertificates("");
+    }
+    bool looksLikePem = fallback.find(Certificate::PEM_BEGIN_TAG) != std::string::npos &&
+                        fallback.find(Certificate::PEM_END_TAG) != std::string::npos;
+    if (looksLikePem)
+    {
+        return withCustomRootCertificates(fallback);
+    }
+    return withCustomRootCertificateFile(fallback);
 }
 
 

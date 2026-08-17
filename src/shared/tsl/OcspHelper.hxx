@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,7 @@
 
 #include "shared/crypto/OpenSslHelper.hxx"
 #include "shared/tsl/TslMode.hxx"
+#include "shared/util/BinaryBuffer.hxx"
 
 #include <chrono>
 #include <memory>
@@ -29,6 +30,10 @@ public:
 
     static const ASN1_OCTET_STRING*
     getCertHashValueFromExtension (ASN1_SEQUENCE_ANY* extensionData);
+
+    static OcspResponsePtr binaryBufferToOcspResponse(const BinaryBuffer& responseBuffer);
+
+    static BinaryBuffer ocspRequestToBinaryBuffer(OCSP_REQUEST& ocspRequest);
 
     static std::string ocspResponseToString(OCSP_RESPONSE& ocspResponse);
 

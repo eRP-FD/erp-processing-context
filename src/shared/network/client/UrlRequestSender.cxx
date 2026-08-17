@@ -1,16 +1,17 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/network/client/UrlRequestSender.hxx"
-#include "shared/network/client/request/ClientRequest.hxx"
+#include "fhirtools/util/Gsl.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/network/client/HttpClient.hxx"
 #include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/client/request/ClientRequest.hxx"
 #include "shared/util/ExceptionHelper.hxx"
-#include "fhirtools/util/Gsl.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/UrlHelper.hxx"
 
@@ -47,6 +48,12 @@ void UrlRequestSender::setTlsCertificateVerifier(TlsCertificateVerifier certific
 }
 
 
+void UrlRequestSender::setClientCertificateChainAndKey(CertificateChainAndKey clientCertificateChainAndKey)
+{
+    mClientCertificateChainAndKey = std::move(clientCertificateChainAndKey);
+}
+
+
 void UrlRequestSender::setFollowRedirects(bool followRedirects)
 {
     mFollowRedirects = followRedirects;
@@ -56,6 +63,11 @@ void UrlRequestSender::setFollowRedirects(bool followRedirects)
 void UrlRequestSender::setAdditionalHeaders(Header::keyValueMap_t&& additionalHeaders)
 {
     mAdditionalHeaders = std::move(additionalHeaders);
+}
+
+void UrlRequestSender::setResponseBodyLimit(std::optional<uint64_t> responseBodyLimit)
+{
+    mResponseBodyLimit = responseBodyLimit;
 }
 
 
@@ -179,6 +191,7 @@ ClientResponse UrlRequestSender::doSend(
     auto proxies = mProxies | std::views::filter(byProxyMode);
     const auto tlsParameters =
         isTls ? std::make_optional<TlsConnectionParameters>({.certificateVerifier = mTlsCertificateVerifier,
+                                                             .clientCertificate = mClientCertificateChainAndKey,
                                                              .forcedCiphers = forcedCiphers,
                                                              .trustCertificateCn = trustCn})
               : std::nullopt;
@@ -186,7 +199,8 @@ ClientResponse UrlRequestSender::doSend(
                                                            .port = std::to_string(url.mPort),
                                                            .connectionTimeout = mConnectionTimeout,
                                                            .resolveTimeout = mResolveTimeout,
-                                                           .tlsParameters = tlsParameters};
+                                                           .tlsParameters = tlsParameters,
+                                                           .responseBodyLimit = mResponseBodyLimit};
     Header::keyValueMap_t httpHeaders;
     if (! body.empty())
     {
@@ -200,6 +214,8 @@ ClientResponse UrlRequestSender::doSend(
     httpHeaders.emplace(Header::Accept, "*/*");
     httpHeaders.emplace(Header::Host, fmt::format("{}:{}", url.mHost, url.mPort));
     httpHeaders.emplace(Header::Connection, Header::ConnectionClose);
+    A_27783_01.start("TI-User-Agent Header field");
+    httpHeaders.emplace(Header::TiUserAgent, Header::tiUserAgentHeader());
 
     httpHeaders.insert(
         std::make_move_iterator(mAdditionalHeaders.begin()),

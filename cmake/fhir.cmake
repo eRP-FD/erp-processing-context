@@ -8,7 +8,7 @@ if (NOT TARGET configuration)
 endif()
 
 if (NOT TARGET fhirinstall)
-    add_executable(fhirinstall EXCLUDE_FROM_ALL)
+    add_executable(fhirinstall)
 endif()
 
 macro(fhir_substitute substitution)

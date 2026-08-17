@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,6 +9,7 @@
 #include "shared/crypto/Pbkdf2Hmac.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/Hash.hxx"
 
 #include <algorithm>
 
@@ -58,6 +59,14 @@ HashedId::HashedId(EncryptedBlob&& hashedId)
     : EncryptedBlob{std::move(hashedId)}
 {}
 
+ db_model::HashedId HashedId::fromString(const std::string& s)
+{
+    const auto hashedStr = Hash::sha256(s);
+    std::vector<std::byte> buf(hashedStr.size());
+    std::transform(hashedStr.begin(), hashedStr.end(), buf.begin(), [](char c) { return std::byte(c); });
+    return db_model::HashedId{std::move(buf)};
+}
+
 HashedKvnr::HashedKvnr(HashedId&& hashedKvnr)
     : HashedId(std::move(hashedKvnr))
 {
@@ -96,4 +105,32 @@ AuditData::AuditData(model::AuditEvent::AgentType agentType, model::AuditEventId
     , blobId(blobId)
     , recorded(model::Timestamp::now())
 {
+}
+
+PushEventData::PushEventData(std::string&& notificationIdentifier, model::ChannelId channelId, db_model::HashedKvnr&& hashedKvnr, std::vector<model::PrescriptionId>&& prescriptions)
+    : mNotificationIdentifier(std::move(notificationIdentifier))
+    , mChannelId(channelId)
+    , mHashedKvnr(std::move(hashedKvnr))
+    , mPrescriptions(std::move(prescriptions))
+{
+}
+
+const std::string& PushEventData::notificationIdentifier() const
+{
+    return mNotificationIdentifier;
+}
+
+const model::ChannelId& PushEventData::channelId() const
+{
+    return mChannelId;
+}
+
+const db_model::HashedKvnr& PushEventData::hashedKvnr() const
+{
+    return mHashedKvnr;
+}
+
+const std::vector<model::PrescriptionId>& PushEventData::prescriptions() const
+{
+    return mPrescriptions;
 }

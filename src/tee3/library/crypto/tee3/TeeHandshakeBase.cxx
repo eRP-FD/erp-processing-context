@@ -1,19 +1,20 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
 #include "library/crypto/tee3/TeeHandshakeBase.hxx"
 #include "library/crypto/EllipticCurve.hxx"
 #include "library/crypto/Key.hxx"
-#include "library/crypto/KeyDerivationUtils.hxx"
 #include "library/crypto/tee3/Kyber768.hxx"
 #include "library/stream/StreamHelper.hxx"
 #include "library/util/Assert.hxx"
 #include "library/util/ByteHelper.hxx"
 #include "library/util/cbor/CborDeserializer.hxx"
 #include "library/util/cbor/CborSerializer.hxx"
+
+#include "shared/crypto/KeyDerivationUtils.hxx"
 
 namespace epa
 {

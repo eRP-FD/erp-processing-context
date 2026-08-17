@@ -38,7 +38,7 @@ void HealthHandler::handleRequest(SessionContext& session)
 
     ResponseBuilder(session.response)
         .status(HttpStatus::OK)
-        .jsonBody(healthResource->serializeToJsonString())
+        .fhirJsonBody(healthResource->serializeToJsonString())
         .keepAlive(true);
 }
 

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -81,7 +81,7 @@ void erp_fhir_ws::ErpFhirWS::start(size_t workers)
     {
         co_spawn(mIoExecutor, acceptloop(), consign(boost::asio::detached, shared_from_this(), make_work_guard(mIoExecutor)));
     }
-    TLOG(INFO) << "Ready to accept commections on http://" << endpoint;
+    TLOG(INFO) << "Ready to accept connections on http://" << endpoint;
 }
 
 void erp_fhir_ws::ErpFhirWS::stop()

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -154,14 +154,14 @@ CREATE OR REPLACE FUNCTION erp_event.f_insert_update_kvnr()
         INSERT INTO erp_event.kvnr(kvnr_hashed, next_export, state)
             VALUES (NEW.kvnr_hashed, NOW(), 'pending')
             ON CONFLICT (kvnr_hashed) DO UPDATE
-            SET state = 'pending', next_export = 
+            SET state = 'pending', next_export =
                 CASE WHEN erp_event.kvnr.state = 'processed'
                     THEN NOW()
                     ELSE erp_event.kvnr.next_export
                 END
             WHERE erp_event.kvnr.state <> 'pending';
         RETURN NEW;
-        END; 
+        END;
     $$;
 
 --

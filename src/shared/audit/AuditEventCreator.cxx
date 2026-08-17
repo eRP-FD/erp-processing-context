@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -109,6 +109,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
     auditEvent.setAgentName(agentName);
     auditEvent.setAgentType(auditData.agentType());
 
+    bool useEntityWhatDisplay = false;
     // entity data
     std::string resourceIdStr;
     if (auditData.prescriptionId().has_value())
@@ -132,6 +133,7 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
         // fixed string "+", except for POST and DELETE /Consent, where we write "CHARGCONS".
         // See ticket ERP-5081, question ERP-7951 and ticket ERP-10743
 
+        const auto& variables = auditData.variables();
         const auto eventId = auditData.eventId();
         if(model::AuditEventId::POST_Consent == eventId || model::AuditEventId::DELETE_Consent == eventId)
         {
@@ -140,6 +142,15 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
         else if (model::AuditEventId::POST_EU_Consent == eventId || model::AuditEventId::DELETE_EU_Consent == eventId)
         {
             auditEvent.setEntityDescription("EUDISPCONS");
+        }
+        else if ((model::AuditEventId::POST_PUSHERS_SET_REGISTER == eventId ||
+                  model::AuditEventId::POST_PUSHERS_SET_UNREGISTER == eventId ||
+                  model::AuditEventId::POST_PUSHERS_SET_UNREGISTER_IN_EXPORTER == eventId) &&
+                 variables.contains(std::string{AuditEventTextTemplates::pushDeviceVariableNameRaw}))
+        {
+            auditEvent.setEntityDescription(
+                variables.at(std::string{AuditEventTextTemplates::pushDeviceVariableNameRaw}));
+            useEntityWhatDisplay = true;
         }
         else
         {
@@ -154,7 +165,14 @@ model::AuditEvent AuditEventCreator::fromAuditData(const model::AuditData& audit
     }
 
     auditEvent.setEntityName(auditData.insurantKvnr().id());
-    auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
+    if (useEntityWhatDisplay)
+    {
+        auditEvent.setEntityWhatDisplay(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
+    }
+    else
+    {
+        auditEvent.setEntityWhatReference(model::createEventResourceReference(auditData.eventId(), resourceIdStr));
+    }
 
     const std::string countryCodeStr = auditData.countryCode() ? auditData.countryCode()->toString() : "";
 

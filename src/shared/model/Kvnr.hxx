@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -45,7 +45,7 @@ public:
     bool validFormat() const;
 
     /**
-     * Returns true if the KVNR is a verification identity, cf. A_20751
+     * Returns true if the KVNR is a verification identity, cf. A_23426
      */
     bool verificationIdentity() const;
 

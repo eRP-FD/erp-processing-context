@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -50,6 +50,11 @@ namespace {
         "DELETE /$revoke-eu-access-permission";
     constexpr std::string_view operationName_GET_read_eu_access_permission = "GET /$read-eu-access-permission";
     constexpr std::string_view operationName_GET_eu_prescriptions = "POST /$get-eu-prescriptions";
+    constexpr std::string_view operationName_GET_PUSHERS = "GET /pushers/v1";
+    constexpr std::string_view operationName_POST_PUSHERS_SET = "POST /pushers/v1/set";
+    constexpr std::string_view operationName_POST_CHANNELS = "POST /channels/v1/{pushkey}";
+    constexpr std::string_view operationName_GET_CHANNELS = "GET /channels/v1";
+    constexpr std::string_view operationName_GET_CHANNELS_PUSHKEY = "GET /channels/v1/{pushkey}";
     constexpr std::string_view operationName_UNKNOWN = "UNKNOWN";
 }
 
@@ -99,6 +104,16 @@ const std::string_view& toString (Operation operation)
             return operationName_GET_read_eu_access_permission;
         case Operation::GET_eu_prescriptions:
             return operationName_GET_eu_prescriptions;
+        case Operation::GET_PUSHERS:
+            return operationName_GET_PUSHERS;
+        case Operation::POST_PUSHERS_SET:
+            return operationName_POST_PUSHERS_SET;
+        case Operation::POST_CHANNELS:
+            return operationName_POST_CHANNELS;
+        case Operation::GET_CHANNELS:
+            return operationName_GET_CHANNELS;
+        case Operation::GET_CHANNELS_PUSHKEY:
+            return operationName_GET_CHANNELS_PUSHKEY;
 
         case Operation::UNKNOWN:                   return operationName_UNKNOWN;
         case Operation::GET_notifications_opt_in:

@@ -1,11 +1,12 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/network/message/Header.hxx"
+#include "shared/ErpRequirements.hxx"
 #include "shared/erp-serverinfo.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/SharedRequirements.hxx"
@@ -49,6 +50,7 @@ const std::string Header::PnIpaddress = "pn_ipaddress";
 
 const std::string Header::Tee3::VauCid = "VAU-CID";
 const std::string Header::XUserAgent = "x-useragent";
+const std::string Header::TiUserAgent = "TI-User-Agent";
 const std::string Header::Tee3::XInsurantId = "x-insurantid";
 const std::string Header::Tee3::VauNP = "vau-np";
 const std::string Header::Tee3::VauNonPuTracing = "VAU-nonPU-Tracing";
@@ -111,6 +113,7 @@ Header::Header(
     HttpStatus statusCode)
     : mMethod(method),
       mTarget(std::move(target)),
+      mTargetOriginal(mTarget),
       mVersion(version),
       mHeader(std::move(header)),
       mStatusCode(statusCode)
@@ -120,6 +123,7 @@ Header::Header(
     {
         parseAcceptField(acceptHeader.value());
     }
+    splitTarget();
 }
 
 
@@ -140,10 +144,45 @@ const std::string& Header::target (void) const
     return mTarget;
 }
 
+std::string Header::targetOriginal() const
+{
+    return mTargetOriginal;
+}
+
+void Header::unescapeTarget()
+{
+    mTarget = UrlHelper::unescapeUrl(mTarget);
+    splitTarget();
+}
 
 void Header::setTarget (const std::string& target)
 {
     mTarget = target;
+    if (mTargetOriginal.empty())
+    {
+        mTargetOriginal = target;
+    }
+    splitTarget();
+}
+
+const std::string& Header::path() const
+{
+    return mPath;
+}
+
+const std::string& Header::pathOriginal() const
+{
+    return mPathOriginal;
+}
+
+const std::string& Header::query() const
+{
+    return mQuery;
+}
+
+const std::string& Header::fragment() const
+{
+    return mFragment;
 }
 
 
@@ -486,6 +525,12 @@ std::string Header::xUserAgentHeader()
     return fmt::format("{}/{}", ErpServerInfo::GematikClientId(), ErpServerInfo::ReleaseVersion());
 }
 
+std::string Header::tiUserAgentHeader()
+{
+    A_27783_01.start("use same header for TI-User-Agent like x-useragent");
+    return xUserAgentHeader();
+}
+
 void Header::setContentLengthZeroMethodUnknown()
 {
     // no Content-Length field for Codes < 200 and 204
@@ -498,4 +543,10 @@ void Header::setContentLengthZeroMethodUnknown()
     {
         removeHeaderField(Header::ContentLength);
     }
+}
+
+void Header::splitTarget()
+{
+    std::tie(mPathOriginal, std::ignore, std::ignore) = UrlHelper::splitTarget(mTargetOriginal);
+    std::tie(mPath, mQuery, mFragment) = UrlHelper::splitTarget(mTarget);
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -152,34 +152,6 @@ void ErpRequestHandler::makeResponse(PcSessionContext& session, HttpStatus statu
     }
 }
 
-bool ErpRequestHandler::isVerificationIdentityKvnr(const std::string_view& kvnr)
-{
-    A_20751.start("Recognize the verification identity");
-    std::string kvnr_(kvnr);
-    ErpExpect(kvnr.size() == 10, HttpStatus::InternalServerError, "The kvnr " + kvnr_ + " is invalid");
-    if (String::starts_with(kvnr_, "X0000"))
-    {
-        kvnr_ = kvnr_.substr(5, 4);
-        try
-        {
-            int value = std::stoi(kvnr_);
-            if (value >= 1 && value <= 5000)
-            {
-                return true;
-            }
-        }
-        catch (const std::invalid_argument&)
-        {
-            return false;
-        }
-        catch (const std::out_of_range&)
-        {
-            return false;
-        }
-    }
-    A_20751.finish();
-    return false;
-}
 
 std::string ErpRequestHandler::makeFullUrl(const std::string_view tail)
 {

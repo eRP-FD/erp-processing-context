@@ -1,10 +1,11 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "shared/ErpConstants.hxx"
 #include "shared/beast/BoostBeastStringReader.hxx"
 #include "shared/util/ErpException.hxx"
 
@@ -61,7 +62,7 @@ TEST_F(BoostBeastStringReaderTest, parseResponse)//NOLINT(readability-function-c
         "Content-Length: 22\r\n"
         "\r\n"
         "did not find your file";
-    auto [header, body] = BoostBeastStringReader::parseResponse(request);
+    auto [header, body] = BoostBeastStringReader::parseResponse(request, ErpConstants::DefaultMaxResponseBodySize);
 
     EXPECT_EQ(header.status(), HttpStatus::NotFound);
     EXPECT_TRUE(header.hasHeader(Header::ContentType));

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SERVICE_AUDITEVENTEXTRESOURCES_HXX
 #define ERP_PROCESSING_CONTEXT_SERVICE_AUDITEVENTEXTRESOURCES_HXX
 
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/AuditData.hxx"
 
 #include <unordered_map>
@@ -15,6 +16,7 @@
 class AuditEventTextTemplates
 {
 public:
+    static constexpr auto implementsA_19284 = A_19284_14.implements("Versichertenprotokoll zu Operationen");
     AuditEventTextTemplates();
 
     struct TextTemplate
@@ -36,6 +38,8 @@ public:
     static constexpr std::string_view countryCodeVariableName = "{countryCode}";
     static constexpr std::string_view proofMethodVariableName = "{proofMethod}";
     static constexpr std::string_view proofMethodVariableNameRaw = "proofMethod";
+    static constexpr std::string_view pushDeviceVariableName = "{device_display_name}";
+    static constexpr std::string_view pushDeviceVariableNameRaw = "device_display_name";
 private:
     using Id2TextContainer = std::unordered_map<model::AuditEventId, std::string>;
     // Language -> (event-id -> text-template)

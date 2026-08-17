@@ -391,23 +391,7 @@ void EventProcessor::processEpaUnknown(const model::EventKvnr& kvnr)
 
 void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollector)
 {
-    try
-    {
-        model::AuditData auditData = auditDataCollector.createData();
-        CommitGuard{mServiceContext->erpDatabaseFactory()}.db().storeAuditEventData(auditData);
-    }
-    catch (const MissingAuditDataException& exc)
-    {
-        TVLOG(2) << "Missing audit data";
-        JsonLog(LogId::INFO, JsonLog::makeErrorLogReceiver(), false).details("Missing audit data");
-    }
-    catch (const std::exception& exc)
-    {
-        // Could be an I/O error.
-        const auto typeinfo = util::demangle(typeid(exc).name());
-        TVLOG(1) << "Error while storing audit data: " << typeinfo;
-        TVLOG(1) << "Error reason:  " << exc.what();
-    }
+    CommitGuard{mServiceContext->erpDatabaseFactory()}.db().storeAuditEventData(auditDataCollector);
 }
 
 void EventProcessor::checkDeactivateThrottle(const std::string& hostNotFailing)

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -93,6 +93,25 @@ void MedicationExporterDatabaseFrontendProxy::finalizeKvnr(const model::EventKvn
                                                            const std::string& assignedEpaPrefix) const
 {
     mDatabase->finalizeKvnr(kvnr, assignedEpaPrefix);
+}
+
+std::optional<model::PushNotificationEvent> MedicationExporterDatabaseFrontendProxy::processNextPushNotification() const
+{
+    return mDatabase->processNextPushNotification();
+}
+
+void MedicationExporterDatabaseFrontendProxy::deletePushNotification(const model::HashedKvnr& hashedKvnr,
+                                                                     int64_t eventId) const
+{
+    mDatabase->deletePushNotification(hashedKvnr, eventId);
+}
+
+void MedicationExporterDatabaseFrontendProxy::updatePushProcessingDelay(std::int32_t newRetry,
+                                                                        std::chrono::seconds delay,
+                                                                        const model::HashedKvnr& hashedKvnr,
+                                                                        int64_t id) const
+{
+    mDatabase->updatePushProcessingDelay(newRetry, delay, hashedKvnr, id);
 }
 
 std::optional<std::unique_ptr<model::TRezeptEvent> > MedicationExporterDatabaseFrontendProxy::processNextTRezeptEvent() const

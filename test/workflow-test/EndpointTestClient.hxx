@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -42,6 +42,8 @@ public:
 private:
     using ConnectionFactory = PostgresConnection&(*)();
     Database::Factory createDatabaseFactory(ConnectionFactory connFactory);
+    PushErpDatabase::Factory createPushDatabaseFactory(ConnectionFactory connFactory);
+    PushExporterDatabase::Factory createPushExporterDatabaseFactory(ConnectionFactory connFactory);
     static std::unique_ptr<HttpsServer> httpsServerFactory(const std::string_view address, uint16_t port,
                                                            RequestHandlerManager&& requestHandlers,
                                                            BaseServiceContext& serviceContext,

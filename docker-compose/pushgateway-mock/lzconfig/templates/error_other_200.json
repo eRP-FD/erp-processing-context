@@ -1,0 +1,16 @@
+{
+  "results": [
+    {
+      "id": "{{id}}",
+      "status": "failed",
+      "rejected": [],
+      "error": "Could not derive push provider from appId=app_id"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "successful": 0,
+    "failed": 1,
+    "partial": 0
+  }
+}

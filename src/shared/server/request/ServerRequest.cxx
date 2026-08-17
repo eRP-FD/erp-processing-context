@@ -1,13 +1,25 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "ServerRequest.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/UrlHelper.hxx"
 
+namespace
+{
+ServerRequest::Type determineType(const std::string& path)
+{
+    if (path.starts_with("/pushers/v1") || path.starts_with("/channels/v1") || path.starts_with("/history/v1"))
+    {
+        return ServerRequest::Type::Push;
+    }
+    return ServerRequest::Type::Fhir;
+}
+}
 
 ServerRequest::ServerRequest (Header header)
     : mHeader(std::move(header)),
@@ -16,18 +28,19 @@ ServerRequest::ServerRequest (Header header)
       mQueryParameters(),
       mFragment(),
       mAccessToken()
+    , mType(determineType(mHeader.path()))
 {
     mHeader.setContentLength(0);
 }
 
 
-const Header& ServerRequest::header (void) const
+const Header& ServerRequest::header () const
 {
     return mHeader;
 }
 
 
-Header& ServerRequest::header (void)
+Header& ServerRequest::header ()
 {
     return mHeader;
 }
@@ -37,6 +50,7 @@ void ServerRequest::setHeader (Header header)
 {
     mHeader = std::move(header);
     mHeader.setContentLength(mBody.size());
+    mType = determineType(mHeader.path());
 }
 
 
@@ -54,7 +68,7 @@ void ServerRequest::setBody (std::string body)
 }
 
 
-const std::string& ServerRequest::getBody (void) const
+const std::string& ServerRequest::getBody () const
 {
     return mBody;
 }
@@ -82,13 +96,13 @@ std::optional<std::string> ServerRequest::getPathParameter (const std::string& p
 }
 
 
-size_t ServerRequest::getPathParameterCount (void) const
+size_t ServerRequest::getPathParameterCount () const
 {
     return mPathParameters.size();
 }
 
 
-const std::unordered_map<std::string, std::string>& ServerRequest::getPathParameters (void) const
+const std::unordered_map<std::string, std::string>& ServerRequest::getPathParameters () const
 {
     return mPathParameters;
 }
@@ -100,7 +114,7 @@ void ServerRequest::setQueryParameters (std::vector<std::pair<std::string,std::s
 }
 
 
-const std::vector<std::pair<std::string, std::string>>& ServerRequest::getQueryParameters (void) const
+const std::vector<std::pair<std::string, std::string>>& ServerRequest::getQueryParameters () const
 {
     return mQueryParameters;
 }
@@ -129,7 +143,7 @@ void ServerRequest::setFragment (std::string fragment)
 }
 
 
-const std::string& ServerRequest::getFragment (void) const
+const std::string& ServerRequest::getFragment () const
 {
     return mFragment;
 }
@@ -139,7 +153,12 @@ void ServerRequest::setAccessToken(JWT jwt)
     mAccessToken = std::move(jwt);
 }
 
-const JWT& ServerRequest::getAccessToken(void) const
+const JWT& ServerRequest::getAccessToken() const
 {
     return mAccessToken;
+}
+
+ServerRequest::Type ServerRequest::getType() const
+{
+    return mType;
 }

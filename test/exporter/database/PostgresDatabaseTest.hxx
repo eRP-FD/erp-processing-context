@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -196,6 +196,9 @@ public:
         return id;
     }
 
+    model::TaskEvent::id_t insertPushEvent(const model::Kvnr& kvnr, model::PrescriptionId prescription_id,
+                                           std::string_view channelId, Uuid notificationIdentifier);
+
     bool eventExists(model::TaskEvent::id_t id);
 
     void insertTaskKvnr(const model::Kvnr& kvnr, std::int32_t retry = 0, const std::string& assignedEpa = "",
@@ -224,6 +227,7 @@ public:
         deleteTxn.exec("DELETE FROM erp_event.task_event");
         deleteTxn.exec("DELETE FROM erp_event.kvnr");
         deleteTxn.exec("DELETE FROM erp_event.trezept_event");
+        deleteTxn.exec("DELETE FROM erp_event.push_notification_event");
         deleteTxn.commit();
     }
 
@@ -231,6 +235,7 @@ public:
     {
         auto deleteTxn = createErpDbTransaction();
         deleteTxn.exec("DELETE FROM erp.auditevent");
+        deleteTxn.exec("DELETE FROM erp.app_registrations");
         deleteTxn.commit();
     }
 
@@ -239,7 +244,7 @@ public:
         return TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false);
     }
 
-    std::basic_string<std::byte> kvnrHashed(const model::Kvnr& kvnr) const
+    std::basic_string<std::byte>kvnrHashed(const model::Kvnr& kvnr) const
     {
         auto kvnr_hashed = mKeyDerivation->hashKvnr(kvnr);
         auto byte_view = kvnr_hashed.binarystring();

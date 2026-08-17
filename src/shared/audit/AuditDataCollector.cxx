@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -21,6 +21,26 @@ const T& assertHasValue(const std::optional<T>& var)
 {
     Expect3(var.has_value(), "Audit data field not filled", MissingAuditDataException);
     return var.value();
+}
+
+std::variant<model::Kvnr, model::HashedKvnr>
+assertKvnrHasValue(const std::variant<std::monostate, model::Kvnr, model::HashedKvnr>& var)
+{
+    struct Converter {
+        std::variant<model::Kvnr, model::HashedKvnr> operator()(std::monostate) const
+        {
+            ModelFail("Neither Kvnr nor HashedKvnr is set");
+        }
+        std::variant<model::Kvnr, model::HashedKvnr> operator()(const model::Kvnr& kvnr) const
+        {
+            return kvnr;
+        }
+        std::variant<model::Kvnr, model::HashedKvnr> operator()(const model::HashedKvnr& hashedKvnr) const
+        {
+            return hashedKvnr;
+        }
+    };
+    return std::visit(Converter{}, var);
 }
 
 }// anonymous namespace
@@ -85,6 +105,12 @@ AuditDataCollector& AuditDataCollector::setInsurantKvnr(const model::Kvnr& kvnr)
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setInsurantKvnr(const model::HashedKvnr& kvnr)
+{
+    mInsurantKvnr = kvnr;
+    return *this;
+}
+
 AuditDataCollector& AuditDataCollector::setDeviceId(const std::int16_t deviceId)
 {
     mDeviceId = deviceId;
@@ -122,6 +148,12 @@ AuditDataCollector& AuditDataCollector::setPoPPTokenProofMethod(PoPPTokenProofMe
     return *this;
 }
 
+AuditDataCollector& AuditDataCollector::setPushDeviceDisplayName(std::string_view deviceDisplayName)
+{
+    setVariable(std::string{AuditEventTextTemplates::pushDeviceVariableNameRaw}, std::string{deviceDisplayName});
+    return *this;
+}
+
 model::AuditData AuditDataCollector::createData() const
 {
     Expect3(mEventId.has_value(), "Event ID should not be missing", std::logic_error);
@@ -143,7 +175,7 @@ model::AuditData AuditDataCollector::createData() const
                              isEventCausedByPatient ? std::optional<std::string>() : assertHasValue(mAgentWho),
                              countryCodeViewOpt, mVariables),
         assertHasValue(mAction), mAgentType.value_or(model::AuditEvent::AgentType::human),
-        assertHasValue(mInsurantKvnr), assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
+        assertKvnrHasValue(mInsurantKvnr), assertHasValue(mDeviceId), mPrescriptionId, mConsentId);
 }
 
 bool AuditDataCollector::shouldCreateAuditEventOnSuccess() const noexcept

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,6 +9,7 @@
 #include "TestUtils.hxx"
 #include "erp/ErpProcessingContext.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
 #include "fhirtools/validator/ValidatorOptions.hxx"
@@ -37,6 +38,7 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/mock/PushErpMockBackend.hxx"
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
@@ -117,15 +119,18 @@ void ServerTestBase::startServer (void)
 
     auto factories = StaticData::makeMockFactories();
     factories.databaseFactory = createDatabaseFactory(&PostgresBackend::mainConnection);
+    factories.pushErpDatabaseFactory = createPushDatabaseFactory(&PostgresBackend::mainConnection);
     if (PostgresBackend::haveReadOnlyConnection())
     {
         if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
         {
             factories.readOnlyDatabaseFactory = createDatabaseFactory(&PostgresBackend::readOnlyConnection);
+            factories.readOnlyPushErpDatabaseFactory = createPushDatabaseFactory(&PostgresBackend::readOnlyConnection);
         }
         else
         {
             factories.readOnlyDatabaseFactory = factories.databaseFactory;
+            factories.readOnlyPushErpDatabaseFactory = factories.pushErpDatabaseFactory;
         }
     }
     factories.redisClientFactory = [](std::chrono::milliseconds){return createRedisInstance();};
@@ -373,6 +378,23 @@ Database::Factory ServerTestBase::createDatabaseFactory(ConnectionFactory connFa
     }
 }
 
+PushErpDatabase::Factory ServerTestBase::createPushDatabaseFactory(ConnectionFactory connFactory)
+{
+    if (mHasPostgresSupport)
+    {
+        return [connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushErpDatabase>(std::make_unique<PushErpPostgresBackend>(connFactory()), hsmPool,
+                                                     keyDerivation);
+        };
+    }
+    else
+    {
+        return [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushErpDatabase>(std::make_unique<PushErpMockBackend>(), hsmPool, keyDerivation);
+        };
+    }
+}
+
 std::unique_ptr<Database> ServerTestBase::createDatabase()
 {
     return createDatabaseFactory(&PostgresBackend::mainConnection)(mContext->getHsmPool(), mContext->getKeyDerivation());
@@ -381,7 +403,7 @@ std::unique_ptr<Database> ServerTestBase::createDatabase()
 
 pqxx::connection& ServerTestBase::getConnection()
 {
-    Expect(mHasPostgresSupport, "can not return Postgres connection because postgres support is disabled");
+    Expect3(mHasPostgresSupport, "can not return Postgres connection because postgres support is disabled", std::runtime_error);
     if ( ! mConnection)
     {
         mConnection = std::make_unique<pqxx::connection>(PostgresConnection::defaultConnectParameters().str());
@@ -392,7 +414,7 @@ pqxx::connection& ServerTestBase::getConnection()
 
 pqxx::work ServerTestBase::createTransaction()
 {
-    Expect(mHasPostgresSupport, "can not return Postgres transaction because postgres support is disabled");
+    Expect3(mHasPostgresSupport, "can not return Postgres transaction because postgres support is disabled", std::runtime_error);
     return pqxx::work{getConnection()};
 }
 

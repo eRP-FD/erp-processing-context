@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -45,12 +45,14 @@ public:
     AuditDataCollector& setEventId(const model::AuditEventId eventId);
     AuditDataCollector& setAction(const model::AuditEvent::Action action);
     AuditDataCollector& setInsurantKvnr(const model::Kvnr& kvnr);
+    AuditDataCollector& setInsurantKvnr(const model::HashedKvnr& kvnr);
     AuditDataCollector& setDeviceId(const std::int16_t deviceId);
     AuditDataCollector& setPrescriptionId(const model::PrescriptionId& prescriptionId);
     AuditDataCollector& setConsentId(const std::string_view& consentId);
     AuditDataCollector& setCountryCode(const model::CountryCode& countryCode);
     AuditDataCollector& setVariable(const std::string& key, const std::string& value);
     AuditDataCollector& setPoPPTokenProofMethod(PoPPTokenProofMethodPrefix method);
+    AuditDataCollector& setPushDeviceDisplayName(std::string_view deviceDisplayName);
 
     // throws MissingAuditDataException if mandatory data is missing:
     model::AuditData createData() const;
@@ -67,7 +69,7 @@ private:
     std::optional<std::string> mAgentWho;    // TelematicId or Kvnr of accessing agent;
     std::optional<std::string> mAgentName;
     std::optional<model::AuditEvent::AgentType> mAgentType;
-    std::optional<model::Kvnr> mInsurantKvnr;
+    std::variant<std::monostate, model::Kvnr, model::HashedKvnr> mInsurantKvnr;
     std::optional<std::int16_t> mDeviceId;
     std::optional<model::PrescriptionId> mPrescriptionId;
     std::optional<std::string> mConsentId;

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -24,5 +24,6 @@ const char* toString (HttpStatus status);
 size_t toNumericalValue (HttpStatus status);
 std::ostream& operator <<(std::ostream& stream, const HttpStatus& status);
 bool is2xxSuccess(HttpStatus status);
+bool is5xxInternalError(HttpStatus status);
 
 #endif

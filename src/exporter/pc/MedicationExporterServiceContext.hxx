@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -48,7 +48,7 @@ public:
     MedicationExporterServiceContext& operator=(const MedicationExporterServiceContext& other) = delete;
     MedicationExporterServiceContext& operator=(MedicationExporterServiceContext&& other) = delete;
 
-    std::unique_ptr<exporter::MainDatabaseFrontend> erpDatabaseFactory();
+    std::unique_ptr<exporter::MainDatabaseFrontendInterface> erpDatabaseFactory();
 
     /**
      * io context to be used for io requests (e.g. https requests)
@@ -71,6 +71,9 @@ public:
     void removeFailingEpa(const std::string& epa);
     bool failingEpasEmpty() const;
 
+    void pushGatewayFailed(const std::string& pushGatewayUrl);
+    bool isPushGatewayFailing(const std::string& pushGatewayUrl);
+
 private:
     std::unique_ptr<MedicationExporterDatabaseFrontendInterface>
     medicationExporterDatabaseFactory(TransactionMode mode);
@@ -83,6 +86,8 @@ private:
     gsl::not_null<std::shared_ptr<exporter::RuntimeConfiguration>> mRuntimeConfiguration;
     mutable std::mutex mFailingEpasMutex;
     std::set<std::string> mFailingEpas;
+    mutable std::mutex mFailingPushGatewaysMutex;
+    std::map<std::string, model::Timestamp> mFailingPushGateways;
 #ifdef FRIEND_TEST
     FRIEND_TEST(CommitGuardTest, only_one_transaction_allowed);
     FRIEND_TEST(CommitGuardTest, create_and_query);

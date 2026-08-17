@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -134,7 +134,7 @@ decltype(auto) value(std::optional<T>& opt, std::source_location loc = std::sour
 }
 
 template <typename T>
-decltype(auto) value(std::optional<T>&& opt, std::source_location loc = std::source_location::current())
+auto value(std::optional<T>&& opt, std::source_location loc = std::source_location::current())
 {
     if (!opt.has_value())
     {
@@ -153,6 +153,8 @@ decltype(auto) value(const std::optional<T>& opt, std::source_location loc = std
     return *opt;
 }
 #endif
+
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 
 #undef fileAndLine
 #define fileAndLine FileNameAndLineNumber(__FILE__, __LINE__)
@@ -282,3 +284,5 @@ decltype(auto) value(const std::optional<T>& opt, std::source_location loc = std
 #undef TslFailWithStatus
 #define TslFailWithStatus(message, errorCode, httpStatus, tslMode) \
     local::logAndThrow<TslError>(message, fileAndLine, errorCode, httpStatus)
+
+// NOLINTEND(cppcoreguidelines-macro-usage)

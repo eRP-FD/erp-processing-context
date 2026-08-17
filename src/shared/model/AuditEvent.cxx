@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -70,7 +70,6 @@ const std::string auditevent_template = R"--(
   "entity": [
     {
       "what": {
-        "reference": ""
       },
       "name": "",
       "description": ""
@@ -157,6 +156,7 @@ const rapidjson::Pointer entityWhatIdentifierUsePointer("/entity/0/what/identifi
 const rapidjson::Pointer entityWhatIdentifierSystemPointer("/entity/0/what/identifier/system");
 const rapidjson::Pointer entityWhatIdentifierValuePointer("/entity/0/what/identifier/value");
 const rapidjson::Pointer entityWhatReferencePointer("/entity/0/what/reference");
+const rapidjson::Pointer entityWhatDisplayPointer("/entity/0/what/display");
 const rapidjson::Pointer entityNamePointer("/entity/0/name");
 const rapidjson::Pointer entityDescriptionPointer("/entity/0/description");
 
@@ -250,6 +250,11 @@ void AuditEvent::setEntityWhatReference(const std::string_view& reference)
     setValue(entityWhatReferencePointer, reference);
 }
 
+void AuditEvent::setEntityWhatDisplay(const std::string_view& display)
+{
+    setValue(entityWhatDisplayPointer, display);
+}
+
 void AuditEvent::setEntityName(const std::string_view& entityName)
 {
     setValue(entityNamePointer, entityName);
@@ -327,6 +332,11 @@ std::tuple<std::optional<std::string_view>, std::optional<std::string_view>> Aud
 std::string_view AuditEvent::entityWhatReference() const
 {
     return getStringValue(entityWhatReferencePointer);
+}
+
+std::string_view AuditEvent::entityWhatDisplay() const
+{
+    return getStringValue(entityWhatDisplayPointer);
 }
 
 std::string_view AuditEvent::entityName() const

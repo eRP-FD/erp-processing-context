@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -24,6 +24,7 @@ TestConfigKeyNames::TestConfigKeyNames()
          {TestConfigurationKey::TEST_RESOURCE_MANAGER_PATH,       {"TEST_RESOURCE_MANAGER_PATH",       "/test/resource-manager-path", Flags::none, "Path to test resources"}},
          {TestConfigurationKey::TEST_VSDM_KEYS,                   {"TEST_VSDM_KEYS",                   "/test/vsdm-keys", Flags::none, "VSDM keys added to the database on startup"}},
          {TestConfigurationKey::TEST_ECIES_CERTIFICATE,           {"TEST_ECIES_CERTIFICATE",           "/test/ecies-certificate", Flags::none, "Client ecies certificate."}},
+         {TestConfigurationKey::TEST_USE_PUSH_GATEWAY_CLIENT,     {"TEST_USE_PUSH_GATEWAY_CLIENT",     "/test/use-push-gateway-client", Flags::none, "true: enable use of push gateway client mock"}},
         });
     // clang-format on
 }

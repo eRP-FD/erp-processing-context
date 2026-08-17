@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -17,6 +17,7 @@
 
 #include "exporter/database/MedicationExporterDatabaseFrontendInterface.hxx"
 #include "exporter/model/EventKvnr.hxx"
+#include "exporter/model/push/PushNotificationEvent.hxx"
 #include "fhirtools/util/Gsl.hxx"
 #include "shared/database/DatabaseConnectionInfo.hxx"
 
@@ -55,6 +56,11 @@ public:
                 (std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr), (const, override));
     MOCK_METHOD(void, finalizeKvnr, (const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix),
                 (const, override));
+    MOCK_METHOD(std::optional<model::PushNotificationEvent>, processNextPushNotification, (), (const, override));
+    MOCK_METHOD(void, deletePushNotification, (const model::HashedKvnr& hashedKvnr, int64_t eventId), (const, override));
+    MOCK_METHOD(void, updatePushProcessingDelay,
+                (std::int32_t newRetry, std::chrono::seconds delay, const model::HashedKvnr& hashedKvnr, int64_t id),
+                (const, override));
 };
 
 class MedicationExporterDatabaseFrontendProxy : public MedicationExporterDatabaseFrontendInterface
@@ -88,6 +94,10 @@ public:
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                const model::EventKvnr& kvnr) const override;
     void finalizeKvnr(const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix) const override;
+    std::optional<model::PushNotificationEvent> processNextPushNotification() const override;
+    void deletePushNotification(const model::HashedKvnr& hashedKvnr, int64_t eventId) const override;
+    void updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                   const model::HashedKvnr& hashedKvnr, int64_t id) const override;
 
 private:
     gsl::not_null<MedicationExporterDatabaseFrontendInterface*> mDatabase;

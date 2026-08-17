@@ -1,18 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/ErpMain.hxx"
 #include "erp/ErpProcessingContext.hxx"
-#include "shared/admin/AdminRequestHandler.hxx"
 #include "erp/admin/AdminServer.hxx"
 #include "erp/database/DatabaseConnectionTimer.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
 #include "erp/database/RedisClient.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
+#include "erp/database/push/PushExporterPostgresBackend.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "erp/registration/ApplicationHealthAndRegistrationUpdater.hxx"
@@ -20,6 +21,7 @@
 #include "erp/server/context/SessionContext.hxx"
 #include "erp/util/health/HealthCheck.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/admin/AdminRequestHandler.hxx"
 #include "shared/deprecated/SignalHandler.hxx"
 #include "shared/deprecated/TerminationHandler.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
@@ -230,6 +232,7 @@ int ErpMain::runApplication (
         heartbeatSender = setupHeartbeatSender(*serviceContext);
     }
     serviceContext->databaseFactory()->closeConnection();
+    serviceContext->pushExporterDatabaseFactory()->closeConnection();
     auto databaseConnectionRefresher = setupDatabaseTimer(*serviceContext);
     state = MainState::WaitingForTermination;
     serviceContext->getTeeServer().waitForShutdown();
@@ -279,13 +282,29 @@ Factories ErpMain::createProductionFactories()
                                                   hsmPool, keyDerivation);
     };
 
+    factories.pushExporterDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+        return std::make_unique<PushExporterDatabase>(
+            std::make_unique<PushExporterPostgresBackend>(PushExporterPostgresBackend::mainConnection()), hsmPool,
+            keyDerivation);
+    };
+
     if (PostgresBackend::haveReadOnlyConnection())
     {
         factories.readOnlyDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
             return std::make_unique<DatabaseFrontend>(
                 std::make_unique<PostgresBackend>(PostgresBackend::readOnlyConnection()), hsmPool, keyDerivation);
         };
+        factories.readOnlyPushErpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushErpDatabase>(
+                std::make_unique<PushErpPostgresBackend>(PostgresBackend::readOnlyConnection()), hsmPool,
+                keyDerivation);
+        };
     }
+
+    factories.pushErpDatabaseFactory = [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+        return std::make_unique<PushErpDatabase>(
+            std::make_unique<PushErpPostgresBackend>(PostgresBackend::mainConnection()), hsmPool, keyDerivation);
+    };
 
     factories.blobCacheFactory = []
     {

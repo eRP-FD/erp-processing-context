@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #include "exporter/util/ConfigurationFormatter.hxx"
@@ -27,6 +27,9 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
     const rapidjson::Pointer pauseTRezeptPointer("/runtime/" + std::string{RuntimeConfiguration::parameter_pause} +
                                                  "/" + std::string{RuntimeConfiguration::parameter_t_rezept} +
                                                  "/value");
+    const rapidjson::Pointer pausePushPointer("/runtime/" + std::string{RuntimeConfiguration::parameter_pause} +
+                                             "/" + std::string{RuntimeConfiguration::parameter_push} +
+                                             "/value");
     const rapidjson::Pointer throttlePointer("/runtime/" + std::string{RuntimeConfiguration::parameter_throttle} +
                                              "/value");
     const RuntimeConfigurationGetter rcGetter(mRuntimeConfig);
@@ -43,6 +46,9 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
                 break;
             case RuntimeConfiguration::ProcessorType::T_REZEPT:
                 pauseTRezeptPointer.Set(document, rcGetter.isPaused(processor));
+                break;
+            case RuntimeConfiguration::ProcessorType::PUSH:
+                pausePushPointer.Set(document, rcGetter.isPaused(processor));
                 break;
         }
     }

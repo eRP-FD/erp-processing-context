@@ -1,0 +1,6 @@
+port: 8443
+keyfilename: ../tls/keystore.p12
+keypin: changeit
+output: true
+mode: default
+chaosRatio: 10

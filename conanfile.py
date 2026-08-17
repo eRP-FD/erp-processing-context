@@ -1,5 +1,5 @@
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -52,7 +52,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.22.0-DEVELOP",
+        'release_version': "1.23.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,

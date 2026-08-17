@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -9,6 +9,7 @@
 #include "test/util/JwtBuilder.hxx"
 
 #include <gtest/gtest.h>
+#include <shared/util/Hash.hxx>
 
 class ErpDatabaseModelTest : public testing::Test
 {
@@ -77,4 +78,19 @@ TEST_F(ErpDatabaseModelTest, AccessToken_InvalidJson)
     {
         EXPECT_STREQ(exc.what(), expectedString);
     }
+}
+
+
+TEST_F(ErpDatabaseModelTest, HashedId)
+{
+    const std::string src = "Hello";
+    const std::string srcHash = Hash::sha256(src);
+    std::vector<std::byte> srcBuf(src.size());
+    std::transform(src.begin(), src.end(), srcBuf.begin(), [](char c) { return std::byte(c); });
+
+    const auto hashedId = db_model::HashedId::fromString(src);
+
+    EXPECT_EQ(String::toHexString(srcHash), hashedId.toHex());
+
+    EXPECT_NE(srcBuf.data(), hashedId.data());
 }

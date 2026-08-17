@@ -37,7 +37,8 @@
       }
     },
     "feature": {
-      "t-rezept": "true"
+      "t-rezept": "true",
+      "push-event": "true"
     },
     "report": {
       "leips": {
@@ -47,6 +48,9 @@
     "popp": {
       "entityStatementUrl": "https://localhost:4443/entityStatement"
     }
+  },
+  "push": {
+    "fqdnAllowList": ["push-gateway.location.here", "localhost:19443"]
   },
   "erp-medication-exporter": {
     "is-production": "false",
@@ -62,6 +66,13 @@
     },
     "bfarm-client": {
       "url": "no-url-configured"
+    },
+    "push": {
+      "client": {
+        "certificate": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/client/client-fullchain.pem",
+        "key": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/client/client-key.pem",
+        "server-ca": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/rootCA/rootCA-cert.pem"
+      }
     },
     "ocsp": {
       "gracePeriodEpa": "31557600"
@@ -88,7 +99,8 @@
     "vsdm-keys": [
       "{\"betreiberkennung\":\"A\",\"version\":\"1\",\"exp\":\"2025-31-12\", \"hmac_empty_string\": \"8dc5840595d86b3d5aac5faf16a590de26a7a29a075cd70d17386c7d7e81f065\", \"cleartext_key\":\"FIYBBFNNWh99R+YbKqWMnQa/e2J1Qr2paQn+0gT3fWE=\"}",
       "{\"betreiberkennung\":\"A\",\"version\":\"2\",\"exp\":\"2025-31-12\", \"hmac_empty_string\": \"4c46a20b002f98ced91fe8596624705574dc4c81b1d115531ed70fd037b71664\", \"cleartext_key\":\"1tHH57rVLW9VmUmOg//emiVswVSrgTV43A8fFUD/r/I=\"}"
-    ]
+    ],
+    "use-push-gateway-client": "false"
   },
   "mock": {
     "ecies": {

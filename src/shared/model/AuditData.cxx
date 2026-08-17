@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -36,6 +36,8 @@ bool isEventCausedByPatient(AuditEventId eventId)
         case AuditEventId::PATCH_TASK_ID_MARK:
         case AuditEventId::POST_EU_Consent:
         case AuditEventId::DELETE_EU_Consent:
+        case AuditEventId::POST_PUSHERS_SET_REGISTER:
+        case AuditEventId::POST_PUSHERS_SET_UNREGISTER:
             return true;
         case AuditEventId::GET_Task_id_representative:
         case AuditEventId::GET_Task_id_pharmacy:
@@ -71,6 +73,7 @@ bool isEventCausedByPatient(AuditEventId eventId)
         case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL:
         case AuditEventId::POST_TASK_EU_CLOSE:
         case AuditEventId::GET_Tasks_by_pharmacy_with_popp:
+        case AuditEventId::POST_PUSHERS_SET_UNREGISTER_IN_EXPORTER:
             break;
     }
     return false;
@@ -152,6 +155,10 @@ std::string createEventResourceReference(AuditEventId eventId, const std::string
         case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_LIST:
         case AuditEventId::POST_GET_EU_PRESCRIPTIONS_E_PRESCRIPTIONS_RETRIEVAL:
             return "$get-eu-prescriptions";
+        case AuditEventId::POST_PUSHERS_SET_REGISTER:
+        case AuditEventId::POST_PUSHERS_SET_UNREGISTER:
+        case AuditEventId::POST_PUSHERS_SET_UNREGISTER_IN_EXPORTER:
+            return "Pusher";
     }
     Fail2("Invalid event id", std::logic_error);
 }
@@ -228,7 +235,7 @@ std::map<std::string, std::string> AuditMetaData::variables() const
 
 bool AuditMetaData::isEmpty() const
 {
-    return !agentName().has_value() && !agentWho().has_value() && !countryCode().has_value();
+    return !agentName().has_value() && !agentWho().has_value() && !countryCode().has_value() && variables().empty();
 }
 
 AuditMetaData::AuditMetaData(NumberAsStringParserDocument&& jsonTree)
@@ -243,7 +250,7 @@ AuditData::AuditData(
     AuditMetaData&& metaData,
     AuditEvent::Action action,
     AuditEvent::AgentType agentType,
-    const Kvnr& insurantKvnr,
+    const std::variant<Kvnr, HashedKvnr>& insurantKvnr,
     const std::int16_t deviceId,
     std::optional<PrescriptionId> prescriptionId,
     std::optional<std::string> consentId)
@@ -282,7 +289,17 @@ AuditEvent::Action AuditData::action() const
 
 const Kvnr& AuditData::insurantKvnr() const
 {
-    return mInsurantKvnr;
+    ModelExpect(std::holds_alternative<Kvnr>(mInsurantKvnr), "Insurant Kvnr is not set, HashedKvnr is set instead!");
+    return std::get<Kvnr>(mInsurantKvnr);
+}
+
+std::optional<HashedKvnr> AuditData::hashedKvnr() const
+{
+    if (std::holds_alternative<HashedKvnr>(mInsurantKvnr))
+    {
+        return std::get<HashedKvnr>(mInsurantKvnr);
+    }
+    return std::nullopt;
 }
 
 std::int16_t AuditData::deviceId() const
@@ -327,6 +344,12 @@ std::map<std::string, std::string> AuditData::variables() const
 bool AuditData::isValidEventId() const
 {
     return (mEventId >= AuditEventId::MIN && mEventId <= AuditEventId::MAX);
+}
+
+bool AuditData::isPushEvent() const
+{
+    return mEventId == AuditEventId::POST_PUSHERS_SET_REGISTER ||
+           mEventId == AuditEventId::POST_PUSHERS_SET_UNREGISTER;
 }
 
 void AuditData::setId(const std::string& id)

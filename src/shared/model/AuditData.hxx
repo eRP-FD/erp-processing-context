@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,18 +8,22 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_AUDITDATA_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_AUDITDATA_HXX
 
+#include "shared/ErpRequirements.hxx"
 #include "shared/model/AuditEvent.hxx"
+#include "shared/model/CountryCode.hxx"
+#include "shared/model/HashedKvnr.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/Resource.hxx"
 #include "shared/model/Timestamp.hxx"
-#include "shared/model/CountryCode.hxx"
 #include "shared/network/message/HttpStatus.hxx"
 
 #include <map>
 
 
 namespace model {
+
+static constexpr auto implementsA_19284 = A_19284_14.implements("Versichertenprotokoll zu Operationen");
 
 enum class AuditEventId : std::int16_t
 {
@@ -76,7 +80,10 @@ enum class AuditEventId : std::int16_t
     DELETE_EU_Consent = 48,
     POST_TASK_EU_CLOSE = 49,
     GET_Tasks_by_pharmacy_with_popp = 50,
-    MAX = GET_Tasks_by_pharmacy_with_popp
+    POST_PUSHERS_SET_REGISTER = 51,
+    POST_PUSHERS_SET_UNREGISTER = 52,
+    POST_PUSHERS_SET_UNREGISTER_IN_EXPORTER = 53,
+    MAX = POST_PUSHERS_SET_UNREGISTER_IN_EXPORTER
 };
 
 bool isEventCausedByPatient(AuditEventId eventId);
@@ -122,7 +129,7 @@ public:
         AuditMetaData&& metaData,
         AuditEvent::Action action,
         AuditEvent::AgentType agentType,
-        const Kvnr& insurantKvnr,
+        const std::variant<Kvnr, HashedKvnr>& insurantKvnr,
         const std::int16_t deviceId,
         std::optional<PrescriptionId> prescriptionId,
         std::optional<std::string> consentId);
@@ -132,6 +139,7 @@ public:
     const AuditMetaData& metaData() const;
     AuditEvent::Action action() const;
     const Kvnr& insurantKvnr() const;
+    std::optional<HashedKvnr> hashedKvnr() const;
     std::int16_t deviceId() const;
     const std::optional<model::PrescriptionId>& prescriptionId() const;
     const std::optional<std::string>& consentId() const;
@@ -141,6 +149,7 @@ public:
     std::map<std::string, std::string> variables() const;
 
     bool isValidEventId() const;
+    bool isPushEvent() const;
 
     void setId(const std::string& id);
     void setRecorded(const model::Timestamp& recorded);
@@ -150,7 +159,7 @@ private:
     AuditMetaData mMetaData;
     AuditEvent::Action mAction;
     AuditEvent::AgentType mAgentType;
-    Kvnr mInsurantKvnr;
+    std::variant<Kvnr, HashedKvnr> mInsurantKvnr;
     std::int16_t mDeviceId;
     std::optional<PrescriptionId> mPrescriptionId;
     std::optional<std::string> mConsentId;

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -30,7 +30,7 @@ ResponseBuilder& ResponseBuilder::status (HttpStatus status)
 }
 
 
-ResponseBuilder& ResponseBuilder::jsonBody (const std::string& body)
+ResponseBuilder& ResponseBuilder::fhirJsonBody (const std::string& body)
 {
     mResponse.setBody(body);
     mResponse.setHeader(Header::ContentType, ContentMimeType::fhirJsonUtf8);
@@ -38,25 +38,21 @@ ResponseBuilder& ResponseBuilder::jsonBody (const std::string& body)
 }
 
 
-ResponseBuilder& ResponseBuilder::xmlBody (const std::string& body)
+ResponseBuilder& ResponseBuilder::fhirXmlBody (const std::string& body)
 {
     mResponse.setBody(body);
     mResponse.setHeader(Header::ContentType, ContentMimeType::fhirXmlUtf8);
     return *this;
 }
 
-
-ResponseBuilder& ResponseBuilder::body (const bool useJson, const model::ResourceBase& resource)
+ResponseBuilder& ResponseBuilder::jsonBody(const std::string& body)
 {
-    if (useJson)
-        jsonBody(resource.serializeToJsonString());
-    else
-        xmlBody(resource.serializeToXmlString());
+    mResponse.setBody(body);
+    mResponse.setHeader(Header::ContentType, ContentMimeType::jsonUtf8);
     return *this;
 }
 
-
-ResponseBuilder &ResponseBuilder::clearBody(void)
+ResponseBuilder &ResponseBuilder::clearBody()
 {
     mResponse.setBody("");
     mResponse.removeHeader(Header::ContentType);
@@ -76,3 +72,18 @@ ResponseBuilder& ResponseBuilder::header(const std::string& key, const std::stri
     mResponse.setHeader(key, value);
     return *this;
 }
+
+
+FhirResponseBuilder& FhirResponseBuilder::body (const bool useJson, const model::ResourceBase& resource)
+{
+    if (useJson)
+    {
+        fhirJsonBody(resource.serializeToJsonString());
+    }
+    else
+    {
+        fhirXmlBody(resource.serializeToXmlString());
+    }
+    return *this;
+}
+

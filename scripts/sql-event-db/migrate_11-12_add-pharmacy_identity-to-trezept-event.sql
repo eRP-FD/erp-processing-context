@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -23,13 +23,13 @@ CREATE OR REPLACE FUNCTION erp_event.f_on_insert_task_event()
         INSERT INTO erp_event.kvnr(kvnr_hashed, next_export, state, retry_count)
             VALUES (NEW.kvnr_hashed, NOW(), 'pending', 0)
             ON CONFLICT (kvnr_hashed) DO UPDATE
-            SET state = 'pending', 
-                next_export = 
+            SET state = 'pending',
+                next_export =
                 CASE WHEN erp_event.kvnr.state = 'processed'
                     THEN NOW()
                     ELSE erp_event.kvnr.next_export
                 END
-                , retry_count = 
+                , retry_count =
                 CASE WHEN erp_event.kvnr.state = 'processed'
                     THEN 0
                     ELSE erp_event.kvnr.retry_count
@@ -99,7 +99,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_on_insert_task_event()
                 );
         END IF;
         RETURN NEW;
-        END; 
+        END;
     $$;
 
 COMMIT;

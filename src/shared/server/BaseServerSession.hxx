@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -16,18 +16,22 @@
 #include <functional>
 
 
-//class RequestHandlerManager;
 class AccessLog;
 
+struct HandlerResult
+{
+    bool success;
+    std::optional<RequestHandlerManager::MatchingHandler> handler;
+    std::function<void()> postCallback; //! Generic function called /after/ the response is written.
+    ServerResponse response;
+};
 
-//class MatchingHandler;
-//std::optional<RequestHandlerManager::MatchingHandler>,
 class AbstractRequestHandler
 {
 public:
     virtual ~AbstractRequestHandler (void) = default;
 
-    virtual std::tuple<bool,std::optional<RequestHandlerManager::MatchingHandler>,ServerResponse> handleRequest (ServerRequest& request, AccessLog& log) = 0;
+    virtual HandlerResult handleRequest (ServerRequest& request, AccessLog& log) = 0;
 };
 
 
@@ -59,7 +63,7 @@ protected:
     void do_read ();
     void on_read (ServerRequest request, SessionDataPointer&& data);
     void do_handleRequest (ServerRequest request, SessionDataPointer&& data);
-    void do_write (ServerResponse response, const bool keepConnectionAlive, SessionDataPointer&& data);
+    void do_write (ServerResponse response, std::function<void()>&& postCallback, const bool keepConnectionAlive, SessionDataPointer&& data);
     void on_write (const bool keepConnectionAlive, SessionDataPointer&& data);
     void do_close (SessionDataPointer&& data);
     void on_shutdown (boost::beast::error_code ec, SessionDataPointer&& data);

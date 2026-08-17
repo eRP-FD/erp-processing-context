@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -23,7 +23,7 @@ static constexpr Requirement A_20703    ("E-Rezept-Fachdienst - Drosselung Brute
 static constexpr Requirement A_20704    ("E-Rezept-Fachdienst - Drosselung Rezeptfälschungen");
 static constexpr Requirement A_19700    ("E-Rezept-Fachdienst - Ableitung der Persistenzschluessel aus Merkmal der E-Rezepte");
 static constexpr Requirement A_19688    ("E-Rezept-Fachdienst - Verschluesselung von ausserhalb des Verarbeitungskontextes der VAU gespeicherten Daten");
-static constexpr Requirement A_20751    ("E-Rezept-Fachdienst - Erkennen der Prüfidentität");
+static constexpr Requirement A_20751_01 ("E-Rezept-Fachdienst - Erkennen der Prüfidentität von Versicherten");
 static constexpr Requirement A_20752    ("E-Rezept-Fachdienst - Ausschluss Vertreterkommunikation von bzw. an Prüf-Identität");
 static constexpr Requirement A_20753    ("E-Rezept-Fachdienst - Ausschluss Vertreterzugriff auf bzw. mittels Prüf-Identität");
 
@@ -475,9 +475,55 @@ static constexpr Requirement A_26449("PoPP-Verifier - Verwendung von PoPP-Servic
 static constexpr Requirement A_27358("PoPP-Verifier - Zugang zum Entity Statement des PoPP-Service");
 static constexpr Requirement A_26534("PoPP-Verifier - PoPP-Service JWK-Set Signatur Prüfung");
 static constexpr Requirement A_27015("PoPP-Verifier - Prüfung Signaturzertifikat via TI-PKI möglich");
-static constexpr Requirement A_27016("PoPP-Verifier - Prüfung Signaturzertifikat via TI-PKI - Vorgaben");
+static constexpr Requirement A_27016_01("PoPP-Verifier - Prüfung Signaturzertifikat via TI-PKI - Vorgaben");
 
+// Push Notifications
+// gemF_PushNotification
+static constexpr Requirement A_27104("Fachdienst - Push Notifications - OpenApi_Notification_Fachdienst");
+static constexpr Requirement A_27154("Fachdienst - FdV-Instanz registrieren - App-Registrierung anlegen");
+static constexpr Requirement A_27155("Fachdienst - FdV-Instanz registrieren - App-Registrierung aktualisieren");
+static constexpr Requirement A_27156("Fachdienst - FdV-Instanz deregistrieren - App-Registrierung löschen");
+static constexpr Requirement A_27157("Fachdienst - FdV-Instanz registrieren – Initiale Schlüsselableitung");
+static constexpr Requirement A_27158_01("Fachdienst - Schlüsselableitung shared-secret-Jahr-Monat und AES/GCM-Schlüssel-Jahr-Monat");
+static constexpr Requirement A_27193("Fachdienst - FdV-Instanz registrieren - Liste der channel_idsdes Geräts anlegen");
+static constexpr Requirement A_27197_01("Fachdienst - FdV-Instanz deregistrieren - Liste der channel_ids des Geräts löschen");
+static constexpr Requirement A_27160("Fachdienst - Push Notification senden – Schlüsselableitung");
+static constexpr Requirement A_27161("Fachdienst - Push Notification senden – Nachricht verschlüsseln");
+static constexpr Requirement A_27610("Fachdienst - Push Notification senden - Größe des Nachrichteninhalts verschleiern");
 
+// C_11585_Anlage_V1.0.0 // gemSpec_FD_eRp
+static constexpr Requirement A_28111("E-Rezept-Fachdienst - Push Notifications - OpenApi_Notification_Fachdienst");
+static constexpr Requirement A_28112("E-Rezept-Fachdienst - Push Notifcations - App-Registrierung - Rolle Versicherter");
+static constexpr Requirement A_28113("E-Rezept-Fachdienst - Push Notifcations - App-Registrierungen Abrufen - Rolle Versicherter");
+static constexpr Requirement A_28114("E-Rezept-Fachdienst - unzulässige Operationen Pushers");
+static constexpr Requirement A_28117("E-Rezept-Fachdienst - Push Notifications - Channels - OpenApi_Notification_Fachdienst");
+static constexpr Requirement A_28118("E-Rezept-Fachdienst - Push Notifcations - Channels abrufen - Rolle Versicherter");
+static constexpr Requirement A_28119("E-Rezept-Fachdienst - Push Notifcations - Channels des Geräts abrufen - Rolle Versicherter");
+static constexpr Requirement A_28120("E-Rezept-Fachdienst - Push Notifcations - Channels konfigurieren - Rolle Versicherter");
+static constexpr Requirement A_28121("E-Rezept-Fachdienst - unzulässige Operationen Channels");
+static constexpr Requirement A_28530("E-Rezept-Fachdienst - Push Notifications - App-Registrierungen abrufen - Filter auf KVNR des Versicherten");
+static constexpr Requirement A_28674("E-Rezept-Fachdienst - Push Notifications - App-Registrierung - Zeitstempel speichern");
 
+static constexpr Requirement A_28115("E-Rezept-Fachdienst - Push Notification senden - Nachrichteninhalt erzeugen");
+static constexpr Requirement A_28135_01("E-Rezept-Fachdienst - Push Notification senden - Referenz auf Protokolleintrag");
+static constexpr Requirement A_28126("E-Rezept-Fachdienst - Task aktivieren - Push Notification Versicherter");
+static constexpr Requirement A_28127("E-Rezept-Fachdienst - Task akzeptieren - Push Notification Versicherter");
+static constexpr Requirement A_28128("E-Rezept-Fachdienst - Task zurückweisen - Push Notification Versicherter");
+static constexpr Requirement A_28129("E-Rezept-Fachdienst - Task schließen - Push Notification Versicherter");
+static constexpr Requirement A_28131("E-Rezept-Fachdienst - E-Rezept löschen - Push Notification Versicherter");
+static constexpr Requirement A_28130("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Push Notification Versicherter");
+static constexpr Requirement A_28206("E-Rezept-Fachdienst - Task schließen - EU - Push Notification Versicherter");
+static constexpr Requirement A_28132("E-Rezept-Fachdienst - Nachricht einstellen - Push Notification Versicherter");
+static constexpr Requirement A_28125("E-Rezept-Fachdienst - Task abrufen - Vertreter - Push Notification Versicherter");
+static constexpr Requirement A_28133("E-Rezept-Fachdienst - Abrechnungsinformation bereitstellen - Push Notification Versicherter");
+static constexpr Requirement A_28134("E-Rezept-Fachdienst - Abrechnungsinformation ändern - Push Notification Versicherter");
+static constexpr Requirement A_28204("E-Rezept-Fachdienst - eu-prescription abfragen - Abfrage aller einlösbaren Verordnungsinformationen - Push Notification Versicherter");
+static constexpr Requirement A_28205("E-Rezept-Fachdienst - eu-prescription abfragen - Abfrage nach Liste Rezept-Ids - Push Notification Versicherter");
+static constexpr Requirement A_28124("E-Rezept - Push Notifications - Datenstruktur Nachrichteninhalte");
+static constexpr Requirement A_27193_02 ("Fachdienst - FdV-Instanz registrieren - Liste der channel_ids des Geräts anlegen");
+
+static constexpr Requirement A_19284_14("E-Rezept-Fachdienst - Versichertenprotokoll zu Operationen");
+static constexpr Requirement A_20165_12("Performance – E-Rezept-Fachdienst - Bearbeitungszeit unter Last");
+static constexpr Requirement A_27783_01("User-Agent - Senden eines User-Agents (Zentrale Dienste der TI)");
 
 #endif

@@ -1,12 +1,13 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Environment.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "shared/ErpConstants.hxx"
 #include "test_config.h"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -171,5 +172,74 @@ TEST_F(ConfigurationTest, OptionalSafeStringValue_null)
         ScopedSetEnv configFileEnv(ErpConstants::ConfigurationFileNameVariable,
                                    ResourceManager::getAbsoluteFilename("test/configuration-null.json").string());
         EXPECT_FALSE(createConfiguration()->getOptionalSafeStringValue(key).has_value());
+    }
+}
+
+TEST_F(ConfigurationTest, pushGatewayFQDNs)
+{
+    std::set<Configuration::PushGatewayFQDNs> fqdns;
+    {
+        const ScopedSetEnv PUSH_GATEWAY_FQDN_ALLOW_LIST(ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST, "localhost");
+        ASSERT_NO_THROW(fqdns = Configuration::instance().pushGatewayFQDNs());
+        ASSERT_EQ(fqdns.size(), 1);
+        ASSERT_EQ(fqdns.begin()->hostName, "localhost");
+        ASSERT_EQ(fqdns.begin()->port, 443);
+    }
+    {
+        const ScopedSetEnv PUSH_GATEWAY_FQDN_ALLOW_LIST(ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST,
+                                                        "localhost:65535;pushgw.erezept.gematik.de");
+        ASSERT_NO_THROW(fqdns = Configuration::instance().pushGatewayFQDNs());
+        ASSERT_EQ(fqdns.size(), 2);
+        auto it = fqdns.begin();
+        ASSERT_EQ(it->hostName, "localhost");
+        ASSERT_EQ(it->port, 65535);
+        ++it;
+        ASSERT_EQ(it->hostName, "pushgw.erezept.gematik.de");
+        ASSERT_EQ(it->port, 443);
+    }
+    {
+        const ScopedSetEnv PUSH_GATEWAY_FQDN_ALLOW_LIST(ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST,
+                                                        "localhost:14443;pushgw.erezept.gematik.de:0");
+        EXPECT_THROW(fqdns = Configuration::instance().pushGatewayFQDNs(), std::runtime_error);
+    }
+    {
+        const ScopedSetEnv PUSH_GATEWAY_FQDN_ALLOW_LIST(ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST,
+                                                        "localhost:65536");
+        EXPECT_THROW(fqdns = Configuration::instance().pushGatewayFQDNs(), std::runtime_error);
+    }
+}
+
+TEST_F(ConfigurationTest, getOptionalPem)
+{
+    static constexpr auto testKey = ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA;
+    const auto& config = Configuration::instance();
+    auto pemFile = ResourceManager::getAbsoluteFilename("test/generated_pki_push/rootCA/rootCA-cert.pem");
+    auto expected = FileHelper::readFileAsString(pemFile);
+    ASSERT_FALSE(expected.empty()); // make sure this test isn't trivial
+    {
+        // use prefix: "pem:"
+        EnvironmentVariableGuard pemGuard{testKey,"pem:" + expected};
+        std::optional<std::string> actual;
+        ASSERT_NO_THROW(actual = config.getOptionalPemValue(testKey));
+        EXPECT_EQ(actual, expected);
+    }
+    {
+        // use prefix: "file://"
+        EnvironmentVariableGuard pemGuard{testKey,"file://" + pemFile.native()};
+        std::optional<std::string> actual;
+        ASSERT_NO_THROW(actual = config.getOptionalPemValue(testKey));
+        EXPECT_EQ(actual, expected);
+    }
+    {
+        // no prefix file name
+        EnvironmentVariableGuard pemGuard{testKey, pemFile.native()};
+        std::optional<std::string> actual;
+        ASSERT_THROW(actual = config.getOptionalPemValue(testKey), IllegalPemPrefixError);
+    }
+    {
+        // no prefix pem
+        EnvironmentVariableGuard pemGuard{testKey, expected};
+        std::optional<std::string> actual;
+        ASSERT_THROW(actual = config.getOptionalPemValue(testKey), IllegalPemPrefixError);
     }
 }

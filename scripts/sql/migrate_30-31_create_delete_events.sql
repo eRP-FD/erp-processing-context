@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_delete_task_event()
     LANGUAGE plpgsql
     AS
     $$
-        DECLARE 
+        DECLARE
             v_id bigint;
             v_usecase erp_event.usecase_type;
             v_prescription_type smallint;
@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_delete_task_event()
             ELSE
                 v_prescription_type = 160;
             END IF;
-          
+
             IF (OLD.status = 1) THEN
                 /* A_26264 */
                 v_usecase = 'cancelPrescription';
@@ -67,7 +67,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_delete_task_event()
                         usecase,
                         prescription_type,
                         doctor_identity,
-                        pharmacy_identity                     
+                        pharmacy_identity
                     )
                 VALUES
                     (

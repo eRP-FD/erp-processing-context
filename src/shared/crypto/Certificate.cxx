@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -23,8 +23,6 @@
 
 namespace
 {
-    constexpr std::string_view PEM_CERTIFICATE_BEGIN_TAG = "-----BEGIN CERTIFICATE-----";
-
     using Asn1PrintableStringPtr = const std::unique_ptr<
                                                         ASN1_PRINTABLESTRING,
                                                         std::function<void(ASN1_PRINTABLESTRING*)>>;
@@ -208,7 +206,7 @@ Certificate Certificate::fromBinaryDer(const std::string& binaryDer)
 
 Certificate Certificate::fromBase64(const std::string& base64)
 {
-    if (String::contains(base64, PEM_CERTIFICATE_BEGIN_TAG))
+    if (String::contains(base64, PEM_BEGIN_TAG))
     {
         return Certificate::fromPem(base64);
     }

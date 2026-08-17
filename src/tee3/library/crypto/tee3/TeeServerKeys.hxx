@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -8,7 +8,7 @@
 #define EPA_LIBRARY_CRYPTO_TEE3_TEESERVERKEYS_HXX
 
 #include "library/crypto/tee3/Tee3Protocol.hxx"
-#include "library/util/BinaryBuffer.hxx"
+#include "shared/util/BinaryBuffer.hxx"
 
 #include <mutex>
 #include <tuple>

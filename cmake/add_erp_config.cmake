@@ -1,10 +1,10 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
-
+include_guard()
 # Add configuration in `bin` folder
 #
 # Usage: add_erp_config(<target> TEMPLATE <template_file> COMPONENTS <component...>|NO_INSTALL)
@@ -36,6 +36,8 @@ function(add_erp_config target)
         DEPENDS "${install_config}"
         COMMAND "${CMAKE_COMMAND}"
                     -DERP_RUNTIME_RESOURCE_DIR="${CMAKE_BINARY_DIR}/bin/resources"
+                    -DERP_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+                    -DERP_BINARY_DIR="${CMAKE_BINARY_DIR}"
                     -DERP_CONFIGURATION_FILE_IN="${template}"
                     -DERP_CONFIGURATION_FILE="${builddir_output_name}"
                     -DERP_RELEASE_VERSION="${ERP_RELEASE_VERSION}"

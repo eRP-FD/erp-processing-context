@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -51,6 +51,7 @@ MedicationExporterServiceContext::MedicationExporterServiceContext(boost::asio::
         std::chrono::milliseconds{
             configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
     requestSender->setProxies(configuration.proxyParameters(ProxyMode::HTTP));
+    requestSender->setResponseBodyLimit(configuration.getIntValue(ConfigurationKey::HTTPCLIENT_MAX_RESPONSE_BODY_SIZE));
 
     requestSender->setFollowRedirects(true);
     mCrlProvider = std::make_shared<CrlDownloadCache>(std::move(requestSender));
@@ -129,7 +130,7 @@ MedicationExporterServiceContext::medicationExporterDatabaseFactory(TransactionM
     return mExporterDatabaseFactory(mKeyDerivation, mode);
 }
 
-std::unique_ptr<exporter::MainDatabaseFrontend> MedicationExporterServiceContext::erpDatabaseFactory()
+std::unique_ptr<exporter::MainDatabaseFrontendInterface> MedicationExporterServiceContext::erpDatabaseFactory()
 {
     return mErpDatabaseFactory(*mHsmPool, mKeyDerivation);
 }
@@ -184,4 +185,31 @@ bool MedicationExporterServiceContext::failingEpasEmpty() const
 {
     const std::unique_lock lock(mFailingEpasMutex);
     return mFailingEpas.empty();
+}
+
+void MedicationExporterServiceContext::pushGatewayFailed(const std::string& pushGatewayUrl)
+{
+    const std::unique_lock lock(mFailingPushGatewaysMutex);
+    TVLOG(1) << "Push Gateway returned 5xx error, marking it as failing: " << pushGatewayUrl;
+    mFailingPushGateways.emplace(pushGatewayUrl, model::Timestamp::now());
+}
+
+bool MedicationExporterServiceContext::isPushGatewayFailing(const std::string& pushGatewayUrl)
+{
+    const std::unique_lock lock(mFailingPushGatewaysMutex);
+    auto it = mFailingPushGateways.find(pushGatewayUrl);
+    if (it != mFailingPushGateways.end())
+    {
+        const bool stillInCooldown =
+            model::Timestamp::now() - it->second <
+            std::chrono::seconds{Configuration::instance().getIntValue(
+                ConfigurationKey::MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS)};
+        if (! stillInCooldown)
+        {
+            TVLOG(1) << "Push Gateway is no longer marked failing: " << pushGatewayUrl;
+            mFailingPushGateways.erase(it);
+        }
+        return stillInCooldown;
+    }
+    return false;
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -56,8 +56,6 @@ public:
                                  const std::optional<std::string>& optionalPathIdParameter) const override;
     Operation getOperation() const override;
     std::string_view name() const;
-
-    static bool isVerificationIdentityKvnr(const std::string_view& kvnr);
 
     static bool callerWantsJson (const ServerRequest& request);
 

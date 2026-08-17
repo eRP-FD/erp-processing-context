@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -47,8 +47,11 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     , idp()
     , mDatabaseFactory(factories.databaseFactory)
     , mReadOnlyDatabaseFactory{factories.readOnlyDatabaseFactory}
+    , mPushErpDatabaseFactory(factories.pushErpDatabaseFactory)
+    , mReadOnlyPushErpDatabaseFactory{factories.readOnlyPushErpDatabaseFactory}
     , mRedisClient(factories.redisClientFactory(
           std::chrono::milliseconds(configuration.getIntValue(ConfigurationKey::REDIS_DOS_SOCKET_TIMEOUT))))
+    , mPushExporterDatabaseFactory(factories.pushExporterDatabaseFactory)
     , mDosHandler(createRateLimiter(mRedisClient))
     , mJsonValidator(factories.jsonValidatorFactory())
     , mPreUserPseudonymManager(PreUserPseudonymManager::create(this))
@@ -67,8 +70,9 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
             std::logic_error);
 
     using enum ApplicationHealth::Service;
-    applicationHealth().enableChecks(
-        {Bna, Hsm, Idp, Postgres, PostgresRO, PrngSeed, Redis, TeeToken, Tsl, CFdSigErp, PoPPService});
+    applicationHealth().enableChecks({Bna, Hsm, Idp, Postgres, PostgresRO, PrngSeed, Redis, TeeToken, Tsl});
+    // Not contributing to application health down state:
+    applicationHealth().enableSoftChecks({CFdSigErp, PoPPService, EventDb});
 
     RequestHandlerManager teeHandlers;
     ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
@@ -84,6 +88,7 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
                 configuration.getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)});
         requestSender->setFollowRedirects(true);
         requestSender->setProxies(configuration.proxyParameters(ProxyMode::HTTP));
+        requestSender->setResponseBodyLimit(configuration.getIntValue(ConfigurationKey::HTTPCLIENT_MAX_RESPONSE_BODY_SIZE));
         mCrlProvider = std::make_shared<CrlDownloadCache>(std::move(requestSender));
     }
 
@@ -144,6 +149,25 @@ std::unique_ptr<ReadOnlyDatabase> PcServiceContext::readOnlyDatabaseFactory()
         return mReadOnlyDatabaseFactory(*mHsmPool, mKeyDerivation);
     }
     return databaseFactory();
+}
+
+std::unique_ptr<PushErpDatabase> PcServiceContext::pushDatabaseFactory()
+{
+    return mPushErpDatabaseFactory(*mHsmPool, mKeyDerivation);
+}
+
+std::unique_ptr<PushErpReadOnlyDatabase> PcServiceContext::readOnlyPushDatabaseFactory()
+{
+    if (mReadOnlyPushErpDatabaseFactory)
+    {
+        return mReadOnlyPushErpDatabaseFactory(*mHsmPool, mKeyDerivation);
+    }
+    return pushDatabaseFactory();
+}
+
+std::unique_ptr<PushExporterDatabase> PcServiceContext::pushExporterDatabaseFactory()
+{
+    return mPushExporterDatabaseFactory(*mHsmPool, mKeyDerivation);
 }
 
 const RateLimiter& PcServiceContext::getDosHandler()

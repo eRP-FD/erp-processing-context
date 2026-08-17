@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -37,9 +37,10 @@ ClientImpl<SslStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, cons
 
 template<>
 ClientImpl<TcpStream>::ClientImpl(const ConnectionParameters& params)
-    : mConnectionTimeout(params.connectionTimeout),
-      mHostName(params.hostname),
-      mSessionContainer{params}
+    : mConnectionTimeout(params.connectionTimeout)
+    , mHostName(params.hostname)
+    , mSessionContainer{params}
+    , mResponseBodyLimit{params.responseBodyLimit}
 {
 }
 
@@ -48,6 +49,7 @@ ClientImpl<TcpStream>::ClientImpl(const boost::asio::ip::tcp::endpoint& ep, cons
     : mConnectionTimeout(params.connectionTimeout)
     , mHostName(params.hostname)
     , mSessionContainer{ep, params}
+    , mResponseBodyLimit{params.responseBodyLimit}
 {
 }
 
@@ -70,7 +72,7 @@ ClientResponse ClientImpl<StreamClass>::send (const ClientRequest& clientRequest
         writer.write(mSessionContainer.getStream());
 
         // Read and return the response.
-        ClientResponseReader reader;
+        ClientResponseReader reader(mResponseBodyLimit);
         ClientResponse response = reader.read(mSessionContainer.getStream());
 
         if (!response.getHeader().keepAlive())

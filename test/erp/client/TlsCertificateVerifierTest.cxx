@@ -20,6 +20,7 @@
 
 #include <gtest/gtest.h>
 #include <filesystem>
+#include <iterator>
 
 
 class TestServerHandler : public UnconstrainedRequestHandler
@@ -38,6 +39,7 @@ public:
 };
 
 struct CertificateTestData {
+    std::filesystem::path rootCaCertFile;
     std::string rootCaCertPem;
     std::string rootCaCrlDer;
     std::string intermediateCertPem;
@@ -50,7 +52,8 @@ struct CertificateTestData {
 CertificateTestData loadCert(std::string rootCa, std::string intermediateCa, std::string leafCert)
 {
     const auto prefix = std::filesystem::path("test/generated_pki/");
-    const auto rootCaPem = ResourceManager::instance().getStringResource((prefix / rootCa / "ca.pem").string());
+    auto rootCaCertFile = (prefix / rootCa / "ca.pem");
+    const auto rootCaPem = ResourceManager::instance().getStringResource(rootCaCertFile.string());
     const auto rootCaCrlDer = ResourceManager::instance().getStringResource((prefix / rootCa / "crl/crl.der").string());
     const auto intermediateCertPem = ResourceManager::instance().getStringResource(
         (prefix / rootCa / "certificates" / intermediateCa / (intermediateCa + "_cert.pem")).string());
@@ -61,6 +64,7 @@ CertificateTestData loadCert(std::string rootCa, std::string intermediateCa, std
     const auto leafPrivateKeyPem = ResourceManager::instance().getStringResource(
         (prefix / intermediateCa / "certificates" / leafCert / (leafCert + "_key.pem")).string());
     return CertificateTestData{
+        .rootCaCertFile = std::move(rootCaCertFile),
         .rootCaCertPem = rootCaPem,
         .rootCaCrlDer = rootCaCrlDer,
         .intermediateCertPem = intermediateCertPem,
@@ -316,3 +320,152 @@ TEST_F(TlsCertificateVerifierTest, crlHardFailEmpty)
 
     EXPECT_ANY_THROW(requestSender.send(requestPath, HttpMethod::GET, ""));
 }
+
+struct TlsInternetCertificateVerifierTestParam {
+    enum CertRepresentation
+    {
+        NONE,
+        PEM,
+        FILE,
+        OTHER_CA_FILE,
+    };
+    struct ConfVal {
+        std::string prefix{};
+        CertRepresentation certificateRep = NONE;
+    };
+    bool success;
+    ConfVal conf{};
+    ConfVal fallback{};
+    std::string serverCert{"unrevoked_ec"};
+
+};
+
+
+class TlsInternetCertificateVerifierTest : public TlsCertificateVerifierTest,
+                                           public testing::WithParamInterface<TlsInternetCertificateVerifierTestParam>
+{
+public:
+    static constexpr auto internetKey = ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH;
+    static constexpr auto fallbackKey = ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA;
+
+    std::string confValue(const CertificateTestData& certData, const TlsInternetCertificateVerifierTestParam::ConfVal& cv)
+    {
+        std::string result;
+        switch (cv.certificateRep)
+        {
+            case TlsInternetCertificateVerifierTestParam::NONE:
+                return cv.prefix;
+            case TlsInternetCertificateVerifierTestParam::PEM:
+                return cv.prefix + certData.rootCaCertPem;
+            case TlsInternetCertificateVerifierTestParam::FILE:
+                return cv.prefix + ResourceManager::getAbsoluteFilename(certData.rootCaCertFile).native();
+            case TlsInternetCertificateVerifierTestParam::OTHER_CA_FILE:
+                return cv.prefix +
+                       ResourceManager::getAbsoluteFilename("test/generated_pki_push/rootCA/rootCA-cert.pem").native();
+        }
+        Fail2("Invalid value for CertRepresentation: " + std::to_string(static_cast<uintmax_t>(cv.certificateRep)),
+              std::logic_error);
+    }
+
+    void test()
+    {
+        auto verifier = TlsCertificateVerifier::withInternetRootCAsWithFallback(fallbackKey);
+        const UrlRequestSender requestSender(verifier, std::chrono::seconds{1}, std::chrono::seconds{1});
+        requestSender.send(requestPath, HttpMethod::GET, "");
+    }
+};
+void PrintTo(const TlsInternetCertificateVerifierTestParam& p, std::ostream* out)
+{
+    fmt::format_to(std::ostream_iterator<char>{*out}, "conf: {}{}, fallback: {}{}, server: {}", p.conf.prefix,
+                    magic_enum::enum_name(p.conf.certificateRep), p.fallback.prefix,
+                    magic_enum::enum_name(p.fallback.certificateRep), p.serverCert);
+}
+
+TEST_P(TlsInternetCertificateVerifierTest, internetCert)
+{
+    const auto& param = GetParam();
+    auto certData = loadCert("root_ca_ec", "sub_ca1_ec", param.serverCert);
+    makeServer(certData.certChain, certData.leafPrivateKeyPem);
+    EnvironmentVariableGuard caFile{internetKey, confValue(certData, param.conf)};
+    EnvironmentVariableGuard noFallback{fallbackKey, confValue(certData, param.fallback)};
+    if (param.success)
+    {
+        ASSERT_NO_THROW(test());
+    }
+    else
+    {
+        ASSERT_ANY_THROW(test());
+    }
+}
+
+INSTANTIATE_TEST_SUITE_P(success, TlsInternetCertificateVerifierTest,
+                         testing::ValuesIn<std::list<TlsInternetCertificateVerifierTestParam>>({
+                             {
+                                 .success = true,
+                                 .conf = {"", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = true,
+                                 .fallback = {"file://", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = true,
+                                 .fallback = {"pem:", TlsInternetCertificateVerifierTestParam::PEM},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = true,
+                                 .fallback = {"", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = true,
+                                 .fallback = {"", TlsInternetCertificateVerifierTestParam::PEM},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = true,
+                                 .conf = {"", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .fallback = {"<broken fallback argument>"},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                         }));
+
+
+INSTANTIATE_TEST_SUITE_P(failure, TlsInternetCertificateVerifierTest,
+                         testing::ValuesIn<std::list<TlsInternetCertificateVerifierTestParam>>({
+                             {
+                                 .success = false,
+                                 .conf = {},
+                                 .fallback = {},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = false,
+                                 .conf = {"", TlsInternetCertificateVerifierTestParam::OTHER_CA_FILE},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = false,
+                                 .fallback = {"file://", TlsInternetCertificateVerifierTestParam::OTHER_CA_FILE},
+                                 .serverCert = "unrevoked_ec",
+                             },
+                             {
+                                 .success = false,
+                                 .conf = {"", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .serverCert = "outdated_ec",
+                             },
+                             {
+                                 .success = false,
+                                 .fallback = {"file://", TlsInternetCertificateVerifierTestParam::FILE},
+                                 .serverCert = "outdated_ec",
+                             },
+                             {
+                                 .success = false,
+                                 .fallback = {"<broken fallback argument>"},
+                                 .serverCert = "unrevoked_ec",
+                             }
+                         }));
+

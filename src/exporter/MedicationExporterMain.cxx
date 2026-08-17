@@ -1,6 +1,6 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2025
-* (C) Copyright IBM Corp. 2021, 2025
+* (C) Copyright IBM Deutschland GmbH 2021, 2026
+* (C) Copyright IBM Corp. 2021, 2026
 *
 * non-exclusively licensed to gematik GmbH
 */
@@ -41,6 +41,8 @@
 
 #include "client/BfArMClient.hxx"
 #include "client/FhirVZDClient.hxx"
+#include "client/push/PushGatewayClient.hxx"
+#include "eventprocessing/push/PushEventProcessor.hxx"
 #include "util/RuntimeConfiguration.hxx"
 
 #include <boost/asio/awaitable.hpp>
@@ -126,8 +128,8 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
                                       RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                       bool enforceClientAuthentication, const SafeString& caCertificates) {
         return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
-                                             dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
-                                             enforceClientAuthentication, caCertificates);
+                                                       dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
+                                                       enforceClientAuthentication, caCertificates);
     };
 
     factories.exporterDatabaseFactory = [](KeyDerivation& keyDerivation, TransactionMode mode) {
@@ -144,8 +146,8 @@ MedicationExporterFactories MedicationExporterMain::createProductionFactories()
                                           RequestHandlerManager&& requestHandlers, BaseServiceContext& serviceContext,
                                           bool enforceClientAuthentication, const SafeString& caCertificates) {
         return std::make_unique<exporter::HttpsServer>(address, port, std::move(requestHandlers),
-                                             dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
-                                             enforceClientAuthentication, caCertificates);
+                                                       dynamic_cast<MedicationExporterServiceContext&>(serviceContext),
+                                                       enforceClientAuthentication, caCertificates);
     };
 
     factories.xmlValidatorFactory = [] {
@@ -184,7 +186,7 @@ int MedicationExporterMain::runApplication(
 
     log << "setting up signal handler";
     SignalHandler signalHandler(runLoop.getThreadPool().ioContext());
-    signalHandler.registerSignalHandlers({SIGINT, SIGTERM}); // Note that SIGPIPE is ignored when calling this method.
+    signalHandler.registerSignalHandlers({SIGINT, SIGTERM});// Note that SIGPIPE is ignored when calling this method.
 
     log << "starting admin server";
     serviceContext->getAdminServer().serve(1, "admin");
@@ -234,6 +236,11 @@ int MedicationExporterMain::runApplication(
         }
         // GEMREQ-end A_27859
         A_27859.finish();
+        if (configuration.getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS))
+        {
+            TVLOG(0) << "serving requests for push notifications with 1 thread";
+            runLoop.serve(serviceContext, &PushEventProcessor::runloopWorker, 1);
+        }
     }
 
     runLoop.getThreadPool().joinAllThreads();
@@ -290,8 +297,9 @@ bool MedicationExporterMain::waitForHealthUp(RunLoopScheduler& runLoop,
                 healthCheckIsUp = true;
                 // validate ePA endpoints
                 TLOG(INFO) << "Testing connections";
-                testEpaEndpoints(*serviceContext);
-                testTRezeptEndpoints(*serviceContext);
+                probeEpaEndpoints(*serviceContext);
+                probeTRezeptEndpoints(*serviceContext);
+                probePushGatewayEndpoints(*serviceContext);
                 TLOG(INFO) << "Done testing connections";
             }
             catch (...)
@@ -322,7 +330,7 @@ bool MedicationExporterMain::waitForHealthUp(RunLoopScheduler& runLoop,
 }
 
 
-bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& serviceContext)
+bool MedicationExporterMain::probeEpaEndpoints(MedicationExporterServiceContext& serviceContext)
 {
     if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA))
     {
@@ -342,13 +350,14 @@ bool MedicationExporterMain::testEpaEndpoints(MedicationExporterServiceContext& 
         }
         else
         {
-            TLOG(INFO) << "Connection to ePA server at " << entry.hostName << ":" << entry.port << " successfully tested";
+            TLOG(INFO) << "Connection to ePA server at " << entry.hostName << ":" << entry.port
+                       << " successfully tested";
         }
     }
     return allUp;
 }
 
-bool MedicationExporterMain::testTRezeptEndpoints(MedicationExporterServiceContext& serviceContext)
+bool MedicationExporterMain::probeTRezeptEndpoints(MedicationExporterServiceContext& serviceContext)
 {
     if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT))
     {
@@ -377,6 +386,44 @@ bool MedicationExporterMain::testTRezeptEndpoints(MedicationExporterServiceConte
     else
     {
         TLOG(INFO) << "Connection to BfArM successfully tested";
+    }
+    return allUp;
+}
+
+bool MedicationExporterMain::probePushGatewayEndpoints(MedicationExporterServiceContext& serviceContext)
+{
+    if (! Configuration::instance().getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS))
+    {
+        return true;
+    }
+    bool allUp = true;
+    const auto client = PushGatewayClient::create(serviceContext.crlProvider());
+    for (const auto& pushGatewayFqdN : Configuration::instance().pushGatewayFQDNs())
+    {
+        try
+        {
+            const auto response =
+                client->send(UrlHelper::UrlParts{UrlHelper::HTTPS_PROTOCOL, pushGatewayFqdN.hostName, pushGatewayFqdN.port, "", ""},
+                             HttpMethod::GET, "", "");
+            JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver())
+                .keyValue("log_type", "health")
+                .keyValue("timestamp", model::Timestamp::now().toXsDateTime())
+                .keyValue("endpoint", fmt::format("{}:{}", pushGatewayFqdN.hostName, pushGatewayFqdN.port))
+                .keyValue("status", "UP")
+                .keyValue("response_code", toNumericalValue(response.getHeader().status()))
+                .keyValue("processor", "notification");
+        }
+        catch (const std::exception& e)
+        {
+            JsonLog(LogId::INFO, JsonLog::makeErrorLogReceiver())
+                .keyValue("log_type", "health")
+                .keyValue("timestamp", model::Timestamp::now().toXsDateTime())
+                .keyValue("endpoint", fmt::format("{}:{}", pushGatewayFqdN.hostName, pushGatewayFqdN.port))
+                .keyValue("status", "DOWN")
+                .keyValue("error", e.what())
+                .keyValue("processor", "notification");
+            allUp = false;
+        }
     }
     return allUp;
 }

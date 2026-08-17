@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -92,4 +92,11 @@ void RejectTaskHandler::handleRequest (PcSessionContext& session)
         .setInsurantKvnr(*kvnr)
         .setAction(model::AuditEvent::Action::update)
         .setPrescriptionId(prescriptionId);
+    A_28115.start("Collect push event data.");
+    A_28128.start("Data from Reject Task handler.");
+    session.pushEventDataCollector()
+        .setKvnr(*kvnr)
+        .setPrescriptionId(task.prescriptionId());
+    A_28128.finish();
+    A_28115.finish();
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 
@@ -592,6 +592,8 @@ generate_certificate sub_ca1_ec unrevoked_ec "Example Unrevoked Cert" usr_cert e
     subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
 # certificate revoked, signed by normal CA
 generate_certificate sub_ca1_ec revoked_ec "Example Revoked Cert" usr_cert ec:brainpoolP256r1 $revoked \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1 crlDistributionPoints=URI:http://crl.example.com/revoked_crt.crl,URI:ldap://test/
+generate_certificate sub_ca1_ec outdated_ec "Example Outdated Cert" usr_cert ec:brainpoolP256r1 $outdated \
     subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1 crlDistributionPoints=URI:http://crl.example.com/revoked_crt.crl,URI:ldap://test/
 # certificate signed by a revoked CA
 generate_certificate revoked_ca_ec normal_ec "Example Cert Revoked Sub Ca" usr_cert ec:brainpoolP256r1 $normal \

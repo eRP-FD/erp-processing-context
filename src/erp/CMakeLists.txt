@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -42,6 +42,14 @@ list(
         database/PostgresBackendChargeItem.cxx
         database/PostgresBackendTask.cxx
         database/RedisClient.cxx
+        database/push/PushErpDatabase.cxx
+        database/push/PushErpPostgresBackend.cxx
+        database/push/PushEventDataCollector.cxx
+        database/push/PushEventDataCollector.hxx
+        database/push/PushExporterBackend.cxx
+        database/push/PushExporterDatabase.cxx
+        database/push/PushExporterDatabaseException.cxx
+        database/push/PushExporterPostgresBackend.cxx
         database/redis/RateLimiter.cxx
         database/redis/TaskRateLimiter.cxx
         model/AbgabedatenPkvBundle.cxx
@@ -74,6 +82,8 @@ list(
         model/MedicationsAndDispenses.cxx
         model/MetaData.cxx
         model/OuterResponseErrorData.cxx
+        model/push/Channels.cxx
+        model/push/ErrorResponse.cxx
         model/ResourceInstances.cxx
         model/Subscription.cxx
         model/Task.cxx
@@ -124,6 +134,13 @@ list(
         service/euAccessPermission/GrantHandler.cxx
         service/euAccessPermission/ReadHandler.cxx
         service/euAccessPermission/RevokeHandler.cxx
+        service/push/GetChannels.cxx
+        service/push/GetChannelsPushkey.cxx
+        service/push/GetPushers.cxx
+        service/push/PostChannels.cxx
+        service/push/PostPushersSet.cxx
+        service/push/PushersRequestHandler.cxx
+        service/push/PushResponseBuilder.cxx
         service/task/AbortTaskHandler.cxx
         service/task/AcceptTaskHandler.cxx
         service/task/ActivateTaskHandler.cxx

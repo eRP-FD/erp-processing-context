@@ -1,16 +1,16 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
 #include "library/crypto/Key.hxx"
 #include "library/log/Logging.hxx"
 #include "library/util/Assert.hxx"
-#include "library/util/BinaryBuffer.hxx"
 #include "library/wrappers/OpenSsl.hxx"
 
 #include "fhirtools/util/Gsl.hxx"
+#include "shared/util/BinaryBuffer.hxx"
 
 #include <openssl/param_build.h>
 

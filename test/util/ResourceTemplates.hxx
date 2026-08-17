@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -212,6 +212,7 @@ struct KbvBundleOptions
     std::string_view medicationRequestExtension = "";
     std::string_view metaExtension = "";
     std::string_view statusCoPayment = "0";
+    std::string_view dmpKennzeichen = "00";
     model::Iknr iknr = model::Iknr{"109500969"};
     model::Lanr lanr = model::Lanr{"444444400", model::Lanr::Type::lanr};
     std::optional<std::string_view> forceInsuranceType = std::nullopt;

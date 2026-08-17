@@ -27,20 +27,17 @@
 namespace
 {
 
-std::string readCa()
+std::unique_ptr<UrlRequestSender> poppRequestSender(gsl::not_null<CrlProvider*> crlProvider)
 {
-    std::string rootCaStr;
-    const std::string rootCaPath =
-        Configuration::instance().getStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH);
-    if (! rootCaPath.empty())
-    {
-        rootCaStr = FileHelper::readFileAsString(rootCaPath);
-    }
-    else
-    {
-        TVLOG(1) << "No IDP update endpoint SSL root CA configured";
-    }
-    return rootCaStr;
+    using enum ConfigurationKey;
+    const auto& config = Configuration::instance();
+    std::chrono::seconds connectTimeout{config.getIntValue(HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)};
+    std::chrono::milliseconds resolveTimeout{config.getIntValue(HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)};
+    // GEMREQ-start A_27855
+    auto tlsVerifier = TlsCertificateVerifier::withInternetRootCAsWithFallback(IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH)
+                           .withCrl(*crlProvider, TlsCertificateVerifier::CrlMode::SOFT_FAIL);
+    return std::make_unique<UrlRequestSender>(std::move(tlsVerifier), connectTimeout, resolveTimeout);
+    // GEMREQ-end A_27855
 }
 
 }
@@ -330,13 +327,7 @@ PoPPCertificateVerifier::PoPPCertificateVerifier(boost::asio::io_context& contex
                                                  std::shared_ptr<CrlProvider> crlProvider)
     : mContext(context)
     , mCrlProvider(std::move(crlProvider))
-    , mRequestSender(std::make_unique<UrlRequestSender>(
-          TlsCertificateVerifier::withCustomRootCertificates(readCa()).withCrl(
-              *mCrlProvider, TlsCertificateVerifier::CrlMode::SOFT_FAIL),
-          std::chrono::seconds{
-              Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
-          std::chrono::milliseconds{
-              Configuration::instance().getIntValue(ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)}))
+    , mRequestSender{poppRequestSender(mCrlProvider.get())}
     , mDownloader(std::make_unique<JwtDownload>(mRequestSender))
     , mTslManager(tslManager)
 {
@@ -414,11 +405,8 @@ void PoPPCertificateVerifier::verifyCachedCertificates()
         {
             // GEMREQ-start A_27016#check_details
             const OcspCheckDescriptor descriptor{
-                .mode = OcspCheckDescriptor::OcspCheckMode::PROVIDED_OR_CACHE,
-
-                .timeSettings = {.referenceTimePoint = std::nullopt,
-                                 .gracePeriod = OcspHelper::getOcspGracePeriod(TslMode::TSL)},
-
+                .mode = OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_ALLOW_CACHE,
+                .timeSettings = {.referenceTimePoint = std::nullopt, .gracePeriod = std::chrono::hours{24}},
                 .providedOcspResponse = {}};
             mTslManager.verifyCertificate(TslMode::TSL, *key.certificate, {CertificateType::C_ZD_SIG}, descriptor);
             // GEMREQ-start A_28731#admission

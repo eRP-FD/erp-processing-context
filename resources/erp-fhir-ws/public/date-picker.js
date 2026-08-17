@@ -1,5 +1,5 @@
 //////////////////////////////////////////////
-// Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
 // (C) Copyright IBM Corp. 2021, 2026
 //
 // non-exclusively licensed to gematik GmbH
@@ -12,7 +12,7 @@ const daysDE = [ "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So" ];
 export class DatePicker {
     #datePicker = null;
     #parent = null;
-    #value = Alpine.reactive({   
+    #value = Alpine.reactive({
         year: 0,
         month: 0,
         day: 0,

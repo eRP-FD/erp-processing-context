@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -31,6 +31,23 @@
         {                                                                                          \
             FAIL() << "Expected ErpException, but wrong exception type was thrown";                \
         }                                                                                          \
+    }
+
+#define EXPECT_EXCEPTION_WITH_MESSAGE(expression, ExceptionType, message)                                              \
+    {                                                                                                                  \
+        try                                                                                                            \
+        {                                                                                                              \
+            static_cast<void>(expression);                                                                             \
+            FAIL() << "Expected exception did not occur";                                                              \
+        }                                                                                                              \
+        catch (const ExceptionType& ex)                                                                                \
+        {                                                                                                              \
+            EXPECT_STREQ(ex.what(), (message)) << ex.what();                                                           \
+        }                                                                                                              \
+        catch (...)                                                                                                    \
+        {                                                                                                              \
+            FAIL() << "Expected " #ExceptionType ", but wrong exception type was thrown";                              \
+        }                                                                                                              \
     }
 
 #define EXPECT_ERP_EXCEPTION_WITH_MESSAGE(expression, httpStatus, message)                         \

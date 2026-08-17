@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -27,7 +27,7 @@ pipeline {
         )
     }
     environment {
-        ERP_RELEASE_VERSION = "1.22.0"
+        ERP_RELEASE_VERSION = "1.23.0"
         ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
         ERP_POSTGRES_IMAGE = "erp-test-database:${dbImageUUID}"
         GIT_SOURCE_CREDS = credentials('jenkins-github-erp')

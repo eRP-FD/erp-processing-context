@@ -85,6 +85,9 @@
       },
       "readOnly": {
         "targetSessionAttrs": "prefer-standby"
+      },
+      "pushDb": {
+        "connect-timeout": "500"
       }
     },
     "json-meta-schema": "@ERP_SCHEMA_DIR@shared/json/draft-4-meta-schema.json",
@@ -125,8 +128,16 @@
         {
           "id": "2026-Q3",
           "valid-from": "2026-07-01",
+          "valid-until": "2026-09-30",
           "groups": [
             "KBV-Schluesseltabellen-Q3/26"
+          ]
+        },
+        {
+          "id": "2026-Q4",
+          "valid-from": "2026-10-01",
+          "groups": [
+            "KBV-Schluesseltabellen-Q4/26"
           ]
         }
       ],
@@ -278,9 +289,11 @@
     },
     "httpClientConnectTimeoutSeconds": "3",
     "httpClientResolveTimeoutMilliseconds": "2000",
+    "httpMaxResponseBodySize": "8388608",
     "feature": {
       "eu": "false",
-      "t-rezept": "false"
+      "t-rezept": "false",
+      "push-event": "true"
     },
     "report": {
       "leips": {
@@ -302,7 +315,8 @@
     "entropy_fetch_interval_seconds": "60",
     "timingCategories": [
       "fhirvalidation",
-      "ocsprequest"
+      "ocsprequest",
+      "pusheventcreation"
     ],
     "vsdmValiditySeconds": "1800",
     "popp": {
@@ -315,5 +329,8 @@
     }
   },
   "https-proxies": [],
-  "http-proxies": []
+  "http-proxies": [],
+  "push": {
+    "fqdnAllowList": ["pushgw.erezept.gematik.de"]
+  }
 }

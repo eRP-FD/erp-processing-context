@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -51,7 +51,7 @@ namespace
     {
         const auto ocspResponseBase64 =
             TslProvider::getInstance().getOcspResponse(certificateDerBase64);
-        return BinaryBuffer{Base64::decode(ocspResponseBase64)};
+        return BinaryBuffer{BinaryView{Base64::decode(ocspResponseBase64)}};
     }
 
     std::vector<BinaryBuffer> pemChainToDerVector(std::string_view pemChain)
@@ -66,7 +66,7 @@ namespace
             start += beginCertificate.length();
             const auto end = pemChain.find(endCertificate, start);
             Assert(end != std::string_view::npos) << "certificate end not found";
-            derChain.emplace_back(Base64::decode(pemChain.substr(start, end - start), true));
+            derChain.emplace_back(BinaryView{Base64::decode(pemChain.substr(start, end - start), true)});
             position = end + endCertificate.size();
         }
         return derChain;

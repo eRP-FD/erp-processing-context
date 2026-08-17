@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -18,7 +18,7 @@ set(VAU_ENC_SOURCES vau_encrypt/vau_encrypt_main.cxx)
 
 include_directories(${CMAKE_SOURCE_DIR}) # "tools/Header.hxx"
 
-add_library(erp-tool-lib EXCLUDE_FROM_ALL OBJECT ${ERP_TOOL_LIB_SOURCES})
+add_library(erp-tool-lib OBJECT ${ERP_TOOL_LIB_SOURCES})
 target_compile_definitions(erp-tool-lib PUBLIC WITH_HSM_MOCK=1)
 target_link_libraries(erp-tool-lib
     PUBLIC
@@ -26,7 +26,7 @@ target_link_libraries(erp-tool-lib
         erp-processing-context-files
     )
 
-add_executable(make_task_id EXCLUDE_FROM_ALL make_task_id/make_task_id.cxx)
+add_executable(make_task_id make_task_id/make_task_id.cxx)
 target_link_libraries(make_task_id
     PUBLIC
         erp-processing-context-files
@@ -68,13 +68,13 @@ if(ERP_WITH_HSM_TPM_PRODUCTION)
     install(TARGETS blob-db-initialization COMPONENT blob-db-initialization)
 endif()
 
-add_executable(fhirconvert EXCLUDE_FROM_ALL fhirconvert/fhirconvert_main.cxx)
+add_executable(fhirconvert fhirconvert/fhirconvert_main.cxx)
 target_link_libraries(fhirconvert
     PUBLIC
         erp-processing-context-files
 )
 
-add_executable(fhirvalidate EXCLUDE_FROM_ALL fhirvalidate/fhirvalidate_main.cxx)
+add_executable(fhirvalidate fhirvalidate/fhirvalidate_main.cxx)
 target_link_libraries(fhirvalidate
     PUBLIC
         erp-processing-context-files
@@ -84,7 +84,7 @@ target_link_libraries(fhirvalidate
 )
 
 
-add_executable(tee3send EXCLUDE_FROM_ALL tee3send/tee3send_main.cxx)
+add_executable(tee3send tee3send/tee3send_main.cxx)
 target_link_libraries(tee3send
     PRIVATE
         erp-medication-exporter-files

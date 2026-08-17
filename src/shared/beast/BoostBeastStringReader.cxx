@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -64,7 +64,7 @@ std::tuple<Header,std::string> BoostBeastStringReader::parseRequest (const std::
     {
         // The boost beast parser only works if there are no spaces in the request URL. That means that unescaping these
         // spaces, and other escaped characters, could not be done earlier.
-        header.setTarget(UrlHelper::unescapeUrl(header.target()));
+        header.unescapeTarget();
     }
     catch (const std::runtime_error& re)
     {
@@ -78,11 +78,20 @@ std::tuple<Header,std::string> BoostBeastStringReader::parseRequest (const std::
 }
 
 
-std::tuple<Header,std::string> BoostBeastStringReader::parseResponse (const std::string_view& headerAndBody)
+std::tuple<Header, std::string> BoostBeastStringReader::parseResponse(const std::string_view& headerAndBody,
+                                                                      std::optional<std::uint64_t> bodyLimit)
 {
     boost::beast::http::response_parser<boost::beast::http::string_body> parser;
     // Consume input buffers across semantic boundaries
     parser.eager(true);
+    if (bodyLimit.has_value())
+    {
+        parser.body_limit(*bodyLimit);
+    }
+    else
+    {
+        parser.body_limit(boost::none);
+    }
 
     putString(parser, headerAndBody);
     Expect(parser.is_header_done(), "parser has not finished to parse the request");

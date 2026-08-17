@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,10 @@
 
 #include "shared/database/CommonPostgresBackend.hxx"
 
+namespace db_model
+{
+struct AppRegistration;
+}
 namespace exporter
 {
 
@@ -21,6 +25,12 @@ public:
     void healthCheck() override;
 
     PostgresConnection& connection() const override;
+
+    std::vector<db_model::AppRegistration> retrieveAppRegistrations(const db_model::HashedKvnr& kvnrHashed,
+                                                                    const std::string& channelId) const;
+    void updateEncryptionKey(const db_model::HashedKvnr& kvnrHashed, const db_model::HashedId& pushkeyHashed,
+                             const db_model::HashedId& appIdHashed, const db_model::EncryptedBlob& encryptionKey);
+    void deletePushKey(const db_model::HashedKvnr& hashedKvnr, const db_model::HashedId& hashedPushKey);
 
 private:
     static PostgresConnection& threadConnection();

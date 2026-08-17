@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -218,6 +218,18 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 50,
           "textTemplate": "{agentName} hat die Liste der einlösbaren E-Rezepte abgerufen durch Autorisierung mittels {proofMethod}."
+        },
+        {
+          "eventId": 51,
+          "textTemplate": "{self} hat das Gerät {device_display_name} für Push-Nachrichten registriert."
+        },
+        {
+          "eventId": 52,
+          "textTemplate": "{self} hat das Gerät {device_display_name} für Push-Nachrichten deregistriert."
+        },
+        {
+          "eventId": 53,
+          "textTemplate": "Fachdienst hat das Gerät {device_display_name} für Push-Nachrichten deregistriert."
         }
       ]
     },
@@ -420,6 +432,18 @@ constexpr const auto* auditEventTextTemplates = R"--(
         {
           "eventId": 50,
           "textTemplate": "{agentName} retrieved a list of prescriptions to be redeemed by authorization with {proofMethod}."
+        },
+        {
+          "eventId": 51,
+          "textTemplate": "{self} has registered the device {device_display_name} for push notifications."
+        },
+        {
+          "eventId": 52,
+          "textTemplate": "{self} has deregistered the device {device_display_name} for push notifications."
+        },
+        {
+          "eventId": 53,
+          "textTemplate": "The service has deregistered the device {device_display_name} for push notifications."
         }
       ]
     }

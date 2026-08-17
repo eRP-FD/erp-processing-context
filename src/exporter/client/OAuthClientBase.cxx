@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -237,8 +237,7 @@ std::unique_ptr<UrlRequestSender> OAuthClientBase::createClient() const
 {
     // GEMREQ-start A_27855
     auto urlRequestSender = std::make_unique<UrlRequestSender>(
-        TlsCertificateVerifier::withCustomRootCertificates(
-            Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS))
+        TlsCertificateVerifier::withInternetRootCAsWithFallback(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS)
             .withCrl(*mCrlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL),
         std::chrono::seconds(60), std::chrono::seconds(5));
     // GEMREQ-end A_27855

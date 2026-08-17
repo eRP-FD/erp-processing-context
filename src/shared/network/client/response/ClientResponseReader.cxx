@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -12,11 +12,19 @@
 #include "shared/ErpConstants.hxx"
 
 
-ClientResponseReader::ClientResponseReader (void)
-    : mBuffer(),
-      mParser()
+ClientResponseReader::ClientResponseReader(std::optional<std::uint64_t> bodyLimit)
+    : mBuffer()
+    , mParser()
+    , mBodyLimit(bodyLimit)
 {
-    mParser.body_limit(ErpConstants::MaxResponseBodySize);
+    if (mBodyLimit.has_value())
+    {
+        mParser.body_limit(*mBodyLimit);
+    }
+    else
+    {
+        mParser.body_limit(boost::none);
+    }
 }
 
 
@@ -40,6 +48,6 @@ bool ClientResponseReader::isStreamClosed (void) const
 
 ClientResponse ClientResponseReader::read (const std::string& s)
 {
-    auto [header,body] = BoostBeastStringReader::parseResponse(s);
+    auto [header, body] = BoostBeastStringReader::parseResponse(s, mBodyLimit);
     return ClientResponse{header,std::string(body)};
 }

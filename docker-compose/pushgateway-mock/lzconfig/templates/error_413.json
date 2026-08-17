@@ -1,0 +1,6 @@
+{
+  "error": "Batch request payload is too large.",
+  "details": {
+    "max_request_size_kb": 1024
+  }
+}

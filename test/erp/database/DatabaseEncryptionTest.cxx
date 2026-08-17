@@ -1,16 +1,19 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushErpDatabase.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
 #include "erp/model/ErxReceipt.hxx"
 #include "erp/model/Task.hxx"
 #include "erp/model/eu/EuAccessCode.hxx"
 #include "erp/model/eu/EuAccessPermission.hxx"
+#include "fhirtools/model/NumberAsStringParserWriter.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/database/DatabaseModel.hxx"
@@ -20,6 +23,8 @@
 #include "shared/model/Binary.hxx"
 #include "shared/model/MedicationDispense.hxx"
 #include "shared/model/MedicationDispenseBundle.hxx"
+#include "shared/model/push/EncryptionKey.hxx"
+#include "shared/util/Hash.hxx"
 #include "test/erp/database/PostgresDatabaseTestFixture.hxx"
 #include "test/util/JsonTestUtils.hxx"
 #include "test/util/ResourceManager.hxx"
@@ -68,8 +73,8 @@ protected:
         std::vector<model::MedicationDispense> medicationDispenses;
         medicationDispenses.emplace_back(model::MedicationDispense::fromXmlNoValidation(
             ResourceTemplates::medicationDispenseXml({.kvnr = InsurantA, .telematikId = owner})));
-        db.updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}}, erxReceipt,
-                                               JwtBuilder::testBuilder().makeJwtApotheke());
+        db.updateTaskMedicationDispenseReceipt(task, model::MedicationDispenseBundle{"", medicationDispenses, {}},
+                                               erxReceipt, JwtBuilder::testBuilder().makeJwtApotheke());
         db.updateTaskStatusAndSecret(task);
         db.commitTransaction();
         return std::make_tuple(std::move(task), std::move(erxReceipt), std::move(medicationDispenses.at(0)));
@@ -122,7 +127,7 @@ public:
 
 TEST_P(DatabaseEncryptionTestP, TableViewTask)
 {
-    if (!usePostgres())
+    if (! usePostgres())
     {
         GTEST_SKIP();
     }
@@ -240,8 +245,8 @@ TEST_P(DatabaseEncryptionTestP, TableViewTask)
     std::optional<model::Bundle> decryptedMedicationDispenseBundle;
     {
         auto key = medicationDispenseKey(kvnrHashed, medicationDispenseBlobId);
-        ASSERT_NO_THROW(decryptedMedicationDispenseBundle = model::Bundle::fromJsonNoValidation(
-                            getDBCodec().decode(encryptedMedicationDispense, key)));
+        ASSERT_NO_THROW(decryptedMedicationDispenseBundle =
+                            model::Bundle::fromJsonNoValidation(getDBCodec().decode(encryptedMedicationDispense, key)));
         auto decryptedMedicationDispenses =
             decryptedMedicationDispenseBundle->getResourcesByType<model::MedicationDispense>();
         ASSERT_FALSE(decryptedMedicationDispenses.empty());
@@ -285,12 +290,11 @@ INSTANTIATE_TEST_SUITE_P(GKV, DatabaseEncryptionTestP,
                          testing::Combine(testing::ValuesIn(testutils::gkvPrescriptionTypes()),
                                           testing::Values(false)));
 INSTANTIATE_TEST_SUITE_P(PKV, DatabaseEncryptionTestP,
-                         testing::Combine(testing::ValuesIn(testutils::pkvPrescriptionTypes()),
-                                          testing::Values(true)));
+                         testing::Combine(testing::ValuesIn(testutils::pkvPrescriptionTypes()), testing::Values(true)));
 
 TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-cognitive-complexity)
 {
-    if (!usePostgres())
+    if (! usePostgres())
     {
         GTEST_SKIP();
     }
@@ -314,13 +318,13 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     auto& db = database();
     auto builder = CommunicationJsonStringBuilder(model::Communication::MessageType::DispReq);
     builder.setPrescriptionId(
-        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel,815).toString());
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 815).toString());
     builder.setPayload("Hallo, ich wollte gern fragen, ob das Medikament bei Ihnen vorraetig ist.");
     builder.setAbout("#5fe6e06c-8725-46d5-aecd-e65e041ca3de");
     auto communication = model::Communication::fromJsonNoValidation(builder.createJsonString());
     communication.setSender(model::Kvnr{InsurantA});
     communication.setRecipient(model::TelematikId{mPharmacy});
-    communication.setTimeSent(model::Timestamp{(int64_t)1612134000});
+    communication.setTimeSent(model::Timestamp{(int64_t) 1612134000});
     auto id = db.insertCommunication(communication);
     ASSERT_TRUE(id.has_value());
     db.commitTransaction();
@@ -351,7 +355,8 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     //  8: message_for_sender bytea NOT NULL,
     auto senderBlobId = gsl::narrow<BlobId>(row[col::sender_blob_id].as<int32_t>());
     {
-        auto key = communicationKey(model::getIdentityString(communication.sender().value()), senderHashed, senderBlobId);
+        auto key =
+            communicationKey(model::getIdentityString(communication.sender().value()), senderHashed, senderBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_sender].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
@@ -364,7 +369,8 @@ TEST_F(DatabaseEncryptionTest, TableCommunication)//NOLINT(readability-function-
     //  9: message_for_recipient bytea NOT NULL,
     auto recipientBlobId = gsl::narrow<BlobId>(row[col::recipient_blob_id].as<int32_t>());
     {
-        auto key = communicationKey(model::getIdentityString(communication.recipient()), recipientHashed, recipientBlobId);
+        auto key =
+            communicationKey(model::getIdentityString(communication.recipient()), recipientHashed, recipientBlobId);
         db_model::EncryptedBlob encryptedMessage{row[col::message_for_recipient].as<db_model::postgres_bytea>()};
         std::optional<model::Communication> decryptedMessage;
         ASSERT_NO_THROW(decryptedMessage =
@@ -380,12 +386,12 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
     static constexpr std::string_view agentName{"Max Mustermann"};
     const model::CountryCode countryCode{"FR"};
 
-    if (!usePostgres())
+    if (! usePostgres())
     {
         GTEST_SKIP();
     }
     A_19688.test("no unencrypted personal data in table erp.auditevent.");
-    struct col { // no enum class to allow implicit cast to int
+    struct col {// no enum class to allow implicit cast to int
         enum index
         {
             id,
@@ -407,7 +413,8 @@ TEST_F(DatabaseEncryptionTest, TableAuditEvent)//NOLINT(readability-function-cog
                                model::AuditEvent::AgentType::human,
                                kvnr,
                                4711,
-                               std::nullopt, std::nullopt};
+                               std::nullopt,
+                               std::nullopt};
     auto& db = database();
     auto id = db.storeAuditEventData(auditData);
     db.commitTransaction();
@@ -476,7 +483,8 @@ TEST_F(DatabaseEncryptionTest, TableEuAccessPermission)
 
     auto txn = createTransaction();
     // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
-    auto row = txn.exec("SELECT * FROM erp.eu_access_permission WHERE kvnr_hashed = $1", {kvnrHashed.binarystring()}).one_row();
+    auto row = txn.exec("SELECT * FROM erp.eu_access_permission WHERE kvnr_hashed = $1", {kvnrHashed.binarystring()})
+                   .one_row();
     txn.commit();
     auto expectedCols = magic_enum::enum_count<col::index>();
     ASSERT_EQ(row.size(), expectedCols) << "Expected table `erp.auditevent` to have " << expectedCols << " columns.";
@@ -494,4 +502,94 @@ TEST_F(DatabaseEncryptionTest, TableEuAccessPermission)
     // 4. blob_id
     // 5. salt
     // 6. expires not encrypted
+}
+
+TEST_F(DatabaseEncryptionTest, TableErpAppRegistration)
+{
+    if (! usePostgres())
+    {
+        GTEST_SKIP();
+    }
+
+    struct col {
+        enum index
+        {
+            kvnr_hashed,
+            blob_id,
+            salt,
+            payload,
+            url,
+            encryption_key,
+            subscribed_channel,
+            time_created,
+            last_modified,
+            pushkey_hashed,
+            app_id_hashed,
+        };
+    };
+
+    const model::Kvnr kvnr{InsurantA};
+    const auto kvnrHashed = getKeyDerivation().hashKvnr(kvnr);
+    const model::PushKey pushkey{"pushkey"};
+    const model::AppId appId{"app_id"};
+
+    const model::Pusher pusher{
+        pushkey,
+        appId,
+        "appDisplayName",
+        "deviceDisplayName",
+        model::Lang{"de"},
+        model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
+        model::Encryption{"2026-05", SafeString{"iss11111111111111111111111111111"}, "keyIdentifier"}};
+
+    auto& db = pushErpDatabase();
+    db.createOrUpdateRegistration(kvnr, pusher);
+    db.commitTransaction();
+
+    auto txn = createTransaction();
+    // intentionally uses '*' to get all columns of the table - so we will not forget to adapt this test if we add a row
+    auto row =
+        txn.exec("SELECT * FROM erp.app_registrations WHERE kvnr_hashed = $1", {kvnrHashed.binarystring()}).one_row();
+    txn.commit();
+
+    constexpr auto expectedCols = magic_enum::enum_count<col::index>();
+    ASSERT_EQ(row.size(), expectedCols) << "Expected table `erp.app_registrations` to have " << expectedCols
+                                        << " columns.";
+    const auto blobId = gsl::narrow<BlobId>(row[col::blob_id].as<int32_t>());
+    const db_model::Blob salt{row[col::salt].as<db_model::postgres_bytea>()};
+
+    const auto hashedPushKey = db_model::HashedId::fromString(pushkey.value);
+    const auto hashedAppId = db_model::HashedId::fromString(appId.value);
+
+    const auto& key = getKeyDerivation().appRegistrationKey(hashedPushKey, salt, kvnrHashed, blobId);
+
+    EXPECT_EQ(row[col::pushkey_hashed].as<db_model::postgres_bytea>(), hashedPushKey.binarystring());// hashed
+    EXPECT_EQ(row[col::app_id_hashed].as<db_model::postgres_bytea>(), hashedAppId.binarystring());      // hashed
+
+    EXPECT_EQ(db_model::EncryptedBlob{row[col::kvnr_hashed].as<db_model::postgres_bytea>()}, kvnrHashed);// hashed
+    EXPECT_EQ(row[col::blob_id].as<BlobId>(), blobId);                             // not encrypted
+    EXPECT_EQ(db_model::Blob{row[col::salt].as<db_model::postgres_bytea>()}, salt);// not encrypted
+    const db_model::EncryptedBlob encryptedPayload{row[col::payload].as<db_model::postgres_bytea>()};
+    const auto decryptedPayload{getDBCodec().decode(encryptedPayload, key)};
+    const auto pusherFromDb = model::Pusher::fromDb(decryptedPayload.c_str());
+    EXPECT_EQ(pusherFromDb.lang().value, pusher.lang().value);
+    EXPECT_EQ(pusherFromDb.deviceDisplayName(), pusher.deviceDisplayName());
+    EXPECT_EQ(pusherFromDb.appDisplayName(), pusher.appDisplayName());
+    EXPECT_EQ(pusherFromDb.pusherData().mUrl, pusher.pusherData().mUrl);
+
+    EXPECT_EQ(pusherFromDb.pushKey().value, pusher.pushKey().value);
+    EXPECT_EQ(pusherFromDb.appId().value, pusher.appId().value);
+
+    EXPECT_EQ(jsonToString(*pusherFromDb.pusherData().mUserData),jsonToString(*pusher.pusherData().mUserData));
+    EXPECT_EQ(row[col::url].as<std::string>(), "https://push-gateway.location.here/push/v1/");// not encrypted
+    auto encryptionKey =
+        getDBCodec().decode(db_model::EncryptedBlob{row[col::encryption_key].as<db_model::postgres_bytea>()}, key);
+    const model::EncryptionKey encryptionKeyObj{model::EncryptionKey::deserializeCsv(encryptionKey)};
+    auto expectedEncryptionKey = model::EncryptionKey::deriveMonthlyKey(pusher.encryption().iss, pusher.encryption().timeIssCreated);
+    EXPECT_EQ(encryptionKeyObj.sharedSecret(), expectedEncryptionKey.sharedSecret());
+    EXPECT_EQ(encryptionKeyObj.messageKey(), expectedEncryptionKey.messageKey());
+    std::string timeKeyCreated = encryptionKeyObj.monthInfoString();
+    EXPECT_EQ(timeKeyCreated, pusher.encryption().timeIssCreated);
+    EXPECT_EQ(encryptionKeyObj.getKeyIdentifier(), pusher.encryption().keyIdentifier);
+    EXPECT_EQ(row[col::subscribed_channel].as<std::string>(), "{}");       // not encrypted
 }

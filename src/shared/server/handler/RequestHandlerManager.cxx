@@ -1,11 +1,12 @@
 /*
-* (C) Copyright IBM Deutschland GmbH 2021, 2025
-* (C) Copyright IBM Corp. 2021, 2025
+* (C) Copyright IBM Deutschland GmbH 2021, 2026
+* (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
 */
 
 #include "shared/server/handler/RequestHandlerManager.hxx"
+#include "shared/network/message/Header.hxx"
 #include "shared/util/UrlHelper.hxx"
 
 #ifdef _WINNT_
@@ -62,27 +63,26 @@ RequestHandlerContext& RequestHandlerManager::onPatchDo(const std::string& path,
 }
 
 
-typename RequestHandlerManager::MatchingHandler
-RequestHandlerManager::findMatchingHandler(const HttpMethod method, const std::string& target) const
+RequestHandlerManager::MatchingHandler
+RequestHandlerManager::findMatchingHandler(const Header& header) const
 {
    // Start with a simple and fast look up.
-   auto entry = mRequestHandlers.find(toString(method) + " " + target);
+   auto entry = mRequestHandlers.find(toString(header.method()) + " " + header.target());
    if (entry != mRequestHandlers.end())
    {
-       return {entry->second.get(), {}, {}, ""};
+       return {entry->second.get(), header.path(), {}, {}, ""};
    }
 
    // No match. Split the target into path, query and fragment and try to match only the path.
-   auto [path, query, fragment] = UrlHelper::splitTarget(target);
    MatchingHandler result;
-   result.queryParameters = UrlHelper::splitQuery(query);
-   result.fragment = std::move(fragment);
+   result.path = UrlHelper::removeTrailingSlash(header.path());
+   result.queryParameters = UrlHelper::splitQuery(header.query());
+   result.fragment = header.fragment();
 
    // Run a regex match of each handler against the target.
-   path = UrlHelper::removeTrailingSlash(path);
    for (const auto& item : mRequestHandlers)
    {
-       auto [matches, parameters] = item.second->matches(method, path);
+       auto [matches, parameters] = item.second->matches(header.method(), header.pathOriginal());
        if (matches)
        {
            result.handlerContext = item.second.get();
@@ -90,8 +90,19 @@ RequestHandlerManager::findMatchingHandler(const HttpMethod method, const std::s
            return result;
        }
    }
+    // backwards compatibility: try the url-unescaped path second
+    for (const auto& item : mRequestHandlers)
+    {
+        auto [matches, parameters] = item.second->matches(header.method(), result.path);
+        if (matches)
+        {
+            result.handlerContext = item.second.get();
+            result.pathParameters = parameters;
+            return result;
+        }
+    }
 
-   return {nullptr, {}, {}, ""};
+   return result; // result.handlerContext is nullptr
 }
 
 const RequestHandlerContainer& RequestHandlerManager::getRequestHandlers() const

@@ -1,13 +1,13 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
 #ifndef EPA_LIBRARY_CRYPTO_CRYPTOTYPES_HXX
 #define EPA_LIBRARY_CRYPTO_CRYPTOTYPES_HXX
 
-#include "library/crypto/SensitiveDataGuard.hxx"
+#include "shared/crypto/SensitiveDataGuard.hxx"
 
 #include <functional>
 #include <optional>

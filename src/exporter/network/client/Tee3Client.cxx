@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -63,7 +63,7 @@ std::optional<CborMessage> tryDeserializeCbor(const std::string& body)
 {
     try
     {
-        return epa::CborDeserializer::deserialize<CborMessage>(epa::BinaryBuffer{body});
+        return epa::CborDeserializer::deserialize<CborMessage>(BinaryBuffer{body});
     }
     catch (const epa::CborError&)
     {
@@ -678,7 +678,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
         // GEMREQ-end A_24622#storeCID
         // GEMREQ-start A_24622#m3UseCID
         request = prepareOuterRequest(verb::post, target, MimeType::cbor);
-        request.body() = handshake.createMessage3(epa::BinaryBuffer{m2response->body()}).toString();
+        request.body() = handshake.createMessage3(BinaryBuffer{m2response->body()}).toString();
         // GEMREQ-end A_24622#m3UseCID, A_24623#createM3Request
         HeaderLog::vlog(3, [&] {
             return std::ostringstream{} << "Sending Message 3 to: " << target;
@@ -708,7 +708,7 @@ boost::asio::awaitable<boost::system::error_code> Tee3Client::tee3Handshake()
             BDEMessage::Data{.innerResponseCode = m4response->result_int(), .responseCode = m4response->result_int()});
         Expect(m4response->result() == boost::beast::http::status::ok,
                "Message 3 request returned status: " + std::to_string(static_cast<uintmax_t>(m4response->result())));
-        handshake.processMessage4(epa::BinaryBuffer{m4response->body()});
+        handshake.processMessage4(BinaryBuffer{m4response->body()});
         HeaderLog::vlog(1, [&] {
             return std::ostringstream{} << "Tee 3 handshake complete";
         });
@@ -736,7 +736,7 @@ bool Tee3Client::needHandshake()
     return mTee3Context == nullptr;
 }
 
-Certificate Tee3Client::provideCertificate(const epa::BinaryBuffer& hash, uint64_t version)
+Certificate Tee3Client::provideCertificate(const BinaryBuffer& hash, uint64_t version)
 {
     return mCertificateService.provideCertificate(mHttpsClient.hostname(), mHttpsClient.port(),
                                                   {ByteHelper::toHex(hash.getString()), version});

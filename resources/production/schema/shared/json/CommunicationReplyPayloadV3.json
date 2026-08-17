@@ -125,7 +125,7 @@
                 "totalAmount": { "$ref": "#/definitions/totalAmount"},
                 "paymentMethods": { "$ref": "#/definitions/paymentMethods" }
             },
-            "required": ["totalAmount", "paymentMethods"],
+            "required": ["totalAmount"],
             "additionalProperties": false
         }
     ],

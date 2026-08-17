@@ -6,21 +6,28 @@ add_executable(exporter-test
         TRezeptTransformerTest.cxx
         admin/AdminRequestHandlerTest.cxx
         admin/PutRuntimeConfigHandlerTest.cxx
+        client/push/PushGatewayClientTest.cxx
         database/CommitGuardTest.cxx
+        database/MedicationExporterDatabaseTest.cxx
         database/PostgresDatabaseTest.cxx
         database/TaskEventConverterTest.cxx
         eventprocessing/CancelPrescriptionTest.cxx
         eventprocessing/ProvideDispensationTest.cxx
         eventprocessing/ProvidePrescriptionTest.cxx
+        eventprocessing/PushEventProcessorTest.cxx
         fhir/DeGematikErpT-PrescriptionTest.cxx
         fhir/FhirRepositoryTest.cxx
         mock/EpaAccountLookupClientMock.cxx
         mock/EpaAccountLookupMock.cxx
         mock/EpaMedicationClientMock.cxx
         mock/FhirVZDClientMock.cxx
+        mock/MainDatabaseFrontendMock.cxx
         mock/MedicationExporterDatabaseFrontendMock.cxx
         model/ConsentDecisionResponseTypeTest.cxx
+        model/EncryptedNotificationTest.cxx
         model/HealthcareServiceDirectoryTest.cxx
+        model/PushNotificationContextTest.cxx
+        model/PushNotificationTest.cxx
         pc/MedicationExporterServiceContextTest.cxx
         util/MedicationExporterStaticData.cxx
         EpaAccountLookupTest.cxx
@@ -30,6 +37,7 @@ add_executable(exporter-test
         TRezeptEventProcessorTest.cxx
         TelematikLookupTest.cxx
         it/EpaAccountLookupIt.cxx
+        it/PushNotificationIt.cxx
         FhirVZDClientTest.cxx
 )
 

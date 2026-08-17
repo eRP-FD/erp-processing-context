@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -117,6 +117,7 @@ enum class ConfigurationKey
     POSTGRES_RO_KEEPALIVES_COUNT,
     POSTGRES_RO_TARGET_SESSION_ATTRS,
     POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES,
+    POSTGRES_PUSHDB_CONNECT_TIMEOUT,
     PUBLIC_E_PRESCRIPTION_SERVICE_URL,
     REGISTRATION_HEARTBEAT_INTERVAL_SEC,
     TSL_TI_OCSP_PROXY_URL,
@@ -157,6 +158,7 @@ enum class ConfigurationKey
     ZSTD_DICTIONARY_DIR,
     HTTPCLIENT_CONNECT_TIMEOUT_SECONDS,
     HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS,
+    HTTPCLIENT_MAX_RESPONSE_BODY_SIZE,
     HTTPS_PROXIES,
     HTTP_PROXIES,
 
@@ -183,6 +185,7 @@ enum class ConfigurationKey
 
     FEATURE_EU,
     FEATURE_TREZEPT,
+    FEATURE_PUSH_EVENT,
 
     // Admin interface settings
     ADMIN_SERVER_INTERFACE,
@@ -275,7 +278,17 @@ enum class ConfigurationKey
 
     MEDICATION_EXPORTER_ENABLE_EPA,
     MEDICATION_EXPORTER_ENABLE_T_REZEPT,
+    MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS,
     MEDICATION_EXPORTER_TRUSTED_CAS,
+
+    // Push Notification
+    PUSH_GATEWAY_FQDN_ALLOW_LIST,
+    MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE,
+    MEDICATION_EXPORTER_PUSH_CLIENT_KEY,
+    MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA,
+    MEDICATION_EXPORTER_PUSH_CLIENT_USE_PROXY,
+    MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT,
+    MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS,
 
     // PoPP
     POPP_ENTITY_STATEMENT_URL,
@@ -284,8 +297,16 @@ enum class ConfigurationKey
     POPP_CONNECTION_TIMEOUT_SECONDS,
     POPP_RESPONSE_TIMEOUT_SECONDS,
     POPP_TOKEN_IAT_MAX_AGE_SECONDS,
+
+    INTERNET_TLS_ROOT_CA_PATH,
 };
 
+// thrown by getOptionalPemValue when prefix is neither `pem:` nor `file://`
+class IllegalPemPrefixError : public std::logic_error
+{
+public:
+    using logic_error::logic_error;
+};
 
 /**
  * Generic representation of a configuration key's associated environment variable name and json path.
@@ -369,9 +390,11 @@ public:
     uint16_t serverPort() const;
 
 protected:
+
     explicit ConfigurationBase(const std::vector<KeyData>& allKeyNames);
 
     std::optional<std::string> getStringValueInternal (KeyData key) const;
+    std::optional<std::string> getPemInternal(KeyData key) const;
     std::optional<SafeString> getSafeStringValueInternal (KeyData key) const;
     std::optional<int> getIntValueInternal (KeyData key) const;
     std::optional<bool> getBoolValueInternal (KeyData key) const;
@@ -443,6 +466,7 @@ public:
 
     std::string getStringValue (Key key) const                   {return ConfigurationBase::getStringValue(names_.strings(key));}
     std::string getOptionalStringValue (Key key, const std::string& defaultValue) const;
+    std::optional<std::string> getOptionalPemValue(Key key) const {return ConfigurationBase::getPemInternal(names_.strings(key));}
     std::optional<std::string> getOptionalStringValue (Key key) const                   {return ConfigurationBase::getOptionalStringValue(names_.strings(key));}
     SafeString getSafeStringValue (Key key) const                {return ConfigurationBase::getSafeStringValue(names_.strings(key));}
     std::optional<SafeString> getOptionalSafeStringValue (Key key) const                { return ConfigurationBase::getOptionalSafeStringValue(names_.strings(key)); }
@@ -683,6 +707,13 @@ public:
     [[nodiscard]] std::chrono::seconds poppTokenIatMaxAge() const;
 
     [[nodiscard]] std::vector<ProxyParameters> proxyParameters(ProxyMode mode) const;
+
+    struct PushGatewayFQDNs {
+        std::string hostName;
+        int port{443};
+        auto operator<=>(const PushGatewayFQDNs&) const = default;
+    };
+    std::set<PushGatewayFQDNs> pushGatewayFQDNs() const;
 };
 
 

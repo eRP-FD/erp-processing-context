@@ -1,6 +1,6 @@
 #
-# (C) Copyright IBM Deutschland GmbH 2021, 2025
-# (C) Copyright IBM Corp. 2021, 2025
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
 #
 # non-exclusively licensed to gematik GmbH
 #
@@ -83,10 +83,16 @@ list(
         model/EpaOpProvidePrescriptionErpInputParameters.cxx
         model/EpaOpRxDispensationErpOutputParameters.cxx
         model/EpaOpRxPrescriptionErpOutputParameters.cxx
-        model/HashedKvnr.cxx
         model/HealthcareServiceDirectory.cxx
         model/LocationDirectory.cxx
         model/OrganizationDirectory.cxx
+        model/push/BatchResponse.cxx
+        model/push/EncryptedNotification.cxx
+        model/push/ErrorResponse.cxx
+        model/push/PushNotification.cxx
+        model/push/PushNotificationContext.cxx
+        model/push/PushNotificationDevice.cxx
+        model/push/PushNotificationEvent.cxx
         model/ResourceInstances.cxx
         model/TaskEvent.cxx
         network/client/HttpsClientPool.cxx
@@ -101,12 +107,15 @@ list(
         client/FhirVZDClient.cxx
         client/TokenCache.cxx
         client/OAuthClientBase.cxx
+        client/push/PushGatewayClient.cxx
         eventprocessing/CancelPrescription.cxx
         eventprocessing/EventDispatcher.cxx
         eventprocessing/EventProcessingBase.cxx
         eventprocessing/Outcome.cxx
         eventprocessing/ProvideDispensation.cxx
         eventprocessing/ProvidePrescription.cxx
+        eventprocessing/push/PushEventEncoder.cxx
+        eventprocessing/push/PushEventProcessor.cxx
         model/ConsentDecisionsResponseType.cxx
         model/EpaErrorType.cxx
         model/EpaOperationOutcome.cxx
@@ -123,6 +132,10 @@ list(
 add_library(
     erp-medication-exporter-files OBJECT
     ${erp-medication-exporter-source-files}
+        model/push/BatchResponse.cxx
+        model/push/BatchResponse.hxx
+        model/push/ErrorResponse.cxx
+        model/push/ErrorResponse.hxx
 )
 
 target_compile_definitions(erp-medication-exporter-files

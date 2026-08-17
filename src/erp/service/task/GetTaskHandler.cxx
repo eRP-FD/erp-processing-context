@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -726,8 +726,7 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         A_20753.start("Exclusion of representative access to or using verification identity");
         if (kvnrFromAccessToken.has_value())
         {
-            ErpExpect(isVerificationIdentityKvnr(kvnrFromAccessToken.value()) ==
-                          isVerificationIdentityKvnr(kvnr.value().id()),
+            ErpExpect(model::Kvnr{kvnrFromAccessToken.value()}.verificationIdentity() == kvnr->verificationIdentity(),
                       HttpStatus::BadRequest,
                       "KVNR verification identities may not access information from insurants and vice versa");
         }
@@ -737,6 +736,14 @@ void GetTaskHandler::handleRequestFromPatient(PcSessionContext& session, const m
         ErpExpect(!model::isDirectAssignment(task->type()), HttpStatus::Forbidden,
                   "Insurant representatives may not access directly assigned tasks");
         A_26148.finish();
+
+        A_28115.start("Collect push event data.");
+        A_28125.start("Data from Get Task handler.");
+        session.pushEventDataCollector()
+            .setKvnr(*kvnr)
+            .setPrescriptionId(task->prescriptionId());
+        A_28125.finish();
+        A_28115.finish();
     }
     // GEMREQ-end A_19116-01
 

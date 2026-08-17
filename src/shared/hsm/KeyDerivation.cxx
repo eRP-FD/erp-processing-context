@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -11,11 +11,12 @@
 #include "shared/hsm/ErpTypes.hxx"
 #include "shared/hsm/HsmClient.hxx"
 #include "shared/hsm/HsmPool.hxx"
+#include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
 #include "shared/model/PrescriptionType.hxx"
-#include "shared/model/Timestamp.hxx"
-#include "shared/model/Kvnr.hxx"
 #include "shared/model/TelematikId.hxx"
+#include "shared/model/Timestamp.hxx"
+#include "shared/model/push/Pusher.hxx"
 #include "shared/util/SafeString.hxx"
 
 #include <boost/endian/conversion.hpp>
@@ -183,6 +184,15 @@ ErpVector KeyDerivation::communicationKeyDerivationData(const std::string_view& 
     return data;
 }
 
+ErpVector KeyDerivation::appRegistrationKeyDerivationData(const db_model::HashedId& hashedPushKey,
+                                                          const db_model::HashedKvnr& kvnr)
+{
+    std::string_view sv(reinterpret_cast<const char*>(hashedPushKey.data()), hashedPushKey.size());
+    ErpVector data = ErpVector::create(sv);
+    data.append(kvnr);
+    return data;
+}
+
 std::tuple<SafeString, OptionalDeriveKeyData>
 KeyDerivation::initialCommunicationKey(const std::string_view& identity, const db_model::HashedId& IdentityHashed)
 {
@@ -240,6 +250,36 @@ KeyDerivation::initialChargeItemKey(const ::model::PrescriptionId& prescriptionI
     return ::std::make_tuple(
         ::SafeString{::std::move(keyData.derivedKey)},//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
         ::std::move(*keyData.optionalData));
+}
+
+std::tuple<SafeString, OptionalDeriveKeyData> KeyDerivation::initialAppRegistrationKey(const db_model::HashedId& hashedPushKey,
+                                                                                       const db_model::HashedKvnr& kvnr)
+{
+    // Encrypted by AuditEvent MasterKey
+    // using: pushkey, kvnr_hashed
+
+    auto hsmPoolSession = mHsmPool.acquire();
+    auto keyData =
+        hsmPoolSession.session().deriveAppRegistrationPersistenceKey(appRegistrationKeyDerivationData(hashedPushKey, kvnr));
+    SafeString key{std::move(keyData.derivedKey)};//NOLINT[hicpp-move-const-arg,performance-move-const-arg]
+    Expect(keyData.optionalData, "missing salt/key_generation_id on initial derivation");
+    return std::make_tuple(std::move(key), std::move(*keyData.optionalData));
+}
+
+SafeString KeyDerivation::appRegistrationKey(const db_model::HashedId& hashedPushKey, const db_model::Blob& salt,
+                                             const db_model::HashedKvnr& kvnr, BlobId blobId)
+{
+    // Encrypted by AuditEvent MasterKey
+    // using: pushkey, kvnr_hashed
+
+    OptionalDeriveKeyData secondCallData;
+    secondCallData.blobId = blobId;
+    secondCallData.salt.append(salt);
+    auto derivationData = appRegistrationKeyDerivationData(hashedPushKey, kvnr);
+    auto hsmPoolSession = mHsmPool.acquire();
+    auto keyData = hsmPoolSession.session().deriveAppRegistrationPersistenceKey(derivationData, secondCallData);
+    SafeString key{std::move(keyData.derivedKey)}; //NOLINT[hicpp-move-const-arg,performance-move-const-arg]
+    return key;
 }
 
 const SafeString& KeyDerivation::getPersistenceIndexKeyKvnr(void) const

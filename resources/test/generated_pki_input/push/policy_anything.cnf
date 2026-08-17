@@ -1,0 +1,5 @@
+.include $ENV::GENERATE_PKI_INPUT/openssl.cnf
+
+[ CA_default ]
+policy = policy_anything
+

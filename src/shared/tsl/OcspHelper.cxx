@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -126,4 +126,28 @@ std::chrono::system_clock::duration OcspHelper::getOcspGracePeriod(TslMode tslMo
     {
         return std::chrono::seconds(Configuration::instance().getIntValue(ConfigurationKey::OCSP_QES_GRACE_PERIOD));
     }
+}
+
+OcspResponsePtr OcspHelper::binaryBufferToOcspResponse(const BinaryBuffer& responseBuffer)
+{
+    if (responseBuffer.empty())
+    {
+        return nullptr;
+    }
+    const auto* buffer = responseBuffer.data();
+    return OcspResponsePtr(
+        d2i_OCSP_RESPONSE(nullptr, &buffer, gsl::narrow_cast<long>(responseBuffer.size())));
+}
+
+
+BinaryBuffer OcspHelper::ocspRequestToBinaryBuffer(OCSP_REQUEST& ocspRequest)
+{
+    unsigned char* buffer = nullptr;
+    const int bufferLength = i2d_OCSP_REQUEST(&ocspRequest, &buffer);
+    Expect(bufferLength > 0, "Could not create OCSP request!");
+
+    OpenSslBufferPtr bufferPtr(buffer);
+    BinaryBuffer requestBuffer(buffer, static_cast<size_t>(bufferLength));
+
+    return requestBuffer;
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_ERP_CLIENT_URLREQUESTSENDER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_ERP_CLIENT_URLREQUESTSENDER_HXX
 
+#include "shared/crypto/CertificateChainAndKey.hxx"
 #include "shared/network/client/ConnectionParameters.hxx"
 #include "shared/network/client/ProxyParameters.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
@@ -59,6 +60,9 @@ public:
 
     void setTlsCertificateVerifier(TlsCertificateVerifier certificateVerifier);
 
+    // mTLS certs and key
+    void setClientCertificateChainAndKey(CertificateChainAndKey clientCertificateChainAndKey);
+
     /**
      * Set the list of proxies, for http connections, only proxies with
      * ProxyMode::HTTP are considered, while for HTTPS connections only proxies
@@ -72,6 +76,8 @@ public:
     void setFollowRedirects(bool followRedirects);
 
     void setAdditionalHeaders(Header::keyValueMap_t&& additionalHeaders);
+
+    void setResponseBodyLimit(std::optional<uint64_t> responseBodyLimit);
 
 protected:
     virtual ClientResponse doSend(const std::string& url, HttpMethod method, const std::string& body,
@@ -87,12 +93,14 @@ protected:
 
 private:
     TlsCertificateVerifier mTlsCertificateVerifier;
+    std::optional<CertificateChainAndKey> mClientCertificateChainAndKey;
     std::chrono::milliseconds mConnectionTimeout;
     std::chrono::milliseconds mResolveTimeout;
     mutable DurationConsumer mDurationConsumer;
     std::vector<ProxyParameters> mProxies;
     bool mFollowRedirects;
     Header::keyValueMap_t mAdditionalHeaders;
+    std::optional<uint64_t> mResponseBodyLimit;
 };
 
 

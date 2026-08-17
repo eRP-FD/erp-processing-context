@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -22,7 +22,7 @@ public:
     class NoZeroFillTag{};
     static constexpr NoZeroFillTag no_zero_fill = {};
     // construct a SafeString of size 0, equivalent to "", the same as SafeString(0)
-    SafeString (void);
+    SafeString ();
     explicit SafeString (size_t size);
     explicit SafeString (const char* value);
     explicit SafeString(char* value, size_t size);
@@ -33,7 +33,7 @@ public:
     SafeString (const SafeString& other);
     SafeString (SafeString&& other) noexcept;
 
-    SafeString& operator= (const SafeString& other);
+    SafeString& operator= (const SafeString& other) = delete;
     SafeString& operator= (SafeString&& other) noexcept;
 
     /// @brief move construct from anything, that has a data and a size member (string, vector, array)
@@ -44,11 +44,13 @@ public:
     template <typename InputT, decltype(std::declval<InputT>().data(), std::declval<InputT>().size())* = nullptr>
     SafeString& operator = (InputT&& in);
 
-    ~SafeString (void);
+    ~SafeString ();
 
     // Overwrite memory with random data and set size to 0
     // Do not use the instance after calling safeErase.
     void safeErase () noexcept;
+
+    void resize(size_t newSize);
 
     // The aim of the implicit conversion operators is to avoid unexpected conversions to std::string, where the sensitive
     // data would be copied into the string, as much as possible. Only conversions to view-ish types are provided.
@@ -56,37 +58,38 @@ public:
     // convert for example SafeString->const char*->std::string
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator const char* (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    [[nodiscard]] operator const char* () const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator const unsigned char* (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    [[nodiscard]] operator const unsigned char* () const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
     //NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    [[nodiscard]] operator std::string_view (void) const;
+    [[nodiscard]] operator std::string_view () const;
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
     //NOLINTNEXTLINE(google-explicit-constructor,hicpp-explicit-conversions)
-    [[nodiscard]] operator std::basic_string_view<std::byte> (void) const;
+    [[nodiscard]] operator std::basic_string_view<std::byte> () const;
 
     /// @return const view to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator gsl::span<const char> (void) const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    [[nodiscard]] operator gsl::span<const char> () const; //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] operator char* (void); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    [[nodiscard]] operator char* (); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
 
     /// @return mutable pointer to the managed memory, terminating \0 is guaranteed
-    [[nodiscard]] explicit operator std::byte* (void); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
+    [[nodiscard]] explicit operator std::byte* (); //NOLINT(google-explicit-constructor,hicpp-explicit-conversions)
     operator std::string& () = delete;
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
     [[nodiscard]] char* c_str();
+    [[nodiscard]] char* begin();
 
     /// @return const pointer to the managed memory, terminating \0 is guaranteed
     [[nodiscard]] const char* c_str() const;
 
     /// @return the size of the string, excluding the terminating \0
-    [[nodiscard]] size_t size (void) const;
+    [[nodiscard]] size_t size () const;
 
 
     [[nodiscard]] bool operator == (const SafeString& other) const;
@@ -102,6 +105,7 @@ private:
     size_t mStringLength = 0; // excluding \0
 
     void checkForTerminatingZero() const;
+    void setTerminatingZero();
 
     // these two classes are needed to disambiguate the use of clear() templates below
     // if InputT has a member named `clear()` both functions are enabled

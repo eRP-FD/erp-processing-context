@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -117,6 +117,13 @@ void AcceptTaskHandler::handleRequest (PcSessionContext& session)
         .setInsurantKvnr(kvnr.value())
         .setAction(model::AuditEvent::Action::update)
         .setPrescriptionId(prescriptionId);
+    A_28115.start("Collect push event data.");
+    A_28127.start("Data from Accept Task handler.");
+    session.pushEventDataCollector()
+        .setKvnr(*kvnr)
+        .setPrescriptionId(task.prescriptionId());
+    A_28127.finish();
+    A_28115.finish();
 }
 
 

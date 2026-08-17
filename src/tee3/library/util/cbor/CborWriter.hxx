@@ -1,14 +1,15 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
 #ifndef EPA_LIBRARY_UTIL_CBOR_CBORWRITER_HXX
 #define EPA_LIBRARY_UTIL_CBOR_CBORWRITER_HXX
 
-#include "library/util/BinaryBuffer.hxx"
 #include "library/util/cbor/Cbor.hxx"
+
+#include "shared/util/BinaryBuffer.hxx"
 
 #include <array>
 #include <cstddef>

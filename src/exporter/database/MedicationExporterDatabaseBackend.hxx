@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -17,6 +17,7 @@
 
 namespace model
 {
+class PushNotification;
 class EventKvnr;
 class TRezeptEvent;
 }
@@ -45,6 +46,10 @@ public:
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) = 0;
     virtual bool isDeadLetter(const model::TRezeptEvent& eventData) = 0;
     virtual int markDeadLetter(const model::TRezeptEvent& eventData) = 0;
+    virtual std::optional<db_model::PushEvent> processNextPushNotification() = 0;
+    virtual void deletePushNotification(const db_model::HashedKvnr& hashedKvnr, int64_t int64) = 0;
+    virtual void updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                           const db_model::HashedKvnr& hashedKvnr, int64_t id) = 0;
 };
 
 #endif// ERP_PROCESSING_CONTEXT_DATABASE_MEDICATIONEXPORTER_BACKEND_HXX

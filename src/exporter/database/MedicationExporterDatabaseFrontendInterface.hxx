@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -17,6 +17,7 @@
 
 namespace model
 {
+class PushNotificationEvent;
 class AuditData;
 class EventKvnr;
 class TRezeptEvent;
@@ -32,7 +33,7 @@ enum class TransactionMode : uint8_t;
 class MedicationExporterDatabaseFrontendInterface
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "12";
+    static constexpr const char* expectedSchemaVersion = "13";
 
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
@@ -67,6 +68,11 @@ public:
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) const = 0;
     virtual bool isDeadLetter(const model::TRezeptEvent& eventData) const = 0;
     virtual int markDeadLetter(const model::TRezeptEvent& eventData) const = 0;
+
+    virtual std::optional<model::PushNotificationEvent> processNextPushNotification() const = 0;
+    virtual void deletePushNotification(const model::HashedKvnr& hashedKvnr, int64_t id) const = 0;
+    virtual void updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                           const model::HashedKvnr& hashedKvnr, int64_t id) const = 0;
 
     /**
      * Postpone processing of a KVNR by adding a delay to the export time and store the current retry count.

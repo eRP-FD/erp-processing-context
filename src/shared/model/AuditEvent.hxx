@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -84,6 +84,7 @@ public:
         const std::optional<std::string_view>& identifierSystem,
         const std::string_view& identifierValue);
     void setEntityWhatReference(const std::string_view& reference);
+    void setEntityWhatDisplay(const std::string_view& display);
     void setEntityName(const std::string_view& entityName);
     void setEntityDescription(const std::string_view& entityDescription);
 
@@ -100,6 +101,7 @@ public:
     [[nodiscard]] std::string_view sourceObserverReference() const;
     [[nodiscard]] std::tuple<std::optional<std::string_view>, std::optional<std::string_view>> entityWhatIdentifier() const;
     [[nodiscard]] std::string_view entityWhatReference() const;
+    [[nodiscard]] std::string_view entityWhatDisplay() const;
 
     [[nodiscard]] std::string_view entityName() const;
     [[nodiscard]] std::string_view entityDescription() const;

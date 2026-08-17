@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,6 +9,8 @@
 #define ERP_PROCESSING_CONTEXT_PC_PCSERVICECONTEXT_HXX
 
 #include "erp/database/Database.hxx"
+#include "erp/database/push/PushErpDatabase.hxx"
+#include "erp/database/push/PushExporterDatabase.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
 #include "erp/pc/CFdSigErpManager.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
@@ -56,6 +58,9 @@ using SeedTimer = PeriodicTimer<SeedTimerHandler>;
 struct Factories : BaseFactories {
     Database::Factory databaseFactory;
     ReadOnlyDatabase::Factory readOnlyDatabaseFactory;
+    PushErpDatabase::Factory pushErpDatabaseFactory;
+    PushErpReadOnlyDatabase::Factory readOnlyPushErpDatabaseFactory;
+    PushExporterDatabase::Factory pushExporterDatabaseFactory;
     std::function<std::unique_ptr<RedisInterface>(std::chrono::milliseconds socketTimeout)> redisClientFactory;
     HttpsServerFactoryT teeServerFactory;
     std::function<std::shared_ptr<JsonValidator>()> jsonValidatorFactory;
@@ -83,8 +88,11 @@ public:
 
     std::unique_ptr<Database> databaseFactory();
     std::unique_ptr<ReadOnlyDatabase> readOnlyDatabaseFactory();
+    std::unique_ptr<PushErpDatabase> pushDatabaseFactory();
+    std::unique_ptr<PushErpReadOnlyDatabase> readOnlyPushDatabaseFactory();
     const RateLimiter& getDosHandler();
     std::shared_ptr<RedisInterface> getRedisClient();
+    std::unique_ptr<PushExporterDatabase> pushExporterDatabaseFactory();
     PreUserPseudonymManager& getPreUserPseudonymManager();
     TelematicPseudonymManager& getTelematicPseudonymManager();
     const JsonValidator& getJsonValidator() const;
@@ -121,7 +129,10 @@ private:
      */
     Database::Factory mDatabaseFactory;
     ReadOnlyDatabase::Factory mReadOnlyDatabaseFactory;
+    PushErpDatabase::Factory mPushErpDatabaseFactory;
+    PushErpReadOnlyDatabase::Factory mReadOnlyPushErpDatabaseFactory;
     std::shared_ptr<RedisInterface> mRedisClient;
+    PushExporterDatabase::Factory mPushExporterDatabaseFactory;
     std::unique_ptr<RateLimiter> mDosHandler;
     const std::shared_ptr<JsonValidator> mJsonValidator;
     std::unique_ptr<PreUserPseudonymManager> mPreUserPseudonymManager;

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -51,7 +51,14 @@ public:
     void setMethod (HttpMethod method);
 
     const std::string& target (void) const;
+    std::string targetOriginal() const;
+    void unescapeTarget();
     void setTarget (const std::string& target);
+
+    [[nodiscard]] const std::string& path() const;
+    [[nodiscard]] const std::string& pathOriginal() const;
+    [[nodiscard]] const std::string& query() const;
+    [[nodiscard]] const std::string& fragment() const;
 
     static constexpr unsigned int Version_1_0 = 10;
     static constexpr unsigned int Version_1_1 = 11;
@@ -111,6 +118,7 @@ public:
 
     static std::string profileVersionHeader(model::ProfileType profileType);
     static std::string xUserAgentHeader();
+    static std::string tiUserAgentHeader();
 
     static const std::string Accept;
     static const std::string AcceptLanguage;
@@ -164,6 +172,7 @@ public:
     static const std::string PnIpaddress;
 
     static const std::string XUserAgent;
+    static const std::string TiUserAgent;
     struct Tee3 {
         static const std::string VauCid;
         static const std::string XInsurantId;
@@ -187,9 +196,15 @@ public:
 private:
     void parseAcceptField(std::string_view acceptField);
     void setContentLengthZeroMethodUnknown();
+    void splitTarget();
 
     HttpMethod mMethod;
-    std::string mTarget;
+    std::string mTarget; // path/query/fragment
+    std::string mTargetOriginal;
+    std::string mPath;
+    std::string mPathOriginal;
+    std::string mQuery;
+    std::string mFragment;
     unsigned int mVersion;
     keyValueMap_t mHeader;
     HttpStatus mStatusCode;

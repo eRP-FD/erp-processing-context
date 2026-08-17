@@ -72,6 +72,8 @@
 | KBV_VS_SFHIR_KBV_DARREICHUNGSFORM_V1.16.xml   | 1.16    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DARREICHUNGSFORM_V1.16.zip   |
 | KBV_CS_SFHIR_KBV_DMP_V1.06.xml                | 1.06    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.06.zip                |
 | KBV_VS_SFHIR_KBV_DMP_V1.06.xml                | 1.06    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.06.zip                |
+| KBV_CS_SFHIR_KBV_DMP_V1.07.xml                | 1.07    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.07.zip                |
+| KBV_VS_SFHIR_KBV_DMP_V1.07.xml                | 1.07    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_DMP_V1.07.zip                |
 | KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.xml       | 1.02    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.zip       |
 | KBV_VS_SFHIR_KBV_FORMULAR_ART_V1.02.xml       | 1.02    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_FORMULAR_ART_V1.02.zip       |
 | KBV_CS_SFHIR_KBV_NARCOTIC_LABEL_V1.00.xml     | 1.00    | https://applications.kbv.de/fhir4/KBV_CS_SFHIR_KBV_NARCOTIC_LABEL_V1.00.zip     |

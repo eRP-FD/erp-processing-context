@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -65,6 +65,34 @@ public:
     std::int32_t retryCount;
 };
 
+struct PushEvent {
+    using id_t = std::int64_t;
+    PushEvent(id_t id, HashedKvnr kvnrHashed, model::PrescriptionId prescriptionId, std::string channelId,
+              std::string notificationIdentifier, std::int32_t retryCount, model::Timestamp created);
+    id_t id;
+    HashedKvnr kvnrHashed;
+    model::PrescriptionId prescriptionId;
+    std::string channelId;
+    std::string notificationIdentifier;
+    std::int32_t retryCount;
+    model::Timestamp created;
+};
+
+struct AppRegistration {
+    AppRegistration(HashedId pushKeyHashed, HashedId appIdHashed, HashedKvnr kvnrHashed, BlobId blobId, Blob salt,
+                    EncryptedBlob payload, std::string url, EncryptedBlob encryptionKey,
+                    model::Timestamp timeCreated, model::Timestamp lastModified);
+    HashedId pushKeyHashed;
+    HashedId appIdHashed;
+    HashedKvnr kvnrHashed;
+    BlobId blobId;
+    Blob salt;
+    EncryptedBlob payload;
+    std::string url;
+    EncryptedBlob encryptionKey;
+    model::Timestamp timeCreated;
+    model::Timestamp lastModified;
+};
 
 }// namespace db_model
 

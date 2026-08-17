@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -18,6 +18,10 @@
 #include <optional>
 
 
+namespace model
+{
+class PushNotificationEvent;
+}
 class MedicationExporterDatabaseFrontend : public MedicationExporterDatabaseFrontendInterface
 {
 public:
@@ -63,6 +67,11 @@ public:
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::TRezeptEvent& eventData) const override;
     bool isDeadLetter(const model::TRezeptEvent& eventData) const override;
     int markDeadLetter(const model::TRezeptEvent& eventData) const override;
+
+    std::optional<model::PushNotificationEvent> processNextPushNotification() const override;
+    void deletePushNotification(const model::HashedKvnr& hashedKvnr, int64_t eventId) const override;
+    void updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                   const model::HashedKvnr& hashedKvnr, int64_t id) const override;
 
 private:
     static std::shared_ptr<Compression> compressionInstance();

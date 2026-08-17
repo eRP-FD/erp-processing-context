@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -8,7 +8,7 @@
 #define EPA_LIBRARY_STREAM_STREAMHELPER_HXX
 
 #include "library/stream/Stream.hxx"
-#include "library/util/BinaryBuffer.hxx"
+#include "shared/util/BinaryBuffer.hxx"
 
 namespace epa
 {

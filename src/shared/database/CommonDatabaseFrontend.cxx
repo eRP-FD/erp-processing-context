@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -58,7 +58,13 @@ std::tuple<SafeString, BlobId> CommonDatabaseFrontend::auditEventKey(DatabaseBac
 std::string CommonDatabaseFrontend::storeAuditEventData(DatabaseBackend& backend,
                                                         model::AuditData& auditData)
 {
-    auto hashedKvnr = mDerivation.hashKvnr(auditData.insurantKvnr());
+    auto hashedKvnr = [&] {
+        if (auto presetHashedKvnr = auditData.hashedKvnr(); presetHashedKvnr.has_value())
+        {
+            return presetHashedKvnr->toDbModel();
+        }
+        return mDerivation.hashKvnr(auditData.insurantKvnr());
+    }();
 
     std::optional<db_model::EncryptedBlob> encryptedMeta;
     std::optional<BlobId> auditEventBlobId;

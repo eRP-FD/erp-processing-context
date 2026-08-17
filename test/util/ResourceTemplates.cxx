@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -367,6 +367,7 @@ std::string kbvBundleXml(const KbvBundleOptions& bundleOptions)
         boost::replace_all(bundle, "###IKNR###", bundleOptions.iknr.id());
     }
     boost::replace_all(bundle, "###STATUS_CO_PAYMENT###", bundleOptions.statusCoPayment);
+    boost::replace_all(bundle, "###DMP_KENNZEICHEN###", bundleOptions.dmpKennzeichen);
     boost::replace_all(bundle, "###MEDICATION_REQUEST_EXTENSION###", bundleOptions.medicationRequestExtension);
     boost::replace_all(bundle, "###META_EXTENSION###", bundleOptions.metaExtension);
     switch (bundleOptions.lanr.getType())

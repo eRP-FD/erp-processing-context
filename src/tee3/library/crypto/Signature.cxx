@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -334,7 +334,7 @@ namespace
     shared_BN binaryToBN(const BinaryView& binary, const std::string& name)
     {
         auto bn = shared_BN::make();
-        auto* result = BN_bin2bn(binary.data(), sizeAsInt(binary), bn);
+        auto* result = BN_bin2bn(binary.data(), binary.sizeAsInt(), bn);
         AssertOpenSsl(result == bn.get()) << "conversion of " << name << " failed";
 
         return bn;

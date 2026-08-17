@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,8 @@
 #include "erp/admin/AdminServer.hxx"
 #include "erp/database/DatabaseFrontend.hxx"
 #include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
+#include "erp/database/push/PushExporterPostgresBackend.hxx"
 #include "erp/pc/SeedTimer.hxx"
 #include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "mock/crypto/MockCryptography.hxx"
@@ -26,6 +28,8 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
+#include "test/mock/PushErpMockBackend.hxx"
+#include "test/mock/PushExporterMockBackend.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/StaticData.hxx"
 
@@ -128,17 +132,21 @@ void EndpointTestClient::initVauServer(std::shared_ptr<XmlValidator> xmlValidato
         return xmlValidator;
     };
     factories.databaseFactory = createDatabaseFactory(&PostgresBackend::mainConnection);
+    factories.pushErpDatabaseFactory = createPushDatabaseFactory(&PostgresBackend::mainConnection);
     if (PostgresBackend::haveReadOnlyConnection())
     {
         if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
         {
             factories.readOnlyDatabaseFactory = createDatabaseFactory(&PostgresBackend::readOnlyConnection);
+            factories.readOnlyPushErpDatabaseFactory = createPushDatabaseFactory(&PostgresBackend::readOnlyConnection);
         }
         else
         {
             factories.readOnlyDatabaseFactory = factories.databaseFactory;
+            factories.readOnlyPushErpDatabaseFactory = factories.pushErpDatabaseFactory;
         }
     }
+	factories.pushExporterDatabaseFactory = createPushExporterDatabaseFactory(&PushExporterPostgresBackend::mainConnection);
     // Test of client authentication:
     const bool enableClientAuthentication =
         TestConfiguration::instance().getBoolValue(TestConfigurationKey::TEST_ENABLE_CLIENT_AUTHENTICATON);
@@ -187,6 +195,41 @@ Database::Factory EndpointTestClient::createDatabaseFactory(ConnectionFactory co
                 return std::make_unique<DatabaseFrontend>(
                     std::make_unique<MockDatabaseProxy>(mMockDatabase), hsmPool, keyDerivation);
             };
+    }
+}
+
+PushErpDatabase::Factory EndpointTestClient::createPushDatabaseFactory(ConnectionFactory connFactory)
+{
+    if (isPostgresEnabled())
+    {
+        return [connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushErpDatabase>(std::make_unique<PushErpPostgresBackend>(connFactory()), hsmPool,
+                                                     keyDerivation);
+        };
+    }
+    else
+    {
+        return [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushErpDatabase>(std::make_unique<PushErpMockBackend>(), hsmPool, keyDerivation);
+        };
+    }
+}
+
+PushExporterDatabase::Factory EndpointTestClient::createPushExporterDatabaseFactory(ConnectionFactory connFactory)
+{
+    if (isPostgresEnabled())
+    {
+        return [connFactory](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushExporterDatabase>(std::make_unique<PushExporterPostgresBackend>(connFactory()),
+														  hsmPool,
+														  keyDerivation);
+        };
+    }
+    else
+    {
+        return [](HsmPool& hsmPool, KeyDerivation& keyDerivation) {
+            return std::make_unique<PushExporterDatabase>(std::make_unique<PushExporterMockBackend>(), hsmPool, keyDerivation);
+        };
     }
 }
 

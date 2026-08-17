@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -61,6 +61,7 @@ public:
     static constexpr std::string_view ProxyUserPseudonymHeader{"Userpseudonym"};
     static constexpr std::string_view VauPreUserPseudonymHeader{"PNP"};
 
+    ErpWorkflowTestBase();
     virtual ~ErpWorkflowTestBase();
 
     std::string toCadesBesSignature(const std::string& content,
@@ -235,6 +236,7 @@ public:
     RequestArguments mChargeItemRequestArgs;
     RequestArguments mConsentItemRequestArgs;
     RequestArguments mGetTaskRequestArgs;
+    RequestArguments mRejectTaskRequestArgs;
 
     /// @returns {outerResponse, innerResponse}
     std::tuple<ClientResponse, ClientResponse> send(
@@ -510,7 +512,8 @@ public:
         const model::Timestamp& startTime,
         const std::vector<std::string>& actorIdentifiers,
         const std::unordered_set<std::size_t>& actorTelematicIdIndices,
-        const std::vector<model::AuditEvent::SubType>& expectedActions);
+        const std::vector<model::AuditEvent::SubType>& expectedActions,
+        bool useEntityWhatDisplay = false);
 
     void checkAuditEventsFrom(const std::string& insurantKvnr);
 

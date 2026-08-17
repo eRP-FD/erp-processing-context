@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -1109,3 +1109,128 @@ TEST_F(VauRequestHandlerProfessionOIDTest, TaskEuCloseSuccess)
     A_27068.finish();
 }
 // GEMREQ-end A_27068
+
+// GEMREQ-start A_28112
+TEST_F(VauRequestHandlerProfessionOIDTest, PostPushersSetSuccess)
+{
+    A_28112.test("Only registered professionOIDs are allowed to call this service.");
+    auto endpoint = "/pushers/v1/set";
+    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::BadRequest);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, PostPushersSetForbidden)
+{
+    A_28112.test("All other professionOIDs are forbidden for this service.");
+    auto endpoint = "/pushers/v1/set";
+    testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
+}
+// GEMREQ-end A_28112
+
+// GEMREQ-start A_28113
+TEST_F(VauRequestHandlerProfessionOIDTest, GetPushersSuccess)
+{
+    A_28113.test("Only registered professionOIDs are allowed to call this service.");
+    auto endpoint = "/pushers/v1";
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, GetPushersForbidden)
+{
+    A_28113.test("All other professionOIDs are forbidden for this service.");
+    auto endpoint = "/pushers/v1";
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
+}
+// GEMREQ-end A_28113
+
+// GEMREQ-start A_28118
+TEST_F(VauRequestHandlerProfessionOIDTest, GetChannelsSuccess)
+{
+    A_28118.test("Only registered professionOIDs are allowed to call this service.");
+    auto endpoint = "/channels/v1";
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::OK);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, GetChannelsForbidden)
+{
+    A_28118.test("All other professionOIDs are forbidden for this service.");
+    auto endpoint = "/channels/v1";
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
+}
+// GEMREQ-end A_28118
+
+// GEMREQ-start A_28119
+TEST_F(VauRequestHandlerProfessionOIDTest, GetChannelsPushkeySuccess)
+{
+    A_28119.test("Only registered professionOIDs are allowed to call this service.");
+    auto endpoint = "/channels/v1/pushkey";
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::NotFound);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, GetChannelsPushkeyForbidden)
+{
+    A_28119.test("All other professionOIDs are forbidden for this service.");
+    auto endpoint = "/channels/v1/pushkey";
+    testEndpoint(HttpMethod::GET, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::GET, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
+}
+// GEMREQ-end A_28119
+
+// GEMREQ-start A_28120
+TEST_F(VauRequestHandlerProfessionOIDTest, PostChannelsSuccess)
+{
+    A_28120.test("Only registered professionOIDs are allowed to call this service.");
+    auto endpoint = "/channels/v1/pushkey";
+    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::BadRequest);
+}
+TEST_F(VauRequestHandlerProfessionOIDTest, PostChannelsForbidden)
+{
+    A_28120.test("All other professionOIDs are forbidden for this service.");
+    auto endpoint = "/channels/v1/pushkey";
+    testEndpoint(HttpMethod::POST, endpoint, jwtOeffentliche_apotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhausapotheke, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisArzt, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtZahnArztPraxis, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtPraxisPsychotherapeut, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtKrankenhaus, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtWithInvalidProfessionOID(), HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtNcpeh, HttpStatus::Forbidden);
+    testEndpoint(HttpMethod::POST, endpoint, jwtInstitutionVorsorgeReha, HttpStatus::Forbidden);
+}
+// GEMREQ-end A_28120

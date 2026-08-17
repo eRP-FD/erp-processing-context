@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -59,8 +59,8 @@ namespace
     }
 }
 
-
-std::string Base64::encode (std::string_view data)
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
+std::pair<std::unique_ptr<char[]>, size_t> Base64::encodeToCharArray(std::string_view data)
 {
     // Every triplet of bytes will be encoded to four bytes of Base64.
     // => The length of Base64-encoded data is ceil(size / 3) * 4.
@@ -95,7 +95,29 @@ std::string Base64::encode (std::string_view data)
     for (const char* end = encodedData.get()+encodedSize; p!=end; )
         *p++ = '=';
 
-    return std::string(encodedData.get(), encodedSize);
+    return std::make_pair(std::move(encodedData), encodedSize);
+}
+
+std::string Base64::encode (std::string_view data)
+{
+    const auto [encodedData, encodedSize] = encodeToCharArray(data);
+    return {encodedData.get(), encodedSize};
+}
+
+SafeString Base64::encodeToSafeString(const SafeString& data)
+{
+    auto [encodedData, encodedSize] = encodeToCharArray(data);
+    if (encodedSize > 0)
+    {
+        return SafeString{&encodedData[0], encodedSize};
+    }
+    return {};
+}
+
+
+std::string Base64::encode(BinaryView data)
+{
+    return encode(data.toStringView());
 }
 
 std::string Base64::toBase64Url(const std::string& encodedData)
@@ -109,19 +131,21 @@ std::string Base64::toBase64Url(const std::string& encodedData)
     return result;
 }
 
-
-util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
+namespace
+{
+template <typename TBuffer = util::Buffer>
+TBuffer decodeT(const std::string_view& base64, bool skipWhiteSpace)
 {
     static const auto binaryAlphabet = getBinaryAlphabet();
 
     const size_t decodedMaxSize = (base64.length() * 3 / 4) + 3;
-    auto decodedData = std::make_unique<char[]>(decodedMaxSize);
+    TBuffer decodedData(decodedMaxSize);
 
     std::int32_t value{};
     std::int8_t valueShift{-8};
-    char* p = decodedData.get();
+    auto p = decodedData.begin();
     unsigned paddingBytes = 0;
-    for (char itr : base64)
+    for (const char itr : base64)
     {
         if (itr == '=')
         {
@@ -157,14 +181,21 @@ util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
 
         if (valueShift >= 0)
         {
-            *p++ = static_cast<char>((value >> valueShift) & 0xFF);
+            *p++ = static_cast<std::remove_reference_t<decltype(*p)>>((value >> valueShift) & 0xFF);
 
             valueShift = static_cast<std::int8_t>(valueShift - 8);
         }
     }
 
-    const size_t decodedSize = gsl::narrow<size_t>(std::distance(decodedData.get(), p));
-    return util::rawToBuffer(reinterpret_cast<uint8_t*>(decodedData.get()), decodedSize);
+    const auto decodedSize = gsl::narrow<size_t>(std::distance(decodedData.begin(), p));
+    decodedData.resize(decodedSize);
+    return decodedData;
+}
+}
+
+util::Buffer Base64::decode(const std::string_view& base64, bool skipWhiteSpace)
+{
+    return decodeT(base64, skipWhiteSpace);
 }
 
 
@@ -172,6 +203,11 @@ std::string Base64::decodeToString(const std::string_view& base64, bool skipWhit
 {
     auto result = decode(base64, skipWhiteSpace);
     return std::string(reinterpret_cast<const char*>(result.data()), result.size());
+}
+
+SafeString Base64::decodeToSafeString(const std::string_view& base64, bool skipWhiteSpace)
+{
+    return decodeT<SafeString>(base64, skipWhiteSpace);
 }
 
 

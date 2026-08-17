@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -34,8 +34,9 @@ public:
 
     static bool waitForHealthUp(RunLoopScheduler& runLoop,
                                 const std::shared_ptr<MedicationExporterServiceContext>& serviceContext);
-    static bool testEpaEndpoints(MedicationExporterServiceContext& serviceContext);
-    static bool testTRezeptEndpoints(MedicationExporterServiceContext& serviceContext);
+    static bool probeEpaEndpoints(MedicationExporterServiceContext& serviceContext);
+    static bool probeTRezeptEndpoints(MedicationExporterServiceContext& serviceContext);
+    static bool probePushGatewayEndpoints(MedicationExporterServiceContext& serviceContext);
 
 };
 

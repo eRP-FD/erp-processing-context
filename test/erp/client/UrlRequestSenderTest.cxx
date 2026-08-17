@@ -1,26 +1,27 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
 #include "shared/network/client/UrlRequestSender.hxx"
-#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
 #include "erp/server/HttpsServer.hxx"
 #include "erp/service/ErpRequestHandler.hxx"
+#include "mock/client/TlsCertificateVerifierNoVerificationImplementation.hxx"
+#include "shared/beast/BoostBeastStringWriter.hxx"
 #include "shared/common/Constants.hxx"
 #include "shared/server/RequestHandler.hxx"
 #include "shared/server/handler/RequestHandlerInterface.hxx"
 #include "shared/server/response/ServerResponse.hxx"
 #include "shared/util/Expect.hxx"
-#include "test/util/StaticData.hxx"
 #include "test/util/HttpServer.hxx"
+#include "test/util/StaticData.hxx"
 
 #include <boost/asio/ssl/stream.hpp>
-#include <chrono>
 #include <fmt/format.h>
 #include <gtest/gtest.h>
+#include <chrono>
 
 namespace
 {
@@ -302,4 +303,85 @@ TEST_F(UrlRequestSenderTest, proxySniIsUsedAndOriginalHostInHeader)
     EXPECT_EQ(handlerPtr->receivedBody, EXPECTED_BODY);
     EXPECT_EQ(handlerPtr->receivedPath, "/test_path");
     proxyServer->shutDown();
+}
+
+
+/**
+ * Test that the setResponseBodyLimit function applies the response
+ * limit correctly by testing one response at the size of the limit
+ * and one response with one byte more.
+ */
+TEST_F(UrlRequestSenderTest, setResponseBodyLimit)
+{
+    const auto& config = Configuration::instance();
+    const auto port = gsl::narrow<uint16_t>(config.serverPort() + 12);
+    const auto url = fmt::format("http://127.0.0.1:{}/", port);
+
+    size_t responseSize = 100;
+    auto requestHandler = [&](boost::asio::ip::tcp::socket&,
+                              const HttpServer::RequestType&) -> HttpServer::ResponseType {
+        HttpServer::ResponseType response{};
+        response.result(boost::beast::http::status::ok);
+        response.keep_alive(false);
+        response.body() = std::string(responseSize, 'a');
+        return response;
+    };
+
+
+    auto server = HttpServer(boost::asio::ip::make_address("127.0.0.1"), port, requestHandler);
+    auto serverThread = std::thread([&server] {
+        server.run();
+    });
+
+
+    UrlRequestSender requestSender(
+        TlsCertificateVerifierNoVerificationImplementation::withVerificationDisabledForTesting(),
+        std::chrono::milliseconds(50), Constants::resolveTimeout);
+    requestSender.setResponseBodyLimit(responseSize);
+    ASSERT_NO_THROW(requestSender.send(url, HttpMethod::POST, ""));
+
+    requestSender.setResponseBodyLimit(responseSize - 1);
+    EXPECT_ANY_THROW(requestSender.send(url, HttpMethod::POST, ""));
+
+    server.stop();
+    serverThread.join();
+}
+
+class HeaderVerifyingHandler : public UnconstrainedRequestHandler
+{
+public:
+    void handleRequest(BaseSessionContext& baseSession) override
+    {
+        std::cout << BoostBeastStringWriter::serializeRequest(baseSession.request.header(), baseSession.request.getBody()) << std::endl;
+        A_27783_01.test("TI-User-Agent Header field");
+        ASSERT_TRUE(baseSession.request.header().header("TI-User-Agent").has_value());
+        EXPECT_EQ(baseSession.request.header().header("TI-User-Agent"), Header::tiUserAgentHeader());
+        ASSERT_TRUE(baseSession.request.header().header("User-Agent").has_value());
+        EXPECT_EQ(baseSession.request.header().header("User-Agent"), "erp-processing-context");
+    }
+    Operation getOperation(void) const override
+    {
+        return Operation::UNKNOWN;
+    }
+};
+
+TEST_F(UrlRequestSenderTest, testMandatoryHeader)
+{
+    const auto& config = Configuration::instance();
+    const auto port = config.serverPort() + 12;
+    auto handler = std::make_unique<HeaderVerifyingHandler>();
+    RequestHandlerManager handlerManager;
+    handlerManager.onPostDo("/test_path", std::move(handler));
+    auto server = std::make_unique<HttpsServer>(HOST_IP, gsl::narrow<uint16_t>(port), std::move(handlerManager),
+                                                getServiceContext());
+    ASSERT_NE(server, nullptr) << "Server must be created";
+    server->serve(1, "test");
+
+    UrlRequestSender urlRequestSender(Configuration::instance().getStringValue(ConfigurationKey::SERVER_CERTIFICATE), 1,
+                                      Constants::resolveTimeout);
+    EXPECT_NO_THROW(
+        urlRequestSender.send(fmt::format("https://127.0.0.1:{}/test_path", port), HttpMethod::POST, EXPECTED_BODY));
+
+    server->shutDown();
+    server.reset();
 }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -18,7 +18,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
     LANGUAGE plpgsql
     AS
     $$
-        DECLARE 
+        DECLARE
             v_id bigint;
             v_usecase erp_event.usecase_type;
             v_prescription_type smallint;
@@ -31,7 +31,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
             ELSE
                 v_prescription_type = 160;
             END IF;
-          
+
             /* Set the intital values for these variables to the values from the new task */
             v_kvnr = NEW.kvnr;
             v_task_key_blob_id = NEW.task_key_blob_id;
@@ -46,16 +46,16 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
                 /* Take these values from the old task because they are null in the new task but needed in the event */
                 v_kvnr = OLD.kvnr;
                 v_task_key_blob_id = OLD.task_key_blob_id;
-                v_salt = OLD.salt;               
+                v_salt = OLD.salt;
             ELSIF (OLD.status = 2 AND NEW.status = 4) THEN
                 /* UC 4.3 abort */
                 v_usecase = 'cancelPrescription';
                 /* Take these values from the old task because they are null in the new task but needed in the event */
                 v_kvnr = OLD.kvnr;
                 v_task_key_blob_id = OLD.task_key_blob_id;
-                v_salt = OLD.salt;  
+                v_salt = OLD.salt;
             ELSIF (OLD.status = 2 AND NEW.status = 3) THEN
-                /* UC 4.4 close */ 
+                /* UC 4.4 close */
                 v_usecase = 'provideDispensation';
             ELSE
                 v_usecase = NULL;
@@ -87,7 +87,7 @@ CREATE OR REPLACE FUNCTION erp_event.f_create_task_event()
                         last_medication_dispense,
                         medication_dispense_salt,
                         usecase,
-                        prescription_type                        
+                        prescription_type
                     )
                 VALUES
                     (

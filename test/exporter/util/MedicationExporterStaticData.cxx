@@ -1,15 +1,14 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 #include "MedicationExporterStaticData.hxx"
-
 #include "exporter/database/MainDatabaseFrontend.hxx"
 #include "exporter/database/MainPostgresBackend.hxx"
-#include "exporter/database/MedicationExporterPostgresBackend.hxx"
 #include "exporter/database/MedicationExporterDatabaseFrontend.hxx"
+#include "exporter/database/MedicationExporterPostgresBackend.hxx"
 #include "exporter/pc/MedicationExporterFactories.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Expect.hxx"
@@ -18,7 +17,7 @@
 #include "test/exporter/mock/MedicationExporterDatabaseFrontendMock.hxx"
 
 
-MedicationExporterFactories MedicationExporterStaticData::makeMockMedicationExporterFactories()
+MedicationExporterFactories MedicationExporterStaticData::makeMockMedicationExporterFactories(bool forceMockDb)
 {
     using exporter::MainDatabaseFrontend;
     using exporter::MainPostgresBackend;
@@ -39,18 +38,21 @@ MedicationExporterFactories MedicationExporterStaticData::makeMockMedicationExpo
     MedicationExporterFactories factories;
     fillMockBaseFactories(factories);
     factories.exporterDatabaseFactory =
-        [telematikLookup](KeyDerivation& keyDerivation,
-                          TransactionMode mode) -> std::unique_ptr<MedicationExporterDatabaseFrontendInterface> {
-        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
+        [telematikLookup,
+         forceMockDb](KeyDerivation& keyDerivation,
+                      TransactionMode mode) -> std::unique_ptr<MedicationExporterDatabaseFrontendInterface> {
+        if (! forceMockDb &&
+            TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
             return std::make_unique<MedicationExporterDatabaseFrontend>(
                 std::make_unique<MedicationExporterPostgresBackend>(mode), keyDerivation, *telematikLookup);
         else
             return std::make_unique<MedicationExporterDatabaseFrontendMock>();
     };
-    factories.erpDatabaseFactory = [](HsmPool& hsmPool,
-                                      KeyDerivation& keyDerivation) -> std::unique_ptr<MainDatabaseFrontend> {
+    factories.erpDatabaseFactory =
+        [forceMockDb](HsmPool& hsmPool, KeyDerivation& keyDerivation) -> std::unique_ptr<MainDatabaseFrontend> {
         std::unique_ptr<MainPostgresBackend> backend;
-        if (TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
+        if (! forceMockDb &&
+            TestConfiguration::instance().getOptionalBoolValue(TestConfigurationKey::TEST_USE_POSTGRES, false))
             backend = std::make_unique<MainPostgresBackend>();
         else
             backend = std::unique_ptr<MainPostgresBackend>(nullptr);

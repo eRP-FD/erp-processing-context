@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -10,6 +10,7 @@
 #include "erp/database/Database.hxx"
 #include "erp/database/redis/RateLimiter.hxx"
 #include "erp/model/OuterResponseErrorData.hxx"
+#include "erp/model/push/Channels.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonym.hxx"
 #include "erp/pc/pre_user_pseudonym/PreUserPseudonymManager.hxx"
 #include "erp/server/context/SessionContext.hxx"
@@ -17,6 +18,7 @@
 #include "erp/tee/ErpTeeProtocol.hxx"
 #include "erp/tee/InnerTeeRequest.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
+#include "push/PushResponseBuilder.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/AesGcm.hxx"
 #include "shared/crypto/CMAC.hxx"
@@ -41,7 +43,7 @@
 namespace
 {
 
-void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
+std::string storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
 {
     A_19391_01.start("Use name of caller for audit logging");
     A_19392.start("Use id of caller for audit logging");
@@ -53,9 +55,18 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
     try
     {
         model::AuditData auditData = sessionContext.auditDataCollector().createData();
-        // Store in database
-        const auto id = sessionContext.database()->storeAuditEventData(auditData);
-        TVLOG(1) << "AuditEvent record with id " << id << " created";
+        if (auditData.isPushEvent())
+        {
+            const auto id = sessionContext.pushDatabase()->storeAuditEventData(auditData);
+            TVLOG(1) << "AuditEvent record with id " << id << " created";
+            return id;
+        }
+        else
+        {
+            const auto id = sessionContext.database()->storeAuditEventData(auditData);
+            TVLOG(1) << "AuditEvent record with id " << id << " created";
+            return id;
+        }
     }
     catch(const MissingAuditDataException& exc)
     {
@@ -79,6 +90,8 @@ void storeAuditData(PcSessionContext& sessionContext, const JWT& accessToken)
         sessionContext.accessLog.error("Unknown error while storing Audit data");
         throw;
     }
+    // Should never reach
+    return "";
 }
 
 JWT getJwtFromAuthorizationHeader(const std::string& authorizationHeaderValue)
@@ -87,10 +100,9 @@ JWT getJwtFromAuthorizationHeader(const std::string& authorizationHeaderValue)
     return JWT(authorizationHeaderValue.substr(7));
 }
 
-void fillErrorResponse(ServerResponse& innerResponse,
-                       const HttpStatus httpStatus,
-                       const std::unique_ptr<ServerRequest>& innerRequest,
-                       const model::OperationOutcome& operationOutcome)
+void fillOperationOutcomeErrorResponse(ServerResponse& innerResponse, const HttpStatus httpStatus,
+                                       const std::unique_ptr<ServerRequest>& innerRequest,
+                                       const model::OperationOutcome& operationOutcome)
 {
     ResponseBuilder(innerResponse).status(httpStatus).clearBody().keepAlive(false);
     bool callerWantsJson = false;
@@ -107,7 +119,19 @@ void fillErrorResponse(ServerResponse& innerResponse,
             callerWantsJson = professionOIDClaim.has_value() && professionOIDClaim == profession_oid::oid_versicherter;
         }
     }
-    ResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
+    FhirResponseBuilder(innerResponse).body(callerWantsJson, operationOutcome);
+}
+
+void fillOperationOutcomeErrorResponse(ServerResponse& innerResponse, const HttpStatus httpStatus,
+                                       const std::unique_ptr<ServerRequest>& innerRequest,
+                                       const std::string& detailsText, const std::optional<std::string>& diagnostics)
+{
+    // By now issue type, error text and diagnostics (if available) are filled.
+    const model::OperationOutcome operationOutcome({
+        model::OperationOutcome::Issue::Severity::error,
+        model::OperationOutcome::httpCodeToOutcomeIssueType(httpStatus),
+        detailsText, {}, diagnostics, {} /*expression*/});
+    fillOperationOutcomeErrorResponse(innerResponse, httpStatus, innerRequest, operationOutcome);
 }
 
 void fillErrorResponse(ServerResponse& innerResponse,
@@ -116,19 +140,24 @@ void fillErrorResponse(ServerResponse& innerResponse,
                        const std::string& detailsText,
                        const std::optional<std::string>& diagnostics)
 {
-    // By now issue type, error text and diagnostics (if available) are filled.
-    const model::OperationOutcome operationOutcome({
-        model::OperationOutcome::Issue::Severity::error,
-        model::OperationOutcome::httpCodeToOutcomeIssueType(httpStatus),
-        detailsText, {}, diagnostics, {} /*expression*/ });
-    fillErrorResponse(innerResponse, httpStatus, innerRequest, operationOutcome);
+    if (!innerRequest)
+    {
+        fillOperationOutcomeErrorResponse(innerResponse, httpStatus, innerRequest, detailsText, diagnostics);
+    }
+    else
+    {
+        switch (innerRequest->getType())
+        {
+            case ServerRequest::Type::Fhir:
+                fillOperationOutcomeErrorResponse(innerResponse, httpStatus, innerRequest, detailsText, diagnostics);
+                break;
+            case ServerRequest::Type::Push:
+                PushResponseBuilder{innerResponse, httpStatus, detailsText, diagnostics};
+                break;
+        }
+    }
 }
 
-} // anonymous namespace
-
-
-namespace
-{
 void runErpExceptionHandler(const ErpException& exception,
                             const std::unique_ptr<ServerRequest>& innerRequest,
                             ServerResponse& innerResponse, PcSessionContext& outerSession)
@@ -177,7 +206,7 @@ void erpServiceExceptionHandler(const ErpServiceException& exception,
         case HttpStatus::BadRequest:
         case HttpStatus::BackendCallFailed:
             outerSession.accessLog.error("ErpServiceException: " + exception.operationOutcome().concatDetails());
-            fillErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
+            fillOperationOutcomeErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
             break;
         case HttpStatus::InternalServerError:
             // fixed text and no diagnostics for internal errors to avoid leaking of personal information;
@@ -185,7 +214,7 @@ void erpServiceExceptionHandler(const ErpServiceException& exception,
             break;
         default:
             outerSession.accessLog.error("ErpServiceException"s);
-            fillErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
+            fillOperationOutcomeErrorResponse(innerResponse, exception.status(), innerRequest, exception.operationOutcome());
             break;
     }
     if (exception.vauErrorCode().has_value())
@@ -301,6 +330,7 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
     HttpStatus errorStatus = HttpStatus::OK;
     std::string errorText;
     std::optional<std::string> errorMessage;
+    session.pushEventDataCollector().setRequestId( sessionIdentifier );
 // GEMREQ-start A_19417#handleRequest
     try {
         auto upParam = session.request.getPathParameter("UP");
@@ -353,9 +383,9 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
     }
 
     model::OuterResponseErrorData errorData(sessionIdentifier, errorStatus, errorText, errorMessage);
-    ResponseBuilder(session.response)
-        .status(errorStatus)
+    FhirResponseBuilder(session.response)
         .body(true, errorData)
+        .status(errorStatus)
         .header(Header::ContentType, ContentMimeType::json)
         .keepAlive(false);
     session.accessLog.error(errorText);
@@ -380,6 +410,9 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         innerServerRequest = std::make_unique<ServerRequest>( innerTeeRequest->releaseHeader() );
         innerServerRequest->setBody(innerTeeRequest->releaseBody());
 
+        // Look up the secondary request handler. Required for determining the inner operation.
+        auto matchingHandler = mRequestHandlers.findMatchingHandler(innerServerRequest->header());
+
         ErpExpect(innerServerRequest->header().hasHeader(Header::Authorization),
                   HttpStatus::BadRequest, "Authorization header is missing");
         const JWT vauJwt = innerTeeRequest->releaseAuthenticationToken();
@@ -393,12 +426,9 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         PcSessionContext innerSession(outerSession.serviceContext, *innerServerRequest, innerServerResponse,
                                       outerSession.accessLog, outerSession.sessionTime());
 
-        // Look up the secondary request handler. Required for determining the inner operation.
-        const std::string& target = innerServerRequest->header().target();
-        auto matchingHandler =
-            mRequestHandlers.findMatchingHandler(innerServerRequest->header().method(), target);
         if (matchingHandler.handlerContext == nullptr)
         {
+            const std::string& target = innerServerRequest->header().target();
             TVLOG(1) << "did not find a handler for " << innerServerRequest->header().method() << " "
                      << target;
             A_19030.start("return 405 if no handler for Task with method and target was found");
@@ -478,7 +508,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         if (checkProfessionOID(innerServerRequest,
                                matchingHandler.handlerContext->handler.get(), innerSession.response, outerSession.accessLog))
         {
-            handleInnerRequest(matchingHandler, innerSession, outerSession);
+            handleInnerRequest(matchingHandler, innerOperation, innerSession, outerSession);
         }
         // GEMREQ-end role-check
     }
@@ -492,6 +522,7 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
 }
 
 void VauRequestHandler::handleInnerRequest(const RequestHandlerManager::MatchingHandler& matchingHandler,
+                                           const Operation& innerOperation,
                                            PcSessionContext& innerSession, PcSessionContext& outerSession)
 {
     matchingHandler.handlerContext->handler->preHandleRequestHook(innerSession);
@@ -526,17 +557,52 @@ void VauRequestHandler::handleInnerRequest(const RequestHandlerManager::Matching
 
     if (shouldCreateAuditEvent)
     {
-        storeAuditData(innerSession, innerSession.request.getAccessToken());
+        auto id = storeAuditData(innerSession, innerSession.request.getAccessToken());
+        A_28135_01.start("Use audit event id as notification identifier if not erp.communication.new");
+        if (innerOperation != Operation::POST_Communication)
+        {
+            innerSession.pushEventDataCollector().setNotificationIdentifier(id);
+        }
+        A_28135_01.finish();
     }
 
     A_18936.start("commit transaction");
-    auto transaction = innerSession.releaseDatabase();
-    if (transaction)
-    {
-        transaction->commitTransaction();
-        transaction.reset();
-    }
+    auto commitTransaction = [](auto&& transaction) {
+        if (transaction)
+        {
+            transaction->commitTransaction();
+            transaction.reset();
+        }
+    };
+    commitTransaction(innerSession.releaseDatabase());
+
+    commitTransaction(innerSession.releasePushDatabase());
     A_18936.finish();
+
+    // Check at least that a kvnr is present before doing further push work:
+    if (auto channelId = operationToChannelId(innerOperation);
+        channelId != model::ChannelId::unused &&
+        innerSession.pushEventDataCollector().kvnr() &&
+        innerSession.pushEventDataCollector().prescriptionId() &&
+        innerSession.pushEventDataCollector().notificationIdentifier())
+    {
+        const auto hashedKvnr =
+            innerSession.serviceContext.getKeyDerivation().hashKvnr(*innerSession.pushEventDataCollector().kvnr());
+        outerSession.pushEventDataCollector().setHashedKvnr(hashedKvnr);
+        outerSession.pushEventDataCollector().setPrescriptions(innerSession.pushEventDataCollector().prescriptions());
+        outerSession.pushEventDataCollector().setNotificationIdentifier(
+            *innerSession.pushEventDataCollector().notificationIdentifier());
+
+        // GET_eu_prescription may come with redeem or get. The collector has
+        // the proper name (set by the corresponding handler) which must be used, here.
+        if (channelId == model::ChannelId::erp_eu_prescription_get)
+        {
+            channelId = *innerSession.pushEventDataCollector().channelId();
+        }
+
+        outerSession.pushEventDataCollector().setChannelId(channelId);
+        outerSession.pushEventDataCollector().validate();
+    }
 
     // rethrow for error case to assure that error response is sent;
     if (currExc)
@@ -940,4 +1006,43 @@ void VauRequestHandler::setBdeUseCaseHeader(const RequestHandlerContext& handler
     {
         TVLOG(1) << "could not set ERP-Use-Case header: " << e.what();
     }
+}
+
+model::ChannelId VauRequestHandler::operationToChannelId(Operation op)
+{
+    using enum Operation;
+    switch (op)
+    {
+        case POST_ChargeItem:
+            return model::ChannelId::erp_chargeitem_create;
+        case PUT_ChargeItem_id:
+            return model::ChannelId::erp_chargeitem_update;
+        case POST_Communication:
+            return model::ChannelId::erp_communication_new;
+        case POST_Task_id_abort:
+            return model::ChannelId::erp_task_abort;
+        case POST_Task_id_accept:
+            return model::ChannelId::erp_task_accept;
+        case POST_Task_id_close:
+            return model::ChannelId::erp_task_close;
+        case POST_Task_id_dispense:
+            return model::ChannelId::erp_task_dispense;
+        case POST_Task_id_reject:
+            return model::ChannelId::erp_task_reject;
+        case GET_Task:
+            return model::ChannelId::erp_task_vertreter;
+        case GET_Task_id:
+            return model::ChannelId::erp_task_vertreter;
+        case POST_Task_id_activate:
+            return model::ChannelId::erp_task_activate;
+        case GET_eu_prescriptions:
+            // This can be _get or _redeem - return _get for now and select the correct
+            // id when calling `setChannelId`, above.
+            return model::ChannelId::erp_eu_prescription_get;
+        case POST_Task_id_eu_close:
+            return model::ChannelId::erp_eu_prescription_close;
+        default:
+            break;
+    }
+    return model::ChannelId::unused;
 }

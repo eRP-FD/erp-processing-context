@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -193,7 +193,7 @@ void BaseServerSession::do_read ()
                 {
                     data->accessLog.error("reading request failed before header could be read", exception);
                     if ( ! reader->isStreamClosed())
-                        self->do_write(getBadRequestResponse(), false, std::move(data));
+                        self->do_write(getBadRequestResponse(), {}, false, std::move(data));
                 }
                 else if (reader->isStreamClosed())
                 {
@@ -242,8 +242,8 @@ void BaseServerSession::do_handleRequest (ServerRequest request, SessionDataPoin
         setLogId(request.header().header(Header::XRequestId));
         data->accessLog.updateFromOuterRequest(request);
         const bool keepAlive = requestSupportsKeepAlive(request, data->accessLog);
-        auto [success, matchingHandler, response] = mRequestHandler->handleRequest(request, data->accessLog);
-        do_write(std::move(response), success&&keepAlive, std::move(data));
+        auto result = mRequestHandler->handleRequest(request, data->accessLog);
+        do_write(std::move(result.response), std::move(result.postCallback), result.success && keepAlive, std::move(data));
     }
     catch(...)
     {
@@ -252,12 +252,12 @@ void BaseServerSession::do_handleRequest (ServerRequest request, SessionDataPoin
         // response, any exception that makes it to this catch clause is interpreted as error in the implementation.
         data->accessLog.error("caught exception in BaseServerSession::do_handleRequest", std::current_exception());
         data->accessLog.keyValue("response-code", static_cast<size_t>(500));
-        do_write(getServerErrorResponse(), false, std::move(data));
+        do_write(getServerErrorResponse(), {}, false, std::move(data));
     }
 }
 
 
-void BaseServerSession::do_write (ServerResponse response, const bool keepConnectionAlive, SessionDataPointer&& data)
+void BaseServerSession::do_write (ServerResponse response, std::function<void()>&& postCallback, bool keepConnectionAlive, SessionDataPointer&& data)
 {
     DebugLog("do_write");
 
@@ -270,14 +270,16 @@ void BaseServerSession::do_write (ServerResponse response, const bool keepConnec
     auto writer = std::make_shared<ServerResponseWriter>();
     // Send the response.
     A_20163.start("10 - send response back to web interface");
-    writer->writeAsynchronously(
-        mSslStream,
-        ValidatedServerResponse(std::move(response)),
-        try_handler([self = shared_from_this(), writer, keepConnectionAlive, data]
-        (const bool success) mutable
-        {
-            self->on_write(keepConnectionAlive && success, std::move(data));
-        }), &data->accessLog);
+    writer->writeAsynchronously(mSslStream, ValidatedServerResponse(std::move(response)),
+                                try_handler([self = shared_from_this(), writer, postCallback = std::move(postCallback),
+                                             keepConnectionAlive, data](const bool success) mutable {
+                                    self->on_write(keepConnectionAlive && success, std::move(data));
+                                    if (postCallback)
+                                    {
+                                        postCallback();
+                                    }
+                                }),
+                                &data->accessLog);
     A_20163.finish();
 }
 
@@ -333,10 +335,7 @@ void BaseServerSession::do_close (SessionDataPointer&& data)
 void BaseServerSession::on_shutdown (boost::beast::error_code ec, SessionDataPointer&& data)
 {
     DebugLog("on_shutdown");
-    if (mSslStream.getLowestLayer().socket().is_open())
-    {
-        mSslStream.getLowestLayer().socket().shutdown(boost::asio::socket_base::shutdown_both, ec);
-    }
+    mSslStream.getLowestLayer().socket().close();
 
     data.reset();
 

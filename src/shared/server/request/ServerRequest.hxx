@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -21,13 +21,13 @@ class ServerRequest
 public:
     explicit ServerRequest (Header header);
 
-    const Header& header (void) const;
-    Header& header (void);
+    const Header& header () const;
+    Header& header ();
     void setHeader (Header header);
     void setMethod(HttpMethod method);
 
     void setBody (std::string body);
-    const std::string& getBody (void) const;
+    const std::string& getBody () const;
 
     /**
     * Path parameters are defined as a specific part in the URL path, e.g. when
@@ -38,9 +38,9 @@ public:
     *     id=123
     * is a path paramater
      */
-    size_t getPathParameterCount (void) const;
+    size_t getPathParameterCount () const;
     std::optional<std::string> getPathParameter (const std::string& parameterName) const;
-    const std::unordered_map<std::string, std::string>& getPathParameters (void) const;
+    const std::unordered_map<std::string, std::string>& getPathParameters () const;
     void setPathParameters (const std::vector<std::string>& keys, const std::vector<std::string>& values);
 
     /**
@@ -63,6 +63,14 @@ public:
     void setAccessToken(JWT jwt);
     const JWT& getAccessToken(void) const;
 
+    enum class Type
+    {
+        Fhir,
+        Push
+    };
+
+    Type getType() const;
+
 private:
     Header mHeader;
     std::string mBody;
@@ -70,6 +78,7 @@ private:
     QueryParametersType mQueryParameters;
     std::string mFragment;
     JWT mAccessToken;
+    Type mType;
 };
 
 

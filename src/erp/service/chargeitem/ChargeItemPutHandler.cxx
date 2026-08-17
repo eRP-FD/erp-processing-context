@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -184,4 +184,11 @@ void ChargeItemPutHandler::handleRequest(PcSessionContext& session)
         .setEventId(model::AuditEventId::PUT_ChargeItem_id)
         .setInsurantKvnr(newChargeItem.subjectKvnr().value())
         .setAction(model::AuditEvent::Action::update);
+    A_28115.start("Collect push event data.");
+    A_28134.start("Data from ChargeItem handler.");
+    session.pushEventDataCollector()
+        .setKvnr(*newChargeItem.subjectKvnr())
+        .setPrescriptionId(prescriptionId);
+    A_28134.finish();
+    A_28115.finish();
 }

@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -8,11 +8,12 @@
 #define EPA_LIBRARY_CRYPTO_AESGCMSTREAMCRYPTOR_HXX
 
 #include "library/crypto/CryptoTypes.hxx"
-#include "library/crypto/SensitiveDataGuard.hxx"
 #include "library/stream/Stream.hxx"
 #include "library/stream/StreamBuffers.hxx"
 #include "library/util/StrongType.hxx"
 #include "library/wrappers/OpenSsl.hxx"
+
+#include "shared/crypto/SensitiveDataGuard.hxx"
 
 #include <cstddef>
 #include <functional>

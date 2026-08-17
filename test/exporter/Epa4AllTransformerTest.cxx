@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -188,12 +188,12 @@ std::vector<std::string> propertyValuesWillBeRetained{
 };
 
 std::vector<std::string> propertyValuesNotInTarget {
-"Medication.amount.denominator.code", 
-"Medication.amount.denominator.comparator", 
-"Medication.amount.denominator.system", 
-"Medication.amount.denominator.unit", 
-"Medication.amount.numerator.comparator", 
-"Medication.amount.numerator.value", 
+"Medication.amount.denominator.code",
+"Medication.amount.denominator.comparator",
+"Medication.amount.denominator.system",
+"Medication.amount.denominator.unit",
+"Medication.amount.numerator.comparator",
+"Medication.amount.numerator.value",
 "Medication.form.coding.1",
 "Medication.form.coding.2",
 "Medication.identifier",
@@ -201,12 +201,12 @@ std::vector<std::string> propertyValuesNotInTarget {
 "Medication.language",
 "Medication.manufacturer",
 "Medication.manufacturer.display",
-"Medication.manufacturer.identifier", 
-"Medication.manufacturer.reference", 
-"Medication.manufacturer.type", 
+"Medication.manufacturer.identifier",
+"Medication.manufacturer.reference",
+"Medication.manufacturer.type",
 "Medication.meta.lastUpdated",
-"Medication.meta.security", 
-"Medication.meta.source", 
+"Medication.meta.security",
+"Medication.meta.source",
 "Medication.meta.tag",
 "Medication.status",
 "Medication.text",

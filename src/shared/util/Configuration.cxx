@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -35,6 +35,7 @@
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
 #include <rapidjson/prettywriter.h>
+
 
 const std::map<model::ProfileType, ConfigurationBase::ProfileTypeRequirement> ConfigurationBase::ERP::requiredProfiles{
     {model::ProfileType::ActivateTaskParameters, {}},
@@ -411,6 +412,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::POSTGRES_RO_KEEPALIVES_COUNT                   , {"ERP_POSTGRES_RO_KEEPALIVES_COUNT"                   , "/erp/postgres/readOnly/keepalivesCount", Flags::categoryEnvironment, "Controls the number of TCP keepalives that can be lost before the client's connection to the read pnly Postgres server is considered dead. A value of zero uses the system default; defaults to value from main"}},
     {ConfigurationKey::POSTGRES_RO_TARGET_SESSION_ATTRS               , {"ERP_POSTGRES_RO_TARGET_SESSION_ATTRS"               , "/erp/postgres/readOnly/targetSessionAttrs", Flags::categoryEnvironment, "If this parameter is set to read-write, only a connection in which read-write transactions are accepted by default is considered acceptable. The query SHOW transaction_read_only will be sent upon any successful connection; if it returns on, the connection will be closed. If multiple hosts were specified in the connection string, any remaining servers will be tried just as if the connection attempt had failed. The default value of this parameter, any, regards all connections as acceptable. Defaults to value from main"}},
     {ConfigurationKey::POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES         , {"ERP_POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES"         , "/erp/postgres/readOnly/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections to the read only Postgres server will be closed and re-opened. Defaults to value from main"}},
+    {ConfigurationKey::POSTGRES_PUSHDB_CONNECT_TIMEOUT                , {"ERP_POSTGRES_PUSHDB_CONNECT_TIMEOUT"                , "/erp/postgres/pushDb/connect-timeout", Flags::categoryEnvironment, "Connection timeout to push event db in milliseconds"}},
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
@@ -441,7 +443,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS        , {"ERP_REPORT_LEIPS_KEY_CHECK_INTERVAL_SECONDS"        , "/erp/report/leips/checkIntervalSeconds", Flags::categoryFunctionalStatic, "Interval in seconds to check for pseudoname_key expiration."}},
     {ConfigurationKey::REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS , {"ERP_REPORT_LEIPS_FAILED_KEY_CHECK_INTERVAL_SECONDS" , "/erp/report/leips/failedCheckIntervalSeconds", Flags::categoryFunctionalStatic, "Retry-Interval in seconds to check for pseudoname_key expiration, when the last call failed"}},
     {ConfigurationKey::FEATURE_EU                                     , {"ERP_FEATURE_EU"                                     , "/erp/feature/eu", Flags::categoryFunctional, "Feature-toggle for the EU-Prescription feature"}},
-    {ConfigurationKey::FEATURE_TREZEPT                                , {"ERP_FEATURE_TREZEPT"                                     , "/erp/feature/t-rezept", Flags::categoryFunctional, "Feature-toggle for the T-Rezept Workflow 166 feature"}},
+    {ConfigurationKey::FEATURE_TREZEPT                                , {"ERP_FEATURE_TREZEPT"                                , "/erp/feature/t-rezept", Flags::categoryFunctional, "Feature-toggle for the T-Rezept Workflow 166 feature"}},
+    {ConfigurationKey::FEATURE_PUSH_EVENT                             , {"ERP_FEATURE_PUSH_EVENT"                             , "/erp/feature/push-event", Flags::categoryFunctional, "Feature-toggle for enabling push event generation"}},
     {ConfigurationKey::XML_SCHEMA_MISC                                , {"ERP_XML_SCHEMA_MISC"                                , "/erp/xml-schema", Flags::array|Flags::categoryFunctionalStatic, "File names of additional XML schemas"}},
     {ConfigurationKey::FHIR_STRUCTURE_DEFINITIONS                     , {"ERP_FHIR_STRUCTURE_DEFINITIONS"                     , "/fhir/structure-files", Flags::categoryFunctionalStatic|Flags::array, "Fhir structure files for generic validation of new profiles"}},
     {ConfigurationKey::FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE, {"ERP_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE", "/erp/fhir/validation/levels/unreferenced-bundled-resource", Flags::categoryFunctionalStatic, "Set severity level for unreferenced entries in bundles of type document in new profiles. Allowed values: debug, info, warning, error"}},
@@ -473,6 +476,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::ZSTD_DICTIONARY_DIR                            , {"ERP_ZSTD_DICTIONARY_DIR"                            , "/erp/compression/zstd/dictionary-dir", Flags::categoryFunctionalStatic, "Path to the compression dictionary for database compression."}},
     {ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS             , {"ERP_HTTPCLIENT_CONNECT_TIMEOUT_SECONDS"             , "/erp/httpClientConnectTimeoutSeconds", Flags::categoryEnvironment, "Connection timeout for outgoing tcp connections"}},
     {ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS        , {"ERP_HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS"        , "/erp/httpClientResolveTimeoutMilliseconds", Flags::categoryEnvironment, "Timeout of DNS resolve requests in ms"}},
+    {ConfigurationKey::HTTPCLIENT_MAX_RESPONSE_BODY_SIZE              , {"ERP_MAX_RESPONSE_BODY_SIZE"                         , "/erp/httpMaxResponseBodySize", Flags::categoryEnvironment, "Maximum size of HTTP responses in bytes."}},
     {ConfigurationKey::ADMIN_SERVER_INTERFACE                         , {"ERP_ADMIN_SERVER_INTERFACE"                         , "/erp/admin/server/interface", Flags::categoryEnvironment, "The network interface for the admin server binds to"}},
     {ConfigurationKey::ADMIN_SERVER_PORT                              , {"ERP_ADMIN_SERVER_PORT"                              , "/erp/admin/server/port", Flags::categoryEnvironment, "The port for the admin server."}},
     {ConfigurationKey::ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS           , {"ERP_ADMIN_DEFAULT_SHUTDOWN_DELAY_SECONDS"           , "/erp/admin/defaultShutdownDelaySeconds", Flags::categoryEnvironment, "Default delay for shutdown commands, if no delay is given in request parameter"}},
@@ -557,7 +561,16 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA, {"ERP_MEDICATION_EXPORTER_ENABLE_EPA", "/erp-medication-exporter/enable-epa", Flags::categoryEnvironment, "Enable the EPA-exporter"}},
     {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT, {"ERP_MEDICATION_EXPORTER_ENABLE_T_REZEPT", "/erp-medication-exporter/enable-t-rezept", Flags::categoryEnvironment, "Enable the T-Rezept-exporter"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS, {"ERP_MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS", "/erp-medication-exporter/enable-push-notifications", Flags::categoryEnvironment, "Enable the push notification processor"}},
     {ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS, {"ERP_MEDICATION_EXPORTER_TRUSTED_CAS", "/erp-medication-exporter/trusted-cas", Flags::categoryEnvironment, "Trusted root certificates for bfarm and vzd TLS client connections."}},
+
+    {ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST, {"ERP_PUSH_GATEWAY_FQDN_ALLOW_LIST" , "/push/fqdnAllowList", (Flags::categoryEnvironment|Flags::array), "The list of allowed Push Gateway FQDNs, separated by ;"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE, {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE" , "/erp-medication-exporter/push/client/certificate", Flags::categoryEnvironment, "Push notification client mTLS client certificate chain. either 'file://<pem_file>' or 'pem:<pem>'"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_KEY,         {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_KEY"         , "/erp-medication-exporter/push/client/key"        , (Flags::categoryEnvironment|Flags::credential), "Push potification client mTLS client key. either 'file://<pem_file>' or 'pem:<pem>'"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA,   {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA"   , "/erp-medication-exporter/push/client/server-ca"  , Flags::categoryEnvironment, "Push notification client server certificate authority. either 'file://<pem_file>' or 'pem:<pem>'"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_USE_PROXY,   {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_USE_PROXY"   , "/erp-medication-exporter/push/client/use-proxy"  , Flags::categoryEnvironment, "Enable use of SNI proxy for push potification client. (boolean)"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT,    {"ERP_MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT"    , "/erp-medication-exporter/push/maxRetryCount"     , Flags::categoryEnvironment, "The maximum number of retries before deleting the event."}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS,{"ERP_MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS", "/erp-medication-exporter/push/gatewayCooldownAfterErrorSeconds", Flags::categoryEnvironment, "Pause all requests to a gateway that reported an 5xx error."}},
 
     {ConfigurationKey::POPP_ENTITY_STATEMENT_URL, {"ERP_POPP_ENTITY_STATEMENT_URL", "/erp/popp/entityStatementUrl", Flags::categoryEnvironment, "Entity statement URL."}},
     {ConfigurationKey::POPP_UPDATE_INTERVAL_SECONDS, {"ERP_POPP_UPDATE_INTERVAL_SECONDS", "/erp/popp/updateIntervalSeconds", Flags::categoryEnvironment, "Interval for certificate check."}},
@@ -565,6 +578,9 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::POPP_CONNECTION_TIMEOUT_SECONDS, {"ERP_POPP_CONNECTION_TIMEOUT_SECONDS", "/erp/popp/connectionTimeoutSeconds", Flags::categoryEnvironment, "Duration until a connection attempt is invalidated."}},
     {ConfigurationKey::POPP_RESPONSE_TIMEOUT_SECONDS, {"ERP_POPP_RESPONSE_TIMEOUT_SECONDS", "/erp/popp/responseTimeoutSeconds", Flags::categoryEnvironment, "Duration until waiting for a response it invalidated."}},
     {ConfigurationKey::POPP_TOKEN_IAT_MAX_AGE_SECONDS, {"ERP_POPP_TOKEN_IAT_MAX_AGE_SECONDS", "/erp/popp/tokenIatMaxAgeSeconds", Flags::categoryEnvironment, "The maximum IAT age of the PoPP Token."}},
+
+    // ERP-36467:
+    {ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH, {"ERP_INTERNET_TLS_ROOT_CA_PATH", "/common/internetTlsRootCaPath", Flags::categoryEnvironment, "Common root-CAs for internet TLS"}},
 
     // */
     });
@@ -816,6 +832,28 @@ std::optional<std::string> ConfigurationBase::getStringValueInternal (KeyData ke
     return getOptionalStringFromJson(key);
 }
 
+std::optional<std::string> ConfigurationBase::getPemInternal(KeyData key) const
+{
+    static constexpr std::string_view filePrefix = "file://";
+    static constexpr std::string_view pemPrefix = "pem:";
+    if (const auto confValue = getStringValueInternal(key); confValue.has_value() && ! confValue->empty())
+    {
+        if (confValue->starts_with(filePrefix))
+        {
+            return FileHelper::readFileAsString(confValue->substr(filePrefix.size()));
+        }
+        if (confValue->starts_with(pemPrefix))
+        {
+            return confValue->substr(pemPrefix.size());
+        }
+        Fail2(fmt::format("Illegal pem configuartion prefix must be `{}` or `{}`: {} = `{}`", pemPrefix, filePrefix,
+                          key.environmentVariable, *confValue),
+              IllegalPemPrefixError);
+    }
+    return std::nullopt;
+}
+
+
 const rapidjson::Value* ConfigurationBase::getJsonValue(KeyData key) const
 {
     const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
@@ -929,6 +967,12 @@ void Configuration::check(ProcessType processType) const
     (void) getIntValue(ConfigurationKey::VSDM_PROOF_VALIDITY_SECONDS);
     (void) proxyParameters(ProxyMode::HTTP);
     (void) proxyParameters(ProxyMode::SNI);
+    std::string internetCaPath = getOptionalStringValue(ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH, {});
+    if (!internetCaPath.empty())
+    {
+        Expect3(std::filesystem::is_regular_file(internetCaPath),
+                "INTERNET_TLS_ROOT_CA_PATH not found or file is not regular: " + internetCaPath, std::logic_error);
+    }
     switch (processType)
     {
         case ConfigurationBase::ProcessType::ERP:
@@ -949,14 +993,28 @@ void Configuration::check(ProcessType processType) const
             (void) synthesizeCodesystem();
             (void) synthesizeValuesets();
             (void) fhirVersionMapping();
+            if (getOptionalPemValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_KEY))
+            {
+                Expect3(getOptionalPemValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_KEY).has_value(),
+                        "MEDICATION_EXPORTER_PUSH_CLIENT_KEY is configured but MEDICATION_EXPORTER_PUSH_CLIENT_KEY is missing",
+                        std::logic_error);
+            }
             for (const auto& epa : this->epaFQDNs())
             {
                 LOG(INFO) << "Configured Epa: " << epa.hostName << ':' << epa.port << " with " << epa.teeConnectionCount
                         << " connections";
             }
             Expect(getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_EPA) ||
-                       getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT),
-                   "both EPA and T-Rezept are disabled");
+                       getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_T_REZEPT) ||
+                       getBoolValue(ConfigurationKey::MEDICATION_EXPORTER_ENABLE_PUSH_NOTIFICATIONS),
+                   "all processors, EPA, T-Rezept, Push-Notifications, are disabled");
+            if (getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE).has_value())
+            {
+                Expect3(getOptionalStringValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_KEY).has_value(),
+                        "MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE is set but MEDICATION_EXPORTER_PUSH_CLIENT_KEY is "
+                        "missing",
+                        std::logic_error);
+            }
             return;
     }
     Fail2("unknown ProcessType: "+ std::to_string(static_cast<uintmax_t>(processType)), std::logic_error);
@@ -1140,6 +1198,33 @@ std::chrono::seconds Configuration::poppTokenIatMaxAge() const
 {
     return std::chrono::seconds{getIntValue(ConfigurationKey::POPP_TOKEN_IAT_MAX_AGE_SECONDS)};
 }
+
+std::set<Configuration::PushGatewayFQDNs> Configuration::pushGatewayFQDNs() const
+{
+    std::set<PushGatewayFQDNs> result;
+    const auto fqdnStrings = getArray(ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST);
+    for (const auto& fqdnString : fqdnStrings)
+    {
+        auto parts = String::split(fqdnString, ':');
+        Expect(parts.size() == 1 || parts.size() == 2, "invalid format for Pushgateway FQDN: " + fqdnString);
+        int port{443};
+        if (parts.size() == 2)
+        {
+            try
+            {
+                port = std::stoi(parts.at(1));
+                Expect(port > 0 && port <= 65535, "invalid port number for Pushgateway FQDN: " + fqdnString);
+            }
+            catch (const std::exception& ex)
+            {
+                Fail("invalid port number in Pushgateway FQDN: " + fqdnString + ": " + ex.what());
+            }
+        }
+        result.emplace(parts.at(0), port);
+    }
+    return result;
+}
+
 
 template fhirtools::Severity
     ConfigurationTemplate<ConfigurationKey, ConfigurationKeyNames>::getOptional<fhirtools::Severity>(

@@ -81,7 +81,8 @@
     }
   },
   "test": {
-      "use-postgres": "true"
+      "use-postgres": "true",
+      "use-push-gateway-client": "true"
   },
   "debug": {
       "enable-hsm-mock": "false"

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -29,7 +29,7 @@ public:
 
 	MedicationExporterServiceContext& mServiceContext;
 
-	std::tuple<bool, std::optional<RequestHandlerManager::MatchingHandler>, ServerResponse> handleRequest(ServerRequest& request, AccessLog& accessLog) override;
+	HandlerResult handleRequest(ServerRequest& request, AccessLog& accessLog) override;
 };
 
 

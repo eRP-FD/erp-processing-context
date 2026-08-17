@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -227,6 +227,7 @@ protected:
 
     using ConnectionFactory = PostgresConnection&(*)();
     Database::Factory createDatabaseFactory(ConnectionFactory connFactory);
+    PushErpDatabase::Factory createPushDatabaseFactory(ConnectionFactory connFactory);
     std::unique_ptr<Database> createDatabase();
     virtual void addAdditionalPrimaryHandlers (RequestHandlerManager&) {}
     virtual void addAdditionalSecondaryHandlers (RequestHandlerManager&) {}

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -19,12 +19,13 @@
 #include <boost/beast/http/parser.hpp>
 #include <boost/beast/http/read.hpp>
 #include <boost/beast/http/string_body.hpp>
+#include <optional>
 
 
 class ClientResponseReader
 {
 public:
-    explicit ClientResponseReader (void);
+    explicit ClientResponseReader(std::optional<std::uint64_t> bodyLimit);
 
     template<class stream_type>
     Header readHeader (stream_type& stream);
@@ -43,6 +44,7 @@ private:
     boost::beast::flat_static_buffer<ErpConstants::DefaultBufferSize> mBuffer;
     boost::beast::http::response_parser<boost::beast::http::string_body> mParser;
     bool mIsStreamClosed{false};
+    std::optional<std::uint64_t> mBodyLimit;
 
     void markStreamAsClosed (void);
     Header convertHeader (void);

@@ -1,0 +1,15 @@
+.include $ENV::GENERATE_PKI_INPUT/openssl.cnf
+
+[ req ]
+default_bits       = 256
+distinguished_name = req_distinguished_name
+
+[ CA_default ]
+x509_extensions = req_ext
+
+[ req_ext ]
+basicConstraints = critical,CA:TRUE,pathlen:0
+keyUsage = critical,keyCertSign,cRLSign
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid,issuer
+

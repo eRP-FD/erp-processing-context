@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -9,7 +9,7 @@
 namespace epa
 {
 
-const std::string resource_aclos_rca_pem = 
+const std::string resource_aclos_rca_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIIC0zCCAnqgAwIBAgIRAMvPNZIRikqDn4BpTt1PPn4wCgYIKoZIzj0EAwIwgYIx
 HDAaBgNVBAMME0FDTE9TLlJDQSBURVNULU9OTFkxNDAyBgNVBAsMK1plbnRyYWxl
@@ -30,7 +30,7 @@ w3s9CSKrcA==
 -----END CERTIFICATE-----
 )---";
 
-const std::string resource_aclos_fd_ca1_pem = 
+const std::string resource_aclos_fd_ca1_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIIDGDCCAr6gAwIBAgIRAJygYpvd8EMRkkrDPQv/EpUwCgYIKoZIzj0EAwIwgYIx
 HDAaBgNVBAMME0FDTE9TLlJDQSBURVNULU9OTFkxNDAyBgNVBAsMK1plbnRyYWxl
@@ -52,7 +52,7 @@ HQjyPxaOoqPJr7bgaMLoK61xcQGL7zsgRYVEYw==
 -----END CERTIFICATE-----)
 )---";
 
-const std::string resource_rca5chain_pem = 
+const std::string resource_rca5chain_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIICmTCCAkCgAwIBAgIBATAKBggqhkjOPQQDAjBtMQswCQYDVQQGEwJERTEVMBMG
 A1UECgwMZ2VtYXRpayBHbWJIMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRl
@@ -71,7 +71,7 @@ AL8VuLK0BrbG6SYCIGN+a8dYoJtY80W0UHr7f9ad4+ULgT5QwYaoe0GMXXaf
 -----END CERTIFICATE-----
 )---";
 
-const std::string resource_rca6chain_pem = 
+const std::string resource_rca6chain_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIICmTCCAkCgAwIBAgIBATAKBggqhkjOPQQDAjBtMQswCQYDVQQGEwJERTEVMBMG
 A1UECgwMZ2VtYXRpayBHbWJIMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRl
@@ -112,7 +112,7 @@ mViDUaDVhQIgW0M9Z+QnicVx227i13ZN/+MSerxlJXbqpvzcx8FyExE=
 -----END CERTIFICATE-----
 )---";
 
-const std::string resource_rca7chain_pem = 
+const std::string resource_rca7chain_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIICmTCCAkCgAwIBAgIBATAKBggqhkjOPQQDAjBtMQswCQYDVQQGEwJERTEVMBMG
 A1UECgwMZ2VtYXRpayBHbWJIMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRl
@@ -174,7 +174,7 @@ OSWO8/tQRgcMkkbr5OR8AfZvngxT60417h0ySWh0Ww==
 -----END CERTIFICATE-----
 )---";
 
-const std::string resource_rca8chain_pem = 
+const std::string resource_rca8chain_pem =
 R"---(-----BEGIN CERTIFICATE-----
 MIICmTCCAkCgAwIBAgIBATAKBggqhkjOPQQDAjBtMQswCQYDVQQGEwJERTEVMBMG
 A1UECgwMZ2VtYXRpayBHbWJIMTQwMgYDVQQLDCtaZW50cmFsZSBSb290LUNBIGRl

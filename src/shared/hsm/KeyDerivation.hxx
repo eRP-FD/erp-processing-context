@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -28,6 +28,7 @@ class HashedKvnr;
 
 namespace model
 {
+struct PushKey;
 class Timestamp;
 class PrescriptionId;
 class Kvnr;
@@ -92,6 +93,11 @@ public:
     [[nodiscard]] ::std::tuple<::SafeString, ::OptionalDeriveKeyData>
     initialChargeItemKey(const ::model::PrescriptionId& prescriptionId);
 
+    [[nodiscard]] std::tuple<SafeString, OptionalDeriveKeyData>
+    initialAppRegistrationKey(const db_model::HashedId& hashedPushKey, const db_model::HashedKvnr& kvnr);
+    [[nodiscard]] SafeString appRegistrationKey(const db_model::HashedId& hashedPushKey, const ::db_model::Blob& salt,
+                                                const db_model::HashedKvnr& kvnr, BlobId blobId);
+
     KeyDerivation(const KeyDerivation&) = delete;
     KeyDerivation(KeyDerivation&&) = delete;
     KeyDerivation& operator = (const KeyDerivation&) = delete;
@@ -104,6 +110,8 @@ private:
     [[nodiscard]] static ErpVector auditEventKeyDerivationData(const db_model::HashedKvnr& kvnr);
     [[nodiscard]] static ErpVector communicationKeyDerivationData(const std::string_view& identity,
                                                                   const db_model::HashedId& identityHashed);
+    [[nodiscard]] static ErpVector appRegistrationKeyDerivationData(const db_model::HashedId& hashedPushKey,
+                                                                    const db_model::HashedKvnr& kvnr);
 
     const SafeString& getPersistenceIndexKeyKvnr (void) const;
     const SafeString& getPersistenceIndexKeyTelematikId (void) const;

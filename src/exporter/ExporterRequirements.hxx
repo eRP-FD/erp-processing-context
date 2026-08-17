@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -66,6 +66,15 @@ static constexpr Requirement A_27858_01("E-Rezept: Zugriff auf Webdienste - TLS-
 
 static constexpr Requirement A_27859("E-Rezept-Fachdienst - Zugriff auf Webdienste - Deaktivieren von Übertragungen");
 static constexpr Requirement A_27860("Anbieter E-Rezept-Fachdienst - Zugriff auf Webdienste - BetrieblicherProzess Deaktivieren von Übertragungen");
+
+[[maybe_unused]] static constexpr Requirement A_27162 ("Fachdienst - Push Notification senden – Einbetten des Zeitstempels");
+[[maybe_unused]] static constexpr Requirement A_27163 ("Fachdienst - Push Notification senden - Aufruf Push Gateway");
+[[maybe_unused]] static constexpr Requirement A_27652 ("Fachdienst - Push Notification senden - Hinterlegte URL");
+[[maybe_unused]] static constexpr Requirement A_27436 ("Fachdienst – Keine personenbezogenen Klartextdaten in Push Notifications");
+[[maybe_unused]] static constexpr Requirement A_27196 ("Fachdienst - Push Notification senden - Status der channel_id prüfen");
+[[maybe_unused]] static constexpr Requirement A_27196_01("Fachdienst - Push Notification senden - Status der channel_id prüfen");
+[[maybe_unused]] static constexpr Requirement A_28473 ("Nicht Verfügbarkeit eines Push Gateway");
+[[maybe_unused]] static constexpr Requirement A_27405 ("Schlüsselableitung - Alte Schlüssel löschen");
 
 // clang-format on
 

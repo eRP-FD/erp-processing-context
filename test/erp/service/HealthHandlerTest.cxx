@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -32,6 +32,8 @@
 #include "test/mock/MockBlobDatabase.hxx"
 #include "test/mock/MockDatabase.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
+#include "test/mock/MockPushExporterDatabase.hxx"
+#include "test/mock/MockPushExporterDatabaseProxy.hxx"
 #include "test/mock/MockRedisStore.hxx"
 #include "test/mock/RegistrationMock.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
@@ -58,6 +60,21 @@ public:
     static bool fail;
 };
 bool HealthHandlerTestMockDatabase::fail = false;
+
+class HealthHandlerTestMockPushExporterDatabase : public MockPushExporterDatabase
+{
+public:
+    using MockPushExporterDatabase::MockPushExporterDatabase;
+    void healthCheck() override
+    {
+        if (fail)
+        {
+            throw std::runtime_error("CONNECTION FAILURE");
+        }
+    }
+    static bool fail;
+};
+bool HealthHandlerTestMockPushExporterDatabase::fail = false;
 
 class HealthHandlerTestHsmMockClient : public HsmMockClient
 {
@@ -153,19 +170,20 @@ public:
         , currentTimestampPointer("/timestamp")
         // Note that the array indices is defined in ApplicationHealth::model()
         , postgresStatusPointer("/checks/3/status")
-        , postgresROStatusPointer("/checks/10/status")
+        , eventdbStatusPointer("/checks/4/status")
+        , postgresROStatusPointer("/checks/11/status")
         , postgresRootCausePointer("/checks/3/data/rootCause")
         , hsmStatusPointer("/checks/1/status")
         , hsmRootCausePointer("/checks/1/data/rootCause")
         , hsmIpPointer("/checks/1/data/ip")
-        , redisStatusPointer("/checks/4/status")
-        , redisRootCausePointer("/checks/4/data/rootCause")
-        , tslStatusPointer("/checks/7/status")
-        , tslRootCausePointer("/checks/7/data/rootCause")
-        , tslExpiryDatePointer("/checks/7/data/expiryDate")
-        , tslSequenceNumberPointer("/checks/7/data/sequenceNumber")
-        , tslIdPointer("/checks/7/data/id")
-        , tslHashPointer("/checks/7/data/hash")
+        , redisStatusPointer("/checks/5/status")
+        , redisRootCausePointer("/checks/5/data/rootCause")
+        , tslStatusPointer("/checks/8/status")
+        , tslRootCausePointer("/checks/8/data/rootCause")
+        , tslExpiryDatePointer("/checks/8/data/expiryDate")
+        , tslSequenceNumberPointer("/checks/8/data/sequenceNumber")
+        , tslIdPointer("/checks/8/data/id")
+        , tslHashPointer("/checks/8/data/hash")
         , bnaStatusPointer("/checks/0/status")
         , bnaRootCausePointer("/checks/0/data/rootCause")
         , bnaExpiryDatePointer("/checks/0/data/expiryDate")
@@ -174,20 +192,20 @@ public:
         , bnaHashPointer("/checks/0/data/hash")
         , idpStatusPointer("/checks/2/status")
         , idpRootCausePointer("/checks/2/data/rootCause")
-        , seedTimerStatusPointer("/checks/5/status")
-        , seedTimerRootCausePointer("/checks/5/data/rootCause")
-        , teeTokenUpdaterStatusPointer("/checks/6/status")
-        , teeTokenUpdaterRootCausePointer("/checks/6/data/rootCause")
-        , cFdSigErpPointer("/checks/8/status")
-        , cFdSigErpRootCausePointer("/checks/8/data/rootCause")
-        , cFdSigErpTimestampPointer("/checks/8/data/timestamp")
-        , cFdSigErpPolicyPointer("/checks/8/data/policy")
-        , cFdSigErpExpiryPointer("/checks/8/data/certificate_expiry")
+        , seedTimerStatusPointer("/checks/6/status")
+        , seedTimerRootCausePointer("/checks/6/data/rootCause")
+        , teeTokenUpdaterStatusPointer("/checks/7/status")
+        , teeTokenUpdaterRootCausePointer("/checks/7/data/rootCause")
+        , cFdSigErpPointer("/checks/9/status")
+        , cFdSigErpRootCausePointer("/checks/9/data/rootCause")
+        , cFdSigErpTimestampPointer("/checks/9/data/timestamp")
+        , cFdSigErpPolicyPointer("/checks/9/data/policy")
+        , cFdSigErpExpiryPointer("/checks/9/data/certificate_expiry")
         , buildPointer("/version/build")
         , buildTypePointer("/version/buildType")
         , releasePointer("/version/release")
         , releasedatePointer("/version/releasedate")
-        , poPPStatusPointer("/checks/9/status")
+        , poPPStatusPointer("/checks/10/status")
         , mGuardERP_HSM_DEVICE("ERP_HSM_DEVICE", "127.0.0.1")
         , mGuardERP_TSL_INITIAL_CA_DER_PATH("ERP_TSL_INITIAL_CA_DER_PATH",
                                             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"))
@@ -216,6 +234,14 @@ public:
                 md = std::make_shared<HealthHandlerTestMockDatabase>(hsmPool);
             }
             return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(md), hsmPool, keyDerivation);
+        };
+        factories.pushExporterDatabaseFactory = [md = std::shared_ptr<HealthHandlerTestMockPushExporterDatabase>{}](
+                                        HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
+            if (!md)
+            {
+                md = std::make_shared<HealthHandlerTestMockPushExporterDatabase>();
+            }
+            return std::make_unique<PushExporterDatabase>(std::make_unique<MockPushExporterDatabaseProxy>(md), hsmPool, keyDerivation);
         };
 
         factories.redisClientFactory = [](std::chrono::milliseconds){return std::make_unique<HealthHandlerTestMockRedisStore>();};
@@ -286,6 +312,7 @@ protected:
     rapidjson::Pointer statusPointer;
     rapidjson::Pointer currentTimestampPointer;
     rapidjson::Pointer postgresStatusPointer;
+    rapidjson::Pointer eventdbStatusPointer;
     rapidjson::Pointer postgresROStatusPointer;
     rapidjson::Pointer postgresRootCausePointer;
     rapidjson::Pointer hsmStatusPointer;
@@ -343,6 +370,7 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(postgresStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_EQ(std::string(eventdbStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_NE(std::string(postgresROStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
     EXPECT_EQ(std::string(hsmStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_FALSE(std::string(hsmIpPointer.Get(healthDocument)->GetString()).empty());
@@ -375,53 +403,53 @@ TEST_F(HealthHandlerTest, healthy)//NOLINT(readability-function-cognitive-comple
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseVersion()), std::string(releasePointer.Get(healthDocument)->GetString()));
     EXPECT_EQ(std::string(ErpServerInfo::ReleaseDate()), std::string(releasedatePointer.Get(healthDocument)->GetString()));
 
-    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/0/subject"}.Get(healthDocument)->GetString()},
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/10/data/certificates/0/subject"}.Get(healthDocument)->GetString()},
               "subject1");
-    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/1/subject"}.Get(healthDocument)->GetString()},
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/10/data/certificates/1/subject"}.Get(healthDocument)->GetString()},
               "subject2");
-    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/9/data/certificates/2/subject"}.Get(healthDocument)->GetString()},
+    EXPECT_EQ(std::string{rapidjson::Pointer{"/checks/10/data/certificates/2/subject"}.Get(healthDocument)->GetString()},
               "subject3");
-    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/0/ocsp"}.Get(healthDocument)->GetString()},
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/10/data/certificates/0/ocsp"}.Get(healthDocument)->GetString()},
               "");
-    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/1/ocsp"}.Get(healthDocument)->GetString()},
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/10/data/certificates/1/ocsp"}.Get(healthDocument)->GetString()},
               "");
-    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/9/data/certificates/2/ocsp"}.Get(healthDocument)->GetString()},
+    EXPECT_NE(std::string{rapidjson::Pointer{"/checks/10/data/certificates/2/ocsp"}.Get(healthDocument)->GetString()},
               "");
     EXPECT_NE(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/0/certificate_expiry"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/0/certificate_expiry"}.Get(healthDocument)->GetString()},
         "");
     EXPECT_NE(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/1/certificate_expiry"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/1/certificate_expiry"}.Get(healthDocument)->GetString()},
         "");
     EXPECT_NE(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/2/certificate_expiry"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/2/certificate_expiry"}.Get(healthDocument)->GetString()},
         "");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/0/certificate_expired"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/0/certificate_expired"}.Get(healthDocument)->GetString()},
         "false");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/1/certificate_expired"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/1/certificate_expired"}.Get(healthDocument)->GetString()},
         "true");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/2/certificate_expired"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/2/certificate_expired"}.Get(healthDocument)->GetString()},
         "false");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/0/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/0/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
         "false");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/1/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/1/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
         "false");
     EXPECT_EQ(
         std::string{
-            rapidjson::Pointer{"/checks/9/data/certificates/2/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
+            rapidjson::Pointer{"/checks/10/data/certificates/2/ocsp_max_age_exceeded"}.Get(healthDocument)->GetString()},
         "true");
 
 
@@ -663,4 +691,21 @@ TEST_F(HealthHandlerTest, PoPPDown)
 
     EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
     EXPECT_EQ(std::string(poPPStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
+}
+
+TEST_F(HealthHandlerTest, eventDbDown)
+{
+    HealthHandlerTestMockPushExporterDatabase::fail = true;
+    ASSERT_NO_THROW(handleRequest());
+    HealthHandlerTestMockPushExporterDatabase::fail = false;
+
+    ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
+    ASSERT_FALSE(mContext->response.getBody().empty());
+
+    rapidjson::Document healthDocument;
+    auto body = mContext->response.getBody();
+    healthDocument.Parse(body);
+
+    EXPECT_EQ(std::string(statusPointer.Get(healthDocument)->GetString()), std::string(model::Health::up));
+    EXPECT_EQ(std::string(eventdbStatusPointer.Get(healthDocument)->GetString()), std::string(model::Health::down));
 }

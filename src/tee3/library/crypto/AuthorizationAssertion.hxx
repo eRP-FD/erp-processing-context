@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -9,7 +9,6 @@
 
 #include "library/crypto/AuthorizedIdentity.hxx"
 #include "library/epa/RecordState.hxx"
-#include "library/util/BinaryBuffer.hxx"
 #include "library/util/Time.hxx"
 
 #include <chrono>

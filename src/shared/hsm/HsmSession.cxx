@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -294,6 +294,13 @@ DeriveKeyOutput HsmSession::deriveAuditLogPersistenceKey (
         markHsmCallTime();
         return mClient.deriveAuditKey(*mRawSession, std::move(input));
     });
+}
+
+DeriveKeyOutput
+HsmSession::deriveAppRegistrationPersistenceKey(const ErpVector& derivationData,
+                                                const std::optional<OptionalDeriveKeyData>& secondCallData)
+{
+    return deriveAuditLogPersistenceKey(derivationData, secondCallData);
 }
 
 ::DeriveKeyOutput

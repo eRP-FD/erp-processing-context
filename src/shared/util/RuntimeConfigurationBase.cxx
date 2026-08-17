@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #include "shared/util/Configuration.hxx"
@@ -45,6 +45,7 @@ std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfigurationBase::
                 defaults[durationCategory] = 30ms;
                 break;
             case DurationCategory::enrolment:
+            case DurationCategory::pusheventcreation:
                 defaults[durationCategory] = 0ms;
                 break;
         }

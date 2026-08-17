@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -25,12 +25,11 @@ public:
     explicit ResponseBuilder (ServerResponse& response);
 
     ResponseBuilder& status (HttpStatus status);
+    ResponseBuilder& fhirJsonBody (const std::string& body);
+    ResponseBuilder& fhirXmlBody (const std::string& body);
     ResponseBuilder& jsonBody (const std::string& body);
-    ResponseBuilder& xmlBody (const std::string& body);
 
-    ResponseBuilder &body(bool useJson, const model::ResourceBase &resource);
-
-    ResponseBuilder &clearBody(void);
+    ResponseBuilder &clearBody();
 
     ResponseBuilder &keepAlive(bool keepAlive);
 
@@ -38,6 +37,14 @@ public:
 
 private:
     ServerResponse& mResponse;
+};
+
+class FhirResponseBuilder : public ResponseBuilder
+{
+public:
+    using ResponseBuilder::ResponseBuilder;
+
+    FhirResponseBuilder& body(bool useJson, const model::ResourceBase& resource);
 };
 
 

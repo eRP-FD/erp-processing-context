@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -49,8 +49,6 @@ void BfArMClient::sendCarbonCopy(const model::ErpTPrescriptionCarbonCopy& doc) c
                                              static_cast<int>(std::strtoll(getPort().c_str(), nullptr, 10)), path, "")
                              .toString();
         return client->send(url, HttpMethod::POST, doc.serializeToJsonString(), "application/fhir+json");
-        A_27827.finish();
-        A_27822.finish();
     }, is2xxSuccess);
 }
 

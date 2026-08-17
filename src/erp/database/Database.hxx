@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -57,7 +57,7 @@ enum class CmacKeyCategory : int8_t;
 class ReadOnlyDatabase
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "41";
+    static constexpr const char* expectedSchemaVersion = "44";
 
     // NOLINTNEXTLINE(bugprone-exception-escape)
     struct TaskAndKey {
@@ -232,4 +232,3 @@ public:
 };
 
 #endif
-

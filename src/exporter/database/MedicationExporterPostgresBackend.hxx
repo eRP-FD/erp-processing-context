@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -51,6 +51,11 @@ public:
     bool isDeadLetter(const model::TRezeptEvent& eventData) override;
     int markDeadLetter(const model::TRezeptEvent& eventData) override;
 
+    std::optional<db_model::PushEvent> processNextPushNotification() override;
+    void deletePushNotification(const db_model::HashedKvnr& hashedKvnr, int64_t eventId) override;
+    void updatePushProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
+                                   const db_model::HashedKvnr& hashedKvnr, int64_t id) override;
+
     struct TaskEventQueryIndexes {
         pqxx::row::size_type id = 0;
         pqxx::row::size_type prescriptionId = 1;
@@ -88,7 +93,6 @@ public:
     [[nodiscard]]
     static PostgresConnectionParameters defaultConnectParameters();
 
-private:
     /**
      * @brief return value from database field
      *
@@ -101,7 +105,7 @@ private:
      */
     template<typename T, typename S = T>
         requires(std::is_arithmetic_v<T>)
-    T map(const pqxx::row& resultRow, pqxx::row::size_type index, const std::string& errorText)
+    static T map(const pqxx::row& resultRow, pqxx::row::size_type index, const std::string& errorText)
     {
         Expect(! resultRow[index].is_null(), errorText);
         return gsl::narrow<T>(resultRow[index].as<S>());
@@ -120,7 +124,7 @@ private:
      */
     template<typename T, typename S = T>
         requires(not std::is_arithmetic_v<T>)
-    T map(const pqxx::row& resultRow, pqxx::row::size_type index, const std::string& errorText)
+    static T map(const pqxx::row& resultRow, pqxx::row::size_type index, const std::string& errorText)
     {
         Expect(! resultRow[index].is_null(), errorText);
         return T{resultRow[index].as<S>()};
@@ -138,7 +142,7 @@ private:
      */
     template<typename T, typename S = T>
         requires(std::is_arithmetic_v<T>)
-    T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
+    static T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
     {
         return gsl::narrow<T>(resultRow[index].as<S>(defaultValue));
     }
@@ -156,14 +160,14 @@ private:
      */
     template<typename T, typename S = T>
         requires(not std::is_arithmetic_v<T>)
-    T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
+    static T mapDefault(const pqxx::row& resultRow, pqxx::row::size_type index, const S& defaultValue)
     {
         return T{resultRow[index].as<S>(defaultValue)};
     }
 
     template<typename T, typename S = T>
         requires(not std::is_arithmetic_v<T>)
-    std::optional<T> mapOptional(const pqxx::row& resultRow, pqxx::row::size_type index)
+    static std::optional<T> mapOptional(const pqxx::row& resultRow, pqxx::row::size_type index)
     {
         if (! resultRow[index].is_null())
         {
@@ -173,7 +177,7 @@ private:
     }
     template<typename T, typename S = T>
         requires(std::is_arithmetic_v<T>)
-    std::optional<T> mapOptional(const pqxx::row& resultRow, pqxx::row::size_type index)
+    static std::optional<T> mapOptional(const pqxx::row& resultRow, pqxx::row::size_type index)
     {
         if (! resultRow[index].is_null())
         {
@@ -182,6 +186,10 @@ private:
         return std::nullopt;
     }
 
+    static model::PrescriptionId prescriptionIdFromRow(const pqxx::row& resultRow, pqxx::row::size_type typeIndex,
+                                                       pqxx::row::size_type idIndex);
+
+private:
     thread_local static PostgresConnection mConnection;
 };
 

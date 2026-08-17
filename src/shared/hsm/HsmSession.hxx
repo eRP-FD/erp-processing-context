@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -118,6 +118,18 @@ public:
      * @throws if there is any error
      */
     DeriveKeyOutput deriveAuditLogPersistenceKey (
+        const ErpVector& derivationData,
+        const std::optional<OptionalDeriveKeyData>& secondCallData = std::nullopt);
+
+    /**
+     * Derive a persistence key for a push app registration.
+     * On the first call leave `secondCallData` empty. In this case a salt value and a blob generation
+     * id are returned. These are expected to be passed in on the second and all subsequent calls as `secondCallData`.
+     *
+     * @note uses audit log master-key.
+     * @throws if there is any error
+     */
+    DeriveKeyOutput deriveAppRegistrationPersistenceKey (
         const ErpVector& derivationData,
         const std::optional<OptionalDeriveKeyData>& secondCallData = std::nullopt);
 

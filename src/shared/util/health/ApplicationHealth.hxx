@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -100,12 +100,14 @@ public:
 
     void enableCheck(const Service& service);
     void enableChecks(const std::set<Service>& services);
+    void enableSoftChecks(const std::set<Service>& services);
 
 private:
     mutable std::mutex mMutex;
     std::unordered_map<Service, State> mStates;
     PoPPServiceState mPoPPServiceState;
     std::set<Service> mEnabledServices;
+    std::set<Service> mServicesNotContributingToApplicationHealth;
 
     /// Helper function to retrieve a status in a format suitable as second argument for one of the Health::set*Status() functions.
     std::string_view getUpDownStatus (Service service) const;
@@ -119,7 +121,7 @@ private:
     std::string_view status_noLock() const;
     bool isUp_noLock (Service service) const;
     std::string downServicesString_noLock (void) const;
-    static bool contributesToApplicationHealth(Service svc);
+    bool contributesToApplicationHealth(Service svc) const;
     bool servicesUp_noLock() const;
 };
 

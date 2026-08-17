@@ -15,42 +15,19 @@
                     ]
                 },
                 "supplyOptionsType": { "enum": ["delivery", "shipment"] },
-                "firstname": {
-                    "type": "string",
-                    "maxLength": 45
-                },
-                "lastname": {
-                    "type": "string",
-                    "maxLength": 45
-                },
-                "address": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 100
-                },
-                "postcode": {
-                    "type": "string",
-                    "minLength": 3,
-                    "maxLength": 10
-                },
-                "city": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 100
-                },
-                "country": {
-                    "type": "string",
-                    "minLength": 2,
-                    "maxLength": 3,
-                    "description": "2-letter country code as defined in ISO 3166-1."
-                },
+                "firstname": { "$ref": "#/definitions/firstname" },
+                "lastname": { "$ref": "#/definitions/lastname" },
+                "address": { "$ref": "#/definitions/address" },
+                "postcode": { "$ref": "#/definitions/postcode" },
+                "city": { "$ref": "#/definitions/city" },
+                "country": { "$ref": "#/definitions/country" },
                 "hint": { "$ref": "#/definitions/hint" },
                 "text": { "$ref": "#/definitions/text" },
                 "phone": { "$ref": "#/definitions/phone" },
                 "email": { "$ref": "#/definitions/email" },
                 "transactionID": { "$ref": "#/definitions/transactionID" }
             },
-            "required": ["version", "communicationType", "supplyOptionsType", "firstname", "lastname", "address", "postcode", "city", "country", "phone"],
+            "required": ["version", "communicationType", "supplyOptionsType", "firstname", "lastname", "address", "postcode", "city", "country", "phone", "transactionID"],
             "additionalProperties": false
         },
         {
@@ -64,13 +41,19 @@
                     ]
                 },
                 "supplyOptionsType": { "enum": ["onPremise"] },
+                "firstname": { "$ref": "#/definitions/firstname" },
+                "lastname": { "$ref": "#/definitions/lastname" },
+                "address": { "$ref": "#/definitions/address" },
+                "postcode": { "$ref": "#/definitions/postcode" },
+                "city": { "$ref": "#/definitions/city" },
+                "country": { "$ref": "#/definitions/country" },
                 "hint": { "$ref": "#/definitions/hint" },
                 "text": { "$ref": "#/definitions/text" },
                 "phone": { "$ref": "#/definitions/phone" },
                 "email": { "$ref": "#/definitions/email" },
                 "transactionID": { "$ref": "#/definitions/transactionID" }
             },
-            "required": ["version", "communicationType", "supplyOptionsType", "phone"],
+            "required": ["version", "communicationType", "supplyOptionsType", "phone", "transactionID"],
             "additionalProperties": false
         },
         {
@@ -83,7 +66,12 @@
                         { "enum": ["text"] }
                     ]
                 },
-                "hint": { "$ref": "#/definitions/hint" },
+                "firstname": { "$ref": "#/definitions/firstname" },
+                "lastname": { "$ref": "#/definitions/lastname" },
+                "address": { "$ref": "#/definitions/address" },
+                "postcode": { "$ref": "#/definitions/postcode" },
+                "city": { "$ref": "#/definitions/city" },
+                "country": { "$ref": "#/definitions/country" },
                 "text": { "$ref": "#/definitions/text" },
                 "phone": { "$ref": "#/definitions/phone" },
                 "email": { "$ref": "#/definitions/email" },
@@ -109,6 +97,35 @@
                 "delivery"
             ]
         },
+        "firstname": {
+            "type": "string",
+            "maxLength": 45
+        },
+        "lastname": {
+            "type": "string",
+            "maxLength": 45
+        },
+        "address": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 100
+        },
+        "postcode": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 10
+        },
+        "city": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "2-letter country code as defined in ISO 3166-1."
+        },
         "transactionID": {
             "type": "string",
             "maxLength": 50
@@ -129,12 +146,9 @@
         },
         "email": {
             "type": "string",
+            "maxLength": 70,
             "pattern": "^.+@.{1,}\\..{1,}$"
         }
     },
-    "required": [
-        "version",
-        "transactionID"
-    ],
     "version": "2"
 }

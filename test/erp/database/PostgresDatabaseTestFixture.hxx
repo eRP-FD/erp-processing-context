@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,11 +8,14 @@
 #ifndef ERP_PROCESSING_CONTEXT_POSTGRESDATABASETEST_HXX
 #define ERP_PROCESSING_CONTEXT_POSTGRESDATABASETEST_HXX
 
+#include "erp/database/DatabaseFrontend.hxx"
+#include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushErpDatabase.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
+#include "mock/hsm/HsmMockFactory.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "shared/crypto/Jwt.hxx"
-#include "erp/database/DatabaseFrontend.hxx"
 #include "shared/database/DatabaseModel.hxx"
-#include "erp/database/PostgresBackend.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionId.hxx"
@@ -21,7 +24,6 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/DurationConsumer.hxx"
 #include "shared/util/Expect.hxx"
-#include "mock/hsm/HsmMockFactory.hxx"
 #include "test_config.h"
 #include "test/erp/model/CommunicationTest.hxx"
 #include "test/util/JwtBuilder.hxx"
@@ -55,6 +57,10 @@ public:
         {
             mDatabase.reset();
         }
+        if (mPushErpDatabase)
+        {
+            mPushErpDatabase.reset();
+        }
         cleanup();
         if (mConnection)
         {
@@ -71,6 +77,18 @@ public:
                             std::make_unique<PostgresBackend>(PostgresBackend::mainConnection()), *mHsmPool, *mKeyDerivation);
         }
         return *mDatabase;
+    }
+
+    PushErpDatabase& pushErpDatabase()
+    {
+        if (! mPushErpDatabase || mPushErpDatabase->getBackend().isCommitted())
+        {
+            Expect(usePostgres(), "database support is disabled, database should not be used");
+            mPushErpDatabase = std::make_unique<PushErpDatabase>(
+                std::make_unique<PushErpPostgresBackend>(PostgresBackend::mainConnection()), *mHsmPool,
+                *mKeyDerivation);
+        }
+        return *mPushErpDatabase;
     }
 
     const DataBaseCodec& getDBCodec()
@@ -161,6 +179,7 @@ protected:
         deleteTxn.exec("DELETE FROM erp.charge_item");
         deleteTxn.exec("DELETE FROM erp.auditevent");
         deleteTxn.exec("DELETE FROM erp.eu_access_permission");
+        deleteTxn.exec("DELETE FROM erp.app_registrations");
         deleteTxn.commit();
     }
 
@@ -196,6 +215,7 @@ protected:
 private:
     std::unique_ptr<pqxx::connection> mConnection;
     std::unique_ptr<DatabaseFrontend> mDatabase;
+    std::unique_ptr<PushErpDatabase> mPushErpDatabase;
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<HsmPool> mHsmPool;
     std::unique_ptr<KeyDerivation> mKeyDerivation;

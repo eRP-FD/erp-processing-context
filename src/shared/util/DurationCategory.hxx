@@ -1,5 +1,5 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
 #pragma once
@@ -13,5 +13,6 @@ enum class DurationCategory
     fhirvalidation,
     ocsprequest,
     hsm,
-    enrolment
+    enrolment,
+    pusheventcreation
 };

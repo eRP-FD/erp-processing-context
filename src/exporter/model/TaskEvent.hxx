@@ -1,13 +1,13 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MODEL_TASKEVENT_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_MODEL_TASKEVENT_HXX
 
-#include "exporter/model/HashedKvnr.hxx"
+#include "shared/model/HashedKvnr.hxx"
 #include "shared/crypto/SignedPrescription.hxx"
 #include "shared/model/Bundle.hxx"
 #include "shared/model/Kvnr.hxx"

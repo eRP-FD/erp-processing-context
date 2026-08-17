@@ -1,0 +1,64 @@
+{
+  "notifyEncryptedBatch": [
+    {
+      "pushKey": "success-200",
+      "code": 200,
+      "template": "success_200.json",
+      "delay": 50
+    },
+    {
+      "pushKey": "success-200-error-null",
+      "code": 200,
+      "template": "success-200-error-null.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "rejected-200",
+      "code": 200,
+      "template": "rejected_200.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-other-200",
+      "code": 200,
+      "template": "error_other_200.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-400",
+      "code": 400,
+      "template": "error_400.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-401",
+      "code": 401,
+      "template": "error_401.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-413",
+      "code": 413,
+      "template": "error_413.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-500",
+      "code": 500,
+      "template": "error_500.json",
+      "delay": 0
+    },
+    {
+      "pushKey": "error-503",
+      "code": 503,
+      "template": "error_503.json",
+      "delay": 0
+    },
+    {
+      "pushKey": ".*",
+      "code": 200,
+      "template": "success_200.json",
+      "delay": 50
+    }
+  ]
+}

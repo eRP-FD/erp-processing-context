@@ -5,10 +5,6 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-//
-// Created by jens on 13.03.26.
-//
-
 #include "PoPPTokenBuilder.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"

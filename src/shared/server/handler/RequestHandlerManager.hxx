@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -12,6 +12,7 @@
 #include "shared/server/handler/RequestHandlerContext.hxx"
 
 
+class Header;
 class RequestHandlerManager
 {
 public:
@@ -32,14 +33,13 @@ public:
     struct MatchingHandler
     {
         const HandlerContext* handlerContext = nullptr;
+        std::string path;
         std::vector<std::string> pathParameters;
         std::vector<std::pair<std::string,std::string>> queryParameters;
         std::string fragment;
     };
 
-    MatchingHandler findMatchingHandler (
-        HttpMethod method,
-        const std::string& target) const;
+    MatchingHandler findMatchingHandler(const Header& header) const;
 
     const RequestHandlerContainer& getRequestHandlers() const;
 

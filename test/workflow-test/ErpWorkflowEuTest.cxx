@@ -1,20 +1,26 @@
-// (C) Copyright IBM Deutschland GmbH 2021, 2025
-// (C) Copyright IBM Corp. 2021, 2025
+// (C) Copyright IBM Deutschland GmbH 2021, 2026
+// (C) Copyright IBM Corp. 2021, 2026
 // non-exclusively licensed to gematik GmbH
 
+#include "erp/database/PostgresBackend.hxx"
+#include "erp/database/push/PushErpPostgresBackend.hxx"
+#include "erp/database/push/PushExporterPostgresBackend.hxx"
 #include "erp/model/eu/EuAccessCode.hxx"
 #include "erp/model/eu/GemErpEuPrParAccessAuthorizationResponse.hxx"
+#include "erp/model/push/Channels.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/database/PostgresConnection.hxx"
 #include "shared/model/GemErpEuPrOrganization.hxx"
 #include "shared/model/GemErpEuPrPractitioner.hxx"
 #include "shared/model/GemErpEuPrPractitionerRole.hxx"
+#include "shared/util/Hash.hxx"
 #include "test/mock/MockDatabaseProxy.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
 
+#include <pqxx/result>
 #include <pqxx/transaction>
 
 struct ErpWorkflowEuTestParams {
@@ -315,6 +321,48 @@ public:
                     .withHeader(Header::ContentType, ContentMimeType::fhirXml)
                     .withExpectedInnerStatus(GetParam().expectedSuccess ? HttpStatus::OK : HttpStatus::BadRequest)
                     .withExpectedBdeUseCase(bde::EuClose_UC_4_22)));
+    }
+
+    void registerPushEvents(const std::unordered_set<model::ChannelId>& channelsSet)
+    {
+        std::unique_ptr<PushErpDatabase> mPushErpDatabase;
+        KeyDerivation keyDerivation(this->testBase.client->getContext()->getHsmPool());
+
+        mPushErpDatabase = std::make_unique<PushErpDatabase>(
+            std::make_unique<PushErpPostgresBackend>(PostgresBackend::mainConnection()),
+            this->testBase.client->getContext()->getHsmPool(), keyDerivation);
+        const model::PushKey pushkey{"pushkey"};
+        const model::AppId appId{"app_id"};
+        const model::Pusher pusher{
+            pushkey,
+            appId,
+            +"appDisplayName",
+            +"deviceDisplayName",
+            model::Lang{"de"},
+            model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
+            model::Encryption{"2026-05", SafeString{"iss11111111111111111111111111111"}, "keyIdentifier"}};
+        mPushErpDatabase->createOrUpdateRegistration(model::Kvnr(kvnr), pusher);
+        model::Channels channels{};
+        for (const auto& c : channelsSet)
+        {
+            channels.add(c);
+        }
+        mPushErpDatabase->updateChannels(model::Kvnr{kvnr}, pushkey, db_model::HashedId::fromString(appId.value), channels);
+        mPushErpDatabase->commitTransaction();
+    }
+
+    std::set<std::string> channelsFromPushEvents(const db_model::HashedKvnr& hashedKvnr)
+    {
+        auto connection = std::make_unique<pqxx::connection>(PushExporterPostgresBackend::defaultConnectParameters().str());
+        auto txn = pqxx::work{*connection};
+        auto rows = txn.exec("SELECT channel_id FROM erp_event.push_notification_event WHERE kvnr_hashed = $1",
+                             pqxx::params{hashedKvnr});
+        std::set<std::string> values;
+        for (const auto& row : rows)
+        {
+            values.insert(row[0].as<std::string>());
+        }
+        return values;
     }
 
     EnvironmentVariableGuard featureToggleGuard{"ERP_FEATURE_EU", GetParam().featureToggle ? "true" : "false"};
@@ -827,6 +875,61 @@ TEST_P(ErpWorkflowEuTestGetPrescriptionsP, PrescriptionsRetrieval)
     checkTaskStatus(id3, model::Task::Status::ready);
 }
 
+TEST_P(ErpWorkflowEuTestGetPrescriptionsP, PrescriptionsListWithPush)
+{
+    auto pushDb = std::make_unique<PushExporterPostgresBackend>(PushExporterPostgresBackend::mainConnection());
+    if (! pushDb->transaction())
+    {
+        GTEST_SKIP() << "Push DB not available";
+    }
+    registerPushEvents({model::ChannelId::erp_eu_prescription_redeem, model::ChannelId::erp_eu_prescription_get});
+
+    ResourceTemplates::EuPostGetPrescriptionsOptions options{
+        .version = ResourceTemplates::Versions::GEM_ERPEU_current(),
+        .requestType = model::GemErpEuPrParGetPrescriptionInput::RequestType::e_prescriptions_list,
+        .kvnr = kvnr.id(),
+        .accessCode = accessCode.toString().c_str(),
+        .countryCode = "FR",
+        .prescriptionIds = {}};
+
+    std::shared_ptr<model::FhirResourceBase> response;
+    ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+    ASSERT_NE(response, nullptr);
+
+    KeyDerivation keyDerivation(this->testBase.client->getContext()->getHsmPool());
+    const auto pushEventChannels = channelsFromPushEvents(keyDerivation.hashKvnr(model::Kvnr(kvnr)));
+    EXPECT_EQ(pushEventChannels.size(), 1);
+    EXPECT_TRUE(pushEventChannels.contains("erp.eu.prescription.get"));
+}
+
+TEST_P(ErpWorkflowEuTestGetPrescriptionsP, PrescriptionsRetrievalWithPush)
+{
+    auto pushDb = std::make_unique<PushExporterPostgresBackend>(PushExporterPostgresBackend::mainConnection());
+    if (! pushDb->transaction())
+    {
+        GTEST_SKIP() << "Push DB not available";
+    }
+    registerPushEvents({model::ChannelId::erp_eu_prescription_redeem, model::ChannelId::erp_eu_prescription_get});
+
+    auto id1 = tasks[0].prescriptionId();
+    auto id2 = tasks[1].prescriptionId();
+    ResourceTemplates::EuPostGetPrescriptionsOptions options{
+        .version = ResourceTemplates::Versions::GEM_ERPEU_current(),
+        .requestType = model::GemErpEuPrParGetPrescriptionInput::RequestType::e_prescriptions_retrieval,
+        .kvnr = kvnr.id(),
+        .accessCode = accessCode.toString().c_str(),
+        .countryCode = "FR",
+        .prescriptionIds = {id1.toString(), id2.toString()}};
+
+    std::shared_ptr<model::FhirResourceBase> response;
+    ASSERT_NO_FATAL_FAILURE(response = postGetEuPrescriptions(options));
+    ASSERT_NE(response, nullptr);
+
+    KeyDerivation keyDerivation(this->testBase.client->getContext()->getHsmPool());
+    const auto pushEventChannels = channelsFromPushEvents(keyDerivation.hashKvnr(model::Kvnr(kvnr)));
+    EXPECT_EQ(pushEventChannels.size(), 1);
+    EXPECT_TRUE(pushEventChannels.contains("erp.eu.prescription.redeem"));
+}
 
 INSTANTIATE_TEST_SUITE_P(
     GetPrescriptions_featureToggle_expectedSuccess, ErpWorkflowEuTestGetPrescriptionsP,

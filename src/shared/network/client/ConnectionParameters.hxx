@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -8,6 +8,7 @@
 #ifndef ERP_SHARED_NETWORK_CLIENT_CONNECTIONPARAMETERS_HXX
 #define ERP_SHARED_NETWORK_CLIENT_CONNECTIONPARAMETERS_HXX
 
+#include "shared/ErpConstants.hxx"
 #include "shared/network/client/TlsCertificateVerifier.hxx"
 #include "shared/crypto/CertificateChainAndKey.hxx"
 
@@ -80,6 +81,11 @@ struct ConnectionParameters
      * The TLS specific parameters. std::nullopt for plain TCP connections.
      */
     std::optional<TlsConnectionParameters> tlsParameters;
+
+    /**
+     * Limit of the response size. `none` means no limit.
+     */
+    std::optional<uint64_t> responseBodyLimit = ErpConstants::DefaultMaxResponseBodySize;
 };
 
 

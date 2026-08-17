@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -333,26 +333,9 @@ std::string ApplicationHealth::downServicesString_noLock (void) const
     return s.str();
 }
 
-bool ApplicationHealth::contributesToApplicationHealth(Service svc)
+bool ApplicationHealth::contributesToApplicationHealth(Service svc) const
 {
-    switch (svc)
-    {
-        case Service::Bna:
-        case Service::Hsm:
-        case Service::Idp:
-        case Service::Postgres:
-        case Service::PrngSeed:
-        case Service::Redis:
-        case Service::TeeToken:
-        case Service::Tsl:
-        case Service::EventDb:
-        case Service::PostgresRO:
-            break;
-        case Service::CFdSigErp:
-        case Service::PoPPService:
-            return false;
-    }
-    return true;
+    return !mServicesNotContributingToApplicationHealth.contains(svc);
 }
 
 
@@ -397,5 +380,14 @@ void ApplicationHealth::enableChecks(const std::set<Service>& services)
     for (const auto& svc : services)
     {
         enableCheck(svc);
+    }
+}
+
+void ApplicationHealth::enableSoftChecks(const std::set<Service>& services)
+{
+    for (const auto& svc : services)
+    {
+        enableCheck(svc);
+        mServicesNotContributingToApplicationHealth.emplace(svc);
     }
 }

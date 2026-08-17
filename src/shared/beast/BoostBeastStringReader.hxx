@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -9,6 +9,8 @@
 #define ERP_PROCESSING_CONTEXT_BOOSTBEASTSTRINGREADER_HXX
 
 #include "shared/network/message/Header.hxx"
+
+#include <optional>
 
 
 /**
@@ -21,7 +23,8 @@ public:
     using Body = std::string;
 
     static std::tuple<Header,Body> parseRequest (const std::string_view& headerAndBody);
-    static std::tuple<Header,Body> parseResponse (const std::string_view& headerAndBody);
+    static std::tuple<Header, Body> parseResponse(const std::string_view& headerAndBody,
+                                                  std::optional<std::uint64_t> bodyLimit);
 };
 
 

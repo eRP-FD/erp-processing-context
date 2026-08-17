@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -285,6 +285,15 @@ UrlHelper::UrlParts::UrlParts(std::string protocol, std::string host, int port, 
 std::string UrlHelper::UrlParts::toString() const
 {
     return mProtocol + mHost + ":" + std::to_string(mPort) + mPath + mRest;
+}
+
+void UrlHelper::UrlParts::appendPath(std::string_view pathAppendix)
+{
+    if (mPath.empty() || mPath.back() != '/')
+    {
+        mPath.append("/");
+    }
+    mPath.append(pathAppendix);
 }
 
 bool UrlHelper::UrlParts::isHttpsProtocol() const

@@ -1,6 +1,6 @@
 /*
- *  (C) Copyright IBM Deutschland GmbH 2021, 2025
- *  (C) Copyright IBM Corp. 2021, 2025
+ *  (C) Copyright IBM Deutschland GmbH 2021, 2026
+ *  (C) Copyright IBM Corp. 2021, 2026
  *  non-exclusively licensed to gematik GmbH
  */
 
@@ -13,12 +13,12 @@
 #include "library/crypto/tee3/TeeMessage2.hxx"
 #include "library/crypto/tee3/TeeMessage3.hxx"
 #include "library/crypto/tee3/TeeMessage4.hxx"
-#include "library/ocsp/OcspHelper.hxx"
 #include "library/util/ByteHelper.hxx"
 #include "library/util/cbor/CborDeserializer.hxx"
 #include "library/util/cbor/CborSerializer.hxx"
 
 #include "shared/crypto/EllipticCurveUtils.hxx"
+#include "shared/tsl/OcspHelper.hxx"
 #include "shared/tsl/TslManager.hxx"
 #include "shared/tsl/TslService.hxx"
 #include "shared/tsl/error/TslError.hxx"

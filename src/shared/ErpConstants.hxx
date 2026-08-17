@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -15,9 +15,9 @@
 class ErpConstants
 {
 public:
-    static constexpr size_t DefaultBufferSize = 8192ul;
-    static constexpr size_t MaxBodySize = 1024lu * 1024ul;
-    static constexpr size_t MaxResponseBodySize = 8ul * 1024ul * 1024ul;
+    static constexpr size_t DefaultBufferSize = 8192UL;
+    static constexpr size_t MaxBodySize = 1024UL * 1024UL;
+    static constexpr size_t DefaultMaxResponseBodySize = 8UL * 1024UL * 1024UL;
 
     static constexpr std::int64_t SocketTimeoutSeconds = 30;
 

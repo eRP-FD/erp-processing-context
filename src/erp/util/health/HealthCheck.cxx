@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -39,6 +39,7 @@ void HealthCheck::update (PcServiceContext& context)
     check(ApplicationHealth::Service::Hsm,          context, &checkHsm);
     check(ApplicationHealth::Service::Idp,          context, &checkIdp);
     check(ApplicationHealth::Service::Postgres,     context, &checkPostgres);
+    check(ApplicationHealth::Service::EventDb,      context, &checkEventDb);
     if (auto roHost = Configuration::instance().getOptionalStringValue(ConfigurationKey::POSTGRES_RO_HOST);
         roHost && ! roHost->empty())
     {
@@ -145,6 +146,20 @@ void HealthCheck::checkPostgres(PcServiceContext& context)
     if (connectionInfo)
     {
         context.applicationHealth().setServiceDetails(ApplicationHealth::Service::Postgres,
+                                                      ApplicationHealth::ServiceDetail::DBConnectionInfo,
+                                                      toString(*connectionInfo));
+    }
+}
+
+void HealthCheck::checkEventDb(PcServiceContext& context)
+{
+    auto connection = context.pushExporterDatabaseFactory();
+    connection->healthCheck();
+    auto connectionInfo = connection->getConnectionInfo();
+    connection->commitTransaction();
+    if (connectionInfo)
+    {
+        context.applicationHealth().setServiceDetails(ApplicationHealth::Service::EventDb,
                                                       ApplicationHealth::ServiceDetail::DBConnectionInfo,
                                                       toString(*connectionInfo));
     }

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 #include "exporter/tee3/EpaCertificateService.hxx"
@@ -106,7 +106,7 @@ boost::asio::awaitable<shared_X509> EpaCertificateService::provideCertificateInt
         return std::ostringstream{} << "received response for cert: " << certId << Base64::encode(resp->body());
     });
     auto certDer =
-        epa::CborDeserializer::deserialize<epa::Tee3Protocol::AutTeeCertificate>(epa::BinaryBuffer{resp->body()})
+        epa::CborDeserializer::deserialize<epa::Tee3Protocol::AutTeeCertificate>(BinaryBuffer{resp->body()})
             .certificate.getString();
     auto teeCert = Certificate::fromBinaryDer(certDer);
     mCertificates.emplace(certId, teeCert);

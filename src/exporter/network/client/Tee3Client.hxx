@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  * non-exclusively licensed to gematik GmbH
  */
 
@@ -15,9 +15,10 @@
 #include <boost/asio/strand.hpp>
 #include <chrono>
 
+class BinaryBuffer;
+
 namespace epa
 {
-class BinaryBuffer;
 class ClientTeeHandshake;
 }
 
@@ -107,7 +108,7 @@ private:
     static Request prepareOuterRequest(boost::beast::http::verb verb, std::string_view target, const MimeType& mimeType);
     Request createEncryptedOuterRequest(Request& innerRequest, epa::Tee3Context::SessionContexts& sessionContexts);
 
-    Certificate provideCertificate(const epa::BinaryBuffer& hash, uint64_t version);
+    Certificate provideCertificate(const BinaryBuffer& hash, uint64_t version);
     class TimeoutHelper;
 
     Tee3ClientsForHost* mOwingClientsForHost;

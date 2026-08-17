@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -60,4 +60,9 @@ bool is2xxSuccess(HttpStatus status)
 {
     const auto numericalValue = toNumericalValue(status);
     return numericalValue >= 200 && numericalValue < 300;
+}
+bool is5xxInternalError(HttpStatus status)
+{
+    const auto numericalValue = toNumericalValue(status);
+    return numericalValue >= 500 && numericalValue < 600;
 }

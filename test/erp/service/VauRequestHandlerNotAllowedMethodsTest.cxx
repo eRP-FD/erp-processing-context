@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -219,3 +219,37 @@ TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsConsent)
     testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
     testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
 }
+
+// GEMREQ-start A_28114
+TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsPushers)
+{
+    A_28114.test("Not allowed HTTP methods for /pushers/v1");
+    std::string_view endpoint = "/pushers/v1";
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::POST, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+
+    A_28114.test("Not allowed HTTP methods for /pushers/v1/set");
+    endpoint = "/pushers/v1/set";
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::GET, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+}
+// GEMREQ-end A_28114
+
+// GEMREQ-start A_28121
+TEST_F(VauRequestHandlerNotAllowedMethodTest, NotAllowedMethodsChannels)
+{
+    A_28121.test("Not allowed HTTP methods for /channels/v1/{pushkey}");
+    const std::string_view endpoint = "/channels/v1/{pushkey}";
+    testEndpoint(HttpMethod::PUT, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::PATCH, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::HEAD, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+    testEndpoint(HttpMethod::DELETE, endpoint, jwtVersicherter, HttpStatus::MethodNotAllowed);
+}
+// GEMREQ-end A_28121
+

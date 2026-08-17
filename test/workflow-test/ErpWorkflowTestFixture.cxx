@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -79,6 +79,11 @@ void modelElemfromString(std::optional<TModelElem>& result, const std::string_vi
 
 } // anonymous namespace
 
+
+ErpWorkflowTestBase::ErpWorkflowTestBase()
+{
+    mRejectTaskRequestArgs.expectedBdeUseCase = bde::RejectTask_UC_4_2;
+}
 
 ErpWorkflowTestBase::~ErpWorkflowTestBase() = default;
 
@@ -587,7 +592,8 @@ void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string
                                            const model::Timestamp& startTime,
                                            const std::vector<std::string>& actorIdentifiers,
                                            const std::unordered_set<std::size_t>& actorTelematicIdIndices,
-                                           const std::vector<model::AuditEvent::SubType>& expectedActions)
+                                           const std::vector<model::AuditEvent::SubType>& expectedActions,
+                                           bool useEntityWhatDisplay)
 {
     Expect3(actorIdentifiers.size() == expectedActions.size(), "Invalid parameters", std::logic_error);
 
@@ -638,35 +644,46 @@ void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string
         EXPECT_EQ(agentWhoValue.value(), actorIdentifiers[i]) << "for i=" << i;
         EXPECT_FALSE(auditEvent.agentName().empty());
         EXPECT_FALSE(auditEvent.sourceObserverReference().empty());
-        EXPECT_FALSE(auditEvent.entityWhatReference().empty());
+        if (! useEntityWhatDisplay)
+        {
+            EXPECT_FALSE(auditEvent.entityWhatReference().empty());
+        }
+        else
+        {
+            EXPECT_FALSE(auditEvent.entityWhatDisplay().empty());
+        }
 
         const auto[entityWhatIdentifierSystem, entityWhatIdentifierValue] = auditEvent.entityWhatIdentifier();
         if(!resourceIds.at(i).has_value())
         {
             EXPECT_TRUE(!entityWhatIdentifierSystem.has_value());
             EXPECT_TRUE(!entityWhatIdentifierValue.has_value());
-
-            // If no unique prescriptionId is available, the field AuditEvent.entity.description is filled with "+" or "-"
-            const char* const expectedDescription = auditEvent.action() == model::AuditEvent::Action::del ? "-" : "+";
-            EXPECT_EQ(auditEvent.entityDescription(), expectedDescription);
+            EXPECT_EQ(auditEvent.entityDescription(), "+");
         }
         else
         {
             if (entityWhatIdentifierSystem.has_value())
             {
-            EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
-            EXPECT_EQ(auditEvent.entityDescription(), resourceIds.at(i));
+                EXPECT_EQ(entityWhatIdentifierSystem.value(), model::resource::naming_system::prescriptionID);
+                EXPECT_EQ(auditEvent.entityDescription(), resourceIds.at(i));
             }
-            ASSERT_TRUE(entityWhatIdentifierValue.has_value()) << auditEvent.serializeToJsonString();
-            EXPECT_EQ(entityWhatIdentifierValue.value(), resourceIds.at(i));
-            if (auditEvent.entityWhatReference() != "MedicationDispense" &&
-                auditEvent.entityWhatReference() != "$grant-eu-access-permission" &&
-                auditEvent.entityWhatReference() != "$revoke-eu-access-permission" &&
-                auditEvent.entityWhatReference() != "$get-eu-prescriptions")
+            ASSERT_TRUE(useEntityWhatDisplay || entityWhatIdentifierValue.has_value()) << auditEvent.serializeToJsonString();
+            if (!useEntityWhatDisplay)
             {
-                EXPECT_TRUE(String::ends_with(auditEvent.entityWhatReference(),
-                                              std::string(entityWhatIdentifierValue.value())))
-                    << auditEvent.serializeToJsonString();
+                EXPECT_EQ(entityWhatIdentifierValue.value(), resourceIds.at(i));
+                if (auditEvent.entityWhatReference() != "MedicationDispense" &&
+                    auditEvent.entityWhatReference() != "$grant-eu-access-permission" &&
+                    auditEvent.entityWhatReference() != "$revoke-eu-access-permission" &&
+                    auditEvent.entityWhatReference() != "$get-eu-prescriptions")
+                {
+                    EXPECT_TRUE(String::ends_with(auditEvent.entityWhatReference(),
+                                                  std::string(entityWhatIdentifierValue.value())))
+                        << auditEvent.serializeToJsonString();
+                }
+            }
+            else
+            {
+                EXPECT_EQ(auditEvent.entityDescription(), resourceIds.at(i));
             }
         }
         EXPECT_EQ(auditEvent.entityName(), insurantKvnr);
@@ -932,6 +949,10 @@ std::string ErpWorkflowTestBase::toExpectedOperation(const ErpWorkflowTestBase::
         {
             vauPath = std::regex_replace(vauPath, matcher, "<id>");
         }
+    }
+    else if (String::starts_with(vauPath, "/channels/v1") && vauPath != "/channels/v1")
+    {
+        vauPath = "/channels/v1/{pushkey}";
     }
     return expectedOperation.append(" ").append(vauPath);
 }
@@ -2874,11 +2895,10 @@ void ErpWorkflowTestBase::taskReject(const std::string& prescriptionIdString,
     ClientResponse serverResponse;
     auto jwt = prescriptionIdString.starts_with("162") ? jwtKostentraeger() : jwtApotheke();
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) =
-                                send(RequestArguments{HttpMethod::POST, rejectPath, {}}
+                                send(RequestArguments{mRejectTaskRequestArgs}.withHttpMethod(HttpMethod::POST).withVauPath( rejectPath)
                                          .withJwt(jwt)
                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                                         .withExpectedInnerStatus(expectedInnerStatus)
-                                         .withExpectedBdeUseCase(bde::RejectTask_UC_4_2)));
+                                         .withExpectedInnerStatus(expectedInnerStatus)));
     ASSERT_EQ(serverResponse.getHeader().status(), expectedInnerStatus);
 
     if(expectedInnerStatus != HttpStatus::NoContent)

@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -52,6 +52,7 @@ private:
     void handleInnerRequest(PcSessionContext& outerSession, const std::string& upParam,
                             std::unique_ptr<InnerTeeRequest> innerTeeRequest);
     static void handleInnerRequest(const RequestHandlerManager::MatchingHandler& matchingHandler,
+                                   const Operation& innerOperation,
                                    PcSessionContext& innerSession, PcSessionContext& outerSession);
     static void makeResponse(ServerResponse& innerServerResponse, const Operation& innerOperation,
                       const ServerRequest* innerServerRequest, const InnerTeeRequest& innerTeeRequest,
@@ -83,6 +84,7 @@ private:
                                                         const std::optional<model::PrescriptionId>& prescriptionId);
     static void setBdeUseCaseHeader(const RequestHandlerContext& handlerContext, PcSessionContext& innerSession,
                                     PcSessionContext& outerSession);
+    static model::ChannelId operationToChannelId(Operation op);
 };
 
 

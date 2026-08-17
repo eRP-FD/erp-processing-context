@@ -1,6 +1,6 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
@@ -123,27 +123,17 @@ IdpUpdater::IdpUpdater (
     , mUpdater{std::make_unique<PeriodicTimer<RefreshTimer>>(*this)}
     , mIo{ioContext}
 {
-    std::string idpSslRootCa;
-    const std::string idpRootCaFile =
-        Configuration::instance().getStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH);
-    if ( ! idpRootCaFile.empty())
-    {
-        idpSslRootCa = FileHelper::readFileAsString(idpRootCaFile);
-    }
-    else
-    {
-        TVLOG(1) << "No IDP update endpoint SSL root CA configured";
-    }
+    const auto& config = Configuration::instance();
     if (mRequestSender == nullptr)
     {
-        mRequestSender = std::make_shared<UrlRequestSender>(idpSslRootCa,
-                                                            static_cast<uint16_t>(Configuration::instance().getIntValue(
-                                                                ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)),
-                                                            mResolveTimeout);
+        std::chrono::seconds connectTimeut{config.getIntValue(ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)};
+        auto tlsVerifier = TlsCertificateVerifier::withInternetRootCAsWithFallback(
+            ConfigurationKey::IDP_UPDATE_ENDPOINT_SSL_ROOT_CA_PATH);
+        mRequestSender = std::make_shared<UrlRequestSender>(std::move(tlsVerifier), connectTimeut, mResolveTimeout);
     }
 
     // Extract hostname and path from the update URL.
-    const std::string updateUrl = Configuration::instance().getStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT);
+    const std::string updateUrl = config.getStringValue(ConfigurationKey::IDP_UPDATE_ENDPOINT);
     mUpdateUrl = std::make_unique<UrlHelper::UrlParts>(UrlHelper::parseUrl(updateUrl));
     ErpExpect(mUpdateUrl->isHttpsProtocol(), HttpStatus::InternalServerError, "IDP update URL must use https://");
 

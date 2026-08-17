@@ -1,16 +1,20 @@
 /*
- * (C) Copyright IBM Deutschland GmbH 2021, 2025
- * (C) Copyright IBM Corp. 2021, 2025
+ * (C) Copyright IBM Deutschland GmbH 2021, 2026
+ * (C) Copyright IBM Corp. 2021, 2026
  *
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "erp/database/push/PushErpPostgresBackend.hxx"
+#include "exporter/ExporterRequirements.hxx"
+#include "exporter/database/MainPostgresBackend.hxx"
 #include "exporter/model/EventKvnr.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "mock/crypto/MockCryptography.hxx"
 #include "mock/hsm/HsmMockFactory.hxx"
 #include "shared/compression/ZStd.hxx"
 #include "test/exporter/database/PostgresDatabaseTest.hxx"
+#include "test/mock/MockTaskTable.hxx"
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/TestUtils.hxx"
 
@@ -33,7 +37,6 @@ std::string PostgresDatabaseTest::getTRezeptEventState()
     EXPECT_EQ(results.size(), 1);
 
     return results.at(0, 0).c_str();
-
 }
 
 std::int32_t PostgresDatabaseTest::getTRezeptEventRetryCount()
@@ -47,13 +50,11 @@ std::int32_t PostgresDatabaseTest::getTRezeptEventRetryCount()
     return static_cast<std::int32_t>(strtol(results.at(0, 0).c_str(), nullptr, 10));
 }
 
-model::TaskEvent::id_t PostgresDatabaseTest::insertTRezeptEvent(const model::Kvnr& kvnr, std::string_view prescription_id,
-                                   model::TaskEvent::UseCase usecase, model::TaskEvent::State state,
-                                   std::optional<std::string> healthcareProviderPrescription,
-                                   std::optional<std::string> medicationDispense,
-                                   std::optional<std::string> doctorIdentity,
-                                   std::optional<std::string> pharmacyIdentity,
-                                   int retryCount /* = 0 */)
+model::TaskEvent::id_t PostgresDatabaseTest::insertTRezeptEvent(
+    const model::Kvnr& kvnr, std::string_view prescription_id, model::TaskEvent::UseCase usecase,
+    model::TaskEvent::State state, std::optional<std::string> healthcareProviderPrescription,
+    std::optional<std::string> medicationDispense, std::optional<std::string> doctorIdentity,
+    std::optional<std::string> pharmacyIdentity, int retryCount /* = 0 */)
 {
     auto kvnr_hashed = kvnrHashed(kvnr);
 
@@ -80,7 +81,7 @@ model::TaskEvent::id_t PostgresDatabaseTest::insertTRezeptEvent(const model::Kvn
     std::optional<db_model::postgres_bytea> optMedicationDispense;
     std::optional<std::string> optBlobIdMedicationDispense;
     std::optional<db_model::postgres_bytea> optSaltMedicationDispense;
-    if(medicationDispense)
+    if (medicationDispense)
     {
         optMedicationDispense =
             mCodec.encode(*medicationDispense, keyMedicationDispense, Compression::DictionaryUse::Default_json)
@@ -115,6 +116,26 @@ model::TaskEvent::id_t PostgresDatabaseTest::insertTRezeptEvent(const model::Kvn
                           std::to_string(derivationData.blobId), optHealthcareProviderPrescription,
                           optBlobIdMedicationDispense, optSaltMedicationDispense, optMedicationDispense,
                           optDoctorIdentity, optPharmacyIdentity, retryCount});
+    txn.commit();
+    return id;
+}
+
+model::TaskEvent::id_t PostgresDatabaseTest::insertPushEvent(const model::Kvnr& kvnr,
+                                                             model::PrescriptionId prescription_id,
+                                                             std::string_view channelId, Uuid notificationIdentifier)
+{
+    auto id = gsl::narrow<model::TaskEvent::id_t>(++mEventIdCounter);
+    auto&& txn = createTransaction();
+    const auto _ = txn.exec("INSERT INTO erp_event.push_notification_event "
+                            "(id, kvnr_hashed, next_export, created, prescription_id, prescription_type, channel_id, "
+                            "notification_identifier, retry_count, state)"
+                            " VALUES "
+                            "($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ",
+                            pqxx::params{id, kvnrHashed(kvnr), model::Timestamp::now().toXsDateTime(),
+                                         model::Timestamp::now().toXsDateTime(), prescription_id.toDatabaseId(),
+                                         static_cast<int16_t>(magic_enum::enum_integer(prescription_id.type())),
+                                         channelId, notificationIdentifier.toString(), 0, "pending"})
+                       .no_rows();
     txn.commit();
     return id;
 }
@@ -519,11 +540,45 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
     }
 }
 
+// GEMREQ-start A_27405#test
+TEST_F(PostgresDatabaseTest, updateEncryptionKey)
+{
+    A_27405.test("");
+    db_model::HashedKvnr kvnrBlob;
+    kvnrBlob.append("kvnr_hashed");
+    db_model::HashedId pushKeyBlob;
+    pushKeyBlob.append("pushkey_hashed");
+    db_model::HashedId appIdBlob;
+    appIdBlob.append("app_id_hashed");
+    {
+        db_model::EncryptedBlob encryptedBlob;
+        encryptedBlob.append("encryption_key");
+        auto transaction = createErpDbTransaction();
+        transaction.exec(
+            R"(INSERT INTO erp.app_registrations
+(pushkey_hashed, app_id_hashed, kvnr_hashed, blob_id, salt, payload, url, encryption_key, subscribed_channel, time_created, last_modified) VALUES
+($1, $2, $3, 1, 'salt', 'payload', 'url', $4, '{}', CURRENT_TIMESTAMP::timestamp, CURRENT_TIMESTAMP::timestamp))",
+            {pushKeyBlob.binarystring(), appIdBlob.binarystring(), kvnrBlob.binarystring(), encryptedBlob.binarystring()});
+        transaction.commit();
+    }
+
+    db_model::EncryptedBlob updatedEncryptedBlob;
+    updatedEncryptedBlob.append("updated");
+    exporter::MainPostgresBackend backend;
+    backend.updateEncryptionKey(kvnrBlob, pushKeyBlob, appIdBlob, updatedEncryptedBlob);
+    backend.commitTransaction();
+
+    auto transaction = createErpDbTransaction();
+    const auto row = transaction.exec("select * from erp.app_registrations").one_row();
+    transaction.commit();
+    ASSERT_EQ(db_model::Blob{row["encryption_key"].as<pqxx::bytes>()}.toHex(), updatedEncryptedBlob.toHex());
+}
+// GEMREQ-end A_27405#test
+
 class PostgresDatabaseTransactionModeTest : public PostgresDatabaseTest,
                                             public testing::WithParamInterface<TransactionMode>
 {
 };
-
 
 
 TEST_P(PostgresDatabaseTransactionModeTest, modes)
