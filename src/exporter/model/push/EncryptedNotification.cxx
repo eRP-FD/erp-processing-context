@@ -35,6 +35,7 @@ void EncryptedNotification::setPrio(PushNotificationPrio prio)
     mPrio = prio;
 }
 
+// GEMREQ-start A_27436
 void EncryptedNotification::toJson(rapidjson::Value& parent, rapidjson::Document::AllocatorType& alloc) const
 {
     // GEMREQ-start A_27161
@@ -54,6 +55,7 @@ void EncryptedNotification::toJson(rapidjson::Value& parent, rapidjson::Document
     mDevice.toJson(notification, alloc);
     parent.AddMember("notification", notification.Move(), alloc);
 }
+// GEMREQ-end A_27436
 
 std::string
 serializePushNotifications(const std::vector<std::pair<std::string, EncryptedNotification>>& pushNotifications)

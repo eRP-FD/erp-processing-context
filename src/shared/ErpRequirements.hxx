@@ -213,7 +213,7 @@ static constexpr Requirement A_24280    ("E-Rezept-Fachdienst - Dispensierinform
 static constexpr Requirement A_24281_02 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Schemaprüfung und Speicherung MedicationDispense");
 static constexpr Requirement A_24298    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Prüfung Status");
 static constexpr Requirement A_24285_01 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Zeitstempel");
-static constexpr Requirement A_24283_03 ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
+static constexpr Requirement A_28667    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - MedicationDispense speichern");
 static constexpr Requirement A_28410    ("E-Rezept-Fachdienst - Dispensierinformationen bereitstellen - Telematik-ID der abgebenden LEI speichern");
 
 // Requirements for endpoint POST /Task/$close
@@ -221,7 +221,7 @@ static constexpr Requirement A_19231_02 ("E-Rezept-Fachdienst - Task schliessen 
 static constexpr Requirement A_19248_05 ("E-Rezept-Fachdienst - Task schliessen - Schemaprüfung und Speicherung MedicationDispense");
 static constexpr Requirement A_19232    ("E-Rezept-Fachdienst - Status beenden");
 static constexpr Requirement A_19233_06 ("E-Rezept-Fachdienst - Task schliessen - Quittung erstellen");
-static constexpr Requirement A_22069_02 ("E-Rezept-Fachdienst - Task schliessen - Speicherung mehrerer MedicationDispenses");
+static constexpr Requirement A_28666    ("E-Rezept-Fachdienst - Task schliessen - MedicationDispense speichern");
 static constexpr Requirement A_22070_03 ("E-Rezept-Fachdienst - MedicationDispense abrufen - Rückgabe mehrerer MedicationDispenses");
 static constexpr Requirement A_23384_05 ("E-Rezept-Fachdienst - Prüfung Gültigkeit Profilversionen");
 static constexpr Requirement A_24287_01 ("E-Rezept-Fachdienst - Task schließen - Aufruf ohne MedicationDispense");

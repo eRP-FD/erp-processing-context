@@ -28,7 +28,8 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
     JWT jwt = defaultJwt();
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, innerResponse) = send(RequestArguments{HttpMethod::GET, "/Task/", {}}
         .withJwt(jwt)
-        .withHeader( Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+        .withHeader( Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+        .withExpectedBdeUseCase(bde::GetTasksPatient_UC_3_1)));
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
 
     if (outerResponse.getHeader().hasHeader(std::string{ProxyUserPseudonymHeader}))
@@ -52,7 +53,8 @@ TEST_F(ErpWorkflowTest, UserPseudonym) // NOLINT
 
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, innerResponse) = send(RequestArguments{HttpMethod::GET, "/Task/", {}}
         .withJwt(jwt)
-        .withHeader( Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+        .withHeader( Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+        .withExpectedBdeUseCase(bde::GetTasksPatient_UC_3_1)));
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
 
     switch(userPseudonymType)
@@ -114,7 +116,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
     ASSERT_NO_FATAL_FAILURE(
         std::tie(std::ignore, serverResponse) =
             send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
-                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt)).withExpectedActivationCode162(isDiga(GetParam())?"1":"XXX")));
+                .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt)).withExpectedActivationCode162(isDiga(GetParam())?"1":"XXX")
+                .withExpectedBdeUseCase(bde::CloseTask_UC_4_4)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK) << serverResponse.getBody();
 
     // Test that any further close request is denied.
@@ -122,7 +125,8 @@ TEST_P(ErpWorkflowTestP, MultipleTaskCloseError)//NOLINT(readability-function-co
                                 send(RequestArguments{HttpMethod::POST, closePath, closeBody, "application/fhir+xml"}
                                          .withJwt(jwt)
                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                                         .withOverrideExpectedWorkflowVersion("XXX")));
+                                         .withOverrideExpectedWorkflowVersion("XXX")
+                                         .withExpectedBdeUseCase(bde::CloseTask_UC_4_4)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Forbidden);
 }
 
@@ -674,6 +678,7 @@ TEST_F(ErpWorkflowTest, ERP_5723_ERP_5750)//NOLINT(readability-function-cognitiv
             RequestArguments{HttpMethod::GET, "/Task/"s + prescriptionId->toString(), {}}
             .withHeader(Header::Accept, MimeType::fhirXml)
             .withJwt(JwtBuilder::testBuilder().makeJwtVersicherter(kvnr))
+            .withExpectedBdeUseCase(bde::GetTaskPatient_UC_3_6)
     ));
     EXPECT_EQ(response.getHeader().status(), HttpStatus::OK);
     const auto& contentType = response.getHeader().contentType();
@@ -721,7 +726,7 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
   </parameter>
 </Parameters>)--";
     ASSERT_NO_FATAL_FAILURE(std::tie(std::ignore, serverResponse) = send(RequestArguments{HttpMethod::POST, "/Task/$create", create, "application/fhir+xml"}.withJwt(jwt)
-                                                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+                                                                         .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt)).withExpectedBdeUseCase(bde::CreateTask_UC_2_1)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::Created);
     ASSERT_NO_THROW(task = Task::fromXml(serverResponse.getBody(), *getXmlValidator()));
     // Get results from the service call.
@@ -755,7 +760,8 @@ TEST_F(ErpWorkflowTest, AuditEventWithOptionalClaims) // NOLINT
                                          .withContentType("application/fhir+xml")
                                          .withJwt(jwt)
                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
-                                         .withHeader("X-AccessCode", accessCode)));
+                                         .withHeader("X-AccessCode", accessCode)
+                                         .withExpectedBdeUseCase(bde::ActivateTask_UC_2_3_160)));
     ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::OK);
     ASSERT_NO_THROW(task = model::Task::fromXml(serverResponse.getBody(), *getXmlValidator()));
     ASSERT_TRUE(task);
@@ -1080,6 +1086,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     RequestArguments args{HttpMethod::POST, activePath, {}};
     args.jwt = JwtBuilder::testBuilder().makeJwtArzt();
     args.overrideExpectedKbvVersion = "XXX";
+    args.expectedBdeUseCase = bde::ActivateTask_UC_2_3_160;
 
     // Send request with PrescriptionType =  apothekenpflichigeArzneimittel
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
@@ -1091,6 +1098,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     const model::PrescriptionId prescriptionId_direkteZuweisung =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::direkteZuweisung, 999999);
     args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$activate";
+    args.expectedBdeUseCase = bde::ActivateTask_UC_2_3_169;
 
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
     EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
@@ -1099,6 +1107,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     // Send request with operation $reject
     args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString() + "/$reject";
     args.jwt = JwtBuilder::testBuilder().makeJwtApotheke();
+    args.expectedBdeUseCase = bde::RejectTask_UC_4_2;
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
     EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value(),
               std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(model::PrescriptionType::direkteZuweisung)));
@@ -1107,6 +1116,7 @@ TEST_F(ErpWorkflowTest, InnerRequestFlowtype) // NOLINT
     args.vauPath = "/Task/" + prescriptionId_direkteZuweisung.toString();
     args.method = HttpMethod::GET;
     args.jwt = defaultJwt();
+    args.expectedBdeUseCase = bde::GetTaskPatient_UC_3_6;
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, std::ignore) = send(args));
     EXPECT_EQ(outerResponse.getHeader().header(Header::InnerRequestFlowtype).value_or("XXX"),
               std::to_string(static_cast<std::underlying_type_t<model::PrescriptionType>>(

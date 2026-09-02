@@ -586,6 +586,7 @@ TEST_P(ErpWorkflowGetTasksTestP, TaskEmptyOutput)// NOLINT
 TEST_F(ErpWorkflowTest, InvalidSearchArguments)
 {
     RequestArguments args(HttpMethod::GET, "/Task?authored-on=le2021-04-20T12%3A04%3A56%2B02%3A00&_count=unknown", {});
+    args.expectedBdeUseCase = bde::GetTasksPatient_UC_3_1;
     ClientResponse response;
     ASSERT_NO_FATAL_FAILURE(tie(std::ignore, response) = send(args));
     ASSERT_EQ(response.getHeader().status(), HttpStatus::BadRequest);

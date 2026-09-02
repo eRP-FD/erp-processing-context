@@ -15,6 +15,10 @@
 #include <optional>
 
 class JWT;
+namespace model
+{
+class PrescriptionId;
+}
 
 class ServerRequest
 {
@@ -70,6 +74,8 @@ public:
     };
 
     Type getType() const;
+
+    std::optional<model::PrescriptionId> tryParsePrescriptionIdFromPathId() const;
 
 private:
     Header mHeader;

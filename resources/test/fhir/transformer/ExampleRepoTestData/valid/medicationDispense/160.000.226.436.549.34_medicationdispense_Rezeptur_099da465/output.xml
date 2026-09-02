@@ -39,7 +39,7 @@
                      <reference value="Organization/3c1fe6ae-b47f-4b5c-9092-f269c0943a6d"/>
                   </actor>
                </performer>
-               <whenHandedOver value="2024-07-02T11:01:36+02:00"/>
+               <whenHandedOver value="2024-07-02"/>
                <dosageInstruction>
                   <text value="1–3mal/Tag auf die erkrankten Hautstellen auftragen"/>
                </dosageInstruction>

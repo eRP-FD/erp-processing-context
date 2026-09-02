@@ -168,3 +168,11 @@ TEST_F(FhirVZDClientTest, CustomExceptions_Success)
         },
         ServerErrorException);
 }
+
+TEST_F(FhirVZDClientTest, bob1)
+{
+    std::shared_ptr<CrlProvider> crlProvider;
+    FhirVzdClient client("abc", crlProvider, Uuid{}.toString());
+    client.testConnection();
+    EXPECT_TRUE(true);
+}

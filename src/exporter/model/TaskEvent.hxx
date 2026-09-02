@@ -22,6 +22,7 @@ class TaskEventBase
 {
 public:
     using id_t = std::int64_t;
+    static constexpr int LimitTasksPerQuery = 100;
 
     TaskEventBase(id_t id, const PrescriptionId& prescriptionId, PrescriptionType prescriptionType, Kvnr kvnr,
                   std::string_view hashedKvnr, Bundle&& kbvBundle, const model::Timestamp& lastModified, std::int32_t retryCount = 0);

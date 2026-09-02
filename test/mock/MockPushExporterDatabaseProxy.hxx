@@ -16,7 +16,7 @@ class MockPushExporterDatabase;
 class MockPushExporterDatabaseProxy : public PushExporterBackend
 {
 public:
-    explicit MockPushExporterDatabaseProxy(std::shared_ptr<MockPushExporterDatabase> mockDatabase);
+    explicit MockPushExporterDatabaseProxy(std::shared_ptr<PushExporterBackend> mockDatabase);
 
     ~MockPushExporterDatabaseProxy() override = default;
 
@@ -30,5 +30,5 @@ public:
     bool isCommitted() const override;
 
 private:
-    std::shared_ptr<MockPushExporterDatabase> mMockDatabase;
+    std::shared_ptr<PushExporterBackend> mMockDatabase;
 };

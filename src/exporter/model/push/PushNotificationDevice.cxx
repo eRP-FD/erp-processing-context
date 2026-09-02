@@ -20,6 +20,7 @@ PushNotificationDevice::PushNotificationDevice(std::string appId, std::string pu
 {
 }
 
+// GEMREQ-start A_27436
 void PushNotificationDevice::toJson(rapidjson::Value& parent, rapidjson::Document::AllocatorType& alloc) const
 {
     rapidjson::Value device(rapidjson::kObjectType);
@@ -34,6 +35,7 @@ void PushNotificationDevice::toJson(rapidjson::Value& parent, rapidjson::Documen
     }
     parent.AddMember("device", device.Move(), alloc);
 }
+// GEMREQ-end A_27436
 
 const std::string& PushNotificationDevice::appId() const
 {

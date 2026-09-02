@@ -118,19 +118,11 @@ bool ErpRequestHandler::callerWantsJson (const ServerRequest& request)
 
 model::PrescriptionId ErpRequestHandler::parseId(const ServerRequest& request, AccessLog& accessLog)
 {
-    const auto prescriptionIdValue = request.getPathParameter("id");
-    ErpExpect(prescriptionIdValue.has_value(), HttpStatus::BadRequest, "id path parameter is missing");
-
-    try
-    {
-        auto prescriptionId = model::PrescriptionId::fromString(prescriptionIdValue.value());
-        accessLog.prescriptionId(prescriptionId);
-        return prescriptionId;
-    }
-    catch (const model::ModelException&)
-    {
-        ErpFail(HttpStatus::NotFound, "Failed to parse prescription ID from URL parameter");
-    }
+    ErpExpect(request.getPathParameter("id").has_value(), HttpStatus::BadRequest, "id path parameter is missing");
+    const auto prescriptionIdValue = request.tryParsePrescriptionIdFromPathId();
+    ErpExpect(prescriptionIdValue.has_value(), HttpStatus::NotFound, "Failed to parse prescription ID from URL parameter");
+    accessLog.prescriptionId(*prescriptionIdValue);
+    return *prescriptionIdValue;
 }
 
 void ErpRequestHandler::makeResponse(PcSessionContext& session, HttpStatus status,

@@ -70,5 +70,6 @@ TEST_F(BdeV2Test, MalitiousProfileVersion)
                                          .withJwt(jwt)
                                          .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
                                          .withExpectedInnerStatus(HttpStatus::BadRequest)
-                                         .withOverrideExpectedWorkflowVersion("XXX")));
+                                         .withOverrideExpectedWorkflowVersion("XXX")
+                                         .withExpectedBdeUseCase(bde::CreateTask_UC_2_1)));
 }

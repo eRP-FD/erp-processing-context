@@ -17,12 +17,15 @@ ClientResponse::ClientResponse(Header header, std::string body)
     : mHeader(std::move(header)), mBody(std::move(body))
 {
     Expect3(mHeader.method() == HttpMethod::UNKNOWN, "http method must not be set for client response", std::logic_error);
-    // For example when Transfer-Encoding: chunked is used, the Content-Length is omitted
-    Expect(! mHeader.hasHeader(Header::ContentLength) || mHeader.contentLength() == mBody.size(),
-        std::string("header.contentLength (")
-            .append(std::to_string(mHeader.contentLength()))
-            .append(") does not match body.size: ")
-            .append(std::to_string(mBody.size())));
+    // For example when Transfer-Encoding: chunked is used, the Content-Length is omitted.
+    // First, check for content length absence, else check for
+    // content-length = bodySize and if this fails, check for empty
+    // body, which almost surely was due to a HEAD request:
+    Expect(! mHeader.hasHeader(Header::ContentLength) || mHeader.contentLength() == mBody.size() || mBody.empty(),
+           std::string("header.contentLength (")
+               .append(std::to_string(mHeader.contentLength()))
+               .append(") does not match body.size: ")
+               .append(std::to_string(mBody.size())));
 }
 const Header& ClientResponse::getHeader() const
 {

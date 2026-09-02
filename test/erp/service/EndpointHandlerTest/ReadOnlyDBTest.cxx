@@ -29,6 +29,7 @@
 #include "test/mock/PushErpMockBackend.hxx"
 #include "test/util/ServerTestBase.hxx"
 
+#include <future>
 #include <erp/service/AuditEventHandler.hxx>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -296,14 +297,19 @@ TEST_F(ReadOnlyDBTest, GetAuditEvent_UC_3_5)
 
 TEST_F(ReadOnlyDBTest, isPushRegistered)
 {
+    std::promise<void> p;
+    auto f = p.get_future();
+
     // expect a single call to create an instance of ReadOnlyDatabase
     EXPECT_CALL(*this, readOnlyPushDb).Times(1).WillOnce([&](HsmPool&) {
         auto backend = std::make_unique<ROPushErpMockBackend>();
         EXPECT_CALL(*backend, isPushRegistered).Times(1).WillOnce(testing::Return(true));
+        p.set_value();
         return backend;
     });
 
     auto serviceContext = makePcServiceContext();
+    serviceContext.getTeeServer().serve(1, "testserver");
     mockDatabase(serviceContext.getHsmPool());
 
     RequestHandlerManager teeHandlers;
@@ -351,4 +357,6 @@ TEST_F(ReadOnlyDBTest, isPushRegistered)
     ASSERT_TRUE(handlerResult->success);
     ASSERT_TRUE(handlerResult->postCallback);
     ASSERT_NO_THROW(handlerResult->postCallback());
+    auto res = f.wait_for(std::chrono::seconds{1});
+    EXPECT_EQ(res, std::future_status::ready);
 }

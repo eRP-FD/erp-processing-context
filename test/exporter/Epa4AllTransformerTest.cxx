@@ -6,6 +6,7 @@
 
 #include "test/exporter/Epa4AllTransformerTest.hxx"
 #include "erp/model/KbvPractitioner.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/Task.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
 #include "exporter/ExporterRequirements.hxx"
@@ -20,9 +21,12 @@
 #include "shared/model/KbvMedicationBase.hxx"
 #include "shared/model/KbvMedicationRequest.hxx"
 #include "shared/model/KbvOrganization.hxx"
+#include "shared/model/MedicationDispenseOperationParameters.hxx"
 #include "shared/model/Patient.hxx"
 #include "shared/model/ResourceFactory.hxx"
+#include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
+#include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
 #include <gtest/gtest.h>
@@ -1328,3 +1332,30 @@ INSTANTIATE_TEST_SUITE_P(Epa4AllTransformerTest, Epa4AllTransformerTestP,
                                          Versions{.kbvVersion = ResourceTemplates::Versions::KBV_ERP_1_4_4,
                                                   .gemVersion = ResourceTemplates::Versions::GEM_ERP_1_6_2}),
                          &Epa4AllTransformerTestP::name);
+
+TEST_F(Epa4AllTransformerTest, Erp38096AtcVersion)
+{
+    auto xml = ResourceManager::instance().getStringResource(
+        "test/fhir/transformer/ibm_erp-38096-atc-version/close-input-param.xml");
+    model::MedicationsAndDispenses medicationsAndDispenses;
+    medicationsAndDispenses.addFromParameters(model::MedicationDispenseOperationParameters::fromXmlNoValidation(xml));
+    model::MedicationDispenseBundle medicationDispenseBundle1{"", medicationsAndDispenses.medicationDispenses,
+                                                              medicationsAndDispenses.medications};
+    auto medicationDispenseBundle =
+        model::Bundle::fromXmlNoValidation(medicationDispenseBundle1.serializeToXmlString());
+    auto transformed = Epa4AllTransformer::transformMedicationDispense(
+        medicationDispenseBundle, model::PrescriptionId::fromString("160.000.000.127.516.77"), model::Timestamp::now(),
+        telematikIdFromAccessToken, organizationNameFromJwt, std::string{profession_oid::oid_oeffentliche_apotheke});
+    std::cout << serialize(transformed.jsonDocument()) << std::endl;
+    validate(fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
+                                      "epa-op-provide-dispensation-erp-input-parameters|1.3"},
+             &transformed.jsonDocument());
+    checkExpression("parameter[0].part[4].resource.code.coding[0].version.exists()",
+                    fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
+                                             "epa-op-provide-prescription-erp-input-parameters"},
+                    &transformed.jsonDocument());
+    checkExpression("parameter[0].part[4].resource.ingredient[0].itemCodeableConcept.coding[0].version.exists()",
+                    fhirtools::DefinitionKey{"https://gematik.de/fhir/epa-medication/StructureDefinition/"
+                                             "epa-op-provide-prescription-erp-input-parameters"},
+                    &transformed.jsonDocument());
+}

@@ -140,6 +140,7 @@ list(
         service/push/PostChannels.cxx
         service/push/PostPushersSet.cxx
         service/push/PushersRequestHandler.cxx
+        service/push/PushEventCreator.cxx
         service/push/PushResponseBuilder.cxx
         service/task/AbortTaskHandler.cxx
         service/task/AcceptTaskHandler.cxx

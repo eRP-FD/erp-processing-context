@@ -6,6 +6,7 @@
  */
 
 #include "ServerRequest.hxx"
+#include "shared/model/PrescriptionId.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/UrlHelper.hxx"
 
@@ -161,4 +162,20 @@ const JWT& ServerRequest::getAccessToken() const
 ServerRequest::Type ServerRequest::getType() const
 {
     return mType;
+}
+
+std::optional<model::PrescriptionId> ServerRequest::tryParsePrescriptionIdFromPathId() const
+{
+    if (const auto idParam = getPathParameter("id"))
+    {
+        try
+        {
+            return model::PrescriptionId::fromString(idParam.value());
+        }
+        catch (const std::exception&)
+        {
+            return std::nullopt;
+        }
+    }
+    return std::nullopt;
 }

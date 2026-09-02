@@ -22,6 +22,9 @@
 #include "shared/idp/Idp.hxx"
 #include "shared/server/BaseServiceContext.hxx"
 
+#include <boost/asio/any_io_executor.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/strand.hpp>
 #include <functional>
 #include <memory>
 
@@ -40,6 +43,7 @@ class SeedTimerHandler;
 class Tpm;
 class RequestHandlerManager;
 class RegistrationManager;
+class PushEventCreator;
 
 namespace erp
 {
@@ -112,6 +116,7 @@ public:
     std::shared_ptr<RegistrationInterface> registrationInterface() const;
 
     BaseHttpsServer& getTeeServer() const;
+    PushEventCreator& getPushEventCreator();
 
     std::unique_ptr<erp::RuntimeConfigurationGetter> getRuntimeConfigurationGetter() const;
     std::unique_ptr<erp::RuntimeConfigurationSetter> getRuntimeConfigurationSetter() const;
@@ -122,6 +127,9 @@ public:
     PcServiceContext& operator=(PcServiceContext&& other) = delete;
 
 private:
+    std::unique_ptr<BaseHttpsServer> createTeeServer(const Configuration& configuration, const Factories& factories);
+
+
     /**
      * As database connections to "real" databases are a precious commodity, we are not supposed to hold
      * one for a longer time. Therefore Database objects, which represent (the connection to) an external database
@@ -148,6 +156,7 @@ private:
     gsl::not_null<std::shared_ptr<erp::RuntimeConfiguration>> mRuntimeConfiguration;
 
     std::unique_ptr<IPoPPCertificateVerifierService> mPoPPService;
+    std::unique_ptr<PushEventCreator> mPushEventCreator;
 };
 
 class SessionContext;

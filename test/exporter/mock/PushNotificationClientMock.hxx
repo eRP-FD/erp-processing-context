@@ -18,8 +18,10 @@ class PushNotificationClientMock : public PushGatewayClient
 public:
     MOCK_METHOD(ClientResponse, send,
                 (const UrlHelper::UrlParts& url, HttpMethod method, const std::string& body,
-                 const std::string& contentType),
+                 const std::string& contentType,
+                 const std::string& requestId),
                 (const, override));
     MOCK_METHOD(ClientResponse, sendPushNotification,
-                (const model::EncryptedNotification& encryptedNotification, const std::string& baseUrl), (override));
+                (const model::EncryptedNotification& encryptedNotification, const std::string& baseUrl,
+                 const std::string& requestId), (override));
 };

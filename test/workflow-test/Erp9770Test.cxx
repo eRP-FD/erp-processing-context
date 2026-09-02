@@ -19,5 +19,6 @@ TEST_F(Erp9770Test, run)//NOLINT(readability-function-cognitive-complexity)
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 3954242);
     send(RequestArguments(HttpMethod::DELETE, "/ChargeItem/" + prescriptionId.toString(), "{}")
              .withJwt(jwtVersicherter())
-             .withExpectedInnerStatus(HttpStatus::NotFound));
+             .withExpectedInnerStatus(HttpStatus::NotFound)
+             .withExpectedBdeUseCase(bde::DeleteChargeItem_UC_3_11));
 }

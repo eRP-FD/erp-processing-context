@@ -67,6 +67,7 @@ public:
     RequestHandlerContext& setErpUseCase(ErpUseCaseT&& uc);
     bde::UseCase getErpUseCase(std::optional<model::PrescriptionId> prescriptionId,
                                std::optional<std::string_view> professionOid) const;
+    std::optional<bde::UseCase> tryGetErpUseCaseEarly(std::optional<model::PrescriptionId> prescriptionId) const;
     bool isErpUseCaseSet() const;
 
 private:

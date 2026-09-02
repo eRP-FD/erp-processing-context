@@ -11,6 +11,7 @@
 struct Erp8538TestParams {
     std::string operation;
     std::function<JWT()> jwtBuilder;
+    std::optional<bde::UseCase> useCase;
 };
 std::ostream& operator<<(std::ostream& os, const Erp8538TestParams& p)
 {
@@ -33,6 +34,7 @@ TEST_P(Erp8538Test, PostOperationWithInvalidPrescriptionId)
     requestArguments.overrideExpectedInnerRole = "";
     requestArguments.overrideExpectedKbvVersion = "XXX";
     requestArguments.overrideExpectedWorkflowVersion = "XXX";
+    requestArguments.expectedBdeUseCase = GetParam().useCase;
 
     const auto& [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
@@ -43,8 +45,8 @@ TEST_P(Erp8538Test, PostOperationWithInvalidPrescriptionId)
 INSTANTIATE_TEST_SUITE_P(
     x, Erp8538Test,
     testing::Values(Erp8538TestParams{"$abort",
-                                      []() { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }},
-                    Erp8538TestParams{"$activate", []() { return JwtBuilder::testBuilder().makeJwtArzt(); }},
-                    Erp8538TestParams{"$accept", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }},
-                    Erp8538TestParams{"$close", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }},
-                    Erp8538TestParams{"$reject", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }}));
+                                      []() { return JwtBuilder::testBuilder().makeJwtVersicherter("X123456788"); }, bde::AbortTaskPatient_UC_3_2},
+                    Erp8538TestParams{"$activate", []() { return JwtBuilder::testBuilder().makeJwtArzt(); }, std::nullopt},
+                    Erp8538TestParams{"$accept", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }, bde::AcceptTask_UC_4_1},
+                    Erp8538TestParams{"$close", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }, bde::CloseTask_UC_4_4},
+                    Erp8538TestParams{"$reject", []() { return JwtBuilder::testBuilder().makeJwtApotheke(); }, bde::RejectTask_UC_4_2}));

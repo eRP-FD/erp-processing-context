@@ -30,9 +30,11 @@ public:
     {
     }
     ClientResponse send(const UrlHelper::UrlParts& url, HttpMethod method, const std::string& body,
-                        const std::string& contentType) const override;
+                        const std::string& contentType,
+                        const std::string& requestId = "") const override;
     ClientResponse sendPushNotification(const model::EncryptedNotification& encryptedNotification,
-                                        const std::string& baseUrl) override;
+                                        const std::string& baseUrl,
+                                        const std::string& requestId = "") override;
 
 
     std::shared_ptr<CrlProvider> mCrlProvider;// holds ownership for RequestSender
@@ -82,17 +84,21 @@ std::unique_ptr<UrlRequestSender> PushGatewayClientImpl::createRequestSender(Crl
 }
 
 ClientResponse PushGatewayClientImpl::send(const UrlHelper::UrlParts& url, const HttpMethod method,
-                                           const std::string& body, const std::string& contentType) const
+                                           const std::string& body, const std::string& contentType,
+                                           const std::string& requestId) const
 {
+    Header::keyValueMap_t requestIdHeader {{Header::XRequestId, requestId}};
+    mRequestSender->setAdditionalHeaders(std::move(requestIdHeader));
     return mRequestSender->send(url, method, body, contentType);
 }
 
 ClientResponse PushGatewayClientImpl::sendPushNotification(const model::EncryptedNotification& encryptedNotification,
-                                                           const std::string& baseUrl)
+                                                           const std::string& baseUrl,
+                                                           const std::string& requestId)
 {
     A_27163.start("den gespeicherten Endpunkt des Push Gateways unter Verwendung von [OpenApi_Notification_PushGateway] aufrufen");
     auto url = UrlHelper::parseUrl(baseUrl);
     url.appendPath("notifyEncrypted/batch");
     return send(url, HttpMethod::POST, model::serializePushNotifications({{Uuid{}.toString(), encryptedNotification}}),
-                "application/json");
+                "application/json", requestId);
 }

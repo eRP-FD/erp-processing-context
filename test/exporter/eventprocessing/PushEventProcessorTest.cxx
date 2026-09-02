@@ -8,6 +8,7 @@
 #include "exporter/eventprocessing/push/PushEventProcessor.hxx"
 #include "erp/database/push/PushExporterDatabaseException.hxx"
 #include "exporter/client/push/PushGatewayClient.hxx"
+#include "shared/model/ModelException.hxx"
 #include "exporter/model/push/PushNotificationContext.hxx"
 #include "exporter/pc/MedicationExporterFactories.hxx"
 #include "exporter/pc/MedicationExporterServiceContext.hxx"
@@ -162,7 +163,7 @@ TEST_F(PushEventProcessorTest, processEvent_Good)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, ""}));
 
@@ -190,7 +191,7 @@ TEST_F(PushEventProcessorTest, process_Good)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, ""}));
     EXPECT_CALL(exporterDbMock, deletePushNotification(testing::_, testing::Eq(123))).Times(1);
@@ -237,7 +238,7 @@ TEST_P(PushEventProcessorExponentialBackoffTest, exponentialBackoff)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::InternalServerError}, ""}));
 
@@ -285,7 +286,7 @@ TEST_F(PushEventProcessorTest, exponentialBackoffMaxRetries)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::BadRequest}, ""}));
 
@@ -320,7 +321,7 @@ TEST_F(PushEventProcessorTest, eventTooOld)
             makePushNotificationContext(ymd, 123, 0, model::Timestamp::now() - 13h)}));
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::InternalServerError}, ""}));
 
@@ -353,7 +354,7 @@ TEST_F(PushEventProcessorTest, pushGatewayFailing)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::InternalServerError}, ""}));
 
@@ -366,7 +367,7 @@ TEST_F(PushEventProcessorTest, pushGatewayFailing)
 
     // restore after 10s cooldown
     std::this_thread::sleep_for(std::chrono::seconds{10});
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, ""}));
     ASSERT_NO_THROW(result = processor.process());
@@ -412,7 +413,7 @@ TEST_F(PushEventProcessorTest, pushKeyRejected)
         R"({"results":[{"id":"9ef1ea9f-3afd-4c56-a838-3ee6efe8fac6","status":"success","rejected":["##PUSHKEY##"],"error":null}],"summary":{"total":1,"successful":1,"failed":0,"partial":0}})";
     body = String::replaceAll(body, "##PUSHKEY##", pushNotificationContext.device().pushkey());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, body}));
     EXPECT_CALL(exporterDbMock, deletePushNotification(testing::_, testing::Eq(123))).Times(1);
@@ -441,7 +442,7 @@ TEST_F(PushEventProcessorTest, okFailed)
 
     auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
     ASSERT_TRUE(clientMock);
-    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_))
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
         .Times(1)
         .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, R"({"results": [{"id": "9ef1ea9f-3afd-4c56-a838-3ee6efe8fac6", "status": "failed", "rejected": [], "error": "Could not derive push provider from appId=app_id"}], "summary": {"total": 1, "successful": 0, "failed": 1, "partial": 0}})"}));
 
@@ -452,5 +453,95 @@ TEST_F(PushEventProcessorTest, okFailed)
 
     PushEventProcessor::ResultType result{PushEventProcessor::ResultType::FailureRetry};
     ASSERT_NO_THROW(result = processor.process());
+    EXPECT_EQ(result, PushEventProcessor::ResultType::FailureRetry);
+}
+
+TEST_F(PushEventProcessorTest, processEvents_ModelException)
+{
+    PushEventProcessor processor{serviceContext, client.get()};
+    const date::year_month_day ymd{model::Timestamp::now().localDay()};
+
+    auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
+    ASSERT_TRUE(clientMock);
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
+        .Times(1)
+        .WillOnce(testing::Throw(model::ModelException{"some client exception"}));
+
+    EXPECT_CALL(exporterDbMock, updatePushProcessingDelay(testing::_, testing::_, testing::_, testing::_)).Times(1);
+
+    const std::vector<model::PushNotificationContext> events{makePushNotificationContext(ymd, 123)};
+    PushEventProcessor::ResultType result{PushEventProcessor::ResultType::Success};
+    ASSERT_NO_THROW(result = processor.processEvents(events));
+    EXPECT_EQ(result, PushEventProcessor::ResultType::FailureRetry);
+}
+
+TEST_F(PushEventProcessorTest, processEvents_StdException)
+{
+    PushEventProcessor processor{serviceContext, client.get()};
+    const date::year_month_day ymd{model::Timestamp::now().localDay()};
+
+    auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
+    ASSERT_TRUE(clientMock);
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
+        .Times(1)
+        .WillOnce(testing::Throw(std::runtime_error{"some client exception"}));
+
+    EXPECT_CALL(exporterDbMock, updatePushProcessingDelay(testing::_, testing::_, testing::_, testing::_)).Times(1);
+
+    const std::vector<model::PushNotificationContext> events{makePushNotificationContext(ymd, 123)};
+    PushEventProcessor::ResultType result{PushEventProcessor::ResultType::Success};
+    ASSERT_NO_THROW(result = processor.processEvents(events));
+    EXPECT_EQ(result, PushEventProcessor::ResultType::FailureRetry);
+}
+
+TEST_F(PushEventProcessorTest, processEvents_MultiEvent_SuccessAndRetry)
+{
+    PushEventProcessor processor{serviceContext, client.get()};
+    const date::year_month_day ymd{model::Timestamp::now().localDay()};
+
+    auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
+    ASSERT_TRUE(clientMock);
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
+        .Times(2)
+        .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, ""}))
+        .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::InternalServerError}, ""}));
+
+    EXPECT_CALL(exporterDbMock, deletePushNotification(testing::_, testing::Eq(123))).Times(1);
+    EXPECT_CALL(exporterDbMock, updatePushProcessingDelay(testing::_, testing::_, testing::_, testing::_)).Times(0);
+
+    const std::vector<model::PushNotificationContext> events{makePushNotificationContext(ymd, 123),
+                                                             makePushNotificationContext(ymd, 123)};
+    PushEventProcessor::ResultType result{PushEventProcessor::ResultType::FailureRetry};
+    ASSERT_NO_THROW(result = processor.processEvents(events));
+    EXPECT_EQ(result, PushEventProcessor::ResultType::Success);
+}
+
+TEST_F(PushEventProcessorTest, processEvents_MultiEvent_RejectedAndRetry)
+{
+    PushEventProcessor processor{serviceContext, client.get()};
+    const date::year_month_day ymd{model::Timestamp::now().localDay()};
+
+    auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
+    ASSERT_TRUE(clientMock);
+
+    const auto context0 = makePushNotificationContext(ymd, 123);
+    const auto context1 = makePushNotificationContext(ymd, 123);
+
+    std::string rejectedBody =
+        R"({"results":[{"id":"9ef1ea9f-3afd-4c56-a838-3ee6efe8fac6","status":"success","rejected":["##PUSHKEY##"],"error":null}],"summary":{"total":1,"successful":1,"failed":0,"partial":0}})";
+    rejectedBody = String::replaceAll(rejectedBody, "##PUSHKEY##", context0.device().pushkey());
+
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
+        .Times(2)
+        .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, rejectedBody}))
+        .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::InternalServerError}, ""}));
+
+    EXPECT_CALL(mainDbMock, deletePushKey).Times(1);
+    EXPECT_CALL(exporterDbMock, updatePushProcessingDelay(testing::_, testing::_, testing::_, testing::_)).Times(1);
+    EXPECT_CALL(exporterDbMock, deletePushNotification(testing::_, testing::_)).Times(0);
+
+    const std::vector<model::PushNotificationContext> events{context0, context1};
+    PushEventProcessor::ResultType result{PushEventProcessor::ResultType::Success};
+    ASSERT_NO_THROW(result = processor.processEvents(events));
     EXPECT_EQ(result, PushEventProcessor::ResultType::FailureRetry);
 }

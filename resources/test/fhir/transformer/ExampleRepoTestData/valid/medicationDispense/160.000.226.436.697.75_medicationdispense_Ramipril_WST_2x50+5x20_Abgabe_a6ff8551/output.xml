@@ -39,7 +39,7 @@
                      <reference value="Organization/e0f00285-351a-4f20-8023-f829338440c0"/>
                   </actor>
                </performer>
-               <whenHandedOver value="2024-07-02T12:01:22+02:00"/>
+               <whenHandedOver value="2024-07-02"/>
             </MedicationDispense>
          </resource>
       </part>

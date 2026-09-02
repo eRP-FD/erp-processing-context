@@ -2613,6 +2613,10 @@ void ErpWorkflowTestBase::verifyBdeV2Headers(const Header& outerResponseHeader, 
     {
         EXPECT_EQ(bdeUseCase, to_string(*args.expectedBdeUseCase));
     }
+    else
+    {
+        EXPECT_EQ(bdeUseCase, "ERP.VAU");
+    }
 }
 
 void ErpWorkflowTestBase::validateInternal(const ClientResponse& innerResponse)

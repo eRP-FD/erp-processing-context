@@ -61,21 +61,6 @@ public:
 };
 bool HealthHandlerTestMockDatabase::fail = false;
 
-class HealthHandlerTestMockPushExporterDatabase : public MockPushExporterDatabase
-{
-public:
-    using MockPushExporterDatabase::MockPushExporterDatabase;
-    void healthCheck() override
-    {
-        if (fail)
-        {
-            throw std::runtime_error("CONNECTION FAILURE");
-        }
-    }
-    static bool fail;
-};
-bool HealthHandlerTestMockPushExporterDatabase::fail = false;
-
 class HealthHandlerTestHsmMockClient : public HsmMockClient
 {
 public:
@@ -163,6 +148,7 @@ public:
     HealthHandlerTest()
         : mBlobCache(MockBlobDatabase::createBlobCache(MockBlobCache::MockTarget::MockedHsm))
         , mServiceContext()
+        , mMockPushExporterDatabase{std::make_shared<testing::NiceMock<MockPushExporterDatabase>>()}
         , request({})
         , response()
         , mContext()
@@ -235,13 +221,9 @@ public:
             }
             return std::make_unique<DatabaseFrontend>(std::make_unique<MockDatabaseProxy>(md), hsmPool, keyDerivation);
         };
-        factories.pushExporterDatabaseFactory = [md = std::shared_ptr<HealthHandlerTestMockPushExporterDatabase>{}](
-                                        HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
-            if (!md)
-            {
-                md = std::make_shared<HealthHandlerTestMockPushExporterDatabase>();
-            }
-            return std::make_unique<PushExporterDatabase>(std::make_unique<MockPushExporterDatabaseProxy>(md), hsmPool, keyDerivation);
+        factories.pushExporterDatabaseFactory = [this](HsmPool& hsmPool, KeyDerivation& keyDerivation) mutable {
+            return std::make_unique<PushExporterDatabase>(
+                std::make_unique<MockPushExporterDatabaseProxy>(mMockPushExporterDatabase), hsmPool, keyDerivation);
         };
 
         factories.redisClientFactory = [](std::chrono::milliseconds){return std::make_unique<HealthHandlerTestMockRedisStore>();};
@@ -303,6 +285,7 @@ public:
 protected:
     std::shared_ptr<BlobCache> mBlobCache;
     std::unique_ptr<PcServiceContext> mServiceContext;
+    std::shared_ptr<MockPushExporterDatabase> mMockPushExporterDatabase;
     ServerRequest request;
     ServerResponse response;
     AccessLog mAccessLog;
@@ -695,9 +678,15 @@ TEST_F(HealthHandlerTest, PoPPDown)
 
 TEST_F(HealthHandlerTest, eventDbDown)
 {
-    HealthHandlerTestMockPushExporterDatabase::fail = true;
+    bool fail = true;
+    EXPECT_CALL(*mMockPushExporterDatabase, healthCheck()).WillRepeatedly([&fail]{
+        if (fail)
+        {
+            throw std::runtime_error("CONNECTION FAILURE");
+        }
+    });
     ASSERT_NO_THROW(handleRequest());
-    HealthHandlerTestMockPushExporterDatabase::fail = false;
+    fail = false;
 
     ASSERT_EQ(mContext->response.getHeader().status(), HttpStatus::OK);
     ASSERT_FALSE(mContext->response.getBody().empty());

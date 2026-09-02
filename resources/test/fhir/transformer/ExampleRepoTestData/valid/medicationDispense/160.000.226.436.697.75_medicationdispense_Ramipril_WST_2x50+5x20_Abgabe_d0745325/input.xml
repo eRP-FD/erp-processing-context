@@ -78,5 +78,5 @@
          </identifier>
       </actor>
    </performer>
-   <whenHandedOver value="2024-07-02T12:01:22+02:00"/>
+   <whenHandedOver value="2024-07-02"/>
 </MedicationDispense>

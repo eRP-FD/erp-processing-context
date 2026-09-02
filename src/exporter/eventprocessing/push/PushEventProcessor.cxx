@@ -131,6 +131,7 @@ PushEventProcessor::processEvents(const std::vector<model::PushNotificationConte
             jlog << KeyValue("event", "Push Notification");
             jlog << KeyValue("reason", "ModelException during event processing");
             jlog << KeyValue(event.pushNotification().identifierType(), event.pushNotification().identifier());
+            combinedResult = std::min(combinedResult, ResultType::FailureRetry);
         }
         catch (const std::exception& ex)
         {
@@ -138,6 +139,7 @@ PushEventProcessor::processEvents(const std::vector<model::PushNotificationConte
             jlog << KeyValue("event", "Push Notification") << KeyValue("what", ex.what());
             jlog << KeyValue("reason", "exception during event processing");
             jlog << KeyValue(event.pushNotification().identifierType(), event.pushNotification().identifier());
+            combinedResult = std::min(combinedResult, ResultType::FailureRetry);
         }
     }
     switch (combinedResult)
@@ -204,7 +206,7 @@ PushEventProcessor::ResultType PushEventProcessor::processEvent(const model::Pus
                   "hinterlegte URL (aus: data/url) übermittelt werden.");
     const auto start = model::Timestamp::now();
     // GEMREQ-start A_27652
-    const auto response = mClient->sendPushNotification(encryptedNotification, event.device().data().mUrl);
+    const auto response = mClient->sendPushNotification(encryptedNotification, event.device().data().mUrl, *tlogContext);
     // GEMREQ-end A_27652
     // GEMREQ-end A_27161#processEvent
     return processResponse(event, response, model::Timestamp::now() - start, model::Timestamp::now() - event.created());

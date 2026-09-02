@@ -200,7 +200,7 @@ TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskAbort_NewlyCreate
 
 TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskLifecycleNormal)// NOLINT
 {
-    const model::PrescriptionType workflowType = model::PrescriptionType::apothekenpflichigeArzneimittel;
+    const model::PrescriptionType workflowType = model::PrescriptionType::digitaleGesundheitsanwendungen;
 
     std::optional<model::PrescriptionId> prescriptionId;
     std::string accessCode;
@@ -323,10 +323,10 @@ TEST_F(ErpWorkflowPushEventsTest,
                                 jwtApotheke(), ContentMimeType::fhirXmlUtf8, *chargeItem2Changed,
                                 dispenseBundle.serializeToXmlString(), chargeItem2Changed->accessCode().value()));
     const std::set<model::ChannelId> pushEventChannels = channelsFromPushEvents();
-    EXPECT_EQ(pushEventChannels.size(), 5);
+    EXPECT_EQ(pushEventChannels.size(), 4);
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_chargeitem_create));
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_chargeitem_update));
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_activate));
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_accept));
-    EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_close));
+    // No close event, due to workflow type.
 }

@@ -478,15 +478,31 @@ TEST_F(IdpUpdaterTest, DISABLED_IdpUpdateAfterTslUpdate)
 }
 
 /**
- * Simulate an unstable IDP endpoint where at least 2 retries are required to get a valid response
+ * Simulate an unstable IDP endpoint where at least 2 retries are required to get a valid response.
+ * The production code resolves the IDP hostname and retries across all returned IP addresses,
+ * so this test requires the hostname to resolve to at least 3 IPs (the mock fails the first 2,
+ * then succeeds on the 3rd). If fewer IPs are available the test is skipped.
  */
 TEST_F(IdpUpdaterTest, initializeWithForcedRetries) // NOLINT(readability-function-cognitive-complexity)
 {
     // instead of the LU configuration use the prod config which has the advantage that
     // it returns more than one DNS entry which are tried one after another then
-    EnvironmentVariableGuard idpEndpoint(
-        ConfigurationKey::IDP_UPDATE_ENDPOINT,
-        "https://idp.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration");
+    const std::string idpEndpointUrl =
+        "https://idp.zentral.idp.splitdns.ti-dienste.de/.well-known/openid-configuration";
+    EnvironmentVariableGuard idpEndpoint(ConfigurationKey::IDP_UPDATE_ENDPOINT, idpEndpointUrl);
+
+    // Resolve the hostname upfront and skip if fewer than 3 IPs are available.
+    const auto parsedUrl = UrlHelper::parseUrl(idpEndpointUrl);
+    boost::asio::io_context resolveIo;
+    const auto resolverResults = boost::asio::ip::tcp::resolver{resolveIo}.resolve(
+        parsedUrl.mHost, std::to_string(parsedUrl.mPort));
+    const auto ipCount = std::distance(resolverResults.begin(), resolverResults.end());
+    if (ipCount < 3)
+    {
+        GTEST_SKIP() << "initializeWithForcedRetries requires >=3 IP addresses for "
+                     << parsedUrl.mHost << " (got " << ipCount << ")";
+    }
+
     Idp idp;
     auto tslManager = createAndSetupTslManager();
 

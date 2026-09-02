@@ -15,6 +15,7 @@
 #include "erp/pc/popp/PoPPCertificateVerifierService.hxx"
 #include "erp/registration/RegistrationInterface.hxx"
 #include "erp/registration/RegistrationManager.hxx"
+#include "erp/service/push/PushEventCreator.hxx"
 #include "erp/util/RuntimeConfiguration.hxx"
 #include "shared/ErpRequirements.hxx"
 #include "shared/crypto/EllipticCurveUtils.hxx"
@@ -38,8 +39,9 @@ std::unique_ptr<RateLimiter> createRateLimiter(std::shared_ptr<RedisInterface>& 
         std::chrono::milliseconds(Configuration::instance().getIntValue(ConfigurationKey::TOKEN_ULIMIT_TIMESPAN_MS));
     return std::make_unique<RateLimiter>(redisClient, "ERP-PC-DOS", calls, timespan);
 }
-}
 
+
+}
 
 // GEMREQ-start A_20974-01
 PcServiceContext::PcServiceContext(const Configuration& configuration, const Factories& factories)
@@ -62,8 +64,10 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     , mRegistrationInterface(
           std::make_shared<RegistrationManager>(configuration.serverHost(), configuration.serverPort(),
                                                 factories.redisClientFactory(std::chrono::seconds(0))))
+    , mTeeServer{createTeeServer(configuration, factories)}
     // GEMREQ-end A_20974-01
     , mRuntimeConfiguration(std::make_shared<erp::RuntimeConfiguration>())
+    , mPushEventCreator{std::make_unique<PushEventCreator>(mTeeServer->getThreadPool().ioContext())}
 {
     setupTslRefreshJob(std::chrono::seconds{configuration.getIntValue(ConfigurationKey::TSL_REFRESH_INTERVAL)});
     Expect3(mDatabaseFactory != nullptr, "database factory has been passed as nullptr to ServiceContext constructor",
@@ -73,12 +77,6 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
     applicationHealth().enableChecks({Bna, Hsm, Idp, Postgres, PostgresRO, PrngSeed, Redis, TeeToken, Tsl});
     // Not contributing to application health down state:
     applicationHealth().enableSoftChecks({CFdSigErp, PoPPService, EventDb});
-
-    RequestHandlerManager teeHandlers;
-    ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
-    mTeeServer =
-        factories.teeServerFactory(HttpsServer::defaultHost, configuration.serverPort(), std::move(teeHandlers), *this,
-                                   false, configuration.getSafeStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE));
 
     {
         auto requestSender = std::make_shared<UrlRequestSender>(
@@ -120,6 +118,16 @@ PcServiceContext::~PcServiceContext()
     {
         mReportPseudonameKeyRefreshJob->shutdown();
     }
+}
+
+
+std::unique_ptr<BaseHttpsServer> PcServiceContext::createTeeServer(const Configuration& configuration, const Factories& factories)
+{
+    RequestHandlerManager teeHandlers;
+    ErpProcessingContext::addPrimaryEndpoints(teeHandlers);
+    return factories.teeServerFactory(HttpsServer::defaultHost, configuration.serverPort(), std::move(teeHandlers), *this,
+                                      false, configuration.getSafeStringValue(ConfigurationKey::SERVER_PROXY_CERTIFICATE));
+
 }
 
 PreUserPseudonymManager& PcServiceContext::getPreUserPseudonymManager()
@@ -224,6 +232,11 @@ std::shared_ptr<RegistrationInterface> PcServiceContext::registrationInterface()
 BaseHttpsServer& PcServiceContext::getTeeServer() const
 {
     return *mTeeServer;
+}
+
+PushEventCreator& PcServiceContext::getPushEventCreator()
+{
+    return *mPushEventCreator;
 }
 
 std::unique_ptr<erp::RuntimeConfigurationGetter> PcServiceContext::getRuntimeConfigurationGetter() const

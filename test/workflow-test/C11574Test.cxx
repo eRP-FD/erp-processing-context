@@ -54,7 +54,8 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
         ASSERT_NO_FATAL_FAILURE(
             std::tie(std::ignore, serverResponse) =
                 send(RequestArguments{HttpMethod::POST, dispensePath, dispenseBody, "application/fhir+xml"}
-                    .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+                    .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                    .withExpectedBdeUseCase(bde::TaskDispense_UC_4_16)));
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::NoContent) << serverResponse.getBody();
     }
 
@@ -76,7 +77,8 @@ TEST_P(C11574Test, successful)//NOLINT(readability-function-cognitive-complexity
         ASSERT_NO_FATAL_FAILURE(
             std::tie(std::ignore, serverResponse) =
                 send(RequestArguments{HttpMethod::POST, rejectPath, {}, "application/fhir+xml"}
-                    .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))));
+                    .withJwt(jwt).withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+                    .withExpectedBdeUseCase(bde::RejectTask_UC_4_2)));
         ASSERT_EQ(serverResponse.getHeader().status(), HttpStatus::NoContent);
     }
 

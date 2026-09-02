@@ -215,9 +215,12 @@ void CloseTaskHandler::handleRequest(PcSessionContext& session)
         .setPrescriptionId(prescriptionId);
     A_28115.start("Collect push event data.");
     A_28129.start("Data from Close Task handler.");
-    session.pushEventDataCollector()
-        .setKvnr(*kvnr)
-        .setPrescriptionId(task.prescriptionId());
+    if (task.prescriptionId().type() == model::PrescriptionType::digitaleGesundheitsanwendungen)
+    {
+        session.pushEventDataCollector()
+            .setKvnr(*kvnr)
+            .setPrescriptionId(task.prescriptionId());
+    }
     A_28129.finish();
     A_28115.finish();
 }

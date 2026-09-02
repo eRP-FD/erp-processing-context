@@ -7,19 +7,7 @@
 
 #include "test/mock/MockPushExporterDatabase.hxx"
 
-void MockPushExporterDatabase::healthCheck()
+MockPushExporterDatabase::MockPushExporterDatabase()
 {
-}
-
-void MockPushExporterDatabase::commitTransaction()
-{
-}
-
-void MockPushExporterDatabase::closeConnection()
-{
-}
-
-bool MockPushExporterDatabase::isCommitted() const
-{
-    return true;
+    ON_CALL(*this, isCommitted()).WillByDefault(testing::Return(true));
 }

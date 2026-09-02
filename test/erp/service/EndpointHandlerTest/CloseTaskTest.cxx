@@ -172,7 +172,7 @@ public:
 TEST_F(CloseTaskInputTest, CloseTask)
 {
     using namespace std::string_literals;
-    A_22069_02.test("Task schliessen - Speicherung mehrerer MedicationDispenses");
+    A_28666.test("Task schliessen - Speicherung mehrerer MedicationDispenses");
     const auto& testConfig = TestConfiguration::instance();
 
     CloseTaskHandler handler({});

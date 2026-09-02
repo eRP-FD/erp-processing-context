@@ -39,7 +39,7 @@
                      <reference value="Organization/8f903d89-d9f1-4db5-9ad8-3532a4726b36"/>
                   </actor>
                </performer>
-               <whenHandedOver value="2024-07-02T09:34:04+02:00"/>
+               <whenHandedOver value="2024-07-02"/>
                <dosageInstruction>
                   <text value="1 Pflaster am Tag"/>
                </dosageInstruction>

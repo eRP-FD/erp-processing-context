@@ -234,6 +234,8 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
         containedMedicationOpt->setId(Uuid{}.toString());
 
         auto transformedMedication = transformKbvMedication(*containedMedicationOpt);
+        patchTransformedAtcMedication(transformedMedication,
+                                      sourceResource.whenHandedOver().toXsGYear(model::Timestamp::GermanTimezone));
 
         F_014.start("Eine Unterscheidung nach GKV und PKV im System findet beim Mapping nicht mehr statt.");
         const std::vector<fhirtools::ValueMapping> dispenseValueMappings{
@@ -266,9 +268,11 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
     auto parameters = transformMedicationDispenseCommon(prescriptionId, authoredOn, actorTelematikId,
                                                         actorOrganizationName, organizationProfessionOid);
 
+    model::Timestamp whenHandedOver{0.0};
     for (auto& medicationDispense : medicationDispenseBundle.getResourcesByType<model::MedicationDispense>())
     {
         medicationDispense.setMetaProfile0(to_string(EpaMedicationDispenseProfile));
+        whenHandedOver = std::max(whenHandedOver, medicationDispense.whenHandedOver());
         const Uuid medicationReference{medicationDispense.medicationReference()};
         if (medicationReference.isValidIheUuid())
         {
@@ -283,7 +287,9 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
     for (auto& medication : medicationDispenseBundle.getResourcesByType<model::UnspecifiedResource>("Medication"))
     {
         medication.setMetaProfile0(to_string(EpaMedicationProfile));
-        parameters.addMedication(medication.jsonDocument());
+        auto document{std::move(medication).jsonDocument()};
+        patchTransformedAtcMedication(document, whenHandedOver.toXsGYear(model::Timestamp::GermanTimezone));
+        parameters.addMedication(document);
     }
 
     parameters.removeEmptyObjectsAndArrays();
@@ -380,6 +386,63 @@ model::EPAOpProvideDispensationERPInputParameters Epa4AllTransformer::transformM
     return parameters;
 }
 
+void Epa4AllTransformer::patchTransformedAtcMedication(model::NumberAsStringParserDocument& document,
+                                                       const std::string& patchVersion)
+{
+    // patch all Medication.code.coding[*].version if .system=="http://fhir.de/CodeSystem/bfarm/atc"
+    const rapidjson::Pointer codeCodingPtr{"/code/coding"};
+    const rapidjson::Pointer codingPtr{"/coding"};
+    const rapidjson::Pointer ingredientPtr{"/ingredient"};
+    const rapidjson::Pointer itemCodeableConceptPtr{"/itemCodeableConcept"};
+    auto* coding = codeCodingPtr.Get(document);
+    if (coding && coding->IsArray())
+    {
+        patchTransformedAtcMedicationCoding(document, *coding, patchVersion);
+    }
+
+    // patch all Medication.ingredient[*].itemCodeableConcept.coding[*].version if .system=="http://fhir.de/CodeSystem/bfarm/atc"
+    auto* ingredient = ingredientPtr.Get(document);
+    if (ingredient && ingredient->IsArray())
+    {
+        for (auto& ingredientEntry : ingredient->GetArray())
+        {
+            if (auto* itemCodeableConcept = itemCodeableConceptPtr.Get(ingredientEntry))
+            {
+                auto* ingredientCoding = codingPtr.Get(*itemCodeableConcept);
+                if (ingredientCoding && ingredientCoding->IsArray())
+                {
+                    patchTransformedAtcMedicationCoding(document, *ingredientCoding, patchVersion);
+                }
+            }
+        }
+    }
+}
+
+void Epa4AllTransformer::patchTransformedAtcMedicationCoding(model::NumberAsStringParserDocument& document,
+                                                             rapidjson::Value& coding, const std::string& patchVersion)
+{
+    const rapidjson::Pointer systemPtr{"/system"};
+    const rapidjson::Pointer versionPtr{"/version"};
+    const rapidjson::Pointer _versionPtr{"/_version"};
+    auto codingArray = coding.GetArray();
+    for (auto& codingEntry : codingArray)
+    {
+        if (! versionPtr.Get(codingEntry))
+        {
+            if (const auto* system = systemPtr.Get(codingEntry))
+            {
+                if (system->IsString() && model::NumberAsStringParserDocument::getStringValueFromValue(system) ==
+                                              model::resource::code_system::atc)
+                {
+                    document.setKeyValue(codingEntry, versionPtr, patchVersion);
+                    // remove data absent reason
+                    document.removeEntry(codingEntry, _versionPtr);
+                }
+            }
+        }
+    }
+}
+
 model::NumberAsStringParserDocument
 Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kbvMedication)
 {
@@ -427,8 +490,7 @@ Epa4AllTransformer::transformKbvMedication(const model::KbvMedicationGeneric& kb
         F_005.finish();
     }
 
-    auto transformedMedication =
-        transformResource(EpaMedicationProfile, kbvMedication, medicationValueMappings, {});
+    auto transformedMedication = transformResource(EpaMedicationProfile, kbvMedication, medicationValueMappings, {});
     F_015.start("Medication.code.coding allowlist");
     removeMedicationCodeCodingsByAllowlist(transformedMedication);
     F_015.finish();

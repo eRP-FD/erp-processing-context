@@ -1,0 +1,57 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "commitMessagePrefix": "renovate:",
+  "postUpgradeTasks": {
+    "commands": ["python3 scripts/update-dependencies-md.py"],
+    "fileFilters": ["Dependencies.md"],
+    "executionMode": "branch"
+  },
+  "packageRules": [
+    {
+        "matchManagers": ["docker"],
+        "registryUrls": [
+            "de.icr.io/erp_dev"
+        ]
+    },
+    {
+        "matchManagers": ["conan"],
+        "registryUrls": [
+            "https://center2.conan.io",
+            "https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-2",
+            "https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-internal"
+        ]
+    },
+    {
+        "description": "openssl: open as draft PR only. The package uses a custom +erp suffix and requires manually porting patches (conan-recipes/openssl/patches/) and updating conandata.yml with the new SHA256 before the PR can be completed.",
+        "matchManagers": ["conan"],
+        "matchDepNames": ["openssl"],
+        "allowedVersions": "/^3\\.5\\./",
+        "draftPR": true
+    },
+    {
+        "description": "hsmclient: exclude from Renovate updates",
+        "matchManagers": ["conan"],
+        "matchDepNames": ["hsmclient"],
+        "enabled": false
+    },
+    {
+        "description": "tpmclient: exclude from Renovate updates",
+        "matchManagers": ["conan"],
+        "matchDepNames": ["tpmclient"],
+        "enabled": false
+    },
+    {
+        "description": "Gradle plugin org.sonarqube: pin to v5.1.0.4882.",
+        "matchManagers": ["gradle"],
+        "matchDepNames": ["org.sonarqube"],
+        "allowedVersions": "5.1.0.4882"
+    },
+    {
+        "description": "Gradle plugin pl.allegro.tech.build.axion-release: exclude from Renovate updates",
+        "matchManagers": ["gradle"],
+        "matchDepNames": ["pl.allegro.tech.build.axion-release"],
+        "enabled": false
+    }
+  ]
+}

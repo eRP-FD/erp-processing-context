@@ -152,7 +152,7 @@ protected:
 
 TEST_F(DispenseTaskTest, DispenseTask)//NOLINT(readability-function-cognitive-complexity)
 {
-    A_24283_03.test("Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
+    A_28667.test("Dispensierinformationen bereitstellen - Speicherung mehrerer MedicationDispenses");
     const ResourceTemplates::MedicationDispenseOptions dispenseOptions{.prescriptionId = prescriptionId,
                                                                        .telematikId = telematikId};
     const auto body = dispenseTaskBody({dispenseOptions});
@@ -492,4 +492,3 @@ TEST_F(DispenseTaskDosageValidatorTest, missingDosageInstruction)
         handler.handleRequest(sessionContext), HttpStatus::BadRequest,
         "Validation of rendered dosage-instructions: Missing MedicationDispense.dosageInstruction.");
 }
-

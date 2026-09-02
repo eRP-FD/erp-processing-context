@@ -1251,3 +1251,55 @@ TEST_F(EventProcessorTest, NoThrottleOnLookupEpaUnknown)
     EXPECT_FALSE(output.find("Throttling active") != std::string::npos);
     EXPECT_FALSE(output.find("Throttling inactive") != std::string::npos);
 }
+
+TEST_F(EventProcessorTest, kvnrProcessingAfter100Events)
+{
+    const model::Kvnr kvnr{"X000000012"};
+    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
+                                     0);
+    insertTaskKvnr(kvnr);
+    for (int i = 0; i < 100; ++i)
+    {
+        auto id =
+            model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 999 + i);
+        insertTaskEvent(kvnr, id.toString(), model::TaskEvent::UseCase::providePrescription,
+                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                        mDoctorIdentity, std::nullopt);
+    }
+    (void) Fhir::instance();
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
+
+    auto originalEvents = createDbFrontendCommitGuard(TransactionMode::autocommit).db().getAllEventsForKvnr(eventKvnr);
+    ASSERT_EQ(originalEvents.size(), 100);
+    MedicationExporterDatabaseFrontendInterface::taskevents_t events{};
+    for (const auto& evt : originalEvents)
+    {
+        auto& originalEvent = dynamic_cast<model::ProvidePrescriptionTaskEvent&>(*evt);
+        events.emplace_back(std::make_unique<model::ProvidePrescriptionTaskEvent>(
+            originalEvent.getId(), originalEvent.getPrescriptionId(), originalEvent.getPrescriptionType(),
+            originalEvent.getKvnr(), originalEvent.getHashedKvnr(), originalEvent.getUseCase(),
+            originalEvent.getState(), originalEvent.getQesDoctorId(), originalEvent.getJwtDoctorId(),
+            originalEvent.getJwtDoctorOrganizationName(), originalEvent.getJwtDoctorProfessionOid(),
+            std::move(const_cast<model::Bundle&>(originalEvent.getKbvBundle())), originalEvent.getLastModified()));
+    }
+
+    EpaAccount epaAccount{kvnr, "epa-as-1-mock", 18888, EpaAccount::Code::allowed, {}};
+    eventProcessor.processEpaAllowed(eventKvnr, epaAccount, events);
+
+    {   // verify: all 100 events were processed (deleted), but KVNR stays in 'processing' state
+        // because the limit of 100 was hit and more events may be queued
+        auto txn = createTransaction();
+        {
+            const auto eventCount = txn.exec("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
+                                             pqxx::params{eventKvnr.kvnrHashed()});
+            EXPECT_EQ(eventCount.at(0, 0).as<std::int64_t>(), 0);
+        }
+        {
+            const auto kvnrResult = txn.exec("SELECT state FROM erp_event.kvnr WHERE kvnr_hashed = $1",
+                                             pqxx::params{eventKvnr.kvnrHashed()});
+            EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
+                      model::EventKvnr::State::processing);
+        }
+        txn.commit();
+    }
+}

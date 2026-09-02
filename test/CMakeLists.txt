@@ -115,6 +115,7 @@ set(ERP_TEST_LIB_SOURCES
         mock/MockChargeItemTable.cxx
         mock/MockTaskTable.cxx
         mock/MockTerminationHandler.cxx
+        mock/PushErpBackendProxy.cxx
         mock/PushErpMockBackend.cxx
         mock/RegistrationMock.cxx
         mock/TestUrlArguments.cxx
@@ -375,6 +376,7 @@ list(
         erp/server/ThreadPoolTest.cxx
         erp/service/AuditEventCreatorTest.cxx
         erp/service/ChargeItemGetHandlerTest.cxx
+        erp/service/push/PushEventCreatorTest.cxx
         util/MockAndProductionTestBase.cxx
 )
 list(
@@ -481,6 +483,7 @@ list(
         erp/xml/XmlDocumentTest.cxx
         erp/xml/XmlStringViewTest.cxx
         shared/network/client/CrlDownloaderCacheTest.cxx
+        shared/network/client/response/ClientResponseTest.cxx
         shared/util/MetricsRegistryTest.cxx
         tools/HsmPoolHelper.cxx
         tools/JwtBuilderTest.cxx

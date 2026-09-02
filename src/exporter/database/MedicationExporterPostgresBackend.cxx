@@ -58,7 +58,8 @@ FROM
 WHERE
   kvnr_hashed = $1::bytea AND state = 'pending'
 ORDER BY
-  prescription_id ASC, last_modified ASC;
+  prescription_id ASC, last_modified ASC
+LIMIT $2;
     )");
 QUERY(sqlCheckDeadletter, R"(
 SELECT
@@ -291,7 +292,9 @@ MedicationExporterPostgresBackend::getAllEventsForKvnr(const model::EventKvnr& e
 
     if (not eventKvnr.kvnrHashed().empty())
     {
-        const auto results = transaction()->exec(sqlGetAllEventsForKvnr.query, pqxx::params{eventKvnr.kvnrHashed()});
+        const auto results =
+            transaction()->exec(sqlGetAllEventsForKvnr.query,
+                                pqxx::params{eventKvnr.kvnrHashed(), model::TaskEventBase::LimitTasksPerQuery});
         TVLOG(2) << "got " << results.size() << " results";
 
         std::vector<db_model::TaskEvent> models{};

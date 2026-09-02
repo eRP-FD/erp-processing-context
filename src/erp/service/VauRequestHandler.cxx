@@ -326,6 +326,7 @@ void VauRequestHandler::handleRequest(BaseSessionContext& baseSessionContext)
         });
 
     session.accessLog.keyValue("health", session.serviceContext.applicationHealth().isUp() ? "UP" : "DOWN");
+    session.response.setHeader(Header::ErpUseCase, "ERP.VAU"); // fallback value
 
     HttpStatus errorStatus = HttpStatus::OK;
     std::string errorText;
@@ -412,6 +413,19 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
 
         // Look up the secondary request handler. Required for determining the inner operation.
         auto matchingHandler = mRequestHandlers.findMatchingHandler(innerServerRequest->header());
+        if (matchingHandler.handlerContext)
+        {
+            ErpExpect(matchingHandler.pathParameters.size() ==
+                          matchingHandler.handlerContext->pathParameterNames.size(),
+                      HttpStatus::BadRequest, "Parameter mismatch.");
+            innerServerRequest->setPathParameters(matchingHandler.handlerContext->pathParameterNames,
+                                                  matchingHandler.pathParameters);
+            if (const auto earlyUseCase = matchingHandler.handlerContext->tryGetErpUseCaseEarly(
+                    innerServerRequest->tryParsePrescriptionIdFromPathId()))
+            {
+                outerSession.response.setHeader(Header::ErpUseCase, to_string(*earlyUseCase));
+            }
+        }
 
         ErpExpect(innerServerRequest->header().hasHeader(Header::Authorization),
                   HttpStatus::BadRequest, "Authorization header is missing");
@@ -497,10 +511,6 @@ void VauRequestHandler::handleInnerRequest(PcSessionContext& outerSession,
         A_20163.finish();
         // GEMREQ-end A_20163#pupResp
 
-        ErpExpect(matchingHandler.pathParameters.size() == matchingHandler.handlerContext->pathParameterNames.size(),
-                  HttpStatus::BadRequest, "Parameter mismatch.");
-        innerSession.request.setPathParameters(matchingHandler.handlerContext->pathParameterNames,
-                                                matchingHandler.pathParameters);
         innerSession.request.setFragment(std::move(matchingHandler.fragment));
         innerSession.request.setQueryParameters(std::move(matchingHandler.queryParameters));
 

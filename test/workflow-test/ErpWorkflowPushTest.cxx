@@ -9,7 +9,6 @@
 
 #undef Expect
 #include "erp/model/push/Channels.hxx"
-#include "fhirtools/model/NumberAsStringParserWriter.hxx"
 #include "shared/ErpRequirements.hxx"
 
 #include <gmock/gmock-matchers.h>
@@ -42,6 +41,8 @@ protected:
         {
             GTEST_SKIP_("Push tests require postgres");
         }
+        mKvnr1.emplace(generateNewRandomKVNR());
+        mKvnr2.emplace(generateNewRandomKVNR());
     }
 
 public:
@@ -59,6 +60,9 @@ public:
     void updateChannels(const model::PushKey& pushkey, const std::string& body, ClientResponse& outInnerResponse);
 
     std::string pushKey{"Xp/MzCt8/9DcSNE9cuiaoT5Ac55job3TdLSSmtmYl4A="};
+
+    std::optional<model::Kvnr> mKvnr1;
+    std::optional<model::Kvnr> mKvnr2;
 };
 
 void ErpWorkflowPushTest::pushRegister(const model::Pusher& pusher, ClientResponse& outInnerResponse,
@@ -68,6 +72,7 @@ void ErpWorkflowPushTest::pushRegister(const model::Pusher& pusher, ClientRespon
     RequestArguments requestArguments{HttpMethod::POST, "/pushers/v1/set", body, ContentMimeType::jsonUtf8};
     requestArguments.headerFields.emplace(Header::Accept, "application/json");
     requestArguments.jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    requestArguments.expectedBdeUseCase = bde::PostPushersSet_UC_3_20;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_THAT(innerResponse.getHeader().status(),
                 ::testing::AnyOf(HttpStatus::OK, HttpStatus::BadRequest, HttpStatus::Unauthorized,
@@ -93,6 +98,7 @@ void ErpWorkflowPushTest::pushDelete(const model::DeletePusher& deletePusher, Cl
     RequestArguments requestArguments{HttpMethod::POST, "/pushers/v1/set", body, ContentMimeType::jsonUtf8};
     requestArguments.headerFields.emplace(Header::Accept, "application/json");
     requestArguments.jwt = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr);
+    requestArguments.expectedBdeUseCase = bde::PostPushersSet_UC_3_20;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_THAT(innerResponse.getHeader().status(),
                 ::testing::AnyOf(HttpStatus::OK, HttpStatus::BadRequest, HttpStatus::Unauthorized,
@@ -116,6 +122,7 @@ void ErpWorkflowPushTest::pushGet(std::vector<TestPusher>& outPusher, ClientResp
     A_28530.test("App-Registrierungen abrufen - Filter auf KVNR des Versicherten");
     RequestArguments requestArguments{HttpMethod::GET, "/pushers/v1", ""};
     requestArguments.headerFields.emplace(Header::Accept, "application/json");
+    requestArguments.expectedBdeUseCase = bde::GetPushers_UC_3_21;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_THAT(innerResponse.getHeader().status(),
                 ::testing::AnyOf(HttpStatus::OK, HttpStatus::BadRequest, HttpStatus::Unauthorized,
@@ -164,8 +171,9 @@ void ErpWorkflowPushTest::compareUserData(std::shared_ptr<rapidjson::Document> l
 void ErpWorkflowPushTest::getChannels(const std::optional<model::PushKey>& pushkey, model::Channels& outChannels,
                                       ClientResponse& outInnerResponse)
 {
-    const RequestArguments requestArguments{HttpMethod::GET,
+    RequestArguments requestArguments{HttpMethod::GET,
                                             "/channels/v1" + (pushkey.has_value() ? "/" + UrlHelper::escapeUrl(pushkey->value) : ""), ""};
+    requestArguments.expectedBdeUseCase = pushkey.has_value() ? bde::GetChannelsPushkey_UC_3_23 : bde::GetChannels_UC_3_22;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     outChannels.processUpdate(innerResponse.getBody());
@@ -188,8 +196,9 @@ void ErpWorkflowPushTest::updateChannels(const model::PushKey& pushkey, const mo
 void ErpWorkflowPushTest::updateChannels(const model::PushKey& pushkey, const std::string& body,
                                          ClientResponse& outInnerResponse)
 {
-    const RequestArguments requestArguments{HttpMethod::POST, "/channels/v1/" + UrlHelper::escapeUrl(pushkey.value), body,
+    RequestArguments requestArguments{HttpMethod::POST, "/channels/v1/" + UrlHelper::escapeUrl(pushkey.value), body,
                                             ContentMimeType::jsonUtf8};
+    requestArguments.expectedBdeUseCase = bde::PostChannelsPushkey_UC_3_24;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     outInnerResponse = innerResponse;
@@ -253,6 +262,7 @@ TEST_F(ErpWorkflowPushTest, notAcceptable)
     {
         RequestArguments requestArguments{HttpMethod::GET, "/pushers/v1", ""};
         requestArguments.headerFields.emplace(Header::Accept, "application/xml");
+        requestArguments.expectedBdeUseCase = bde::GetPushers_UC_3_21;
         auto [outerResponse, innerResponse] = send(requestArguments);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotAcceptable);
     }
@@ -260,6 +270,7 @@ TEST_F(ErpWorkflowPushTest, notAcceptable)
     {
         RequestArguments requestArguments{HttpMethod::GET, "/pushers/v1", ""};
         requestArguments.headerFields.emplace(Header::Accept, "application/fhir+json");
+        requestArguments.expectedBdeUseCase = bde::GetPushers_UC_3_21;
         auto [outerResponse, innerResponse] = send(requestArguments);
         EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotAcceptable);
     }
@@ -286,6 +297,7 @@ TEST_F(ErpWorkflowPushTest, forbidden)
     RequestArguments requestArguments{HttpMethod::GET, "/pushers/v1", ""};
     requestArguments.headerFields.emplace(Header::Accept, "application/json");
     requestArguments.jwt = JwtBuilder::testBuilder().makeJwtArzt();
+    requestArguments.expectedBdeUseCase = bde::GetPushers_UC_3_21;
     auto [outerResponse, innerResponse] = send(requestArguments);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Forbidden);
     rapidjson::Document document;
@@ -374,15 +386,15 @@ TEST_F(ErpWorkflowPushTest, updateChannels)
 
 TEST_F(ErpWorkflowPushTest, noAuditEventNothingDeleted)
 {
-    auto kvnr = generateNewRandomKVNR();
     model::Timestamp startTime = model::Timestamp::now();
     ClientResponse innerResponse;
     pushDelete(model::DeletePusher{model::PushKey{pushKey}, model::AppId{"appid"}}, innerResponse);
+    EXPECT_TRUE(true);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     std::optional<model::Bundle> auditEventBundle;
     ASSERT_NO_FATAL_FAILURE(
         auditEventBundle =
-            auditEventGet(kvnr.id(), "de",
+            auditEventGet(mKvnr1->id(), "de",
                           "date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=date"));
     EXPECT_TRUE(auditEventBundle.has_value());
     EXPECT_EQ(0, auditEventBundle->getResourceCount()) << auditEventBundle->serializeToJsonString();
@@ -390,7 +402,6 @@ TEST_F(ErpWorkflowPushTest, noAuditEventNothingDeleted)
 
 TEST_F(ErpWorkflowPushTest, auditEventRegisterUnregister)
 {
-    auto kvnr = generateNewRandomKVNR();
     model::Timestamp startTime = model::Timestamp::now();
     const model::Pusher pusher{
         model::PushKey{pushKey},
@@ -401,17 +412,17 @@ TEST_F(ErpWorkflowPushTest, auditEventRegisterUnregister)
         model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
         model::Encryption{"2026-06", SafeString("iss11111111111111111111111111111"), "keyIdentifier"}};
     ClientResponse innerResponse;
-    ASSERT_NO_THROW(pushRegister(pusher, innerResponse, kvnr.id()));
+    ASSERT_NO_THROW(pushRegister(pusher, innerResponse, mKvnr2->id()));
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
-    checkAuditEvents(std::vector<std::optional<std::string>>{"device display name"}, kvnr.id(), "de", startTime,
-                     std::vector<std::string>{{kvnr.id()}}, {},
+    checkAuditEvents(std::vector<std::optional<std::string>>{"device display name"}, mKvnr2->id(), "de", startTime,
+                     std::vector<std::string>{{mKvnr2->id()}}, {},
                      std::vector<model::AuditEvent::SubType>{model::AuditEvent::SubType::create}, true);
 
-    pushDelete(model::DeletePusher{model::PushKey{pushKey}, model::AppId{"appid"}}, innerResponse, kvnr.id());
+    pushDelete(model::DeletePusher{model::PushKey{pushKey}, model::AppId{"appid"}}, innerResponse, mKvnr2->id());
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
     checkAuditEvents(
-        std::vector<std::optional<std::string>>{"device display name", "device display name"}, kvnr.id(), "de",
-        startTime, std::vector<std::string>{kvnr.id(), kvnr.id()}, {},
+        std::vector<std::optional<std::string>>{"device display name", "device display name"}, mKvnr2->id(), "de",
+        startTime, std::vector<std::string>{mKvnr2->id(), mKvnr2->id()}, {},
         std::vector<model::AuditEvent::SubType>{model::AuditEvent::SubType::create, model::AuditEvent::SubType::del},
         true);
 }

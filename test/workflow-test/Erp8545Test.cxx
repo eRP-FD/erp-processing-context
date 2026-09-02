@@ -15,7 +15,7 @@ TEST_P(Erp8545TestCreate, run)
 {
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, "/Task/$create", std::string{GetParam()}, ContentMimeType::fhirXmlUtf8}
-                 .withJwt(jwtArzt()));
+                 .withJwt(jwtArzt()).withExpectedBdeUseCase(bde::CreateTask_UC_2_1));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }
@@ -97,7 +97,8 @@ TEST_P(Erp8545TestActivate, run)//NOLINT(readability-function-cognitive-complexi
     const auto body = std::regex_replace(GetParam(), prescriptionPlaceholder, bundle);
     const auto& [outerResponse, innerResponse] =
         send(RequestArguments{HttpMethod::POST, path, body, ContentMimeType::fhirXmlUtf8}
-                 .withJwt(jwtArzt()).withOverrideExpectedKbvVersion("XXX"));
+                 .withJwt(jwtArzt()).withOverrideExpectedKbvVersion("XXX")
+                 .withExpectedBdeUseCase(bde::ActivateTask_UC_2_3_160));
     EXPECT_EQ(outerResponse.getHeader().status(), HttpStatus::OK);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::BadRequest);
 }

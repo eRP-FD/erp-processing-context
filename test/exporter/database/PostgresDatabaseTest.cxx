@@ -575,6 +575,27 @@ TEST_F(PostgresDatabaseTest, updateEncryptionKey)
 }
 // GEMREQ-end A_27405#test
 
+TEST_F(PostgresDatabaseTest, eventLimit100)
+{
+    const std::string kvnr_str{"X000000012"};
+    const model::Kvnr kvnr{kvnr_str};
+    const auto hashedKvnr = kvnrHashed(kvnr);
+    const model::EventKvnr eventKvnr{hashedKvnr, std::nullopt, std::nullopt, model::EventKvnr::State::pending, 0};
+    insertTaskKvnr(kvnr);
+
+    for (int i = 0; i < 101; ++i)
+    {
+        const auto prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel,9999 + i);
+        insertTaskEvent(kvnr, prescriptionId.toString(), model::TaskEvent::UseCase::providePrescription,
+                        model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
+                        std::nullopt);
+    }
+    auto& db = database();
+    const auto events = db.getAllEventsForKvnr(eventKvnr);
+    db.commitTransaction();
+    ASSERT_EQ(events.size(), 100);
+}
+
 class PostgresDatabaseTransactionModeTest : public PostgresDatabaseTest,
                                             public testing::WithParamInterface<TransactionMode>
 {

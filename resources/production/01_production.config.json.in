@@ -63,7 +63,11 @@
       "subscription": {
         "signingKey": ""
       },
-      "pcr-set": "0,3,4"
+      "pcr-set": "0,3,4",
+      "push": {
+        "eventMaxQueue": "100",
+        "eventDroppedWarnIntervalSeconds": "60"
+      }
     },
     "postgres": {
       "main": {

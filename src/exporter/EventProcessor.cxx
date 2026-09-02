@@ -328,11 +328,15 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         }
     }
     // Workflow step 13 - set kvnr to processed
-    autocommit([&](auto& db) {
-        A_25941.start("Store prefix for reuse.");
-        db.finalizeKvnr(kvnr, epaAccount.host);
-        A_25941.finish();
-    });
+    // If count of events is < 100
+    if (events.size() < model::TaskEventBase::LimitTasksPerQuery)
+    {
+        autocommit([&](auto& db) {
+            A_25941.start("Store prefix for reuse.");
+            db.finalizeKvnr(kvnr, epaAccount.host);
+            A_25941.finish();
+        });
+    }
     jsonLog() << kvnr << KeyValue("event", "KVNR processed");
 }
 

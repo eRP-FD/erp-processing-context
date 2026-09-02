@@ -37,6 +37,6 @@ TEST_F(Erp5874Test, run)
                                           "/Task/$create",
                                           createRequest,
                                           ContentMimeType::fhirXmlUtf8}
-                                          .withJwt(jwtArzt())));
+                                          .withJwt(jwtArzt()).withExpectedBdeUseCase(bde::CreateTask_UC_2_1)));
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
 }

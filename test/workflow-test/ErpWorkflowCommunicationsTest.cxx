@@ -182,6 +182,7 @@ TEST_F(ErpWorkflowTest, CommunicationJsonValidationError)
         R"___({"resourceType":"Communication","meta":{"lastUpdated":null,"profile":["https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_DispReq"]},"basedOn":[{"reference":"Task/160.000.226.093.129.57/$accept?ac=5edb4d3d90e21fbba2b72855e851e8e5dc7ca1ef470a727103d069627687c8b4","type":null,"identifier":null,"display":null}],"status":"unknown","recipient":[{"reference":null,"type":null,"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/sid/telematik-id","value":"3-10.2.0110201000.579","period":null},"display":null}],"identifier":{"use":null,"type":null,"system":"https://gematik.de/fhir/NamingSystem/OrderID","value":"6e59e060-0131-4020-ad05-1b4196a75f5e","period":null},"contained":[],"payload":[{"extension":null,"contentString":"{\"supplyOptionsType\":\"onPremise\",\"hint\":\"\"}"}]})___";
     RequestArguments reqArgs(HttpMethod::POST, "/Communication", communication, "application/json");
     reqArgs.overrideExpectedWorkflowVersion = "XXX";
+    reqArgs.expectedBdeUseCase = bde::PostCommunicationPatient_UC_3_3;
     auto [outerResonse, innerResponse] = send(reqArgs);
     checkOperationOutcome(
         operationOutcomeFromResponse(innerResponse.getBody(), true), model::OperationOutcome::Issue::Type::invalid,
@@ -209,6 +210,7 @@ TEST_F(ErpWorkflowTest, CommunicationPayloadJsonValidationError)
     auto reqArgs = RequestArguments(HttpMethod::POST, "/Communication", communication, "application/json")
                        .withHeader(Header::XAccessCode, std::string{task->accessCode()});
     reqArgs.overrideExpectedPrescriptionId = task->prescriptionId().toString();
+    reqArgs.expectedBdeUseCase = bde::PostCommunicationPatient_UC_3_3;
     auto [outerResonse, innerResponse] = send(reqArgs);
     checkOperationOutcome(
         operationOutcomeFromResponse(innerResponse.getBody(), true), model::OperationOutcome::Issue::Type::invalid,
@@ -233,6 +235,7 @@ TEST_F(ErpWorkflowTest, CommunicationDigaReject)
     auto reqArgs = RequestArguments(HttpMethod::POST, "/Communication", communication, "application/fhir+xml")
                        .withJwt(jwtKostentraeger());
     reqArgs.overrideExpectedPrescriptionId = task->prescriptionId().toString();
+    reqArgs.expectedBdeUseCase = bde::PostCommunicationPharmacy_UC_4_7;
     auto [outerResonse, innerResponse] = send(reqArgs);
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::Created);
 

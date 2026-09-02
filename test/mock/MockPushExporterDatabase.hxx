@@ -9,12 +9,22 @@
 
 class HsmPool;
 
-class MockPushExporterDatabase
+#include "erp/database/push/PushExporterBackend.hxx"
+#include "shared/database/DatabaseConnectionInfo.hxx"
+
+#undef Expect
+#include <gmock/gmock-function-mocker.h>
+
+class MockPushExporterDatabase : public PushExporterBackend
 {
  public:
-    virtual ~MockPushExporterDatabase() = default;
-    virtual void healthCheck();
-    virtual void commitTransaction();
-    virtual void closeConnection();
-    virtual bool isCommitted() const;
+    MockPushExporterDatabase();
+    ~MockPushExporterDatabase() override = default;
+    MOCK_METHOD(void, healthCheck, (), (const, override));
+    MOCK_METHOD(void, commitTransaction, (), (override));
+    MOCK_METHOD(void, closeConnection, (), (override));
+    MOCK_METHOD(bool, isCommitted, (), (const, override));
+    MOCK_METHOD(std::optional<DatabaseConnectionInfo>, getConnectionInfo, (), (const, override));
+    MOCK_METHOD(void, createPushEvent, (const db_model::PushEventData& data), (override));
+
 };

@@ -12,8 +12,12 @@
 #include "erp/database/push/PushExporterDatabaseException.hxx"
 #include "erp/model/push/Channels.hxx"
 #include "erp/pc/PcServiceContext.hxx"
+#include "erp/service/push/PushEventCreator.hxx"
 
-HandlerResult  RequestHandler::handleRequest(ServerRequest& request, AccessLog& accessLog)
+#include <fmt/format.h>
+#include <mutex>
+
+HandlerResult RequestHandler::handleRequest(ServerRequest& request, AccessLog& accessLog)
 {
     auto result = PartialRequestHandler::handleRequest(request, accessLog);
     if (not result.success)
@@ -38,17 +42,9 @@ HandlerResult  RequestHandler::handleRequest(ServerRequest& request, AccessLog& 
     if (pushEventFeatureEnabled && session.pushEventDataCollector().isReadyForPushEvent())
     {
         // Push events are generated after the response is written.
-        return {result.success, std::nullopt, [this, pushEventData=session.pushEventDataCollector()]() { // std::function requires a copyable instance of pushEventData.
-                const auto dt =
-                    DurationConsumer::getCurrent().getTimer(DurationCategory::pusheventcreation, "inside-callback");
-                const bool isRegistered = mServiceContext.readOnlyPushDatabaseFactory()->isPushRegistered(
-                    value(pushEventData.hashedKvnr()), *pushEventData.channelId());
-
-            if (isRegistered)
-            {
-                mServiceContext.pushExporterDatabaseFactory()->createPushEvent(pushEventData);
-            }
-       }, std::move(response)};
+        auto postCallback = std::bind(&PushEventCreator::tryPostCreatePushEvent, std::ref(mServiceContext.getPushEventCreator()),
+                      session.pushEventDataCollector(), std::ref(mServiceContext));
+        return {result.success, std::nullopt, std::move(postCallback), std::move(response)};
     }
 
     return {result.success, std::nullopt, {}, response};

@@ -74,7 +74,7 @@ bde::UseCase RequestHandlerContext::getErpUseCase(std::optional<model::Prescript
             Expect(prescriptionId.has_value(),
                    "invalid call to RequestHandlerContext::getErpUseCase without prescriptionId");
             Expect(uc.contains(prescriptionId->type()),
-                   "invalid call to RequestHandlerContext::getErpUseCase wit unsupported prescription type "s.append(
+                   "invalid call to RequestHandlerContext::getErpUseCase with unsupported prescription type "s.append(
                        magic_enum::enum_name(prescriptionId->type())));
             return uc.at(prescriptionId->type());
         }
@@ -96,6 +96,40 @@ bde::UseCase RequestHandlerContext::getErpUseCase(std::optional<model::Prescript
         std::optional<std::string_view> professionOid;
     };
     const Visitor visitor{.prescriptionId = prescriptionId, .professionOid = professionOid};
+    return std::visit(visitor, mErpUseCase);
+}
+
+std::optional<bde::UseCase>
+RequestHandlerContext::tryGetErpUseCaseEarly(std::optional<model::PrescriptionId> prescriptionId) const
+{
+    using namespace std::string_literals;
+    struct Visitor {
+        std::optional<bde::UseCase> operator()(const bde::UseCase& uc) const
+        {
+            return uc;
+        }
+        std::optional<bde::UseCase> operator()(const std::map<model::PrescriptionType, bde::UseCase>& uc) const
+        {
+            if(prescriptionId.has_value())
+            {
+                Expect(uc.contains(prescriptionId->type()),
+                       "invalid call to RequestHandlerContext::getErpUseCase with unsupported prescription type "s.append(
+                           magic_enum::enum_name(prescriptionId->type())));
+                return uc.at(prescriptionId->type());
+            }
+            return std::nullopt;
+        }
+        std::optional<bde::UseCase> operator()(const std::map<profession_oid::InnerRequestRole, bde::UseCase>&) const
+        {
+            return std::nullopt;
+        }
+        std::optional<bde::UseCase> operator()(const bde::NoUseCase&) const
+        {
+            return std::nullopt;
+        }
+        std::optional<model::PrescriptionId> prescriptionId;
+    };
+    const Visitor visitor{.prescriptionId = prescriptionId};
     return std::visit(visitor, mErpUseCase);
 }
 

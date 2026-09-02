@@ -316,3 +316,137 @@ TEST_F(RegressionTest, Erp20654InvalidTargetEscape)
 
     ASSERT_NO_FATAL_FAILURE(std::tie(outerResponse, serverResponse) = send(args));
 }
+
+struct Erp38393Param
+{
+    HttpMethod method = HttpMethod::POST;
+    std::string path;
+    std::optional<bde::UseCase> expectedUseCase;
+    friend std::ostream& operator<<(std::ostream& os, const Erp38393Param& param)
+    {
+        os << param.path << " -> " << (param.expectedUseCase?to_string(*param.expectedUseCase):"ERP.VAU");
+        return os;
+    }
+};
+class Erp38393BdeUseCase401 : public ErpWorkflowTest, public testing::WithParamInterface<Erp38393Param>
+{};
+TEST_P(Erp38393BdeUseCase401, test)
+{
+    // iat claim removed to trigger invalid JWT check.
+    auto jwt = JwtBuilder::testBuilder().getJWT(R"({
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://gematik.erppre.de/",
+    "exp": 2524608000,
+    "display_name": "Vorname Nachname",
+    "idNummer": "0123456789",
+    "iss": "https://idp1.telematik.de/jwt",
+    "jti": "<IDP>_01234567890123456789",
+    "nbf": 1585336956,
+    "nonce": "fuu bar baz",
+    "organizationName": "Institutions- oder Organisations-Bezeichnung",
+    "professionOID": "1.2.276.0.76.4.50",
+    "sub": "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"
+}
+)");
+    auto args = RequestArguments{GetParam().method, GetParam().path, "", "application/fhir+xml"}
+    .withJwt(jwt)
+    .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+    .withExpectedInnerStatus(HttpStatus::Unauthorized);
+    args.expectedBdeUseCase = GetParam().expectedUseCase;
+    args.overrideExpectedPrescriptionId = "XXX";
+    args.overrideExpectedKbvVersion = "XXX";
+    args.overrideExpectedWorkflowVersion = "XXX";
+    args.overrideExpectedPatientenrechnungVersion = "XXX";
+    args.overrideExpectedDavVersion = "XXX";
+    auto [outerResponse, innerResponse] = send(args);
+}
+class Erp38393BdeUseCase403 : public ErpWorkflowTest, public testing::WithParamInterface<Erp38393Param>
+{};
+TEST_P(Erp38393BdeUseCase403, test)
+{
+    // ProfessionOid 1.2.276.0.76.4.292 triggers early 403.
+    auto jwt = JwtBuilder::testBuilder().getJWT(R"({
+    "acr": "gematik-ehealth-loa-high",
+    "aud": "https://gematik.erppre.de/",
+    "exp": 2524608000,
+    "display_name": "Vorname Nachname",
+    "iat": 1585336956,
+    "idNummer": "0123456789",
+    "iss": "https://idp1.telematik.de/jwt",
+    "jti": "<IDP>_01234567890123456789",
+    "nbf": 1585336956,
+    "nonce": "fuu bar baz",
+    "organizationName": "Institutions- oder Organisations-Bezeichnung",
+    "professionOID": "1.2.276.0.76.4.292",
+    "sub": "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"
+}
+)");
+    auto args = RequestArguments{GetParam().method, GetParam().path, "", "application/fhir+xml"}
+    .withJwt(jwt)
+    .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
+    .withExpectedInnerStatus(HttpStatus::Forbidden);
+    args.expectedBdeUseCase = GetParam().expectedUseCase;
+    args.overrideExpectedPrescriptionId = "XXX";
+    args.overrideExpectedKbvVersion = "XXX";
+    args.overrideExpectedWorkflowVersion = "XXX";
+    args.overrideExpectedPatientenrechnungVersion = "XXX";
+    args.overrideExpectedDavVersion = "XXX";
+    if (GetParam().path == "/Device" || GetParam().path == "/metadata")
+    {
+        args.expectedInnerStatus = HttpStatus::OK;
+    }
+    auto [outerResponse, innerResponse] = send(args);
+}
+std::vector<Erp38393Param> makeErp38393Params()
+{
+    const std::string idType160 = "/160.000.000.004.713.80";
+    const std::string idType162 = "/162.000.033.491.280.69";
+    const std::string idType166 = "/166.100.000.000.001.12";
+    const std::string idType169 = "/169.018.562.305.023.72";
+    const std::string idType200 = "/200.000.000.000.000.71";
+    const std::string idType209 = "/209.000.000.032.994.37";
+    return {
+        {.path = "/Task/$create", .expectedUseCase = bde::CreateTask_UC_2_1},
+        {.path = "/Task" + idType160 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_160},
+        {.path = "/Task" + idType162 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_162},
+        {.path = "/Task" + idType166 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_166},
+        {.path = "/Task" + idType169 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_169},
+        {.path = "/Task" + idType200 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_200},
+        {.path = "/Task" + idType209 + "/$activate", .expectedUseCase = bde::ActivateTask_UC_2_3_209},
+        {.path = "/Task" + idType160 + "/$accept", .expectedUseCase = bde::AcceptTask_UC_4_1},
+        {.path = "/Task" + idType160 + "/$reject", .expectedUseCase = bde::RejectTask_UC_4_2},
+        {.path = "/Task" + idType160 + "/$close", .expectedUseCase = bde::CloseTask_UC_4_4},
+        {.path = "/Task" + idType160 + "/$dispense", .expectedUseCase = bde::TaskDispense_UC_4_16},
+        // POST /Task/{id}/$abort — use case depends on role (InnerRequestRole), not resolvable early
+        {.path = "/Task" + idType209 + "/$abort", .expectedUseCase = std::nullopt},
+        // GET /Task — NoUseCase (set directly in handler)
+        {.method = HttpMethod::GET, .path = "/Task", .expectedUseCase = std::nullopt},
+        // GET /Task/{id} — use case depends on role (InnerRequestRole), not resolvable early
+        {.method = HttpMethod::GET, .path = "/Task" + idType160, .expectedUseCase = std::nullopt},
+        {.method = HttpMethod::GET,
+         .path = "/MedicationDispense",
+         .expectedUseCase = bde::GetMedicationDispense_UC_3_9},
+        // GET /Communication — use case depends on role (InnerRequestRole), not resolvable early
+        {.method = HttpMethod::GET, .path = "/Communication", .expectedUseCase = std::nullopt},
+        {.method = HttpMethod::GET, .path = "/AuditEvent", .expectedUseCase = bde::GetAuditEvent_UC_3_5},
+        {.method = HttpMethod::GET, .path = "/Device", .expectedUseCase = bde::GetDevice_UC_1_1},
+        {.method = HttpMethod::GET, .path = "/metadata", .expectedUseCase = bde::GetMetadata_UC_1_2},
+        {.path = "/Subscription", .expectedUseCase = bde::PostSubscription_UC_4_14},
+        {.method = HttpMethod::GET, .path = "/ChargeItem", .expectedUseCase = bde::GetChargeItems_UC_3_10},
+        // GET /ChargeItem/{id} — use case depends on role (InnerRequestRole), not resolvable early
+        {.method = HttpMethod::GET, .path = "/ChargeItem" + idType160, .expectedUseCase = std::nullopt},
+        {.path = "/ChargeItem", .expectedUseCase = bde::PostChargeItem_UC_4_11},
+        {.method = HttpMethod::DELETE,
+         .path = "/ChargeItem" + idType160,
+         .expectedUseCase = bde::DeleteChargeItem_UC_3_11},
+        {.method = HttpMethod::PATCH,
+         .path = "/ChargeItem" + idType160,
+         .expectedUseCase = bde::PatchChargeItem_UC_3_12},
+        {.method = HttpMethod::PUT, .path = "/ChargeItem" + idType160, .expectedUseCase = bde::PutChargeItem_UC_4_13},
+        {.method = HttpMethod::GET, .path = "/Consent", .expectedUseCase = bde::GetConsent_UC_3_13},
+        {.path = "/Consent", .expectedUseCase = bde::PostConsent_UC_3_14},
+        {.method = HttpMethod::DELETE, .path = "/Consent", .expectedUseCase = bde::DeleteConsent_UC_3_15},
+    };
+}
+INSTANTIATE_TEST_SUITE_P(test, Erp38393BdeUseCase401, testing::ValuesIn(makeErp38393Params()));
+INSTANTIATE_TEST_SUITE_P(test, Erp38393BdeUseCase403, testing::ValuesIn(makeErp38393Params()));

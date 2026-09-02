@@ -107,7 +107,12 @@ Factories StaticData::makeMockFactories()
 
     factories.jsonValidatorFactory = StaticData::getJsonValidator;
 
-    factories.teeServerFactory = &StaticData::nullHttpsServer;
+    factories.teeServerFactory = [](const std::string_view address, uint16_t port,
+                                    RequestHandlerManager&& requestHandlers [[maybe_unused]],
+                                    BaseServiceContext& serviceContext [[maybe_unused]],
+                                    bool enforceClientAuthentication, const SafeString& caCertificates) {
+        return std::make_unique<BaseHttpsServer>(address, port, enforceClientAuthentication, caCertificates);
+    };
 
     factories.poppServiceFactory = [](boost::asio::io_context*, TslManager&, std::shared_ptr<CrlProvider>) {
         auto poppServiceMock = std::make_unique<PoPPCertificateVerifierServiceMock>();

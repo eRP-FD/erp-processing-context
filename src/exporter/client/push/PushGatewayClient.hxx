@@ -31,7 +31,9 @@ public:
     virtual ~PushGatewayClient();
 
     virtual ClientResponse send(const UrlHelper::UrlParts& url, HttpMethod method, const std::string& body,
-                                const std::string& contentType = MimeType::json) const = 0;
+                                const std::string& contentType = MimeType::json,
+                                const std::string& requestId = "") const = 0;
     virtual ClientResponse sendPushNotification(const model::EncryptedNotification& encryptedNotification,
-                                                const std::string& baseUrl) = 0;
+                                                const std::string& baseUrl,
+                                                const std::string& requestId = "") = 0;
 };

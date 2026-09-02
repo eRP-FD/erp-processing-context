@@ -10,8 +10,8 @@
 #include "erp/database/push/PushEventDataCollector.hxx"
 #include "shared/database/DatabaseConnectionInfo.hxx"
 
-MockPushExporterDatabaseProxy::MockPushExporterDatabaseProxy(std::shared_ptr<MockPushExporterDatabase> mockDatabase)
-    : mMockDatabase(mockDatabase)
+MockPushExporterDatabaseProxy::MockPushExporterDatabaseProxy(std::shared_ptr<PushExporterBackend> mockDatabase)
+    : mMockDatabase{std::move(mockDatabase)}
 {
 }
 
@@ -22,21 +22,21 @@ void MockPushExporterDatabaseProxy::healthCheck() const
 
 std::optional<DatabaseConnectionInfo> MockPushExporterDatabaseProxy::getConnectionInfo() const
 {
-    return std::nullopt;
+    return mMockDatabase->getConnectionInfo();
 }
 
 void MockPushExporterDatabaseProxy::closeConnection() {
-
+    return mMockDatabase->closeConnection();
 }
 
-void MockPushExporterDatabaseProxy::createPushEvent(const db_model::PushEventData&) {
-
+void MockPushExporterDatabaseProxy::createPushEvent(const db_model::PushEventData& event) {
+    return mMockDatabase->createPushEvent(event);
 }
 
 void MockPushExporterDatabaseProxy::commitTransaction() {
-
+    mMockDatabase->commitTransaction();
 }
 
 bool MockPushExporterDatabaseProxy::isCommitted() const {
-    return true;
+    return mMockDatabase->isCommitted();
 }

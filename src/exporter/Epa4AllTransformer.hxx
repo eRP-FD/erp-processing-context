@@ -56,6 +56,9 @@ private:
                                       const model::TelematikId& actorTelematikId,
                                       const std::string& actorOrganizationName,
                                       const std::string& organizationProfessionOid);
+    static void patchTransformedAtcMedication(model::NumberAsStringParserDocument& document, const std::string& patchVersion);
+    static void patchTransformedAtcMedicationCoding(model::NumberAsStringParserDocument& document,
+                                                    rapidjson::Value& coding, const std::string& patchVersion);
     static model::NumberAsStringParserDocument transformKbvMedication(const model::KbvMedicationGeneric& kbvMedication);
     static void convertPZNIngredients(model::NumberAsStringParserDocument& transformedMedication,
                                       const model::KbvMedicationCompounding& kbvMedicationCompounding);

@@ -21,6 +21,7 @@
 #include "shared/validation/XmlValidator.hxx"
 
 #include <charconv>
+#include <fmt/format.h>
 #include <regex>
 #include <stdexcept>
 #include <string>
@@ -414,6 +415,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES         , {"ERP_POSTGRES_RO_CONNECTION_MAX_AGE_MINUTES"         , "/erp/postgres/readOnly/connectionMaxAgeMinutes", Flags::categoryEnvironment, "After this time the database connections to the read only Postgres server will be closed and re-opened. Defaults to value from main"}},
     {ConfigurationKey::POSTGRES_PUSHDB_CONNECT_TIMEOUT                , {"ERP_POSTGRES_PUSHDB_CONNECT_TIMEOUT"                , "/erp/postgres/pushDb/connect-timeout", Flags::categoryEnvironment, "Connection timeout to push event db in milliseconds"}},
     {ConfigurationKey::PUBLIC_E_PRESCRIPTION_SERVICE_URL              , {"ERP_E_PRESCRIPTION_SERVICE_URL"                     , "/erp/publicEPrescriptionServiceUrl", Flags::categoryEnvironment, "Used as basis for links in outgoing resources, e.g. fullUrl"}},
+    {ConfigurationKey::PUSH_EVENT_MAX_QUEUE                           , {"ERP_PUSH_EVENT_MAX_QUEUE"                           , "/erp/service/push/eventMaxQueue", Flags::categoryFunctional, "maximum number of push event creations to queue"}},
+    {ConfigurationKey::PUSH_EVENT_DROPPED_WARN_INTERVAL_SEC           , {"ERP_PUSH_EVENT_DROPPED_WARN_INTERVAL_SEC"           , "/erp/service/push/eventDroppedWarnIntervalSeconds", Flags::categoryFunctional, "warning interval when push events are dropped"}},
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
     {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL                       , {"ERP_TSL_INITIAL_DOWNLOAD_URL"                       , "/erp/tsl/initialDownloadUrl", Flags::categoryEnvironment, "The URL to download initial TSL from."}},
@@ -807,7 +810,7 @@ std::optional<std::string> ConfigurationBase::getOptionalStringFromJson(KeyData 
     {
         return std::nullopt;
     }
-    Expect3(jsonValue->IsString(), "JSON Value must be string", std::logic_error);
+    Expect3(jsonValue->IsString(), fmt::format("JSON Value must be string: {}", key.jsonPath), std::logic_error);
     return jsonValue->GetString();
 }
 
@@ -983,6 +986,8 @@ void Configuration::check(ProcessType processType) const
             (void) synthesizeCodesystem();
             (void) synthesizeValuesets();
             (void) fhirVersionMapping();
+            (void) gsl::narrow<size_t>(getIntValue(ConfigurationKey::PUSH_EVENT_MAX_QUEUE));
+            (void) getIntValue(ConfigurationKey::PUSH_EVENT_DROPPED_WARN_INTERVAL_SEC);
             return;
         case ConfigurationBase::ProcessType::MedicationExporter:
             (void) get<fhirtools::Severity>(ConfigurationKey::MEDICATION_EXPORTER_FHIR_VALIDATION_LEVELS_UNREFERENCED_BUNDLED_RESOURCE);
