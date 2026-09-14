@@ -9,7 +9,7 @@
 
 TestConfigKeyNames::TestConfigKeyNames()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert(
         {{TestConfigurationKey::TEST_USE_POSTGRES,                {"TEST_USE_POSTGRES",                "/test/use-postgres", Flags::none, "If disabled, will use database mocks"}},

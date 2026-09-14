@@ -15,7 +15,7 @@ namespace exporter
 {
 void Application::printConfiguration()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     const auto& config = Configuration::instance();
     Fhir::init<ConfigurationBase::MedicationExporter>(Fhir::Init::now);
     ConfigurationFormatter formatter(std::make_shared<RuntimeConfiguration>());

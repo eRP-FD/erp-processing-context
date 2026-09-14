@@ -282,7 +282,6 @@ namespace {
     }
 }
 
-
 ConfigurationBase::ConfigurationBase (const std::vector<KeyData>& allKeyNames)
     : mDocument(parseConfigFile(ErpConstants::ConfigurationFileNameVariable, std::filesystem::current_path()))
     , mServerPort(determineServerPort())
@@ -342,7 +341,8 @@ bool ConfigurationBase::lookupKey(const std::string& pathPrefix, const std::stri
 
 OpsConfigKeyNames::OpsConfigKeyNames()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Type = ConfigurationKeyType;
+    using Flags = ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
     {ConfigurationKey::C_FD_SIG_ERP_VALIDATION_INTERVAL               , {"ERP_C_FD_SIG_ERP_VALIDATION_INTERVAL"               , "/erp/c.fd.sig-erp-validation", Flags::categoryEnvironment, "The OCSP validation interval for C.FD.OSIG-eRP signer certificate in seconds"}},
@@ -420,8 +420,8 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::REGISTRATION_HEARTBEAT_INTERVAL_SEC            , {"ERP_REGISTRATION_HEARTBEAT_INTERVAL_SEC"            , "/erp/registration/heartbeatIntervalSec", Flags::categoryEnvironment, "interval for the regular health check and registration status update."}},
     {ConfigurationKey::TSL_TI_OCSP_PROXY_URL                          , {"ERP_TSL_TI_OCSP_PROXY_URL"                          , "/erp/tsl/tiOcspProxyUrl", Flags::categoryEnvironment, "Special handling for G0 QES certificates for which no mapping exists in the TSL. In this case a special TI OCSP proxy should be used."}},
     {ConfigurationKey::TSL_INITIAL_DOWNLOAD_URL                       , {"ERP_TSL_INITIAL_DOWNLOAD_URL"                       , "/erp/tsl/initialDownloadUrl", Flags::categoryEnvironment, "The URL to download initial TSL from."}},
-    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH                        , {"ERP_TSL_INITIAL_CA_DER_PATH"                        , "/erp/tsl/initialCaDerPath", Flags::categoryEnvironment, "Path to the TSL-Signer CA."}},
-    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW                    , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW"                    , "/erp/tsl/initialCaDerPathNew", Flags::categoryEnvironment, "Path to the additional TSL-Signer CA. It could be used when TSL-Signer CA is being changed to support both old and new TSL-Signer CA."}},
+    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH                        , {"ERP_TSL_INITIAL_CA_DER_PATH"                        , "/erp/tsl/initialCaDerPath", Flags::categoryEnvironment, Type::file, "Path to the TSL-Signer CA."}},
+    {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW                    , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW"                    , "/erp/tsl/initialCaDerPathNew", Flags::categoryEnvironment, Type::file, "Path to the additional TSL-Signer CA. It could be used when TSL-Signer CA is being changed to support both old and new TSL-Signer CA."}},
     {ConfigurationKey::TSL_INITIAL_CA_DER_PATH_NEW_START              , {"ERP_TSL_INITIAL_CA_DER_PATH_NEW_START"              , "/erp/tsl/initialCaDerPathStart", Flags::categoryEnvironment, "The timestamp in FHIR DateTime format https://www.hl7.org/fhir/datatypes.html#dateTime to use the additional TSL-Signer CA from. Using this variable the additional TSL-Signer CA can be configured before it is active."}},
     {ConfigurationKey::TSL_REFRESH_INTERVAL                           , {"ERP_TSL_REFRESH_INTERVAL"                           , "/erp/tsl/refreshInterval", Flags::categoryFunctional, "How often the TSL update should be tried."}},
     {ConfigurationKey::TSL_DOWNLOAD_CIPHERS                           , {"ERP_TSL_DOWNLOAD_CIPHERS"                           , "/erp/tsl/downloadCiphers", Flags::categoryFunctionalStatic, "Specifies ciphers to be used for TSL download if set."}},
@@ -568,9 +568,9 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS, {"ERP_MEDICATION_EXPORTER_TRUSTED_CAS", "/erp-medication-exporter/trusted-cas", Flags::categoryEnvironment, "Trusted root certificates for bfarm and vzd TLS client connections."}},
 
     {ConfigurationKey::PUSH_GATEWAY_FQDN_ALLOW_LIST, {"ERP_PUSH_GATEWAY_FQDN_ALLOW_LIST" , "/push/fqdnAllowList", (Flags::categoryEnvironment|Flags::array), "The list of allowed Push Gateway FQDNs, separated by ;"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE, {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE" , "/erp-medication-exporter/push/client/certificate", Flags::categoryEnvironment, "Push notification client mTLS client certificate chain. either 'file://<pem_file>' or 'pem:<pem>'"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE, {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE" , "/erp-medication-exporter/push/client/certificate", Flags::categoryEnvironment, Type::autoPem, "Push notification client mTLS client certificate chain. either 'file://<pem_file>' or 'pem:<pem>'"}},
     {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_KEY,         {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_KEY"         , "/erp-medication-exporter/push/client/key"        , (Flags::categoryEnvironment|Flags::credential), "Push potification client mTLS client key. either 'file://<pem_file>' or 'pem:<pem>'"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA,   {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA"   , "/erp-medication-exporter/push/client/server-ca"  , Flags::categoryEnvironment, "Push notification client server certificate authority. either 'file://<pem_file>' or 'pem:<pem>'"}},
+    {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA,   {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA"   , "/erp-medication-exporter/push/client/server-ca"  , Flags::categoryEnvironment, Type::autoPem, "Push notification client server certificate authority. either 'file://<pem_file>' or 'pem:<pem>'"}},
     {ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_USE_PROXY,   {"ERP_MEDICATION_EXPORTER_PUSH_CLIENT_USE_PROXY"   , "/erp-medication-exporter/push/client/use-proxy"  , Flags::categoryEnvironment, "Enable use of SNI proxy for push potification client. (boolean)"}},
     {ConfigurationKey::MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT,    {"ERP_MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT"    , "/erp-medication-exporter/push/maxRetryCount"     , Flags::categoryEnvironment, "The maximum number of retries before deleting the event."}},
     {ConfigurationKey::MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS,{"ERP_MEDICATION_EXPORTER_PUSH_GATEWAY_COOLDOWN_AFTER_ERROR_SECONDS", "/erp-medication-exporter/push/gatewayCooldownAfterErrorSeconds", Flags::categoryEnvironment, "Pause all requests to a gateway that reported an 5xx error."}},
@@ -583,7 +583,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::POPP_TOKEN_IAT_MAX_AGE_SECONDS, {"ERP_POPP_TOKEN_IAT_MAX_AGE_SECONDS", "/erp/popp/tokenIatMaxAgeSeconds", Flags::categoryEnvironment, "The maximum IAT age of the PoPP Token."}},
 
     // ERP-36467:
-    {ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH, {"ERP_INTERNET_TLS_ROOT_CA_PATH", "/common/internetTlsRootCaPath", Flags::categoryEnvironment, "Common root-CAs for internet TLS"}},
+    {ConfigurationKey::INTERNET_TLS_ROOT_CA_PATH, {"ERP_INTERNET_TLS_ROOT_CA_PATH", "/common/internetTlsRootCaPath", Flags::categoryEnvironment, Type::file, "Common root-CAs for internet TLS"}},
 
     // */
     });
@@ -593,7 +593,7 @@ OpsConfigKeyNames::OpsConfigKeyNames()
 DevConfigKeyNames::DevConfigKeyNames()
     : OpsConfigKeyNames()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
     {ConfigurationKey::DEBUG_ENABLE_HSM_MOCK,                 {"DEBUG_ENABLE_HSM_MOCK",             "/debug/enable-hsm-mock", Flags::categoryDebug, "Use HSM mock"}},
@@ -758,7 +758,7 @@ std::vector<std::string> ConfigurationBase::getArrayInternal(KeyData key) const
         return String::split(value.value(), ';');
     }
 
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (jsonValue != nullptr)
     {
         Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
@@ -775,10 +775,10 @@ std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key
         return String::split(value.value(), ';');
     }
 
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (jsonValue != nullptr)
     {
-        Expect3(jsonValue->IsArray(), "JSON value must be array", std::logic_error);
+        Expect3(jsonValue->IsArray(), fmt::format("JSON value must be array: {}", key.jsonPath), std::logic_error);
         return getArrayHelper(jsonValue->GetArray());
     }
     return {};
@@ -787,7 +787,7 @@ std::vector<std::string> ConfigurationBase::getOptionalArrayInternal(KeyData key
 std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInternal(KeyData key) const
 {
     std::map<std::string, std::vector<std::string>> ret;
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (jsonValue != nullptr)
     {
         Expect3(jsonValue->IsObject(), "JSON value must be object", std::logic_error);
@@ -805,7 +805,7 @@ std::map<std::string, std::vector<std::string>> ConfigurationBase::getMapInterna
 
 std::optional<std::string> ConfigurationBase::getOptionalStringFromJson(KeyData key) const
 {
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (! jsonValue || jsonValue->IsNull())
     {
         return std::nullopt;
@@ -816,7 +816,7 @@ std::optional<std::string> ConfigurationBase::getOptionalStringFromJson(KeyData 
 
 std::vector<std::string> ConfigurationBase::getOptionalArrayFromJson(KeyData key) const
 {
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (! jsonValue)
     {
         return {};
@@ -856,10 +856,9 @@ std::optional<std::string> ConfigurationBase::getPemInternal(KeyData key) const
     return std::nullopt;
 }
 
-
-const rapidjson::Value* ConfigurationBase::getJsonValue(KeyData key) const
+const rapidjson::Value* ConfigurationBase::getJsonValue(std::string_view jsonPath) const
 {
-    const auto jsonValueIter = mValuesByKey.find(std::string(key.jsonPath));
+    const auto jsonValueIter = mValuesByKey.find(std::string(jsonPath));
     if(jsonValueIter != mValuesByKey.end() && jsonValueIter->second != nullptr)
     {
         return jsonValueIter->second;
@@ -871,8 +870,7 @@ std::list<std::pair<std::string, fhirtools::FhirVersion>>
 ConfigurationBase::resourceList(const std::string& jsonPath) const
 {
     std::list<std::pair<std::string, fhirtools::FhirVersion>> result;
-    const auto* resourceArray =
-        getJsonValue(KeyData{.environmentVariable = "", .jsonPath = jsonPath, .flags = 0, .description = ""});
+    const auto* resourceArray = getJsonValue(jsonPath);
     Expect3(resourceArray != nullptr, "missing configuration value: " + jsonPath, std::logic_error);
     Expect3(resourceArray->IsArray(), "configuration value must be Array: " + jsonPath, std::logic_error);
     for (const auto& entry : resourceArray->GetArray())
@@ -907,7 +905,7 @@ std::optional<SafeString> ConfigurationBase::getSafeStringValueInternal (const K
         return SafeString(value);
 
     // Could not find the value in the environment. Now try the configuration file.
-    const auto* jsonValue = getJsonValue(key);
+    const auto* jsonValue = getJsonValue(key.jsonPath);
     if (jsonValue == nullptr || jsonValue->IsNull())
     {
         // Not found in the configuration file either.
@@ -1044,8 +1042,7 @@ Configuration::AnrChecksumValidationMode Configuration::anrChecksumValidationMod
 
 fhirtools::FhirResourceGroupConfiguration Configuration::fhirResourceGroupConfiguration() const
 {
-    static const auto* groups =
-    getJsonValue(KeyData{.environmentVariable = "", .jsonPath = Common::fhirResourceGroups, .flags = 0, .description = ""});
+    static const auto* groups = getJsonValue(Common::fhirResourceGroups);
     const auto mapper = std::make_shared<fhirtools::VersionMapper>(fhirVersionMapping());
     return fhirtools::FhirResourceGroupConfiguration(groups, mapper);
 }
@@ -1055,12 +1052,10 @@ fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfigur
 {
     auto groupResolver = fhirResourceGroupConfiguration();
 
-    static const auto* kbvsc = getJsonValue(
-        KeyData{.environmentVariable = "", .jsonPath = ProcessT::kbvSchluesseltabellen, .flags = 0, .description = ""});
+    static const auto* kbvsc = getJsonValue(ProcessT::kbvSchluesseltabellen);
     fhirtools::KbvSchluesseltabellenConfiguration kbvSchluesseltabellenConfiguration{groupResolver, kbvsc};
 
-    static const auto* views = getJsonValue(
-        KeyData{.environmentVariable = "", .jsonPath = ProcessT::fhirResourceViews, .flags = 0, .description = ""});
+    static const auto* views = getJsonValue(ProcessT::fhirResourceViews);
     auto globalOffset = getIntValue(ConfigurationKey::FHIR_REFERENCE_TIME_OFFSET_DAYS);
     return fhirtools::FhirResourceViewConfiguration{groupResolver, views, kbvSchluesseltabellenConfiguration,
                                                     date::days{globalOffset}};
@@ -1079,13 +1074,7 @@ std::list<std::pair<std::string, fhirtools::FhirVersion>> Configuration::synthes
 fhirtools::VersionMapper::Config Configuration::fhirVersionMapping() const
 {
     using namespace std::string_literals;
-    static const KeyData configKey{
-        .environmentVariable = "",
-        .jsonPath = Common::versionMappingPath,
-        .flags = 0,
-        .description = "",
-    };
-    if (const auto* jsonValue = getJsonValue(configKey))
+    if (const auto* jsonValue = getJsonValue(Common::versionMappingPath))
     {
         return fhirtools::VersionMapper::Config::fromJson(*jsonValue);
     }

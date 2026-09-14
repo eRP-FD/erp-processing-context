@@ -313,27 +313,49 @@ public:
 /**
  * Generic representation of a configuration key's associated environment variable name and json path.
  */
+enum class ConfigurationKeyType : uint8_t
+{
+    plain = 0,
+    file = 1,
+    autoPem = 2,
+};
+
+enum class ConfigurationKeyFlags : uint16_t
+{
+    none        = 0,
+    credential  = 1 << 0,
+    array       = 1 << 1,
+    deprecated  = 1 << 2,
+    categoryEnvironment = 1 << 3,
+    categoryFunctional = 1 << 4,
+    categoryFunctionalStatic = 1 << 5,
+    categoryDebug = 1 << 6,
+    categoryRuntime = 1 << 7,
+    categoryFhirPackages = 1 << 8,
+    all = std::numeric_limits<uint16_t>::max(),
+};
+
 struct KeyData
 {
-    std::string_view environmentVariable;
-    std::string_view jsonPath;
-    enum ConfigurationKeyFlags
-    {
-        none        = 0,
-        credential  = 1 << 0,
-        array       = 1 << 1,
-        deprecated  = 1 << 2,
-        categoryEnvironment = 1 << 3,
-        categoryFunctional = 1 << 4,
-        categoryFunctionalStatic = 1 << 5,
-        categoryDebug = 1 << 6,
-        categoryRuntime = 1 << 7,
-        categoryFhirPackages = 1 << 8,
-        all = INT_MAX,
-    };
-    int flags = none;
-    std::string_view description;
+    using Flags = ConfigurationKeyFlags;
+    using Type = ConfigurationKeyType;
+    constexpr KeyData(std::string_view initEnvironmentVariable, std::string_view initJsonPath, ConfigurationKeyFlags initFlags,
+            ConfigurationKeyType initType, std::string_view initDescription);
+    constexpr KeyData(std::string_view initEnvironmentVariable, std::string_view initJsonPath, ConfigurationKeyFlags initFlags,
+            std::string_view initDescription);
+
+    constexpr bool hasFlags(Flags f) const;
+
+    std::string_view environmentVariable{};
+    std::string_view jsonPath{};
+    Flags flags{};
+    Type type{};
+    std::string_view description{};
+
 };
+
+constexpr ConfigurationKeyFlags operator | (ConfigurationKeyFlags, ConfigurationKeyFlags);
+constexpr ConfigurationKeyFlags operator & (ConfigurationKeyFlags, ConfigurationKeyFlags);
 
 /**
  * The base class of the Configuration is key agnostic and can be used with every concret configuration class
@@ -422,7 +444,7 @@ protected:
     std::optional<std::string> getOptionalStringFromJson(KeyData key) const;
     std::vector<std::string> getOptionalArrayFromJson(KeyData key) const;
 
-    const rapidjson::Value* getJsonValue(KeyData key) const;
+    const rapidjson::Value* getJsonValue(std::string_view jsonPath) const;
 
     [[nodiscard]] std::list<std::pair<std::string, fhirtools::FhirVersion>>
     resourceList(const std::string& jsonPath) const;
@@ -734,5 +756,38 @@ extern template fhirtools::Severity
 
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::ERP>() const;
 extern template fhirtools::FhirResourceViewConfiguration Configuration::fhirResourceViewConfiguration<ConfigurationBase::MedicationExporter>() const;
+
+constexpr KeyData::KeyData(std::string_view initEnvironmentVariable, std::string_view initJsonPath,
+                           ConfigurationKeyFlags initFlags, ConfigurationKeyType initType,
+                           std::string_view initDescription)
+    : environmentVariable{initEnvironmentVariable}
+    , jsonPath{initJsonPath}
+    , flags{initFlags}
+    , type{initType}
+    , description{initDescription}
+{
+}
+
+constexpr KeyData::KeyData(std::string_view initEnvironmentVariable, std::string_view initJsonPath,
+                           ConfigurationKeyFlags initFlags, std::string_view initDescription)
+    : KeyData{initEnvironmentVariable, initJsonPath, initFlags, ConfigurationKeyType::plain, initDescription}
+{
+}
+
+constexpr ConfigurationKeyFlags operator|(ConfigurationKeyFlags lhs, ConfigurationKeyFlags rhs)
+{
+    using UT = std::underlying_type_t<ConfigurationKeyFlags>;
+    return static_cast<ConfigurationKeyFlags>(static_cast<UT>(lhs) | static_cast<UT>(rhs));
+}
+
+constexpr ConfigurationKeyFlags operator&(ConfigurationKeyFlags lhs, ConfigurationKeyFlags rhs)
+{
+    using UT = std::underlying_type_t<ConfigurationKeyFlags>;
+    return static_cast<ConfigurationKeyFlags>(static_cast<UT>(lhs) & static_cast<UT>(rhs));
+}
+
+constexpr bool KeyData::hasFlags(Flags f) const {
+    return (flags & f) == f;
+}
 
 #endif // ERP_PROCESSING_CONTEXT_UTIL_CONFIGURATION_HXX

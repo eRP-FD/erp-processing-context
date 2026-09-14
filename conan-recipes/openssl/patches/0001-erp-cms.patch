@@ -1,6 +1,6 @@
-From 748957df833f99db6bf4c452022bc9552c62f73f Mon Sep 17 00:00:00 2001
+From f7f96a3a533c964d2eef1ffaf19ebce376c5fe32 Mon Sep 17 00:00:00 2001
 From: redacted <redacted>
-Date: Thu, 25 Jun 2026 11:23:14 +0200
+Date: Wed, 2 Sep 2026 15:51:11 +0200
 Subject: [PATCH 1/2] erp-cms
 
 ---
@@ -11,7 +11,7 @@ Subject: [PATCH 1/2] erp-cms
  4 files changed, 82 insertions(+), 1 deletion(-)
 
 diff --git a/crypto/cms/cms_asn1.c b/crypto/cms/cms_asn1.c
-index fb87f6c6ad..b576b2aa4f 100644
+index b3c1036990..ca35b7ef60 100644
 --- a/crypto/cms/cms_asn1.c
 +++ b/crypto/cms/cms_asn1.c
 @@ -60,7 +60,8 @@ ASN1_SEQUENCE_cb(CMS_SignerInfo, cms_si_cb) = {
@@ -114,10 +114,10 @@ index e3fe76e206..0ef1e36d0a 100644
  {
      STACK_OF(X509_CRL) *crls = NULL;
 diff --git a/crypto/cms/cms_local.h b/crypto/cms/cms_local.h
-index 94496b3823..d44b4afb62 100644
+index 55f41af054..30c81e1f01 100644
 --- a/crypto/cms/cms_local.h
 +++ b/crypto/cms/cms_local.h
-@@ -498,6 +498,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
+@@ -501,6 +501,7 @@ DECLARE_ASN1_ITEM(CMS_KeyAgreeRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_KeyTransRecipientInfo)
  DECLARE_ASN1_ITEM(CMS_OriginatorPublicKey)
  DECLARE_ASN1_ITEM(CMS_OtherKeyAttribute)
@@ -145,5 +145,5 @@ index dc87758514..2fcaa9b391 100644
  CMS_SignerInfo *CMS_add1_signer(CMS_ContentInfo *cms,
      X509 *signer, EVP_PKEY *pk, const EVP_MD *md,
 -- 
-2.53.0
+2.55.0
 

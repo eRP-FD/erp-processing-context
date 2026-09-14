@@ -43,6 +43,7 @@ protected:
         }
         mKvnr1.emplace(generateNewRandomKVNR());
         mKvnr2.emplace(generateNewRandomKVNR());
+        Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
     }
 
 public:

@@ -70,5 +70,12 @@ void PushExporterDatabase::createPushEvent(const PushEventDataCollector& data)
     catch (const PushErpExporterDatabaseException& exc)
     {
         TLOG(ERROR) << exc.what();
+        JsonLog(LogId::INFO, JsonLog::makeInfoLogReceiver(), false)
+            .keyValue("x_request_id", data.requestId().value_or("NOT SET"))
+            .keyValue("event", "Could not create Push Event")
+            .keyValue("channel_id", model::to_string(data.channelId().value()))
+            .keyValue("prescription_id", data.prescriptionId()->toString())
+            .keyValue("kvnr", data.hashedKvnr()->toHex())
+            .keyValue("error", exc.what());
     }
 }

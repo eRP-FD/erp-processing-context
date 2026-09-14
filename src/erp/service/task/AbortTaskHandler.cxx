@@ -39,6 +39,7 @@ void AbortTaskHandler::checkAccessValidityPharmacy(
 
 void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
     AuditDataCollector& auditDataCollector,
+    PushEventDataCollector& pushEventDataCollector,
     const std::string& professionOIDClaim,
     const model::Task &task,
     const ServerRequest &request)
@@ -49,11 +50,11 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
                   std::string(model::Task::StatusNames.at(task.status())));
     A_19145_01.finish();
 
+    const auto kvNrFromTask = task.kvnr();
+    Expect3(kvNrFromTask.has_value(), "Task has no KV number", std::logic_error);
     if(professionOIDClaim == profession_oid::oid_versicherter)
     {
         const auto kvNrClaim = request.getAccessToken().stringForClaim(JWT::idNumberClaim);
-        const auto kvNrFromTask = task.kvnr();
-        Expect3(kvNrFromTask.has_value(), "Task has no KV number", std::logic_error);
         A_20546_03.start("Check insurance number for insured person (patient)");
         if (kvNrClaim == kvNrFromTask)
         {
@@ -79,11 +80,19 @@ void AbortTaskHandler::checkAccessValidityOutsidePharmacy(
                                   : model::AuditEventId::POST_Task_abort_doctor);
     A_20547.finish();
     A_19120_3.finish();
+    A_28115.start("Collect push event data.");
+    A_28131.start("Data from Abort Task handler only if not triggered by patient.");
+    pushEventDataCollector
+        .setKvnr(*kvNrFromTask)
+        .setPrescriptionId(task.prescriptionId());
+    A_28131.finish();
+    A_28115.finish();
 }
 
 
 void AbortTaskHandler::checkAccessValidity(
     AuditDataCollector& auditDataCollector,
+    PushEventDataCollector& pushEventDataCollector,
     const std::string& professionOIDClaim,
     const model::Task &task,
     const ServerRequest &request)
@@ -93,10 +102,18 @@ void AbortTaskHandler::checkAccessValidity(
     {
         auditDataCollector.setEventId(model::AuditEventId::POST_Task_abort_pharmacy);
         checkAccessValidityPharmacy(task, request);
+        A_28115.start("Collect push event data.");
+        A_28131.start("Data from Abort Task handler only if not triggered by patient.");
+        pushEventDataCollector
+            .setKvnr(value(task.kvnr()))
+            .setPrescriptionId(task.prescriptionId());
+        A_28131.finish();
+        A_28115.finish();
     }
     else
     {
-        checkAccessValidityOutsidePharmacy(auditDataCollector, professionOIDClaim, task, request);
+        checkAccessValidityOutsidePharmacy(auditDataCollector, pushEventDataCollector, professionOIDClaim, task,
+                                           request);
     }
 }
 
@@ -145,7 +162,8 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
     }
     A_22102_01.finish();
 
-    checkAccessValidity(session.auditDataCollector(), *professionOIDClaim, task, session.request);
+    checkAccessValidity(session.auditDataCollector(), session.pushEventDataCollector(), *professionOIDClaim, task,
+                        session.request);
 
     const auto kvnr = task.kvnr();
     Expect3(kvnr.has_value(), "Task has no KV number", std::logic_error);
@@ -174,11 +192,4 @@ void AbortTaskHandler::handleRequest (PcSessionContext& session)
         .setInsurantKvnr(*kvnr)
         .setPrescriptionId(prescriptionId)
         .setAction(model::AuditEvent::Action::del);
-    A_28115.start("Collect push event data.");
-    A_28131.start("Data from Abort Task handler.");
-    session.pushEventDataCollector()
-        .setKvnr(*kvnr)
-        .setPrescriptionId(task.prescriptionId());
-    A_28131.finish();
-    A_28115.finish();
 }

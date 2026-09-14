@@ -451,6 +451,7 @@ list(
         erp/util/BufferTest.cxx
         erp/util/ByteHelperTest.cxx
         erp/util/ConditionTest.cxx
+        erp/util/ConfigurationFormatterTest.cxx
         erp/util/ConfigurationTest.cxx
         erp/util/DurationConsumerTest.cxx
         erp/util/EnvironmentTest.cxx

@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
+  "ignorePaths": [
+    "**/conan-recipes/**"
+  ],
   "commitMessagePrefix": "renovate:",
   "postUpgradeTasks": {
     "commands": ["python3 scripts/update-dependencies-md.py"],
@@ -23,11 +26,18 @@
         ]
     },
     {
-        "description": "openssl: open as draft PR only. The package uses a custom +erp suffix and requires manually porting patches (conan-recipes/openssl/patches/) and updating conandata.yml with the new SHA256 before the PR can be completed.",
+        "description": "openssl: open as draft PR only when a newer upstream version exists. Uses regex versioning so 3.5.8+erp and 3.5.8 are considered equal, triggering only when 3.5.9+ is released.",
         "matchManagers": ["conan"],
         "matchDepNames": ["openssl"],
+        "versioning": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)(?:\\+erp)?$",
         "allowedVersions": "/^3\\.5\\./",
         "draftPR": true
+    },
+    {
+        "description": "rapidjson: parse cci.YYYYMMDD snapshot dates to prevent downgrades to older cci snapshots",
+        "matchManagers": ["conan"],
+        "matchDepNames": ["rapidjson"],
+        "versioning": "regex:^cci\\.(?<major>\\d{4})(?<minor>\\d{2})(?<patch>\\d{2})$"
     },
     {
         "description": "hsmclient: exclude from Renovate updates",

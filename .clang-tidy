@@ -56,6 +56,7 @@ Checks: >-
 HeaderFilterRegex: '(src|test)/.*'
 CheckOptions:
   - { key: cppcoreguidelines-avoid-c-arrays.AllowStringArrays,     value: true       }
+  - { key: modernize-avoid-c-arrays.AllowStringArrays,             value: true       }
   - { key: cppcoreguidelines-special-member-functions.AllowSoleDefaultDtor, value: true }
   - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
   - { key: readability-identifier-naming.FunctionCase,             value: camelBack  }

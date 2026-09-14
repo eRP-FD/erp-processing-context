@@ -50,20 +50,36 @@ PushEventProcessor::runloopWorker(RunLoopScheduler& scheduler,
         }
 
         auto client = PushGatewayClient::create(serviceCtx->crlProvider());
-        const auto result = PushEventProcessor{serviceCtx, client.get()}.process();
-        switch (result)
+        PushEventProcessor processor{serviceCtx, client.get()};
+        try
         {
+            const auto result = processor.process();
+            switch (result)
+            {
 
-            case ResultType::Idle:
-                timer.expires_after(15s);
-                co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
-                break;
-            case ResultType::Success:
-            case ResultType::FailureRetry:
-            case ResultType::FailureRejected:
-                co_await async_immediate(co_await boost::asio::this_coro::executor);
-                break;
+                case ResultType::Idle:
+                    timer.expires_after(15s);
+                    co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
+                    continue;
+                case ResultType::Success:
+                case ResultType::FailureRetry:
+                case ResultType::FailureRejected:
+                    co_await async_immediate(co_await boost::asio::this_coro::executor);
+                    continue;
+            }
         }
+        catch (const std::exception& ex)
+        {
+            // last resort, should never land here.
+            const std::string what = dynamic_cast<const model::ModelException*>(&ex) ? "not given" : ex.what();
+            auto jlog = processor.mJsonLogFactory();
+            jlog << KeyValue("event", "Push Notification") << KeyValue("what", what);
+            jlog << KeyValue("reason", "last resort handling of unhandled exception, delaying processor for 60s");
+            jlog.locationFromException(ex);
+        }
+        // not allowed inside of catch:
+        timer.expires_after(60s);
+        co_await timer.async_wait(boost::asio::as_tuple(boost::asio::deferred));
     }
 }
 
@@ -98,9 +114,11 @@ PushEventProcessor::ResultType PushEventProcessor::process()
     }
     catch (const std::exception& ex)
     {
+        const std::string what = dynamic_cast<const model::ModelException*>(&ex) ? "not given" : ex.what();
         auto jlog = mJsonLogFactory();
-        jlog << KeyValue("event", "Push Notification") << KeyValue("what", ex.what());
+        jlog << KeyValue("event", "Push Notification") << KeyValue("what", what);
         jlog << KeyValue("reason", "exception during event fetching from databases");
+        jlog.locationFromException(ex);
         return ResultType::FailureRetry;
     }
     if (! events.empty())
@@ -125,60 +143,67 @@ PushEventProcessor::processEvents(const std::vector<model::PushNotificationConte
             // If one result is success the combined result shall be success, same for Retry.
             combinedResult = std::min(combinedResult, currentResult);
         }
-        catch (const model::ModelException& me)
-        {
-            auto jlog = mJsonLogFactory();
-            jlog << KeyValue("event", "Push Notification");
-            jlog << KeyValue("reason", "ModelException during event processing");
-            jlog << KeyValue(event.pushNotification().identifierType(), event.pushNotification().identifier());
-            combinedResult = std::min(combinedResult, ResultType::FailureRetry);
-        }
         catch (const std::exception& ex)
         {
+            const std::string what = dynamic_cast<const model::ModelException*>(&ex) ? "not given" : ex.what();
             auto jlog = mJsonLogFactory();
-            jlog << KeyValue("event", "Push Notification") << KeyValue("what", ex.what());
+            jlog << KeyValue("event", "Push Notification") << KeyValue("what", what);
             jlog << KeyValue("reason", "exception during event processing");
             jlog << KeyValue(event.pushNotification().identifierType(), event.pushNotification().identifier());
+            jlog.locationFromException(ex);
             combinedResult = std::min(combinedResult, ResultType::FailureRetry);
         }
     }
-    switch (combinedResult)
+    try
     {
-        case ResultType::Success:
-            deletePushNotification(firstEvent, "Deleting event after successful transfer");
+        switch (combinedResult)
+        {
+            case ResultType::Success:
+                deletePushNotification(firstEvent, "Deleting event after successful transfer");
+                break;
+            case ResultType::FailureRejected:
+                deletePushNotification(firstEvent, "Deleting event because pushkey was rejected");
+                break;
+            case ResultType::Idle:
+            case ResultType::FailureRetry: {
+                using namespace std::chrono_literals;
+                if (firstEvent.created() + 12h < model::Timestamp::now())
+                {
+                    A_28473.start("Retry after 12h, delete if still failing");
+                    deletePushNotification(firstEvent, "Deleting push event older than 12 hours");
+                    return ResultType::FailureRetry;
+                }
+                if (firstEvent.retryCount() >=
+                    Configuration::instance().getIntValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT))
+                {
+                    deletePushNotification(firstEvent, "Deleting event after max retryCount");
+                }
+                else
+                {
+                    auto delay = firstEvent.rescheduleDelay();
+                    mJsonLogFactory() << KeyValue("event", "Reschedule event after error")
+                                      << KeyValue("channel_id", firstEvent.pushNotification().channelId())
+                                      << KeyValue("prescription_id", firstEvent.pushNotification().identifier())
+                                      << KeyValue("kvnr", firstEvent.hashedKvnr().getLoggingId())
+                                      << KeyValue("retryCount", std::to_string(firstEvent.retryCount()));
+                    mServiceContext->transaction(TransactionMode::autocommit, [&](auto& db) {
+                        db.updatePushProcessingDelay(firstEvent.retryCount() + 1, delay, firstEvent.hashedKvnr(),
+                                                     firstEvent.eventId());
+                    });
+                }
+            }
             break;
-        case ResultType::FailureRejected:
-            deletePushNotification(firstEvent, "Deleting event because pushkey was rejected");
-            break;
-        case ResultType::Idle:
-        case ResultType::FailureRetry: {
-            using namespace std::chrono_literals;
-            if (firstEvent.created() + 12h < model::Timestamp::now())
-            {
-                A_28473.start("Retry after 12h, delete if still failing");
-                deletePushNotification(firstEvent, "Deleting push event older than 12 hours");
-                return ResultType::FailureRetry;
-            }
-            if (firstEvent.retryCount() >=
-                Configuration::instance().getIntValue(ConfigurationKey::MEDICATION_EXPORTER_PUSH_MAX_RETRY_COUNT))
-            {
-                deletePushNotification(firstEvent, "Deleting event after max retryCount");
-            }
-            else
-            {
-                auto delay = firstEvent.rescheduleDelay();
-                mJsonLogFactory() << KeyValue("event", "Reschedule event after error")
-                                  << KeyValue("channel_id", firstEvent.pushNotification().channelId())
-                                  << KeyValue("prescription_id", firstEvent.pushNotification().identifier())
-                                  << KeyValue("kvnr", firstEvent.hashedKvnr().getLoggingId())
-                                  << KeyValue("retryCount", std::to_string(firstEvent.retryCount()));
-                mServiceContext->transaction(TransactionMode::autocommit, [&](auto& db) {
-                    db.updatePushProcessingDelay(firstEvent.retryCount() + 1, delay, firstEvent.hashedKvnr(),
-                                                 firstEvent.eventId());
-                });
-            }
         }
-        break;
+    }
+    catch (const std::exception& ex)
+    {
+        const std::string what = dynamic_cast<const model::ModelException*>(&ex) ? "not given" : ex.what();
+        auto jlog = mJsonLogFactory();
+        jlog << KeyValue("event", "Push Notification") << KeyValue("what", what);
+        jlog << KeyValue("reason", "exception during combinedResult evaluation");
+        jlog << KeyValue(firstEvent.pushNotification().identifierType(), firstEvent.pushNotification().identifier());
+        jlog.locationFromException(ex);
+        // changing combinedResult here wouldn't do anything, it has already been evaluated
     }
     return combinedResult;
 }
@@ -307,6 +332,7 @@ PushEventProcessor::ResultType PushEventProcessor::processResponse(const model::
         catch (const std::exception& ex)
         {
             jlog << KeyValue("error", "exception during error response parsing");
+            jlog.locationFromException(ex);
             TLOG(INFO) << "response body: " << response.getBody();
         }
         if (is5xxInternalError(response.getHeader().status()))
@@ -347,6 +373,7 @@ PushEventProcessor::ResultType PushEventProcessor::processResponse(const model::
     catch (const std::exception& ex)
     {
         jlog << KeyValue("error", "exception during batch response parsing / processing");
+        jlog.locationFromException(ex);
         TLOG(INFO) << "response body: " << response.getBody();
         TLOG(INFO) << "exception: " << ex.what();
     }

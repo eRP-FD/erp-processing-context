@@ -113,7 +113,7 @@ void GetConfigurationHandler::doHandleRequest(BaseSessionContext& session)
 {
     TVLOG(1) << "configuration requested by: " << session.request.header().serializeFields();
     const auto& config = Configuration::instance();
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     session.response.setBody(mFormatter->formatAsJson(config, Flags::all));
     session.response.setHeader(Header::ContentType, MimeType::json);
 }

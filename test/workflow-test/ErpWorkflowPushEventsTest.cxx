@@ -187,7 +187,7 @@ TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskAbort_NewlyCreate
     auto taskOrOperationOutcome = taskActivate(task->prescriptionId(), accessCode, qesBundle, HttpStatus::OK);
 
     ASSERT_NO_FATAL_FAILURE(taskAbort(task->prescriptionId(), JwtBuilder::testBuilder().makeJwtArzt(), accessCode, {},
-                                      HttpStatus::NoContent, model::OperationOutcome::Issue::Type::forbidden));
+                                      HttpStatus::NoContent));
 
 
 
@@ -196,6 +196,32 @@ TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskAbort_NewlyCreate
     EXPECT_EQ(pushEventChannels.size(), 2);
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_activate));
     EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_abort));
+}
+
+TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskAbort_NotForPatient)
+{
+    const model::PrescriptionType workflowType = model::PrescriptionType::apothekenpflichigeArzneimittel;
+
+    std::optional<model::Task> task;
+    ASSERT_NO_FATAL_FAILURE(task = taskCreate(workflowType));
+    ASSERT_TRUE(task);
+
+    const std::string accessCode(task->accessCode());
+
+    std::string qesBundle;
+    ASSERT_NO_THROW(qesBundle =
+                        std::get<0>(makeQESBundle(mKvnr, task->prescriptionId(), model::Timestamp::now(), std::nullopt, false)));
+    auto taskOrOperationOutcome = taskActivate(task->prescriptionId(), accessCode, qesBundle, HttpStatus::OK);
+
+    ASSERT_NO_FATAL_FAILURE(taskAbort(task->prescriptionId(), JwtBuilder::testBuilder().makeJwtVersicherter(mKvnr), accessCode, {},
+                                      HttpStatus::NoContent));
+
+
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));// Abort operation requires some processing time.
+    const std::set<model::ChannelId> pushEventChannels = channelsFromPushEvents();
+    EXPECT_EQ(pushEventChannels.size(), 1);
+    EXPECT_TRUE(pushEventChannels.contains(model::ChannelId::erp_task_activate));
 }
 
 TEST_F(ErpWorkflowPushEventsTest, taskPushEventsGeneration_TaskLifecycleNormal)// NOLINT

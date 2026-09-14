@@ -11,7 +11,7 @@
 
 MockConfigurationKeyNames::MockConfigurationKeyNames()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     // clang-format off
     mNamesByKey.insert({
         { MockConfigurationKey::MOCK_ECIES_PUBLIC_KEY,       {"MOCK_ECIES_PUBLIC_KEY",       "/mock/ecies/public-key", Flags::categoryDebug, ""} },

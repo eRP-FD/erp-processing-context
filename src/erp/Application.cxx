@@ -15,7 +15,7 @@ namespace erp
 {
 void Application::printConfiguration()
 {
-    using Flags = KeyData::ConfigurationKeyFlags;
+    using Flags = ConfigurationKeyFlags;
     const auto& config = Configuration::instance();
     Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
     erp::ConfigurationFormatter formatter(std::make_shared<const erp::RuntimeConfiguration>());

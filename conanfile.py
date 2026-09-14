@@ -65,23 +65,23 @@ class ErpProcessingContext(ConanFile):
     requires = [
         'antlr4-cppruntime/4.13.2',
         'boost/1.90.0',
-        'botan/3.11.1',
-        'date/3.0.4',  # date can be removed as soon as we use C++20
-        'fmt/12.1.0',
+        'botan/3.13.0',
+        'date/3.0.5',  # date can be removed as soon as we use C++20
+        'fmt/12.2.0',
         'glog/0.7.1',
         'gsl-lite/0.41.0',
         'gtest/1.17.0',
         'hiredis/1.3.0',
-        'libpq/16.8',
+        'libpq/16.14',
         'libpqxx/7.10.5',
         'libunwind/1.8.3',
-        'libxml2/2.15.2',
-        'magic_enum/0.9.7',
-        'openssl/3.5.7+erp',
+        'libxml2/2.15.3',
+        'magic_enum/0.9.8',
+        'openssl/3.5.8+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20250205',
         'redis-plus-plus/1.3.15',
-        'xmlsec/1.3.9',
+        'xmlsec/1.3.12',
         'zlib/1.3.2',
         'zstd/1.5.7'  # database compression
     ]
@@ -97,7 +97,7 @@ class ErpProcessingContext(ConanFile):
             self.requires('hsmclient/2.19.0-b00')
 
     def build_requirements(self):
-        self.tool_requires('xmlsec/1.3.8', options={"shared": False})
+        self.tool_requires('xmlsec/1.3.12', options={"shared": False})
 
 
     def layout(self):

@@ -95,3 +95,4 @@ add_custom_target(tools DEPENDS make_task_id fhirconvert fhirvalidate tee3send r
 
 add_subdirectory(fhirinstall)
 add_subdirectory(erp-fhir-ws)
+add_subdirectory(cfgreport)

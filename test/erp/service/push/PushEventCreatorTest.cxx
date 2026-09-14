@@ -6,24 +6,25 @@
  */
 
 #include "erp/database/push/PushErpDatabase.hxx"
-#include "erp/database/push/PushExporterDatabase.hxx"
 #include "erp/database/push/PushEventDataCollector.hxx"
+#include "erp/database/push/PushExporterDatabase.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "erp/service/push/PushEventCreator.hxx"
+#include "shared/database/PostgresConnection.hxx"
 #include "shared/server/BaseHttpsServer.hxx"
 #include "shared/util/Expect.hxx"
 #include "test/mock/MockPushExporterDatabaseProxy.hxx"
-#include "test/mock/PushExporterMockBackend.hxx"
 #include "test/mock/PushErpBackendProxy.hxx"
 #include "test/mock/PushErpMockBackend.hxx"
+#include "test/mock/PushExporterMockBackend.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <future>
 #include <latch>
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
 
 using namespace std::chrono_literals;
 
@@ -209,4 +210,39 @@ TEST_F(PushEventCreatorCrashTest, pushExporterDatabaseFactoryThrows)
     p.set_value();
     testutils::waitFor( [&]() { return pushCreator.currentDepth() == 0; }, 1s);
     EXPECT_TRUE(hasThrown);
+}
+
+TEST_F(PushEventCreatorTest, createPushEventDbFailure_logsCouldNotCreatePushEvent)
+{
+    using namespace std::chrono_literals;
+    using testing::_;
+
+    ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault(testing::Return(true));
+
+    ON_CALL(*mPushExporterMockBackend, createPushEvent(_)).WillByDefault(::testing::Invoke([&] {
+        throw pqxx::broken_connection{"Lost connection to the database server."};
+    }));
+
+    testing::internal::CaptureStderr();
+
+    auto& pushCreator = mServiceContext->getPushEventCreator();
+    pushCreator.tryPostCreatePushEvent(createSampleEventData(), *mServiceContext);
+
+    testutils::waitFor(
+        [&] {
+            return pushCreator.currentDepth() == 0;
+        },
+        1s);
+
+    const std::string output = testing::internal::GetCapturedStderr();
+    std::cerr << output << std::endl;
+
+    // Must NOT contain the success event
+    EXPECT_EQ(output.find(R"("event":"Create Push Event")"), std::string::npos) << output;
+
+    // Must contain the failure event with all required fields
+    EXPECT_NE(output.find(R"("event":"Could not create Push Event")"), std::string::npos) << output;
+    EXPECT_NE(output.find(R"("channel_id":"erp.chargeitem.create")"), std::string::npos) << output;
+    EXPECT_NE(output.find(R"("error":)"), std::string::npos) << output;
+    EXPECT_NE(output.find("Lost connection to the database server."), std::string::npos) << output;
 }

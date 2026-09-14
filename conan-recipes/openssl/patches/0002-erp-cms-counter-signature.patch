@@ -1,6 +1,6 @@
-From 3b89dd7eab05d5a806d338cbf20becba097116f6 Mon Sep 17 00:00:00 2001
-From: redacted <redacted>
-Date: Thu, 25 Jun 2026 11:23:46 +0200
+From 7872fc1852e05204c6d7c996b250ad43aa73229f Mon Sep 17 00:00:00 2001
+redacted <redacted>
+Date: Wed, 2 Sep 2026 15:52:18 +0200
 Subject: [PATCH 2/2] erp-cms-counter-signature
 
 ---
@@ -315,5 +315,5 @@ index 2fcaa9b391..68e55bb0ce 100644
  #define CMS_R_UNKNOWN_DIGEST_ALGORITM CMS_R_UNKNOWN_DIGEST_ALGORITHM
  #define CMS_R_UNSUPPORTED_RECPIENTINFO_TYPE \
 -- 
-2.53.0
+2.55.0
 

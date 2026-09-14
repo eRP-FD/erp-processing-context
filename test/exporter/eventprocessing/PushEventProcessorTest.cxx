@@ -210,6 +210,40 @@ TEST_F(PushEventProcessorTest, process_Idle)
     EXPECT_EQ(result, PushEventProcessor::ResultType::Idle);
 }
 
+TEST_F(PushEventProcessorTest, process_ThrowInDelete)
+{
+    PushEventProcessor processor{serviceContext, client.get()};
+    auto prescriptionId =
+        model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1);
+    const model::Kvnr kvnr("X12345678");
+    db_model::HashedKvnr hashedKvnr;
+    hashedKvnr.append("c8c5d1e7de0a204e56970d3c1c32c3cccf9c71e08425fa114b507c381f48cfff");
+    const model::PushNotificationEvent event{
+        123,      "erp.task.activate", prescriptionId.toString(), "TaskId", hashedKvnr, 0, model::Timestamp::now(),
+        "auditId"};
+    ON_CALL(exporterDbMock, processNextPushNotification()).WillByDefault(testing::Return(event));
+
+    const date::year_month_day ymd{model::Timestamp::now().localDay()};
+    ON_CALL(mainDbMock, retrievePushNotificationEventData(testing::_))
+        .WillByDefault(
+            testing::Return(std::vector<model::PushNotificationContext>{makePushNotificationContext(ymd, 123)}));
+
+    auto* clientMock = dynamic_cast<PushNotificationClientMock*>(client.get());
+    ASSERT_TRUE(clientMock);
+    EXPECT_CALL(*clientMock, sendPushNotification(testing::_, testing::_, testing::_))
+        .Times(1)
+        .WillOnce(testing::Return(ClientResponse{Header{HttpStatus::OK}, ""}));
+
+    // throws during delete
+    ON_CALL(exporterDbMock, deletePushNotification(testing::_, testing::Eq(123)))
+        .WillByDefault(testing::Throw(std::runtime_error("error")));
+
+    PushEventProcessor::ResultType result{PushEventProcessor::ResultType::FailureRetry};
+    ASSERT_NO_THROW(result = processor.process());
+    // still Success, the event was transmitted.
+    EXPECT_EQ(result, PushEventProcessor::ResultType::Success);
+}
+
 struct ExponentialBackoffParam {
     int retry;
     std::chrono::seconds expectedDelay;

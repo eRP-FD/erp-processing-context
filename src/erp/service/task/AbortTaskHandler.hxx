@@ -20,10 +20,12 @@ public:
 
 private:
     void checkAccessValidityOutsidePharmacy(AuditDataCollector& auditDataCollector,
+                                            PushEventDataCollector& pushEventDataCollector,
                                             const std::string& professionOIDClaim, const model::Task& task,
                                             const ServerRequest& request);
-    void checkAccessValidity(AuditDataCollector& auditDataCollector, const std::string& professionOIDClaim,
-                             const model::Task& task, const ServerRequest& request);
+    void checkAccessValidity(AuditDataCollector& auditDataCollector, PushEventDataCollector& pushEventDataCollector,
+                             const std::string& professionOIDClaim, const model::Task& task,
+                             const ServerRequest& request);
     void checkAccessValidityPharmacy(const model::Task& task, const ServerRequest& request);
 };
 
