@@ -3274,6 +3274,11 @@ void ErpWorkflowTestBase::generateNewRandomKVNR(std::string& kvnr)
         oss << std::setfill('0') << std::setw(8) << distrib(gen);
         auto numericPart = oss.str();
         kvnr = "X" + numericPart + checksum::mod10<1, 2>("24" + numericPart);
+        if (model::Kvnr{kvnr}.verificationIdentity())
+        {
+            // skip verification identities
+            continue;
+        }
         const auto& bundle = taskGet(kvnr);
         if (bundle->getResourceCount() == 0)
         {

@@ -23,7 +23,8 @@ EventDispatcher::EventDispatcher(std::unique_ptr<IEpaMedicationClient>&& medicat
 {
 }
 
-Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCollector& auditDataCollector)
+EventDispatcher::Result EventDispatcher::dispatch(const model::TaskEvent& erpEvent,
+                                                  AuditDataCollector& auditDataCollector)
 {
     A_19296_04.start("AuditEvent Content");
     auditDataCollector.setAgentName("E-Rezept-Fachdienst");
@@ -109,7 +110,7 @@ Outcome EventDispatcher::dispatch(const model::TaskEvent& erpEvent, AuditDataCol
     }
     A_19296_04.finish();
 
-    return outcome;
+    return {.outcome = outcome, .deadLetterReason = message.getData().error.value_or("no dead_letter reason given")};
 }
 
 }

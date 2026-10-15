@@ -12,6 +12,7 @@
 #include "shared/util/Expect.hxx"
 #include "shared/util/String.hxx"
 
+#include <boost/algorithm/string/replace.hpp>
 #include <rapidjson/ostreamwrapper.h>
 #include <regex>
 
@@ -133,7 +134,9 @@ std::string NumberAsStringParserDocument::serializeToJsonString(const rapidjson:
     rj::StringBuffer buffer;
     NumberAsStringParserWriter<rj::StringBuffer> writer(buffer);
     value.Accept(writer);
-    return {buffer.GetString()};
+    std::string result{buffer.GetString()};
+    sanitizeString(result);
+    return result;
 }
 
 std::string NumberAsStringParserDocument::pointerToString(const rj::Pointer& pointer)
@@ -731,6 +734,24 @@ rj::Value model::NumberAsStringParserDocument::makeValue(Ch prefix, const std::s
     s.push_back(prefix);
     s.append(value);
     return rj::Value{s, GetAllocator()};
+}
+
+void NumberAsStringParserDocument::sanitizeString(std::string& str)
+{
+    // Fast-path: '<' starts <script / </script / <!--
+    //            '>' ends   ]]> / -->
+    //            \xE2 is the UTF-8 lead byte of U+2028 / U+2029
+    if (str.find_first_of("<>\xE2") == std::string::npos)
+    {
+        return;
+    }
+    str = ::String::replaceInSubstring(std::move(str), "<script", "<", "\\u003C", true);
+    str = ::String::replaceInSubstring(std::move(str), "</script", "<", "\\u003C", true);
+    str = ::String::replaceInSubstring(std::move(str), "<!--", "<", "\\u003C", false);
+    str = ::String::replaceInSubstring(std::move(str), "]]>", ">", "\\u003E", false);
+    str = ::String::replaceInSubstring(std::move(str), "-->", ">", "\\u003E", false);
+    boost::replace_all(str, "\u2028", "\\u2028");
+    boost::replace_all(str, "\u2029", "\\u2029");
 }
 
 rj::Document NumberAsStringParserDocumentConverter::copyToOriginalFormat(const rj::Document& documentNumbersAsStrings)

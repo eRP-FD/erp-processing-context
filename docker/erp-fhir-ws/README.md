@@ -4,8 +4,8 @@ eRP-FHIR-Validator Web Docker Image
 Building
 --------
 
-Before starting, acquire a conan authentication token from [IBM-Artifactory](https://artifactory-cpp-ce.ihc-devops.net/ui/repos/tree).
-Log in and click on _Set Me Up_ on the top right under the navigation bar.
+Before starting, acquire a conan authentication token from [IBM-Artifactory]
+
 Then insert your authentication token into a file in the top-level source folder of `erp-processing-context` and
 name it `conan_credentials.json` with the following contents (tokens should normaly be identical):
 

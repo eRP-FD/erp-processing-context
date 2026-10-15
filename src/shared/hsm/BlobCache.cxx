@@ -43,7 +43,7 @@ class BlobCache::Refresher : public FixedIntervalHandler
 {
 public:
     explicit Refresher(BlobCache& blobCache, std::chrono::steady_clock::duration interval)
-        : FixedIntervalHandler{interval}
+        : FixedIntervalHandler{"BlobCache::Refresher", interval}
         , mBlobCache{blobCache}
     {
     }

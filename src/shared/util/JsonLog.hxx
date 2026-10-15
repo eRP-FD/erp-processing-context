@@ -32,6 +32,8 @@ namespace {
     constexpr uint32_t LOGID_SERVICE_DOS                          = 0x00000004;
     constexpr uint32_t LOGID_ACCESS                               = 0x00000005;
     constexpr uint32_t LOGID_INTERNAL                             = 0x00000006;
+
+    constexpr uint32_t LOGID_SEVERITY_MASK                        = 0xF0000000;
 }
 
 
@@ -76,14 +78,16 @@ public:
     static constexpr bool withDetailsDefault();
 
     JsonLog(JsonLog&& o) noexcept = default;
-    JsonLog(LogId id, LogReceiver&& receiver, bool withDetails = withDetailsDefault());
+    JsonLog(LogId id, LogReceiver&& receiver = LogReceiver{}, bool withDetails = withDetailsDefault());
     JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
     ~JsonLog(void);
+
 
     static LogReceiver makeErrorLogReceiver();
     static LogReceiver makeWarningLogReceiver();
     static LogReceiver makeInfoLogReceiver();
     static LogReceiver makeVLogReceiver(const int32_t logLevel);
+    static LogReceiver makeLogReceiver(LogId logId);
 
     JsonLog& message (std::string_view text);
     JsonLog& details (std::string_view details);
@@ -103,6 +107,12 @@ public:
     JsonLog& locationFromException(const boost::exception& ex) &;
     JsonLog&& locationFromException(const boost::exception& ex) &&;
 
+    /// sets "location", "rootLocation", "exception", "what", "details" and "status" if applicable
+    ///
+    /// ErpException: "status" and "details" are added if available
+    /// ModelException: "what" is not set
+    /// ExceptionWrapperBase: "location" and "rootLocaton" are added
+    void valuesFromException(const std::exception& ex);
     /**
      * There are circumstances where an AccessLog object is created but output from it is undesirable.
      * The discard() method prevents any output from its destructor. When writeWithoutDetails() or writeWithDetails()

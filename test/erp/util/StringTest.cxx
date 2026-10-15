@@ -464,3 +464,103 @@ TEST_F(StringTest, isHexString)
     EXPECT_TRUE(String::isHexString(String::toHexString("0")));
     EXPECT_TRUE(String::isHexString(String::toHexString("")));
 }
+
+TEST_F(StringTest, replaceInSubstring)
+{
+    std::string s = R"({"x":"<script="bla.js"/>"})";
+    s = String::replaceInSubstring(std::move(s), "<script", "<", "\\u003C", false);
+    EXPECT_EQ(s, R"({"x":"\u003Cscript="bla.js"/>"})") << s;
+}
+
+// substring not present in inOut → inOut unchanged
+TEST_F(StringTest, replaceInSubstring_noMatch)
+{
+    EXPECT_EQ(String::replaceInSubstring("hello world", "<tag", "<", "\\u003C", false), "hello world");
+}
+
+// multiple occurrences of substring are all replaced
+TEST_F(StringTest, replaceInSubstring_multipleOccurrences)
+{
+    EXPECT_EQ(String::replaceInSubstring("<b>foo</b> and <b>bar</b>", "<b>", "<", "\\u003C", false),
+              "\\u003Cb>foo</b> and \\u003Cb>bar</b>");
+}
+
+// only the first occurrence of 'from' inside each matched substring is replaced
+TEST_F(StringTest, replaceInSubstring_onlyFirstFromInsideSubstring)
+{
+    // substring "aa" contains "a" twice; only the first "a" must be replaced
+    EXPECT_EQ(String::replaceInSubstring("aa", "aa", "a", "X", false), "Xa");
+}
+
+// to is longer than from → string grows correctly
+TEST_F(StringTest, replaceInSubstring_toLongerThanFrom)
+{
+    EXPECT_EQ(String::replaceInSubstring("<img><img>", "<img>", "<", "\\u003C", false), "\\u003Cimg>\\u003Cimg>");
+}
+
+// to is shorter than from → string shrinks correctly
+TEST_F(StringTest, replaceInSubstring_toShorterThanFrom)
+{
+    EXPECT_EQ(String::replaceInSubstring("<<tag>><<tag>>", "<<tag>>", "<<", "<", false), "<tag>><tag>>");
+}
+
+// to equals from → string unchanged
+TEST_F(StringTest, replaceInSubstring_toEqualsFrom)
+{
+    EXPECT_EQ(String::replaceInSubstring("<x><x>", "<x>", "<", "<", false), "<x><x>");
+}
+
+// empty input → empty output
+TEST_F(StringTest, replaceInSubstring_emptyInput)
+{
+    EXPECT_EQ(String::replaceInSubstring("", "<br>", "<", "\\u003C", false), "");
+}
+
+// from is located at the end of substring
+TEST_F(StringTest, replaceInSubstring_fromAtEndOfSubstring)
+{
+    EXPECT_EQ(String::replaceInSubstring("foo<", "oo<", "<", "\\u003C", false), "foo\\u003C");
+}
+
+// precondition violated: from not contained in substring → throws
+TEST_F(StringTest, replaceInSubstring_fromNotInSubstring_throws)
+{
+    EXPECT_ANY_THROW((void) String::replaceInSubstring("hello", "hello", "X", "Y", false));
+}
+
+// --- Case-insensitive matching (ignoreCase = true) ---
+
+// lowercase pattern matches uppercase input
+TEST_F(StringTest, replaceInSubstring_caseInsensitive_upperCase)
+{
+    EXPECT_EQ(String::replaceInSubstring(R"({"x":"<SCRIPT="bla.js"/>"})", "<script", "<", "\\u003C", true),
+              R"({"x":"\u003CSCRIPT="bla.js"/>"})");
+}
+
+// lowercase pattern matches mixed-case input
+TEST_F(StringTest, replaceInSubstring_caseInsensitive_mixedCase)
+{
+    EXPECT_EQ(String::replaceInSubstring("<Script>alert()</Script>", "<script", "<", "\\u003C", true),
+              "\\u003CScript>alert()</Script>");
+}
+
+// original casing of the non-replaced portion is preserved
+TEST_F(StringTest, replaceInSubstring_caseInsensitive_preservesCasing)
+{
+    EXPECT_EQ(String::replaceInSubstring("<ScRiPt>x</sCrIpT>", "<script", "<", "\\u003C", true),
+              "\\u003CScRiPt>x</sCrIpT>");
+}
+
+// multiple case-variant occurrences are all replaced
+TEST_F(StringTest, replaceInSubstring_caseInsensitive_multipleOccurrences)
+{
+    EXPECT_EQ(String::replaceInSubstring("<script><SCRIPT><Script>", "<script", "<", "\\u003C", true),
+              "\\u003Cscript>\\u003CSCRIPT>\\u003CScript>");
+}
+
+// case-sensitive default (ignoreCase = false) does NOT match different case
+TEST_F(StringTest, replaceInSubstring_caseSensitive_doesNotMatchDifferentCase)
+{
+    EXPECT_EQ(String::replaceInSubstring("<SCRIPT>alert()</SCRIPT>", "<script", "<", "\\u003C", false),
+              "<SCRIPT>alert()</SCRIPT>");
+}

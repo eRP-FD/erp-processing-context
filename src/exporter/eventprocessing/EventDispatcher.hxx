@@ -23,8 +23,13 @@ namespace eventprocessing
 class EventDispatcher
 {
 public:
+    struct Result {
+        Outcome outcome;
+        std::string deadLetterReason;
+    };
+
     explicit EventDispatcher(std::unique_ptr<IEpaMedicationClient>&& medicationClient);
-    Outcome dispatch(const model::TaskEvent& erpEvent, AuditDataCollector& auditDataCollector);
+    Result dispatch(const model::TaskEvent& erpEvent, AuditDataCollector& auditDataCollector);
 
 private:
     std::unique_ptr<IEpaMedicationClient> mMedicationClient;

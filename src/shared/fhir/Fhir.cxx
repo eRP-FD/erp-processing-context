@@ -362,6 +362,10 @@ void Fhir::init(Init init)
         const auto& instance = *mInstance;
         Expect3(dynamic_cast<InstanceType*>(mInstance.get()),
                 std::string{"Fhir already initialized with: "} + typeid(instance).name(), std::logic_error);
+        if (init == Init::now)
+        {
+            mInstance->ensureInitialized();
+        }
         return;
     }
     mInstance = std::make_unique<FhirImpl<ProcessT>>();

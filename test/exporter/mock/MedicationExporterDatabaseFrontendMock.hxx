@@ -39,7 +39,7 @@ public:
                 (const, override));
     MOCK_METHOD(int, markDeadLetter,
                 (const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
-                 model::PrescriptionType prescriptionType),
+                 model::PrescriptionType prescriptionType, const std::string& errorText),
                 (const, override));
     MOCK_METHOD(std::optional<model::BareTaskEvent>, markFirstEventDeadLetter, (const model::EventKvnr& kvnr),
                 (const, override));
@@ -81,7 +81,7 @@ public:
     bool isDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                       model::PrescriptionType prescriptionType) const override;
     int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
-                       model::PrescriptionType prescriptionType) const override;
+                       model::PrescriptionType prescriptionType, const std::string& errorText) const override;
     std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const override;
     void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const override;
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const override;

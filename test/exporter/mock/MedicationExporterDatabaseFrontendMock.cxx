@@ -61,9 +61,10 @@ bool MedicationExporterDatabaseFrontendProxy::isDeadLetter(const model::EventKvn
 }
 int MedicationExporterDatabaseFrontendProxy::markDeadLetter(const model::EventKvnr& kvnr,
                                                             const model::PrescriptionId& prescriptionId,
-                                                            model::PrescriptionType prescriptionType) const
+                                                            model::PrescriptionType prescriptionType,
+                                                            const std::string& errorText) const
 {
-    return mDatabase->markDeadLetter(kvnr, prescriptionId, prescriptionType);
+    return mDatabase->markDeadLetter(kvnr, prescriptionId, prescriptionType, errorText);
 }
 
 std::optional<model::BareTaskEvent>

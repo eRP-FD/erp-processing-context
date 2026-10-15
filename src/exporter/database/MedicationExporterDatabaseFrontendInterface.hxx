@@ -33,7 +33,7 @@ enum class TransactionMode : uint8_t;
 class MedicationExporterDatabaseFrontendInterface
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "13";
+    static constexpr const char* expectedSchemaVersion = "14";
 
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
@@ -59,7 +59,7 @@ public:
     virtual bool isDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                               model::PrescriptionType prescriptionType) const = 0;
     virtual int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
-                               model::PrescriptionType prescriptionType) const = 0;
+                               model::PrescriptionType prescriptionType, const std::string& errorText) const = 0;
     virtual std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const = 0;
     virtual void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const = 0;
     virtual void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) const = 0;

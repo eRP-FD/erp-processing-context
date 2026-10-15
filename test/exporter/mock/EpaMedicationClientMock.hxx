@@ -24,10 +24,13 @@ public:
     Response sendCancelPrescription(const std::string& xRequestId, const model::Kvnr& kvnr,
                                     const std::string& payload, BDEMessage& bdeMessage) override;
 
+    [[nodiscard]] std::string receivedInput() const;
+
 private:
     HttpStatus mHttpStatus{HttpStatus::OK};
     std::string mOperationOutcome;
     std::optional<std::string> mExpectedInput;
+    std::string mReceivedInput;
 };
 
 

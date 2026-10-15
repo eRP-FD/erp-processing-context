@@ -58,7 +58,7 @@ pipeline {
                 throttle(['unit-test-category'])
             }
             steps {
-                loadNexusConfiguration {
+                loadArtifactoryConfigurationeRP {
                     sh """
                         #!/bin/bash -l
                         set -e
@@ -95,26 +95,31 @@ pipeline {
             }
             steps {
                 script {
-                    loadNexusConfiguration {
+                    loadArtifactoryConfigurationeRP {
                         loadGithubSSHConfiguration {
-                            inside(env.ERP_BUILD_IMAGE, '-u root:sudo -v jenkins-build-ccache:${HOME}/.ccache' + " -v ${env.WORKSPACE}:/media/erp") {
-                                def erp_build_version = sh(returnStdout: true, script: "git --git-dir='/media/erp/.git' describe").trim().toLowerCase()
-                                sh """#!/bin/bash
-                                    set -ex
-                                    cd /media/erp
-                                    scripts/ci-build.sh \
-                                        --build_version='${erp_build_version}'\
-                                        --release_version='${env.ERP_RELEASE_VERSION}' \
-                                        --with_ccache \
-                                        --build_type=RelWithDebInfo \
-                                        --with_hsm_mock
-                                    # remove most of the intermediate build files to make the overall disk-usage footprint smaller
-                                    find build/RelWithDebInfo -path '*/CMakeFiles*' -delete
-                                    rm -rf build/RelWithDebInfo/fhir_package_tmp
-                                    # Fix build folder file permissions
-                                    chmod o+w /media/erp/build/
-                                    chmod -R o+r /media/erp/build/
-                                """
+                            withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
+                                                            usernameVariable: 'GITHUB_USERNAME',
+                                                            passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
+                                env.CONAN_LOGIN_USERNAME = env.CONAN_USERNAME 
+                                inside(env.ERP_BUILD_IMAGE, '-u root:sudo -v jenkins-build-ccache:${HOME}/.ccache' + " -v ${env.WORKSPACE}:/media/erp") {
+                                    def erp_build_version = sh(returnStdout: true, script: "git --git-dir='/media/erp/.git' describe").trim().toLowerCase()
+                                    sh """#!/bin/bash
+                                        set -ex
+                                        cd /media/erp
+                                        scripts/ci-build.sh \
+                                            --build_version='${erp_build_version}'\
+                                            --release_version='${env.ERP_RELEASE_VERSION}' \
+                                            --with_ccache \
+                                            --build_type=RelWithDebInfo \
+                                            --with_hsm_mock
+                                        # remove most of the intermediate build files to make the overall disk-usage footprint smaller
+                                        find build/RelWithDebInfo -path '*/CMakeFiles*' -delete
+                                        rm -rf build/RelWithDebInfo/fhir_package_tmp
+                                        # Fix build folder file permissions
+                                        chmod o+w /media/erp/build/
+                                        chmod -R o+r /media/erp/build/
+                                    """
+                                }
                             }
                         }
                     }
@@ -376,14 +381,16 @@ pipeline {
                 sh "cp docker/Dockerfile Dockerfile"
                 script {
                     withDockerRegistry(registry: [url: 'https://de.icr.io/v2/', credentialsId: 'icr_image_pusher_erp_dev_api_key']) {
-                        loadNexusConfiguration{
+                        loadArtifactoryConfigurationeRP{
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                             usernameVariable: 'GITHUB_USERNAME',
                                                             passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-processing-context:${currentBuild.displayName}",
-                                    '--build-arg CONAN_LOGIN_USERNAME="${NEXUS_USERNAME}" ' +
-                                    '--build-arg CONAN_PASSWORD="${NEXUS_PASSWORD}" ' +
+                                    '--build-arg CONAN_LOGIN_USERNAME="${CONAN_USERNAME}" ' +
+                                    '--build-arg CONAN_PASSWORD="${CONAN_PASSWORD}" ' +
+                                    '--build-arg CONAN_URL="${CONAN_URL}" ' +
+                                    '--build-arg CONAN_INTERNAL_URL="${CONAN_INTERNAL_URL}" ' +
                                     '--build-arg GITHUB_USERNAME="${GITHUB_USERNAME}" ' +
                                     '--build-arg GITHUB_OAUTH_TOKEN="${GITHUB_OAUTH_TOKEN}" ' +
                                     "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
@@ -418,14 +425,16 @@ pipeline {
                 sh "cp docker/exporter/Dockerfile Dockerfile"
                 script {
                     withDockerRegistry(registry: [url: 'https://de.icr.io/v2/', credentialsId: 'icr_image_pusher_erp_dev_api_key']) {
-                        loadNexusConfiguration{
+                        loadArtifactoryConfigurationeRP{
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                             usernameVariable: 'GITHUB_USERNAME',
                                                             passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/erp-medication-exporter:${currentBuild.displayName}",
-                                    '--build-arg CONAN_LOGIN_USERNAME="${NEXUS_USERNAME}" ' +
-                                    '--build-arg CONAN_PASSWORD="${NEXUS_PASSWORD}" ' +
+                                    '--build-arg CONAN_LOGIN_USERNAME="${CONAN_USERNAME}" ' +
+                                    '--build-arg CONAN_PASSWORD="${CONAN_PASSWORD}" ' +
+                                    '--build-arg CONAN_URL="${CONAN_URL}" ' +
+                                    '--build-arg CONAN_INTERNAL_URL="${CONAN_INTERNAL_URL}" ' +
                                     '--build-arg GITHUB_USERNAME="${GITHUB_USERNAME}" ' +
                                     '--build-arg GITHUB_OAUTH_TOKEN="${GITHUB_OAUTH_TOKEN}" ' +
                                     "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
@@ -460,14 +469,16 @@ pipeline {
                 sh "cp docker/enrolment/Dockerfile Dockerfile"
                 script {
                     withDockerRegistry(registry: [url: 'https://de.icr.io/v2/', credentialsId: 'icr_image_pusher_erp_dev_api_key']) {
-                        loadNexusConfiguration{
+                        loadArtifactoryConfigurationeRP{
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                             usernameVariable: 'GITHUB_USERNAME',
                                                             passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
                                 def image = docker.build(
                                     "de.icr.io/erp_dev/blob-db-initialization:${currentBuild.displayName}",
-                                    "--build-arg CONAN_LOGIN_USERNAME=\"${env.NEXUS_USERNAME}\" " +
-                                    "--build-arg CONAN_PASSWORD=\"${env.NEXUS_PASSWORD}\" " +
+                                    "--build-arg CONAN_LOGIN_USERNAME=\"${env.CONAN_USERNAME}\" " +
+                                    "--build-arg CONAN_PASSWORD=\"${env.CONAN_PASSWORD}\" " +
+                                    "--build-arg CONAN_URL=\"${env.CONAN_URL}\" " +
+                                    "--build-arg CONAN_INTERNAL_URL=\"${env.CONAN_INTERNAL_URL}\" " +
                                     "--build-arg GITHUB_USERNAME=\"${env.GITHUB_USERNAME}\" " +
                                     "--build-arg GITHUB_OAUTH_TOKEN=\"${env.GITHUB_OAUTH_TOKEN}\" " +
                                     "--build-arg ERP_BUILD_VERSION=\"${currentBuild.displayName}\" " +
@@ -656,7 +667,7 @@ def runTestWithDB(String command) {
             '--user root:sudo ' +
             "--volume '${env.WORKSPACE}:/media/erp' " +
             "--link '${dbContainer.id}:postgres-erp'") {
-            loadNexusConfiguration {
+            loadArtifactoryConfigurationeRP {
                 sh """#!/bin/bash
                     set -ex
                     set -o pipefail

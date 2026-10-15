@@ -5,6 +5,8 @@
  * non-exclusively licensed to gematik GmbH
  */
 
+#include "shared/model/ModelException.hxx"
+#include "shared/util/ErpException.hxx"
 #include "shared/util/JsonLog.hxx"
 #include "shared/util/Configuration.hxx"
 
@@ -13,6 +15,11 @@
 
 class JsonLogTest : public testing::Test
 {
+};
+
+
+class SomeModelException : public model::ModelException {
+    using ModelException::ModelException;
 };
 
 
@@ -106,4 +113,69 @@ TEST_F(JsonLogTest, keyValueDouble_12345_6789)
     std::stringstream expected;
     expected << R"({"key":12345.6789})";
     ASSERT_EQ(result.str(), expected.str());
+}
+
+TEST_F(JsonLogTest, fromException)
+{
+    bool written = false;
+    {
+        JsonLog log{LogId::INTERNAL_WARNING, [&](std::string log){
+            EXPECT_EQ(log, R"({"location":"unknown","exception":"std::runtime_error","what":"Oh No!","details":""})");
+            written = true;
+        }, true};
+        log.valuesFromException(std::runtime_error{"Oh No!"});
+    }
+    EXPECT_TRUE(written);
+}
+
+TEST_F(JsonLogTest, fromWrapped)
+{
+    bool written = false;
+    {
+        JsonLog log{LogId::INTERNAL_WARNING, [&](std::string log){
+            EXPECT_EQ(log, R"({"location":"here:1","exception":"ExceptionWrapper<std::runtime_error>","what":"Oh No!","details":""})");
+            written = true;
+        }, true};
+        log.valuesFromException(ExceptionWrapper<std::runtime_error>::create({"here", 1}, "Oh No!"));
+    }
+    EXPECT_TRUE(written);
+}
+
+TEST_F(JsonLogTest, fromModelException)
+{
+    bool written = false;
+    {
+        JsonLog log{LogId::INTERNAL_WARNING, [&](std::string log){
+            EXPECT_EQ(log, R"({"location":"here:1","exception":"ExceptionWrapper<SomeModelException>","details":""})");
+            written = true;
+        }, true};
+        log.valuesFromException(ExceptionWrapper<SomeModelException>::create({"here", 1}, "Oh No!"));
+    }
+    EXPECT_TRUE(written);
+}
+
+TEST_F(JsonLogTest, fromErpExceptionNoDiag)
+{
+    bool written = false;
+    {
+        JsonLog log{LogId::INTERNAL_WARNING, [&](std::string log){
+            EXPECT_EQ(log, R"({"location":"here:1","exception":"ExceptionWrapper<ErpException>","status":"BadRequest","what":"Oh No!","details":""})");
+            written = true;
+        }, true};
+        log.valuesFromException(ExceptionWrapper<ErpException>::create({"here", 1}, "Oh No!", HttpStatus::BadRequest));
+    }
+    EXPECT_TRUE(written);
+}
+
+TEST_F(JsonLogTest, fromErpExceptionDiag)
+{
+    bool written = false;
+    {
+        JsonLog log{LogId::INTERNAL_WARNING, [&](std::string log){
+            EXPECT_EQ(log, R"({"location":"here:1","exception":"ExceptionWrapper<ErpException>","status":"BadRequest","what":"Oh No!","details":"private info"})");
+            written = true;
+        }, true};
+        log.valuesFromException(ExceptionWrapper<ErpException>::create({"here", 1}, "Oh No!", HttpStatus::BadRequest, "private info"));
+    }
+    EXPECT_TRUE(written);
 }

@@ -15,6 +15,13 @@ TelematikId::TelematikId(std::string_view telematikId)
 {
 }
 
+void TelematikId::sanitize()
+{
+    std::erase_if(mId, [](const unsigned char c) {
+        return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+    });
+}
+
 bool TelematikId::validFormat() const
 {
     return isTelematikId(mId);

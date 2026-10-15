@@ -11,6 +11,15 @@
 #include "shared/util/TLog.hxx"
 #include "shared/util/DurationConsumer.hxx"
 
+TimerHandler::TimerHandler(std::string name)
+    : mName{std::move(name)}
+{
+}
+
+const std::string& TimerHandler::timerName() const
+{
+    return mName;
+}
 
 PeriodicTimerBase::PeriodicTimerBase(std::shared_ptr<TimerHandler> timerHandler)
     : mTimerHandler(std::move(timerHandler))
@@ -79,7 +88,10 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
     }
     if (errorCode.failed())
     {
-        TVLOG(0) << "timerHandler called with error (" << errorCode.value() << "): " << errorCode.message();
+        // according to the documentation only `operation_aborted` should occur.
+        // see: https://www.boost.org/doc/libs/latest/doc/html/boost_asio/reference/basic_waitable_timer/async_wait.html
+        TLOG(ERROR) << handler->timerName() << ": timerHandler called with error (" << errorCode.value()
+                    << "): " << errorCode.message();
         return;
     }
 
@@ -99,10 +111,16 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
         }
         catch (const std::exception& e)
         {
-            auto& handlerRef = *handler.get();
-            TLOG(ERROR) << "TimerHandler threw an exception of type " << util::demangle(typeid(e).name())
-                        << " from Timer " << util::demangle(typeid(handlerRef).name());
-            throw;
+            JsonLog log{LogId::INTERNAL_ERROR};
+            log.valuesFromException(e);
+            log.keyValue("timer", handler->timerName());
+            log.message("TimerHandler threw an exception");
+        }
+        catch (...)
+        {
+            JsonLog log{LogId::INTERNAL_ERROR};
+            log.keyValue("timer", handler->timerName());
+            log.message("TimerHandler threw an unknown object");
         }
         interval = handler->nextInterval();
         if (!interval)
@@ -117,7 +135,9 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
         auto newExpire = mTimer->expiry() + *interval;
         if (newExpire < now)
         {
-            TLOG(WARNING) << "Periodic timer skipped interval.";
+            JsonLog log{LogId::INTERNAL_WARNING};
+            log.message("Periodic timer skipped interval.");
+            log.keyValue("timer", handler->timerName());
             newExpire = now + *interval;
         }
         mTimer->expires_at(newExpire);
@@ -130,8 +150,9 @@ std::optional<std::chrono::_V2::steady_clock::duration> OneShotHandler::nextInte
     return std::nullopt;
 }
 
-FixedIntervalHandler::FixedIntervalHandler(std::chrono::steady_clock::duration interval)
-    : mInterval{interval}
+FixedIntervalHandler::FixedIntervalHandler(std::string name, std::chrono::steady_clock::duration interval)
+    : TimerHandler{std::move(name)}
+    , mInterval{interval}
 {
 }
 

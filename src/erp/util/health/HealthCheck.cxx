@@ -14,6 +14,7 @@
 #include "shared/util/Demangle.hxx"
 #include "shared/util/ExceptionHelper.hxx"
 
+#include <fmt/format.h>
 #include <sw/redis++/errors.h>
 
 namespace
@@ -211,6 +212,7 @@ void HealthCheck::check (
     PcServiceContext& context,
     void (* checkAction)(PcServiceContext&))
 {
+    ScopedLogContext logCtx{fmt::format("HealthCheck: {}/{}", tlogContext.value_or("-") , magic_enum::enum_name(service))};
     // Try again in case of EAGAIN errors, which are handled with the same exception as ETIMEDOUT and EWOULDBLOCK errors.
     const size_t max_retries = 3;
 	const auto period = std::chrono::milliseconds(50);

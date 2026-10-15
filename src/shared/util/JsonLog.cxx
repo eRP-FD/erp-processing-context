@@ -7,7 +7,9 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/NumberAsStringParserWriter.hxx"
+#include "shared/network/message/HttpStatus.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/Demangle.hxx"
 #include "shared/util/JsonLog.hxx"
 #include "shared/util/String.hxx"
 #include "shared/util/TLog.hxx"
@@ -25,8 +27,8 @@ JsonLog::JsonLog(const LogId id, std::ostream& os, bool withDetails)
 }
 
 
-JsonLog::JsonLog(const LogId, LogReceiver&& receiver, bool withDetails)
-    : mLogReceiver(std::move(receiver))
+JsonLog::JsonLog(const LogId logId, LogReceiver&& receiver, bool withDetails)
+    : mLogReceiver(receiver?std::move(receiver):makeLogReceiver(logId))
     , mShowDetails(withDetails)
 {
     mDocument.SetObject();
@@ -76,6 +78,23 @@ JsonLog::LogReceiver JsonLog::makeVLogReceiver(const int32_t logLevel)
         TVLOG(logLevel) << message;
     };
 }
+
+JsonLog::LogReceiver JsonLog::makeLogReceiver(LogId logId)
+{
+    switch (static_cast<std::underlying_type_t<LogId>>(logId) & LOGID_SEVERITY_MASK)
+    {
+        case LOGID_CRITICAL:
+        case LOGID_ERROR:
+            return makeErrorLogReceiver();
+        case LOGID_WARNING:
+            return makeWarningLogReceiver();
+        case LOGID_INFO:
+            return makeInfoLogReceiver();
+    }
+    TLOG(ERROR) << "invalid log severity: " << std::hex << static_cast<uintmax_t>(logId);
+    return makeErrorLogReceiver();
+}
+
 
 void JsonLog::finish()
 {
@@ -248,6 +267,23 @@ JsonLog& JsonLog::keyValue(const std::string_view key, const double value)
     return *this;
 }
 
+void JsonLog::valuesFromException(const std::exception& ex)
+{
+    locationFromException(ex);
+    keyValue("exception", util::demangle(typeid(ex).name()));
+    if (const auto* erpException = dynamic_cast<const ErpException*>(&ex))
+    {
+        if (erpException->diagnostics())
+        {
+            details(*erpException->diagnostics());
+        }
+        keyValue("status", toString(erpException->status()));
+    }
+    if (!dynamic_cast<const model::ModelException*>(&ex))
+    {
+        keyValue("what", ex.what());
+    }
+}
 
 void JsonLog::discard()
 {

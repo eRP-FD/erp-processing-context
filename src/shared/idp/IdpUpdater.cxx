@@ -50,7 +50,8 @@ class IdpUpdater::RefreshTimer : public TimerHandler
 {
 public:
     explicit RefreshTimer(IdpUpdater& idpUpdater)
-        : mIdpUpdater{idpUpdater} {};
+        : TimerHandler{"IdpUpdater::RefreshTimer"}
+        , mIdpUpdater{idpUpdater} {};
 
     std::optional<std::chrono::steady_clock::duration> nextInterval() const override
     {

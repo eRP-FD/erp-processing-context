@@ -315,6 +315,7 @@ public:
 private:
     [[nodiscard]]
     rapidjson::Value makeValue(Ch prefix, const std::string_view& value);
+    static void sanitizeString(std::string& str);
 
 
     static const Ch prefixString{ '$' }; // Inserted to values to mark the values as a string.

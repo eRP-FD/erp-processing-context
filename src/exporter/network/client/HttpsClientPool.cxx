@@ -14,7 +14,7 @@ class HttpsClientPool::DnsRefresher : public FixedIntervalHandler
 {
 public:
     DnsRefresher(HttpsClientPool& parent, const std::chrono::steady_clock::duration& interval)
-        : FixedIntervalHandler{interval}
+        : FixedIntervalHandler{"HttpsClientPool::DnsRefresher", interval}
         , mParent{parent.weak_from_this()}
         , mResolver{parent.mIoContext}
     {

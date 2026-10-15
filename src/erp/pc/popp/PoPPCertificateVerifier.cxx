@@ -276,24 +276,49 @@ void PoPPCertificateVerifier::PoPPCertificateCache::invalidateAndUpdate(const Po
         return;
     }
 
+    std::unique_lock lock(mCacheMutex);
+    std::set<std::string> allKeys;
+    for (const auto& k : keys)
     {
-        std::unique_lock lock(mCacheMutex);
-        mCache.clear();
-        for (const auto& k : keys)
+        if (! k.x5c().empty() && ! k.x5c().at(0).empty())
         {
-            if (not mCache.contains(k.kid()) && not k.x5c().empty())
+            const auto x5c = k.x5c().at(0);
+            const auto cert = std::make_shared<X509Certificate>(X509Certificate::createFromBase64(x5c));
+            const auto calculatedPublicKey = k.calculatePublicKey();
+
+            // Collect kid for second pass, required to identify and remove stale cache entries.
+            allKeys.emplace(k.kid());
+
+            if (mCache.contains(k.kid()) &&
+                mCache[k.kid()].certificate->getSha256FingerprintHex() == cert->getSha256FingerprintHex())
             {
-                const auto x5c = k.x5c().at(0);
-                const auto cert = std::make_shared<X509Certificate>(X509Certificate::createFromBase64(x5c));
-                const auto calculatedPublicKey = k.calculatePublicKey();
+                // don't touch existing cache entry.
+            }
+            else
+            {
+                // add new cache entry or update existing entry.
                 auto result = Key{
-                    .kid = k.kid(),
-                    .lastSuccessAt = std::nullopt, // timestamp will be set after successful TSL check.
+                    .kid =
+                        k.kid(),// Lookup for kid, not for key. Reason is, key is required for the cache update, only.
+                    .lastSuccessAt = std::nullopt,// timestamp will be set after successful TSL check.
                     .expiration = model::Timestamp::fromTmInUtc(cert->getNotAfter()),
                     .certificate = cert,
                     .publicKey = calculatedPublicKey};
                 mCache[k.kid()] = result;
             }
+        }
+    }
+
+    // Second pass: delete all stale cache entries.
+    for (auto it = mCache.begin(); it != mCache.end();)
+    {
+        if (! allKeys.contains(it->first))
+        {
+            it = mCache.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 }
@@ -325,7 +350,8 @@ std::list<PoPPCertificateVerifier::PoPPCertificateCache::Key> PoPPCertificateVer
 
 PoPPCertificateVerifier::PoPPCertificateVerifier(boost::asio::io_context& context, TslManager& tslManager,
                                                  std::shared_ptr<CrlProvider> crlProvider)
-    : mContext(context)
+    : TimerHandler{"PoPPCertificateVerifier"}
+    , mContext(context)
     , mCrlProvider(std::move(crlProvider))
     , mRequestSender{poppRequestSender(mCrlProvider.get())}
     , mDownloader(std::make_unique<JwtDownload>(mRequestSender))
@@ -337,7 +363,8 @@ PoPPCertificateVerifier::PoPPCertificateVerifier(boost::asio::io_context& contex
 PoPPCertificateVerifier::PoPPCertificateVerifier(boost::asio::io_context& context,
                                                  std::unique_ptr<UrlRequestSender> urlRequestSender,
                                                  TslManager& tslManager)
-    : mContext(context)
+    : TimerHandler{"PoPPCertificateVerifier"}
+    , mContext(context)
     , mRequestSender(std::move(urlRequestSender))
     , mDownloader(std::make_unique<JwtDownload>(mRequestSender))
     , mTslManager(tslManager)
@@ -405,8 +432,9 @@ void PoPPCertificateVerifier::verifyCachedCertificates()
         {
             // GEMREQ-start A_27016#check_details
             const OcspCheckDescriptor descriptor{
-                .mode = OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_ALLOW_CACHE,
-                .timeSettings = {.referenceTimePoint = std::nullopt, .gracePeriod = std::chrono::hours{24}},
+                .mode = OcspCheckDescriptor::OcspCheckMode::FORCE_OCSP_REQUEST_STRICT,
+                .timeSettings = {.referenceTimePoint = std::nullopt,
+                                 .gracePeriod = OcspHelper::getOcspGracePeriod(TslMode::TSL)},
                 .providedOcspResponse = {}};
             mTslManager.verifyCertificate(TslMode::TSL, *key.certificate, {CertificateType::C_ZD_SIG}, descriptor);
             // GEMREQ-start A_28731#admission
@@ -435,14 +463,14 @@ void PoPPCertificateVerifier::verifyCachedCertificates()
                     break;
                 }
             }
-
+            // GEMREQ-start A_27016#maxAge
             if (revoked)
             {
                 TLOG(ERROR) << "Revoked or unknown certificate with kid: " << key.kid
                             << ", subject: " << key.certificate->getSubject()
                             << ", removeCertificate: " << removeCertificate;
             }
-            else if ((model::Timestamp::now() - *(key.lastSuccessAt)) > mMaxAgeSeconds)
+            else if (key.lastCheckExpired(mMaxAgeSeconds))
             {
                 TLOG(ERROR) << "Last TSL check too old for certificate with kid: " << key.kid
                             << ", subject: " << key.certificate->getSubject()
@@ -461,6 +489,7 @@ void PoPPCertificateVerifier::verifyCachedCertificates()
                               << ", subject: " << key.certificate->getSubject() << ", last check [minutes]: " << timeStr
                               << ", reason: " << exc.what() << ", removeCertificate: " << removeCertificate;
             }
+            // GEMREQ-end A_27016#maxAge
 
             return removeCertificate;
         }

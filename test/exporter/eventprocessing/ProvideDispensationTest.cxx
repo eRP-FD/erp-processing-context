@@ -5,6 +5,7 @@
  */
 
 #include "exporter/eventprocessing/ProvideDispensation.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/eventprocessing/EventDispatcher.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/audit/AuditDataCollector.hxx"
@@ -12,6 +13,8 @@
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
+#undef Expect
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace
@@ -164,11 +167,12 @@ TEST_F(ProvideDispensationTest, AuditEventPRESCRIPTION_NO_EXIST)
 
     eventprocessing::EventDispatcher eventDispatcher{std::move(client)};
     AuditDataCollector auditDataCollector;
-    eventprocessing::Outcome outcome{};
-    ASSERT_NO_FATAL_FAILURE(outcome = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    std::optional<eventprocessing::EventDispatcher::Result> result;
+    ASSERT_NO_FATAL_FAILURE(result = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    ASSERT_TRUE(result);
     std::optional<model::AuditData> auditData;
     ASSERT_TRUE(auditDataCollector.shouldCreateAuditEventOnSuccess());
-    EXPECT_EQ(outcome, eventprocessing::Outcome::SuccessAuditFail);
+    EXPECT_EQ(result->outcome, eventprocessing::Outcome::SuccessAuditFail);
     ASSERT_NO_FATAL_FAILURE(auditData.emplace(auditDataCollector.createData()));
     ASSERT_TRUE(auditData);
     EXPECT_EQ(auditData->agentType(), model::AuditEvent::AgentType::machine);
@@ -189,11 +193,12 @@ TEST_F(ProvideDispensationTest, AuditEventPRESCRIPTION_STATUS)
 
     eventprocessing::EventDispatcher eventDispatcher{std::move(client)};
     AuditDataCollector auditDataCollector;
-    eventprocessing::Outcome outcome{};
-    ASSERT_NO_FATAL_FAILURE(outcome = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    std::optional<eventprocessing::EventDispatcher::Result> result;
+    ASSERT_NO_FATAL_FAILURE(result = eventDispatcher.dispatch(makeEvent(std::nullopt), auditDataCollector));
+    ASSERT_TRUE(result);
     std::optional<model::AuditData> auditData;
     ASSERT_TRUE(auditDataCollector.shouldCreateAuditEventOnSuccess());
-    EXPECT_EQ(outcome, eventprocessing::Outcome::SuccessAuditFail);
+    EXPECT_EQ(result->outcome, eventprocessing::Outcome::SuccessAuditFail);
     ASSERT_NO_FATAL_FAILURE(auditData.emplace(auditDataCollector.createData()));
     ASSERT_TRUE(auditData);
     EXPECT_EQ(auditData->agentType(), model::AuditEvent::AgentType::machine);
@@ -261,3 +266,67 @@ INSTANTIATE_TEST_SUITE_P(
                     ErrorCodesTestParam{"MEDSVC_EMP_ENTRY_ALREADY_EXISTS", eventprocessing::Outcome::DeadLetter},
                     ErrorCodesTestParam{"MEDSVC_EMP_NO_EXIST", eventprocessing::Outcome::DeadLetter}),
     &ProvideDispensationErrorCodesTestP::getName);
+
+struct TelematikIdSanitizationParam {
+    std::string telematikId;
+    std::string telematikIdClean;
+};
+
+class ProvideDispensationTelematikIdSanitizationP : public ProvideDispensationTest,
+                                                    public testing::WithParamInterface<TelematikIdSanitizationParam>
+{
+public:
+    model::ProvideDispensationTaskEvent makeEvent(const std::string& pharmacyTelematikId)
+    {
+        const auto lastModified = model::Timestamp::now();
+        return model::ProvideDispensationTaskEvent(
+            0, model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1),
+            model::PrescriptionType::apothekenpflichigeArzneimittel, model::Kvnr{"X12345678"}, "not a real hash",
+            model::TaskEvent::UseCase::provideDispensation, model::TaskEvent::State::pending,
+            SignedPrescription::fromBinNoVerify(
+                CryptoHelper::toCadesBesSignature(std::string(ResourceTemplates::kbvBundleXml()),
+                                                  model::Timestamp::now()))
+                .getTelematikId(),
+            model::TelematikId("doctor-id-not-set"), "doctor organization name not-set",
+            std::string(profession_oid::oid_oeffentliche_apotheke), model::TelematikId(pharmacyTelematikId),
+            "pharmacy organization name not-set", std::string(profession_oid::oid_oeffentliche_apotheke),
+            model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()),
+            model::Bundle::fromXmlNoValidation(
+                ResourceTemplates::internal_type::medicationDispenseBundle(
+                    ResourceTemplates::MedicationDispenseBundleOptions{
+                        .gematikVersion = ResourceTemplates::Versions::GEM_ERP_current(),
+                        .medicationDispenses{ResourceTemplates::MedicationDispenseOptions{
+                            .whenHandedOver = model::Timestamp::now().toGermanDate(),
+                            .gematikVersion = ResourceTemplates::Versions::GEM_ERP_current(),
+                            .medication = ResourceTemplates::MedicationOptions{}}}})
+                    .serializeToXmlString()),
+            lastModified);
+    }
+};
+
+TEST_P(ProvideDispensationTelematikIdSanitizationP, sanitizeTelematikId)
+{
+    A_30274.test("Bereinigung der Telematik-ID: ProvideDispensation");
+    auto event = makeEvent(GetParam().telematikId);
+    ASSERT_EQ(event.getJwtPharmacyId().id(), GetParam().telematikId);
+    EpaMedicationClientMock client;
+    client.setHttpStatusResponse(HttpStatus::OK);
+    client.setOperationOutcomeResponse(operationOutcomeTpl);
+
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvideDispensation::process(&client, event, bdeMessage);
+    EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
+    EXPECT_THAT(client.receivedInput(), testing::HasSubstr(GetParam().telematikIdClean));
+    EXPECT_THAT(client.receivedInput(), testing::Not(testing::HasSubstr(GetParam().telematikId)));
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    x, ProvideDispensationTelematikIdSanitizationP,
+    testing::Values(TelematikIdSanitizationParam{"3-SMC-B-1234567890\n", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"3-SMC\r-B-1234567890", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"   3-SMC-B-1234567890\t", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"3-SMC-B-\t1234567890", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"3-SMC-B-1234567890\r\n", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"3-SMC-B-\r\n1234567890", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"\t\n3-SMC-B-12345\r67890\n", "3-SMC-B-1234567890"},
+                    TelematikIdSanitizationParam{"\r\n 3-SMC-B-1234567890 \r\n", "3-SMC-B-1234567890"}));

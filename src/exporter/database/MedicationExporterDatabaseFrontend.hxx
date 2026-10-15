@@ -50,7 +50,7 @@ public:
                       model::PrescriptionType prescriptionType) const override;
 
     int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
-                       model::PrescriptionType prescriptionType) const override;
+                       model::PrescriptionType prescriptionType, const std::string& errorText) const override;
     std::optional<model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) const override;
 
     void deleteOneEventForKvnr(const model::EventKvnr& kvnr, model::TaskEvent::id_t id) const override;

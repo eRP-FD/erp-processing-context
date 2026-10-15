@@ -84,22 +84,34 @@ MainDatabaseFrontend::retrievePushNotificationEventData(const model::PushNotific
     std::vector<model::PushNotificationContext> pushNotificationEvents;
     for (const auto& appRegistration : appRegistrations)
     {
-        auto key = mDerivation.appRegistrationKey(appRegistration.pushKeyHashed, appRegistration.salt,
-                                                  pushNotificationEvent.hashedKvnr(), appRegistration.blobId);
-        auto payload = mCodec.decode(appRegistration.payload, key);
-        auto pusher = model::Pusher::fromDb(std::string{payload.c_str()});
-        model::PushNotificationDevice device{pusher.appId().value, pusher.pushKey().value,
-                                             std::chrono::duration_cast<std::chrono::seconds>(
-                                                 appRegistration.lastModified.toChronoTimePoint().time_since_epoch()),
-                                             pusher.pusherData(), pusher.deviceDisplayName()};
-        auto encryptionKey = model::EncryptionKey::deserializeCsv(mCodec.decode(appRegistration.encryptionKey, key));
+        try
+        {
+            const auto key = mDerivation.appRegistrationKey(appRegistration.pushKeyHashed, appRegistration.salt,
+                                                            pushNotificationEvent.hashedKvnr(), appRegistration.blobId);
+            auto payload = mCodec.decode(appRegistration.payload, key);
+            const auto pusher = model::Pusher::fromDb(std::string{payload.c_str()});
+            model::PushNotificationDevice device{
+                pusher.appId().value, pusher.pushKey().value,
+                std::chrono::duration_cast<std::chrono::seconds>(
+                    appRegistration.lastModified.toChronoTimePoint().time_since_epoch()),
+                pusher.pusherData(), pusher.deviceDisplayName()};
+            auto encryptionKey =
+                model::EncryptionKey::deserializeCsv(mCodec.decode(appRegistration.encryptionKey, key));
 
-        pushNotificationEvents.emplace_back(pushNotificationEvent.pushNotification(), std::move(device),
-                                            std::move(encryptionKey), encryptionKey.getKeyIdentifier(),
-                                            pushNotificationEvent.created(), appRegistration.salt,
-                                            appRegistration.blobId, pushNotificationEvent.id(),
-                                            pushNotificationEvent.hashedKvnr(), pushNotificationEvent.retryCount(),
-                                            pushNotificationEvent.auditOrCommunicationIdentifier());
+            pushNotificationEvents.emplace_back(
+                pushNotificationEvent.pushNotification(), std::move(device), std::move(encryptionKey),
+                encryptionKey.getKeyIdentifier(), pushNotificationEvent.created(), appRegistration.salt,
+                appRegistration.blobId, pushNotificationEvent.id(), pushNotificationEvent.hashedKvnr(),
+                pushNotificationEvent.retryCount(), pushNotificationEvent.auditOrCommunicationIdentifier());
+        }
+        catch(const AesGcmException& e)
+        {
+            TLOG(WARNING) << fmt::format("Unable to decrypt app registration data for pushkey: {}, app_id: {}, kvnr: "
+                                         "{}, exception: {}. Skipping push notification for app registration",
+                                         appRegistration.pushKeyHashed.toHex(), appRegistration.appIdHashed.toHex(),
+                                         pushNotificationEvent.hashedKvnr().toHex(), e.what());
+            continue;
+        }
     }
     return pushNotificationEvents;
 }

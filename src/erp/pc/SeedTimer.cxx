@@ -6,13 +6,13 @@
  */
 
 #include "erp/pc/SeedTimer.hxx"
+#include "shared/util/JsonLog.hxx"
 #include "shared/util/TLog.hxx"
 
 
-SeedTimerHandler::SeedTimerHandler(ThreadPool& pool, HsmPool& hsmPool,
-                     std::chrono::steady_clock::duration interval,
-                     SeedTimerHandler::AddEntropyFunction addEntropy)
-    : FixedIntervalHandler{interval}
+SeedTimerHandler::SeedTimerHandler(ThreadPool& pool, HsmPool& hsmPool, std::chrono::steady_clock::duration interval,
+                                   SeedTimerHandler::AddEntropyFunction addEntropy)
+    : FixedIntervalHandler{"SeedTimerHandler", interval}
     , mThreadPool(pool)
     , mSeeder(hsmPool)
     , mAddEntropy(std::move(addEntropy))
@@ -28,13 +28,13 @@ void SeedTimerHandler::seedThisThread()
     }
     catch (const std::exception& ex)
     {
-        TLOG(ERROR) << "exception during refresh of random seeds: " << ex.what();
-        throw;
+        JsonLog log{LogId::INTERNAL_WARNING};
+        log.valuesFromException(ex);
+        log.message("exception during refresh of random seeds");
     }
     catch (...)
     {
         TLOG(ERROR) << "unknown exception during refresh of random seeds";
-        throw;
     }
 }
 

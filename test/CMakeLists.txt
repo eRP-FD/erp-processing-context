@@ -358,6 +358,7 @@ list(
         erp/pc/PcServiceContextTest.cxx
         erp/pc/PoPPTest.cxx
         erp/pc/PseudonameKeyRefreshJobTest.cxx
+        erp/pc/popp/PoPPCertificateCacheTest.cxx
         erp/pc/popp/PoPPVerifierTest.cxx
         erp/requirements/A_19714_SecureTransportChannel.cxx
         erp/registration/ApplicationHealthAndRegistrationUpdaterTest.cxx

@@ -84,6 +84,15 @@ public:
     template<class FindNextReplacement>
     [[nodiscard]] static std::string replaceAll(std::string str, FindNextReplacement findNextReplacement);
 
+    /// For each occurrence of @p substring in @p str, replace the first occurrence
+    /// of @p from inside that matched region with @p to.
+    /// When @p ignoreCase is true, @p substring is matched case-insensitively;
+    /// the original casing of the matched text is preserved in the output.
+    /// @p from must be contained in @p substring (checked at runtime).
+    [[nodiscard]]
+    static std::string replaceInSubstring(std::string str, std::string_view substring, std::string_view from,
+                                          std::string_view to, bool ignoreCase);
+
     static bool starts_with (const std::string& s, const std::string_view& head);
     static bool starts_with(const std::string_view s, const std::string_view head);
 

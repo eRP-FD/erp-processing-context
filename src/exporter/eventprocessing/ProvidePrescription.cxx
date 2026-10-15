@@ -6,6 +6,7 @@
 
 #include "exporter/eventprocessing/ProvidePrescription.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/client/EpaMedicationClient.hxx"
 #include "exporter/model/EpaErrorType.hxx"
 #include "exporter/model/EpaOpRxPrescriptionErpOutputParameters.hxx"
@@ -36,11 +37,16 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
     const auto& kbvBundle = taskEvent.getKbvBundle();
     if (! taskEvent.getQesDoctorId().has_value())
     {
+        bdeMessage.update({.error = "No mapping in SerNo2TID"});
         return Outcome::DeadLetter;
     }
 
-    const auto& telematikIdFromQes = taskEvent.getQesDoctorId();
-    const auto& telematikIdFromJwt = taskEvent.getJwtDoctorId();
+    auto telematikIdFromQes = taskEvent.getQesDoctorId();
+    auto telematikIdFromJwt = taskEvent.getJwtDoctorId();
+    A_30274.start("Bereinigung der Telematik-ID");
+    telematikIdFromQes->sanitize();
+    telematikIdFromJwt.sanitize();
+    A_30274.finish();
     const auto& organizationNameFromJwt = taskEvent.getJwtDoctorOrganizationName();
     const auto& organizationProfessionOidFromJwt = taskEvent.getJwtDoctorProfessionOid();
     auto providePrescriptionErpOp = Epa4AllTransformer::transformPrescription(

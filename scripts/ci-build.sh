@@ -95,8 +95,8 @@ conan_remote_add() {
     fi
 }
 
-conan_remote_add erp-conan-2 https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-2
-conan_remote_add erp-conan-internal https://artifactory-cpp-ce.ihc-devops.net/artifactory/api/conan/erp-conan-internal
+conan_remote_add erp-conan-2 ${CONAN_URL}
+conan_remote_add erp-conan-internal ${CONAN_INTERNAL_URL}
 
 set +x
 conan_auth() {
@@ -148,6 +148,11 @@ conan_args+=(
     -c tools.cmake.cmaketoolchain:generator=Ninja
     -cc core:non_interactive=True
 )
+
+# Rewrite SSH GitHub URLs to HTTPS using the OAuth token (required for Conan source steps)
+if [[ -n "${GITHUB_OAUTH_TOKEN:-}" ]]; then
+    git config --global url."https://${GITHUB_OAUTH_TOKEN}@github.ibmgcloud.net/".insteadOf "git@github.ibmgcloud.net:"
+fi
 
 conan install "${source_folder}" "${conan_args[@]}"
 conan cache clean --source --build --download

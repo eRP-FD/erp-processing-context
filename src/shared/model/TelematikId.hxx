@@ -19,6 +19,8 @@ class TelematikId
 public:
     explicit TelematikId(std::string_view telematikId);
 
+    void sanitize();
+
     bool validFormat() const;
 
     const std::string& id() const&;

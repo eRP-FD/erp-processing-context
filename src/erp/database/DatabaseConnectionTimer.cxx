@@ -13,7 +13,7 @@
 
 DatabaseConnectionTimerHandler::DatabaseConnectionTimerHandler(PcServiceContext& serviceContext,
                                                                std::chrono::steady_clock::duration interval)
-    : FixedIntervalHandler(interval)
+    : FixedIntervalHandler("DatabaseConnectionTimer", interval)
     , mThreadPool(serviceContext.getTeeServer().getThreadPool())
     , mServiceContext(serviceContext)
 {

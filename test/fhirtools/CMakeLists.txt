@@ -26,6 +26,7 @@ add_executable(fhirtools-test
         KbvSchluesseltabellenConfigurationTest.cxx
         MandatoryMetaProfileTest.cxx
         ReferenceTest.cxx
+        NumberAsStringParserDocumentTest.cxx
         PrimitiveTypeTest.cxx
         SlicingValidationTest.cxx
         UriValidationTest.cxx
@@ -33,7 +34,7 @@ add_executable(fhirtools-test
         VersionMappingViewTest.cxx
         issues/ERP-12159-RefereceTypeCheck.cxx
         issues/ERP-33046_profile_in_placeholder_element.cxx
-        )
+)
 
 target_link_libraries(fhirtools-test fhirtools gtest::gtest erp-processing-context-files erp-test-util-lib
         )

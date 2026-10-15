@@ -150,6 +150,55 @@ std::string String::replaceAll (const std::string& in, const std::string& from, 
 }
 
 
+std::string String::replaceInSubstring(std::string str, std::string_view substring, std::string_view from,
+                                       std::string_view to, bool ignoreCase)
+{
+    const bool fromInSubstring = ignoreCase ? boost::icontains(substring, from) : boost::contains(substring, from);
+    ModelExpect(fromInSubstring, "from must be contained in the substring");
+
+    if ((ignoreCase && ! boost::icontains(str, substring)) || (! ignoreCase && ! boost::contains(str, substring)))
+    {
+        return str;
+    }
+
+    const auto findFirst = [ignoreCase](std::string_view searchIn, std::string_view searchTerm, size_t searchFrom) {
+        if (ignoreCase)
+        {
+            const auto* it = searchIn.cbegin();
+            std::advance(it, searchFrom);
+            auto ir = boost::make_iterator_range(it, searchIn.cend());
+            auto range = boost::ifind_first(ir, searchTerm);
+            return range.empty() ? std::string::npos : static_cast<std::size_t>(range.begin() - searchIn.cbegin());
+        }
+        return searchIn.find(searchTerm, searchFrom);
+    };
+
+    const std::size_t offsetInSubstring = findFirst(substring, from, 0);
+
+    std::string result;
+    result.reserve(str.size());
+    std::size_t pos = 0;       // next uncopied start position in str
+    std::size_t searchFrom = 0;// next search start position in str
+
+    for (;;)
+    {
+        const std::size_t found = findFirst(str, substring, searchFrom);
+        if (found == std::string::npos)
+        {
+            break;
+        }
+
+        // copy everything before this match, plus the prefix of the match that precedes `from`
+        result.append(str, pos, found - pos + offsetInSubstring);
+        result.append(to);
+        pos = found + offsetInSubstring + from.size();// resume copying after the replaced `from`
+        searchFrom = found + substring.size();        // search past end of current match in str
+    }
+
+    result.append(str, pos, std::string::npos);
+    return result;
+}
+
 bool String::starts_with (const std::string& s, const std::string_view& head)
 {
     return boost::starts_with(s, head);

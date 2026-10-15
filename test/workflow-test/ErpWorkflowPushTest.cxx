@@ -41,9 +41,9 @@ protected:
         {
             GTEST_SKIP_("Push tests require postgres");
         }
+        Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
         mKvnr1.emplace(generateNewRandomKVNR());
         mKvnr2.emplace(generateNewRandomKVNR());
-        Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
     }
 
 public:

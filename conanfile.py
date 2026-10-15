@@ -93,8 +93,8 @@ class ErpProcessingContext(ConanFile):
 
     def requirements(self):
         if self.options.with_hsm_tpm_production:
-            self.requires('tpmclient/0.15.0-b40')
-            self.requires('hsmclient/2.19.0-b00')
+            self.requires('tpmclient/0.15.0-b49')
+            self.requires('hsmclient/2.22.0-b106')
 
     def build_requirements(self):
         self.tool_requires('xmlsec/1.3.12', options={"shared": False})

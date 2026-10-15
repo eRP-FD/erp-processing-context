@@ -1303,3 +1303,140 @@ TEST_F(EventProcessorTest, kvnrProcessingAfter100Events)
         txn.commit();
     }
 }
+
+TEST_F(EventProcessorTest, processOne_deadLetterQueue_alreadyInDLQ_setsLastError)
+{
+    // Step 6b: If an event for a prescriptionId already exists in the DLQ,
+    // all other events for that prescriptionId are also moved to DLQ
+    // and last_error is set to "Event for prescriptionId already in DLQ".
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
+    const model::Kvnr kvnr{"X000000012"};
+    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
+                                     0);
+    insertTaskKvnr(kvnr);
+    // Event 1: already in DLQ
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::deadLetterQueue, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+    // Event 2: pending – should also be moved to DLQ by step 6b
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::provideDispensation,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, mPharmacyIdentity);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
+    eventProcessor.processOne(eventKvnr);
+
+    {
+        auto transaction = createTransaction();
+        const auto results =
+            transaction.exec("SELECT state, last_error FROM erp_event.task_event WHERE kvnr_hashed = $1 "
+                             "ORDER BY last_modified ASC",
+                             pqxx::params{eventKvnr.kvnrHashed()});
+        ASSERT_EQ(results.size(), 2);
+        // Event 1 (originally DLQ): state stays deadLetterQueue, last_error unchanged (NULL, because WHERE state != 'deadLetterQueue' excludes it)
+        EXPECT_EQ(results.at(0).at(0).as<std::string>(), "deadLetterQueue");
+        EXPECT_TRUE(results.at(0).at(1).is_null());
+        // Event 2 (pending → DLQ): last_error must contain the error text
+        EXPECT_EQ(results.at(1).at(0).as<std::string>(), "deadLetterQueue");
+        EXPECT_EQ(results.at(1).at(1).as<std::string>(), "Event for prescriptionId already in DLQ");
+        transaction.commit();
+    }
+}
+
+TEST_F(EventProcessorTest, processOne_deadLetterQueue_epaError_setsLastError)
+{
+    // Step 11b: On an EPA error (DeadLetter outcome) the error text from the BDE message
+    // is stored as last_error on the event.
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
+    // X011300021 triggers a DeadLetter response from the EPA mock
+    const model::Kvnr kvnr{"X011300021"};
+    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
+                                     0);
+    insertTaskKvnr(kvnr);
+    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
+                    mDoctorIdentity, std::nullopt);
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
+    eventProcessor.processOne(eventKvnr);
+
+    {
+        auto transaction = createTransaction();
+        const auto results =
+            transaction.exec("SELECT state, last_error FROM erp_event.task_event WHERE kvnr_hashed = $1",
+                             pqxx::params{eventKvnr.kvnrHashed()});
+        ASSERT_EQ(results.size(), 1);
+        EXPECT_EQ(results.at(0).at(0).as<std::string>(), "deadLetterQueue");
+        // last_error must be set (not NULL, not empty)
+        EXPECT_FALSE(results.at(0).at(1).is_null());
+        EXPECT_FALSE(results.at(0).at(1).as<std::string>().empty());
+        transaction.commit();
+    }
+}
+
+TEST_F(EventProcessorTest, processOne_deadLetterQueue_noSerNo2TIDMapping_setsLastError)
+{
+    // Error case SerNo2TID: If no mapping exists for the serial number from the QES certificate,
+    // getQesDoctorId() returns nullopt and last_error is set to "No mapping in SerNo2TID".
+    //
+    // The prescription must be signed with a certificate that:
+    //   - has no TelematikId embedded in the QES signature itself, AND
+    //   - has a serial number that is absent from the SerNo2TID mapping.
+    // "test/no-qes-no-serno2tid.pem" satisfies both conditions (see TaskEventConverterTest).
+    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
+    const model::Kvnr kvnr{"X000000012"};
+    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
+                                     0);
+    insertTaskKvnr(kvnr);
+
+    // Build and insert the task event with a prescription signed by no-qes-no-serno2tid.pem,
+    // mirroring insertTaskEvent() but using a custom signing certificate.
+    {
+        const fhirtools::DefinitionKey binaryProfile{std::string{model::resource::structure_definition::binary},
+                                                     ResourceTemplates::Versions::GEM_ERP_1_3};
+        auto&& txn = createTransaction();
+        const model::Timestamp authoredOn = model::Timestamp::now();
+        auto [key, derivationData] = mKeyDerivation->initialTaskKey(prescriptionId1, authoredOn);
+        const db_model::Blob salt{derivationData.salt};
+        const auto encryptedKvnr = mCodec.encode(kvnr.id(), key, Compression::DictionaryUse::Default_json);
+
+        const auto prescriptionBundle = ::model::Bundle::fromXmlNoValidation(healthcareProviderPrescription);
+        const ::model::Binary signedNoQesNoMapping{
+            prescriptionBundle.getId().toString(),
+            ::CryptoHelper::toCadesBesSignature(prescriptionBundle.serializeToXmlString(),
+                                                "test/no-qes-no-serno2tid.pem"),
+            binaryProfile};
+        const auto encryptedPrescription =
+            mCodec.encode(signedNoQesNoMapping.serializeToJsonString(), key, Compression::DictionaryUse::Default_json);
+        const db_model::postgres_bytea prescriptionBlob{encryptedPrescription.binarystring()};
+        const auto encryptedDoctorIdentity =
+            mCodec.encode(*mDoctorIdentity, key, Compression::DictionaryUse::Default_json);
+
+        const auto id = gsl::narrow<model::TaskEvent::id_t>(++mEventIdCounter);
+        txn.exec("INSERT INTO erp_event.task_event "
+                 "(id, prescription_type, prescription_id, kvnr, kvnr_hashed, status, usecase, state, salt, "
+                 "task_key_blob_id, healthcare_provider_prescription, doctor_identity)"
+                 " VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                 pqxx::params{id, static_cast<int16_t>(magic_enum::enum_integer(prescriptionId1.type())),
+                              prescriptionId1.toDatabaseId(), encryptedKvnr.binarystring(), kvnrHashed(kvnr), 1,
+                              magic_enum::enum_name(model::TaskEvent::UseCase::providePrescription),
+                              magic_enum::enum_name(model::TaskEvent::State::pending), salt.binarystring(),
+                              std::to_string(derivationData.blobId), prescriptionBlob,
+                              encryptedDoctorIdentity.binarystring()});
+        txn.commit();
+    }
+
+    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
+    eventProcessor.processOne(eventKvnr);
+
+    {
+        auto transaction = createTransaction();
+        const auto results =
+            transaction.exec("SELECT state, last_error FROM erp_event.task_event WHERE kvnr_hashed = $1",
+                             pqxx::params{eventKvnr.kvnrHashed()});
+        ASSERT_EQ(results.size(), 1);
+        EXPECT_EQ(results.at(0).at(0).as<std::string>(), "deadLetterQueue");
+        EXPECT_EQ(results.at(0).at(1).as<std::string>(), "No mapping in SerNo2TID");
+        transaction.commit();
+    }
+}

@@ -25,6 +25,7 @@ void EpaMedicationClientMock::setExpectedInput(const std::string& input)
 
 IEpaMedicationClient::Response EpaMedicationClientMock::send(const model::Kvnr&, const std::string& payload, BDEMessage& bdeMessage [[maybe_unused]])
 {
+    mReceivedInput = payload;
     if (mExpectedInput)
     {
         [&] {
@@ -51,4 +52,9 @@ IEpaMedicationClient::Response
 EpaMedicationClientMock::sendCancelPrescription(const std::string&, const model::Kvnr& kvnr, const std::string& payload, BDEMessage& bdeMessage)
 {
     return send(kvnr, payload, bdeMessage);
+}
+
+std::string EpaMedicationClientMock::receivedInput() const
+{
+    return mReceivedInput;
 }

@@ -264,7 +264,8 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
         {
             // Workflow step 17 - set deadletter
             const auto skipped = autocommit([&](auto& db) {
-                return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+                return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType(),
+                                         "Event for prescriptionId already in DLQ");
             });
             TVLOG(1) << "marked events as deadletterQueue: " << skipped;
             jsonLog() << kvnr << KeyValue("event", "Setting all events for task in dead letter queue because of previous task event in state DLQ")
@@ -278,17 +279,18 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                   << KeyValue("prescription_id", event->getPrescriptionId().toString())
                   << KeyValue("usecase", magic_enum::enum_name(event->getUseCase()))
                   << KeyValue("epa", epaAccount.host);
-        auto outcome = dispatcher.dispatch(*event, auditDataCollector);
+        auto result = dispatcher.dispatch(*event, auditDataCollector);
 
         A_25962.start("Write audit event to database");
-        if (outcome == eventprocessing::Outcome::Success || outcome == eventprocessing::Outcome::DeadLetter)
+        if (result.outcome == eventprocessing::Outcome::Success ||
+            result.outcome == eventprocessing::Outcome::DeadLetter)
         {
             writeAuditEvent(auditDataCollector);
         }
         A_25962.finish();
 
         // Workflow step 11 - check ePA response
-        switch (outcome)
+        switch (result.outcome)
         {
             case eventprocessing::Outcome::Success:
             case eventprocessing::Outcome::SuccessAuditFail: {// Workflow step 11a - Success -> Workflow step 15
@@ -318,7 +320,8 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
             case eventprocessing::Outcome::DeadLetter:// Workflow step 11b - DeadletterQueue -> Workflow step 17
                 // Workflow step 17 - set deadletter
                 const auto skipped = autocommit([&](auto& db) {
-                    return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType());
+                    return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType(),
+                                             result.deadLetterReason);
                 });
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
                 jsonLog() << kvnr << KeyValue("event", "Setting all events for task in DLQ because of error in processing current task event")

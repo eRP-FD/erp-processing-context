@@ -21,11 +21,16 @@ class PeriodicTimerBase;
 class TimerHandler
 {
 public:
+    explicit TimerHandler(std::string name);
     virtual void timerHandler() = 0;
     virtual std::optional<std::chrono::steady_clock::duration> nextInterval() const = 0;
+    const std::string& timerName() const;
     virtual ~TimerHandler() noexcept = default;
 
+
 private:
+    std::string mName;
+
     std::mutex mMutex;
     bool canceled = false;
     friend class PeriodicTimerBase;
@@ -34,13 +39,14 @@ private:
 class OneShotHandler : public TimerHandler
 {
 public:
+    using TimerHandler::TimerHandler;
     std::optional<std::chrono::steady_clock::duration> nextInterval() const final;
 };
 
 class FixedIntervalHandler : public TimerHandler
 {
 public:
-    FixedIntervalHandler(std::chrono::steady_clock::duration interval);
+    FixedIntervalHandler(std::string name, std::chrono::steady_clock::duration interval);
     std::optional<std::chrono::steady_clock::duration> nextInterval() const final;
 
 private:

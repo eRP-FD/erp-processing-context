@@ -219,7 +219,7 @@ TEST_F(DurationConsumerTest, PeriodicTimer)
     };
     using TestTimer = PeriodicTimer<TestTimerHandler>;
     boost::asio::io_context ioContext;
-    TestTimer testTimer(interval);
+    TestTimer testTimer("TestTimer", interval);
     testTimer.start(ioContext, interval);
     ioContext.run_for(interval * 2);
     ioContext.stop();

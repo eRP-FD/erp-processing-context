@@ -32,7 +32,7 @@ class TerminationHandler::CountDownTimerHandler : public FixedIntervalHandler
 {
 public:
     explicit CountDownTimerHandler(int countDownSecondsStart)
-        : FixedIntervalHandler(std::chrono::seconds(1))
+        : FixedIntervalHandler("CountDownTimer", std::chrono::seconds(1))
         , secondsLeft(countDownSecondsStart)
     {
         TLOG(INFO) << "shutdown in " << secondsLeft;
@@ -57,12 +57,12 @@ std::unique_ptr<TerminationHandler>& TerminationHandler::rawInstance (void)
     return instance;
 }
 
-TerminationHandler::TerminationHandler (void)
-    : mMutex(),
-      mCallbacks(),
-      mState(State::Running),
-      mHasError(false),
-      mShutdownDelayTimer(std::make_unique<ShutdownDelayTimer>())
+TerminationHandler::TerminationHandler(void)
+    : mMutex()
+    , mCallbacks()
+    , mState(State::Running)
+    , mHasError(false)
+    , mShutdownDelayTimer(std::make_unique<ShutdownDelayTimer>("ShutdownDelayTimer"))
 {
 }
 

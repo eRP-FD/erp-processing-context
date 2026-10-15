@@ -76,6 +76,8 @@ static constexpr Requirement A_27860("Anbieter E-Rezept-Fachdienst - Zugriff auf
 [[maybe_unused]] static constexpr Requirement A_28473 ("Nicht Verfügbarkeit eines Push Gateway");
 [[maybe_unused]] static constexpr Requirement A_27405 ("Schlüsselableitung - Alte Schlüssel löschen");
 
+[[maybe_unused]] static constexpr Requirement A_30274("E-Rezept-Fachdienst - ePA - Mapping - Bereinigung der Telematik-ID");
+
 // clang-format on
 
 #endif//ERP_PROCESSING_CONTEXT_SRC_EXPORTER_EXPORTERREQUIREMENTS_HXX

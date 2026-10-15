@@ -526,15 +526,17 @@ TEST_F(PostgresDatabaseTest, markDeadletter)//NOLINT(readability-function-cognit
 
     EXPECT_EQ(database().isDeadLetter(eventKvnr, prescriptionId, prescriptionId.type()), true);
 
-    const auto marked = database().markDeadLetter(eventKvnr, prescriptionId, prescriptionId.type());
+    const auto marked = database().markDeadLetter(eventKvnr, prescriptionId, prescriptionId.type(), "reason");
     EXPECT_EQ(marked, 1);
     database().commitTransaction();
 
     {
         auto transaction = createTransaction();
-        const auto results = transaction.exec("SELECT state FROM erp_event.task_event ORDER BY last_modified ASC");
+        const auto results =
+            transaction.exec("SELECT state, last_error FROM erp_event.task_event ORDER BY last_modified ASC");
         ASSERT_EQ(results.size(), 2);
         EXPECT_EQ("deadLetterQueue", results[0].at(0).as<std::string>());
+        EXPECT_EQ("reason", results[0].at(1).as<std::string>());
         EXPECT_EQ("deadLetterQueue", results[1].at(0).as<std::string>());
         transaction.commit();
     }
@@ -594,6 +596,13 @@ TEST_F(PostgresDatabaseTest, eventLimit100)
     const auto events = db.getAllEventsForKvnr(eventKvnr);
     db.commitTransaction();
     ASSERT_EQ(events.size(), 100);
+}
+
+TEST_F(PostgresDatabaseTest, expectedSchemaVersion)
+{
+    auto& db = database();
+    EXPECT_EQ(db.retrieveSchemaVersion(), MedicationExporterDatabaseFrontendInterface::expectedSchemaVersion);
+    db.commitTransaction();
 }
 
 class PostgresDatabaseTransactionModeTest : public PostgresDatabaseTest,

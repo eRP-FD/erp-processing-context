@@ -25,7 +25,7 @@ class VsdmKeyCache::Refresher : public FixedIntervalHandler
 {
 public:
     explicit Refresher(VsdmKeyCache& keyCache, std::chrono::steady_clock::duration interval)
-        : FixedIntervalHandler{interval}
+        : FixedIntervalHandler{"VsdmKeyCache::Refresher", interval}
         , mKeyCache{keyCache}
     {
     }

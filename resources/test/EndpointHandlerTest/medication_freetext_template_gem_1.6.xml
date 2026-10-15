@@ -1,7 +1,7 @@
       <Medication xmlns="http://hl7.org/fhir">
         <id value="###MEDICATION_ID###"/>
         <meta>
-          <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.5"/>
+          <profile value="https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Medication|1.6"/>
         </meta>
         <extension url="https://gematik.de/fhir/epa-medication/StructureDefinition/drug-category-extension">
           <valueCoding>

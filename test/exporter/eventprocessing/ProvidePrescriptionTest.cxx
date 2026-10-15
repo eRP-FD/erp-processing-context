@@ -5,6 +5,7 @@
  */
 
 #include "exporter/eventprocessing/ProvidePrescription.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/eventprocessing/EventDispatcher.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "shared/audit/AuditDataCollector.hxx"
@@ -12,6 +13,8 @@
 #include "test/util/CryptoHelper.hxx"
 #include "test/util/ResourceTemplates.hxx"
 
+#undef Expect
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 namespace
@@ -253,3 +256,51 @@ INSTANTIATE_TEST_SUITE_P(
                     ErrorCodesTestParam{"MEDSVC_EMP_ENTRY_ALREADY_EXISTS", eventprocessing::Outcome::DeadLetter},
                     ErrorCodesTestParam{"MEDSVC_EMP_NO_EXIST", eventprocessing::Outcome::DeadLetter}),
     &ProvidePrescriptionErrorCodesTestP::getName);
+
+struct TelematikIdSanitizationParam {
+    std::string telematikId;
+    std::string telematikIdClean;
+};
+
+class ProvidePrescriptionTelematikIdSanitizationP : public ProvidePrescriptionTest,
+                                                    public testing::WithParamInterface<TelematikIdSanitizationParam>
+{
+public:
+    model::ProvidePrescriptionTaskEvent makeEvent(const std::string& telematikId)
+    {
+        const auto lastModified = model::Timestamp::now();
+        return model::ProvidePrescriptionTaskEvent(
+            0, model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 1),
+            model::PrescriptionType::apothekenpflichigeArzneimittel, model::Kvnr{"X12345678"}, "not a real hash",
+            model::TaskEvent::UseCase::providePrescription, model::TaskEvent::State::pending,
+            model::TelematikId{telematikId}, model::TelematikId(telematikId), "doctor organization name not-set",
+            std::string(profession_oid::oid_arzt),
+            model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml()), lastModified);
+    }
+};
+
+TEST_P(ProvidePrescriptionTelematikIdSanitizationP, sanitizeTelematikId)
+{
+    A_30274.test("Bereinigung der Telematik-ID: ProvidePrescription");
+    auto event = makeEvent(GetParam().telematikId);
+    ASSERT_EQ(event.getJwtDoctorId().id(), GetParam().telematikId);
+    EpaMedicationClientMock client;
+    client.setHttpStatusResponse(HttpStatus::OK);
+    client.setOperationOutcomeResponse(operationOutcomeTpl);
+
+    BDEMessage bdeMessage;
+    auto outcome = eventprocessing::ProvidePrescription::process(&client, event, bdeMessage);
+    EXPECT_EQ(outcome, eventprocessing::Outcome::Success);
+    EXPECT_THAT(client.receivedInput(), testing::HasSubstr(GetParam().telematikIdClean));
+    EXPECT_THAT(client.receivedInput(), testing::Not(testing::HasSubstr(GetParam().telematikId)));
+}
+
+INSTANTIATE_TEST_SUITE_P(x, ProvidePrescriptionTelematikIdSanitizationP,
+                         testing::Values(TelematikIdSanitizationParam{"x-12345678\n", "x-12345678"},
+                                         TelematikIdSanitizationParam{"x\r-12345678", "x-12345678"},
+                                         TelematikIdSanitizationParam{"   x-12345678\t", "x-12345678"},
+                                         TelematikIdSanitizationParam{"x-123\t45678", "x-12345678"},
+                                         TelematikIdSanitizationParam{"x-12345678\r\n", "x-12345678"},
+                                         TelematikIdSanitizationParam{"x-123\r\n45678", "x-12345678"},
+                                         TelematikIdSanitizationParam{"\t\nx-1234\r5678\n", "x-12345678"},
+                                         TelematikIdSanitizationParam{"\r\n x-12345678 \r\n", "x-12345678"}));

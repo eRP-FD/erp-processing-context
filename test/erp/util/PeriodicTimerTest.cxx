@@ -24,7 +24,7 @@ TEST(PeriodicTimerTest, countAndInterval)
         struct TestTimerHandler final : public FixedIntervalHandler {
             using FixedIntervalHandler::FixedIntervalHandler;
             TestTimerHandler(std::chrono::steady_clock::duration interval, erp::test::SoftExpect& softExpect)
-                : FixedIntervalHandler{interval}
+                : FixedIntervalHandler{"TestTimer", interval}
                 , WITH_RETRIES_SoftExpect{softExpect}
             {}
             void timerHandler() override
@@ -66,7 +66,7 @@ TEST(PeriodicTimerTest, skip)
     };
     using TestTimer = PeriodicTimer<TestTimerHandler>;
     boost::asio::io_context ioContext;
-    TestTimer testTimer(interval);
+    TestTimer testTimer("TestTimer", interval);
     testTimer.start(ioContext, interval);
     testTimer.handler()->expectTrigger = std::chrono::steady_clock::now() + interval;
     ioContext.run_for(interval * 8 + tolerance);
@@ -80,8 +80,9 @@ TEST(PeriodicTimerTest, deleteWaitsForHandler)
     std::atomic_bool started = false;
     std::atomic_bool completed = false;
     struct TestTimerHandler final : public OneShotHandler {
-        TestTimerHandler(std::atomic_bool& started, std::atomic_bool & completed)
-            : mStarted{started}
+        TestTimerHandler(std::atomic_bool& started, std::atomic_bool& completed)
+            : OneShotHandler{"TestTimer"}
+            , mStarted{started}
             , mCompleted{completed}
         {
         }
@@ -114,37 +115,34 @@ TEST(PeriodicTimerTest, deleteWaitsForHandler)
 TEST(PeriodicTimerTest, exception)
 {
     using namespace std::chrono_literals;
-    std::atomic_bool started = false;
+    std::atomic_size_t count = 0;
     std::atomic_bool completed = false;
-    struct TestTimerHandler final : public OneShotHandler {
-        TestTimerHandler(std::atomic_bool& started, std::atomic_bool& completed)
-            : mStarted{started}
-            , mCompleted{completed}
+    struct TestTimerHandler final : public FixedIntervalHandler {
+        TestTimerHandler(std::atomic_size_t& started)
+            : FixedIntervalHandler{"TestTimer", interval}
+            , mCount{started}
         {
         }
         void timerHandler() override
         {
-            mStarted = true;
+            ++mCount;
             throw std::runtime_error("test");
-            mCompleted = true;
         }
-        std::atomic_bool& mStarted;
-        std::atomic_bool& mCompleted;
+        std::atomic_size_t& mCount;
     };
 
     using TestTimer = PeriodicTimer<TestTimerHandler>;
-    auto testTimer = std::make_shared<TestTimer>(started, completed);
+    auto testTimer = std::make_shared<TestTimer>(count);
     boost::asio::io_context ioContext;
 
     testTimer->start(ioContext, tolerance);
     std::thread runner{[&] {
-        ASSERT_THROW(ioContext.run_for(2 * interval), std::runtime_error);
+        ASSERT_NO_THROW(ioContext.run_for(3 * interval));
     }};
     testutils::waitFor([&]() -> bool {
-        return started;
+        return count >= 2;
     });
     testTimer.reset();
-    EXPECT_FALSE(completed);
     ioContext.stop();
     runner.join();
 }

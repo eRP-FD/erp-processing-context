@@ -72,7 +72,7 @@ QUERY(sqlMarkDeadletter, R"(
 UPDATE
   erp_event.task_event
 SET
-  state = 'deadLetterQueue'
+  state = 'deadLetterQueue', last_error=$4
 WHERE
   kvnr_hashed = $1 AND prescription_id = $2 AND prescription_type = $3 AND state != 'deadLetterQueue'
     )");
@@ -247,6 +247,18 @@ PostgresConnection& MedicationExporterPostgresBackend::connection() const
     return mConnection;
 }
 
+std::string MedicationExporterPostgresBackend::retrieveSchemaVersion()
+{
+    checkCommonPreconditions();
+    static const std::string query = "SELECT value FROM erp_event.config WHERE parameter = 'schema_version'";
+    TVLOG(2) << query << std::endl;
+    const auto timerKeepAlive =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "retrieveschemaversion");
+
+    const auto result = transaction()->exec(query).one_field();
+    return result.as<std::string>();
+}
+
 std::optional<model::EventKvnr> MedicationExporterPostgresBackend::processNextKvnr()
 {
     checkCommonPreconditions();
@@ -357,7 +369,8 @@ bool MedicationExporterPostgresBackend::isDeadLetter(const model::EventKvnr& kvn
 
 int MedicationExporterPostgresBackend::markDeadLetter(const model::EventKvnr& kvnr,
                                                       const model::PrescriptionId& prescriptionId,
-                                                      model::PrescriptionType prescriptionType)
+                                                      model::PrescriptionType prescriptionType,
+                                                      const std::string& errorText)
 {
     const QueryDefinition& sql = sqlMarkDeadletter;
     checkCommonPreconditions();
@@ -367,7 +380,7 @@ int MedicationExporterPostgresBackend::markDeadLetter(const model::EventKvnr& kv
 
     const auto result = transaction()->exec(
         sql.query, pqxx::params{kvnr.kvnrHashed(), prescriptionId.toDatabaseId(),
-                                static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType))});
+                                static_cast<std::int16_t>(magic_enum::enum_integer(prescriptionType)), errorText});
     return result.affected_rows();
 }
 

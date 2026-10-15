@@ -24,6 +24,7 @@ public:
     ~MedicationExporterPostgresBackend() override = default;
 
     PostgresConnection& connection() const override;
+    std::string retrieveSchemaVersion() override;
 
     std::optional<model::EventKvnr> processNextKvnr() override;
 
@@ -33,7 +34,7 @@ public:
     bool isDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
                       model::PrescriptionType prescriptionType) override;
     int markDeadLetter(const model::EventKvnr& kvnr, const model::PrescriptionId& prescriptionId,
-                       model::PrescriptionType prescriptionType) override;
+                       model::PrescriptionType prescriptionType, const std::string& errorText) override;
     std::optional<db_model::BareTaskEvent> markFirstEventDeadLetter(const model::EventKvnr& kvnr) override;
 
     void deleteAllEventsForKvnr(const model::EventKvnr& kvnr) override;

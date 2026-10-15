@@ -6,6 +6,7 @@
 
 #include "exporter/eventprocessing/ProvideDispensation.hxx"
 #include "exporter/Epa4AllTransformer.hxx"
+#include "exporter/ExporterRequirements.hxx"
 #include "exporter/client/EpaMedicationClient.hxx"
 #include "exporter/model/EpaOpProvideDispensationErpInputParameters.hxx"
 #include "exporter/model/EpaOpRxDispensationErpOutputParameters.hxx"
@@ -32,7 +33,10 @@ ProvideDispensation::ProvideDispensation(gsl::not_null<IEpaMedicationClient*> me
 Outcome ProvideDispensation::doProcess(const model::ProvideDispensationTaskEvent& taskEvent, BDEMessage& bdeMessage)
 {
     const auto& medicationDispenseBundle = taskEvent.getMedicationDispenseBundle();
-    const auto& telematikIdFromJwt = taskEvent.getJwtPharmacyId();
+    auto telematikIdFromJwt = taskEvent.getJwtPharmacyId();
+    A_30274.start("Bereinigung der Telematik-ID");
+    telematikIdFromJwt.sanitize();
+    A_30274.finish();
     const auto& organizationNameFromJwt = taskEvent.getJwtPharmacyOrganizationName();
     const auto& organizationProfessionOidFromJwt = taskEvent.getJwtPharmacyProfessionOid();
 
