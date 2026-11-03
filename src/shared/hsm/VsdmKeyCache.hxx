@@ -36,6 +36,7 @@ public:
     SafeString getKey(char operatorId, char version);
 
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
+    void cancelRefresher();
 
     VsdmKeyBlobDatabase& getVsdmKeyBlobDatabase();
 

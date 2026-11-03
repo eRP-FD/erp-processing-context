@@ -18,6 +18,7 @@
 
 #include <rapidjson/document.h>
 #include <optional>
+#include <span>
 
 namespace model
 {
@@ -61,6 +62,14 @@ private:
     friend Resource<MedicationDispense>;
     explicit MedicationDispense(NumberAsStringParserDocument&& jsonTree);
 };
+
+/**
+ * Protects against swapped medication dispense data between tasks (e.g. by manipulation of the database):
+ * The prescription id within each MedicationDispense must match the id of the task it was read from.
+ * Logs an error and returns false if a MedicationDispense belongs to a different prescription.
+ */
+[[nodiscard]] bool prescriptionIdsMatch(std::span<const MedicationDispense> medicationDispenses,
+                                        const PrescriptionId& expectedPrescriptionId);
 
 class GemErpExRedeemCode : public Extension<GemErpExRedeemCode>
 {

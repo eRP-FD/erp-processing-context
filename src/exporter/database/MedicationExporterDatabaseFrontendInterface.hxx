@@ -33,7 +33,7 @@ enum class TransactionMode : uint8_t;
 class MedicationExporterDatabaseFrontendInterface
 {
 public:
-    static constexpr const char* expectedSchemaVersion = "14";
+    static constexpr const char* expectedSchemaVersion = "16";
 
     using taskevents_t = std::vector<std::unique_ptr<model::TaskEvent>>;
 
@@ -86,6 +86,7 @@ public:
      */
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                        const model::EventKvnr& kvnr) const = 0;
+    virtual void recordErrorOnFirstEvent(const model::EventKvnr& kvnr, const std::string& errorText) const = 0;
     virtual void finalizeKvnr(const model::EventKvnr& kvnr,
                               const std::string& assignedEpaPrefix) const = 0;
 };

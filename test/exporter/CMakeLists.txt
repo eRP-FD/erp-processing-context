@@ -6,6 +6,7 @@ add_executable(exporter-test
         TRezeptTransformerTest.cxx
         admin/AdminRequestHandlerTest.cxx
         admin/PutRuntimeConfigHandlerTest.cxx
+        client/BfArMClientTest.cxx
         client/push/PushGatewayClientTest.cxx
         database/CommitGuardTest.cxx
         database/MedicationExporterDatabaseTest.cxx

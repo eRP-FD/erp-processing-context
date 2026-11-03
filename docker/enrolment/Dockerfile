@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 as build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3 AS build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -20,7 +20,7 @@ ARG GITHUB_OAUTH_TOKEN
 ENV GITHUB_USERNAME=${GITHUB_USERNAME:-''} \
     GITHUB_OAUTH_TOKEN=${GITHUB_OAUTH_TOKEN:-''}
 RUN git config --global url.https://${GITHUB_USERNAME:-}:${GITHUB_OAUTH_TOKEN:-}@github.ibmgcloud.net/.insteadOf git@github.ibmgcloud.net:
-RUN pip3 install "conan<3" --upgrade
+RUN pipx install 'conan<3'
 # set username and password in environment variables for IBM internal nexus "erp"
 # (as added below) so that the login to this remote happens automatically.
 ARG CONAN_LOGIN_USERNAME
@@ -32,7 +32,7 @@ ARG ERP_RELEASE_VERSION
 ENV CONAN_LOGIN_USERNAME=${CONAN_LOGIN_USERNAME:-''} \
     CONAN_PASSWORD=${CONAN_PASSWORD:-''} \
     CONAN_URL=${CONAN_URL:-''} \
-    CONAN_INTERNAL_URL=${CONAN_INTERNAL_URL:-''} \    
+    CONAN_INTERNAL_URL=${CONAN_INTERNAL_URL:-''} \
     ERP_BUILD_VERSION=${ERP_BUILD_VERSION:-'0.0.0'} \
     ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'}
 
@@ -54,7 +54,7 @@ RUN git clone --depth 1 git@github.ibmgcloud.net:eRp/vau-hsm.git .
 RUN mkdir -p /erp/vau-hsm/client/test/resources
 RUN rsync -a client/test/resources/saved /erp/vau-hsm/client/test/resources/
 
-FROM ubuntu:jammy AS runtime
+FROM ubuntu:noble AS runtime
 
 RUN apt-get update --fix-missing && \
     apt-get install -y curl jq

@@ -397,6 +397,7 @@ TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate)
     blobCache->startRefresher(ioContext, std::chrono::milliseconds{1000});
 
     testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
+    blobCache->cancelRefresher();
     ioContext.stop();
     ioThread.join();
 }
@@ -429,7 +430,8 @@ TEST_F(CFdSigErpManagerTest, updateAfterBlobCacheUpdate2)
     blobCache->startRefresher(ioContext, std::chrono::milliseconds{1000});
 
     testutils::waitFor([&requestSender, &ocspUrl] () -> bool {return requestSender->getCounter(ocspUrl) > 1;});
-    serviceContext.reset();
+    blobCache->cancelRefresher();
     ioContext.stop();
     ioThread.join();
+    serviceContext.reset();
 }

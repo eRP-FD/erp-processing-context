@@ -22,11 +22,20 @@ public:
 
     model::BareTaskEvent convertBareEvent(const db_model::EncryptedBlob& kvnr, const db_model::HashedKvnr& hashedKvnr,
                                           const std::string& usecase, model::PrescriptionId prescriptionId,
-                                          std::int16_t prescriptionType, const SafeString& key) const;
+                                          std::int16_t prescriptionType, const SafeString& key,
+                                          const std::string& lastError) const;
 
+    /**
+     * Returns nullptr if the event is a provideDispensation event whose MedicationDispenses do not belong to the
+     * prescription id of the event (e.g. manipulated database). An error is logged in this case.
+     */
     std::unique_ptr<model::TaskEvent> convert(const db_model::TaskEvent& dbTaskEvent, const SafeString& key,
                                               const SafeString& medicationDispenseKey) const;
 
+    /**
+     * Returns nullptr if the MedicationDispenses do not belong to the prescription id of the event
+     * (e.g. manipulated database). An error is logged in this case.
+     */
     std::unique_ptr<model::TRezeptEvent> convertToTRezeptEvent(const db_model::TaskEvent& dbTaskEvent, const SafeString& key,
                                                                const SafeString& medicationDispenseKey) const;
 

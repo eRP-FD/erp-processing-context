@@ -1,6 +1,7 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/model/erp/ErpElement.hxx"
+#include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
 #include "fhirtools/repository/views/VersionMappingView.hxx"
 #include "fhirtools/validator/FhirPathValidator.hxx"
@@ -116,8 +117,10 @@ int main(int argc, char* argv[])
             {
                 factory.emplace(Factory::fromJson(fileContent, *StaticData::getJsonValidator()));
             }
+            Fhir::instance().backend().enableMeasurement();
             (void) std::move(*factory).getValidated(model::ProfileType::fhir, view);
         }
+        Fhir::instance().backend().report();
     }
     catch (const ErpException& erpException)
     {

@@ -54,6 +54,8 @@ public:
     MOCK_METHOD(int, markDeadLetter, (const model::TRezeptEvent& eventData), (const, override));
     MOCK_METHOD(void, updateProcessingDelay,
                 (std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr), (const, override));
+    MOCK_METHOD(void, recordErrorOnFirstEvent, (const model::EventKvnr& kvnr, const std::string& errorText),
+                (const, override));
     MOCK_METHOD(void, finalizeKvnr, (const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix),
                 (const, override));
     MOCK_METHOD(std::optional<model::PushNotificationEvent>, processNextPushNotification, (), (const, override));
@@ -93,6 +95,7 @@ public:
     int markDeadLetter(const model::TRezeptEvent& eventData) const override;
     void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                const model::EventKvnr& kvnr) const override;
+    void recordErrorOnFirstEvent(const model::EventKvnr& kvnr, const std::string& errorText) const override;
     void finalizeKvnr(const model::EventKvnr& kvnr, const std::string& assignedEpaPrefix) const override;
     std::optional<model::PushNotificationEvent> processNextPushNotification() const override;
     void deletePushNotification(const model::HashedKvnr& hashedKvnr, int64_t eventId) const override;

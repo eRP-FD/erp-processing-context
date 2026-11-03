@@ -12,6 +12,7 @@
 #include "fhirtools/validator/ValidationResult.hxx"
 #include "shared/model/Kvnr.hxx"
 #include "shared/model/PrescriptionType.hxx"
+#include "shared/model/Timestamp.hxx"
 #include "test/util/EnvironmentVariableGuard.hxx"
 
 #include <gtest/gtest.h>
@@ -62,6 +63,11 @@ std::unique_ptr<model::FhirResourceBase> createResource(std::string_view doc);
 std::unique_ptr<model::FhirResourceBase> createResourceNoValidation(model::NumberAsStringParserDocument doc);
 
 std::string shiftDate(const std::string& realDate);
+
+/// The calendar day of the given timestamp in the German timezone (as used for selecting FHIR resource views).
+date::sys_days germanDay(const model::Timestamp& timestamp);
+/// The current calendar day in the German timezone.
+date::sys_days germanToday();
 
 class ShiftFhirResourceViewsGuard
 {

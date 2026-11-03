@@ -34,7 +34,7 @@ public:
     [[nodiscard]] EvaluationContext makeDateElement(const Date& value) const;
     [[nodiscard]] EvaluationContext makeDateTimeElement(const DateTime& value) const;
     [[nodiscard]] EvaluationContext makeTimeElement(const Time& value) const;
-    [[nodiscard]] EvaluationContext makeQuantityElement(const Element::QuantityType& value) const;
+    [[nodiscard]] EvaluationContext makeQuantityElement(const QuantityType& value) const;
 
     // use element as collection in this context
     [[nodiscard]] EvaluationContext operator()(std::shared_ptr<const Element> element) const;

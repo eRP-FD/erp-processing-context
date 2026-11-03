@@ -26,7 +26,7 @@ public:
     ~MockTerminationHandler() override;
 
     void terminate() override;
-    void gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds) override;
+    void gracefulShutdown(int delaySeconds) override;
     void waitForTerminated (void);
 };
 

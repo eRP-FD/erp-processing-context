@@ -43,6 +43,8 @@ oid_policy_hba_cp    = 1.2.276.0.76.4.145
 oid_policy_eu_phys   = 1.3.6.1.4.1.42675.1.1
 oid_smc_b_osig       = 1.2.276.0.76.4.78
 oid_vk_eaa_enc       = 1.3.6.1.4.1.24796.1.10
+oid_policy_ev_tls    = 2.23.140.1.1
+oid_policy_ov_tls    = 2.23.140.1.2.2
 
 # Policies used by the TSA examples.
 tsa_policy1 = 1.2.3.4.1
@@ -347,6 +349,26 @@ subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
 
 
+[ usr_cert_ev_tls ]
+
+basicConstraints       = CA:FALSE
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
+certificatePolicies    = oid_policy_ev_tls
+
+
+[ usr_cert_ov_tls ]
+
+basicConstraints       = CA:FALSE
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
+certificatePolicies    = oid_policy_ov_tls
+
+
 [ usr_cert_has_san ]
 
 # Same as above, but cert req already has SubjectAltName.
@@ -547,6 +569,29 @@ authorityKeyIdentifier = keyid,issuer
 subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 
 extendedKeyUsage       = critical,timeStamping
+
+crlDistributionPoints  = URI:http://example.com/example_ca.crl
+
+
+####################################################################
+[vau_aut_cert]
+
+basicConstraints       = CA:FALSE
+
+keyUsage               = digitalSignature
+
+# PKIX recommendations harmless if included in all certificates.
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+
+subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
+
+certificatePolicies    = 1.2.276.0.76.4.155
+
+# admissions / profession info: eRP VAU role (oid_erp_vau = 1.2.276.0.76.4.258)
+1.3.36.8.3.3           = ASN1:SEQUENCE:admission_syntax_erp_vau_sequence
+
+authorityInfoAccess    = OCSP;URI:http://ocsp-test.ocsp.telematik-test:8080/
 
 crlDistributionPoints  = URI:http://example.com/example_ca.crl
 
@@ -797,6 +842,28 @@ certificatePolicies    = oid_hba_qes,qcp-natural-qscd,oid_policy_hba_cp,oid_poli
 1.3.36.8.3.3           = ASN1:SEQUENCE:profession_oids
 authorityInfoAccess    = OCSP;URI:http://ocsp.test.ibm.de/
 
+
+[admission_syntax_erp_vau_sequence]
+contentsOfAdmissions = SEQUENCE:admissions_stack_erp_vau_sequence
+
+[admissions_stack_erp_vau_sequence]
+admissions = SEQUENCE:admissions_erp_vau_sequence
+
+[admissions_erp_vau_sequence]
+professionInfos = SEQUENCE:profession_info_stack_erp_vau_sequence
+
+[profession_info_stack_erp_vau_sequence]
+professionInfos = SEQUENCE:profession_info_erp_vau_sequence
+
+[profession_info_erp_vau_sequence]
+professionItems = SEQUENCE:profession_item_stack_erp_vau_sequence
+professionOids = SEQUENCE:profession_oid_stack_erp_vau_sequence
+
+[profession_item_stack_erp_vau_sequence]
+item1 = FORMAT:UTF8,UTF8:E-Rezept vertrauenswürdige Ausführungsumgebung
+
+[profession_oid_stack_erp_vau_sequence]
+oid1 = OID:1.2.276.0.76.4.258
 
 [admission_syntax_epa_vau_sequence]
 contentsOfAdmissions = SEQUENCE:admissions_stack_epa_vau_sequence

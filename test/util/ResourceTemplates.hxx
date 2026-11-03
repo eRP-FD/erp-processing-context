@@ -92,7 +92,7 @@ struct Versions {
     static inline DAV_PKV DAV_PKV_1_3{"1.3"};
     static inline DAV_PKV DAV_PKV_1_4_0{"1.4.0"};
     static inline GEM_ERPEU GEM_ERPEU_1_1_2{"1.1.2"};
-    static inline GEM_ERP_TREZEPT GEM_ERP_TREZEPT_1_1{"1.1"};
+    static inline GEM_ERP_TREZEPT GEM_ERP_TREZEPT_1_2_0{"1.2.0"};
     static inline KBV_FOR KBV_FOR_1_3_1{"1.3.1"};
     static inline EPA_MEDICATION EPA_MEDICATION_1_0{"1.0.6-2"};
     static inline EPA_MEDICATION EPA_MEDICATION_1_3_0{"1.3.0"};

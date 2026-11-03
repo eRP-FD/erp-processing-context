@@ -68,14 +68,33 @@ JsonLog EventProcessingBase::log(JsonLog::LogReceiver&& logReceiver, const model
     return log;
 }
 
-std::optional<std::string> EventProcessingBase::getFailureDiagnostics(const model::NumberAsStringParserDocument& doc)
+std::string EventProcessingBase::getFailureDiagnostics(HttpStatus httpStatus,
+                                                       const model::NumberAsStringParserDocument& doc)
 {
-    auto oo = model::OperationOutcome::fromJson(doc);
-    if (! oo.issues().empty() && oo.issues()[0].diagnostics.has_value())
+    std::optional<std::string> ret;
+
+    const auto oo = model::OperationOutcome::fromJson(doc);
+    if (const auto issues = oo.issues(); ! issues.empty())
     {
-        return oo.issues()[0].diagnostics;
+        ret = issues.at(0).diagnostics;
+        if (! ret)
+        {
+            ret = issues.at(0).detailsText;
+        }
     }
-    return std::nullopt;
+    if (! ret)
+    {
+        const model::EpaErrorType errorType(doc);
+        if (! errorType.getErrorDetail().empty())
+        {
+            ret = errorType.getErrorDetail();
+        }
+        if (! ret && ! errorType.getErrorCode().empty())
+        {
+            ret = errorType.getErrorCode();
+        }
+    }
+    return ret.value_or(toString(httpStatus));
 }
 
 }

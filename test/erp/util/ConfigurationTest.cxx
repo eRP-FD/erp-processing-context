@@ -213,7 +213,7 @@ TEST_F(ConfigurationTest, getOptionalPem)
 {
     static constexpr auto testKey = ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_SERVER_CA;
     const auto& config = Configuration::instance();
-    auto pemFile = ResourceManager::getAbsoluteFilename("test/generated_pki_push/rootCA/rootCA-cert.pem");
+    auto pemFile = ResourceManager::getAbsoluteFilename("test/generated_pki_mock/rootCA/rootCA-cert.pem");
     auto expected = FileHelper::readFileAsString(pemFile);
     ASSERT_FALSE(expected.empty()); // make sure this test isn't trivial
     {

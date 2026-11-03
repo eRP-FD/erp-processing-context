@@ -659,7 +659,7 @@ void Epa4AllTransformerTest::checkExtensions(const rapidjson::Value& source, con
                     {
                         const auto* sourceExtension = findExtension(source, mapping.sourceUrl);
                         ASSERT_NE(sourceExtension, nullptr)
-                            << "Extension not found in source, mapping definition in test must be wrong";
+                            << "Extension not found in source, mapping definition in test must be wrong: " << mapping.sourceUrl;
                         checkRetainedProperties(*sourceExtension, extension, mapping.retainedValues);
                     }
                     checkPropertiesNotInTarget(extension, mapping.emptyInTarget);

@@ -100,6 +100,47 @@ if (WITH_PROFILING)
     find_package(GPerftools REQUIRED)
 endif()
 
+option(ERP_WITH_ASAN "Build with AddressSanitizer (-fsanitize=address)" OFF)
+if (ERP_WITH_ASAN)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+        message(FATAL_ERROR "ERP_WITH_ASAN is not supported with MSVC")
+    endif ()
+    message(NOTICE "ERP_WITH_ASAN: ON")
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+    # Suppress false-positive warnings that fire only under ASan due to deeper inlining.
+    #
+    # 1) -Wmaybe-uninitialized: GCC's <bits/regex_automaton.h> uses a tagged union where
+    #    the std::function member is intentionally left uninitialised for most opcodes.
+    #    With ASan flags the optimiser inlines deeply enough that the interprocedural pass
+    #    sees the std::function move-constructor touch those union bytes and fires.
+    #    Known GCC libstdc++ bug, unfixed in any released version:
+    #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=105616
+    #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=117873
+    add_compile_options(-Wno-maybe-uninitialized)
+    #
+    # 2) -Wmismatched-new-delete: Boost.Asio coroutine frames allocate via
+    #    std::aligned_alloc() (for alignment) but the coroutine's operator delete uses
+    #    ::operator delete(void*, size_t).  GCC inlines deeply enough under ASan to see
+    #    the mismatched pair and warns, even though Boost.Asio's paired deallocate calls
+    #    free() which is the correct counterpart to aligned_alloc().
+    #    Known GCC bug, unfixed in any released version:
+    #    https://gcc.gnu.org/bugzilla/show_bug.cgi?id=103993
+    add_compile_options(-Wno-mismatched-new-delete)
+    # Embed the compiler's runtime library path so binaries find libasan.so at
+    # runtime without requiring LD_LIBRARY_PATH.
+    get_filename_component(_asan_lib
+            "${CMAKE_CXX_COMPILER}" DIRECTORY)               # .../bin
+    get_filename_component(_asan_lib
+            "${_asan_lib}/../lib64" ABSOLUTE)                # .../lib64
+    if (EXISTS "${_asan_lib}/libasan.so")
+        add_link_options(-Wl,-rpath,${_asan_lib})
+        message(NOTICE "ERP_WITH_ASAN: adding rpath ${_asan_lib}")
+    endif ()
+else ()
+    message(NOTICE "ERP_WITH_ASAN: OFF")
+endif ()
+
 if (NOT DEFINED ANTLR_EXECUTABLE)
     set(ANTLR_EXECUTABLE "${CMAKE_BINARY_DIR}/antlr-4.10.1-complete.jar" CACHE STRING
             "Path of ANTLR4 executable. Can be either normal executable or jar file.")

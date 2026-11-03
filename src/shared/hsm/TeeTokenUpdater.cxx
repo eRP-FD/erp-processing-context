@@ -73,12 +73,20 @@ TeeTokenUpdater::TeeTokenUpdater (
 
 TeeTokenUpdater::~TeeTokenUpdater (void)
 {
+    // Cancel any pending (not yet started) timer callback first.
     mTimerManager->cancel(mUpdateJobToken);
+    // Then wait for any in-progress update() invocation to finish before the
+    // members it accesses are destroyed.
+    const std::scoped_lock lock(mUpdateMutex);
 }
 
 
 void TeeTokenUpdater::update (void)
 {
+    // Hold the mutex for the entire execution so that ~TeeTokenUpdater()
+    // cannot destroy our members while we are using them.
+    const std::scoped_lock lock(mUpdateMutex);
+
     try
     {
         mUpdateJobToken = Timer::NotAJob;

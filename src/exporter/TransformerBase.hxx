@@ -6,6 +6,7 @@
 
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "fhirtools/repository/views/FhirStructureRepositoryView.hxx"
+#include "fhirtools/transformer/ResourceProfileTransformer.hxx"
 
 namespace model
 {
@@ -29,6 +30,11 @@ protected:
     transformResource(const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
                       const std::vector<fhirtools::ValueMapping>& valueMappings,
                       const std::vector<FixedValue>& fixedValues);
+    static model::NumberAsStringParserDocument
+    transformResource(const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
+                      const std::vector<fhirtools::ValueMapping>& valueMappings,
+                      const std::vector<FixedValue>& fixedValues,
+                      const fhirtools::ResourceProfileTransformer::Options& options);
 
     static void checkSetAbsentReason(model::NumberAsStringParserDocument& document, const std::string& memberPath,
                                      std::string_view valueCode);

@@ -37,6 +37,28 @@ FhirElement::FhirElement() = default;
 
 FhirElement::~FhirElement() = default;
 
+void fhirtools::FhirElement::enableMeasurement() const
+{
+    std::ranges::for_each(mConstraints, &FhirConstraint::enableMeasurement);
+}
+
+void FhirElement::report() const
+{
+    for (const auto& constraint : mConstraints)
+    {
+        if (const auto& runtime = constraint.runtime(); runtime > std::chrono::milliseconds{1})
+        {
+            TVLOG(0) << R"("constraint": )"                                                                //
+                     << R"({ "profile": ")" << structureDefinition().key() << '"'                          //
+                     << R"(, "element": ")" << name() << '"'                                               //
+                     << R"(, "key": ")" << constraint.getKey() << '"'                                      //
+                     << R"(, "duration_ms": )" << duration_cast<std::chrono::milliseconds>(runtime).count()//
+                     << R"(, "calls": )" << constraint.callCount()                                         //
+                     << " }";
+        }
+    }
+}
+
 std::string_view fhirtools::FhirElement::fieldName() const
 {
     size_t dot = mName.rfind('.');

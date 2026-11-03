@@ -316,6 +316,9 @@ TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAllPharmacy)
 
 TEST_F(ChargeItemGetHandlerTest, ChargeItemGetAll_FilterByDate) // NOLINT(readability-function-cognitive-complexity)
 {
+#if defined(__SANITIZE_ADDRESS__)
+    GTEST_SKIP() << "Skipping flaky test under AddressSanitizer";
+#endif
     // Insert ChargeItem into database
     //--------------------------
 

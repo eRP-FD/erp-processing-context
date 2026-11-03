@@ -29,7 +29,41 @@ class ErpProcessingContext(ConanFile):
     }
     default_options = {
         'boost/*:bzip2': False,
-        'boost/*:header_only': True,
+        'boost/*:without_atomic': True,
+        'boost/*:without_charconv': True,
+        'boost/*:without_chrono': True,
+        'boost/*:without_cobalt': True,
+        'boost/*:without_container': True,
+        'boost/*:without_context': True,
+        'boost/*:without_contract': True,
+        'boost/*:without_coroutine': True,
+        'boost/*:without_date_time': True,
+        'boost/*:without_exception': True,
+        'boost/*:without_fiber': True,
+        'boost/*:without_filesystem': True,
+        'boost/*:without_graph': True,
+        'boost/*:without_graph_parallel': True,
+        'boost/*:without_iostreams': True,
+        'boost/*:without_json': True,
+        'boost/*:without_locale': True,
+        'boost/*:without_log': True,
+        'boost/*:without_math': True,
+        'boost/*:without_mpi': True,
+        'boost/*:without_nowide': True,
+        'boost/*:without_process': True,
+        'boost/*:without_program_options': True,
+        'boost/*:without_python': True,
+        'boost/*:without_random': True,
+        'boost/*:without_regex': True,
+        'boost/*:without_serialization': True,
+        'boost/*:without_stacktrace': True,
+        'boost/*:without_system': True,
+        'boost/*:without_test': True,
+        'boost/*:without_thread': True,
+        'boost/*:without_timer': True,
+        'boost/*:without_type_erasure': True,
+        'boost/*:without_url': False,  # <-- binary
+        'boost/*:without_wave': True,
         'date/*:tz_db': 'system',
         'fmt/*:header_only': True,
         'glog/*:with_gflags': False,
@@ -52,7 +86,7 @@ class ErpProcessingContext(ConanFile):
         'redis-plus-plus/*:with_tls': True,
         'tss/*:with_hardware_tpm': True,
         'zlib/*:shared': True,
-        'release_version': "1.23.0-DEVELOP",
+        'release_version': "1.24.0-DEVELOP",
         'with_ccache': False,
         'with_hsm_tpm_production': True,
         'with_hsm_mock': False,
@@ -64,20 +98,20 @@ class ErpProcessingContext(ConanFile):
     exports_sources = "."
     requires = [
         'antlr4-cppruntime/4.13.2',
-        'boost/1.90.0',
+        'boost/1.91.0',
         'botan/3.13.0',
         'date/3.0.5',  # date can be removed as soon as we use C++20
         'fmt/12.2.0',
         'glog/0.7.1',
         'gsl-lite/0.41.0',
-        'gtest/1.17.0',
-        'hiredis/1.3.0',
-        'libpq/16.14',
+        'gtest/1.18.0',
+        'hiredis/1.3.1',
+        'libpq/16.15',
         'libpqxx/7.10.5',
         'libunwind/1.8.3',
-        'libxml2/2.15.3',
+        'libxml2/2.15.4',
         'magic_enum/0.9.8',
-        'openssl/3.5.8+erp',
+        'openssl/3.5.9+erp',
         'prometheus-cpp/1.3.0',
         'rapidjson/cci.20250205',
         'redis-plus-plus/1.3.15',
@@ -93,7 +127,7 @@ class ErpProcessingContext(ConanFile):
 
     def requirements(self):
         if self.options.with_hsm_tpm_production:
-            self.requires('tpmclient/0.15.0-b49')
+            self.requires('tpmclient/0.15.0-b50')
             self.requires('hsmclient/2.22.0-b106')
 
     def build_requirements(self):

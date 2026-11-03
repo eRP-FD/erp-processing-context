@@ -177,6 +177,14 @@ void BlobCache::startRefresher(boost::asio::io_context& context, std::chrono::st
     mRefresher->start(context, interval);
 }
 
+void BlobCache::cancelRefresher()
+{
+    if (mRefresher)
+    {
+        mRefresher->cancel();
+    }
+}
+
 BlobDatabase& BlobCache::getBlobDatabase()
 {
     return *mDatabase;

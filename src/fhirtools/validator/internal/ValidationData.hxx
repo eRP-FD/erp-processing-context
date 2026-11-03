@@ -34,7 +34,7 @@ public:
     void add(FhirConstraint constraint, std::string elementFullPath, const FhirStructureDefinition* profile);
     void addInfo(ValidationAdditionalInfo::Kind kind, const std::shared_ptr<const Element>& element,
                  const std::optional<std::string>& elementFullPath, const std::string& typeId,
-                 const FhirConstraint::Key& constraintKey);
+                 const std::optional<FhirConstraint::Key>& constraintKey = std::nullopt);
     void append(ValidationResults);
     const ValidationResults& results() const;
     [[nodiscard]] bool isFailed() const;

@@ -6,7 +6,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 AS build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3 AS build
 
 WORKDIR /erp
 ARG ERP_BUILD_VERSION

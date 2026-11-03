@@ -78,8 +78,8 @@ public:
     static constexpr bool withDetailsDefault();
 
     JsonLog(JsonLog&& o) noexcept = default;
-    JsonLog(LogId id, LogReceiver&& receiver = LogReceiver{}, bool withDetails = withDetailsDefault());
-    JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
+    explicit JsonLog(LogId id, LogReceiver&& receiver = LogReceiver{}, bool withDetails = withDetailsDefault());
+    explicit JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
     ~JsonLog(void);
 
 

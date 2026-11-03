@@ -245,7 +245,7 @@ INSTANTIATE_TEST_SUITE_P(
          .errorMessage = "FHIR-Validation error",
          // at the provided date no profile is valid at all. Therefore we get different messages than below.
          .diagnosticMessage = "Consent: error: profile unknown: "
-                             "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent; "},
+                             "https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Consent"},
         {
             .date = "2025-10-01",
             .version = ResourceTemplates::Versions::GEM_ERPEU{"1.0"},

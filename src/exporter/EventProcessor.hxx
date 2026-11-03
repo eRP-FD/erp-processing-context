@@ -38,17 +38,18 @@ public:
                             IEpaAccountLookup& epaAccountLookup, const std::string& xContextId);
     bool process() override;
     virtual void processOne(const model::EventKvnr& kvnr);
-    virtual bool checkRetryCount(const model::EventKvnr& kvnr);
+    virtual bool checkRetryCount(const model::EventKvnr& kvnr, int32_t retry);
 
     virtual void processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount& epaAccount,
                                    const MedicationExporterDatabaseFrontendInterface::taskevents_t& events);
     virtual void processEpaDeniedOrNotFound(const model::EventKvnr& kvnr);
     virtual void processEpaConflict(const model::EventKvnr& kvnr);
     virtual void processEpaUnknown(const model::EventKvnr& kvnr);
+    virtual void processEpaPaused(const model::EventKvnr& kvnr);
 
     virtual EpaAccount ePaAccountLookup(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent);
 
-    virtual void scheduleRetryQueue(const model::EventKvnr& kvnr);
+    virtual void scheduleRetryQueue(const model::EventKvnr& kvnr, const std::string& reason);
     virtual void scheduleHealthRecordRelocation(const model::EventKvnr& kvnr);
     virtual void scheduleHealthRecordConflict(const model::EventKvnr& kvnr);
 
@@ -65,6 +66,8 @@ private:
 
     void writeAuditEvent(const AuditDataCollector& auditDataCollector);
     void checkDeactivateThrottle(const std::string& hostNotFailing);
+    static AuditDataCollector makeDeadLetterAudit(const model::PrescriptionId& prescriptionId, const model::Kvnr& kvnr,
+                                                  const model::TaskEvent::UseCase& useCase);
 
     std::function<JsonLog()> jsonLog;
     const std::shared_ptr<MedicationExporterServiceContext>& mServiceContext;

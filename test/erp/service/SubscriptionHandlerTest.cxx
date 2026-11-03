@@ -82,13 +82,19 @@ public:
 
     SubscriptionHandlerTest()
         : ServerTestBase(true)
-        , jwtOeffentliche_apotheke(jwtWithProfessionOID(profession_oid::oid_oeffentliche_apotheke))
-        , jwtKrankenhausapotheke(jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke))
         , teeProtocol()
         , mClient(createClient())
     {
     }
 
+    void SetUp() override
+    {
+        ServerTestBase::SetUp();
+        // Create the JWTs only after the (potentially slow) server startup, otherwise they may
+        // already be expired when the test runs under high load.
+        jwtOeffentliche_apotheke = jwtWithProfessionOID(profession_oid::oid_oeffentliche_apotheke);
+        jwtKrankenhausapotheke = jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke);
+    }
 
     JWT jwtOeffentliche_apotheke;
     JWT jwtKrankenhausapotheke;

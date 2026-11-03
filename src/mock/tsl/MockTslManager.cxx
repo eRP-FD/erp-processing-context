@@ -43,21 +43,25 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
         Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/IDP-Wansim.pem"));
     const auto idpCertificateCa =
         Certificate::fromPem(FileHelper::readFileAsString(pkiPath / "../tsl/X509Certificate/IDP-Wansim-CA.pem"));
+    const auto autCert = Certificate::fromPem(
+        FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/certificates/vau_aut_ec/vau_aut_ec_cert.pem"));
+    const auto autCertCA = Certificate::fromBinaryDer(
+        FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/ca.der"));
+
+    // The VAU AUT certificates are issued by the same CA as the TSL signer, so the OCSP responder given as
+    // service supply point of that CA in the TSL has to know them.
     requestSender->setOcspUrlRequestHandler(
         "http://ocsp-testref.tsl.telematik-test/ocsp",
         {{Certificate::fromBinaryDer(tslSignerCertificateString),
           Certificate::fromBinaryDer(tslSignerCertificateIssuerString), MockOcsp::CertificateOcspTestMode::SUCCESS},
-         {idpCertificate, idpCertificateCa, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+         {idpCertificate, idpCertificateCa, MockOcsp::CertificateOcspTestMode::SUCCESS},
+         {autCert, autCertCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
         ocspCertificate, ocspPrivateKey);
 
     const auto cert =
         Certificate::fromPem(MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_CERT));
     const auto certCA = Certificate::fromPem(
         MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_SIGNER_CERT));
-    const auto autCert =
-        Certificate::fromPem(MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_VAU_AUT_CERT));
-    const auto autCertCA = Certificate::fromPem(
-        MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_VAU_AUT_SIGNER_CERT));
 
     requestSender->setOcspUrlRequestHandler(
         MockConfiguration::instance().getStringValue(MockConfigurationKey::MOCK_ID_FD_SIG_OCSP_URL),
@@ -82,7 +86,7 @@ std::shared_ptr<TslManager> MockTslManager::createMockTslManager(std::shared_ptr
     requestSender->setOcspUrlRequestHandler("http://ocsp-test.ocsp.telematik-test:8080/",
                                             {{nonQesSmcbCert, nonQesSmcbIssuer, MockOcsp::CertificateOcspTestMode::SUCCESS},
                                             {cert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS},
-                                            {autCert, certCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
+                                            {autCert, autCertCA, MockOcsp::CertificateOcspTestMode::SUCCESS}},
                                             ocspCertificate, ocspPrivateKey);
 
     auto trustStore = std::make_unique<TrustStore>(

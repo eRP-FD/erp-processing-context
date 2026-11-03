@@ -205,6 +205,7 @@ public:
 
 TEST_P(PatchTaskHandlerStatusTest, taskStatus)
 {
+    A_28910.test("Task markieren - Versicherter - nur zur Einlösung verfügbare E-Rezepte");
     EnvironmentVariableGuard featureToggleGuard("ERP_FEATURE_EU", "true");
     const auto isEuRedeemableByPatientAuthorizationParam = model::GemErpEuPrTaskInput::fromXmlNoValidation(xml);
     eu::PatchTaskHandler patchTaskHandler({});

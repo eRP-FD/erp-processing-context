@@ -16,7 +16,7 @@ PushResponseBuilder::PushResponseBuilder(ServerResponse& innerResponse, HttpStat
     : ResponseBuilder(innerResponse)
 {
     status(httpStatus).clearBody().keepAlive(false);
-    const auto errorResponse =
-        model::ErrorResponse::fromHttpStatus(httpStatus, fmt::format("{} {}", detailsText, diagnostics.value_or("")));
+    const auto detail = diagnostics ? fmt::format("{} {}", detailsText, *diagnostics) : detailsText;
+    const auto errorResponse = model::ErrorResponse::fromHttpStatus(httpStatus, detail);
     jsonBody(errorResponse.serializeToJsonString());
 }

@@ -15,15 +15,6 @@
 #include <optional>
 #include <vector>
 
-template <typename>
-class PeriodicTimer;
-
-namespace boost::asio
-{
-class io_context;
-}
-
-
 /**
  * The purpose of the termination handler is to call registered callbacks right before the application exits
  * so that they can release resources.
@@ -74,7 +65,7 @@ public:
     /// @brief trigger a process termination from anywhere
     virtual void terminate();
 
-    virtual void gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds);
+    virtual void gracefulShutdown(int delaySeconds);
 
     State getState (void) const;
 
@@ -96,13 +87,6 @@ private:
     std::vector<std::function<void(bool)>> mCallbacks;
     std::atomic<State> mState;
     std::atomic_bool mHasError;
-    class ShutdownDelayTimerHandler;
-    using ShutdownDelayTimer= PeriodicTimer<ShutdownDelayTimerHandler>;
-    std::unique_ptr<ShutdownDelayTimer> mShutdownDelayTimer;
-    class CountDownTimerHandler;
-    using CountDownTimer = PeriodicTimer<CountDownTimerHandler>;
-    std::unique_ptr<CountDownTimer> mCountDownTimer;
-
     static std::unique_ptr<TerminationHandler>& rawInstance (void);
 
     State setState (State newState);

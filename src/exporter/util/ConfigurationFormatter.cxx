@@ -53,6 +53,18 @@ void ConfigurationFormatter::appendRuntimeConfiguration(rapidjson::Document& doc
         }
     }
     throttlePointer.Set(document, rcGetter.throttleValue().count());
+
+    {
+        const rapidjson::Pointer pausedEpasPointer(
+            "/runtime/" + std::string{RuntimeConfiguration::parameter_paused_epas} + "/value");
+        rapidjson::Value arr(rapidjson::kArrayType);
+        for (const auto& fqdn : rcGetter.getPausedEpas())
+        {
+            arr.PushBack(rapidjson::Value(fqdn, document.GetAllocator()), document.GetAllocator());
+        }
+        pausedEpasPointer.Set(document, arr, document.GetAllocator());
+    }
+
     for (const auto& [parameterMetricsLogThresholdMs, category] :
          RuntimeConfiguration::parameter_metrics_category_log_threshold_ms)
     {

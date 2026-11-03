@@ -480,6 +480,16 @@ std::string shiftDate(const std::string& realDate)
     return date::format(format, realDateAsDate + globalOffset);
 }
 
+date::sys_days germanDay(const model::Timestamp& timestamp)
+{
+    return date::sys_days{date::year_month_day{timestamp.localDay(model::Timestamp::GermanTimezone)}};
+}
+
+date::sys_days germanToday()
+{
+    return germanDay(model::Timestamp::now());
+}
+
 testutils::ShiftFhirResourceViewsGuard::ShiftFhirResourceViewsGuard(const AsConfiguredTag&)
 {
     envGuards.emplace_back("ERP_FHIR_REFERENCE_TIME_OFFSET_DAYS", std::nullopt);

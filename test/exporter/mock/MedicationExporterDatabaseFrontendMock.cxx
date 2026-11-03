@@ -87,7 +87,13 @@ void MedicationExporterDatabaseFrontendProxy::deleteAllEventsForKvnr(const model
 void MedicationExporterDatabaseFrontendProxy::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
                                                                     const model::EventKvnr& kvnr) const
 {
-    return mDatabase->updateProcessingDelay(newRetry, delay, kvnr);
+    mDatabase->updateProcessingDelay(newRetry, delay, kvnr);
+}
+
+void MedicationExporterDatabaseFrontendProxy::recordErrorOnFirstEvent(const model::EventKvnr& kvnr,
+                                                                      const std::string& errorText) const
+{
+    mDatabase->recordErrorOnFirstEvent(kvnr, errorText);
 }
 
 void MedicationExporterDatabaseFrontendProxy::finalizeKvnr(const model::EventKvnr& kvnr,

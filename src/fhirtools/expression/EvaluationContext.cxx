@@ -83,7 +83,7 @@ EvaluationContext EvaluationContext::makeTimeElement(const Time& value) const
     return makeElement(Element::Type::Time, value);
 }
 
-EvaluationContext EvaluationContext::makeQuantityElement(const Element::QuantityType& value) const
+EvaluationContext EvaluationContext::makeQuantityElement(const QuantityType& value) const
 {
     return makeElement(Element::Type::Quantity, value);
 }

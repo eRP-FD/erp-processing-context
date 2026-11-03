@@ -391,8 +391,8 @@ TEST_F(CloseTaskTest, WhenPreparedNotTimestamp)
 TEST_F(CloseTaskTest, whenHandedOver)
 {
     using namespace date::literals;
-    auto today{date::floor<date::days>(std::chrono::system_clock::now())};
-    const auto tomorrow = today + date::days{1};
+    const auto now = model::Timestamp::now();
+    const auto today = testutils::germanDay(now);
     ResourceTemplates::MedicationOptions medicationOptions{
         .darreichungsform = "LYE",
     };
@@ -415,27 +415,9 @@ TEST_F(CloseTaskTest, whenHandedOver)
 
         };
     };
-    auto parametersOptions1_5 = parameters(ResourceTemplates::Versions::GEM_ERP_1_5_2);
     auto parametersOptions1_6 = parameters(ResourceTemplates::Versions::GEM_ERP_1_6_2);
 
-    // whenHandedOver during Workflow 1.5 period
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", tomorrow};
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_5), ExpectedResult::success));
-    }
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", tomorrow};
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_6), ExpectedResult::failure));
-    }
-    // whenHandedOver during Workflow 1.5 and 1.6 period
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", today};
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_5), ExpectedResult::success));
-    }
-    {
-        testutils::ShiftFhirResourceViewsGuard shiftView{"GEM_WF_1_6_NON_FDV", today};
-        EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_6), ExpectedResult::success));
-    }
+    EXPECT_NO_FATAL_FAILURE(test(medicationDispenseOperationParametersXml(parametersOptions1_6), ExpectedResult::success));
 }
 
 TEST_F(CloseTaskTest, whenHandedOverConsistentInBundle)
@@ -905,7 +887,7 @@ TEST_F(CloseTaskTest, UnslicedExtensionReject)
             "http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); Parameters.meta.extension[0]: error: element "
             "doesn't belong to any slice. (from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); "
             "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.5.2); ";
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.5.2)";
         EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
             handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
             diagnostics);
@@ -917,7 +899,7 @@ TEST_F(CloseTaskTest, UnslicedExtensionReject)
             "http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); Parameters.meta.extension[0]: error: element "
             "doesn't belong to any slice. (from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); "
             "Parameters.meta.extension[0]: error: element doesn't belong to any slice. (from profile: "
-            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.4); ";
+            "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_PAR_CloseOperation_Input|1.4)";
         EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
             handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
             diagnostics);
@@ -1094,8 +1076,6 @@ public:
         return DosageInstructionTestHelper::getDispenseSample(prescriptionId, GetParam(),
                                                               model::ProfileType::GEM_ERP_PR_PAR_CloseOperation_Input);
     }
-
-    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
 };
 
 class CloseTaskDosageValidatorTest : public CloseTaskDosageInstructionTest

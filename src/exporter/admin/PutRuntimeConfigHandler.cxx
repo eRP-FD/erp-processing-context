@@ -8,6 +8,7 @@
 #include "exporter/util/RuntimeConfiguration.hxx"
 #include "shared/server/request/ServerRequest.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/String.hxx"
 #include "shared/util/TLog.hxx"
 #include "shared/util/UrlHelper.hxx"
 
@@ -78,6 +79,10 @@ void PutRuntimeConfigHandler::doHandleRequest(BaseSessionContext& baseSession)
         {
             handleParameterThrottle(*runtimeConfig, param.second);
         }
+        else if (param.first == exporter::RuntimeConfiguration::parameter_paused_epas)
+        {
+            handleParameterPausedEpas(*runtimeConfig, param.second);
+        }
         else if (RuntimeConfiguration::parameter_metrics_category_log_threshold_ms.contains(param.first))
         {
             handleParameterMetricsLogThreshold(*runtimeConfig, param.first, param.second);
@@ -147,5 +152,15 @@ void PutRuntimeConfigHandler::handleParameterMetricsLogThreshold(RuntimeConfigur
     const auto defaults = RuntimeConfiguration::defaultMetricsLogThresholdsMs();
     const auto value = ! param.empty() ? std::chrono::milliseconds{std::stol(param)} : defaults.at(category);
     runtimeConfig.setMetricsLogThresholdMs(category, value);
+}
+
+void PutRuntimeConfigHandler::handleParameterPausedEpas(RuntimeConfigurationSetter& runtimeConfig,
+                                                        const std::string& param)
+{
+    auto fqdns = String::split(UrlHelper::unescapeUrl(param), ';');
+    // Remove empty tokens (covers empty input and trailing/leading semicolons)
+    std::erase_if(fqdns, [](const auto& s) { return s.empty(); });
+    TLOG(INFO) << "admin: set PausedEpas (" << fqdns.size() << " entries)";
+    runtimeConfig.setPausedEpas(std::move(fqdns));
 }
 }// namespace exporter

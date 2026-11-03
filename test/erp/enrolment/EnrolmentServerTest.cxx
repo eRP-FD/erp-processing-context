@@ -39,6 +39,7 @@
 #include "mock/tpm/TpmTestHelper.hxx"
 #include "mock/util/MockConfiguration.hxx"
 #include "shared/util/Base64.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "shared/util/ByteHelper.hxx"
 #include "shared/util/Hash.hxx"
 #include "shared/util/Random.hxx"
@@ -1411,9 +1412,11 @@ TEST_P(EnrolmentServerTest, DeleteVauSig_success)//NOLINT(readability-function-c
 
 TEST_P(EnrolmentServerTest, PostVauAut_success)
 {
+    const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
+    const auto pemCert = FileHelper::readFileAsString(
+        pkiPath / "sub_ca1_ec/certificates/vau_aut_ec/vau_aut_ec_cert.pem");
     const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
     auto model = EnrolmentModel(body);
-    const auto pemCert = Certificate::fromBase64(std::string{tpm::vauAutCertificate_base64}).toPem();
     model.set("/certificate", Base64::encode(pemCert));
     auto response = createClient().send(
         ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));
@@ -1429,9 +1432,13 @@ TEST_P(EnrolmentServerTest, PostVauAut_success)
 
 TEST_P(EnrolmentServerTest, PostVauAutInvalid)
 {
+    const auto pkiPath2 = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
+    // Intentionally send raw DER base64 (not PEM-wrapped-in-base64) to exercise the malformed-certificate path.
+    const auto derBase64 = Certificate::fromPem(FileHelper::readFileAsString(
+        pkiPath2 / "sub_ca1_ec/certificates/vau_aut_ec/vau_aut_ec_cert.pem")).toBase64Der();
     const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
     auto model = EnrolmentModel(body);
-    model.set("/certificate", tpm::vauAutCertificate_base64);
+    model.set("/certificate", derBase64);
     auto response = createClient().send(
         ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));
     checkResponseHeader(response, HttpStatus::BadRequest);
@@ -1440,11 +1447,13 @@ TEST_P(EnrolmentServerTest, PostVauAutInvalid)
 
 TEST_P(EnrolmentServerTest, DeleteVauAut_success)//NOLINT(readability-function-cognitive-complexity)
 {
+    const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
+    const auto pemCert = FileHelper::readFileAsString(
+        pkiPath / "sub_ca1_ec/certificates/vau_aut_ec/vau_aut_ec_cert.pem");
     // Set up a hash key that can be deleted.
     {
         const auto body = createPutBody("123", "black box blob data", 11, {},{},{}, {},{});
         auto model = EnrolmentModel(body);
-        const auto pemCert = Certificate::fromBase64(std::string{tpm::vauAutCertificate_base64}).toPem();
         model.set("/certificate", Base64::encode(pemCert));
         auto response = createClient().send(
             ClientRequest(createHeader(HttpMethod::POST, "/Enrolment/VauAut"), model.serializeToString()));

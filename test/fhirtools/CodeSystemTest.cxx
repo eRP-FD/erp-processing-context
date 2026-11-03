@@ -21,18 +21,18 @@ public:
 
     void SetUp() override
     {
-        ON_CALL(*resolver, allGroups).WillByDefault(::testing::Invoke([this] {
+        ON_CALL(*resolver, allGroups).WillByDefault([this] {
             return mGroups;
-        }));
+        });
         ON_CALL(*resolver, findGroup)
-            .WillByDefault(::testing::Invoke([this](const std::string& url, const fhirtools::FhirVersion& version,
-                                                    const std::filesystem::path& path) {
+            .WillByDefault([this](const std::string& url, const fhirtools::FhirVersion& version,
+                                  const std::filesystem::path& path) {
                 if (path.filename() == "minifhirtypes.xml")
                 {
                     return baseResolver.findGroup(url, version, path);
                 }
                 return group(fhirtools::DefinitionKey{url, version});
-            }));
+            });
         repo.load(
             {
                 ResourceManager::getAbsoluteFilename("test/fhir-path/profiles/minifhirtypes.xml"),
@@ -57,7 +57,6 @@ public:
         {
             // create a new group for every key and set it up to resolve only that key.
             using ::testing::Eq;
-            using ::testing::Invoke;
             using ::testing::Ne;
             using ::testing::Return;
             fhirtools::DefinitionKey unver{key.url, std::nullopt};
@@ -72,8 +71,8 @@ public:
                 return std::make_pair(version, ptr.lock());
             };
             ON_CALL(*mockGrp, findVersion).WillByDefault(Return(std::make_pair(std::nullopt, nullptr)));
-            ON_CALL(*mockGrp, findVersion(Eq(key))).WillByDefault(Invoke(foundResult));
-            ON_CALL(*mockGrp, findVersion(Eq(unver))).WillByDefault(Invoke(foundResult));
+            ON_CALL(*mockGrp, findVersion(Eq(key))).WillByDefault(foundResult);
+            ON_CALL(*mockGrp, findVersion(Eq(unver))).WillByDefault(foundResult);
             grp = std::move(mockGrp);
         }
         return grp;

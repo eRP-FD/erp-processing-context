@@ -17,7 +17,7 @@ namespace
 {
 #define QUERY(name, query) const QueryDefinition name = {#name, query};
 
-QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
+QUERY(healthCheckQuery, "SELECT 1")
 
 #undef QUERY
 

@@ -15,7 +15,8 @@
 
 model::NumberAsStringParserDocument TransformerBase::transformResource(
     const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
-    const std::vector<fhirtools::ValueMapping>& valueMappings, const std::vector<FixedValue>& fixedValues)
+    const std::vector<fhirtools::ValueMapping>& valueMappings, const std::vector<FixedValue>& fixedValues,
+    const fhirtools::ResourceProfileTransformer::Options& options)
 {
     const auto* backend = std::addressof(Fhir::instance().backend());
     auto repoView = getRepo(targetProfileKey);
@@ -35,8 +36,6 @@ model::NumberAsStringParserDocument TransformerBase::transformResource(
     auto erpElement = std::make_shared<ErpElement>(backend, std::weak_ptr<const fhirtools::Element>{},
                                                    baseTargetProfile, &targetResource, &targetResource, nullptr);
 
-    fhirtools::ResourceProfileTransformer::Options options;
-    options.removeUnknownExtensionsFromOpenSlicing = true;
     fhirtools::ResourceProfileTransformer resourceProfileTransformer(repoView.get(), nullptr, targetProfile, options);
     resourceProfileTransformer.map(valueMappings);
     resourceProfileTransformer.map(
@@ -60,6 +59,14 @@ model::NumberAsStringParserDocument TransformerBase::transformResource(
 
     Expect(result.success, result.summary());
     return targetResource;
+}
+model::NumberAsStringParserDocument TransformerBase::transformResource(
+    const fhirtools::DefinitionKey& targetProfileKey, const model::FhirResourceBase& sourceResource,
+    const std::vector<fhirtools::ValueMapping>& valueMappings, const std::vector<FixedValue>& fixedValues)
+{
+    fhirtools::ResourceProfileTransformer::Options options;
+    options.removeUnknownExtensionsFromOpenSlicing = true;
+    return transformResource(targetProfileKey, sourceResource, valueMappings, fixedValues, options);
 }
 void TransformerBase::checkSetAbsentReason(model::NumberAsStringParserDocument& document, const std::string& memberPath,
                                            const std::string_view valueCode)

@@ -289,6 +289,47 @@ function generate_certificate()
 }
 
 
+# Issue a certificate for an already existing public key (e.g. a key that is wrapped in an HSM blob and whose
+# private key is not available). No private key is generated, only the certificate files are created.
+function generate_certificate_for_public_key()
+{
+  local caName="$1"
+  local alias="$2"
+  local commonName="$3"
+  local extensions="$4"
+  local publicKeyFile="$5"
+  shift 5
+
+  eval "$(get_named_arguments subjectAltName "$@")"
+
+  local caDir="$testDataDir/$caName"
+  local outDir="$caDir/certificates/$alias"
+
+  if [ -e "$outDir" ]; then
+    echo "Certificate directory \"$outDir\" already exists, skipping generation."
+    return
+  fi
+  mkdir -p "$outDir"
+
+  local serial
+  serial=$(dd if=/dev/urandom bs=8 count=1 status=none | xxd -p)
+
+  SUBJECT_ALT_NAME="${subjectAltName:-email:admin@example.com}" \
+  CRL_DISTRIBUTION_POINTS="URI:http://crl.example.com/${alias}.crl" \
+  POPP_OID="OID:1.2.276.0.76.4.320" \
+    "$OPENSSL" x509 -new -force_pubkey "$publicKeyFile" \
+      -subj "/C=DE/ST=Berlin/L=Berlin/O=Example Inc./OU=IT/CN=$commonName" \
+      -CA "$caDir/ca.pem" -CAkey "$caDir/private/ca_key.pem" \
+      -set_serial "0x$serial" -days 36524 -sha512 \
+      -extfile "$opensslConfig" -extensions "$extensions" \
+      -out "$outDir/${alias}_cert.pem"
+
+  "$OPENSSL" x509 -outform der -in "$outDir/${alias}_cert.pem" -out "$outDir/${alias}.der"
+
+  caMap[$alias]="$caName"
+}
+
+
 function generate_sub_ca()
 {
   local parentCaName=$1
@@ -566,6 +607,11 @@ generate_sub_ca root_ca_ec outdated_ca_ec "Example Inc. outdated CA EC" ec:brain
 generate_sub_ca root_ca_ec revoked_ca_ec "Revoked Example Inc. Sub CA EC 2" ec:brainpoolP256r1 $revoked
 generate_certificate sub_ca1_ec tsl_signer_ec "TSL signer" tsl_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
+generate_certificate sub_ca1_ec vau_aut_ec "eRezept VAU AUT" vau_aut_cert ec:brainpoolP256r1 $normal \
+    subjectAltName=email:admin@example.com
+# VAU AUT certificate for the static key pair wrapped in the simulated HSM blob (tpm::vauAutKeyPair_blob_base64)
+generate_certificate_for_public_key sub_ca1_ec vau_aut_hsm_ec "eRezept VAU AUT HSM" vau_aut_cert \
+    "$inputDataDir/vau_aut_hsm_pub.pem" subjectAltName=email:admin@example.com
 generate_certificate bna_signer_ca_ec bna_signer_ec "BNA signer" bna_signer_cert ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
 generate_certificate sub_ca1_ec popp_zd_sig_ec "PoPP signer" popp_zd_sig_cert ec:prime256v1 $normal
@@ -589,6 +635,10 @@ generate_certificate sub_ca1_ec tsl_signer_wrong_key_usage_ec "TSL signer 2" tsl
 generate_certificate sub_ca1_ec smc_b_osig_ec "SMC-B Osig Signer" smc_b_osig ec:brainpoolP256r1 $normal \
     subjectAltName=email:admin@example.com
 generate_certificate sub_ca1_ec unrevoked_ec "Example Unrevoked Cert" usr_cert ec:brainpoolP256r1 $normal \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
+generate_certificate sub_ca1_ec ev_tls_ec "Example EV TLS Cert" usr_cert_ev_tls ec:brainpoolP256r1 $normal \
+    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
+generate_certificate sub_ca1_ec ov_tls_ec "Example OV TLS Cert" usr_cert_ov_tls ec:brainpoolP256r1 $normal \
     subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
 # certificate revoked, signed by normal CA
 generate_certificate sub_ca1_ec revoked_ec "Example Revoked Cert" usr_cert ec:brainpoolP256r1 $revoked \

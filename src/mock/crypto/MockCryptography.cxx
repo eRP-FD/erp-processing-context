@@ -100,20 +100,6 @@ const SafeString& MockCryptography::getIdFdSigPrivateKeyPkcs8 (void)
 }
 
 
-const SafeString& MockCryptography::getVauAutPrivateKeyPem()
-{
-    static SafeString privateKeyPem =
-        MockConfiguration::instance().getSafeStringValue(MockConfigurationKey::MOCK_VAU_AUT_PRIVATE_KEY);
-    return privateKeyPem;
-}
-
-const Certificate& MockCryptography::getVauAutCertificate()
-{
-    static shared_EVP_PKEY privateKey = EllipticCurveUtils::pemToPrivatePublicKeyPair(getVauAutPrivateKeyPem());
-    static auto certificate = Certificate::createSelfSignedCertificateMock(privateKey);
-    return certificate;
-}
-
 const SafeString& MockCryptography::getPseudonymizationLogKey()
 {
     static const SafeString key(Base64::decode(

@@ -116,7 +116,6 @@ TEST(PeriodicTimerTest, exception)
 {
     using namespace std::chrono_literals;
     std::atomic_size_t count = 0;
-    std::atomic_bool completed = false;
     struct TestTimerHandler final : public FixedIntervalHandler {
         TestTimerHandler(std::atomic_size_t& started)
             : FixedIntervalHandler{"TestTimer", interval}

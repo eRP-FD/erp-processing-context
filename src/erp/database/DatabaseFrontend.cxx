@@ -36,6 +36,7 @@
 #include "shared/util/Expect.hxx"
 
 #include <boost/algorithm/string.hpp>
+#include <algorithm>
 
 using namespace model;
 using namespace ::std::literals;
@@ -100,13 +101,27 @@ DatabaseFrontend::retrieveAllMedicationDispenses(const model::Kvnr& kvnr, const 
             model::UnspecifiedResource::fromJsonNoValidation(mCodec.decode(res.medicationDispense, key->second));
         if (unspecified.getResourceType() == model::MedicationDispense::resourceTypeName)
         {
-            resultSet.medicationDispenses.emplace_back(model::MedicationDispense::fromJson(unspecified.jsonDocument()));
+            model::MedicationsAndDispenses single;
+            single.medicationDispenses.emplace_back(model::MedicationDispense::fromJson(unspecified.jsonDocument()));
+            if (! prescriptionIdsMatch(single.medicationDispenses, res.prescriptionId))
+            {
+                continue;
+            }
+            resultSet.medicationDispenses.emplace_back(std::move(single.medicationDispenses.front()));
         }
         else if (unspecified.getResourceType() == model::Bundle::resourceTypeName)
         {
             const auto& bundle = model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument());
             // Ignores expected eu resources.
-            resultSet.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
+            model::MedicationsAndDispenses fromBundle;
+            fromBundle.addFromBundle(bundle);
+            if (! prescriptionIdsMatch(fromBundle.medicationDispenses, res.prescriptionId))
+            {
+                // Omit the whole bundle, including its medications and eu resources.
+                continue;
+            }
+            std::ranges::move(fromBundle.medicationDispenses, std::back_inserter(resultSet.medicationDispenses));
+            std::ranges::move(fromBundle.medications, std::back_inserter(resultSet.medications));
             // Handle ignored eu resources here:
             auto euInfo = EuMedicationDispenseInfos::create(bundle);
             if (euInfo.has_value())
@@ -149,6 +164,10 @@ model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(cons
         {
             model::MedicationsAndDispenses result;
             result.medicationDispenses.emplace_back(std::move(medicationDispense));
+            if (! prescriptionIdsMatch(result.medicationDispenses, res.prescriptionId))
+            {
+                return {};
+            }
             return result;
         }
         return {};
@@ -157,6 +176,10 @@ model::MedicationsAndDispenses DatabaseFrontend::retrieveMedicationDispense(cons
     {
         model::MedicationsAndDispenses fromBundle;
         fromBundle.addFromBundle(model::MedicationDispenseBundle::fromJson(unspecified.jsonDocument()));
+        if (! prescriptionIdsMatch(fromBundle.medicationDispenses, res.prescriptionId))
+        {
+            return {};
+        }
         return std::move(fromBundle).filter(id);
     }
     else

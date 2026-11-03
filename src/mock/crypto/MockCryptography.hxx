@@ -44,8 +44,6 @@ public:
 
     static const SafeString& getIdFdSigPrivateKeyPem (void);
     static const SafeString& getIdFdSigPrivateKeyPkcs8 (void);
-    static const SafeString& getVauAutPrivateKeyPem();
-    static const Certificate& getVauAutCertificate();
     static const SafeString& getPseudonymizationLogKey();
 };
 

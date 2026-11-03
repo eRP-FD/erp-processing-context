@@ -43,19 +43,21 @@ public:
         .medicationDispenses =
             {
                 {
+                    .prescriptionId = prescriptionId,
                     .telematikId = "3-01.2.2023001.16.101.1",
                     .whenHandedOver = model::Timestamp::now().toGermanDate(),
                     .gematikVersion = gemVer,
                     .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
                 },
                 {
+                    .prescriptionId = prescriptionId,
                     .telematikId = "3-01.2.2023001.16.101.1",
                     .whenHandedOver = model::Timestamp::now().toGermanDate(),
                     .gematikVersion = gemVer,
                     .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
                 },
             },
-        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+        .prescriptionId = prescriptionId,
     };
 
     const model::MedicationDispenseBundle medicationDispenseBundle =
@@ -67,19 +69,21 @@ public:
         .medicationDispenses =
             {
                 {
+                    .prescriptionId = prescriptionId,
                     .telematikId = "3-02.2.2023001.16.101.1",
                     .whenHandedOver = model::Timestamp::now().toGermanDate(),
                     .gematikVersion = gemVer,
                     .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
                 },
                 {
+                    .prescriptionId = prescriptionId,
                     .telematikId = "3-02.2.2023001.16.101.1",
                     .whenHandedOver = model::Timestamp::now().toGermanDate(),
                     .gematikVersion = gemVer,
                     .medication = ResourceTemplates::MedicationOptions{.version = gemVer},
                 },
             },
-        .prescriptionId = model::PrescriptionId::fromString("160.123.456.789.123.58"),
+        .prescriptionId = prescriptionId,
     };
 
     const model::MedicationDispenseBundle medicationDispenseBundle1 =
@@ -130,9 +134,6 @@ public:
     {
         clearTrezeptEventTable();
     }
-
-    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
 
     const std::string pharmacyIdentity =
         R"({"id": ")" + mJwtPharmacyIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +

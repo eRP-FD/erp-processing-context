@@ -40,6 +40,7 @@ public:
 
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const Time& time1);
+    friend std::string to_string(const Time& t);
 
     Time() = default;
     Time(const Time&) = default;
@@ -78,7 +79,7 @@ public:
 
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const Date& date1);
-
+    friend std::string to_string(const Date& d);
 
     Date() = default;
     Date(const Date&) = default;
@@ -107,6 +108,7 @@ public:
 
     [[nodiscard]] std::string toString(bool full = false) const;
     friend std::ostream& operator<<(std::ostream& os, const DateTime& dateTime);
+    friend std::string to_string(const DateTime& dt);
 
     [[nodiscard]] const Date& date() const;
     [[nodiscard]] const std::optional<Time>& time() const;

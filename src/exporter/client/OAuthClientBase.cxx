@@ -13,6 +13,7 @@
 #include "shared/network/client/ClientInterface.hxx"
 #include "shared/network/client/CrlProvider.hxx"
 #include "shared/network/client/HttpsClient.hxx"
+#include "shared/network/client/TlsCertificateVerifier.hxx"
 #include "shared/network/client/UrlRequestSender.hxx"
 #include "shared/network/client/request/ClientRequest.hxx"
 #include "shared/network/client/response/ClientResponse.hxx"
@@ -77,13 +78,15 @@ using namespace medication::exporter::exceptions;
 
 
 OAuthClientBase::OAuthClientBase(std::string clientId, std::string host, std::string port,
-                                 std::shared_ptr<CrlProvider> crlProvider, std::string xContextId)
+                                 std::shared_ptr<CrlProvider> crlProvider, std::string xContextId,
+                                 std::optional<AdditionalCertificateCheck> additionalCertificateCheck)
     : mClientId(std::move(clientId))
     , mHost(std::move(host))
     , mPort(std::move(port))
     , mAccessTokenCache(std::make_unique<TokenCache>(TokenCache::TokenType::AccessToken))
     , mCrlProvider(std::move(crlProvider))
     , mXContextId(std::move(xContextId))
+    , mAdditionalCertificateCheck(std::move(additionalCertificateCheck))
 {
 }
 
@@ -235,12 +238,17 @@ void OAuthClientBase::invalidateTokenCache() const
 
 std::unique_ptr<UrlRequestSender> OAuthClientBase::createClient() const
 {
-    // GEMREQ-start A_27855
-    auto urlRequestSender = std::make_unique<UrlRequestSender>(
+    // GEMREQ-start A_27855,A_27857
+    auto verifier =
         TlsCertificateVerifier::withInternetRootCAsWithFallback(ConfigurationKey::MEDICATION_EXPORTER_TRUSTED_CAS)
-            .withCrl(*mCrlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL),
-        std::chrono::seconds(60), std::chrono::seconds(5));
-    // GEMREQ-end A_27855
+            .withCrl(*mCrlProvider, TlsCertificateVerifier::CrlMode::HARD_FAIL);
+    if (mAdditionalCertificateCheck)
+    {
+        verifier.withAdditionalCertificateCheck(*mAdditionalCertificateCheck);
+    }
+    auto urlRequestSender = std::make_unique<UrlRequestSender>(
+        std::move(verifier), std::chrono::seconds(60), std::chrono::seconds(5));
+    // GEMREQ-end A_27855, A_27857
     urlRequestSender->setProxies(Configuration::instance().proxyParameters(ProxyMode::SNI));
 
     return urlRequestSender;

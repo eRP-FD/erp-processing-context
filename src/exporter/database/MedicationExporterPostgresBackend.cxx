@@ -85,7 +85,7 @@ WHERE id = (
         WHERE kvnr_hashed = $1 AND state = 'pending'
         ORDER BY prescription_id ASC, last_modified ASC LIMIT 1
     )
-RETURNING kvnr, kvnr_hashed, prescription_id, prescription_type, usecase, EXTRACT(EPOCH FROM authored_on), task_key_blob_id, salt
+RETURNING kvnr, kvnr_hashed, prescription_id, prescription_type, usecase, EXTRACT(EPOCH FROM authored_on), task_key_blob_id, salt, last_error
 )");
 QUERY(sqlDeleteOneEventForFKvnr, R"(
 DELETE FROM
@@ -110,16 +110,7 @@ WHERE
   kvnr_hashed = $3::bytea;
     )");
 QUERY(sqlFinalizeKvnr, R"(
-UPDATE
-  erp_event.kvnr
-SET
-  state = 'processed',
-  retry_count = 0,
-  next_export = null,
-  assigned_epa = $2,
-  last_consent_check = NOW()
-WHERE
-  kvnr_hashed = $1::bytea AND state = 'processing';
+SELECT erp_event.f_finalize_kvnr($1::bytea, $2);
     )");
 
 QUERY(sqlHealthCheck, R"(
@@ -418,6 +409,7 @@ MedicationExporterPostgresBackend::markFirstEventDeadLetter(const model::EventKv
             map<model::Timestamp, double>(res, idx.authoredOn, "authored_on is null"),
             map<BlobId, int32_t>(res, idx.keyBlobId, "blob id is null"),
             map<db_model::Blob, db_model::postgres_bytea>(res, idx.salt, "salt is null"),
+            mapOptional<std::string, std::string>(res, idx.lastError).value_or("no last_error stored"),
         });
     }
     return std::nullopt;
@@ -486,6 +478,26 @@ void MedicationExporterPostgresBackend::finalizeKvnr(const model::EventKvnr& kvn
     const auto results = transaction()->exec(sqlFinalizeKvnr.query, pqxx::params{s, parts[0]});
 
     TVLOG(2) << "got " << results.size() << " results";
+}
+
+void MedicationExporterPostgresBackend::recordErrorOnFirstEvent(const model::EventKvnr& kvnr,
+                                                                const std::string& errorText)
+{
+    static const std::string sql = R"(
+UPDATE
+  erp_event.task_event
+  SET last_error=$2
+WHERE id = (
+        SELECT id FROM erp_event.task_event
+        WHERE kvnr_hashed = $1 AND state = 'pending'
+        ORDER BY prescription_id ASC, last_modified ASC LIMIT 1
+    )
+)";
+    TVLOG(2) << sql;
+    const auto durationTimer =
+        DurationConsumer::getCurrent().getTimer(DurationCategory::postgres, "recorderroronfirstevent");
+
+    const auto _ = transaction()->exec(sql, pqxx::params{kvnr.kvnrHashed(), errorText}).no_rows();
 }
 
 std::optional<db_model::TaskEvent> MedicationExporterPostgresBackend::processNextTRezeptEvent()

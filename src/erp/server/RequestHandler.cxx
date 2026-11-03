@@ -42,7 +42,8 @@ HandlerResult RequestHandler::handleRequest(ServerRequest& request, AccessLog& a
     if (pushEventFeatureEnabled && session.pushEventDataCollector().isReadyForPushEvent())
     {
         // Push events are generated after the response is written.
-        auto postCallback = std::bind(&PushEventCreator::tryPostCreatePushEvent, std::ref(mServiceContext.getPushEventCreator()),
+        auto postCallback =
+            std::bind(&PushEventCreator::tryPostCreatePushEvent, std::ref(mServiceContext.getPushEventCreator()),
                       session.pushEventDataCollector(), std::ref(mServiceContext));
         return {result.success, std::nullopt, std::move(postCallback), std::move(response)};
     }

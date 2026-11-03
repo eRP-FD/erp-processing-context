@@ -19,24 +19,24 @@ namespace model
 
 enum class ChannelId : uint8_t
 {
-    erp_task_activate,
-    erp_task_accept,
-    erp_task_reject,
-    erp_task_close,
+    erp_task_activate          = 0,
+    erp_task_accept            = 1,
+    erp_task_reject            = 2,
+    erp_task_close             = 3,
 
-    erp_task_dispense,
-    erp_task_abort,
-    erp_communication_new,
-    erp_task_vertreter,
+    erp_task_dispense          = 4,
+    erp_task_abort             = 5,
+    erp_communication_new      = 6,
+    erp_task_vertreter         = 7,
 
-    erp_chargeitem_create,
-    erp_chargeitem_update,
-    erp_eu_prescription_get,
-    erp_eu_prescription_redeem,
+    erp_chargeitem_create      = 8,
+    erp_chargeitem_update      = 9,
+    erp_eu_prescription_get    = 10,
+    erp_eu_prescription_redeem = 11,
 
-    erp_eu_prescription_close,
+    erp_eu_prescription_close  = 12,
 
-    unused = UINT8_MAX,
+    unused                     = UINT8_MAX,
 };
 
 ChannelId toChannelId(std::string s);

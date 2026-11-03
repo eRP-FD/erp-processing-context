@@ -61,13 +61,13 @@ void EuCloseTaskHandler::handleRequest(PcSessionContext& session)
 
     try
     {
-        A_27069.start("FHIR validation with GEM_ERPEU_PR_PAR_CloseOperation_Input profile.");
+        A_27069_01.start("FHIR validation with GEM_ERPEU_PR_PAR_CloseOperation_Input profile.");
         const auto validatedDoc = parseAndValidateRequestBody<model::GemErpEuPrParCloseOperationInput>(session);
 
         ErpExpect(!session.request.getBody().empty(), HttpStatus::BadRequest, "Missing request body.");
         model::MedicationsAndDispenses medicationsAndDispenses = parseBody(session, Operation::POST_Task_id_eu_close, prescriptionId.type());
 
-        A_27069.finish();
+        A_27069_01.finish();
 
         const auto kvnr = validatedDoc.kvnr();
         const auto accessCode = validatedDoc.accessCode();
@@ -111,9 +111,10 @@ void EuCloseTaskHandler::handleRequest(PcSessionContext& session)
         A_27071.finish();
 
         Expect3(task->kvnr().has_value(), "Task has no KV number", std::logic_error);
-        Expect3(task->kvnr().value().id() == kvnr.id(), "Invalid KVNR", std::logic_error);
 
+        A_27069_01.start("check prescriptionId and KVNR of MedicationDispense against Task");
         checkMedicationDispenses(medicationsAndDispenses.medicationDispenses, prescriptionId, task->kvnr().value(), {});
+        A_27069_01.finish();
 
         A_27074.start("MedicationDispense Zeitstempel aktualisieren");
         task->updateLastMedicationDispense();

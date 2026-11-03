@@ -7,10 +7,12 @@
 
 #include "shared/server/BaseServiceContext.hxx"
 #include "shared/ErpRequirements.hxx"
+#include "shared/deprecated/SignalHandler.hxx"
 #include "shared/enrolment/EnrolmentServer.hxx"
 #include "shared/hsm/VsdmKeyCache.hxx"
 #include "shared/tsl/TslRefreshJob.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/TLog.hxx"
 
 
 // GEMREQ-start A_20974-01
@@ -33,10 +35,70 @@ BaseServiceContext::BaseServiceContext(const BaseFactories& factories)
 
 BaseServiceContext::~BaseServiceContext()
 {
+    if (mCountDownTimer)
+    {
+        mCountDownTimer->cancel();
+    }
+    if (mShutdownDelayTimer)
+    {
+        mShutdownDelayTimer->cancel();
+    }
     if (mTslRefreshJob != nullptr)
     {
         mTslRefreshJob->shutdown();
     }
+}
+
+namespace
+{
+
+class ShutdownDelayTimerHandler : public OneShotHandler
+{
+public:
+    using OneShotHandler::OneShotHandler;
+
+protected:
+    void timerHandler() override
+    {
+        SignalHandler::gracefulShutdown();
+    }
+};
+
+class CountDownTimerHandler : public FixedIntervalHandler
+{
+public:
+    explicit CountDownTimerHandler(int countDownSecondsStart)
+        : FixedIntervalHandler("CountDownTimer", std::chrono::seconds(1))
+        , mSecondsLeft(countDownSecondsStart)
+    {
+        TLOG(INFO) << "shutdown in " << mSecondsLeft;
+    }
+
+protected:
+    void timerHandler() override
+    {
+        TLOG(INFO) << "shutdown in " << --mSecondsLeft;
+    }
+
+private:
+    int mSecondsLeft;
+};
+
+
+}// namespace
+
+void BaseServiceContext::startShutdownTimers(int delaySeconds)
+{
+    if (mAdminServer == nullptr)
+    {
+        // No admin server available (e.g. in unit tests) — timers cannot be started.
+        return;
+    }
+    auto& ioContext = mAdminServer->getThreadPool().ioContext();
+    mShutdownDelayTimer = std::make_unique<PeriodicTimer<ShutdownDelayTimerHandler>>("ShutdownDelayTimer");
+    mShutdownDelayTimer->start(ioContext, std::chrono::seconds(delaySeconds));
+    mCountDownTimer = std::make_unique<PeriodicTimer<CountDownTimerHandler>>(delaySeconds);
+    mCountDownTimer->start(ioContext, std::chrono::seconds(1));
 }
 
 std::shared_ptr<Timer> BaseServiceContext::getTimerManager()

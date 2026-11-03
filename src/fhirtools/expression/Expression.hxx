@@ -9,10 +9,11 @@
 #define FHIR_TOOLS_SRC_FHIR_PATH_EXPRESSION_EXPRESSION_HXX
 
 
-#include "fhirtools/model/Element.hxx"
 #include "fhirtools/expression/EvaluationContext.hxx"
+#include "fhirtools/model/Element.hxx"
 
 #include <any>
+#include <chrono>
 #include <memory>
 
 namespace fhirtools
@@ -24,13 +25,16 @@ public:
     virtual ~Expression() = default;
     [[nodiscard]] virtual EvaluationContext eval(const EvaluationContext&) const = 0;
 
+    // Returns true if the evaluation result collection is guaranteed to be sorted in ascending Element::quickCompareTo order.
+    [[nodiscard]] virtual bool returnsSorted() const;
+
     virtual std::string debugInfo() const
     {
         return "";
     }
 };
 
-using ExpressionPtr = std::shared_ptr<Expression>;
+using ExpressionPtr = std::shared_ptr<const Expression>;
 
 class UnaryExpression : public Expression
 {
@@ -39,6 +43,20 @@ public:
 
 protected:
     ExpressionPtr mArg;
+};
+
+class ExpressionMeasurement : public UnaryExpression
+{
+public:
+    using UnaryExpression::UnaryExpression;
+    [[nodiscard]] EvaluationContext eval(const EvaluationContext&) const override;
+    std::chrono::high_resolution_clock::duration runtime() const;
+    uint32_t callCount() const;
+
+private:
+    void completed(const std::chrono::high_resolution_clock::time_point& startTime) const;
+    mutable std::chrono::high_resolution_clock::duration mRuntime{};
+    mutable uint32_t mCallCount{};
 };
 
 class BinaryExpression : public Expression
@@ -203,5 +221,11 @@ public:
     static constexpr auto IDENTIFIER = "contains";
     CollectionsContainsOperator(ExpressionPtr lhs, ExpressionPtr rhs);
 };
+
+// -------------------------------------- IMPL
+inline UnaryExpression::UnaryExpression(ExpressionPtr arg)
+    : mArg{std::move(arg)}
+{
+}
 }
 #endif//FHIR_TOOLS_SRC_FHIR_PATH_EXPRESSION_EXPRESSION_HXX

@@ -94,7 +94,7 @@ TEST_F(EuGrantHandlerTest, badAccessCode)
         fmt::format(
             "Parameters.parameter[1].valueIdentifier.value: error: "
             "workflow-eu-access-code-1: Format of the AccessCode must be a 6-digit code in the Form [a-z, A-Z, 0-9]. "
-            "(from profile: https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Access_Code|{}); ",
+            "(from profile: https://gematik.de/fhir/erp-eu/StructureDefinition/GEM_ERPEU_PR_Access_Code|{})",
             euVersion));
 }
 

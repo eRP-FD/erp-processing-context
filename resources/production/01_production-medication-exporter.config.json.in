@@ -70,7 +70,8 @@
       "erpSubmissionFunctionId": "erp-submission",
       "epaAsFqdn": [],
       "poolSizePerFqdn": "5",
-      "throttleSeconds": "0"
+      "throttleSeconds": "0",
+      "lookupDelayPausedEpa": "3600"
     },
     "epa-conflict": {
       "epaConflictWaitMinutes": "1440"
@@ -126,10 +127,10 @@
           ]
         },
         {
-          "id": "erp.t-prescription-1.1",
+          "id": "erp.t-prescription-1.2",
           "valid-from": "2026-07-01",
           "groups": [
-            "de.gematik.erp.t-prescription-1.1"
+            "de.gematik.erp.t-prescription-1.2"
           ]
         },
         {

@@ -20,28 +20,24 @@ TEST(GemErpEuPrParAccessAuthorizationResponseTest, test)
     auto* accessCode = resource->findParameter("accessCode");
     ASSERT_TRUE(accessCode);
 
-    EXPECT_STREQ(model::NumberAsStringParserDocument::getStringValueFromValue(
-                     rapidjson::Pointer{"/valueIdentifier/value"}.Get(*accessCode))
-                     .data(),
-                 "abcdef");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(
+                  rapidjson::Pointer{"/valueIdentifier/value"}.Get(*accessCode)),
+              "abcdef");
     auto* countryCode = resource->findParameter("countryCode");
     ASSERT_TRUE(countryCode);
-    EXPECT_STREQ(model::NumberAsStringParserDocument::getStringValueFromValue(
-                     rapidjson::Pointer{"/valueCoding/code"}.Get(*countryCode))
-                     .data(),
-                 "FR");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(
+                  rapidjson::Pointer{"/valueCoding/code"}.Get(*countryCode)),
+              "FR");
     auto* validUntil = resource->findParameter("validUntil");
     ASSERT_TRUE(validUntil);
-    EXPECT_STREQ(model::NumberAsStringParserDocument::getStringValueFromValue(
-                     rapidjson::Pointer{"/valueInstant"}.Get(*validUntil))
-                     .data(),
-                 eua.getValidUntil().toXsDateTime().c_str());
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(
+                  rapidjson::Pointer{"/valueInstant"}.Get(*validUntil)),
+              eua.getValidUntil().toXsDateTime());
     auto* createdAt = resource->findParameter("createdAt");
     ASSERT_TRUE(createdAt);
-    EXPECT_STREQ(model::NumberAsStringParserDocument::getStringValueFromValue(
-                     rapidjson::Pointer{"/valueInstant"}.Get(*createdAt))
-                     .data(),
-                 eua.getCreatedAt().toXsDateTime().c_str());
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(
+                  rapidjson::Pointer{"/valueInstant"}.Get(*createdAt)),
+              eua.getCreatedAt().toXsDateTime());
 
     std::optional<model::GemErpEuPrParAccessAuthorizationResponse> resource2;
     ASSERT_NO_THROW(resource2 = model::GemErpEuPrParAccessAuthorizationResponse::fromJson(

@@ -8,6 +8,7 @@
 #include "shared/server/ThreadPool.hxx"
 
 #include "shared/server/Worker.hxx"
+#include "shared/util/CrashHandler.hxx"
 #include "shared/util/TLog.hxx"
 
 
@@ -46,6 +47,7 @@ void ThreadPool::setUp(const size_t threadCount, std::string_view threadBaseName
 
 void ThreadPool::runWorkerOnThisThread()
 {
+    CrashHandler::installAlternateStack();
     std::unique_lock lock{mWorkerListMutex};
     auto& worker = mWorkerList.emplace_back();
     lock.unlock();

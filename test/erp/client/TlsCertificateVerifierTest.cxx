@@ -361,7 +361,7 @@ public:
                 return cv.prefix + ResourceManager::getAbsoluteFilename(certData.rootCaCertFile).native();
             case TlsInternetCertificateVerifierTestParam::OTHER_CA_FILE:
                 return cv.prefix +
-                       ResourceManager::getAbsoluteFilename("test/generated_pki_push/rootCA/rootCA-cert.pem").native();
+                       ResourceManager::getAbsoluteFilename("test/generated_pki_mock/rootCA/rootCA-cert.pem").native();
         }
         Fail2("Invalid value for CertRepresentation: " + std::to_string(static_cast<uintmax_t>(cv.certificateRep)),
               std::logic_error);

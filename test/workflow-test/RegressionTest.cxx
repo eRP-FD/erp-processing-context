@@ -156,7 +156,7 @@ TEST_F(RegressionTest, Erp11142)
             task->prescriptionId(), accessCode,
             toCadesBesSignature(kbv_bundle_xml, model::Timestamp::fromXsDateTime("2022-09-14T00:05:57+02:00")),
             HttpStatus::BadRequest, model::OperationOutcome::Issue::Type::invalid, "FHIR-Validation error",
-            fmt::format(R"(;Bundle.meta.profile[0]: error: value must match fixed value: )"
+            fmt::format(R"(Bundle.meta.profile[0]: error: value must match fixed value: )"
                         R"("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}" (but is )"
                         R"("https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle") (from profile: )"
                         R"(https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|{}))",
@@ -275,7 +275,7 @@ TEST_F(RegressionTest, Erp16393)
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]N3, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]NB, "
             "[https://fhir.kbv.de/CodeSystem/KBV_CS_SFHIR_KBV_NORMGROESSE]Sonstiges "
-                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse|" + kbvVerStr + "); "};
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:Normgroesse|" + kbvVerStr + ")"};
     // clang-format on
     std::optional<model::Task> task;
     ASSERT_NO_FATAL_FAILURE(task = taskCreate(model::PrescriptionType::apothekenpflichigeArzneimittel));

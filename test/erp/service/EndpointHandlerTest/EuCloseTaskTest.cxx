@@ -6,8 +6,8 @@
  */
 
 #include "erp/model/ErxReceipt.hxx"
-#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/EuMedicationDispenseInfos.hxx"
+#include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/eu/EuAccessPermission.hxx"
 #include "erp/model/eu/GemErpEuPrParCloseOperationInput.hxx"
 #include "erp/service/task/CloseTaskHandler.hxx"
@@ -36,22 +36,34 @@
 class EuCloseTaskTest : public MedicationDispenseFixture
 {
 protected:
+    void consentAndAccessPermission(const model::GemErpEuPrParCloseOperationInput& resource)
+    {
+        auto database = mServiceContext.databaseFactory();
+        database->storeConsent(
+            model::Consent{model::ConsentType::EUDISPCONS, resource.kvnr(), model::Timestamp::now()});
+        auto accessCode = resource.accessCode();
+        auto cc = resource.countryCode();
+        database->createEuAccessPermission(
+            resource.kvnr(),
+            model::EuAccessPermission{model::EuAccessCode{SafeString{std::move(accessCode.toString())}},
+                                      model::CountryCode{cc}});
+        database->commitTransaction();
+    }
+
     // no need to shift. We are addressing the correct view by passing whenHandedOver
     testutils::ShiftFhirResourceViewsGuard shift{testutils::ShiftFhirResourceViewsGuard::asConfigured};
+    EnvironmentVariableGuard featureToggleGuard{"ERP_FEATURE_EU", "true"};
 };
 
 TEST_F(EuCloseTaskTest, test1)
 {
-    EnvironmentVariableGuard featureToggleGuard("ERP_FEATURE_EU", "true");
-
-
     eu::EuCloseTaskHandler handler({});
 
     const Header requestHeader{HttpMethod::POST,
-                         "/Task/" + prescriptionId.toString() + "/$eu-close/",
-                         0,
-                         {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
-                         HttpStatus::Unknown};
+                               "/Task/" + prescriptionId.toString() + "/$eu-close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
 
     const auto jwt = mJwtBuilder->makeJwtNcpeh();
     const auto accessCode = "ABC123";
@@ -61,14 +73,12 @@ TEST_F(EuCloseTaskTest, test1)
     serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
     serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
 
-    auto xmlStr = ResourceTemplates::euCloseTaskXml({
-        .kvnr = "X234567891",
-        .prescriptionId = "160.000.000.004.715.74",
-        .whenHandedOver = "2025-10-01",
-        .accessCode = accessCode,
-        .countryCode = "BE",
-        .medicationDispenseId = "Example"
-    });
+    auto xmlStr = ResourceTemplates::euCloseTaskXml({.kvnr = "X234567891",
+                                                     .prescriptionId = "160.000.000.004.715.74",
+                                                     .whenHandedOver = "2025-10-01",
+                                                     .accessCode = accessCode,
+                                                     .countryCode = "BE",
+                                                     .medicationDispenseId = "Example"});
     std::optional<model::GemErpEuPrParCloseOperationInput> resource;
     ASSERT_NO_THROW(resource =
                         model::GemErpEuPrParCloseOperationInput::fromXml(xmlStr, *StaticData::getXmlValidator()));
@@ -81,25 +91,7 @@ TEST_F(EuCloseTaskTest, test1)
     AccessLog accessLog;
     SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
 
-    {
-        auto database = mServiceContext.databaseFactory();
-        const auto kvnr = resource->kvnr();
-        database->storeConsent(
-            model::Consent{model::ConsentType::EUDISPCONS, model::Kvnr{kvnr}, model::Timestamp::now()});
-        database->commitTransaction();
-    }
-
-    {
-        auto database = mServiceContext.databaseFactory();
-        const auto kvnr = resource->kvnr();
-        auto accessCode = resource->accessCode();
-        auto cc = resource->countryCode();
-        database->createEuAccessPermission(
-            model::Kvnr{kvnr},
-            model::EuAccessPermission{model::EuAccessCode{SafeString{std::move(accessCode.toString())}},
-                                      model::CountryCode{cc}});
-        database->commitTransaction();
-    }
+    consentAndAccessPermission(*resource);
 
     ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
     ASSERT_NO_THROW(handler.handleRequest(sessionContext)) << serverRequest.getBody();
@@ -107,7 +99,8 @@ TEST_F(EuCloseTaskTest, test1)
 
     {
         const auto kvnr = resource->kvnr();
-        const auto medicationsAndDispenses = sessionContext.database()->retrieveAllMedicationDispenses(model::Kvnr{"X234567891"}, std::nullopt);
+        const auto medicationsAndDispenses =
+            sessionContext.database()->retrieveAllMedicationDispenses(model::Kvnr{"X234567891"}, std::nullopt);
 
         EXPECT_TRUE(std::get<0>(medicationsAndDispenses).medicationDispenses.size());
         const auto& md = std::get<0>(medicationsAndDispenses).medicationDispenses.front();
@@ -130,4 +123,92 @@ TEST_F(EuCloseTaskTest, test1)
         const Uuid organizationUrn{euInfos.practitionerRole().organizationReference()};
         EXPECT_STREQ(std::string{euInfos.organization().getId().value()}.c_str(), organizationUrn.toString().c_str());
     }
+}
+
+TEST_F(EuCloseTaskTest, wrongKvnr)
+{
+    A_27069_01.test("Wrong KVNR");
+    eu::EuCloseTaskHandler handler({});
+
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$eu-close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+
+    const auto jwt = mJwtBuilder->makeJwtNcpeh();
+    const auto accessCode = "ABC123";
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwt);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    auto xmlStr = ResourceTemplates::euCloseTaskXml({.kvnr = "X234567899",
+                                                     .prescriptionId = "160.000.000.004.715.74",
+                                                     .whenHandedOver = "2025-10-01",
+                                                     .accessCode = accessCode,
+                                                     .countryCode = "BE",
+                                                     .medicationDispenseId = "Example"});
+    std::optional<model::GemErpEuPrParCloseOperationInput> resource;
+    ASSERT_NO_THROW(resource =
+                        model::GemErpEuPrParCloseOperationInput::fromXml(xmlStr, *StaticData::getXmlValidator()));
+    ASSERT_TRUE(resource);
+
+    serverRequest.setAccessToken(jwt);
+    serverRequest.setBody(xmlStr);
+
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    consentAndAccessPermission(*resource);
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                      "KVNR in MedicationDispense does not match the one in the task");
+}
+
+TEST_F(EuCloseTaskTest, wrongId)
+{
+    A_27069_01.test("Wrong PrescriptionId");
+    eu::EuCloseTaskHandler handler({});
+
+    const Header requestHeader{HttpMethod::POST,
+                               "/Task/" + prescriptionId.toString() + "/$eu-close/",
+                               0,
+                               {{Header::ContentType, ContentMimeType::fhirXmlUtf8}},
+                               HttpStatus::Unknown};
+
+    const auto jwt = mJwtBuilder->makeJwtNcpeh();
+    const auto accessCode = "ABC123";
+
+    ServerRequest serverRequest{requestHeader};
+    serverRequest.setAccessToken(jwt);
+    serverRequest.setQueryParameters({{"secret", "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"}});
+    serverRequest.setPathParameters({"id"}, {prescriptionId.toString()});
+
+    auto xmlStr = ResourceTemplates::euCloseTaskXml({.kvnr = "X234567891",
+                                                     .prescriptionId = "160.000.000.004.716.71",
+                                                     .whenHandedOver = "2025-10-01",
+                                                     .accessCode = accessCode,
+                                                     .countryCode = "BE",
+                                                     .medicationDispenseId = "Example"});
+    std::optional<model::GemErpEuPrParCloseOperationInput> resource;
+    ASSERT_NO_THROW(resource =
+                        model::GemErpEuPrParCloseOperationInput::fromXml(xmlStr, *StaticData::getXmlValidator()));
+    ASSERT_TRUE(resource);
+
+    serverRequest.setAccessToken(jwt);
+    serverRequest.setBody(xmlStr);
+
+    ServerResponse serverResponse;
+    AccessLog accessLog;
+    SessionContext sessionContext{mServiceContext, serverRequest, serverResponse, accessLog};
+
+    consentAndAccessPermission(*resource);
+
+    ASSERT_NO_THROW(handler.preHandleRequestHook(sessionContext));
+    EXPECT_ERP_EXCEPTION_WITH_MESSAGE(handler.handleRequest(sessionContext), HttpStatus::BadRequest,
+                                      "Prescription ID in MedicationDispense does not match the one in the task");
 }

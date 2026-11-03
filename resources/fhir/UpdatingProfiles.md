@@ -14,6 +14,10 @@ Profiles of **KBV and eRP** can be downloaded from [simplifier.net](https://simp
 
 **KBV-Schlüsseltabelle** can be downloaded on [applications.kbv.de](https://applications.kbv.de/overview.xhtml).
 
+**HL7 FHIR Core Extensions** packages can be downloaded from [hl7.org](http://hl7.org/fhir/extensions/history.html).
+
+**HL7 Terminology** packages can be downloaded from [terminology.hl7.org](https://terminology.hl7.org/history.html)
+
 Configuration
 -------------
 ### Package installation

@@ -101,6 +101,11 @@ std::ostream& operator<<(std::ostream& os, const Time& time1)
     return os;
 }
 
+std::string to_string(const Time& t)
+{
+    return t.toString();
+}
+
 void Time::parseHour(const std::string_view& hourStr, const std::string_view& timeStr)
 {
     parsePart(hourStr, timeStr, mHour);
@@ -236,6 +241,11 @@ std::ostream& operator<<(std::ostream& os, const Date& date1)
     return os;
 }
 
+std::string to_string(const Date& d)
+{
+    return d.toString();
+}
+
 std::optional<std::strong_ordering> Date::compareTo(const Date& other) const
 {
     if (mYear < other.mYear)
@@ -342,6 +352,11 @@ std::ostream& operator<<(std::ostream& os, const DateTime& dateTime)
 {
     os << dateTime.toString();
     return os;
+}
+
+std::string to_string(const DateTime& dt)
+{
+    return dt.toString();
 }
 
 const Date& DateTime::date() const

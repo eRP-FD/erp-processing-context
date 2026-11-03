@@ -13,6 +13,7 @@
 #include "shared/hsm/production/ProductionBlobDatabase.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
+#include "shared/util/FileHelper.hxx"
 #include "shared/util/TLog.hxx"
 
 #include "mock/crypto/MockCryptography.hxx"
@@ -20,6 +21,7 @@
 #include "mock/enrolment/MockEnrolmentManager.hxx"
 #endif
 #include "mock/tpm/TpmTestData.hxx"
+#include "mock/util/MockConfiguration.hxx"
 
 #include "mock/mock_config.h"
 
@@ -208,11 +210,15 @@ void MockBlobCache::setupBlobCacheForSimulatedHsm (BlobCache& blobCache)
     // VAU AUT
     if ( ! isBlobTypeAlreadyInitialized(blobCache, BlobType::VauAut))
     {
+        const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
         BlobDatabase::Entry entry;
         entry.type = BlobType::VauAut;
         entry.name = ErpVector::create("vau-aut");
         entry.blob = ErpBlob::fromCDump(tpm::vauAutKeyPair_blob_base64);
-        entry.certificate = tpm::vauAutCertificate_base64;
+        // The certificate is issued for the public key of the static key pair in the TPM blob.
+        entry.certificate = Certificate::fromPem(
+            FileHelper::readFileAsString(pkiPath / "sub_ca1_ec/certificates/vau_aut_hsm_ec/vau_aut_hsm_ec_cert.pem"))
+                                .toBase64Der();
         blobCache.storeBlob(std::move(entry));
     }
 
@@ -304,8 +310,11 @@ void MockBlobCache::setupBlobCacheForMockedHsm (BlobCache& blobCache)
         BlobDatabase::Entry entry;
         entry.type = BlobType::VauAut;
         entry.name = ErpVector::create("vau-aut");
-        entry.blob = ErpBlob(std::string_view(MockCryptography::getVauAutPrivateKeyPem()), 11);
-        entry.certificate = MockCryptography::getVauAutCertificate().toBase64Der();
+        const auto pkiPath = MockConfiguration::instance().getPathValue(MockConfigurationKey::MOCK_GENERATED_PKI_PATH);
+        const auto vauAutDir = pkiPath / "sub_ca1_ec/certificates/vau_aut_ec";
+        entry.blob = ErpBlob(FileHelper::readFileAsString(vauAutDir / "vau_aut_ec_key.pem"), 11);
+        entry.certificate =
+            Certificate::fromPem(FileHelper::readFileAsString(vauAutDir / "vau_aut_ec_cert.pem")).toBase64Der();
         blobCache.storeBlob(std::move(entry));
     }
 

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 enum class ProxyMode
@@ -17,7 +18,7 @@ enum class ProxyMode
 
 struct ProxyParameters {
     std::string ip;
-    uint_least16_t port;
+    std::uint_least16_t port;
     ProxyMode mode;
     static ProxyParameters fromUrl(std::string_view proxyUrl, ProxyMode mode);
 };

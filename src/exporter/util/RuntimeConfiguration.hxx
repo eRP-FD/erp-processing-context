@@ -9,7 +9,10 @@
 
 #include <boost/core/noncopyable.hpp>
 #include <mutex>
+#include <set>
 #include <shared_mutex>
+#include <string>
+#include <vector>
 
 namespace exporter
 {
@@ -22,6 +25,7 @@ public:
     static constexpr std::string_view parameter_push = "push";
     static constexpr std::string_view parameter_resume = "Resume";
     static constexpr std::string_view parameter_throttle = "Throttle";
+    static constexpr std::string_view parameter_paused_epas = "PausedEpas";
 
     class Getter;
     class Setter;
@@ -49,6 +53,10 @@ private:
     void resume(ProcessorType processor);
     void throttle(ThrottleMode throttleMode, const std::chrono::milliseconds& throttle);
 
+    void setPausedEpas(std::vector<std::string> fqdns);
+    bool isEpaPaused(const std::string& fqdn) const;
+    std::set<std::string> getPausedEpas() const;
+
     void setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs);
     std::chrono::milliseconds getMetricsLogThresholdMs(DurationCategory category) const;
     std::map<DurationCategory, std::chrono::milliseconds> getMetricsLogThresholdsMs() const;
@@ -58,6 +66,7 @@ private:
     std::map<ProcessorType, bool> mPause;
     std::chrono::milliseconds mThrottle{0};
     ThrottleMode mThrottleMode{ThrottleMode::MANUAL};
+    std::set<std::string> mPausedEpas;
 };
 
 class RuntimeConfiguration::Getter : boost::noncopyable
@@ -68,6 +77,9 @@ public:
     bool isPaused(ProcessorType processor) const;
     std::chrono::milliseconds throttleValue() const;
     ThrottleMode throttleMode() const;
+
+    bool isEpaPaused(const std::string& fqdn) const;
+    std::set<std::string> getPausedEpas() const;
 
     std::chrono::milliseconds getMetricsLogThresholdMs(DurationCategory category) const;
     std::map<DurationCategory, std::chrono::milliseconds> getMetricsLogThresholdsMs() const;
@@ -96,6 +108,8 @@ public:
     bool isPaused(ProcessorType processor) const;
     std::chrono::milliseconds throttleValue() const;
     ThrottleMode throttleMode() const;
+
+    void setPausedEpas(std::vector<std::string> fqdns);
 
     void setMetricsLogThresholdMs(DurationCategory category, std::chrono::milliseconds thresholdMs);
 

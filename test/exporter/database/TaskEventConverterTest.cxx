@@ -62,11 +62,15 @@ TaskEventConverterTest::TaskEventConverterTest()
     , keyMedicationDispense(std::get<0>(keyAndDerivationDataMedicationDispense))
     , derivationDataMedicationDispense(std::get<1>(keyAndDerivationDataMedicationDispense))
     , saltMedicationDispense(derivationDataMedicationDispense.salt)
-    , medicationDispense{::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml())}
+    , medicationDispense{::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml(
+          {.medicationDispenses = {
+               {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")},
+               {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")}},
+           .prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")}))}
     , signedMedicationDispensePrescription{::model::Binary{
           medicationDispense.getId().toString(),
           ::CryptoHelper::toCadesBesSignature(medicationDispense.serializeToXmlString()), binaryProfile}}
-    , encryptedBlobMedicationDispense{mCodec.encode(signedMedicationDispensePrescription.serializeToJsonString(),
+    , encryptedBlobMedicationDispense{mCodec.encode(medicationDispense.serializeToJsonString(),
                                                     keyMedicationDispense, Compression::DictionaryUse::Default_json)}
     , jwtBuilder{MockCryptography::getIdpPrivateKey()}
     , telematikLookupEntries("80276883531000000202;qes-from-lookup-80276883531000000202")
@@ -342,6 +346,48 @@ TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent)
         EXPECT_EQ(provideDispensation.getJwtPharmacyProfessionOid(), "1.2.276.0.76.4.54");
     }
 }
+
+TEST_F(TaskEventConverterTest, convert_ProvideDispensationTaskEvent_prescriptionIdMismatch)
+{
+    // Build a medication dispense bundle whose dispenses carry a different prescription ID
+    // than the task event — simulates a tampered database entry.
+    const auto wrongId = model::PrescriptionId::fromString("160.000.100.000.002.02");
+    const auto mismatchedBundle = ::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml(
+        {.medicationDispenses = {{.prescriptionId = wrongId}, {.prescriptionId = wrongId}},
+         .prescriptionId = wrongId}));
+    const auto encryptedMismatchedBundle =
+        mCodec.encode(mismatchedBundle.serializeToJsonString(), keyMedicationDispense,
+                      Compression::DictionaryUse::Default_json);
+
+    const JWT jwtDoctorIdentity = jwtBuilder.makeJwtArzt();
+    encryptedBlobDoctorIdentity =
+        mCodec.encode(R"({"id": ")" + jwtDoctorIdentity.stringForClaim(JWT::idNumberClaim).value() +
+                          R"(", "name": ")" + jwtDoctorIdentity.stringForClaim(JWT::organizationNameClaim).value() +
+                          R"(", "oid": ")" + jwtDoctorIdentity.stringForClaim(JWT::professionOIDClaim).value() +
+                          R"("})",
+                      key, Compression::DictionaryUse::Default_json);
+    const JWT jwtPharmacyIdentity = jwtBuilder.makeJwtApotheke();
+    encryptedBlobPharmacyIdentity = mCodec.encode(
+        R"({"id": ")" + jwtPharmacyIdentity.stringForClaim(JWT::idNumberClaim).value() + R"(", "name": ")" +
+            jwtPharmacyIdentity.stringForClaim(JWT::organizationNameClaim).value() + R"(", "oid": ")" +
+            jwtPharmacyIdentity.stringForClaim(JWT::professionOIDClaim).value() + R"("})",
+        key, Compression::DictionaryUse::Default_json);
+    usecase = model::TaskEvent::UseCase::provideDispensation;
+
+    const db_model::TaskEvent dbTaskEvent(
+        .0, model::PrescriptionId::fromString("160.000.100.000.001.05"),
+        static_cast<int16_t>(magic_enum::enum_integer(prescriptionId.type())), derivationData.blobId, salt,
+        encryptedKvnr, hashedKvnr, std::string(magic_enum::enum_name(state)),
+        std::string(magic_enum::enum_name(usecase)), lastModified, authoredOn, encryptedBlobPrescription,
+        derivationDataMedicationDispense.blobId, saltMedicationDispense, encryptedMismatchedBundle,
+        encryptedBlobDoctorIdentity, encryptedBlobPharmacyIdentity, 0);
+
+    TaskEventConverter taskEventConverter(mCodec, telematikLookup);
+    // The dispenses belong to a different task — converter must return nullptr (event to be discarded).
+    EXPECT_EQ(taskEventConverter.convert(dbTaskEvent, key, keyMedicationDispense), nullptr);
+}
+
+
 
 TEST_F(TaskEventConverterTest, convert_CancelDispensationTaskEvent)
 {

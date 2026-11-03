@@ -109,6 +109,13 @@ public:
 
     const FhirStructureDefinition& structureDefinition() const;
 
+    // BEGIN: performance report
+    // call enableMeasurement to record performence metrics
+    // call report to print recorded data
+    void enableMeasurement() const;
+    void report() const;
+    // END: performance report
+
     // immutable:
     FhirElement(FhirElement&&) = delete;
     FhirElement& operator=(FhirElement&&) = delete;

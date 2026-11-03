@@ -488,7 +488,7 @@ TEST_F(MVO_A_23164, Step_01_EndDateBeforeStartDateNoValidation_BadRequest)
     // Issue and Diagnostic from the new version.
     std::string issueText = "FHIR-Validation error";
     std::optional<std::string> issueDiagnostics =
-        "start SHALL have a lower value than end (from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1);";
+        "start SHALL have a lower value than end (from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1)";
 
     TestStep(A_23164, "ERP-A_23164.01 - Task aktivieren - Mehrfachverordnung - Endedatum vor Startdatum");
 
@@ -549,7 +549,7 @@ TEST_F(MVO_A_23537, Step_01_StartDateBeforeAuthoredOn)
             "FHIR-Validation error",
             "Bundle: error: "
                 "-erp-multiplePrescriptionEinloesefristBeginn: Der Beginn der Einlösefrist darf nicht vor dem Ausstellungsdatum liegen. "
-                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); "));
+                    "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + ")"));
         // clang-format on
     }
 }

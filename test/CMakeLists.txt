@@ -441,6 +441,7 @@ list(
         erp/tee/OuterTeeResponseTest.cxx
         erp/tpm/PcrSetTest.cxx
         erp/tsl/C14NHelperTest.cxx
+        erp/tsl/TrustStoreRaceConditionTest.cxx
         erp/tsl/TrustStoreTests.cxx
         erp/tsl/TslManagerTest.cxx
         erp/tsl/TslParsingExpectations.cxx
@@ -652,4 +653,4 @@ add_dependencies(test erp-integration-test erp-connection-test)
 
 add_subdirectory(fhirtools)
 add_subdirectory(exporter)
-add_dependencies(test push-pki)
+add_dependencies(test mock-pki)

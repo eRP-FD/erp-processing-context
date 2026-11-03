@@ -85,8 +85,9 @@ private:
             mEnrolmentApiClient = std::make_unique<EnrolmentApiClient>(ConnectionParameters{
                 .hostname = configuration.serverHost(),
                 .port = configuration.getStringValue(ConfigurationKey::ENROLMENT_SERVER_PORT),
-                .connectionTimeout = std::chrono::seconds{configuration.getIntValue(
-                    ConfigurationKey::HTTPCLIENT_CONNECT_TIMEOUT_SECONDS)},
+                // The timeout also applies to reading the response. Storing a blob involves several database
+                // round trips, which can exceed the default of a few seconds on a loaded CI database.
+                .connectionTimeout = std::chrono::seconds{30},
                 .resolveTimeout = std::chrono::milliseconds{configuration.getIntValue(
                     ConfigurationKey::HTTPCLIENT_RESOLVE_TIMEOUT_MILLISECONDS)},
                 .tlsParameters = TlsConnectionParameters{

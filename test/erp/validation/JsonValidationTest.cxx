@@ -88,7 +88,7 @@ TEST_F(JsonValidationTest, Erp8881CommunicationExtensionUrl)
     std::string expected =
         fmt::format("Bundle.entry[0].resource{{Communication}}.payload[0].extension[0]: error: element doesn't "
                     "match any slice in closed slicing (from profile: "
-                    "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|{}); ",
+                    "https://gematik.de/fhir/erp/StructureDefinition/GEM_ERP_PR_Communication_Reply|{})",
                     to_string(ResourceTemplates::Versions::GEM_ERP_1_6_2));
     EXPECT_EQ(expected, validationResults.summary(fhirtools::Severity::error));
 }

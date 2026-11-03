@@ -31,6 +31,7 @@ ErrorResponse ErrorResponse::fromHttpStatus(HttpStatus httpStatus, const std::st
         {HttpStatus::BadRequest, ErrorCode::malformedRequest},
         {HttpStatus::Unauthorized, ErrorCode::invalidAccessToken},
         {HttpStatus::Forbidden, ErrorCode::invalidOid},
+        {HttpStatus::NotFound, ErrorCode::notFound},
         {HttpStatus::MethodNotAllowed, ErrorCode::methodNotAllowed},
         {HttpStatus::NotAcceptable, ErrorCode::notAcceptable},
         {HttpStatus::RequestTimeout, ErrorCode::timeout},

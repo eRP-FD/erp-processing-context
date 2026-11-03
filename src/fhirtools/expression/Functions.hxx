@@ -216,6 +216,7 @@ public:
     static constexpr auto IDENTIFIER = "union";
     CombiningUnion(ExpressionPtr lhs, ExpressionPtr rhs);
     [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override;
+    bool returnsSorted() const override;
 };
 
 using UnionOperator = CombiningUnion;

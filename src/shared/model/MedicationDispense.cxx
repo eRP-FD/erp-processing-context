@@ -14,9 +14,11 @@
 #include "shared/model/ResourceNames.hxx"
 #include "shared/model/extensions/GeneratedDosageInstructionsMeta.hxx"
 #include "shared/util/Expect.hxx"
+#include "shared/util/TLog.hxx"
 #include "shared/util/dosagetext/Validator.hxx"
 
 #include <rapidjson/pointer.h>
+#include <algorithm>
 #include <mutex>// for call_once
 
 using namespace model;
@@ -243,6 +245,21 @@ std::optional<std::string_view> MedicationDispense::performerReference() const
 std::vector<DosageDgMP> MedicationDispense::dosageInstruction() const
 {
     return getDosageInstructionFromResource(*this);
+}
+
+bool prescriptionIdsMatch(std::span<const MedicationDispense> medicationDispenses,
+                          const PrescriptionId& expectedPrescriptionId)
+{
+    return std::ranges::all_of(medicationDispenses, [&](const MedicationDispense& dispense) {
+        const auto actualPrescriptionId = dispense.prescriptionId();
+        if (actualPrescriptionId != expectedPrescriptionId)
+        {
+            TLOG(ERROR) << "MedicationDispense of task " << expectedPrescriptionId.toString()
+                        << " contains unexpected prescription id " << actualPrescriptionId.toString();
+            return false;
+        }
+        return true;
+    });
 }
 
 template class Extension<GemErpExRedeemCode>;

@@ -39,7 +39,6 @@ void MockTerminationHandler::waitForTerminated(void)
     }
 }
 
-void MockTerminationHandler::gracefulShutdown(boost::asio::io_context& , int )
+void MockTerminationHandler::gracefulShutdown(int)
 {
-
 }

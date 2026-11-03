@@ -436,6 +436,7 @@ TEST_F(BlobCacheTest, updateBeforeKeyExpired)// NOLINT(readability-function-cogn
                                 auto entry = cache->getBlob(BlobType::TaskKeyDerivation);
                                 return entry.id == 3;
                             }););
+    cache->cancelRefresher();
     ioContext.stop();
     contextThread.join();
 }

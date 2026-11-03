@@ -18,11 +18,6 @@ EvaluationContext ExistenceEmpty::eval(const EvaluationContext& context) const
     return context.makeBoolElement(context.collection.empty());
 }
 
-UnaryExpression::UnaryExpression(ExpressionPtr arg)
-    : mArg(std::move(arg))
-{
-}
-
 //NOLINTNEXTLINE(misc-no-recursion)
 EvaluationContext ExistenceExists::eval(const EvaluationContext& context) const
 {
@@ -248,24 +243,59 @@ CombiningUnion::CombiningUnion(ExpressionPtr lhs, ExpressionPtr rhs)
 EvaluationContext CombiningUnion::eval(const EvaluationContext& context) const
 {
     EVAL_TRACE;
+    // according to http://hl7.org/fhirpath/N1/#unionother-collection
+    // "There is no expectation of order in the resulting collection."
+    static constexpr auto quickOrder = [](const auto& l, const auto& r) {
+        return is_lt(l->quickCompareTo(*r));
+    };
+    static constexpr auto equals = [](const auto& l, const auto& r) {
+        return l->type() == r->type() && l->equals(*r).value_or(false);
+    };
+
     auto lhs = mLhs->eval(context);
-    auto rhs = mRhs->eval(context);
-    auto ret = context();
-    for (const auto& item : lhs.collection)
+    if (! mLhs->returnsSorted())
     {
-        if (! ret.collection.contains(item))
-        {
-            ret.collection.push_back(item);
-        }
+        std::ranges::sort(lhs.collection, quickOrder);
     }
-    for (const auto& item : rhs.collection)
+    auto rhs = mRhs->eval(context);
+    if (! mRhs->returnsSorted())
     {
-        if (! ret.collection.contains(item))
+        std::ranges::sort(rhs.collection, quickOrder);
+    }
+
+    auto ret = context();
+    auto lhsIt = lhs.collection.begin();
+    auto rhsIt = rhs.collection.begin();
+    ret.collection.reserve(lhs.collection.size() + rhs.collection.size());
+    auto appendUniue = [&](auto& it) {
+        if (ret.collection.empty() || ! equals(ret.collection.back(), *it))
         {
-            ret.collection.push_back(item);
+            ret.collection.emplace_back(std::move(*it));
+        }
+    };
+
+    // both collections / lhs and rhs are now sorted
+    // merge both as done by merge-sort thereby skip any duplicates:
+    while (lhsIt != lhs.collection.end() || rhsIt != rhs.collection.end())
+    {
+        if (rhsIt == rhs.collection.end() || (lhsIt != lhs.collection.end() && quickOrder(*lhsIt, *rhsIt)))
+        {
+            appendUniue(lhsIt);
+            ++lhsIt;
+        }
+        else
+        {
+            appendUniue(rhsIt);
+            ++rhsIt;
         }
     }
     return ret;
+}
+
+bool fhirtools::CombiningUnion::returnsSorted() const
+{
+    // returned result will always be sorted by quickCompareTo
+    return true;
 }
 
 EvaluationContext CombiningCombine::eval(const EvaluationContext& context) const

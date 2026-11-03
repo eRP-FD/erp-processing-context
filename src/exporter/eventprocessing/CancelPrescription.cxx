@@ -88,10 +88,7 @@ Outcome CancelPrescription::doProcess(const model::CancelPrescriptionTaskEvent& 
         case Outcome::Retry:
         case Outcome::Conflict:
         case Outcome::ConsentRevoked:
-            if (auto diag = EventProcessingBase::getFailureDiagnostics(response.body))
-            {
-                bdeMessage.update(BDEMessage::Data{.error = diag});
-            }
+            bdeMessage.update(BDEMessage::Data{.error = getFailureDiagnostics(response.httpStatus, response.body)});
             logFailure(response.httpStatus, std::move(response.body));
             break;
     }

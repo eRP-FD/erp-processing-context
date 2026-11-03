@@ -427,3 +427,39 @@ TEST_F(ErpWorkflowPushTest, auditEventRegisterUnregister)
         std::vector<model::AuditEvent::SubType>{model::AuditEvent::SubType::create, model::AuditEvent::SubType::del},
         true);
 }
+
+
+TEST_F(ErpWorkflowPushTest, updateChannelsPushkeyNotFound)
+{
+    model::Channels channels;
+    channels.add(model::ChannelId::erp_task_abort);
+
+    RequestArguments requestArguments{
+        HttpMethod::POST, "/channels/v1/" + UrlHelper::escapeUrl("nonexistent-pushkey"),
+        channels.serializeToJsonString(), ContentMimeType::jsonUtf8};
+    requestArguments.expectedBdeUseCase = bde::PostChannelsPushkey_UC_3_24;
+    auto [outerResponse, innerResponse] = send(requestArguments);
+
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
+    rapidjson::Document document;
+    ASSERT_NO_THROW(document.Parse(innerResponse.getBody()));
+    ASSERT_FALSE(document.HasParseError()) << innerResponse.getBody();
+    ASSERT_TRUE(document["errorCode"].IsString());
+    EXPECT_STREQ(document["errorCode"].GetString(), "notFound");
+}
+
+
+TEST_F(ErpWorkflowPushTest, getChannelsPushkeyNotFound)
+{
+    RequestArguments requestArguments{
+        HttpMethod::GET, "/channels/v1/" + UrlHelper::escapeUrl("nonexistent-pushkey"), ""};
+    requestArguments.expectedBdeUseCase = bde::GetChannelsPushkey_UC_3_23;
+    auto [outerResponse, innerResponse] = send(requestArguments);
+
+    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
+    rapidjson::Document document;
+    ASSERT_NO_THROW(document.Parse(innerResponse.getBody()));
+    ASSERT_FALSE(document.HasParseError()) << innerResponse.getBody();
+    ASSERT_TRUE(document["errorCode"].IsString());
+    EXPECT_STREQ(document["errorCode"].GetString(), "notFound");
+}

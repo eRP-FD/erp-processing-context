@@ -34,6 +34,8 @@ namespace fhirtools
 {
 // A fixed-point number type with precision 10^-8 as specified in http://hl7.org/fhirpath/#decimal
 using DecimalType = boost::multiprecision::number<boost::multiprecision::cpp_dec_float<8>>;
+
+std::string to_string(const DecimalType& dec);
 }
 
 

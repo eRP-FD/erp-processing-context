@@ -270,7 +270,8 @@ public:
 
 TEST_P(CommunicationPostEndpointTestP, ProfileValidity)
 {
-    auto today{date::floor<date::days>(std::chrono::system_clock::now())};
+    const auto now = model::Timestamp::now();
+    const auto today = testutils::germanDay(now);
     date::sys_days testDate;
     std::istringstream datestrm{GetParam().date};
     date::from_stream(datestrm, "%Y-%m-%d", testDate);

@@ -6,7 +6,6 @@
  */
 
 #include "PushEventCreator.hxx"
-
 #include "erp/database/push/PushEventDataCollector.hxx"
 #include "erp/pc/PcServiceContext.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -56,7 +55,8 @@ void createPushEvent(const PushEventDataCollector& pushEventData, PcServiceConte
 }
 
 PushEventCreator::PushEventCreator(boost::asio::io_context& ioContext)
-    : mStrand{boost::asio::make_strand(ioContext)}
+    : mIoContext{ioContext}
+    , mStrand{boost::asio::make_strand(ioContext)}
 {
 }
 
@@ -90,6 +90,39 @@ void PushEventCreator::tryPostCreatePushEvent(PushEventDataCollector pushEventDa
     });
 }
 
+void PushEventCreator::shutdown()
+{
+    {
+        const std::scoped_lock guard{mQueueMutex};
+        mShutdown = true;
+        if (mQueueDepth == 0)
+        {
+            return;
+        }
+    }
+
+    using namespace std::chrono_literals;
+    const auto timeout = 2s;
+    const auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline)
+    {
+        {
+            const std::unique_lock guard{mQueueMutex};
+            if (mQueueDepth == 0)
+            {
+                return;
+            }
+        }
+        mIoContext.poll();
+    }
+
+    const std::scoped_lock guard{mQueueMutex};
+    if (mQueueDepth > 0)
+    {
+        TLOG(WARNING) << fmt::format("PushEventCreator::shutdown timed out after {}s with {} pending events in queue.",
+                                     std::chrono::duration_cast<std::chrono::seconds>(timeout).count(), mQueueDepth);
+    }
+}
 size_t PushEventCreator::maxdepth(const Configuration& config)
 {
     return gsl::narrow<size_t>(config.getIntValue(ConfigurationKey::PUSH_EVENT_MAX_QUEUE));

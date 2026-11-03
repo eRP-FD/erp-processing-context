@@ -5,6 +5,8 @@
 #include "exporter/TRezeptTransformer.hxx"
 #include "erp/model/MedicationsAndDispenses.hxx"
 #include "erp/model/Task.hxx"
+#include "exporter/model/HealthcareServiceDirectory.hxx"
+#include "exporter/model/LocationDirectory.hxx"
 #include "exporter/model/OrganizationDirectory.hxx"
 #include "shared/fhir/FhirCanonicalizer.hxx"
 #include "shared/model/KbvBundle.hxx"
@@ -27,8 +29,6 @@ public:
                                         const rapidjson::Value& tRezeptMedicationDispense);
     void checkTRezeptOrganization(const model::Bundle& vzdSearchSet, const rapidjson::Value& tRezeptOrganization);
 
-    testutils::ShiftFhirResourceViewsGuard shift{"erp.t-prescription-1.1",
-                                                 date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const model::TelematikId fallbackTelematikId{"x-y"};
     const std::string fallbackName{"Fallback Name"};
 };
@@ -40,7 +40,7 @@ void TRezeptTransformerTest::checkCarbonCopy(model::Bundle& kbvBundle, const mod
     std::cout << carbonCopy.serializeToJsonString() << std::endl;
     validate(
         fhirtools::DefinitionKey{
-            "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy|1.1"},
+            "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy|1.2"},
         &carbonCopy.jsonDocument());
 
     EXPECT_EQ(signingTime, carbonCopy.prescriptionSignatureDate());
@@ -106,7 +106,24 @@ void TRezeptTransformerTest::checkTRezeptMedication(const rapidjson::Value& sour
          std::vector<MappedValue>{}, std::vector<std::string>{"Extension.valueCode"}, std::vector<std::string>{}},
         {"https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Packaging",
          "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-formulation-packaging-extension",
-         std::vector<MappedValue>{}, std::vector<std::string>{"Extension.valueString"}, std::vector<std::string>{}}};
+         std::vector<MappedValue>{}, std::vector<std::string>{"Extension.valueString"}, std::vector<std::string>{}},
+    };
+
+    // KBV source uses KBV_EX_ERP_Medication_CompoundingInstruction, GEM (dispense) source already uses the target url.
+    static const std::string kbvCompoundingInstruction =
+        "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_CompoundingInstruction";
+    static const std::string manufacturingInstructions =
+        "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-manufacturing-instructions-extension";
+    for (const auto& sourceUrl : {kbvCompoundingInstruction, manufacturingInstructions})
+    {
+        if (findExtension(source, sourceUrl))
+        {
+            mappedExtensions.emplace_back(sourceUrl, manufacturingInstructions, std::vector<MappedValue>{},
+                                          std::vector<std::string>{"Extension.valueString"},
+                                          std::vector<std::string>{});
+            break;
+        }
+    }
 
     checkRetainedProperties(source, tRezeptMedication, propertiesRetained);
     checkPropertiesNotInTarget(tRezeptMedication, propertiesNotInTarget);
@@ -137,6 +154,7 @@ void TRezeptTransformerTest::checkTRezeptMedicationDispense(const rapidjson::Val
         "MedicationDispense.dosageInstruction.timing.repeat.period",
         "MedicationDispense.dosageInstruction.timing.repeat.periodUnit",
         "MedicationDispense.when",
+        "MedicationDispense.extension",
     };
     const std::vector<std::string> propertiesNotInTarget{
         "MedicationDispense.identifier",
@@ -164,7 +182,7 @@ void TRezeptTransformerTest::checkTRezeptMedicationDispense(const rapidjson::Val
 
     validate(
         fhirtools::DefinitionKey{
-            "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-dispense|1.1"},
+            "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-medication-dispense|1.2"},
         &tRezeptMedicationDispense);
 }
 
@@ -197,26 +215,38 @@ void TRezeptTransformerTest::checkTRezeptOrganization(const model::Bundle& vzdSe
         EXPECT_EQ(fallbackName, name);
     }
 
-    const auto& healthcareService =
-        vzdSearchSet.getUniqueResourceByType<model::UnspecifiedResource>("HealthcareService");
-    const std::vector<std::string> fromHealthcareService{
-        "Organization.telecom.system", "Organization.telecom.value",        "Organization.telecom.use",
-        "Organization.telecom.rank",   "Organization.telecom.period.start", "Organization.telecom.period.end",
-    };
-    checkRetainedProperties(healthcareService.jsonDocument(), tRezeptOrganization, fromHealthcareService);
-
-    const auto& optionalLocationDirectory =
-        vzdSearchSet.getResourcesByType<model::UnspecifiedResource>("LocationDirectory");
-    if (! optionalLocationDirectory.empty())
+    const auto healthcareServices = vzdSearchSet.getResourcesByType<model::HealthcareServiceDirectory>();
+    if (! healthcareServices.empty())
     {
-        const std::vector<std::string> fromLocationDirectory{
-            "Organization.address.use",          "Organization.address.type",       "Organization.address.text",
-            "Organization.address.line",         "Organization.address.city",       "Organization.address.district",
-            "Organization.address.state",        "Organization.address.postalCode", "Organization.address.country",
-            "Organization.address.period.start", "Organization.address.period.end",
-        };
-        checkRetainedProperties(optionalLocationDirectory[0].jsonDocument(), tRezeptOrganization,
-                                fromLocationDirectory);
+        const auto* sourceTelecom = healthcareServices.front().telecomRaw();
+        const auto* targetTelecom = rapidjson::Pointer("/telecom").Get(tRezeptOrganization);
+        if (sourceTelecom)
+        {
+            ASSERT_TRUE(targetTelecom);
+            EXPECT_EQ(serialize(*sourceTelecom), serialize(*targetTelecom));
+        }
+        else
+        {
+            EXPECT_FALSE(targetTelecom);
+        }
+    }
+
+    const auto locations = vzdSearchSet.getResourcesByType<model::LocationDirectory>();
+    if (! locations.empty())
+    {
+        const auto* sourceAddress = locations.front().addressRaw();
+        const auto* targetAddress = rapidjson::Pointer("/address").Get(tRezeptOrganization);
+        if (sourceAddress)
+        {
+            ASSERT_TRUE(targetAddress);
+            ASSERT_TRUE(targetAddress->IsArray());
+            ASSERT_FALSE(targetAddress->Empty());
+            EXPECT_EQ(serialize(*sourceAddress), serialize((*targetAddress)[0]));
+        }
+        else
+        {
+            EXPECT_FALSE(targetAddress);
+        }
     }
     checkMappedValues(tRezeptOrganization, {});
 }
@@ -278,6 +308,118 @@ TEST_F(TRezeptTransformerTest, missingLocationAndHealthcareService_noError)
                                                            options.prescriptionId, fallbackTelematikId, fallbackName,
                                                            vzdSearchset));
     ASSERT_TRUE(result);
+}
+
+TEST_F(TRezeptTransformerTest, transform_organizationWithTelecomAndAddressState)
+{
+    const ResourceTemplates::KbvBundleOptions options{
+        .prescriptionId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 123456789)};
+    auto kbvBundle = model::Bundle::fromXmlNoValidation(ResourceTemplates::kbvBundleXml(options));
+    auto medicationDispenseBundle = model::Bundle::fromJsonNoValidation(
+        ResourceTemplates::internal_type::medicationDispenseBundle().serializeToJsonString());
+
+    const std::string vzdJson = R"({
+      "resourceType": "Bundle",
+      "type": "searchset",
+      "total": 3,
+      "entry": [
+        {
+          "resource": {
+            "resourceType": "HealthcareService",
+            "id": "hs-1",
+            "providedBy": {
+              "reference": "Organization/org-1"
+            },
+            "location": [
+              {
+                "reference": "Location/loc-1"
+              }
+            ],
+            "telecom": [
+              {
+                "system": "phone",
+                "value": "0891234567",
+                "use": "work"
+              },
+              {
+                "system": "email",
+                "value": "info@apotheke-muenchen.de",
+                "use": "work"
+              }
+            ]
+          }
+        },
+        {
+          "resource": {
+            "resourceType": "Organization",
+            "id": "org-1",
+            "identifier": [
+              {
+                "system": "https://gematik.de/fhir/sid/telematik-id",
+                "value": "3-07.2.1234560000.10.789"
+              }
+            ],
+            "name": "Marien-Apotheke München"
+          }
+        },
+        {
+          "resource": {
+            "resourceType": "Location",
+            "id": "loc-1",
+            "address": {
+              "use": "work",
+              "type": "postal",
+              "text": "Marienplatz 1, 80331 München, Bayern, DE",
+              "line": ["Marienplatz 1"],
+              "city": "München",
+              "state": "Bayern",
+              "postalCode": "80331",
+              "country": "DE"
+            }
+          }
+        }
+      ]
+    })";
+
+    auto vzdSearchset = model::Bundle::fromJsonNoValidation(vzdJson);
+
+    std::optional<model::ErpTPrescriptionCarbonCopy> result;
+    auto signingTime = model::Timestamp::now();
+    ASSERT_NO_THROW(result = TRezeptTransformer::transform(kbvBundle, medicationDispenseBundle, signingTime,
+                                                           options.prescriptionId, fallbackTelematikId, fallbackName,
+                                                           vzdSearchset));
+    ASSERT_TRUE(result);
+
+    const auto& org = result->organization();
+
+    // Verify telecom
+    const auto* telecom = rapidjson::Pointer("/telecom").Get(org);
+    ASSERT_TRUE(telecom);
+    ASSERT_TRUE(telecom->IsArray());
+    ASSERT_EQ(telecom->Size(), 2);
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[0]["system"])), "phone");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[0]["value"])), "0891234567");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[0]["use"])), "work");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[1]["system"])), "email");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[1]["value"])), "info@apotheke-muenchen.de");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&((*telecom)[1]["use"])), "work");
+
+    // Verify address including state
+    const auto* address = rapidjson::Pointer("/address").Get(org);
+    ASSERT_TRUE(address);
+    ASSERT_TRUE(address->IsArray());
+    ASSERT_EQ(address->Size(), 1);
+    const auto& addr0 = (*address)[0];
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["use"])), "work");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["type"])), "postal");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["city"])), "München");
+    ASSERT_TRUE(addr0.HasMember("state"));
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["state"])), "Bayern");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["postalCode"])), "80331");
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["country"])), "DE");
+    ASSERT_TRUE(addr0.HasMember("line"));
+    ASSERT_TRUE(addr0["line"].IsArray());
+    EXPECT_EQ(model::NumberAsStringParserDocument::getStringValueFromValue(&(addr0["line"][0])), "Marienplatz 1");
 }
 
 struct TestCaseParam {
@@ -364,5 +506,6 @@ INSTANTIATE_TEST_SUITE_P(x, TRezeptSampleTestP,
                          testing::Values(makeParam("Beispiel 1 PZN Verordnung", "01"),
                                          makeParam("Beispiel 2 Wirkstoff Verordnung", "02"),
                                          makeParam("Beispiel 3 Freitext Verordnung", "03"),
-                                         makeParam("Beispiel 4 PZN Verordnung mit absoluter Refernzierung", "04")),
+                                         makeParam("Beispiel 4 PZN Verordnung mit absoluter Refernzierung", "04"),
+                                         makeParam("Crafted1", "05")),
                          &TRezeptSampleTestP::name);

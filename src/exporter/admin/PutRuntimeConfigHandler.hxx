@@ -24,6 +24,7 @@ private:
     static void handleParameterThrottle(RuntimeConfigurationSetter& runtimeConfig, const std::string& param);
     static void handleParameterMetricsLogThreshold(RuntimeConfigurationSetter& runtimeConfig, const std::string& key,
                                                    const std::string& param);
+    static void handleParameterPausedEpas(RuntimeConfigurationSetter& runtimeConfig, const std::string& param);
 };
 
 }// namespace exporter

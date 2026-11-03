@@ -39,6 +39,10 @@ providePrescription:
     code: 423
     template: prescriptionoutput_MEDSVC_OPERATION_SUCCESS.json
     delay: 300
+  - kvnr: "X011999974"
+    code: 500
+    template: prescriptionoutput_MEDSVC_OPERATION_SUCCESS.json
+    delay: 300
   - kvnr: ".*"
     code: 200
     template: prescriptionoutput_MEDSVC_OPERATION_SUCCESS.json

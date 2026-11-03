@@ -17,31 +17,22 @@ if [ "x$version" == "x" ]; then
 fi
 
 echo $tmpdir
-if [ -f ../docker/build/Dockerfile ]; then
-    cp ../docker/build/Dockerfile "$tmpdir/Dockerfile"
-elif [ -f docker/build/Dockerfile ]; then
-    cp docker/build/Dockerfile "$tmpdir/Dockerfile"
+if [ -f ../docker/build-image/Dockerfile ]; then
+    cp ../docker/build-image/Dockerfile "$tmpdir/Dockerfile"
+    cp -rf ../docker/build-image/files "$tmpdir/"
+elif [ -f docker/build-image/Dockerfile ]; then
+    cp docker/build-image/Dockerfile "$tmpdir/Dockerfile"
+    cp -rf docker/build-image/files "$tmpdir/"
 else
     echo "please call this script from the cmake build dir or from the project root dir"
     exit
 fi
 
-if [ -f ../conanfile.txt ]; then
-    cp ../conanfile.txt "$tmpdir/conanfile.txt"
-elif [ -f conanfile.txt ]; then
-    cp conanfile.txt "$tmpdir/conanfile.txt"
-else
-    echo "please call this script from the cmake build dir or from the project root dir"
-    exit
-fi
-
-
-
-echo "fetch latest version of ubuntu:jammy"
-docker pull ubuntu:jammy
+echo "fetch latest version of de.icr.io/erp_dev/ubuntu-noble"
+docker pull de.icr.io/erp_dev/ubuntu-noble:latest
 
 echo "running docker build"
-docker build -t erp-pc-ubuntu-build:$version "$tmpdir"
+docker build --pull -t erp-pc-ubuntu-build:$version "$tmpdir"
 docker image ls | grep erp-pc-ubuntu-build
 docker tag erp-pc-ubuntu-build:$version de.icr.io/erp_dev/erp-pc-ubuntu-build:$version
 
