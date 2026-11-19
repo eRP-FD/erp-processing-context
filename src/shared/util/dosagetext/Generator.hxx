@@ -22,7 +22,7 @@ namespace dosagetext
 struct ScriptVersion;
 struct Language;
 
-// https://ig.fhir.de/igs/medication/dosierung-textgenerierung.html
+// https://ig.fhir.de/igs/medication/1.0.3/dosierung-textgenerierung.html
 class Generator
 {
 public:

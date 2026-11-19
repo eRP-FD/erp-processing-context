@@ -268,7 +268,7 @@ void ConfigurationFormatter::addFileMembers(rapidjson::Document& document, const
                                             const std::string& value, const std::string& defaultValue,
                                             const KeyData& confOption)
 {
-    static constexpr auto k10KiB = static_cast<uintmax_t>(1024 * 10);
+    static constexpr auto k50KiB = static_cast<uintmax_t>(1024 * 50);
     rapidjson::Pointer valuePtr{key + "/value"};
     const rapidjson::Pointer errorPtr{key + "/error"};
 
@@ -297,9 +297,9 @@ void ConfigurationFormatter::addFileMembers(rapidjson::Document& document, const
         errorPtr.Set(document, "not a regular file");
         return;
     }
-    if (entry.file_size() > k10KiB)
+    if (entry.file_size() > k50KiB)
     {
-        errorPtr.Set(document, "file too large (>10kiB)");
+        errorPtr.Set(document, "file too large (>50kiB)");
         return;
     }
     std::ifstream file{path, std::ios_base::binary};

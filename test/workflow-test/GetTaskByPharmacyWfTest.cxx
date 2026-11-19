@@ -261,9 +261,9 @@ TEST_F(GetTaskByPharmacyWfTest, Success)
 
 TEST_F(GetTaskByPharmacyWfTest, PN2_rejectMissingHcv)
 {
-    if (runsInCloudEnv())
+    if (!runsInErpTest())
     {
-        GTEST_SKIP();
+        GTEST_SKIP() << "EnvironmentVariableGuard only takes effect in-process";
     }
     const auto& keys = TestConfiguration::instance().getArray(TestConfigurationKey::TEST_VSDM_KEYS);
     ASSERT_FALSE(keys.empty());

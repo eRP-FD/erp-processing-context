@@ -7,7 +7,9 @@
 #include "fhirtools/converter/FhirConverter.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/views/FhirResourceViewList.hxx"
+#include "shared/util/Configuration.hxx"
 #include "test/util/ResourceManager.hxx"
+#include <rapidjson/pointer.h>
 #include "test/util/ResourceTemplates.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -333,7 +335,8 @@ class Erp38393BdeUseCase401 : public ErpWorkflowTest, public testing::WithParamI
 TEST_P(Erp38393BdeUseCase401, test)
 {
     // iat claim removed to trigger invalid JWT check.
-    auto jwt = JwtBuilder::testBuilder().getJWT(R"({
+    rapidjson::Document claims401;
+    claims401.Parse(R"({
     "acr": "gematik-ehealth-loa-high",
     "aud": "https://gematik.erppre.de/",
     "exp": 2524608000,
@@ -346,8 +349,13 @@ TEST_P(Erp38393BdeUseCase401, test)
     "organizationName": "Institutions- oder Organisations-Bezeichnung",
     "professionOID": "1.2.276.0.76.4.50",
     "sub": "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"
-}
-)");
+})");
+    const auto audValue401 = Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_REGISTERED_FD_URI, "");
+    if (!audValue401.empty())
+    {
+        rapidjson::Pointer("/aud").Set(claims401, audValue401);
+    }
+    auto jwt = JwtBuilder::testBuilder().getJWT(claims401);
     auto args = RequestArguments{GetParam().method, GetParam().path, "", "application/fhir+xml"}
     .withJwt(jwt)
     .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))
@@ -365,7 +373,8 @@ class Erp38393BdeUseCase403 : public ErpWorkflowTest, public testing::WithParamI
 TEST_P(Erp38393BdeUseCase403, test)
 {
     // ProfessionOid 1.2.276.0.76.4.292 triggers early 403.
-    auto jwt = JwtBuilder::testBuilder().getJWT(R"({
+    rapidjson::Document claims403;
+    claims403.Parse(R"({
     "acr": "gematik-ehealth-loa-high",
     "aud": "https://gematik.erppre.de/",
     "exp": 2524608000,
@@ -379,8 +388,13 @@ TEST_P(Erp38393BdeUseCase403, test)
     "organizationName": "Institutions- oder Organisations-Bezeichnung",
     "professionOID": "1.2.276.0.76.4.292",
     "sub": "RabcUSuuWKKZEEHmrcNm_kUDOW13uaGU5Zk8OoBwiNk"
-}
-)");
+})");
+    const auto audValue403 = Configuration::instance().getOptionalStringValue(ConfigurationKey::IDP_REGISTERED_FD_URI, "");
+    if (!audValue403.empty())
+    {
+        rapidjson::Pointer("/aud").Set(claims403, audValue403);
+    }
+    auto jwt = JwtBuilder::testBuilder().getJWT(claims403);
     auto args = RequestArguments{GetParam().method, GetParam().path, "", "application/fhir+xml"}
     .withJwt(jwt)
     .withHeader(Header::Authorization, getAuthorizationBearerValueForJwt(jwt))

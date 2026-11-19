@@ -213,8 +213,7 @@ TEST_F(ChargeItemTest, ConstructMarked)//NOLINT(readability-function-cognitive-c
 
     ASSERT_NO_THROW(optChargeItem->deleteMarkingFlag());
     EXPECT_FALSE(optChargeItem.value().isMarked());
-    allMarkings = optChargeItem->markingFlags()->getAllMarkings();
-    EXPECT_TRUE(allMarkings.empty());
+    EXPECT_FALSE(optChargeItem->markingFlags().has_value());
 }
 
 TEST_F(ChargeItemTest, ContainedBinary)//NOLINT(readability-function-cognitive-complexity)

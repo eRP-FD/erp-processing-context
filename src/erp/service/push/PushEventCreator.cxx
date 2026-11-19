@@ -13,6 +13,8 @@
 #include "shared/util/Demangle.hxx"
 #include "shared/util/JsonLog.hxx"
 
+#include <boost/asio/post.hpp>
+
 namespace
 {
 void createPushEvent(const PushEventDataCollector& pushEventData, PcServiceContext& serviceContext)
@@ -84,9 +86,12 @@ void PushEventCreator::tryPostCreatePushEvent(PushEventDataCollector pushEventDa
     ++mQueueDepth;
     guard.unlock();
     auto fun = std::bind(&createPushEvent, std::move(pushEventData), std::ref(serviceContext));
-    post(std::move(fun), mStrand, [this] {
-        std::lock_guard guard{mQueueMutex};
-        --mQueueDepth;
+    boost::asio::post(mStrand, [this, fun = std::move(fun)]() mutable {
+        const auto cleanup = gsl::finally([this] {
+            std::lock_guard guard{mQueueMutex};
+            --mQueueDepth;
+        });
+        fun();
     });
 }
 

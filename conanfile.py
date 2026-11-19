@@ -99,7 +99,7 @@ class ErpProcessingContext(ConanFile):
     requires = [
         'antlr4-cppruntime/4.13.2',
         'boost/1.91.0',
-        'botan/3.13.0',
+        'botan/3.14.0',
         'date/3.0.5',  # date can be removed as soon as we use C++20
         'fmt/12.2.0',
         'glog/0.7.1',

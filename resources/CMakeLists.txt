@@ -285,6 +285,13 @@ add_custom_command(
 add_custom_target(t_prescription_sampes DEPENDS "${t_prescription_sampes_DEST_DIR}/.stamp")
 add_dependencies(resources t_prescription_sampes)
 
+add_custom_target(clean-fhir
+    COMMENT "Removing fhir profiles"
+    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf -- "${ERP_FHIR_REPOSITORY_DIR}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -rf -- "${ERP_FHIR_RESOURCE_DIR}"
+)
+
 set(SCHEMA_FILES
         "schema/hl7.fhir.r4.core/4.0.1/json/fhir.json"
         "schema/shared/json/CommunicationDispReqPayloadV1.json"

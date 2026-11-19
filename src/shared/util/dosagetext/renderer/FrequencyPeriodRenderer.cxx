@@ -32,9 +32,11 @@ void FrequencyPeriodRenderer::doRender(const std::vector<model::DosageDgMP>& dos
     {
         mText += timing->frequency + " x ";
     }
-    if (timing->period == "1")
+    if (timing->period == "1" &&
+        (timing->periodUnit == model::TimingDpMpTimeUnit::d || timing->periodUnit == model::TimingDpMpTimeUnit::wk))
     {
         // special cases daily and weekly pattern:
+        // https://ig.fhir.de/igs/medication/1.0.3/dosierung-textgenerierung.html#2-intervall--grundrhythmus-frequency--period--periodunit
         mText += germanFrequency(timing->periodUnit);
     }
     else
@@ -44,7 +46,8 @@ void FrequencyPeriodRenderer::doRender(const std::vector<model::DosageDgMP>& dos
         mText.append("alle ")
             .append(timing->period)
             .append(" ")
-            .append(germanTimeUnit(timing->periodUnit, GrammaticalNumber::PLURAL));
+            .append(germanTimeUnit(timing->periodUnit,
+                                   timing->period == "1" ? GrammaticalNumber::SINGULAR : GrammaticalNumber::PLURAL));
     }
 }
 

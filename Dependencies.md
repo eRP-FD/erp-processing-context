@@ -3,7 +3,7 @@
 | antlr           | 4.13.2       | BSD          | https://www.antlr.org/download.html                 |
 | asn1c           | cci.20200522 | BSD 2-Clause | https://github.com/vlm/asn1c                        |
 | boost           | 1.91.0       | Boost        | https://github.com/boostorg/boost/releases          |
-| botan           | 3.13.0       | BSD 2-Clause | https://github.com/randombit/botan                  |
+| botan           | 3.14.0       | BSD 2-Clause | https://github.com/randombit/botan                  |
 | date            | 3.0.5        | MIT          | https://github.com/HowardHinnant/date/releases      |
 | fmt             | 12.2.0       | MIT          | https://github.com/fmtlib/fmt/releases              |
 | glog            | 0.7.1        | BSD-3-Clause | https://github.com/google/glog/releases             |
