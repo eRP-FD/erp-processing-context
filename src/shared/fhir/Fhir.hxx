@@ -18,7 +18,7 @@
 namespace fhirtools
 {
 class Expression;
-using ExpressionPtr = std::shared_ptr<const Expression>;
+using ExpressionPtr = std::shared_ptr<Expression>;
 }
 
 namespace model

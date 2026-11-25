@@ -17,16 +17,13 @@
 
 namespace model
 {
+class EncryptionKey;
 class Channels;
 class Kvnr;
 class Pusher;
 struct PushKey;
 struct AppId;
 }
-namespace db_model
-{
-struct EncryptionKey;
-} // db_model
 class HsmPool;
 class KeyDerivation;
 

@@ -41,10 +41,6 @@ public:
 
 void ErpWorkflowPushEventsTest::SetUp()
 {
-    if (! runsInErpTest())
-    {
-        GTEST_SKIP() << "Push events generation test requires internal context/DB access and runs only in erp-test";
-    }
     mPushDb = std::make_unique<PushExporterPostgresBackend>(PushExporterPostgresBackend::mainConnection());
 
     if (! mPushDb->transaction() && runsInErpTest())

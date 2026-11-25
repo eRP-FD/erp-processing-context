@@ -10,7 +10,6 @@
 #undef Expect
 #include "erp/model/push/Channels.hxx"
 #include "shared/ErpRequirements.hxx"
-#include "shared/util/Configuration.hxx"
 
 #include <gmock/gmock-matchers.h>
 #include <gtest/gtest.h>
@@ -62,18 +61,6 @@ public:
     void updateChannels(const model::PushKey& pushkey, const std::string& body, ClientResponse& outInnerResponse);
 
     std::string pushKey{"Xp/MzCt8/9DcSNE9cuiaoT5Ac55job3TdLSSmtmYl4A="};
-
-    static std::string pushGatewayUrl()
-    {
-        const auto fqdns = Configuration::instance().pushGatewayFQDNs();
-        if (fqdns.empty())
-        {
-            throw std::logic_error("No push gateway FQDNs configured");
-        }
-        const auto& fqdn = *fqdns.begin();
-        const auto port = fqdn.port == 443 ? "" : ":" + std::to_string(fqdn.port);
-        return "https://" + fqdn.hostName + port + "/push/v1/";
-    }
 
     std::optional<model::Kvnr> mKvnr1;
     std::optional<model::Kvnr> mKvnr2;
@@ -228,7 +215,7 @@ TEST_F(ErpWorkflowPushTest, registerUpdateDelete)
         "app display name",
         "device display name",
         model::Lang{"de"},
-        model::PusherData{pushGatewayUrl(), "format"},
+        model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
         model::Encryption{"2026-06", SafeString("iss11111111111111111111111111111"), "keyIdentifier"}};
     ClientResponse innerResponse;
     ASSERT_NO_THROW(pushRegister(pusher, innerResponse));
@@ -248,7 +235,7 @@ TEST_F(ErpWorkflowPushTest, registerUpdateDelete)
         "updated app display name",
         "updated device display name",
         model::Lang{"en"},
-        model::PusherData{pushGatewayUrl(), "format"},
+        model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
         model::Encryption{"2026-07", SafeString("iss11111111111111111111111111112"), "updated-keyIdentifier"}};
     ASSERT_NO_THROW(pushRegister(updatedPusher, innerResponse));
     EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::OK);
@@ -338,7 +325,7 @@ TEST_F(ErpWorkflowPushTest, updateChannels)
         "app display name",
         "device display name",
         model::Lang{"de"},
-        model::PusherData{pushGatewayUrl(), "format"},
+        model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
         model::Encryption{"2026-06", SafeString("iss11111111111111111111111111111"), "keyIdentifier"}};
     ClientResponse innerResponse;
     ASSERT_NO_THROW(pushRegister(pusher, innerResponse));
@@ -423,7 +410,7 @@ TEST_F(ErpWorkflowPushTest, auditEventRegisterUnregister)
         "app display name",
         "device display name",
         model::Lang{"de"},
-        model::PusherData{pushGatewayUrl(), "format"},
+        model::PusherData{"https://push-gateway.location.here/push/v1/", "format"},
         model::Encryption{"2026-06", SafeString("iss11111111111111111111111111111"), "keyIdentifier"}};
     ClientResponse innerResponse;
     ASSERT_NO_THROW(pushRegister(pusher, innerResponse, mKvnr2->id()));
@@ -439,40 +426,4 @@ TEST_F(ErpWorkflowPushTest, auditEventRegisterUnregister)
         startTime, std::vector<std::string>{mKvnr2->id(), mKvnr2->id()}, {},
         std::vector<model::AuditEvent::SubType>{model::AuditEvent::SubType::create, model::AuditEvent::SubType::del},
         true);
-}
-
-
-TEST_F(ErpWorkflowPushTest, updateChannelsPushkeyNotFound)
-{
-    model::Channels channels;
-    channels.add(model::ChannelId::erp_task_abort);
-
-    RequestArguments requestArguments{
-        HttpMethod::POST, "/channels/v1/" + UrlHelper::escapeUrl("nonexistent-pushkey"),
-        channels.serializeToJsonString(), ContentMimeType::jsonUtf8};
-    requestArguments.expectedBdeUseCase = bde::PostChannelsPushkey_UC_3_24;
-    auto [outerResponse, innerResponse] = send(requestArguments);
-
-    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
-    rapidjson::Document document;
-    ASSERT_NO_THROW(document.Parse(innerResponse.getBody()));
-    ASSERT_FALSE(document.HasParseError()) << innerResponse.getBody();
-    ASSERT_TRUE(document["errorCode"].IsString());
-    EXPECT_STREQ(document["errorCode"].GetString(), "notFound");
-}
-
-
-TEST_F(ErpWorkflowPushTest, getChannelsPushkeyNotFound)
-{
-    RequestArguments requestArguments{
-        HttpMethod::GET, "/channels/v1/" + UrlHelper::escapeUrl("nonexistent-pushkey"), ""};
-    requestArguments.expectedBdeUseCase = bde::GetChannelsPushkey_UC_3_23;
-    auto [outerResponse, innerResponse] = send(requestArguments);
-
-    EXPECT_EQ(innerResponse.getHeader().status(), HttpStatus::NotFound);
-    rapidjson::Document document;
-    ASSERT_NO_THROW(document.Parse(innerResponse.getBody()));
-    ASSERT_FALSE(document.HasParseError()) << innerResponse.getBody();
-    ASSERT_TRUE(document["errorCode"].IsString());
-    EXPECT_STREQ(document["errorCode"].GetString(), "notFound");
 }

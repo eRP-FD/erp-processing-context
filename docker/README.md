@@ -22,11 +22,11 @@ The script creates a manifest file for graphene which is copied from the templat
 The start_erp.sh shell script is a wrapper for providing a docker entrypoint.
 
 ### Build image
-The build image is used during the build and provides a fixed and constant build environment. The Dockerfile for creating the build image is placed in the docker/build folder.
+The build image is used during the build and provides a fixed and constant build environment. The Dockerfille for creating the build image is placed in the docker/build folder.
 
 #### Build instructions:
 ```shell
-docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3 -f docker/build/Dockerfile .
+docker build -t de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 -f docker/build/Dockerfile .
 ```
 The name of the image (in this case: erp-pc:build) must be adopted in the main Dockerfile.
 

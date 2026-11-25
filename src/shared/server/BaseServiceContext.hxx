@@ -17,7 +17,6 @@
 #include "shared/server/BaseHttpsServer.hxx"
 #include "shared/tpm/Tpm.hxx"
 #include "shared/tsl/TslManager.hxx"
-#include "shared/util/PeriodicTimer.hxx"
 #include "shared/util/health/ApplicationHealth.hxx"
 
 
@@ -88,13 +87,6 @@ public:
 
     void setupTslRefreshJob(std::chrono::seconds tslRefreshInterval);
 
-    /**
-     * Start the shutdown delay timer and countdown logger.
-     * Called by AdminRequestHandler when delaySeconds > 0.
-     * SignalHandler::gracefulShutdown() is called when the delay expires.
-     */
-    void startShutdownTimers(int delaySeconds);
-
     std::shared_ptr<CrlProvider> crlProvider();
 
 protected:
@@ -118,11 +110,6 @@ private:
      */
     std::shared_ptr<TslManager> mTslManager;
     std::unique_ptr<TslRefreshJob> mTslRefreshJob;
-
-    // Shutdown timers — created only when startShutdownTimers() is called.
-    // Must live here (not in TerminationHandler) so they are destroyed before their io_context.
-    std::unique_ptr<PeriodicTimerBase> mShutdownDelayTimer;
-    std::unique_ptr<PeriodicTimerBase> mCountDownTimer;
 };
 
 

@@ -56,13 +56,11 @@ target_sources(fhirtools
         expression/StringManipulation.cxx
         model/Collection.cxx
         model/DateTime.cxx
-        model/DecimalType.cxx
         model/Element.cxx
         model/erp/ErpElement.cxx
         model/MutableElement.cxx
         model/NumberAsStringParserDocument.cxx
         model/NumberAsStringParserWriter.cxx
-        model/PrimitiveValue.cxx
         model/ValueElement.cxx
         parser/ErrorListener.cxx
         parser/FhirPathFixer.cxx

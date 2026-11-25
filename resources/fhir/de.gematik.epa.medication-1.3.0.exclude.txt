@@ -1,273 +1,34 @@
-###############################################################
-# not a FHIR definition
-###############################################################
-package/ImplementationGuide-de.gematik.epa.medication.json
-package/example/Bundle-example-epa-batch-emp-request-bundle.json
-package/example/Bundle-example-epa-batch-emp-response-bundle.json
-package/example/Bundle-example-get-medication-list-bundle1.json
-package/example/Bundle-example-get-medication-plan-bundle-1.json
-package/example/Bundle-example-searchset-medication.json
-package/example/Bundle-example-searchset-medicationdispense.json
-package/example/Bundle-example-searchset-medicationrequest.json
-package/example/Bundle-example-searchset-medicationstatement.json
-package/example/Bundle-medication-plan-chronology-log-bundle.json
-package/example/Medication-1254591a-dd2d-4d17-b8f8-ee3155da0699.json
-package/example/Medication-13c66845-d0ce-43e1-9b0b-884cbbe8df7f.json
-package/example/Medication-1412aa4f-a9ed-45f2-8916-063fee7eb025.json
-package/example/Medication-19549515-60a8-4e1c-b86a-49518053fe9f.json
-package/example/Medication-2571d29b-e213-40ec-b817-a1490718f491.json
-package/example/Medication-312d581c-f5e7-4faa-9de5-c4e1568c6db2.json
-package/example/Medication-3f0b0cb0-e8cf-4aaf-bad8-01a51619417b.json
-package/example/Medication-4B5557E5-4900-47FE-A8D9-407611E05BD2.json
-package/example/Medication-56ca34f1-a3f3-42f7-95a2-f5a6423c2031.json
-package/example/Medication-659c0be1-2ec8-4137-9698-dcffee811934.json
-package/example/Medication-83d7ad1c-47d1-4524-829a-5b86ce333bbc.json
-package/example/Medication-87f08ba2-da7e-467e-86aa-404d9035297c.json
-package/example/Medication-CortisonDexpantenol.json
-package/example/Medication-Technical-Exp-EPAMedicationMax.json
-package/example/Medication-Technical-Exp-NachtragEmlMedication.json
-package/example/Medication-Technical-Exp-NachtragEmpMedicationEml.json
-package/example/Medication-Technical-Exp-NachtragEmpMedicationEmp.json
-package/example/Medication-a2aa2baf-c37d-40e0-bff5-f6e8a58dc2c3.json
-package/example/Medication-ab8addbd-c4c7-48d2-bf4b-4a7c99f9fd6e.json
-package/example/Medication-bb91cde8-0426-4f4b-a766-5d818d0605bd.json
-package/example/Medication-deecd514-235d-41df-a664-e3672208f410.json
-package/example/Medication-ef5d5baf-0c42-4240-9604-7fba9cea926d.json
-package/example/Medication-fc7b28e8-05ac-4ac8-86d7-7677d9c6134e.json
-package/example/MedicationDispense-3c10c1ad-1d7a-47e8-abab-00b8299b49b8.json
-package/example/MedicationDispense-4e6e1623-778e-44a3-b208-8479f5339e43.json
-package/example/MedicationDispense-5aeaf266-a7ee-4e9d-bcb9-3c7dde96abad.json
-package/example/MedicationDispense-6250569a-3505-4db7-aebc-45dba1f98acc.json
-package/example/MedicationDispense-b2911d1e-fc63-47bb-8887-63b701bc49c4.json
-package/example/MedicationDispense-c0b553bd-2542-49d7-b5e1-0a770185e39f.json
-package/example/MedicationDispense-c3a353f0-c61a-4d6b-affa-daf8c0f6e77c.json
-package/example/MedicationDispense-f7240e05-01a1-4ce6-a8bb-edb71b6b5104.json
-package/example/MedicationDispense-fa0c29e1-c4e7-4f08-91ab-598a2233867c.json
-package/example/MedicationRequest-0435e19e-ed9a-4b5b-a9e9-70924c5922a0.json
-package/example/MedicationRequest-08cb8487-2758-406c-999a-e23a05e63c0b.json
-package/example/MedicationRequest-0e7f16e4-d879-4a2c-8292-41c55201bbdd.json
-package/example/MedicationRequest-266620a9-2c26-41c1-b0cb-a10947b867f5.json
-package/example/MedicationRequest-2a794a78-8a72-46ca-bb81-09f702f94e11.json
-package/example/MedicationRequest-3191d752-3adf-4c7f-848d-8d43766fed72.json
-package/example/MedicationRequest-3ffb5c34-81e7-45ec-842c-82a2422cb8c8.json
-package/example/MedicationRequest-40df19aa-40e2-4ebc-a11d-9d232dcb0f67.json
-package/example/MedicationRequest-4dd6f19d-002c-44ac-ae2f-3c9d08ad35b8.json
-package/example/MedicationRequest-6461edff-13ec-4dc7-b9f3-aea66bcb0643.json
-package/example/MedicationRequest-71b66f1b-8032-4886-b7bf-e775daee22fb.json
-package/example/MedicationRequest-7efae80a-a4d9-4e26-a1b9-92c72e79cfaa.json
-package/example/MedicationRequest-Technical-Exp-NachtragEmpMedicationRequestEmp.json
-package/example/MedicationRequest-ed2eeb8c-9ab6-4f4f-be9d-7e1a3784045e.json
-package/example/MedicationRequest-f14498f0-4932-490a-91a2-9de8616e133b.json
-package/example/MedicationRequest-f6b1d9ab-4ff0-405e-8d2d-7a181d9fdbdd.json
-package/example/MedicationStatement-0fc1f006-5793-4501-81b6-fe3918fcfa2d.json
-package/example/MedicationStatement-133c8159-6398-4937-984a-d741e24556ad.json
-package/example/MedicationStatement-1b88713c-64cc-40ad-9665-70ca5f7dfb08.json
-package/example/MedicationStatement-1cb0f018-178d-4488-a6b4-2be32dbda784.json
-package/example/MedicationStatement-405ff43e-bc8e-4109-b370-3e31431c5fe0.json
-package/example/MedicationStatement-71601cdb-8a53-4f26-b5d5-e5457b498e76.json
-package/example/MedicationStatement-Technical-Exp-NachtragEmlMedicationStatement.json
-package/example/MedicationStatement-Technical-Exp-NachtragEmpMedicationStatementEml.json
-package/example/MedicationStatement-ab495b80-c9d2-4ed6-a076-b44b8dfae75a.json
-package/example/MedicationStatement-b87b0908-7765-4ec0-8662-7d3daff08f6e.json
-package/example/MedicationStatement-cfb84928-15d6-468c-8e17-e77f1ed44904.json
-package/example/MedicationStatement-f29f1d0c-be05-4b0d-a335-3e508da39c0c.json
-package/example/MedicationStatement-f3988023-2313-4645-bd6b-f9e37cfb6fc7.json
-package/example/OperationOutcome-0a30eb5d-289f-44cf-a0bd-ec4ec38edaa8.json
-package/example/OperationOutcome-0b476e35-02d5-4fb0-ad60-79f5eb05e2b4.json
-package/example/OperationOutcome-0b967346-00bf-412c-8e05-077ed13e873e.json
-package/example/OperationOutcome-12f5513f-3eef-41ad-baca-826627c890f2.json
-package/example/OperationOutcome-1a5a1db0-7bab-4d25-a43d-3ad1efb29cb5.json
-package/example/OperationOutcome-1e5838dd-ec29-4f68-9739-dfa717db515d.json
-package/example/OperationOutcome-24b64018-89f4-4a52-8e9c-c0af279c4e86.json
-package/example/OperationOutcome-255002c7-aa1b-4163-bdd4-ede482453cca.json
-package/example/OperationOutcome-2b34898e-a9d1-4fa6-9959-5ff6033cfcb0.json
-package/example/OperationOutcome-41d25882-4a02-47e3-a367-f5b5fe8c8015.json
-package/example/OperationOutcome-446e77ff-9fcb-4232-8de3-74986f78d85f.json
-package/example/OperationOutcome-52c59e99-eba0-4488-b829-39983b9169f5.json
-package/example/OperationOutcome-912a5e81-6274-439e-9d79-5172c4855a70.json
-package/example/OperationOutcome-98ca7dff-aa8d-47d0-a074-4055f55cb4db.json
-package/example/OperationOutcome-98ca7dff-aa8d-47d0-a074-4055f55cb4dc.json
-package/example/OperationOutcome-a1dc2bb2-1776-4ccd-929f-355472077cf6.json
-package/example/OperationOutcome-a4da96e5-84d6-4883-8789-5df2e1363c40.json
-package/example/OperationOutcome-a94b020a-2f34-4013-83ea-cf1bd0a92cdd.json
-package/example/OperationOutcome-b29880f0-6c99-4fe2-aae2-007e8cb4d9cf.json
-package/example/OperationOutcome-bef62761-7eea-4daa-a992-36c532232679.json
-package/example/OperationOutcome-c03670fe-eaf2-4a38-a333-4dc1470072a2.json
-package/example/OperationOutcome-c146f801-8f50-4ca4-8578-514d5938e3c3.json
-package/example/OperationOutcome-dc558008-4fbd-4e51-a16a-0cbc382a529f.json
-package/example/OperationOutcome-e4f1ed42-7741-40f5-a84e-fd688ac74d3e.json
-package/example/OperationOutcome-e69228bf-6f07-4055-8190-e832d2c670dc.json
-package/example/OperationOutcome-e730e451-3a44-4842-a8ed-1517a3334465.json
-package/example/OperationOutcome-ee1e0518-02f2-4d3a-99ae-bae8e91c382d.json
-package/example/OperationOutcome-fc3e8ea4-41ec-4de2-906e-97871b34adcb.json
-package/example/Organization-151f1697-7512-4e21-9466-1b75207475d8.json
-package/example/Organization-450a9511-53e5-4af7-be36-a18444bb8dd2.json
-package/example/Organization-8B421590-9F7F-46BE-BD1E-C987063AC4F5.json
-package/example/Organization-Technical-Exp-NachtragEmlLEI.json
-package/example/Organization-Technical-Exp-NachtragEmpLEI.json
-package/example/Organization-ad7dc0e7-cb44-4740-ba67-cb573e29d596.json
-package/example/Organization-be51e0d2-783d-4e21-b16b-1a4cd7403515.json
-package/example/Parameters-7ccb2670-7178-4f82-912a-de70f68ecd51.json
-package/example/Parameters-example-epa-op-add-eml-entry-input-parameters-1.json
-package/example/Parameters-example-epa-op-add-emp-entry-input-parameters-1.json
-package/example/Parameters-example-epa-op-add-emp-entry-with-reference-input-parameters-1.json
-package/example/Parameters-example-epa-op-cancel-dispensation-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-cancel-prescription-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-eml-entry-cancelled-output-parameters-1.json
-package/example/Parameters-example-epa-op-eml-entry-output-parameters-1.json
-package/example/Parameters-example-epa-op-emp-entry-output-parameters-1.json
-package/example/Parameters-example-epa-op-emp-entry-output-parameters-2.json
-package/example/Parameters-example-epa-op-link-emp-entry-output-parameters-1.json
-package/example/Parameters-example-epa-op-link-emp-entry-parameters-1.json
-package/example/Parameters-example-epa-op-provide-dispensation-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-provide-dispensation-erp-input-parameters-2.json
-package/example/Parameters-example-epa-op-provide-dispensation-erp-input-parameters-3.json
-package/example/Parameters-example-epa-op-provide-prescription-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-provide-prescription-erp-input-parameters-2.json
-package/example/Parameters-example-epa-op-rmp-commit-input-parameters-1.json
-package/example/Parameters-example-epa-op-rx-dispensation-erp-output-parameters-1.json
-package/example/Parameters-example-epa-op-rx-prescription-erp-output-parameters-1.json
-package/example/Parameters-example-epa-op-unlink-emp-entry-output-parameters-1.json
-package/example/Parameters-example-epa-op-unlink-emp-entry-parameters-1.json
-package/example/Parameters-example-epa-op-update-emp-entry-input-parameters-1.json
-package/example/Patient-Technical-Exp-NachtragEmlPatient.json
-package/example/Patient-Technical-Exp-NachtragEmpPatient.json
-package/example/Practitioner-498c345f-31f5-4da6-9f04-00fa2bc8af7c.json
-package/example/PractitionerRole-73a551f8-d8cd-4b44-823d-ab5f8aeab1aa.json
-package/example/PractitionerRole-b9eb9668-b61e-43b5-b3ea-485234836d59.json
-package/example/Provenance-0b383501-f078-464b-b984-9fdb6751601b.json
-package/example/Provenance-168ec791-45ca-434c-8ba8-cbc855a3ca90.json
-package/example/Provenance-176eec9c-8d5a-46a7-96e3-7af3f68c49ed.json
-package/example/Provenance-1a93c378-435e-437e-8c7c-6e84b788a3eb.json
-package/example/Provenance-20335453-d103-4957-a370-03c9007db2f6.json
-package/example/Provenance-2e112cb5-3b9f-4434-848e-26e27756cd30.json
-package/example/Provenance-2e1ba746-1aef-4eef-b741-2dfc771c7001.json
-package/example/Provenance-319fcc6e-049d-4eb1-9a5c-82c33438cf94.json
-package/example/Provenance-39475183-3444-4b63-bfed-ae0741f4496b.json
-package/example/Provenance-850ef590-34ff-469a-8c0d-13b6751a029b.json
-package/example/Provenance-8faa45dd-b2dc-4a80-8956-94aeab1db04b.json
-package/example/Provenance-9090b28c-e165-4823-b82b-15bb63012123.json
-package/example/Provenance-Technical-Exp-NachtragEmlProvenance.json
-package/example/Provenance-Technical-Exp-NachtragEmpProvenanceEml.json
-package/example/Provenance-Technical-Exp-NachtragEmpProvenanceEmp.json
-package/example/Provenance-a36b3ae8-1c1d-4dbb-b209-ee2ee9fc31e6.json
-package/example/Provenance-a99c2849-de82-4a43-98f4-8d6a4caa6038.json
-package/example/Provenance-b467ce05-e0e5-4d71-9a0b-d824dbb492ef.json
-package/example/Provenance-b5ad3b05-1174-415f-8f43-555160862b25.json
-package/example/Provenance-cf988182-fd13-4f1f-a35c-d045c57c28d0.json
-package/example/Provenance-de42aa65-f84e-4e96-acfb-b9fd5e104b2d.json
-package/example/Provenance-f2e5c91f-4aed-484f-b313-7332ac2677c8.json
-package/example/Provenance-f35a13e2-d82c-4826-97d7-b7e32721c4af.json
-package/CapabilityStatement-epa-medication-service-client.json
-package/CapabilityStatement-epa-medication-service-server.json
-package/OperationDefinition-add-eml-entry-op.json
-package/OperationDefinition-add-emp-entry-op.json
-package/OperationDefinition-batch-emp-entries-op.json
-package/OperationDefinition-cancel-dispensation-erp-OP.json
-package/OperationDefinition-cancel-eml-entry-op.json
-package/OperationDefinition-cancel-prescription-erp-OP.json
-package/OperationDefinition-emp-commit-op.json
-package/OperationDefinition-get-medication-list-op.json
-package/OperationDefinition-get-medication-plan-op.json
-package/OperationDefinition-link-emp-op.json
-package/OperationDefinition-medication-plan-log-op.json
-package/OperationDefinition-provide-dispensation-erp-OP.json
-package/OperationDefinition-provide-prescription-erp-OP.json
-package/OperationDefinition-unlink-emp-op.json
-package/OperationDefinition-update-emp-entry-op.json
-package/SearchParameter-based-on-emp-sp.json
-package/SearchParameter-context-sp.json
-package/SearchParameter-derived-from-sp.json
-package/SearchParameter-is-emp-chronology-sp.json
-package/SearchParameter-medication-statement-activity-sp.json
-package/SearchParameter-medicationrequest-effective-dose-period-sp.json
-package/SearchParameter-provenance-agent-identifier-sp.json
-package/SearchParameter-rx-prescription-process-sp.json
+## exclude Open API specification
 package/openapi/epa-medication-service-client.openapi.json
 package/openapi/epa-medication-service-server.openapi.json
-package/other/validation-summary.json
-package/other/validation-oo.json
-
-###############################################################
-# files with version conflict to de.gematik.epa.medication#1.3.2
-###############################################################
-package/StructureDefinition-teratogenic-extension.json
-
-###############################################################
-# files unchanged in de.gematik.epa.medication#1.3.2
-###############################################################
-package/CodeSystem-context-code.json
-package/CodeSystem-epa-medicationstatement-processing-event-code.json
-package/CodeSystem-epa-ms-operation-outcome-details.json
-package/StructureDefinition-context-extension.json
-package/StructureDefinition-drug-category-extension.json
-package/StructureDefinition-epa-medication-type-extension.json
-package/StructureDefinition-epa-medication-unique-identifier.json
-package/StructureDefinition-epa-medicationstatement-processing-event-extension.json
-package/StructureDefinition-indicator-bvg-extension.json
-package/StructureDefinition-indicator-ser-extension.json
-package/StructureDefinition-is-emp-chronology-extension.json
+# de.gematik.epa.medication-1.3.0+1.3.2
 package/StructureDefinition-is-emp-extension.json
 package/StructureDefinition-medication-formulation-packaging-extension.json
+package/ValueSet-epa-medication-statement-status-vs.json
+package/StructureDefinition-context-extension.json
+package/StructureDefinition-indicator-bvg-extension.json
+package/StructureDefinition-multiple-prescription-extension.json
 package/StructureDefinition-medication-id-vaccine-extension.json
 package/StructureDefinition-medication-ingredient-amount-extension.json
-package/StructureDefinition-medication-ingredient-darreichungsform-extension.json
-package/StructureDefinition-medication-manufacturing-instructions-extension.json
-package/StructureDefinition-medication-packaging-size-extension.json
-package/StructureDefinition-medication-total-quantity-formulation-extension.json
-package/StructureDefinition-multiple-prescription-extension.json
-package/StructureDefinition-patient-id-extension.json
-package/StructureDefinition-patient-note-extension.json
-package/StructureDefinition-prescriber-id-extension.json
+package/CodeSystem-epa-medicationstatement-processing-event-code.json
 package/StructureDefinition-reason-patient-instruction-extension.json
-package/StructureDefinition-rx-originator-process-identifier.json
-package/StructureDefinition-rx-prescription-process-identifier-extension.json
-package/StructureDefinition-rx-prescription-process-identifier.json
-package/ValueSet-context-code.json
-package/ValueSet-emp-medicationrequest-status-vs.json
-package/ValueSet-epa-medication-statement-status-vs.json
-package/ValueSet-epa-medicationstatement-context-code.json
+package/CodeSystem-context-code.json
 package/ValueSet-epa-medicationstatement-processing-event-code.json
+package/StructureDefinition-medication-packaging-size-extension.json
+package/ValueSet-emp-medicationrequest-status-vs.json
+package/StructureDefinition-epa-medication-type-extension.json
+package/CodeSystem-epa-ms-operation-outcome-details.json
+package/StructureDefinition-medication-total-quantity-formulation-extension.json
+package/StructureDefinition-drug-category-extension.json
+package/StructureDefinition-prescriber-id-extension.json
+package/StructureDefinition-patient-note-extension.json
+package/StructureDefinition-medication-manufacturing-instructions-extension.json
 package/ValueSet-epa-provide-dispensation-status-vs.json
-
-###############################################################
-# only version changed in de.gematik.epa.medication#1.3.2
-###############################################################
-# package/StructureDefinition-epa-op-add-eml-entry-input-parameters.json
-# package/StructureDefinition-epa-op-eml-entry-output-parameters.json
-# package/StructureDefinition-epa-op-emp-entry-output-parameters.json
-
-###############################################################
-# files changed in de.gematik.epa.medication#1.3.2
-###############################################################
-# package/StructureDefinition-emp-chronology-provenance.json
-# package/StructureDefinition-emp-medication-request.json
-# package/StructureDefinition-emp-medication.json
-# package/StructureDefinition-emp-medicationrequest-activity-extension.json
-# package/StructureDefinition-emp-origin-medication-extension.json
-# package/StructureDefinition-epa-batch-emp-request-bundle.json
-# package/StructureDefinition-epa-medication-dispense.json
-# package/StructureDefinition-epa-medication-pharmaceutical-product.json
-# package/StructureDefinition-epa-medication-request.json
-# package/StructureDefinition-epa-medication-statement.json
-# package/StructureDefinition-epa-medication.json
-# package/StructureDefinition-epa-op-link-emp-entry-output-parameters.json
-# package/StructureDefinition-epa-op-link-emp-entry-parameters.json
-# package/StructureDefinition-epa-op-update-emp-entry-input-parameters.json
-# package/StructureDefinition-narcotics-extension.json
-# package/ValueSet-epa-ms-operation-outcome-details.json
-# package/StructureDefinition-epa-medication-pzn-ingredient.json
-# package/StructureDefinition-epa-ms-operation-outcome.json
-# package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
-# package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
-# package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
-# package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
-# package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
-# package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
-# package/StructureDefinition-epa-op-add-emp-entry-input-parameters.json
-
-###############################################################
-# removed in de.gematik.epa.medication#1.3.2
-###############################################################
-# package/StructureDefinition-epa-op-rmp-commit-input-parameters.json
-
+package/ValueSet-epa-medicationstatement-context-code.json
+package/StructureDefinition-is-emp-chronology-extension.json
+package/StructureDefinition-medication-ingredient-darreichungsform-extension.json
+package/StructureDefinition-indicator-ser-extension.json
+package/StructureDefinition-patient-id-extension.json
+package/ValueSet-context-code.json
+package/StructureDefinition-epa-medicationstatement-processing-event-extension.json
+package/StructureDefinition-teratogenic-extension.json

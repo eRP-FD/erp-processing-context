@@ -31,11 +31,11 @@ public:
     [[nodiscard]] std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const override;
     [[nodiscard]] bool hasValue() const override;
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
-    [[nodiscard]] const std::vector<std::string>& subElementNames() const override;
+    [[nodiscard]] std::vector<std::string> subElementNames() const override;
 
     [[nodiscard]] std::string asRaw() const override;
 
-    [[nodiscard]] QuantityType asQuantity() const override;
+    [[nodiscard]] Element::QuantityType asQuantity() const override;
     [[nodiscard]] DateTime asDateTime() const override;
     [[nodiscard]] Time asTime() const override;
     [[nodiscard]] Date asDate() const override;
@@ -56,7 +56,6 @@ private:
     [[nodiscard]] std::shared_ptr<PrimitiveElement> asPrimitiveElement(Type type, const std::string& value,
                                                                        const std::string& unit) const;
     std::shared_ptr<const FhirValue> mValue;
-    mutable std::vector<std::string> mSubElementNameCache;
 };
 
 class FhirValue

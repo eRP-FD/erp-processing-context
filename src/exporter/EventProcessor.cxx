@@ -73,14 +73,9 @@ bool EventProcessor::process()
         {
             jsonLog() << *kvnr << KeyValue("event", "Processing task events: Unexpected error. Mark first event as deadletter")
                       << KeyValue("reason", e.what());
-            if (auto unexpandedTaskEvent = autocommit([&](auto& db) {
-                    db.recordErrorOnFirstEvent(*kvnr, e.what());
-                    return db.markFirstEventDeadLetter(*kvnr);
-                }))
-            {
-                writeAuditEvent(makeDeadLetterAudit(unexpandedTaskEvent->prescriptionId, unexpandedTaskEvent->kvnr,
-                                                    unexpandedTaskEvent->useCase));
-            }
+            autocommit([&](auto& db) {
+                db.markFirstEventDeadLetter(*kvnr);
+            });
         }
         catch (const std::exception& e)
         {
@@ -88,7 +83,7 @@ bool EventProcessor::process()
             jsonLog().locationFromException(e)
                 << *kvnr << KeyValue("event", "Processing task events: Unexpected error. Rescheduling KVNR")
                 << KeyValue("retryCount", std::to_string(kvnr->getRetryCount())) << KeyValue("reason", reason);
-            scheduleRetryQueue(*kvnr, reason);
+            scheduleRetryQueue(*kvnr);
         }
         return true;
     }
@@ -99,7 +94,7 @@ bool EventProcessor::process()
 void EventProcessor::processOne(const model::EventKvnr& kvnr)
 {
     // Workflow step 18
-    if (checkRetryCount(kvnr, kvnr.getRetryCount()))
+    if (checkRetryCount(kvnr))
     {
         // Workflow step 2
         auto events = autocommit([&](auto& db) {
@@ -159,9 +154,6 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
                     mServiceContext->mergeFailingEpas(std::move(epaAccount.failingHosts));
                     processEpaUnknown(kvnr);
                     break;
-                case EpaAccount::Code::paused:
-                    processEpaPaused(kvnr);
-                    break;
             }
         }
         else
@@ -177,24 +169,57 @@ void EventProcessor::processOne(const model::EventKvnr& kvnr)
     }
 }
 
-bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr, int32_t retry)
+bool EventProcessor::checkRetryCount(const model::EventKvnr& kvnr)
 {
+    const auto retry = kvnr.getRetryCount();
     // Workflow step 18 check retry_count
     if (retry > mMaxRetryAttempts)
     {
+        AuditDataCollector auditDataCollector;
+        auditDataCollector.setAgentName("E-Rezept-Fachdienst");
+        auditDataCollector.setAgentType(model::AuditEvent::AgentType::machine);
+        auditDataCollector.setAgentWho("9-E-Rezept-Fachdienst");
+        auditDataCollector.setDeviceId(ExporterDeviceId);
+
         // Workflow step 19 mark first event as deadletter-queue
         if (const auto unexpandedTaskEvent = autocommit([&](MedicationExporterDatabaseFrontendInterface& db) {
                 return db.markFirstEventDeadLetter(kvnr);
             }))
         {
+            auditDataCollector.setPrescriptionId(unexpandedTaskEvent->prescriptionId);
+            auditDataCollector.setInsurantKvnr(unexpandedTaskEvent->kvnr);
+
+            switch (unexpandedTaskEvent->useCase)
+            {
+                case model::TaskEvent::UseCase::providePrescription:
+                    A_25962.start("Die Verordnung konnte nicht in die Patientenakte übertragen werden.");
+                    auditDataCollector.setAction(model::AuditEvent::Action::create);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed);
+                    A_25962.finish();
+                    break;
+                case model::TaskEvent::UseCase::cancelPrescription:
+                    A_25962.start(
+                        "Die Löschinformation zum E-Rezept konnte nicht in die Patientenakte übermittelt werden.");
+                    auditDataCollector.setAction(model::AuditEvent::Action::del);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed);
+                    A_25962.finish();
+                    break;
+                case model::TaskEvent::UseCase::provideDispensation:
+                    A_25962.start("Die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");
+                    auditDataCollector.setAction(model::AuditEvent::Action::create);
+                    auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
+                    A_25962.finish();
+                    break;
+                case model::TaskEvent::UseCase::cancelDispensation:// unreachable
+                    break;
+            }
             jsonLog() << kvnr
-                      << KeyValue("event", "Put first event for task in dead letter queue: Max retry count reached")
+                      << KeyValue("event", "Put first event for task in dead letter queue")
                       << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                       << KeyValue("prescription_id", unexpandedTaskEvent->prescriptionId.toString())
-                      << KeyValue("reason", unexpandedTaskEvent->lastError);
+                      << KeyValue("reason", "Max retry count reached");
             // Workflow step 20 write audit event
-            writeAuditEvent(makeDeadLetterAudit(unexpandedTaskEvent->prescriptionId, unexpandedTaskEvent->kvnr,
-                                                unexpandedTaskEvent->useCase));
+            writeAuditEvent(auditDataCollector);
         }
         else
         {
@@ -282,23 +307,21 @@ void EventProcessor::processEpaAllowed(const model::EventKvnr& kvnr, EpaAccount&
                 {
                     jsonLog() << kvnr << KeyValue("retryCount", std::to_string(kvnr.getRetryCount()))
                               << KeyValue("event", "Technical error occurred. Rescheduling KVNR");
-                    scheduleRetryQueue(kvnr, result.errorReason);
+                    scheduleRetryQueue(kvnr);
                     return;// break transmission of remaining events of this KVNR
                 }
                 break;
             case eventprocessing::Outcome::Conflict:
                 processEpaConflict(kvnr);
-                // No further processing.
-                return;
+                break;
             case eventprocessing::Outcome::ConsentRevoked:
                 processEpaDeniedOrNotFound(kvnr);
-                // No further processing.
-                return;
+                break;
             case eventprocessing::Outcome::DeadLetter:// Workflow step 11b - DeadletterQueue -> Workflow step 17
                 // Workflow step 17 - set deadletter
                 const auto skipped = autocommit([&](auto& db) {
                     return db.markDeadLetter(kvnr, event->getPrescriptionId(), event->getPrescriptionType(),
-                                             result.errorReason);
+                                             result.deadLetterReason);
                 });
                 TVLOG(1) << "marked events as deadletterQueue: " << skipped;
                 jsonLog() << kvnr << KeyValue("event", "Setting all events for task in DLQ because of error in processing current task event")
@@ -370,19 +393,7 @@ void EventProcessor::processEpaUnknown(const model::EventKvnr& kvnr)
                                        1s);
             break;
     }
-    scheduleRetryQueue(kvnr, "account lookup unknown with given kvnr");
-}
-
-void EventProcessor::processEpaPaused(const model::EventKvnr& kvnr)
-{
-    const auto delay = std::chrono::seconds(Configuration::instance().getIntValue(
-        ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DELAY_PAUSED_EPA_SECONDS));
-    jsonLog() << kvnr
-              << KeyValue("event", "ePA of KVNR is paused. Reschedule KVNR in " + std::to_string(delay.count()) + "s.");
-    // keep the retry count, pausing an ePA is not an error of processing
-    autocommit([&](auto& db) {
-        db.updateProcessingDelay(kvnr.getRetryCount(), delay, kvnr);
-    });
+    scheduleRetryQueue(kvnr);
 }
 
 void EventProcessor::writeAuditEvent(const AuditDataCollector& auditDataCollector)
@@ -414,43 +425,6 @@ void EventProcessor::checkDeactivateThrottle(const std::string& hostNotFailing)
     }
 }
 
-AuditDataCollector EventProcessor::makeDeadLetterAudit(const model::PrescriptionId& prescriptionId,
-                                                       const model::Kvnr& kvnr,
-                                                       const model::TaskEvent::UseCase& useCase)
-{
-    AuditDataCollector auditDataCollector;
-    auditDataCollector.setAgentName("E-Rezept-Fachdienst");
-    auditDataCollector.setAgentType(model::AuditEvent::AgentType::machine);
-    auditDataCollector.setAgentWho("9-E-Rezept-Fachdienst");
-    auditDataCollector.setDeviceId(ExporterDeviceId);
-    auditDataCollector.setPrescriptionId(prescriptionId);
-    auditDataCollector.setInsurantKvnr(kvnr);
-    switch (useCase)
-    {
-        case model::TaskEvent::UseCase::providePrescription:
-            A_25962.start("Die Verordnung konnte nicht in die Patientenakte übertragen werden.");
-            auditDataCollector.setAction(model::AuditEvent::Action::create);
-            auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_PRESCRIPTION_ERP_failed);
-            A_25962.finish();
-            break;
-        case model::TaskEvent::UseCase::cancelPrescription:
-            A_25962.start("Die Löschinformation zum E-Rezept konnte nicht in die Patientenakte übermittelt werden.");
-            auditDataCollector.setAction(model::AuditEvent::Action::del);
-            auditDataCollector.setEventId(model::AuditEventId::POST_CANCEL_PRESCRIPTION_ERP_failed);
-            A_25962.finish();
-            break;
-        case model::TaskEvent::UseCase::provideDispensation:
-            A_25962.start("Die Medikamentenabgabe konnte nicht in die Patientenakte übertragen werden.");
-            auditDataCollector.setAction(model::AuditEvent::Action::create);
-            auditDataCollector.setEventId(model::AuditEventId::POST_PROVIDE_DISPENSATION_ERP_failed);
-            A_25962.finish();
-            break;
-        case model::TaskEvent::UseCase::cancelDispensation:// unreachable
-            break;
-    }
-    return auditDataCollector;
-}
-
 EpaAccount EventProcessor::ePaAccountLookup(const model::EventKvnr& kvnr, const model::TaskEvent& taskEvent)
 {
     BDEMessage::Data data;
@@ -463,19 +437,13 @@ EpaAccount EventProcessor::ePaAccountLookup(const model::EventKvnr& kvnr, const 
     return acc;
 }
 
-void EventProcessor::scheduleRetryQueue(const model::EventKvnr& kvnr, const std::string& reason)
+void EventProcessor::scheduleRetryQueue(const model::EventKvnr& kvnr)
 {
-    autocommit([&](auto& db) {
-        db.recordErrorOnFirstEvent(kvnr, reason);
-    });
     auto retry = kvnr.getRetryCount();
-    if (checkRetryCount(kvnr, retry + 1))
-    {
-        std::chrono::seconds retryDelaySeconds = calculateExponentialBackoffDelay(retry);
-        autocommit([&](auto& db) {
-            db.updateProcessingDelay(++retry, retryDelaySeconds, kvnr);
-        });
-    }
+    std::chrono::seconds retryDelaySeconds = calculateExponentialBackoffDelay(retry);
+    autocommit([&](auto& db) {
+        db.updateProcessingDelay(++retry, retryDelaySeconds, kvnr);
+    });
 }
 
 void EventProcessor::scheduleHealthRecordRelocation(const model::EventKvnr& kvnr)

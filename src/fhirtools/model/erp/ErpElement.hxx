@@ -51,11 +51,11 @@ public:
     [[nodiscard]] fhirtools::Date asDate() const override;
     [[nodiscard]] fhirtools::Time asTime() const override;
     [[nodiscard]] fhirtools::DateTime asDateTime() const override;
-    [[nodiscard]] fhirtools::QuantityType asQuantity() const override;
+    [[nodiscard]] QuantityType asQuantity() const override;
     [[nodiscard]] const rapidjson::Value* asJson() const;
 
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
-    [[nodiscard]] const std::vector<std::string>& subElementNames() const override;
+    [[nodiscard]] std::vector<std::string> subElementNames() const override;
     [[nodiscard]] bool hasValue() const override;
     [[nodiscard]] std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const override;
 
@@ -68,7 +68,6 @@ public:
     [[nodiscard]] const rapidjson::Value* jsonValue() const;
 
 private:
-    fhirtools::PrimitiveValue asPrimitiveValue() const;
     std::shared_ptr<const fhirtools::PrimitiveElement> asPrimitiveElement() const;
     static std::string resourceType(const rapidjson::Value& resource);
     static std::vector<std::string_view> profiles(const rapidjson::Value& resource);
@@ -90,7 +89,6 @@ private:
     using SubElementCache = std::map<std::string, std::vector<std::shared_ptr<const Element>>>;
     mutable SubElementCache mSubElementCache;
     std::string mElementName;
-    mutable std::vector<std::string> mSubElementNameCache;
     mutable std::optional<size_t> mArrayIndex = 0;
     // primitive types can have substructures, denoted by _
     // e.g.:

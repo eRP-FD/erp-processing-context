@@ -113,9 +113,7 @@ class HealthHandlerTestTeeTokenUpdater : public TeeTokenUpdater
 public:
     explicit HealthHandlerTestTeeTokenUpdater(HsmPool& hsmPool, TokenRefresher&& tokenRefresher,
                                               std::shared_ptr<Timer> timerManager)
-        // Use a 1000ms interval so the 1500ms staleness threshold is not exceeded during normal test
-        // execution — even on loaded CI machines where the timer thread may be delayed.
-        : TeeTokenUpdater(hsmPool, std::move(tokenRefresher), std::move(timerManager), 1000ms, 1000ms)
+        : TeeTokenUpdater(hsmPool, std::move(tokenRefresher), std::move(timerManager), 100ms, 100ms)
     {
     }
 };
@@ -608,7 +606,7 @@ TEST_F(HealthHandlerTest, SeedTimerDown)//NOLINT(readability-function-cognitive-
 TEST_F(HealthHandlerTest, TeeTokenUpdaterDown)//NOLINT(readability-function-cognitive-complexity)
 {
     HealthHandlerTestTeeTokenUpdaterFactory::fail = true;
-    std::this_thread::sleep_for(1501ms); // > 1.5 * 1000ms (the test-fixture TeeToken update interval)
+    std::this_thread::sleep_for(151ms);
     ASSERT_NO_THROW(handleRequest());
     HealthHandlerTestTeeTokenUpdaterFactory::fail = false;
 

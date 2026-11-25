@@ -277,25 +277,6 @@ void TrustStore::refillFromTsl(TslParser& tslParser)
     mBnaServiceInformation = tslParser.getBnaServiceInformation();
     mServiceInformationMap = tslParser.getServiceInformationMap();
 
-    // Pre-warm the OpenSSL extension cache on every stored CA certificate while still holding
-    // mMutex and before any other thread can observe the new map.
-    //
-    // Background: ossl_x509v3_cache_extensions() performs a lazy one-time write inside every X509
-    // object to populate extension data (sets EXFLAG_SET).  It acquires x->lock for that write.
-    // X509_free() frees x->lock (sets it to NULL) when the last reference is dropped.  If a fresh
-    // d2i_X509 allocation reaches lookupCaCertificate() with EXFLAG_SET still unset, and another
-    // thread concurrently frees that same X509 object (e.g. by replacing the map), then
-    // ossl_x509v3_cache_extensions() can attempt to acquire a freed lock → SIGSEGV.
-    //
-    // Calling getSubjectKeyIdentifier() once here sets EXFLAG_SET while we are the sole owner.
-    // All subsequent calls on the same X509 object take the fast flag-read path and never touch
-    // x->lock again, eliminating the race entirely.
-    for (auto& [_, info] : mServiceInformationMap)
-    {
-        (void) _;
-        (void) info.certificate.getSubjectKeyIdentifier();
-    }
-
     if (mMode == TslMode::TSL && !checkNewTslSignerCaIdList(tslParser, mServiceInformationMap))
     {
         // the problematic CAs related to TUC_PKI_013 should be removed

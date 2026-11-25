@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_JSONLOG_HXX
 #define ERP_PROCESSING_CONTEXT_JSONLOG_HXX
 
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
 
 #include <boost/exception/exception.hpp>
@@ -78,8 +79,8 @@ public:
     static constexpr bool withDetailsDefault();
 
     JsonLog(JsonLog&& o) noexcept = default;
-    explicit JsonLog(LogId id, LogReceiver&& receiver = LogReceiver{}, bool withDetails = withDetailsDefault());
-    explicit JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
+    JsonLog(LogId id, LogReceiver&& receiver = LogReceiver{}, bool withDetails = withDetailsDefault());
+    JsonLog(LogId id, std::ostream& os, bool withDetails = withDetailsDefault());
     ~JsonLog(void);
 
 

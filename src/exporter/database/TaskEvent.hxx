@@ -25,7 +25,6 @@ struct BareTaskEvent
     model::Timestamp authoredOn;
     BlobId blobId;
     const db_model::Blob salt;
-    std::string lastError;
 };
 
 class TaskEvent

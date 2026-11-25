@@ -528,7 +528,7 @@ TEST_F(ErpWorkflowTest, GetMetaData)//NOLINT(readability-function-cognitive-comp
     std::optional<model::MetaData> metaData;
     ASSERT_NO_FATAL_FAILURE(metaData = metaDataGet(ContentMimeType::fhirJsonUtf8));
     ASSERT_TRUE(metaData);
-    if (runsInErpTest())
+    if (!runsInCloudEnv())
     {
         const auto releaseDate = model::Timestamp::fromXsDateTime(std::string{ErpServerInfo::ReleaseDate()});
         EXPECT_EQ(metaData->date(), releaseDate);

@@ -92,11 +92,8 @@ void PostRestartHandler::doHandleRequest(BaseSessionContext& session)
         }
     }
     ErpExpect(delay >= 0, HttpStatus::BadRequest, "Delay value " + std::to_string(delay) + " is out of range");
-    TerminationHandler::instance().gracefulShutdown(delay);
-    if (delay > 0)
-    {
-        session.baseServiceContext.startShutdownTimers(delay);
-    }
+    auto& ioContext = session.baseServiceContext.getAdminServer().getThreadPool().ioContext();
+    TerminationHandler::instance().gracefulShutdown(ioContext, delay);
     session.response.setBody("shutdown in " + std::to_string(delay) + " seconds");
 }
 

@@ -1,5 +1,0 @@
-{
-  "erp-medication-exporter": {
-    "trusted-cas": "file://@ERP_BINARY_DIR@/resources/test/generated_pki_mock/rootCA/rootCA-cert.pem"
-  }
-}

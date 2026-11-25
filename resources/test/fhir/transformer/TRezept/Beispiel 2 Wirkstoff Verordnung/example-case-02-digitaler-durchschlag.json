@@ -2,7 +2,7 @@
   "resourceType": "Parameters",
   "meta": {
     "profile": [
-      "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy|1.2"
+      "https://gematik.de/fhir/erp-t-prescription/StructureDefinition/erp-tprescription-carbon-copy|1.1"
     ]
   },
   "parameter": [
@@ -49,23 +49,6 @@
                   }
                 ],
                 "url": "https://gematik.de/fhir/epa-medication/StructureDefinition/teratogenic-extension"
-              },
-              {
-                "url" : "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction",
-                "valueMarkdown" : "1-0-0-0 Stück"
-              },
-              {
-                "extension" : [
-                  {
-                    "url" : "algorithmVersion",
-                    "valueString" : "1.0.1"
-                  },
-                  {
-                    "url" : "language",
-                    "valueCode" : "de-DE"
-                  }
-                ],
-                "url" : "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta"
               }
             ],
             "status": "completed",
@@ -74,17 +57,10 @@
               "reference": "http://pvs.praxis.local/fhir/Medication/a3ccc266-b033-47cc-9361-98ec450f7db9"
             },
             "subject": {
-              "identifier": [
+              "extension": [
                 {
-                  "system": "http://fhir.de/sid/gkv/kvid-10",
-                  "_value": {
-                    "extension": [
-                      {
-                        "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
-                        "valueCode": "not-permitted"
-                      }
-                    ]
-                  }
+                  "url": "http://hl7.org/fhir/StructureDefinition/data-absent-reason",
+                  "valueCode": "not-permitted"
                 }
               ]
             },

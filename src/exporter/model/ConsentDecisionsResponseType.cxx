@@ -5,6 +5,7 @@
  */
 
 #include "ConsentDecisionsResponseType.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/Expect.hxx"
 
 #include <rapidjson/document.h>

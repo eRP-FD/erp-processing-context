@@ -138,6 +138,20 @@ public:
 
     VauRequestHandlerProfessionOIDTest ()
             : ServerTestBase(true)
+
+            , jwtVersicherter(jwtWithProfessionOID(profession_oid::oid_versicherter))
+            , jwtOeffentliche_apotheke(jwtWithProfessionOID(profession_oid::oid_oeffentliche_apotheke))
+            , jwtKrankenhausapotheke(jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke))
+            , jwtArzt(jwtWithProfessionOID(profession_oid::oid_arzt))
+            , jwtZahnArzt(jwtWithProfessionOID(profession_oid::oid_zahnarzt))
+            , jwtPraxisArzt(jwtWithProfessionOID(profession_oid::oid_praxis_arzt))
+            , jwtZahnArztPraxis(jwtWithProfessionOID(profession_oid::oid_zahnarztpraxis))
+            , jwtPraxisPsychotherapeut(jwtWithProfessionOID(profession_oid::oid_praxis_psychotherapeut))
+            , jwtKrankenhaus(jwtWithProfessionOID(profession_oid::oid_krankenhaus))
+            , jwtBundeswehrapotheke(jwtWithProfessionOID(profession_oid::oid_bundeswehrapotheke))
+            , jwtKostentraeger(jwtWithProfessionOID(profession_oid::oid_kostentraeger))
+            , jwtNcpeh(jwtWithProfessionOID(profession_oid::oid_ncpeh))
+            , jwtInstitutionVorsorgeReha(jwtWithProfessionOID(profession_oid::oid_institution_vorsorge_reha))
         , teeProtocol()
             , mClient(createClient())
             , taskId(model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichtigeArzneimittelPkv, 4711).toString())
@@ -149,22 +163,6 @@ public:
     {
         ASSERT_NO_FATAL_FAILURE(ServerTestBase::SetUp());
         ASSERT_NO_FATAL_FAILURE(Fhir::instance());
-
-        // Create the JWTs only after the (potentially slow) server startup, otherwise they may
-        // already be expired when the test runs under high load.
-        jwtVersicherter = jwtWithProfessionOID(profession_oid::oid_versicherter);
-        jwtOeffentliche_apotheke = jwtWithProfessionOID(profession_oid::oid_oeffentliche_apotheke);
-        jwtKrankenhausapotheke = jwtWithProfessionOID(profession_oid::oid_krankenhausapotheke);
-        jwtArzt = jwtWithProfessionOID(profession_oid::oid_arzt);
-        jwtZahnArzt = jwtWithProfessionOID(profession_oid::oid_zahnarzt);
-        jwtPraxisArzt = jwtWithProfessionOID(profession_oid::oid_praxis_arzt);
-        jwtZahnArztPraxis = jwtWithProfessionOID(profession_oid::oid_zahnarztpraxis);
-        jwtPraxisPsychotherapeut = jwtWithProfessionOID(profession_oid::oid_praxis_psychotherapeut);
-        jwtKrankenhaus = jwtWithProfessionOID(profession_oid::oid_krankenhaus);
-        jwtBundeswehrapotheke = jwtWithProfessionOID(profession_oid::oid_bundeswehrapotheke);
-        jwtKostentraeger = jwtWithProfessionOID(profession_oid::oid_kostentraeger);
-        jwtNcpeh = jwtWithProfessionOID(profession_oid::oid_ncpeh);
-        jwtInstitutionVorsorgeReha = jwtWithProfessionOID(profession_oid::oid_institution_vorsorge_reha);
     }
 
     std::unique_ptr<Database> createDatabaseFrontend()

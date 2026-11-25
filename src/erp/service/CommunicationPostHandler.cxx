@@ -70,11 +70,15 @@ bool canCreatePushNotification(const Communication::MessageType& messageType)
     switch (messageType)
     {
         case Communication::MessageType::Reply:
+            return true;
         case Communication::MessageType::Representative:
+            return true;
         case Communication::MessageType::ChargChangeReply:
+            return true;
         case Communication::MessageType::DiGA:
             return true;
         case Communication::MessageType::ChargChangeReq:
+            return false;
         case Communication::MessageType::DispReq:
             return false;
     }
@@ -219,7 +223,7 @@ void CommunicationPostHandler::handleRequest (PcSessionContext& session)
         // GEMREQ-start A_19450-01#callVerifyPayload
         A_19450_01.start("do not allow malicious code in payload");
         A_23876_01.start("DispReq - Datenstruktur Nachricht");
-        A_23877_03.start("Reply - Datenstruktur Nachricht");
+        A_23877_01.start("Reply - Datenstruktur Nachricht");
         A_23878_01.start("verify json payload V1 of DispReq");
         A_23878_02.start("verify json payload V3 of DispReq");
         A_23879.start("verify json payload V1 of Reply");

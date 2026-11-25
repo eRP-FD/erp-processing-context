@@ -61,7 +61,7 @@ static constexpr Requirement A_27831("E-Rezept-Fachdienst - BfArM - Fehlerbehand
 
 static constexpr Requirement A_27855_01("E-Rezept: Zugriff auf Webdienste - Webzertifikat aus Internet PKI");
 static constexpr Requirement A_27856_01("E-Rezept: Zugriff auf Webdienste - Hostname-Prüfung für TLS-Server-Zertifikat durchführen");
-static constexpr Requirement A_27857_02("E-Rezept-Fachdienst - BfArM - Sperrprüfung für TLS-Server-Zertifikat durchführen");
+static constexpr Requirement A_27857_01("E-Rezept: Zugriff auf Webdienste - Sperrprüfung für TLS-Server-Zertifikat durchführen");
 static constexpr Requirement A_27858_01("E-Rezept: Zugriff auf Webdienste - TLS-Protokollversion und Cipher Suites");
 
 static constexpr Requirement A_27859("E-Rezept-Fachdienst - Zugriff auf Webdienste - Deaktivieren von Übertragungen");

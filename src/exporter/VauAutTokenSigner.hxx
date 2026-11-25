@@ -7,6 +7,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_EXPORTER_VAUAUTTOKENSIGNER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_EXPORTER_VAUAUTTOKENSIGNER_HXX
 
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <rapidjson/document.h>
 #include <string>
 

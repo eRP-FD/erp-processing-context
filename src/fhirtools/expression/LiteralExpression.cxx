@@ -76,7 +76,7 @@ LiteralDateTimeExpression::LiteralDateTimeExpression(
 LiteralQuantityExpression::LiteralQuantityExpression(
     gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, const std::string& value)
     : LiteralExpression(std::make_shared<PrimitiveElement>(fhirStructureRepository, Element::Type::Quantity,
-                                                           QuantityType(value)))
+                                                           Element::QuantityType(value)))
 {
 }
 }

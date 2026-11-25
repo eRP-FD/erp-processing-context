@@ -131,13 +131,6 @@ public:
 
     const FhirStructureRepositoryBackend& repositoryBackend() const;
 
-    // BEGIN: performance report
-    // call enableMeasurement to record performence metrics
-    // call report to print recorded data
-    void enableMeasurement() const;
-    void report() const;
-    // END: performance report
-
     // immutable:
     FhirStructureDefinition(FhirStructureDefinition&&) = delete;
     FhirStructureDefinition& operator=(const FhirStructureDefinition&) = delete;

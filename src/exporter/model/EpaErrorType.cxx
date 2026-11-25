@@ -17,14 +17,13 @@ namespace model
 
 EpaErrorType::EpaErrorType(const NumberAsStringParserDocument& document)
 {
-    // GetString() would return the internal string prefix ('$') as well
     if (const auto* errorCodeValue = errorCodePointer.Get(document))
     {
-        mErrorCode = NumberAsStringParserDocument::getStringValueFromValue(errorCodeValue);
+        mErrorCode = errorCodeValue->GetString();
     }
     if (const auto* errorDetailValue = errorDetailPointer.Get(document))
     {
-        mErrorDetail = NumberAsStringParserDocument::getStringValueFromValue(errorDetailValue);
+        mErrorDetail = errorDetailValue->GetString();
     }
 }
 const std::string& EpaErrorType::getErrorCode() const

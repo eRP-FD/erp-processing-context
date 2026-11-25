@@ -126,11 +126,3 @@ void VsdmKeyCache::startRefresher(boost::asio::io_context& context, std::chrono:
     mRefresher = std::make_unique<PeriodicTimer<Refresher>>(*this, interval);
     mRefresher->start(context, interval);
 }
-
-void VsdmKeyCache::cancelRefresher()
-{
-    if (mRefresher)
-    {
-        mRefresher->cancel();
-    }
-}

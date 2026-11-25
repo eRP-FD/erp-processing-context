@@ -14,6 +14,7 @@
 #include "shared/model/ProfileType.hxx"
 #include "shared/network/client/ProxyParameters.hxx"
 #include "shared/util/Environment.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/ExceptionWrapper.hxx"
 #include "shared/util/SafeString.hxx"
 #include "shared/validation/SchemaType.hxx"
@@ -236,7 +237,6 @@ enum class ConfigurationKey
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN,
     MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS,
-    MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DELAY_PAUSED_EPA_SECONDS,
     MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES,
     MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER,
     MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS,

@@ -19,43 +19,6 @@
 
 using namespace fhirtools;
 
-bool Expression::returnsSorted() const
-{
-    return false;
-}
-
-EvaluationContext fhirtools::ExpressionMeasurement::eval(const EvaluationContext& ctx) const
-{
-    auto startTime = std::chrono::high_resolution_clock::now();
-    try
-    {
-        auto result = mArg->eval(ctx);
-        completed(startTime);
-        return result;
-    }
-    catch (...)
-    {
-        completed(startTime);
-        throw;
-    }
-}
-
-void fhirtools::ExpressionMeasurement::completed(const std::chrono::high_resolution_clock::time_point& startTime) const
-{
-    ++mCallCount;
-    mRuntime += std::chrono::high_resolution_clock::now() - startTime;
-}
-
-uint32_t fhirtools::ExpressionMeasurement::callCount() const
-{
-    return mCallCount;
-}
-
-std::chrono::high_resolution_clock::duration fhirtools::ExpressionMeasurement::runtime() const
-{
-    return mRuntime;
-}
-
 
 EvaluationContext InvocationExpression::eval(const EvaluationContext& context) const
 {

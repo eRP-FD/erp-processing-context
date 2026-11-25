@@ -13,6 +13,7 @@
 
 using fhirtools::test::MockFhirResourceView;
 using ::testing::Eq;
+using ::testing::Invoke;
 using ::testing::Return;
 
 
@@ -99,24 +100,24 @@ public:
         valueSetV2 = std::make_shared<fhirtools::FhirValueSet>(valueSetBuilder.getAndReset());
 
         baseView = MockFhirResourceView::create();
-        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemNoVerKey))).WillByDefault([&]() {
+        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemNoVerKey))).WillByDefault(Invoke([&]() {
             return std::make_shared<const fhirtools::FhirCodeSystemCodes>(codeSystemV2->getCodes(*baseView));
-        });
-        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemV1Key))).WillByDefault([&]() {
+        }));
+        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemV1Key))).WillByDefault(Invoke([&]() {
             return std::make_shared<const fhirtools::FhirCodeSystemCodes>(codeSystemV1->getCodes(*baseView));
-        });
-        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemV2Key))).WillByDefault([&]() {
+        }));
+        ON_CALL(*baseView, findCodeSystemCodes(Eq(codeSystemV2Key))).WillByDefault(Invoke([&]() {
             return std::make_shared<const fhirtools::FhirCodeSystemCodes>(codeSystemV2->getCodes(*baseView));
-        });
-        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetNoVerKey))).WillByDefault([&]() {
+        }));
+        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetNoVerKey))).WillByDefault(Invoke([&]() {
             return fhirtools::FhirValueSetCodes::create(baseView.get(), valueSetV2.get());
-        });
-        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetV1Key))).WillByDefault([&]() {
+        }));
+        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetV1Key))).WillByDefault(Invoke([&]() {
             return fhirtools::FhirValueSetCodes::create(baseView.get(), valueSetV1.get());
-        });
-        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetV2Key))).WillByDefault([&]() {
+        }));
+        ON_CALL(*baseView, findValueSetCodes(Eq(valueSetV2Key))).WillByDefault(Invoke([&]() {
             return fhirtools::FhirValueSetCodes::create(baseView.get(), valueSetV2.get());
-        });
+        }));
         ON_CALL(*baseView, findSupplementers).WillByDefault(Return(std::set<const fhirtools::FhirCodeSystem*>{}));
         EXPECT_CALL(*baseView, findSupplementers).Times(::testing::AnyNumber());
     }

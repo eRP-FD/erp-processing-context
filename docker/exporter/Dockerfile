@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3 AS build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -74,7 +74,7 @@ RUN cmake --build . --target production -- -l$(nproc) && \
 RUN tar -czf ./erp-medication-exporter-debug.tar.gz /debug/erp-exporter
 
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:1.0.0 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.8 AS runtime
 
 WORKDIR /debug/erp-exporter
 COPY --from=reldeb_build /build/RelWithDebInfo/erp-medication-exporter-debug.tar.gz .

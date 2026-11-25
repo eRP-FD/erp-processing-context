@@ -12,6 +12,7 @@
 #include "fhirtools/repository/FhirValueSet.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroupConst.hxx"
 #include "fhirtools/repository/views/VersionMappingView.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <gtest/gtest.h>
 #include <magic_enum/magic_enum.hpp>

@@ -193,7 +193,7 @@ services:
       BFARM_TEMPLATE_PATH: /opt/bfarmmock/lzconfig/templates
       BFARM_SRV_FILE: /opt/bfarmmock/config/srv.yaml
     volumes:
-      - '@ERP_BINARY_DIR@/resources/test/generated_pki_mock/bfarm-keystore.p12:/tls/keystore.p12:ro,Z'
+      - '@ERP_SOURCE_DIR@/docker-compose/bfarm/tls/keystore.p12:/tls/keystore.p12:ro,Z'
       - '@ERP_SOURCE_DIR@/docker-compose/bfarm/lz-config.json:/opt/bfarmmock/lzconfig/lz-config.json:Z'
       - '@ERP_SOURCE_DIR@/docker-compose/bfarm/templates:/opt/bfarmmock/lzconfig/templates:Z'
       - '@ERP_SOURCE_DIR@/docker-compose/bfarm/srv.yaml:/opt/bfarmmock/config/srv.yaml:Z'
@@ -217,9 +217,9 @@ services:
       PUSHGATEWAY_TEMPLATE_PATH: /opt/pushgatewaymock/lzconfig/templates
       PUSHGATEWAY_SRV_FILE: /opt/pushgatewaymock/config/srv.yaml
     volumes:
-      - '@ERP_BINARY_DIR@/resources/test/generated_pki_mock/pushgateway-keystore.p12:/tls/keystore.p12:ro,Z'
-      - '@ERP_BINARY_DIR@/resources/test/generated_pki_mock/pushgateway-truststore.jks:/tls/truststore.jks:ro,Z'
-      - '@ERP_BINARY_DIR@/resources/test/generated_pki_mock/intermediateCA/intermediateCA.crl:/tls/mock-ca.crl:ro,Z'
+      - '@ERP_BINARY_DIR@/resources/test/generated_pki_push/keystore.p12:/tls/keystore.p12:ro,Z'
+      - '@ERP_BINARY_DIR@/resources/test/generated_pki_push/truststore.jks:/tls/truststore.jks:ro,Z'
+      - '@ERP_BINARY_DIR@/resources/test/generated_pki_push/intermediateCA/intermediateCA.crl:/tls/mock-ca.crl:ro,Z'
       - '@ERP_SOURCE_DIR@/docker-compose/pushgateway-mock/lzconfig/lz-config.json:/opt/pushgatewaymock/lzconfig/lz-config.json:Z'
       - '@ERP_SOURCE_DIR@/docker-compose/pushgateway-mock/lzconfig/templates:/opt/pushgatewaymock/lzconfig/templates:Z'
       - '@ERP_SOURCE_DIR@/docker-compose/pushgateway-mock/config/srv.yaml:/opt/pushgatewaymock/config/srv.yaml:Z'

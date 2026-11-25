@@ -432,9 +432,11 @@ Timestamp Task::expiryDate() const
 bool Task::expired() const
 {
     const auto now = std::chrono::system_clock::now();
-    const auto validUntil = model::Timestamp(model::Timestamp::GermanTimezone,
-                                             expiryDate().localDay(model::Timestamp::GermanTimezone) + date::days{1});
-    return validUntil.toChronoTimePoint() <= now;
+    using namespace std::chrono_literals;
+    auto validUntil =
+        date::make_zoned(model::Timestamp::GermanTimezone, expiryDate().toChronoTimePoint() + 24h);
+    validUntil = floor<date::days>(validUntil.get_local_time());
+    return validUntil.get_sys_time() < now;
 }
 
 Timestamp Task::acceptDate() const

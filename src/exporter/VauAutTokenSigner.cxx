@@ -10,6 +10,7 @@
 #include "shared/crypto/Jws.hxx"
 #include "shared/hsm/HsmPool.hxx"
 #include "shared/util/Base64.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>

@@ -8,8 +8,10 @@
 #ifndef ERP_PROCESSING_CONTEXT_RAPIDJSONDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_RAPIDJSONDOCUMENT_HXX
 
-#include <rapidjson/document.h>
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
+
+#include <rapidjson/document.h>
 
 /**
  * This is a workaround for the fact that rapidjson::GenericDocument uses a static int value in its constructor.

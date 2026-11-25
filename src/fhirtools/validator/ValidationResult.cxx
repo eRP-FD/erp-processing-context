@@ -234,17 +234,16 @@ fhirtools::Severity fhirtools::ValidationResults::highestSeverity() const
 std::string fhirtools::ValidationResults::summary(Severity minSeverity) const
 {
     std::ostringstream oss;
-    const char* separator = "";
     for (const auto& item : mResults)
     {
         if (item.severity() >= minSeverity)
         {
-            oss << separator << item;
+            oss << item;
             if (item.profile)
             {
                 oss << " (from profile: " << item.profile->url() << '|' << item.profile->version() << ")";
             }
-            separator = "; ";
+            oss << "; ";
         }
     }
     return oss.str();

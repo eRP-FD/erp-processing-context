@@ -95,8 +95,6 @@ public:
     };
     ProcessingResult process(const Element& element, std::string_view elementFullPath);
     void appendResults(ValidationResults results);
-    void addInfo(ValidationAdditionalInfo::Kind kind, const std::shared_ptr<const Element>& element,
-                 const std::optional<std::string>& elementFullPath, const std::string& typeId);
     void finalize();
     ValidationResults results() const;
 

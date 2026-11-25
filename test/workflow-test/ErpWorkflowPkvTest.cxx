@@ -662,7 +662,7 @@ TEST_P(ErpWorkflowPkvTestP, PkvChargeItemPatch)//NOLINT(readability-function-cog
     const auto telematicIdPharmacy = jwtApotheke().stringForClaim(JWT::idNumberClaim).value();
     std::optional<model::ChargeItem> createdChargeItem;
     ASSERT_NO_FATAL_FAILURE(createdChargeItem = chargeItemPost(*prescriptionId, kvnr1, telematicIdPharmacy, secret));
-    EXPECT_FALSE(createdChargeItem->markingFlags().has_value());
+    EXPECT_TRUE(createdChargeItem->markingFlags()->getAllMarkings().empty());
 
     const auto jwtInsurant1 = JwtBuilder::testBuilder().makeJwtVersicherter(kvnr1);
     // Patch created charge item

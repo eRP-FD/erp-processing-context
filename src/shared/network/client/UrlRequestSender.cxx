@@ -266,8 +266,7 @@ ClientResponse UrlRequestSender::doSend(
             auto ec = e.code();
             if (boost::asio::ssl::error::stream_truncated == ec || boost::asio::error::connection_reset == ec ||
                 boost::asio::error::not_connected == ec || boost::beast::http::error::end_of_stream == ec ||
-                boost::asio::error::connection_refused == ec || boost::asio::error::host_unreachable == ec ||
-                boost::beast::error::timeout == ec)
+                boost::asio::error::connection_refused == ec || boost::asio::error::host_unreachable == ec)
             {
                 LOG(INFO) << "request to proxy " << proxy.ip << ":" << proxy.port << " failed with " << ec.message();
                 continue;

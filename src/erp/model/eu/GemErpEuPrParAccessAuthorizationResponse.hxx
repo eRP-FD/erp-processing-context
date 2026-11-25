@@ -25,5 +25,5 @@ public:
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<GemErpEuPrParAccessAuthorizationResponse>;
 extern template class Parameters<GemErpEuPrParAccessAuthorizationResponse>;
-// NOLINTEND(bugprone-exception-escape)
+// NOLINTEND
 } // model

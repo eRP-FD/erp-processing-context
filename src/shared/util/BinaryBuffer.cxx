@@ -44,7 +44,7 @@ BinaryBuffer::BinaryBuffer(std::string string) noexcept
 }
 
 
-BinaryBuffer::BinaryBuffer(const BinaryView& view)
+BinaryBuffer::BinaryBuffer(const BinaryView& view) noexcept
   : BinaryBuffer{view.data(), view.size()}
 {
 }

@@ -6,6 +6,7 @@
 #include "CodeChecker.hxx"
 
 #include "fhirtools/validator/ValidationResult.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/encodings.h>
 #include <iostream>

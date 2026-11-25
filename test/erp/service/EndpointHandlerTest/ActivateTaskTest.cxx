@@ -245,6 +245,8 @@ TEST_F(ActivateTaskTest, ActivateTask)
 
 TEST_F(ActivateTaskTest, ActivateTask166)
 {
+    testutils::ShiftFhirResourceViewsGuard kbv14Guard{
+        "KBV_1_4", date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     auto signingTime = model::Timestamp::now();
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4800);
@@ -296,8 +298,10 @@ TEST_F(ActivateTaskTestPkv, ActivateTaskPkv)
 
 TEST_F(ActivateTaskTestPkv, ActivateTask166Pkv)
 {
-    const auto authoredOn = model::Timestamp::now();
+    testutils::ShiftFhirResourceViewsGuard kbv14Guard{
+        "KBV_1_4", date::floor<date::days>(model::Timestamp::now().toChronoTimePoint())};
     const auto pkvTaskId = model::PrescriptionId::fromDatabaseId(model::PrescriptionType::tRezept, 4801);
+    const auto authoredOn = model::Timestamp::now();
 
     const auto task = ResourceTemplates::taskJson(
         {.taskType = ResourceTemplates::TaskType::Draft, .prescriptionId = pkvTaskId, .timestamp = authoredOn});
@@ -587,7 +591,7 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientCodingCode)
             ex, "FHIR-Validation error",
             "Bundle: error: -erp-angabeKVKVersichertennummerVerbot: In der Ressource vom Typ Patient ist "
             "eine KVK-Versichertennummer vorhanden, diese darf nicht angegeben werden. (from profile: "
-                    "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + ")");
+                    "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Bundle|" + ver + "); ");
     }
     catch (...)
     {
@@ -628,7 +632,7 @@ TEST_F(ActivateTaskTest, ActivateTaskInvalidPatientIdentifierSystem)
                 "(from profile: http://fhir.de/StructureDefinition/identifier-kvid-10|1.5.2); "
         "Bundle.entry[1].resource{Patient}.identifier[0].system: "
             "error: value must match fixed value: \"http://fhir.de/sid/gkv/kvid-10\" (but is \"http://fhir.de/sid/pkv/kvid-10\") "
-                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient:versichertenId|" + to_string(*forVer.version) + ")";
+                "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_FOR_Patient:versichertenId|" + to_string(*forVer.version) + "); ";
     // clang-format on
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(std::rethrow_exception(exception), diagnostics);
 }
@@ -759,7 +763,7 @@ TEST_F(ActivateTaskTest, Erp10633UnslicedExtension)
         "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
         "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
         "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1)";
+        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1); ";
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
         diagnostics);
@@ -801,7 +805,7 @@ TEST_F(ActivateTaskTest, UnslicedExtension)
         "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
         "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
         "Bundle.entry[6].resource{MedicationRequest}.status.extension[0]: error: element doesn't belong to any slice. "
-        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1)";
+        "(from profile: http://hl7.org/fhir/StructureDefinition/code|4.0.1); ";
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
         diagnostics);
@@ -938,7 +942,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateEnd)
                 "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|" + ver + "); "
         "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
             "per-1: If present, start SHALL have a lower value than end "
-                "(from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1)"
+                "(from profile: http://hl7.org/fhir/StructureDefinition/Period|4.0.1); "
         // clang-format on
     );
 }
@@ -964,7 +968,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
             "Bundle.entry[1].resource{MedicationRequest}.extension[3].extension[2].valuePeriod: error: "
             "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT (from profile: "
             "https://fhir.kbv.de/StructureDefinition/"
-            "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0)");
+            "KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|1.1.0); ");
     }
     else
     {
@@ -980,7 +984,7 @@ TEST_F(ActivateTaskTest, ERP15117_begrenzungDateStart)
                         "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Multiple_Prescription:Zeitraum:valuePeriod|" + ver + "); "
                 "Bundle.entry[1].resource{MedicationRequest}.extension[2].extension[2].valuePeriod: error: "
                     "-erp-begrenzungDateStart: Begrenzung der Datumsangabe auf 10 Zeichen JJJJ-MM-TT "
-                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|" + ver + ")"
+                        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Prescription:Mehrfachverordnung:Zeitraum:valuePeriod|" + ver + "); "
             // clang-format on
         );
     }
@@ -1221,7 +1225,7 @@ TEST_F(ActivateTaskTest, failInvalidPZNFormat)
         std::rethrow_exception(exception),
         "Bundle.entry[4].resource{Medication}.code.coding[0]: "
         "error: -erp-begrenzungPznCode: Der PZN-Code muss aus genau 8 Zeichen bestehen. "
-        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:" + suffix + ")");
+        "(from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:" + suffix + "); ");
 }
 
 TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
@@ -1246,7 +1250,7 @@ TEST_F(ActivateTaskTest, ERP17605CrashMissingIngredientArray)
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
         "Bundle.entry[2].resource{Medication}.ingredient[*]: error: missing mandatory element (from profile: "
-        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|" + to_string(version) + ")");
+        "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_Compounding|" + to_string(version) + "); ");
 }
 
 class DigaNoAlternativeIdAllowed : public ActivateTaskTest,
@@ -1316,7 +1320,7 @@ TEST_F(ActivateTaskTest, DigaE16D)
     const auto& evdgaVersion = to_string(ResourceTemplates::Versions::KBV_EVDGA_current(signingTime));
     EXPECT_ERP_EXCEPTION_WITH_FHIR_VALIDATION_ERROR(
         std::rethrow_exception(exception),
-        R"(Bundle.entry[0].resource{Composition}.type.coding[0].code: error: )"
+        R"(; Bundle.entry[0].resource{Composition}.type.coding[0].code: error: )"
         R"(value must match fixed value: "e16D" (but is "e16A") )"
         R"((from profile: https://fhir.kbv.de/StructureDefinition/KBV_PR_EVDGA_Composition|)" +
             evdgaVersion + ")");
@@ -1385,7 +1389,7 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
     }
     using namespace fhirtools::version_literal;
     const auto now = model::Timestamp::now();
-    const auto today = testutils::germanDay(now);
+    const auto today = date::floor<date::days>(now.toChronoTimePoint());
     const auto tomorrow = today + date::days{1};
     testutils::ShiftFhirResourceViewsGuard shiftView{GetParam().becomesValidInView, tomorrow};
     const auto taskId =
@@ -1443,12 +1447,13 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformNotYetValid)
             "ValueSet https://fhir.kbv.de/ValueSet/KBV_VS_SFHIR_KBV_DARREICHUNGSFORM|" + GetParam().previousVersion + ", allowed are " +
             codes->codesToString() +
             " (from profile: "
-            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:kbvDarreichungsform|1.1.0)");
+            "https://fhir.kbv.de/StructureDefinition/KBV_PR_ERP_Medication_PZN:kbvDarreichungsform|1.1.0); ");
 }
 
 TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformValid)
 {
-    const auto now = model::Timestamp::now();
+    auto today = date::floor<date::days>(std::chrono::system_clock::now());
+    testutils::ShiftFhirResourceViewsGuard shiftView{GetParam().becomesValidInView, today};
 
     const auto taskId =
         model::PrescriptionId::fromDatabaseId(model::PrescriptionType::apothekenpflichigeArzneimittel, 4713);
@@ -1463,8 +1468,9 @@ TEST_P(ActivateTaskTestDarreichungsformValidity, DarreichungsformValid)
             },
     });
 
-    ASSERT_NO_FATAL_FAILURE(checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
-                                              {.expectedStatus = HttpStatus::OK, .signingTime = now}));
+    ASSERT_NO_FATAL_FAILURE(
+        checkActivateTask(mServiceContext, taskJson, kbvBundleXml, "X234567891",
+                          {.expectedStatus = HttpStatus::OK, .signingTime = model::Timestamp::now()}));
 }
 
 INSTANTIATE_TEST_SUITE_P(darreichnungsformen, ActivateTaskTestDarreichungsformValidity,
@@ -1673,7 +1679,7 @@ TEST_P(ActivateTaskUuidValidationTest, run)
     {
         EXPECT_ERP_EXCEPTION_WITH_DIAGNOSTICS(
             handler.handleRequest(sessionContext), HttpStatus::BadRequest, "FHIR-Validation error",
-            "Bundle.entry[1].fullUrl: error: value is not a valid lower-case urn:uuid.");
+            "Bundle.entry[1].fullUrl: error: value is not a valid lower-case urn:uuid.; ");
     }
 }
 
@@ -1864,6 +1870,8 @@ public:
             patchMedicationRequestInKbvBundle(std::move(kbvBundle).jsonDocument(), resource.jsonDocument()));
         return patchedBundle;
     }
+
+    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
 };
 
 class ActivateTaskDosageValidatorTest : public ActivateTaskDosageInstructionTest

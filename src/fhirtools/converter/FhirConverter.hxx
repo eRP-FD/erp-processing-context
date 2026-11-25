@@ -10,7 +10,6 @@
 
 #include "fhirtools/util/XmlMemory.hxx"
 
-#include <rapidjson/document.h>
 #include <memory>
 #include <string_view>
 

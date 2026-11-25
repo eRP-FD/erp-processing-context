@@ -485,13 +485,3 @@ void fhirtools::FhirStructureRepositoryBackend::addValueSet(std::unique_ptr<Fhir
     FPExpect(inserted, "Duplicate ValueSet: " + valueSet->getUrl() + '|' + to_string(valueSet->getVersion()));
     TVLOG(3) << "ValueSet inserted: " << it->first;
 }
-
-void fhirtools::FhirStructureRepositoryBackend::enableMeasurement() const
-{
-    std::ranges::for_each(mDefinitionsByKey | std::views::values, &FhirStructureDefinition::enableMeasurement);
-}
-
-void FhirStructureRepositoryBackend::report() const
-{
-    std::ranges::for_each(mDefinitionsByKey | std::views::values, &FhirStructureDefinition::report);
-}

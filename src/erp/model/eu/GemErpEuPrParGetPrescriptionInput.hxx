@@ -51,7 +51,7 @@ private:
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<GemErpEuPrParGetPrescriptionInput>;
 extern template class Parameters<GemErpEuPrParGetPrescriptionInput>;
-// NOLINTEND(bugprone-exception-escape)
+// NOLINTEND
 }// model
 
 #endif//ERP_PROCESSING_CONTEXT_MODEL_GEMERPEUPRPARGETPRESCRIPTIONINPUT_HXX

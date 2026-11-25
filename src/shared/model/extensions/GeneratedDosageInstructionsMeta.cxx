@@ -10,22 +10,22 @@
 namespace model
 {
 
-std::string GeneratedDosageInstructionsMeta::algorithmVersion() const
+std::string_view GeneratedDosageInstructionsMeta::algorithmVersion() const
 {
     auto ext = getExtension("algorithmVersion");
     ModelExpect(ext, "Extension algorithmVersion not found");
     auto ver = ext->valueString();
     ModelExpect(ver, "Extension algorithmVersion has no value");
-    return std::string{*ver};
+    return *ver;
 }
 
-std::string GeneratedDosageInstructionsMeta::language() const
+std::string_view GeneratedDosageInstructionsMeta::language() const
 {
     auto ext = getExtension("language");
     ModelExpect(ext, "Extension language not found");
     auto lang = ext->valueCode();
     ModelExpect(lang, "Extension language has no value");
-    return std::string{*lang};
+    return *lang;
 }
 
 template class Extension<GeneratedDosageInstructionsMeta>;

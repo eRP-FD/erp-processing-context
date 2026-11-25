@@ -271,7 +271,7 @@ void fhirtools::ProfileSetValidator::incrementCounters(const Element& element)
     if (mParent)
     {
         std::set<CounterKey> incrementedCounters;
-        for (auto& profVal : mProfileValidators)
+        for (const auto& profVal : mProfileValidators)
         {
             if (profVal.first.element()->isRoot())
             {
@@ -288,10 +288,8 @@ void fhirtools::ProfileSetValidator::incrementCounters(const Element& element)
             {
                 if (profVal.first.element()->cardinality().max == 0)
                 {
-                    // store in the profile's validation data, so that the info is dropped together with the
-                    // other results if the profile is not relevant (e.g. unselected alternative of a requireOne).
-                    profVal.second.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(),
-                                           std::nullopt, profVal.second.definitionPointer().element()->typeId());
+                    mResults.addInfo(ValidationAdditionalInfo::IllegalElement, element.shared_from_this(), std::nullopt,
+                                     profVal.second.definitionPointer().element()->typeId());
                 }
             }
         }

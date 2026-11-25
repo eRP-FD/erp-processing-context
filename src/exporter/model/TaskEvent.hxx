@@ -91,7 +91,6 @@ struct BareTaskEvent
     TaskEvent::UseCase useCase;
     PrescriptionId prescriptionId;
     PrescriptionType prescriptionType;
-    std::string lastError;
 };
 
 

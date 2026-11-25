@@ -1,91 +1,10 @@
-###############################################################
-# not a FHIR definition
-###############################################################
-package/ImplementationGuide-de.gematik.epa.medication.json
-package/example/Bundle-example-get-medication-list-bundle1.json
-package/example/Bundle-example-searchset-medication.json
-package/example/Bundle-example-searchset-medicationdispense.json
-package/example/Bundle-example-searchset-medicationrequest.json
-package/example/Medication-2571d29b-e213-40ec-b817-a1490718a490.json
-package/example/Medication-3b990824-3814-4d75-80b1-e2935827f8f0.json
-package/example/Medication-4bfef107-7d81-4d36-8aa0-7ea937969046.json
-package/example/Medication-4f9ab221-0eef-4e46-a8a9-38302e0488b1.json
-package/example/Medication-CortisonDexpantenolMedicationPreparation.json
-package/example/Medication-ExampleEPAMedicationMax.json
-package/example/Medication-SumatripanMedication.json
-package/example/Medication-TabletSprayKombipackung.json
-package/example/MedicationDispense-46865835-8c8f-4139-86ba-271bd3565250.json
-package/example/MedicationDispense-4e6e1623-778e-44a3-b208-8479f5339e43.json
-package/example/MedicationRequest-3d7252b4-7814-4d40-8ca2-2f731648f22d.json
-package/example/MedicationRequest-bb91cde8-0426-4f4b-a766-5d818d0605bd.json
-package/example/OperationOutcome-255002c7-aa1b-4163-bdd4-ede482453cca.json
-package/example/OperationOutcome-2b34898e-a9d1-4fa6-9959-5ff6033cfcb0.json
-package/example/OperationOutcome-a94b020a-2f34-4013-83ea-cf1bd0a92cdd.json
-package/example/OperationOutcome-bef62761-7eea-4daa-a992-36c532232679.json
-package/example/OperationOutcome-c03670fe-eaf2-4a38-a333-4dc1470072a2.json
-package/example/OperationOutcome-e730e451-3a44-4842-a8ed-1517a3334465.json
-package/example/OperationOutcome-ee1e0518-02f2-4d3a-99ae-bae8e91c382d.json
-package/example/OperationOutcome-fc3e8ea4-41ec-4de2-906e-97871b34adcb.json
-package/example/Organization-151f1697-7512-4e21-9466-1b75207475d8.json
-package/example/Organization-be51e0d2-783d-4e21-b16b-1a4cd7403515.json
-package/example/Parameters-example-epa-op-cancel-dispensation-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-cancel-prescription-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-provide-dispensation-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-provide-dispensation-erp-input-parameters-2.json
-package/example/Parameters-example-epa-op-provide-prescription-erp-input-parameters-1.json
-package/example/Parameters-example-epa-op-provide-prescription-erp-input-parameters-2.json
-package/example/Parameters-example-epa-op-rx-dispensation-erp-output-parameters-1.json
-package/example/Parameters-example-epa-op-rx-prescription-erp-output-parameters-1.json
-package/example/Practitioner-498c345f-31f5-4da6-9f04-00fa2bc8af7c.json
-package/example/PractitionerRole-73a551f8-d8cd-4b44-823d-ab5f8aeab1aa.json
-package/CapabilityStatement-epa-medication-service-client.json
-package/CapabilityStatement-epa-medication-service-server.json
-package/OperationDefinition-cancel-dispensation-erp-OP.json
-package/OperationDefinition-cancel-prescription-erp-OP.json
-package/OperationDefinition-get-medication-list-op.json
-package/OperationDefinition-provide-dispensation-erp-OP.json
-package/OperationDefinition-provide-prescription-erp-OP.json
+#
+# (C) Copyright IBM Deutschland GmbH 2021, 2026
+# (C) Copyright IBM Corp. 2021, 2026
+#
+# non-exclusively licensed to gematik GmbH
+#
+
+# exclude openapi specification
 package/openapi/epa-medication-service-client.openapi.json
 package/openapi/epa-medication-service-server.openapi.json
-package/other/validation-summary.json
-package/other/validation-oo.json
-
-###############################################################
-# files with version conflict to de.gematik.epa.medication#1.3.0
-###############################################################
-# version patched in 1.3.0
-# package/StructureDefinition-epa-medication-pzn-ingredient.json
-# package/StructureDefinition-epa-ms-operation-outcome.json
-# taken from 1.3.0
-package/StructureDefinition-epa-medication-unique-identifier.json
-package/StructureDefinition-rx-originator-process-identifier.json
-package/StructureDefinition-rx-prescription-process-identifier-extension.json
-package/StructureDefinition-rx-prescription-process-identifier.json
-
-###############################################################
-# files changed in de.gematik.epa.medication#1.3.0
-###############################################################
-# package/CodeSystem-epa-ms-operation-outcome-details.json
-# package/StructureDefinition-drug-category-extension.json
-# package/StructureDefinition-epa-medication-dispense.json
-# package/StructureDefinition-epa-medication-pharmaceutical-product.json
-# package/StructureDefinition-epa-medication-request.json
-# package/StructureDefinition-epa-medication-type-extension.json
-# package/StructureDefinition-epa-medication.json
-# package/StructureDefinition-indicator-bvg-extension.json
-# package/StructureDefinition-medication-formulation-packaging-extension.json
-# package/StructureDefinition-medication-id-vaccine-extension.json
-# package/StructureDefinition-medication-ingredient-amount-extension.json
-# package/StructureDefinition-medication-ingredient-darreichungsform-extension.json
-# package/StructureDefinition-medication-manufacturing-instructions-extension.json
-# package/StructureDefinition-medication-packaging-size-extension.json
-# package/StructureDefinition-medication-total-quantity-formulation-extension.json
-# package/StructureDefinition-multiple-prescription-extension.json
-# package/ValueSet-epa-ms-operation-outcome-details.json
-# package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
-# package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
-# package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
-# package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
-# package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
-# package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
-

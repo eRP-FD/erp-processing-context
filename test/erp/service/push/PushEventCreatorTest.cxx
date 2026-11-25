@@ -83,9 +83,9 @@ TEST_F(PushEventCreatorTest, createsPushEventWhenRegistered)
     ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault(testing::Return(true));
     std::promise<void> p;
     std::future<void> f = p.get_future();
-    EXPECT_CALL(*mPushExporterMockBackend, createPushEvent(testing::_)).WillOnce([&] {
+    EXPECT_CALL(*mPushExporterMockBackend, createPushEvent(testing::_)).WillOnce(::testing::Invoke([&]{
         p.set_value();
-    });
+    }));
     mServiceContext->getPushEventCreator().tryPostCreatePushEvent(createSampleEventData(), *mServiceContext);
     auto res = f.wait_for(std::chrono::seconds{1});
     EXPECT_EQ(res, std::future_status::ready);
@@ -110,13 +110,13 @@ TEST_F(PushEventCreatorTest, discardsEventWhenQueueFull)
     std::shared_future<void> f = p.get_future();
     std::latch l{3};
     std::atomic_size_t processing;
-    ON_CALL(*mPushExporterMockBackend, createPushEvent(testing::_)).WillByDefault([&] {
+    ON_CALL(*mPushExporterMockBackend, createPushEvent(testing::_)).WillByDefault(::testing::Invoke([&] {
         ++processing;
         EXPECT_EQ(processing, 1) << "more than one event published at once (strand)";
         f.get();
         l.count_down();
         --processing;
-    });
+    }));
     EXPECT_EQ(mServiceContext->getPushEventCreator().currentDepth(), 0);
     EXPECT_EQ(mServiceContext->getPushEventCreator().discardedSinceWarn(), 0);
     for (size_t i = 0; i < 6; ++i)
@@ -139,11 +139,11 @@ TEST_F(PushEventCreatorTest, isPushRegisteredThrows)
     std::promise<void> p;
     auto f = p.get_future();
     bool hasThrown = false;
-    ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault([&]() -> bool {
+    ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault(testing::Invoke([&]() -> bool {
         f.get();
         hasThrown = true;
         throw std::runtime_error("Some DB problem");
-    });
+    }));
     auto& pushCreator = mServiceContext->getPushEventCreator();
     pushCreator.tryPostCreatePushEvent(createSampleEventData(), *mServiceContext);
     testutils::waitFor( [&]() { return pushCreator.currentDepth() == 1; }, 1s);
@@ -161,11 +161,11 @@ TEST_F(PushEventCreatorTest, createPushEventThrows)
     auto f = p.get_future();
     bool hasThrown = false;
     ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault(testing::Return(true));
-    ON_CALL(*mPushExporterMockBackend, createPushEvent(_)).WillByDefault([&] {
+    ON_CALL(*mPushExporterMockBackend, createPushEvent(_)).WillByDefault(::testing::Invoke([&] {
         f.get();
         hasThrown = true;
         throw std::runtime_error("Some DB problem");
-    });
+    }));
     auto& pushCreator = mServiceContext->getPushEventCreator();
     pushCreator.tryPostCreatePushEvent(createSampleEventData(), *mServiceContext);
     testutils::waitFor( [&]() { return pushCreator.currentDepth() == 1; }, 1s);
@@ -219,9 +219,9 @@ TEST_F(PushEventCreatorTest, createPushEventDbFailure_logsCouldNotCreatePushEven
 
     ON_CALL(*mPushErpMockBackend, isPushRegistered(_, _)).WillByDefault(testing::Return(true));
 
-    ON_CALL(*mPushExporterMockBackend, createPushEvent(_)).WillByDefault([&] {
+    ON_CALL(*mPushExporterMockBackend, createPushEvent(_)).WillByDefault(::testing::Invoke([&] {
         throw pqxx::broken_connection{"Lost connection to the database server."};
-    });
+    }));
 
     testing::internal::CaptureStderr();
 

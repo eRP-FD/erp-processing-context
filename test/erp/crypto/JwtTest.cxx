@@ -9,6 +9,7 @@
 #include "shared/crypto/EllipticCurveUtils.hxx"
 #include "shared/crypto/Jwt.hxx"
 #include "shared/crypto/Jws.hxx"
+#include "shared/model/ModelException.hxx"
 #include "shared/model/ProfessionOid.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Environment.hxx"
@@ -52,6 +53,38 @@ public:
     {
         mIdpPublicKey = MockCryptography::getIdpPublicKey();
         mIdpPrivateKey = MockCryptography::getIdpPrivateKey();
+    }
+
+    static std::string sign(std::string jwtData)
+    {
+        auto privateKey = MockCryptography::getIdpPrivateKey();
+        static constexpr size_t BnSize = 32;
+        auto mdctx = shared_EVP_MD_CTX::make();
+        OpenSslExpect(mdctx, "Failed to make EVP_MD_CTX");
+        EVP_PKEY_CTX* pkeyctx = nullptr;
+        OpenSslExpect(EVP_DigestSignInit(mdctx, &pkeyctx, EVP_sha256(), nullptr, privateKey.removeConst()) == 1,
+                      "Initialization of Signing Algorithm failed.");
+        OpenSslExpect(pkeyctx, "Failed to initialize DigestSignInit");
+        OpenSslExpect(EVP_DigestSignUpdate(mdctx, jwtData.data(), jwtData.size()) == 1, "Processing of JWS data failed.");
+        size_t siglen = 0;
+        OpenSslExpect(EVP_DigestSignFinal(mdctx, nullptr, &siglen) == 1, "Failed to get signature length.");
+        //NOLINTNEXTLINE(cppcoreguidelines-avoid-c-arrays)
+        auto sig = std::make_unique<unsigned char[]>(siglen);
+        OpenSslExpect(EVP_DigestSignFinal(mdctx, sig.get(), &siglen) == 1, "Signature calculation failed");
+        const unsigned char* sigptr = sig.get();
+        EcdsaSignaturePtr ecdsaSig{d2i_ECDSA_SIG(nullptr, &sigptr, static_cast<int>(siglen))};
+        OpenSslExpect(ecdsaSig != nullptr, "Failed to read generated signature.");
+
+        const BIGNUM* r;// NOLINT(cppcoreguidelines-init-variables)
+        const BIGNUM* s;// NOLINT(cppcoreguidelines-init-variables)
+        ECDSA_SIG_get0(ecdsaSig.get(), &r, &s);
+        std::string rsBin(2 * BnSize, '\0');
+        OpenSslExpect(BN_bn2binpad(r, reinterpret_cast<unsigned char*>(rsBin.data()), BnSize) == BnSize,
+                      "Failed to get binary R.");
+        OpenSslExpect(BN_bn2binpad(s, reinterpret_cast<unsigned char*>(std::addressof(rsBin[BnSize])), BnSize) == BnSize,
+                      "Failed to get binary S.");
+        jwtData.append(1, '.').append(Base64::toBase64Url(Base64::encode(rsBin)));
+        return jwtData;
     }
 
     const JoseHeader mJoseHeader = JoseHeader(JoseHeader::Algorithm::BP256R1);
@@ -138,20 +171,26 @@ TEST_F(JwtTest, HeaderChecks)//NOLINT(readability-function-cognitive-complexity)
     std::string payload = Base64::encode("{}"sv);
     std::string signature = Base64::encode("invalid"sv);
     JWT jwt0(header + "." + payload + "." + signature);
-    ASSERT_THROW(jwt0.verify(idpPublicKey), JwtInvalidRfcFormatException); // header has no alg key.
+    ASSERT_THROW(jwt0.checkJwtFormat(), JwtInvalidRfcFormatException); // header has no alg key.
+    // The signature is verified first, the invalid signature is reported by verify():
+    ASSERT_THROW(jwt0.verify(idpPublicKey), JwtInvalidSignatureException);
 
-    header = Base64::encode(R"({"alg":"none"})"sv);
-    payload = Base64::encode("{}"sv);
-    signature = Base64::encode("invalid"sv);
-    JWT jwt1(header + "." + payload + "." + signature);
+    // Valid signature, but the algorithm in the header (ES256) is not the expected BP256R1.
+    JWT jwt1(Jws(JoseHeader(JoseHeader::Algorithm::ES256), "{}"sv, mIdpPrivateKey).compactSerialized());
+    ASSERT_NO_THROW(jwt1.verifySignature(idpPublicKey));
+    ASSERT_THROW(jwt1.checkJwtFormat(), JwtInvalidSignatureException);
     ASSERT_THROW(jwt1.verify(idpPublicKey), JwtInvalidSignatureException);
 
     header = Base64::encode(R"({"alg":"BP256R1"})"sv);
     payload = Base64::encode("{}"sv);
     signature = Base64::encode("invalid"sv);
     JWT jwt2(header + "." + payload + "." + signature);
-    // Test must fail at claims check, header is valid and must not throw JwtInvalidFormatException
-    ASSERT_THROW(jwt2.verify(idpPublicKey), JwtRequiredClaimException);
+    // Header is valid and must not throw
+    ASSERT_NO_THROW(jwt2.checkJwtFormat());
+    // Test must fail at claims check
+    ASSERT_THROW(jwt2.checkRequiredClaims(), JwtRequiredClaimException);
+    // verify() fails earlier because of the invalid signature
+    ASSERT_THROW(jwt2.verify(idpPublicKey), JwtInvalidSignatureException);
 
     A_20362.finish();
 }
@@ -481,7 +520,9 @@ TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-comple
 
     {
         // All problamtic JWTs from above are handled during verification.
-        EXPECT_THROW(JWT().verify(mIdpPublicKey), JwtInvalidRfcFormatException);
+        // The signature is verified first, thus the invalid signature is reported.
+        EXPECT_THROW(JWT().checkJwtFormat(), JwtInvalidRfcFormatException);
+        EXPECT_THROW(JWT().verify(mIdpPublicKey), JwtInvalidSignatureException);
         EXPECT_THROW(JWT("").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT(".").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT("..").verify(mIdpPublicKey), JwtInvalidFormatException);
@@ -490,8 +531,10 @@ TEST_F(JwtTest, ConstructorChecks)//NOLINT(readability-function-cognitive-comple
         EXPECT_THROW(JWT("a.b.").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT("a.b.c").verify(mIdpPublicKey), JwtInvalidFormatException);
         EXPECT_THROW(JWT(mHeader + ".b.c").verify(mIdpPublicKey), JwtInvalidFormatException);
-        EXPECT_THROW(JWT(mHeader + "." + Base64::encode("{}"sv) + ".c").verify(mIdpPublicKey),
+        EXPECT_THROW(JWT(mHeader + "." + Base64::encode("{}"sv) + ".c").checkRequiredClaims(),
                      JwtRequiredClaimException);
+        EXPECT_THROW(JWT(mHeader + "." + Base64::encode("{}"sv) + ".c").verify(mIdpPublicKey),
+                     JwtInvalidSignatureException);
 
         const std::string claimString = FileHelper::readFileAsString(std::string{TEST_DATA_DIR} + "/jwt/claims_patient.json");
 
@@ -742,3 +785,42 @@ TEST_F(JwtTest, acr_fail)
     }).checkRequiredClaims(), JwtInvalidFormatException);
     A_19439_04.finish();
 }
+
+// ERP-39783: unchecked JSON value types must not lead to undefined behavior
+TEST_F(JwtTest, HeaderNotAnObject)
+{
+    using namespace std::string_view_literals;
+    for (const auto& header : {"1"sv, "1.5"sv, R"("BP256R1")"sv, "true"sv, "null"sv, R"(["alg", "BP256R1"])"sv})
+    {
+        JWT jwt{sign(Base64::encode(header) + "." + mPayload)};
+        EXPECT_THROW(jwt.checkJwtFormat(), model::ModelException) << header;
+        EXPECT_THROW(jwt.verify(mIdpPublicKey), model::ModelException) << header;
+    }
+}
+
+TEST_F(JwtTest, HeaderAlgNotAString)
+{
+    using namespace std::string_view_literals;
+    for (const auto& header :
+         {R"({"alg": 1})"sv, R"({"alg": null})"sv, R"({"alg": {}})"sv, R"({"alg": []})"sv, R"({"alg": true})"sv})
+    {
+        JWT jwt{sign(Base64::encode(header) + "." + mPayload)};
+        EXPECT_THROW(jwt.checkJwtFormat(), model::ModelException) << header;
+        EXPECT_THROW(jwt.verify(mIdpPublicKey), model::ModelException) << header;
+    }
+}
+
+TEST_F(JwtTest, ClaimsNotAnObject)
+{
+    using namespace std::string_view_literals;
+    for (const auto& claims : {"1"sv, R"("sub")"sv, "true"sv, "null"sv, R"(["sub", "iat"])"sv})
+    {
+        JWT jwt{sign(mHeader + "." + Base64::encode(claims))};
+        EXPECT_FALSE(jwt.stringForClaim(JWT::subClaim).has_value()) << claims;
+        EXPECT_FALSE(jwt.intForClaim(JWT::expClaim).has_value()) << claims;
+        EXPECT_FALSE(jwt.doubleForClaim(JWT::expClaim).has_value()) << claims;
+        EXPECT_THROW(jwt.checkRequiredClaims(), model::ModelException) << claims;
+        EXPECT_THROW(jwt.verify(mIdpPublicKey), model::ModelException) << claims;
+    }
+}
+

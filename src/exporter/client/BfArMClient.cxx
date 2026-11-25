@@ -10,11 +10,8 @@
 #include "exporter/client/TokenCache.hxx"
 #include "exporter/model/TaskEvent.hxx"
 #include "exporter/model/trezept/ErpTPrescriptionCarbonCopy.hxx"
-#include "shared/ErpRequirements.hxx"
 #include "shared/network/client/HttpsClient.hxx"
 #include "shared/network/client/UrlRequestSender.hxx"
-#include "shared/tsl/CertificatePolicy.hxx"
-#include "shared/tsl/X509Certificate.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
 #include "shared/util/UrlHelper.hxx"
@@ -28,21 +25,7 @@ BfArMClient::BfArMClient(std::string clientId, std::shared_ptr<CrlProvider> crlP
     : OAuthClientBase(std::move(clientId),
                       Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_URL),
                       Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_PORT),
-                      std::move(crlProvider), xContextId,
-                      // GEMREQ-start A_28933
-                      [](const X509Certificate& cert, boost::asio::ssl::verify_context&) -> bool {
-
-                          A_28933.start("Validate certificate policy for BfArM server");
-                          const auto hasEvOrOvPolicy = cert.checkCertificatePolicy(certificate_policy::oid_ev_tls) ||
-                                                       cert.checkCertificatePolicy(certificate_policy::oid_ov_tls);
-                          if (! hasEvOrOvPolicy)
-                          {
-                              LOG(ERROR) << "BfArM Server Certificate does not have required EV/OV certificate "
-                                            "policies. Rejecting";
-                          }
-                          return hasEvOrOvPolicy;
-                      })
-                      // GEMREQ-end A_28933
+                      std::move(crlProvider), xContextId)
     , mClientSecret(Configuration::instance().getStringValue(ConfigurationKey::MEDICATION_EXPORTER_BFARM_CLIENT_SECRET))
 {
     Configuration::instance().check(Configuration::ProcessType::MedicationExporter);

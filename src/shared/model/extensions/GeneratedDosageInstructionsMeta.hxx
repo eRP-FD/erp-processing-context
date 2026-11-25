@@ -18,8 +18,8 @@ public:
     using Extension::Extension;
     static constexpr auto url = resource::structure_definition::GeneratedDosageInstructionsMeta;
 
-    [[nodiscard]] std::string algorithmVersion() const;
-    [[nodiscard]] std::string language() const;
+    [[nodiscard]] std::string_view algorithmVersion() const;
+    [[nodiscard]] std::string_view language() const;
 
     template<typename T>
     friend class Parameters;

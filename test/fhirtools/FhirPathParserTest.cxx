@@ -152,28 +152,11 @@ TEST_F(FhirPathParserTest, unionOperator)
     ASSERT_TRUE(expressions);
     auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
     ASSERT_EQ(result.size(), 5);
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 1)));
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 5)));
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 42)));
-    EXPECT_TRUE(
-        result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Decimal, DecimalType("0.1"))));
-    EXPECT_TRUE(
-        result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Decimal, DecimalType("3.14"))));
-}
-
-TEST_F(FhirPathParserTest, unionFunction)
-{
-    auto expressions = FhirPathParser::parse(backend, "union(multiNum, Test.multiDec)");
-    ASSERT_TRUE(expressions);
-    auto result = expressions->eval(fhirtools::EvaluationContext{mRepo, rootElement}).collection;
-    ASSERT_EQ(result.size(), 5);
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 1)));
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 5)));
-    EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Integer, 42)));
-    EXPECT_TRUE(
-        result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Decimal, DecimalType("0.1"))));
-    EXPECT_TRUE(
-        result.contains(std::make_shared<PrimitiveElement>(backend, Element::Type::Decimal, DecimalType("3.14"))));
+    EXPECT_EQ(result[0]->asInt(), 1);
+    EXPECT_EQ(result[1]->asInt(), 5);
+    EXPECT_EQ(result[2]->asInt(), 42);
+    EXPECT_EQ(result[3]->asDecimal(), DecimalType("0.1"));
+    EXPECT_EQ(result[4]->asDecimal(), DecimalType("3.14"));
 }
 
 TEST_F(FhirPathParserTest, orOperator)

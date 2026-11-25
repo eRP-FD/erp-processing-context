@@ -41,7 +41,6 @@ void PatchTaskHandler::handleRequest(PcSessionContext& session)
     A_27551.finish();
 
     A_27550.start("Versicherte können nur ihre eigenen Tasks markieren.");
-    A_28910.start("Versicherte können nur Tasks im Zustand ready markieren.");
     auto* databaseHandle = session.database();
     const model::Kvnr kvnr{*kvnrClaim};
     auto taskAndKey = databaseHandle->retrieveTaskForUpdate(prescriptionId);
@@ -49,7 +48,6 @@ void PatchTaskHandler::handleRequest(PcSessionContext& session)
     model::Task& task{taskAndKey->task};
     ErpExpect(task.kvnr() && task.kvnr() == kvnr && task.status() == model::Task::Status::ready, HttpStatus::Forbidden,
               "Operation only allowed by insurant owning the task and task status is ready");
-    A_28910.finish();
     A_27550.finish();
 
     A_28500.start("Task markieren - Versicherter - nur einlösbare E-Rezepte");

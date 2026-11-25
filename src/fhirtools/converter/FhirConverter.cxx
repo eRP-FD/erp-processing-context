@@ -8,12 +8,13 @@
 #include "FhirConverter.hxx"
 #include "shared/fhir/Fhir.hxx"
 #include "shared/model/Resource.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "fhirtools/converter/internal/FhirJsonToXmlConverter.hxx"
 #include "fhirtools/converter/internal/FhirSAXHandler.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/util/Gsl.hxx"
 
-//#include <algorithm>
+#include <rapidjson/document.h>
 
 
 model::NumberAsStringParserDocument FhirConverter::xmlStringToJson(const std::string_view& xmlDocument) const

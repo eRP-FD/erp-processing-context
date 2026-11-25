@@ -9,7 +9,6 @@
 #include "shared/network/message/Header.hxx"
 #include "shared/util/Base64.hxx"
 #include "shared/util/Configuration.hxx"
-#include "shared/util/CrashHandler.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/HeaderLog.hxx"
 #include "shared/util/SharedRequirements.hxx"
@@ -30,7 +29,6 @@ EpaCertificateService::EpaCertificateService(boost::asio::execution_context& con
     , mWorkIoContext{}
     , mWork{boost::asio::make_work_guard(mWorkIoContext)}
     , mWorkThread{[this] {
-        CrashHandler::installAlternateStack();
         mWorkIoContext.run();
     }}
 {

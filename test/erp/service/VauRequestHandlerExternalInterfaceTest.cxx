@@ -67,7 +67,7 @@ TEST_F(VauRequestHandlerExternalInterfaceTest, InvalidJwtWithRequestINTERNET)
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
     ASSERT_TRUE( innerResponse.getHeader().hasHeader(Header::WWWAuthenticate) );
-    ASSERT_TRUE( innerResponse.getHeader().header(Header::WWWAuthenticate).value() == std::string{VauRequestHandler::wwwAuthenticateErrorInternetRequest()} );
+    ASSERT_TRUE( innerResponse.getHeader().header(Header::WWWAuthenticate).value() == std::string{VauRequestHandler::wwwAuthenticateErrorInvalidToken()} );
 }
 
 TEST_F(VauRequestHandlerExternalInterfaceTest, InvalidJwtWithRequestTI)
@@ -84,5 +84,5 @@ TEST_F(VauRequestHandlerExternalInterfaceTest, InvalidJwtWithRequestTI)
     const ClientResponse innerResponse = teeProtocol.parseResponse(response);
     ASSERT_EQ(innerResponse.getHeader().status(), HttpStatus::Unauthorized);
     ASSERT_TRUE( innerResponse.getHeader().hasHeader(Header::WWWAuthenticate) );
-    ASSERT_TRUE( innerResponse.getHeader().header(Header::WWWAuthenticate).value() == std::string{VauRequestHandler::wwwAuthenticateErrorTiRequest() } );
+    ASSERT_TRUE( innerResponse.getHeader().header(Header::WWWAuthenticate).value() == std::string{VauRequestHandler::wwwAuthenticateErrorInvalidToken()} );
 }

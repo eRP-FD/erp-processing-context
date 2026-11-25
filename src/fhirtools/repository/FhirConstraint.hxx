@@ -11,7 +11,6 @@
 #include "fhirtools/util/Gsl.hxx"
 #include "fhirtools/validator/Severity.hxx"
 
-#include <chrono>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -38,12 +37,9 @@ public:
     [[nodiscard]] std::shared_ptr<const Expression>
     parsedExpression(gsl::not_null<const FhirStructureRepositoryBackend*> repo, ExpressionCache* cache = nullptr) const;
 
+
     std::strong_ordering operator <=> (const FhirConstraint&) const;
     bool operator == (const FhirConstraint&) const;
-
-    void enableMeasurement() const;
-    [[nodiscard]] std::chrono::high_resolution_clock::duration runtime() const;
-    [[nodiscard]] uint32_t callCount() const;
 
 private:
     decltype(auto) tie() const;

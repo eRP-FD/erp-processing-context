@@ -8,6 +8,7 @@
 #include "fhirtools/repository/VersionMapper.hxx"
 #include "fhirtools/FPExpect.hxx"
 #include "fhirtools/repository/DefinitionKey.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <ranges>

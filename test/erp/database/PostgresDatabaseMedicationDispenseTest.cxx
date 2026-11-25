@@ -17,7 +17,6 @@
 #include "shared/util/FileHelper.hxx"
 #include "test/util/ResourceManager.hxx"
 #include "test/util/ResourceTemplates.hxx"
-#include "test/util/LogTestBase.hxx"
 #include "test/util/StaticData.hxx"
 #include "test/util/TestUtils.hxx"
 #include "test/workflow-test/ErpWorkflowTestFixture.hxx"
@@ -1148,100 +1147,5 @@ TEST_F(PostgresDatabaseMedicationDispenseTestBase, ERP_30108)
                             database().retrieveAllMedicationDispenses(model::Kvnr{InsurantA}, searchArgs));
         database().commitTransaction();
         ASSERT_EQ(std::get<0>(medicationsAndDispenses).medicationDispenses.size(), 1);
-    }
-}
-
-// Insider with write access to the database swaps the medication dispense data (bundle, blob id, salt)
-// of two tasks of the same insurant. The MedicationDispenses must not be returned for the wrong task.
-TEST_F(PostgresDatabaseMedicationDispenseTestBase, swappedMedicationDispenseBundles)//NOLINT(readability-function-cognitive-complexity)
-{
-    if (! usePostgres())
-    {
-        GTEST_SKIP();
-    }
-    const model::TelematikId pharmacy{"3-SMC-B-Testkarte-883110000120312"};
-    const model::Kvnr kvnr{InsurantA};
-    constexpr size_t numMedications = 2;
-    auto type = PrescriptionType::apothekenpflichigeArzneimittel;
-
-    Task taskSwapped1 = createAcceptedTask(kvnr.id(), type, false);
-    closeTask(taskSwapped1, pharmacy.id(), numMedications);
-    Task taskSwapped2 = createAcceptedTask(kvnr.id(), type, false);
-    closeTask(taskSwapped2, pharmacy.id(), numMedications);
-    Task taskUntouched = createAcceptedTask(kvnr.id(), type, false);
-    closeTask(taskUntouched, pharmacy.id(), numMedications);
-
-    // sanity check: before the manipulation all MedicationDispenses are returned
-    {
-        auto result = database().retrieveAllMedicationDispenses(kvnr, std::optional<UrlArguments>{});
-        database().commitTransaction();
-        ASSERT_EQ(std::get<0>(result).medicationDispenses.size(), 3 * numMedications);
-    }
-
-    // manipulate: swap bundle, blob id and salt between two tasks
-    {
-        const auto id1 = std::to_string(taskSwapped1.prescriptionId().toDatabaseId());
-        const auto id2 = std::to_string(taskSwapped2.prescriptionId().toDatabaseId());
-        auto txn = createTransaction();
-        txn.exec("UPDATE " + taskTableName(type) +
-                 " AS t SET medication_dispense_bundle = o.medication_dispense_bundle,"
-                 " medication_dispense_blob_id = o.medication_dispense_blob_id,"
-                 " medication_dispense_salt = o.medication_dispense_salt"
-                 " FROM (SELECT prescription_id, medication_dispense_bundle, medication_dispense_blob_id,"
-                 " medication_dispense_salt FROM " +
-                 taskTableName(type) + " WHERE prescription_id IN (" + id1 + "," + id2 +
-                 ")) AS o"
-                 " WHERE t.prescription_id IN (" +
-                 id1 + "," + id2 + ") AND o.prescription_id <> t.prescription_id");
-        txn.commit();
-    }
-
-    // GET all: swapped MedicationDispenses are omitted and an ERROR is logged, the untouched task is still returned
-    {
-        LogTestBase::TestLogSink logSink;
-        auto result = database().retrieveAllMedicationDispenses(kvnr, std::optional<UrlArguments>{});
-        database().commitTransaction();
-        const auto& dispenses = std::get<0>(result).medicationDispenses;
-        ASSERT_EQ(dispenses.size(), numMedications);
-        for (const auto& dispense : dispenses)
-        {
-            EXPECT_EQ(dispense.prescriptionId(), taskUntouched.prescriptionId());
-        }
-        size_t errorCount = 0;
-        logSink.visitLines([&](const std::string& line) {
-            if (line.find("contains unexpected prescription id") != std::string::npos)
-            {
-                ++errorCount;
-            }
-        });
-        EXPECT_EQ(errorCount, 2);
-    }
-
-    // GET by id: swapped MedicationDispenses are not returned, the untouched one is
-    for (const auto* swappedTask : {&taskSwapped1, &taskSwapped2})
-    {
-        LogTestBase::TestLogSink logSink;
-        for (size_t i = 0; i < numMedications; ++i)
-        {
-            const model::MedicationDispenseId id(swappedTask->prescriptionId(), i);
-            const auto result = database().retrieveMedicationDispense(kvnr, id);
-            database().commitTransaction();
-            EXPECT_TRUE(result.medicationDispenses.empty());
-        }
-        size_t errorCount = 0;
-        logSink.visitLines([&](const std::string& line) {
-            if (line.find("contains unexpected prescription id") != std::string::npos)
-            {
-                ++errorCount;
-            }
-        });
-        EXPECT_EQ(errorCount, numMedications);
-    }
-    for (size_t i = 0; i < numMedications; ++i)
-    {
-        const model::MedicationDispenseId id(taskUntouched.prescriptionId(), i);
-        const auto result = database().retrieveMedicationDispense(kvnr, id);
-        database().commitTransaction();
-        EXPECT_EQ(result.medicationDispenses.size(), 1);
     }
 }

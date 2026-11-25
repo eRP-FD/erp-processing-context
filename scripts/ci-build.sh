@@ -27,7 +27,6 @@ readargs()
     output_folder="."
     source_folder="."
     with_hsm_mock="False"
-    with_asan=false
     while [ $# -gt 0 ] ; do
         case "$1" in
             --build_version=*)
@@ -53,9 +52,6 @@ readargs()
                 ;;
             --with_hsm_mock)
                 with_hsm_mock="True"
-                ;;
-            --with_asan)
-                with_asan=true
                 ;;
             *)
                 die "Unknown option: $1"
@@ -88,12 +84,14 @@ fi
 test -n "${erp_build_version}" || die "missing argument --build_version="
 test -n "${erp_release_version}" || die "missing argument --release_version="
 
+pip3 install "conan<3" --upgrade
+pip3 install --user packageurl-python
 export CONAN_TRACE_FILE=$(pwd)/conan_trace.log
 conan --version
 
 conan_remote_add() {
     if ! ( conan remote list | grep -qE "^$1" ; ) ; then
-        conan remote add --force "$1" "$2"
+        conan remote add "$1" "$2"
     fi
 }
 
@@ -158,11 +156,7 @@ fi
 
 conan install "${source_folder}" "${conan_args[@]}"
 conan cache clean --source --build --download
-cmake_extra_args=()
-if "${with_asan}"; then
-    cmake_extra_args+=(-DERP_WITH_ASAN=ON)
-fi
-cmake "${source_folder}" --preset "conan-${build_type,,}" "${cmake_extra_args[@]}"
+cmake "${source_folder}" --preset "conan-${build_type,,}"
 
 if [ "$skip_build" == "yes" ]; then
     cmake --build "${output_folder}/build/${build_type}" --target generated_source

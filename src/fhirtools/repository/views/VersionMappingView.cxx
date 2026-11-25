@@ -11,6 +11,7 @@
 #include "fhirtools/repository/FhirCodeSystem.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirValueSet.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <ranges>

@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_FHIR_FHIRCANONICALIZER_HXX
 
 #include "shared/ErpRequirements.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 

@@ -88,13 +88,6 @@ public:
     const std::unordered_map<DefinitionKey, std::unique_ptr<FhirCodeSystem>>& codeSystemsByKey() const;
     const std::unordered_map<DefinitionKey, std::unique_ptr<FhirValueSet>>& valueSetsByKey() const;
 
-    // BEGIN: performance report
-    // call enableMeasurement to record performence metrics
-    // call report to print recorded data
-    void enableMeasurement() const;
-    void report() const;
-    // END: performance report
-
 private:
     [[nodiscard]] bool loadFile(const std::filesystem::path& file, const FhirResourceGroupResolver& groupResolver);
     void mergeGroups(const std::map<std::string, std::shared_ptr<const FhirResourceGroup>>& groups);

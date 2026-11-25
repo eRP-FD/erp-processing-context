@@ -102,7 +102,6 @@ public:
     void setPcrHash(const ::ErpVector& pcrHash);
 
     void startRefresher(boost::asio::io_context& context, std::chrono::steady_clock::duration interval);
-    void cancelRefresher();
 
     BlobDatabase& getBlobDatabase();
     void recreateDatabaseConnection();

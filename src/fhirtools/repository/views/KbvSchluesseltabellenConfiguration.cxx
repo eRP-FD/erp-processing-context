@@ -5,6 +5,7 @@
 #include "fhirtools/repository/views/KbvSchluesseltabellenConfiguration.hxx"
 #include "ConfigurationHelper.hxx"
 #include "fhirtools/FPExpect.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/pointer.h>
 #include <ranges>

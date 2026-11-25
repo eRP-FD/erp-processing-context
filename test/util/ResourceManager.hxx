@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_TOOLS_RESOURCEMANAGER_HXX
 
 #include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <filesystem>
 #include <map>

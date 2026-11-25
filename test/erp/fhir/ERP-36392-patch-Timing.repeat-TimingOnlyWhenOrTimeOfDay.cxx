@@ -33,6 +33,8 @@ public:
         std::regex notAllowed{R"([^A-Za-z0-9_])"};
         return regex_replace(info.param, notAllowed, "_");
     }
+
+    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", fhirtools::Date{"2026-05-29"}};
 };
 
 TEST_P(ERP_36392_patch_Timing_repeat_TimingOnlyWhenOrTimeOfDayTest, negative)

@@ -51,6 +51,7 @@ struct Params {
     }
     Type type;
     std::string inputFileName = "input.xml";
+    std::optional<std::string> shiftView{};
     friend std::ostream& operator<<(std::ostream& os, const Params& params)
     {
         os << params.sampleName;
@@ -93,6 +94,11 @@ public:
 
 TEST_P(Epa4AllTransformerGematikTestdataPrescription, Test)
 {
+    std::optional<testutils::ShiftFhirResourceViewsGuard> guard =
+        GetParam().shiftView.has_value()
+            ? std::make_optional<testutils::ShiftFhirResourceViewsGuard>(
+                  GetParam().shiftView.value_or(""), date::floor<date::days>(std::chrono::system_clock::now()))
+            : std::nullopt;
     const auto inputResourceXmlString = ResourceManager::instance().getStringResource(GetParam().inputFile().string());
 
     const auto kbvInputBundle = model::Bundle::fromXmlNoValidation(inputResourceXmlString);
@@ -191,7 +197,8 @@ std::vector<Params> makeKbv14Params(const std::filesystem::path& path)
             params.emplace_back(Params{.sampleDir = file.path().parent_path(),
                                        .sampleName = file.path().filename().replace_extension("").string(),
                                        .type = Type::autoDetect,
-                                       .inputFileName = file.path().filename().string()});
+                                       .inputFileName = file.path().filename().string(),
+                                       .shiftView = "epa.medication-1.3.2"});
         }
     }
     return params;

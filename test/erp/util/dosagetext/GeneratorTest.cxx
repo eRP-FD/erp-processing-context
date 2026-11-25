@@ -27,6 +27,8 @@ using namespace dosagetext;
 
 class GeneratorTest : public testing::Test
 {
+public:
+    testutils::ShiftFhirResourceViewsGuard kbv1_4{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
 };
 
 TEST_F(GeneratorTest, Test)

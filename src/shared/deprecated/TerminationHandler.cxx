@@ -7,6 +7,7 @@
 
 #include "shared/deprecated/TerminationHandler.hxx"
 
+#include "shared/util/PeriodicTimer.hxx"
 #include "shared/deprecated/SignalHandler.hxx"
 #include "shared/util/TLog.hxx"
 #include "shared/util/ThreadNames.hxx"
@@ -14,6 +15,38 @@
 
 #include <iostream>
 #include <memory>
+
+class TerminationHandler::ShutdownDelayTimerHandler : public OneShotHandler
+{
+public:
+    using OneShotHandler::OneShotHandler;
+
+protected:
+    void timerHandler() override
+    {
+        SignalHandler::gracefulShutdown();
+    }
+};
+
+class TerminationHandler::CountDownTimerHandler : public FixedIntervalHandler
+{
+public:
+    explicit CountDownTimerHandler(int countDownSecondsStart)
+        : FixedIntervalHandler("CountDownTimer", std::chrono::seconds(1))
+        , secondsLeft(countDownSecondsStart)
+    {
+        TLOG(INFO) << "shutdown in " << secondsLeft;
+    }
+
+protected:
+    void timerHandler() override
+    {
+        TLOG(INFO) << "shutdown in " << --secondsLeft;
+    }
+
+private:
+    int secondsLeft;
+};
 
 TerminationHandler::~TerminationHandler() = default;
 
@@ -29,6 +62,7 @@ TerminationHandler::TerminationHandler(void)
     , mCallbacks()
     , mState(State::Running)
     , mHasError(false)
+    , mShutdownDelayTimer(std::make_unique<ShutdownDelayTimer>("ShutdownDelayTimer"))
 {
 }
 
@@ -75,15 +109,19 @@ void TerminationHandler::terminate()
     SignalHandler::manualTermination();
 }
 
-void TerminationHandler::gracefulShutdown(int delaySeconds)
+void TerminationHandler::gracefulShutdown(boost::asio::io_context& ioContext, int delaySeconds)
 {
     setState(State::Terminating);
     if (delaySeconds <= 0)
     {
         SignalHandler::gracefulShutdown();
     }
-    // If delaySeconds > 0 the caller (BaseServiceContext::startShutdownTimers) owns the
-    // timers and will call SignalHandler::gracefulShutdown() when the delay expires.
+    else
+    {
+        mShutdownDelayTimer->start(ioContext, std::chrono::seconds(delaySeconds));
+        mCountDownTimer = std::make_unique<CountDownTimer>(delaySeconds);
+        mCountDownTimer->start(ioContext, std::chrono::seconds(1));
+    }
 }
 
 TerminationHandler::State TerminationHandler::setState (const State newState)

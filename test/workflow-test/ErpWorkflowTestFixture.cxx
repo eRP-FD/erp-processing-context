@@ -612,31 +612,15 @@ void ErpWorkflowTestBase::checkAuditEvents(std::vector<std::optional<std::string
         auditEventBundle = auditEventGet(
             insurantKvnr, language, "date=ge" + startTime.toXsDateTimeWithoutFractionalSeconds().substr(0, 19) + "Z&_sort=date"));
     ASSERT_TRUE(auditEventBundle);
+    ASSERT_EQ(auditEventBundle->getResourceCount(), expectedActions.size()) << auditEventBundle->serializeToJsonString();
 
-    // Filter out asynchronous exporter events (EPA/Patientenakte transfer) that may appear in
-    // cloud environments because the export happens asynchronously and is not part of the workflow
-    // under test.
-    std::vector<model::AuditEvent> auditEvents;
-    if (auditEventBundle->getResourceCount() > 0)
-    {
-        auto allAuditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
-        for (auto& ev : allAuditEvents)
-        {
-            if (ev.textDiv().find("Patientenakte") == std::string_view::npos)
-            {
-                auditEvents.emplace_back(std::move(ev));
-            }
-        }
-    }
-
-    ASSERT_EQ(auditEvents.size(), expectedActions.size()) << auditEventBundle->serializeToJsonString();
-
-    EXPECT_EQ(auditEvents.size(), resourceIds.size());
+    EXPECT_EQ(auditEventBundle->getResourceCount(), resourceIds.size());
     if (resourceIds.empty())
     {
         return;
     }
 
+    const auto auditEvents = auditEventBundle->getResourcesByType<model::AuditEvent>("AuditEvent");
     for(std::size_t i = 0; i < auditEvents.size(); ++i)
     {
         const auto& auditEvent = auditEvents[i];

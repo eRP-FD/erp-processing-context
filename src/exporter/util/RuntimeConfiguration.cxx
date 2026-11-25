@@ -6,8 +6,6 @@
 #include "shared/util/Configuration.hxx"
 #include "shared/util/Expect.hxx"
 
-#include <utility>
-
 namespace exporter
 {
 
@@ -65,24 +63,6 @@ std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::getM
     return shared::RuntimeConfigurationBase::getMetricsLogThresholdsMs();
 }
 
-
-void RuntimeConfiguration::setPausedEpas(std::vector<std::string> fqdns)
-{
-    mPausedEpas = std::set<std::string>(std::make_move_iterator(fqdns.begin()),
-                                        std::make_move_iterator(fqdns.end()));
-}
-
-bool RuntimeConfiguration::isEpaPaused(const std::string& fqdn) const
-{
-    return mPausedEpas.contains(fqdn);
-}
-
-std::set<std::string> RuntimeConfiguration::getPausedEpas() const
-{
-    return mPausedEpas;
-}
-
-
 RuntimeConfiguration::Getter::Getter(std::shared_ptr<const RuntimeConfiguration> runtimeConfiguration)
     : mRuntimeConfiguration(std::move(runtimeConfiguration))
     , mSharedLock(mRuntimeConfiguration->mSharedMutex)
@@ -113,18 +93,6 @@ std::map<DurationCategory, std::chrono::milliseconds> RuntimeConfiguration::Gett
 {
     return mRuntimeConfiguration->getMetricsLogThresholdsMs();
 }
-
-bool RuntimeConfiguration::Getter::isEpaPaused(const std::string& fqdn) const
-{
-    return mRuntimeConfiguration->isEpaPaused(fqdn);
-}
-
-std::set<std::string> RuntimeConfiguration::Getter::getPausedEpas() const
-{
-    return mRuntimeConfiguration->getPausedEpas();
-}
-
-
 
 
 RuntimeConfiguration::Setter::Setter(std::shared_ptr<RuntimeConfiguration> runtimeConfiguration)
@@ -167,11 +135,6 @@ void RuntimeConfiguration::Setter::setMetricsLogThresholdMs(DurationCategory cat
                                                             std::chrono::milliseconds thresholdMs)
 {
     mRuntimeConfiguration->setMetricsLogThresholdMs(category, thresholdMs);
-}
-
-void RuntimeConfiguration::Setter::setPausedEpas(std::vector<std::string> fqdns)
-{
-    mRuntimeConfiguration->setPausedEpas(std::move(fqdns));
 }
 
 }

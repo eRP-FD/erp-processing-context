@@ -25,7 +25,7 @@ class EventDispatcher
 public:
     struct Result {
         Outcome outcome;
-        std::string errorReason;
+        std::string deadLetterReason;
     };
 
     explicit EventDispatcher(std::unique_ptr<IEpaMedicationClient>&& medicationClient);

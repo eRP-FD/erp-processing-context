@@ -17,7 +17,6 @@
 #include "pc/popp/PoPPCertificateVerifierServiceMock.hxx"
 #include "shared/common/Constants.hxx"
 #include "shared/deprecated/TerminationHandler.hxx"
-#include "shared/fhir/Fhir.hxx"
 #include "shared/network/client/HttpsClient.hxx"
 #include "shared/util/Condition.hxx"
 #include "shared/util/ThreadNames.hxx"
@@ -55,7 +54,6 @@ public:
 
     void SetUp () override
     {
-        Fhir::init<ConfigurationBase::ERP>(Fhir::Init::now);
         mCaDerPathGuard = std::make_unique<EnvironmentVariableGuard>(
             "ERP_TSL_INITIAL_CA_DER_PATH",
             ResourceManager::getAbsoluteFilename("test/generated_pki/sub_ca1_ec/ca.der"));
@@ -107,23 +105,10 @@ public:
                     });
             });
 
-        // Ensure the application thread is always terminated and joined, even when an assertion below
-        // fails early. Without this guard, ASSERT_EQ causes an early return that leaves the thread
-        // running and its destructor calls std::terminate().
-        auto threadGuard = std::unique_ptr<std::thread, std::function<void(std::thread*)>>(
-            &processingContextThread, [](std::thread* t) {
-                if (t->joinable())
-                {
-                    TerminationHandler::instance().terminate();
-                    t->join();
-                }
-            });
-
         // Initialization of the processing context takes some time. Wait until all is setup and the PC is waiting for
-        // its termination. Use a generous timeout to accommodate slower CI environments where the TSL download
-        // and health-check loop can take significantly longer than on a developer machine.
+        // its termination.
         TVLOG(1) << "waiting for the processing context to finish its initialization";
-        auto currentState = state.waitForValue(MainState::WaitingForTermination, std::chrono::seconds(120));
+        auto currentState = state.waitForValue(MainState::WaitingForTermination, std::chrono::seconds(60));
         ASSERT_EQ(currentState, MainState::WaitingForTermination);
 
         makeRequests();
@@ -134,8 +119,6 @@ public:
         ASSERT_EQ(currentState, MainState::Terminated);
 
         processingContextThread.join();
-        [[maybe_unused]] const auto _ =
-            threadGuard.release();// thread already joined above, prevent double-join in guard
     }
 
     static bool usePostgres()

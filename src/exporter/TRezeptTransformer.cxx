@@ -86,10 +86,7 @@ void TRezeptTransformer::transformRxPrescription(model::ErpTPrescriptionCarbonCo
         {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_Ingredient_Amount",
          .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-ingredient-amount-extension"},
         {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_PackagingSize",
-         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-packaging-size-extension"},
-        {.from = "https://fhir.kbv.de/StructureDefinition/KBV_EX_ERP_Medication_CompoundingInstruction",
-         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/"
-               "medication-manufacturing-instructions-extension"}};
+         .to = "https://gematik.de/fhir/epa-medication/StructureDefinition/medication-packaging-size-extension"}};
     auto transformedMedication =
         transformResource(TRezeptMedicationProfile, kbvMedication, medicationValueMappings, {});
     outParameter.setMedication(transformedMedication);
@@ -101,14 +98,6 @@ void TRezeptTransformer::transformRxDispense(model::ErpTPrescriptionCarbonCopy& 
                                              const model::TelematikId& fallbackTelematikId,
                                              const std::string& fallbackOrganizationName)
 {
-    fhirtools::ResourceProfileTransformer::Options options;
-    options.keepExtensions.emplace(
-        "http://ig.fhir.de/igs/medication/StructureDefinition/GeneratedDosageInstructionsMeta");
-    options.keepExtensions.emplace(
-        "http://hl7.org/fhir/5.0/StructureDefinition/extension-MedicationDispense.renderedDosageInstruction");
-    options.keepExtensions.emplace("algorithmVersion");
-    options.keepExtensions.emplace("language");
-
     model::ErpTPrescriptionOrganization organization;
     // Set profile without version
     organization.setMetaProfile0(to_string(TRezeptOrganizationProfile));
@@ -166,8 +155,8 @@ void TRezeptTransformer::transformRxDispense(model::ErpTPrescriptionCarbonCopy& 
     {
         const Uuid medicationReference{medicationDispense.medicationReference()};
         Expect(medicationReference.isValidIheUuid(), "MedicationDispense without valid medicationReference");
-        auto transformedDispense = transformResource(TRezeptMedicationDispenseProfile, medicationDispense, {},
-                                                     medicationDispenseFixedValues, options);
+        auto transformedDispense =
+            transformResource(TRezeptMedicationDispenseProfile, medicationDispense, {}, medicationDispenseFixedValues);
         remove(transformedDispense, rapidjson::Pointer{"/performer"});
         transformedDispense.setValue(rapidjson::Pointer{"/performer/0/actor/reference"},
                                      "Organization/" + telematikId->id());
@@ -179,7 +168,7 @@ void TRezeptTransformer::transformRxDispense(model::ErpTPrescriptionCarbonCopy& 
             if (medicationId == medicationReference)
             {
                 foundMedication = true;
-                auto transformedMedication = transformResource(TRezeptMedicationProfile, medication, {}, {}, options);
+                auto transformedMedication = transformResource(TRezeptMedicationProfile, medication, {}, {});
                 outParameter.addDispenseInformation(transformedDispense, transformedMedication);
             }
         }

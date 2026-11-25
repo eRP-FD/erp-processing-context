@@ -335,16 +335,6 @@ const fhirtools::FhirStructureRepositoryBackend& fhirtools::FhirStructureDefinit
     return *mRepositoryBackend;
 }
 
-void fhirtools::FhirStructureDefinition::enableMeasurement() const
-{
-    std::ranges::for_each(mElements, &FhirElement::enableMeasurement);
-}
-
-void fhirtools::FhirStructureDefinition::report() const
-{
-    std::ranges::for_each(mElements, &FhirElement::report);
-}
-
 
 class FhirStructureDefinition::Builder::FhirSlicingBuilder : public FhirSlicing::Builder
 {

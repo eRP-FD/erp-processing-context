@@ -13,7 +13,6 @@
 #include "shared/deprecated/Timer.hxx"
 
 #include <functional>
-#include <mutex>
 
 
 class HsmFactory;
@@ -75,9 +74,6 @@ private:
     std::chrono::system_clock::duration mRetryInterval;
     std::atomic<std::chrono::system_clock::time_point> mLastUpdate;
     std::shared_ptr<Timer> mTimerManager;
-    // Serialises update() against the destructor so that a timer callback
-    // that is already executing cannot access members after they are freed.
-    mutable std::mutex mUpdateMutex;
 };
 
 

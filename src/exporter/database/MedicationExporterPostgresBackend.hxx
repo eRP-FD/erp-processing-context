@@ -45,7 +45,6 @@ public:
 
     void finalizeKvnr(const model::EventKvnr& kvnr,
                       const std::string& assignedEpaPrefix) const override;
-    void recordErrorOnFirstEvent(const model::EventKvnr& kvnr, const std::string& errorText) override;
 
     std::optional<db_model::TaskEvent> processNextTRezeptEvent() override;
     void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) override;
@@ -89,8 +88,7 @@ public:
         pqxx::row::size_type authoredOn = 5;
         pqxx::row::size_type keyBlobId = 6;
         pqxx::row::size_type salt = 7;
-        pqxx::row::size_type lastError = 8;
-        int total = 9;
+                         int total = 8;
     };
 
     [[nodiscard]]

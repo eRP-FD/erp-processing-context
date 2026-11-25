@@ -14,6 +14,7 @@
 #include "test/util/TestUtils.hxx"
 #include "shared/util/TLog.hxx"
 
+#include <date/tz.h>
 #include <gtest/gtest.h>
 #include <span>
 #include <chrono>
@@ -45,8 +46,9 @@ int main(int argc, char** argv)
     std::optional<testutils::ShiftFhirResourceViewsGuard> shiftGuard;
     if (testDate && testDate != "today")
     {
-        const auto testDay = testutils::germanDay(model::Timestamp::fromGermanDate(*testDate));
-        const auto offset = testutils::germanToday() - testDay;
+        const auto testTimestamp = model::Timestamp::fromXsDate(*testDate, model::Timestamp::UTCTimezone);
+        auto now = floor<std::chrono::days>(date::utc_clock::now());
+        auto offset = now - floor<std::chrono::days>(date::clock_cast<date::utc_clock>(testTimestamp.toChronoTimePoint()));
         LOG(INFO) << "setting offset: " << offset;
         shiftGuard.emplace(offset);
     }

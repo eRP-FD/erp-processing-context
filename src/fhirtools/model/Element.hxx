@@ -11,7 +11,6 @@
 
 #include "fhirtools/model/DateTime.hxx"
 #include "fhirtools/model/DecimalType.hxx"
-#include "fhirtools/model/PrimitiveValue.hxx"
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/typemodel/ProfiledElementTypeInfo.hxx"
 #include "fhirtools/util/Gsl.hxx"
@@ -35,6 +34,7 @@ class FhirCodeSystem;
 class Element : public std::enable_shared_from_this<Element>
 {
 public:
+    class QuantityType;
     enum class Type
     {
         Integer,
@@ -106,7 +106,7 @@ public:
     [[nodiscard]] virtual QuantityType asQuantity() const = 0;
 
     [[nodiscard]] virtual bool hasSubElement(const std::string& name) const = 0;
-    [[nodiscard]] virtual const std::vector<std::string>& subElementNames() const = 0;
+    [[nodiscard]] virtual std::vector<std::string> subElementNames() const = 0;
     [[nodiscard]] virtual std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const = 0;
     [[nodiscard]] std::shared_ptr<const Element> resourceRoot() const;
     [[nodiscard]] std::shared_ptr<const Element> containerResource() const;
@@ -137,8 +137,6 @@ public:
     [[nodiscard]] std::optional<std::strong_ordering> compareTo(const Element& rhs) const;
     [[nodiscard]] std::optional<bool> equals(const Element& rhs) const;
     [[nodiscard]] bool matches(const Element& pattern) const;
-    // arbitrary order - also orders structures
-    [[nodiscard]] std::strong_ordering quickCompareTo(const Element& rhs) const;
 
     size_t subElementLevel() const;
 
@@ -177,13 +175,41 @@ private:
     Type mType;
 };
 
+class Element::QuantityType
+{
+public:
+    QuantityType(DecimalType value, const std::string_view& unit);
+    explicit QuantityType(const std::string_view& valueAndUnit);
+
+    [[nodiscard]] const DecimalType& value() const
+    {
+        return mValue;
+    }
+    [[nodiscard]] const std::string& unit() const
+    {
+        return mUnit;
+    }
+
+    [[nodiscard]] std::optional<std::strong_ordering> compareTo(const QuantityType& rhs) const;
+    [[nodiscard]] std::optional<bool> equals(const QuantityType& rhs) const;
+
+private:
+    QuantityType convertToUnit(const std::string& unit) const;
+    bool convertibleToUnit(const std::string& unit) const;
+
+    DecimalType mValue;
+    std::string mUnit;
+};
+
+
 /// @brief Implementation of the Element interface for the 'primitive' types
 ///        boolean, string, integer, decimal, date-time, date and quantity
 class PrimitiveElement : public Element
 {
 public:
+    using ValueType = std::variant<int32_t, DecimalType, bool, std::string, Date, DateTime, Time, QuantityType>;
     explicit PrimitiveElement(gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository,
-                              Type type, PrimitiveValue&& value, std::weak_ptr<const Element> parent = {});
+                              Type type, ValueType&& value, std::weak_ptr<const Element> parent = {});
     [[nodiscard]] std::string resourceType() const override;
     [[nodiscard]] std::vector<std::string_view> profiles() const override;
 
@@ -199,7 +225,7 @@ public:
     [[nodiscard]] QuantityType asQuantity() const override;
 
     [[nodiscard]] bool hasSubElement(const std::string& name) const override;
-    [[nodiscard]] const std::vector<std::string>& subElementNames() const override;
+    [[nodiscard]] std::vector<std::string> subElementNames() const override;
     [[nodiscard]] bool hasValue() const final;
     [[nodiscard]] std::vector<std::shared_ptr<const Element>> subElements(const std::string& name) const override;
 
@@ -207,8 +233,9 @@ private:
     static const FhirStructureDefinition&
     getStructureDefinition(const FhirStructureRepositoryBackend& fhirStructureRepository, Type type);
 
+    std::string decimalAsString(const DecimalType& dec) const;
 
-    PrimitiveValue mValue;
+    ValueType mValue;
 };
 
 [[nodiscard]] bool isImplicitConvertible(Element::Type from, Element::Type to);

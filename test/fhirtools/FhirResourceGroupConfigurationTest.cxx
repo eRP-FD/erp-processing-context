@@ -9,6 +9,7 @@
 #include "fhirtools/repository/FhirStructureRepository.hxx"
 #include "fhirtools/repository/VersionMapper.hxx"
 #include "fhirtools/repository/groups/FhirResourceGroupConfiguration.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>

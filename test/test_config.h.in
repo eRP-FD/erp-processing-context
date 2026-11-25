@@ -10,4 +10,3 @@
 // @GENERATED_NOTE@
 
 static constexpr std::string_view TEST_DATA_DIR = "@TEST_DATA_DIR@";
-static constexpr std::string_view TEST_DATA_BINARY_DIR = "@TEST_DATA_BINARY_DIR@";

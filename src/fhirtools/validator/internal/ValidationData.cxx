@@ -29,7 +29,7 @@ void fhirtools::ValidationData::add(FhirConstraint constraint, std::string eleme
 
 void ValidationData::addInfo(ValidationAdditionalInfo::Kind kind, const std::shared_ptr<const Element>& element,
                              const std::optional<std::string>& elementFullPath, const std::string& typeId,
-                             const std::optional<FhirConstraint::Key>& constraintKey)
+                             const FhirConstraint::Key& constraintKey)
 {
     mResult.addInfo(kind, element, elementFullPath, typeId, constraintKey);
 }

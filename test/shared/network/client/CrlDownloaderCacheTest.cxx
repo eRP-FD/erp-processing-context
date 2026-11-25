@@ -18,7 +18,7 @@ public:
 
         std::string result(reinterpret_cast<char*>(derData), static_cast<size_t>(derLen));
         OPENSSL_free(derData);
-        BIO_free(bio);
+        OPENSSL_free(bio);
         return result;
     }
 };

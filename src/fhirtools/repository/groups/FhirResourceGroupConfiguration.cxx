@@ -9,6 +9,7 @@
 #include "fhirtools/repository/FhirStructureDefinition.hxx"
 #include "fhirtools/repository/FhirValueSet.hxx"
 #include "fhirtools/repository/VersionMapper.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>

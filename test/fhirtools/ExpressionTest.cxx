@@ -37,28 +37,6 @@ public:
     MOCK_METHOD(EvaluationContext,  eval, (const EvaluationContext&), (const, override));
 };
 
-class FixedCollectionExpression : public fhirtools::Expression
-{
-public:
-    explicit FixedCollectionExpression(Collection collection, bool isSorted = false)
-        : mCollection(std::move(collection))
-        , mSorted(isSorted)
-    {
-    }
-    [[nodiscard]] EvaluationContext eval(const EvaluationContext& context) const override
-    {
-        return context(mCollection);
-    }
-    [[nodiscard]] bool returnsSorted() const override
-    {
-        return mSorted;
-    }
-
-private:
-    Collection mCollection;
-    bool mSorted;
-};
-
 class ExpressionTest : public testing::Test
 {
 public:
@@ -190,13 +168,13 @@ protected:
         checkDecResult(result.collection, expected);
     }
 
-    void checkQuantResult(const Collection& result, QuantityType expected)
+    void checkQuantResult(const Collection& result, Element::QuantityType expected)
     {
         ASSERT_EQ(result.size(), 1);
         ASSERT_EQ(result[0]->type(), Element::Type::Quantity);
         ASSERT_EQ(result[0]->asQuantity().equals(expected), true);
     }
-    void checkQuantResult(const EvaluationContext& result, QuantityType expected)
+    void checkQuantResult(const EvaluationContext& result, Element::QuantityType expected)
     {
         checkQuantResult(result.collection, expected);
     }
@@ -348,7 +326,7 @@ TEST_F(ExpressionTest, ExistenceDistinct)
         mRepo,
         {std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 11),
          std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType(11)),
-         std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(11, {}))},
+         std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(11, {}))},
         rootElement};
 
     {
@@ -1580,323 +1558,6 @@ TEST_F(ExpressionTest, CombiningUnion)
     }
 }
 
-TEST_F(ExpressionTest, CombiningUnion_PropertiesAndConstructorValidation)
-{
-    static_assert(std::is_same_v<CombiningUnion, UnionOperator>);
-    EXPECT_STREQ(CombiningUnion::IDENTIFIER, "union");
-
-    CombiningUnion unionExpr(std::make_shared<DollarThis>(), std::make_shared<DollarThis>());
-    EXPECT_TRUE(unionExpr.returnsSorted());
-
-    EXPECT_THROW(CombiningUnion(nullptr, std::make_shared<DollarThis>()), std::exception);
-    EXPECT_THROW(CombiningUnion(std::make_shared<DollarThis>(), nullptr), std::exception);
-    EXPECT_THROW(CombiningUnion(nullptr, nullptr), std::exception);
-}
-
-TEST_F(ExpressionTest, CombiningUnion_EmptyAndSingleCollections)
-{
-    // Empty | Empty -> Empty
-    {
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement});
-        EXPECT_TRUE(result.collection.empty());
-        EXPECT_EQ(result.context, rootElement);
-        EXPECT_EQ(result.view, mRepo);
-    }
-
-    // Empty | Non-Empty -> Non-Empty
-    {
-        const auto elem = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "item"s);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{elem}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement});
-        ASSERT_EQ(result.collection.size(), 1);
-        EXPECT_TRUE(result.collection.contains(elem));
-    }
-
-    // Non-Empty | Empty -> Non-Empty
-    {
-        const auto elem = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 42);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{elem}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement});
-        ASSERT_EQ(result.collection.size(), 1);
-        EXPECT_TRUE(result.collection.contains(elem));
-    }
-
-    // Single item identical on both sides -> Deduplicated to single item
-    {
-        const auto elem = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "same"s);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{elem}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{elem}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement});
-        ASSERT_EQ(result.collection.size(), 1);
-        EXPECT_TRUE(result.collection.contains(elem));
-    }
-
-    // Single item distinct on each side -> 2 items
-    {
-        const auto elem1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "alpha"s);
-        const auto elem2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "beta"s);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{elem1}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{elem2}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement});
-        ASSERT_EQ(result.collection.size(), 2);
-        EXPECT_TRUE(result.collection.contains(elem1));
-        EXPECT_TRUE(result.collection.contains(elem2));
-    }
-}
-
-TEST_F(ExpressionTest, CombiningUnion_Deduplication)
-{
-    // LHS with internal duplicates, RHS empty
-    {
-        const auto e1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1);
-        const auto e2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 2);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{e1, e1, e2, e2, e1}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 2);
-        EXPECT_TRUE(result.contains(e1));
-        EXPECT_TRUE(result.contains(e2));
-    }
-
-    // LHS empty, RHS with internal duplicates
-    {
-        const auto s1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "dup"s);
-        const auto s2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "unique"s);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{s1, s2, s1, s1}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 2);
-        EXPECT_TRUE(result.contains(s1));
-        EXPECT_TRUE(result.contains(s2));
-    }
-
-    // Overlapping elements between LHS and RHS
-    {
-        const auto e1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1);
-        const auto e2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 2);
-        const auto e3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 3);
-        const auto e4 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 4);
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{e1, e2, e3}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{e2, e3, e4}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(e1));
-        EXPECT_TRUE(result.contains(e2));
-        EXPECT_TRUE(result.contains(e3));
-        EXPECT_TRUE(result.contains(e4));
-    }
-
-    // Completely identical multi-element sets
-    {
-        const auto s1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "first"s);
-        const auto s2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "second"s);
-        const auto s3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "third"s);
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{s1, s2, s3}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{s1, s2, s3}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 3);
-        EXPECT_TRUE(result.contains(s1));
-        EXPECT_TRUE(result.contains(s2));
-        EXPECT_TRUE(result.contains(s3));
-    }
-
-    // All identical elements repeated multiple times on both sides
-    {
-        const auto val = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 99);
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{val, val, val}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{val, val}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 1);
-        EXPECT_TRUE(result.contains(val));
-    }
-}
-
-TEST_F(ExpressionTest, CombiningUnion_DisjointCollections)
-{
-    // Disjoint Integers
-    {
-        const auto i1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 10);
-        const auto i2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 20);
-        const auto i3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 30);
-        const auto i4 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 40);
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{i1, i3}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{i2, i4}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(i1));
-        EXPECT_TRUE(result.contains(i2));
-        EXPECT_TRUE(result.contains(i3));
-        EXPECT_TRUE(result.contains(i4));
-    }
-
-    // Disjoint Strings
-    {
-        const auto s1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "apple"s);
-        const auto s2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "banana"s);
-        const auto s3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "cherry"s);
-        const auto s4 = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "date"s);
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{s1, s3}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{s2, s4}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(s1));
-        EXPECT_TRUE(result.contains(s2));
-        EXPECT_TRUE(result.contains(s3));
-        EXPECT_TRUE(result.contains(s4));
-    }
-
-    // Booleans
-    {
-        const auto bTrue = std::make_shared<PrimitiveElement>(&backend, Element::Type::Boolean, true);
-        const auto bFalse = std::make_shared<PrimitiveElement>(&backend, Element::Type::Boolean, false);
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{bTrue}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{bFalse}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 2);
-        EXPECT_TRUE(result.contains(bTrue));
-        EXPECT_TRUE(result.contains(bFalse));
-    }
-
-    // Decimals
-    {
-        const auto d1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("1.25"));
-        const auto d2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("2.50"));
-        const auto d3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("3.75"));
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{d1, d3}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{d2}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 3);
-        EXPECT_TRUE(result.contains(d1));
-        EXPECT_TRUE(result.contains(d2));
-        EXPECT_TRUE(result.contains(d3));
-    }
-}
-
-TEST_F(ExpressionTest, CombiningUnion_MixedTypes)
-{
-    // Heterogeneous collection union
-    {
-        const auto iVal = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 100);
-        const auto sVal = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "hello"s);
-        const auto bVal = std::make_shared<PrimitiveElement>(&backend, Element::Type::Boolean, true);
-        const auto dVal = std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("99.9"));
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{iVal, sVal}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{bVal, dVal}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(iVal));
-        EXPECT_TRUE(result.contains(sVal));
-        EXPECT_TRUE(result.contains(bVal));
-        EXPECT_TRUE(result.contains(dVal));
-    }
-
-    // Different types with comparable textual/numeric values are distinct and not deduplicated
-    {
-        const auto iOne = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1);
-        const auto bTrue = std::make_shared<PrimitiveElement>(&backend, Element::Type::Boolean, true);
-        const auto sOne = std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "1"s);
-        const auto dOne = std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("1"));
-
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{iOne, bTrue}),
-                                 std::make_shared<FixedCollectionExpression>(Collection{sOne, dOne}));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(iOne));
-        EXPECT_TRUE(result.contains(bTrue));
-        EXPECT_TRUE(result.contains(sOne));
-        EXPECT_TRUE(result.contains(dOne));
-    }
-}
-
-TEST_F(ExpressionTest, CombiningUnion_ReturnsSortedOptimization)
-{
-    // Test with inputs reporting returnsSorted() == true vs false
-    const auto e1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1);
-    const auto e2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 2);
-    const auto e3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 3);
-
-    // Both sorted
-    {
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{e1, e3}, /*isSorted=*/true),
-                                 std::make_shared<FixedCollectionExpression>(Collection{e2}, /*isSorted=*/true));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 3);
-        EXPECT_TRUE(result.contains(e1));
-        EXPECT_TRUE(result.contains(e2));
-        EXPECT_TRUE(result.contains(e3));
-    }
-
-    // Unsorted inputs
-    {
-        CombiningUnion unionExpr(std::make_shared<FixedCollectionExpression>(Collection{e3, e1}, /*isSorted=*/false),
-                                 std::make_shared<FixedCollectionExpression>(Collection{e2, e1}, /*isSorted=*/false));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 3);
-        EXPECT_TRUE(result.contains(e1));
-        EXPECT_TRUE(result.contains(e2));
-        EXPECT_TRUE(result.contains(e3));
-    }
-}
-
-TEST_F(ExpressionTest, CombiningUnion_ChainedAndPathSelection)
-{
-    // Chained unions: (A | B) | C
-    {
-        const auto e1 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1);
-        const auto e2 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 2);
-        const auto e3 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 3);
-        const auto e4 = std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 4);
-
-        auto unionAB =
-            std::make_shared<CombiningUnion>(std::make_shared<FixedCollectionExpression>(Collection{e1, e2}),
-                                             std::make_shared<FixedCollectionExpression>(Collection{e2, e3}));
-        CombiningUnion unionABC(unionAB, std::make_shared<FixedCollectionExpression>(Collection{e3, e4}));
-
-        const auto result = unionABC.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 4);
-        EXPECT_TRUE(result.contains(e1));
-        EXPECT_TRUE(result.contains(e2));
-        EXPECT_TRUE(result.contains(e3));
-        EXPECT_TRUE(result.contains(e4));
-    }
-
-    // Union of PathSelections on rootElement
-    {
-        CombiningUnion unionExpr(std::make_shared<PathSelection>("multiNum"),
-                                 std::make_shared<PathSelection>("multiDec"));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 5);
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 1)));
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 5)));
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::Integer, 42)));
-        EXPECT_TRUE(
-            result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("0.1"))));
-        EXPECT_TRUE(
-            result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::Decimal, DecimalType("3.14"))));
-    }
-
-    // PathSelection union Literal
-    {
-        CombiningUnion unionExpr(std::make_shared<PathSelection>("string"),
-                                 std::make_shared<LiteralStringExpression>(&backend, "appended"s));
-        const auto result = unionExpr.eval(EvaluationContext{mRepo, rootElement}).collection;
-        ASSERT_EQ(result.size(), 2);
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "value"s)));
-        EXPECT_TRUE(result.contains(std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "appended"s)));
-    }
-}
-
 TEST_F(ExpressionTest, CombiningCombine)
 {
     CombiningCombine combiningCombine(std::make_shared<DollarThis>());
@@ -1917,22 +1578,22 @@ TEST_F(ExpressionTest, CollectionsInOperator)
     {
         const auto result = collectionsInOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m"))},
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m"))},
              rootElement});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsInOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m")),
-              std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m"))},
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m")),
+              std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m"))},
              rootElement});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsInOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m")),
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m")),
               std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "x"s)},
              rootElement});
         checkBoolResult(result, true);
@@ -1971,22 +1632,22 @@ TEST_F(ExpressionTest, CollectionsContainsOperator)
     {
         const auto result = collectionsContainsOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m"))},
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m"))},
              rootElement});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsContainsOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m")),
-              std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m"))},
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m")),
+              std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m"))},
              rootElement});
         checkBoolResult(result, true);
     }
     {
         const auto result = collectionsContainsOperator.eval(
             {mRepo,
-             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, QuantityType(10, "m")),
+             {std::make_shared<PrimitiveElement>(&backend, Element::Type::Quantity, Element::QuantityType(10, "m")),
               std::make_shared<PrimitiveElement>(&backend, Element::Type::String, "x"s)},
              rootElement});
         checkBoolResult(result, true);
@@ -2090,19 +1751,19 @@ TEST_F(ExpressionTest, MathPlusTest)
         PlusOperator plusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5m"),
                                   std::make_shared<LiteralQuantityExpression>(&backend, "1m"));
         const auto result = plusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-0.5}, "m"});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-0.5}, "m"});
     }
     {
         PlusOperator plusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5"),
                                   std::make_shared<LiteralDecimalExpression>(&backend, DecimalType{1.0}));
         const auto result = plusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-0.5}, ""});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-0.5}, ""});
     }
     {
         PlusOperator plusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5"),
                                   std::make_shared<LiteralIntegerExpression>(&backend, 1));
         const auto result = plusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-0.5}, ""});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-0.5}, ""});
     }
 }
 
@@ -2142,19 +1803,19 @@ TEST_F(ExpressionTest, MathMinusTest)
         MathMinusOperator minusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5m"),
                                         std::make_shared<LiteralQuantityExpression>(&backend, "1m"));
         const auto result = minusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-2.5}, "m"});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-2.5}, "m"});
     }
     {
         MathMinusOperator minusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5"),
                                         std::make_shared<LiteralDecimalExpression>(&backend, DecimalType{1.0}));
         const auto result = minusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-2.5}, ""});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-2.5}, ""});
     }
     {
         MathMinusOperator minusOperator(std::make_shared<LiteralQuantityExpression>(&backend, "-1.5"),
                                         std::make_shared<LiteralIntegerExpression>(&backend, 1));
         const auto result = minusOperator.eval({mRepo, {}, rootElement});
-        checkQuantResult(result, QuantityType{DecimalType{-2.5}, ""});
+        checkQuantResult(result, Element::QuantityType{DecimalType{-2.5}, ""});
     }
 }
 

@@ -39,7 +39,7 @@ public:
     /** Moves the contents of the given string into a BinaryBuffer. */
     explicit BinaryBuffer(std::string string) noexcept;
     /** Copies the contents of the given view into a BinaryBuffer. */
-    explicit BinaryBuffer(const BinaryView& view);
+    explicit BinaryBuffer(const BinaryView& view) noexcept;
     /** Copies the contents of the given memory range into a BinaryBuffer. */
     BinaryBuffer(const void* data, std::size_t size);
 

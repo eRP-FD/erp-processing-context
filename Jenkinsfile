@@ -27,8 +27,8 @@ pipeline {
         )
     }
     environment {
-        ERP_RELEASE_VERSION = "1.24.0"
-        ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3'
+        ERP_RELEASE_VERSION = "1.23.0"
+        ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
         ERP_POSTGRES_IMAGE = "erp-test-database:${dbImageUUID}"
         GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
         CONAN_HOME = "/media/erp/.conan2"
@@ -58,12 +58,7 @@ pipeline {
                 throttle(['unit-test-category'])
             }
             steps {
-                withVault([
-                    [path: "secret/eRp/tools/nexus", secretValues: [
-                        [vaultKey: 'username', envVar: 'NEXUS_EPA_DEV_NET_LOGIN'],
-                        [vaultKey: 'password', envVar: 'NEXUS_EPA_DEV_NET_PASSWORD']
-                    ]]
-                ]) {
+                loadArtifactoryConfigurationeRP {
                     sh """
                         #!/bin/bash -l
                         set -e
@@ -105,7 +100,7 @@ pipeline {
                             withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
                                                             usernameVariable: 'GITHUB_USERNAME',
                                                             passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                env.CONAN_LOGIN_USERNAME = env.CONAN_USERNAME
+                                env.CONAN_LOGIN_USERNAME = env.CONAN_USERNAME 
                                 inside(env.ERP_BUILD_IMAGE, '-u root:sudo -v jenkins-build-ccache:${HOME}/.ccache' + " -v ${env.WORKSPACE}:/media/erp") {
                                     def erp_build_version = sh(returnStdout: true, script: "git --git-dir='/media/erp/.git' describe").trim().toLowerCase()
                                     sh """#!/bin/bash
@@ -118,9 +113,7 @@ pipeline {
                                             --build_type=RelWithDebInfo \
                                             --with_hsm_mock
                                         # remove most of the intermediate build files to make the overall disk-usage footprint smaller
-                                        # Delete CMakeFiles but preserve rules.ninja so that "ninja -t deps"
-                                        # (used by ci-static-analysis.sh) can still load build.ninja.
-                                        find build/RelWithDebInfo -path '*/CMakeFiles*' -type f ! -name 'rules.ninja' -delete
+                                        find build/RelWithDebInfo -path '*/CMakeFiles*' -delete
                                         rm -rf build/RelWithDebInfo/fhir_package_tmp
                                         # Fix build folder file permissions
                                         chmod o+w /media/erp/build/

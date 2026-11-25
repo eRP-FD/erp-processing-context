@@ -542,13 +542,6 @@ void fhirtools::ProfileValidator::appendResults(fhirtools::ValidationResults res
     mData->append(std::move(results));
 }
 
-void fhirtools::ProfileValidator::addInfo(ValidationAdditionalInfo::Kind kind,
-                                          const std::shared_ptr<const Element>& element,
-                                          const std::optional<std::string>& elementFullPath, const std::string& typeId)
-{
-    mData->addInfo(kind, element, elementFullPath, typeId);
-}
-
 void fhirtools::ProfileValidator::finalize()
 {
     mData->append(mSolver.collectResults());

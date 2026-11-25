@@ -13,6 +13,7 @@
 #include "shared/ErpConstants.hxx"
 #include "shared/model/Timestamp.hxx"
 #include "shared/util/Environment.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/FileHelper.hxx"
 #include "shared/util/GLog.hxx"
@@ -28,10 +29,6 @@
 #include <unordered_set>
 
 
-// Compile the rapidjson assert so that it calls Expects() and will throw an exception instead of just aborting (crashing)
-// the application.
-#undef RAPIDJSON_ASSERT
-#define RAPIDJSON_ASSERT(x) Expect(x, "rapidjson error")
 #include <boost/algorithm/string/predicate.hpp>
 #include <rapidjson/error/en.h>
 #include <rapidjson/pointer.h>
@@ -520,7 +517,6 @@ OpsConfigKeyNames::OpsConfigKeyNames()
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN                  , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_EPA_AS_FQDN"                  , "/erp-medication-exporter/epa-account-lookup/epaAsFqdn", Flags::categoryEnvironment|Flags::array, "List of EPA FQDN adresses and TEE connection count (default 8) in the format <host>`:`<port>[`+`<connections>] separated by semicolon"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN           , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_POOL_SIZE_PER_FQDN"           , "/erp-medication-exporter/epa-account-lookup/poolSizePerFqdn", Flags::categoryEnvironment, "Number of connections per ePA FQDN"}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS             , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_THROTTLE_SECONDS"             , "/erp-medication-exporter/epa-account-lookup/throttleSeconds", Flags::categoryEnvironment, "Throttling value when at least one EPA is reporting errors, e.g. http-500"}},
-    {ConfigurationKey::MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DELAY_PAUSED_EPA_SECONDS     , {"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DELAY_PAUSED_EPA_SECONDS"     , "/erp-medication-exporter/epa-account-lookup/lookupDelayPausedEpa", Flags::categoryEnvironment, "Delay in seconds before retrying a lookup for an EPA that is currently paused."}},
     {ConfigurationKey::MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES                       , {"MEDICATION_EXPORTER_EPA_CONFLICT_WAIT_MINUTES"                           , "/erp-medication-exporter/epa-conflict/epaConflictWaitMinutes", Flags::categoryEnvironment, "Minutes to wait before retry after EPA conflicts HTTP 409"}},
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER               , {"MEDICATION_EXPORTER_RETRIES_MAXIMUM_BEFORE_DEADLETTER"                   , "/erp-medication-exporter/retries/maximumRetriesBeforeDeadletter", Flags::categoryEnvironment, "Maximum retry attempts before moving task events to Deadlettter queue"}},
     {ConfigurationKey::MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS                , {"MEDICATION_EXPORTER_RETRIES_RESCHEDULE_DELAY_SECONDS"                    , "/erp-medication-exporter/retries/rescheduleDelaySeconds", Flags::categoryEnvironment, "Seconds to delay next processing of KVNR after moving events to Deadletter queue"}},

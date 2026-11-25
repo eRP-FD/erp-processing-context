@@ -214,11 +214,7 @@ TEST_F(PostgresDatabaseTest, getAllEventsForKvnr)//NOLINT(readability-function-c
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
                     mPharmacyIdentity);
 
-    const auto medicationDispense = ResourceTemplates::medicationDispenseBundleXml(
-        {.medicationDispenses = {
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")},
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")}},
-         .prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")});
+    const auto medicationDispense = ResourceTemplates::medicationDispenseBundleXml();
     const auto medicationDispenseBundle = ::model::Bundle::fromXmlNoValidation(medicationDispense);
     insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::provideDispensation,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(),
@@ -319,18 +315,16 @@ TEST_F(PostgresDatabaseTest, delayProcessing)//NOLINT(readability-function-cogni
     model::Kvnr kvnr1{"X000000012"};
     model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     insertTaskKvnr(kvnr1);
-    const auto eventId1 =
-        insertTaskEvent(kvnr1, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt,
-                        mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr1, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
+                    std::nullopt);
 
     model::Kvnr kvnr2{"X000000022"};
     model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
     insertTaskKvnr(kvnr2);
-    const auto eventId2 =
-        insertTaskEvent(kvnr2, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt,
-                        mDoctorIdentity, std::nullopt);
+    insertTaskEvent(kvnr2, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
+                    model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
+                    std::nullopt);
 
     struct StateAndNextExport {
         model::EventKvnr::State state;
@@ -385,108 +379,6 @@ TEST_F(PostgresDatabaseTest, delayProcessing)//NOLINT(readability-function-cogni
                     after_eventKvnrs.at(eventKvnr1.kvnrHashed()).nextExport <=
                         before_eventKvnrs.at(eventKvnr1.kvnrHashed()).nextExport + delay + maxInaccurancy);
     }
-
-    // updateProcessingDelay must not touch last_error of the events
-    {
-        auto transaction = createTransaction();
-        for (const auto id : {eventId1, eventId2})
-        {
-            const auto r =
-                transaction.exec("SELECT last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{id});
-            ASSERT_EQ(r.size(), 1);
-            EXPECT_TRUE(r.at(0, 0).is_null());
-        }
-        transaction.commit();
-    }
-}
-
-TEST_F(PostgresDatabaseTest, recordErrorOnFirstEvent)//NOLINT(readability-function-cognitive-complexity)
-{
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     0};
-    const model::Kvnr otherKvnr{"X000000022"};
-    insertTaskKvnr(kvnr);
-    insertTaskKvnr(otherKvnr);
-    // event in DLQ must be ignored, even if it is the oldest one
-    const auto dlqId = insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
-                                       model::TaskEvent::State::deadLetterQueue, ResourceTemplates::kbvBundleXml(),
-                                       std::nullopt, mDoctorIdentity, std::nullopt);
-    const auto firstId = insertTaskEvent(kvnr, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
-                                         model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(),
-                                         std::nullopt, mDoctorIdentity, std::nullopt);
-    const auto secondId =
-        insertTaskEvent(kvnr, "160.000.100.000.003.96", model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt,
-                        mDoctorIdentity, std::nullopt);
-    const auto otherId =
-        insertTaskEvent(otherKvnr, "160.000.100.000.004.93", model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt,
-                        mDoctorIdentity, std::nullopt);
-
-    const auto lastErrorOf = [&](model::TaskEvent::id_t id) {
-        auto transaction = createTransaction();
-        const auto r = transaction.exec("SELECT last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{id});
-        transaction.commit();
-        return r.at(0, 0).is_null() ? std::optional<std::string>{} : std::make_optional(r.at(0, 0).as<std::string>());
-    };
-
-    database().recordErrorOnFirstEvent(eventKvnr, "first error");
-    database().commitTransaction();
-    EXPECT_FALSE(lastErrorOf(dlqId).has_value());
-    EXPECT_EQ(lastErrorOf(firstId), "first error");
-    EXPECT_FALSE(lastErrorOf(secondId).has_value());
-    EXPECT_FALSE(lastErrorOf(otherId).has_value());
-
-    // the last error overwrites the previous one
-    database().recordErrorOnFirstEvent(eventKvnr, "second error");
-    database().commitTransaction();
-    EXPECT_EQ(lastErrorOf(firstId), "second error");
-    EXPECT_FALSE(lastErrorOf(secondId).has_value());
-}
-
-TEST_F(PostgresDatabaseTest,
-       markFirstEventDeadLetter_returnsAndKeepsLastError)//NOLINT(readability-function-cognitive-complexity)
-{
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr{kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     0};
-    insertTaskKvnr(kvnr);
-    const auto firstId = insertTaskEvent(kvnr, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
-                                         model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(),
-                                         std::nullopt, mDoctorIdentity, std::nullopt);
-    insertTaskEvent(kvnr, "160.000.100.000.002.02", model::TaskEvent::UseCase::providePrescription,
-                    model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(), std::nullopt, mDoctorIdentity,
-                    std::nullopt);
-
-    // without a recorded error
-    {
-        auto transaction = createTransaction();
-        transaction.exec("UPDATE erp_event.task_event SET last_error = NULL WHERE id = $1", pqxx::params{firstId});
-        transaction.commit();
-    }
-    database().recordErrorOnFirstEvent(eventKvnr, "recorded error");
-    const auto marked = database().markFirstEventDeadLetter(eventKvnr);
-    database().commitTransaction();
-    ASSERT_TRUE(marked.has_value());
-    EXPECT_EQ(marked->lastError, "recorded error");
-    EXPECT_EQ(marked->prescriptionId.toString(), "160.000.100.000.001.05");
-
-    {
-        auto transaction = createTransaction();
-        const auto r =
-            transaction.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{firstId});
-        EXPECT_EQ(r.at(0, 0).as<std::string>(), "deadLetterQueue");
-        EXPECT_EQ(r.at(0, 1).as<std::string>(), "recorded error");
-        transaction.commit();
-    }
-
-    // the second pending event has no recorded error
-    const auto markedSecond = database().markFirstEventDeadLetter(eventKvnr);
-    database().commitTransaction();
-    ASSERT_TRUE(markedSecond.has_value());
-    EXPECT_EQ(markedSecond->prescriptionId.toString(), "160.000.100.000.002.02");
-    EXPECT_EQ(markedSecond->lastError, "no last_error stored");
 }
 
 
@@ -520,19 +412,8 @@ TEST_F(PostgresDatabaseTest, deleteOneEventForKvnr)//NOLINT(readability-function
     model::Kvnr kvnr1{"X000000012"};
     model::EventKvnr eventKvnr1{kvnrHashed(kvnr1), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
 
-    const auto medicationDispense1 = ResourceTemplates::medicationDispenseBundleXml(
-        {.medicationDispenses = {
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")},
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")}},
-         .prescriptionId = model::PrescriptionId::fromString("160.000.100.000.001.05")});
-    const auto medicationDispenseBundle1 = ::model::Bundle::fromXmlNoValidation(medicationDispense1);
-
-    const auto medicationDispense2 = ResourceTemplates::medicationDispenseBundleXml(
-        {.medicationDispenses = {
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.002.02")},
-             {.prescriptionId = model::PrescriptionId::fromString("160.000.100.000.002.02")}},
-         .prescriptionId = model::PrescriptionId::fromString("160.000.100.000.002.02")});
-    const auto medicationDispenseBundle2 = ::model::Bundle::fromXmlNoValidation(medicationDispense2);
+    const auto medicationDispense = ResourceTemplates::medicationDispenseBundleXml();
+    const auto medicationDispenseBundle = ::model::Bundle::fromXmlNoValidation(medicationDispense);
 
     insertTaskKvnr(kvnr1);
     insertTaskEvent(kvnr1, "160.000.100.000.001.05", model::TaskEvent::UseCase::providePrescription,
@@ -540,7 +421,7 @@ TEST_F(PostgresDatabaseTest, deleteOneEventForKvnr)//NOLINT(readability-function
                     std::nullopt);
     insertTaskEvent(kvnr1, "160.000.100.000.001.05", model::TaskEvent::UseCase::provideDispensation,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(),
-                    medicationDispenseBundle1.serializeToJsonString(), mDoctorIdentity, mPharmacyIdentity);
+                    medicationDispenseBundle.serializeToJsonString(), mDoctorIdentity, mPharmacyIdentity);
 
     model::Kvnr kvnr2{"X000000022"};
     model::EventKvnr eventKvnr2{kvnrHashed(kvnr2), std::nullopt, std::nullopt, model::EventKvnr::State::processing, 0};
@@ -550,7 +431,7 @@ TEST_F(PostgresDatabaseTest, deleteOneEventForKvnr)//NOLINT(readability-function
                     std::nullopt);
     insertTaskEvent(kvnr2, "160.000.100.000.002.02", model::TaskEvent::UseCase::provideDispensation,
                     model::TaskEvent::State::pending, ResourceTemplates::kbvBundleXml(),
-                    medicationDispenseBundle2.serializeToJsonString(), mDoctorIdentity, mPharmacyIdentity);
+                    medicationDispenseBundle.serializeToJsonString(), mDoctorIdentity, mPharmacyIdentity);
 
 
     const auto events = database().getAllEventsForKvnr(eventKvnr2);

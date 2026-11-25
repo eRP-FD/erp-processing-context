@@ -8,11 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERDOCUMENT_HXX
 
-#ifdef RAPIDJSON_ASSERT
-#undef RAPIDJSON_ASSERT
-#endif
 #include "shared/util/Expect.hxx"
-#define RAPIDJSON_ASSERT(x) ModelExpect(x, "rapidjson assertion")
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <rapidjson/pointer.h>

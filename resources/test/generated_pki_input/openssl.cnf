@@ -43,8 +43,6 @@ oid_policy_hba_cp    = 1.2.276.0.76.4.145
 oid_policy_eu_phys   = 1.3.6.1.4.1.42675.1.1
 oid_smc_b_osig       = 1.2.276.0.76.4.78
 oid_vk_eaa_enc       = 1.3.6.1.4.1.24796.1.10
-oid_policy_ev_tls    = 2.23.140.1.1
-oid_policy_ov_tls    = 2.23.140.1.2.2
 
 # Policies used by the TSA examples.
 tsa_policy1 = 1.2.3.4.1
@@ -347,26 +345,6 @@ subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
 # extendedKeyUsage = critical,timeStamping
 
 crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
-
-
-[ usr_cert_ev_tls ]
-
-basicConstraints       = CA:FALSE
-subjectKeyIdentifier   = hash
-authorityKeyIdentifier = keyid,issuer
-subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
-crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
-certificatePolicies    = oid_policy_ev_tls
-
-
-[ usr_cert_ov_tls ]
-
-basicConstraints       = CA:FALSE
-subjectKeyIdentifier   = hash
-authorityKeyIdentifier = keyid,issuer
-subjectAltName         = ${ENV::SUBJECT_ALT_NAME}
-crlDistributionPoints  = ${ENV::CRL_DISTRIBUTION_POINTS}
-certificatePolicies    = oid_policy_ov_tls
 
 
 [ usr_cert_has_san ]

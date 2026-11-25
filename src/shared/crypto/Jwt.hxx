@@ -9,6 +9,7 @@
 #define ERP_PROCESSING_CONTEXT_CRYPTO_JWT_HXX
 
 #include "shared/crypto/OpenSslHelper.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <chrono>
 #include <memory>

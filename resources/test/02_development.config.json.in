@@ -69,9 +69,9 @@
     },
     "push": {
       "client": {
-        "certificate": "file://@CMAKE_BINARY_DIR@/test/generated_pki_mock/client/client-fullchain.pem",
-        "key": "file://@CMAKE_BINARY_DIR@/test/generated_pki_mock/client/client-key.pem",
-        "server-ca": "file://@CMAKE_BINARY_DIR@/test/generated_pki_mock/rootCA/rootCA-cert.pem"
+        "certificate": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/client/client-fullchain.pem",
+        "key": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/client/client-key.pem",
+        "server-ca": "file://@CMAKE_BINARY_DIR@/test/generated_pki_push/rootCA/rootCA-cert.pem"
       }
     },
     "ocsp": {

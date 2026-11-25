@@ -10,6 +10,7 @@
 
 #include "shared/util/SafeString.hxx"
 #include "shared/hsm/ErpTypes.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 
 #include <rapidjson/document.h>
 #include <string_view>

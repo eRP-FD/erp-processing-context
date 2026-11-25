@@ -40,7 +40,6 @@ public:
     virtual void updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) = 0;
     virtual void finalizeKvnr(const model::EventKvnr& kvnr,
                               const std::string& assignedEpaPrefix) const = 0;
-    virtual void recordErrorOnFirstEvent(const model::EventKvnr& kvnr, const std::string& errorText) = 0;
 
     virtual std::optional<db_model::TaskEvent> processNextTRezeptEvent() = 0;
     virtual void deleteTRezeptEvent(model::TRezeptEvent::id_t eventId) = 0;

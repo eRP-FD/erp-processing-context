@@ -14,9 +14,8 @@
 #define RAPIDJSON_HAS_STDSTRING 1
 #endif
 
-#ifndef RAPIDJSON_ASSERT
+#undef RAPIDJSON_ASSERT
 #define RAPIDJSON_ASSERT(x) Assert(x) << "RapidJson assert failed"
-#endif
 
 DISABLE_WARNINGS_BEGIN
 

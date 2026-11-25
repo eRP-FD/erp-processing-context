@@ -88,7 +88,7 @@ int main(int argc, char** argv)
                                &fhirtools::FhirResourceViewConfiguration::ViewConfig::mId);
         if (availableViews.contains(*shiftTo))
         {
-            shiftGuard.emplace(*shiftTo, testutils::germanToday());
+            shiftGuard.emplace(*shiftTo, floor<std::chrono::days>(std::chrono::system_clock::now()));
         }
         else
         {
@@ -98,8 +98,9 @@ int main(int argc, char** argv)
     }
     else if (testDate && testDate != "today")
     {
-        const auto testDay = testutils::germanDay(model::Timestamp::fromGermanDate(*testDate));
-        const auto offset = testutils::germanToday() - testDay;
+        const auto testTimestamp = model::Timestamp::fromXsDate(*testDate, model::Timestamp::UTCTimezone);
+        auto now = floor<std::chrono::days>(date::utc_clock::now());
+        auto offset = now - floor<std::chrono::days>(date::clock_cast<date::utc_clock>(testTimestamp.toChronoTimePoint()));
         LOG(INFO) << "setting offset: " << offset;
         shiftGuard.emplace(offset);
     }

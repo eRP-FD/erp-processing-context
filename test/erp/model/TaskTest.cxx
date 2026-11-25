@@ -263,32 +263,6 @@ TEST_F(TaskTest, ExpiryDate)
     ASSERT_EQ(task.expiryDate(), model::Timestamp::fromGermanDate(timestamp.toGermanDate()));
 }
 
-TEST_F(TaskTest, Expired)
-{
-    // Expiry date today: should not be expired today
-    {
-        model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-        task.setExpiryDate(model::Timestamp::now());
-        EXPECT_FALSE(task.expired());
-    }
-
-    // Expiry date in the future
-    {
-        model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-        task.setExpiryDate(
-            model::Timestamp(model::Timestamp::GermanTimezone, model::Timestamp::now().localDay() + date::days{10}));
-        EXPECT_FALSE(task.expired());
-    }
-
-    // Expiry date in the past
-    {
-        model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");
-        task.setExpiryDate(
-            model::Timestamp(model::Timestamp::GermanTimezone, model::Timestamp::now().localDay() - date::days{1}));
-        EXPECT_TRUE(task.expired());
-    }
-}
-
 TEST_F(TaskTest, AcceptDate)
 {
     model::Task task(model::PrescriptionType::apothekenpflichigeArzneimittel, "access_code");

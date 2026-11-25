@@ -8,6 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_SRC_SHARED_UTIL_CONFIGURATIONFORMATTER_HXX
 #define ERP_PROCESSING_CONTEXT_SRC_SHARED_UTIL_CONFIGURATIONFORMATTER_HXX
 
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <memory>
 #include <string>
 #include <unordered_set>

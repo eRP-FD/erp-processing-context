@@ -80,13 +80,13 @@ file(COPY ${CMAKE_SOURCE_DIR}/resources/test/tsl/X509Certificate/idpResponse.jso
 
 
 #############################################################################
-## Generate PKI for the mocks (pushgateway-mock, bfarm-test-mock) and the test clients
+## Generrate push notification PKI
 ## see: https://github.ibmgcloud.net/eRp/pushgateway-mock/blob/main/tls/README.md
-set(mock_pki_input_folder "${CMAKE_SOURCE_DIR}/resources/test/generated_pki_input/mock")
+set(push_pki_input_folder "${CMAKE_SOURCE_DIR}/resources/test/generated_pki_input/push")
 
 ## resources/test/generated_pki is deleted by `generate_pki_test_data.sh` when running cmake, which would fully rebuild the PKI
 # any running docker container would need restart - so we are not using that folder
-set(mock_pki_output_folder "${CMAKE_BINARY_DIR}/resources/test/generated_pki_mock")
+set(push_pki_output_folder "${CMAKE_BINARY_DIR}/resources/test/generated_pki_push")
 
 set(openssl_cnf "${CMAKE_SOURCE_DIR}/resources/test/generated_pki_input/openssl.cnf")
 set(run_openssl "${CMAKE_COMMAND}" -E env
@@ -114,7 +114,7 @@ endfunction()
 
 function(new_certificate name)
     cmake_parse_arguments(arg "ROOT;CA" "ISSUER;SUBJECT;CONFIG" "" ${ARGN})
-    set(fulldir "${mock_pki_output_folder}/${name}")
+    set(fulldir "${push_pki_output_folder}/${name}")
     if (arg_ROOT AND DEFINED arg_ISSUER)
         message(FATAL_ERROR "new_certificate: ISSUER ${arg_ISSUER} and ROOT ${arg_ROOT} are mutually exclusive")
     endif()
@@ -126,7 +126,7 @@ function(new_certificate name)
     endif()
     set(config "${openssl_cnf}")
     if (arg_CONFIG)
-        set(config "${mock_pki_input_folder}/${arg_CONFIG}")
+        set(config "${push_pki_input_folder}/${arg_CONFIG}")
     endif()
     # cleanup and rebuild CA
     add_custom_command(
@@ -172,7 +172,7 @@ function(new_certificate name)
                         -config "${config}"
             WORKING_DIRECTORY "${fulldir}"
         )
-        set(issuerdir "${mock_pki_output_folder}/${arg_ISSUER}")
+        set(issuerdir "${push_pki_output_folder}/${arg_ISSUER}")
         unset(extensions)
         add_custom_command(
             OUTPUT "${fulldir}/${name}-cert.pem"
@@ -198,7 +198,7 @@ function(new_certificate name)
         add_custom_target(${name}-certificate DEPENDS "${fulldir}/${name}-cert.pem")
         add_dependencies(${arg_ISSUER}-signed-certificates ${name}-certificate)
     endif()
-    add_fullchain_target("${mock_pki_output_folder}" "${name}")
+    add_fullchain_target("${push_pki_output_folder}" "${name}")
     set(${name}_FULLCHAIN "${fulldir}/${name}-fullchain.pem" PARENT_SCOPE)
     set(${name}_CERT "${fulldir}/${name}-cert.pem" PARENT_SCOPE)
     set(${name}_KEY "${fulldir}/${name}-key.pem" PARENT_SCOPE)
@@ -235,83 +235,62 @@ new_certificate(intermediateCA CA
     ISSUER rootCA
     CONFIG intermediateCA_ext.cnf
 )
-new_certificate(pushgateway
+new_certificate(server
     SUBJECT "/C=DE/ST=Hamburg/L=Hamburg/O=TEST-PushGateway/CN=TEST-PushGateway Mock"
     ISSUER intermediateCA
-    CONFIG pushgateway_server_ext.cnf
+    CONFIG server_ext.cnf
 )
 new_certificate(client
     SUBJECT "/C=DE/ST=Hamburg/L=Hamburg/O=TestClient/OU=Testing/CN=test-client"
     ISSUER rootCA
     CONFIG policy_anything.cnf
 )
-# BfArM mock server certificate: needs an EV TLS certificate policy (OID 2.23.140.1.1) as required by A_28933.
-# Signed by the intermediateCA, whose CRL is served at http://localhost:19080/mock-ca.crl by the pushgateway-mock.
-new_certificate(bfarm
-    SUBJECT "/C=DE/ST=Hamburg/L=Hamburg/O=TEST-BfArM/CN=bfarm-test-mock"
-    ISSUER intermediateCA
-    CONFIG bfarm_server_ext.cnf
-)
 
 # truststore with root CA
 find_program(KEYTOOL names keytool REQUIRED)
 
 add_custom_command(
-    OUTPUT "${mock_pki_output_folder}/pushgateway-truststore.jks"
+    OUTPUT "${push_pki_output_folder}/truststore.jks"
     DEPENDS "${rootCA_CERT}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${mock_pki_output_folder}/pushgateway-truststore.jks"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${push_pki_output_folder}/truststore.jks"
     COMMAND "${KEYTOOL}" -importcert -noprompt -alias internetca -trustcacerts -storetype jks -storepass changeit
         -file "${rootCA_CERT}"
-        -keystore "${mock_pki_output_folder}/pushgateway-truststore.jks"
-    WORKING_DIRECTORY "${mock_pki_output_folder}"
+        -keystore "${push_pki_output_folder}/truststore.jks"
+    WORKING_DIRECTORY "${push_pki_output_folder}"
 )
 
 # Create PKCS#12 keystore containing the private key and full chain
 add_custom_command(
-    OUTPUT "${mock_pki_output_folder}/pushgateway-keystore.p12"
-    DEPENDS "${pushgateway_FULLCHAIN}" "${pushgateway_KEY}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${mock_pki_output_folder}/pushgateway-keystore.p12"
+    OUTPUT "${push_pki_output_folder}/keystore.p12"
+    DEPENDS "${server_FULLCHAIN}" "${server_KEY}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${push_pki_output_folder}/keystore.p12"
     COMMAND ${run_openssl} pkcs12 -export -password pass:changeit -name pushgatewayserver
-            -in "${pushgateway_FULLCHAIN}"
-            -inkey "${pushgateway_KEY}"
-            -out "${mock_pki_output_folder}/pushgateway-keystore.p12"
-    COMMAND chmod 666 "${mock_pki_output_folder}/pushgateway-keystore.p12"
-    WORKING_DIRECTORY "${mock_pki_output_folder}"
-)
-
-# PKCS#12 keystore of the BfArM mock
-add_custom_command(
-    OUTPUT "${mock_pki_output_folder}/bfarm-keystore.p12"
-    DEPENDS "${bfarm_FULLCHAIN}" "${bfarm_KEY}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${mock_pki_output_folder}/bfarm-keystore.p12"
-    COMMAND ${run_openssl} pkcs12 -export -password pass:changeit -name bfarmserver
-            -in "${bfarm_FULLCHAIN}"
-            -inkey "${bfarm_KEY}"
-            -out "${mock_pki_output_folder}/bfarm-keystore.p12"
-    COMMAND chmod 666 "${mock_pki_output_folder}/bfarm-keystore.p12"
-    WORKING_DIRECTORY "${mock_pki_output_folder}"
+            -in "${server_FULLCHAIN}"
+            -inkey "${server_KEY}"
+            -out "${push_pki_output_folder}/keystore.p12"
+    COMMAND chmod 666 "${push_pki_output_folder}/keystore.p12"
+    WORKING_DIRECTORY "${push_pki_output_folder}"
 )
 
 add_custom_command(
-    OUTPUT "${mock_pki_output_folder}/pushgateway-keystore.jks"
-    DEPENDS "${mock_pki_output_folder}/pushgateway-keystore.p12"
-    COMMAND "${CMAKE_COMMAND}" -E rm -f "${mock_pki_output_folder}/pushgateway-keystore.jks"
+    OUTPUT "${push_pki_output_folder}/keystore.jks"
+    DEPENDS "${push_pki_output_folder}/keystore.p12"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${push_pki_output_folder}/keystore.jks"
     COMMAND "${KEYTOOL}" -importkeystore -deststorepass changeit -destkeypass changeit
                 -srcstoretype PKCS12 -alias pushgatewayserver -srcstorepass changeit
-                -destkeystore "${mock_pki_output_folder}/pushgateway-keystore.jks"
-                -srckeystore "${mock_pki_output_folder}/pushgateway-keystore.p12"
-    WORKING_DIRECTORY "${mock_pki_output_folder}"
+                -destkeystore "${push_pki_output_folder}/keystore.jks"
+                -srckeystore "${push_pki_output_folder}/keystore.p12"
+    WORKING_DIRECTORY "${push_pki_output_folder}"
 )
 
 ###################
 # force building required files:
-add_custom_target(mock-pki ALL
+add_custom_target(push-pki ALL
     DEPENDS
-        "${mock_pki_output_folder}/pushgateway-truststore.jks"
-        "${mock_pki_output_folder}/pushgateway-keystore.p12"
-        "${mock_pki_output_folder}/pushgateway-keystore.jks"
-        "${mock_pki_output_folder}/bfarm-keystore.p12"
-        "${pushgateway_FULLCHAIN}"
+        "${push_pki_output_folder}/truststore.jks"
+        "${push_pki_output_folder}/keystore.p12"
+        "${push_pki_output_folder}/keystore.jks"
+        "${server_FULLCHAIN}"
         "${client_FULLCHAIN}"
         "${intermediateCA_CRL}"
 )

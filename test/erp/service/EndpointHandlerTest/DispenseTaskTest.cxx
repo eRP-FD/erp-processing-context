@@ -443,6 +443,7 @@ public:
     ServerResponse serverResponse;
     AccessLog accessLog;
     SessionContext sessionContext;
+    testutils::ShiftFhirResourceViewsGuard shift{"KBV_1_4", date::floor<date::days>(std::chrono::system_clock::now())};
 };
 
 TEST_F(DispenseTaskDosageValidatorTest, wrongScriptVersion)

@@ -114,30 +114,10 @@ PcServiceContext::PcServiceContext(const Configuration& configuration, const Fac
 
 PcServiceContext::~PcServiceContext()
 {
-    // The enrolment server threads may still process a request (e.g. a blob update which triggers the
-    // BlobCache update callback that uses mCFdSigErpManager). mEnrolmentServer is a member of the base class and
-    // would otherwise be stopped only after the members of this class (e.g. mCFdSigErpManager) have been destroyed.
-    if (mEnrolmentServer != nullptr)
-    {
-        mEnrolmentServer->shutDown();
-    }
-    mBlobCache->registerCacheUpdateCallback({});
     if (mReportPseudonameKeyRefreshJob != nullptr)
     {
         mReportPseudonameKeyRefreshJob->shutdown();
     }
-    // Drain the PushEventCreator strand before the io_context (owned by mTeeServer)
-    // is torn down. This ensures no [this]-capturing completion callbacks execute
-    // after mPushEventCreator has been freed.
-    mPushEventCreator->shutdown();
-    // Cancel all PeriodicTimer instances that hold a boost::asio::steady_timer
-    // tied to the io_context owned by mTeeServer (via ThreadPool).
-    if (mPrngSeeder)
-    {
-        mPrngSeeder->cancel();
-    }
-    getVsdmKeyCache().cancelRefresher();
-    getBlobCache()->cancelRefresher();
 }
 
 

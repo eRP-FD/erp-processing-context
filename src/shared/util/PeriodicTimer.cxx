@@ -7,9 +7,9 @@
 
 #include "PeriodicTimer.hxx"
 #include "shared/util/Demangle.hxx"
-#include "shared/util/DurationConsumer.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/TLog.hxx"
+#include "shared/util/DurationConsumer.hxx"
 
 TimerHandler::TimerHandler(std::string name)
     : mName{std::move(name)}
@@ -55,18 +55,7 @@ void PeriodicTimerBase::start(boost::asio::io_context& context, std::chrono::ste
 void PeriodicTimerBase::cancel()
 {
     if (mTimer)
-    {
-        // Set canceled under the handler mutex first, so that timerHandlerInternal
-        // won't touch mTimer after we release it below.
-        {
-            std::lock_guard guard{mTimerHandler->mMutex};
-            mTimerHandler->canceled = true;
-        }
-        // Cancel the pending async operation so the io_context processes the
-        // cancellation while it is still alive, then release the timer object.
         mTimer->cancel();
-        mTimer.reset();
-    }
 }
 
 PeriodicTimerBase::~PeriodicTimerBase()
@@ -106,48 +95,54 @@ void PeriodicTimerBase::timerHandlerInternal(const HandlerSharedPtr& handler,
         return;
     }
 
-    const std::scoped_lock guard{handler->mMutex};
-    if (handler->canceled)
+    std::optional<std::chrono::steady_clock::duration> interval;
+
     {
-        return;
-    }
-    try
-    {
-        // Set up the duration consumer that will log spend time
-        const DurationConsumerGuard durationConsumerGuard("PeriodicTimer");
-        handler->timerHandler();
-    }
-    catch (const std::exception& e)
-    {
-        JsonLog log{LogId::INTERNAL_ERROR};
-        log.valuesFromException(e);
-        log.keyValue("timer", handler->timerName());
-        log.message("TimerHandler threw an exception");
-    }
-    catch (...)
-    {
-        JsonLog log{LogId::INTERNAL_ERROR};
-        log.keyValue("timer", handler->timerName());
-        log.message("TimerHandler threw an unknown object");
-    }
-    auto interval = handler->nextInterval();
-    if (! interval)
-    {
-        handler->canceled = true;
-        return;
+        std::lock_guard guard{handler->mMutex};
+        if (handler->canceled)
+        {
+            return;
+        }
+        try
+        {
+            // Set up the duration consumer that will log spend time
+            DurationConsumerGuard durationConsumerGuard("PeriodicTimer");
+            handler->timerHandler();
+        }
+        catch (const std::exception& e)
+        {
+            JsonLog log{LogId::INTERNAL_ERROR};
+            log.valuesFromException(e);
+            log.keyValue("timer", handler->timerName());
+            log.message("TimerHandler threw an exception");
+        }
+        catch (...)
+        {
+            JsonLog log{LogId::INTERNAL_ERROR};
+            log.keyValue("timer", handler->timerName());
+            log.message("TimerHandler threw an unknown object");
+        }
+        interval = handler->nextInterval();
+        if (!interval)
+        {
+            handler->canceled = true;
+        }
     }
 
-    auto now = std::chrono::steady_clock::now();
-    auto newExpire = mTimer->expiry() + *interval;
-    if (newExpire < now)
+    if (interval)
     {
-        JsonLog log{LogId::INTERNAL_WARNING};
-        log.message("Periodic timer skipped interval.");
-        log.keyValue("timer", handler->timerName());
-        newExpire = now + *interval;
+        auto now = std::chrono::steady_clock::now();
+        auto newExpire = mTimer->expiry() + *interval;
+        if (newExpire < now)
+        {
+            JsonLog log{LogId::INTERNAL_WARNING};
+            log.message("Periodic timer skipped interval.");
+            log.keyValue("timer", handler->timerName());
+            newExpire = now + *interval;
+        }
+        mTimer->expires_at(newExpire);
+        mTimer->async_wait(timerCallback(handler));
     }
-    mTimer->expires_at(newExpire);
-    mTimer->async_wait(timerCallback(handler));
 }
 
 std::optional<std::chrono::_V2::steady_clock::duration> OneShotHandler::nextInterval() const

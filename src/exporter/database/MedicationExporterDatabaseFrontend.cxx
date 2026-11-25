@@ -82,15 +82,8 @@ MedicationExporterDatabaseFrontend::getAllEventsForKvnr(const model::EventKvnr& 
             dbTaskEvent.medicationDispenseBundle.has_value() ? medicationDispenseKey(dbTaskEvent) : SafeString{}};
         try
         {
-            auto taskEvent =
-                TaskEventConverter(mCodec, mTelematikLookup).convert(dbTaskEvent, keyForTask, keyForMedicationDispense);
-            if (! taskEvent)
-            {
-                // The medication dispenses do not belong to the task of the event (error already logged), discard it.
-                mBackend->deleteOneEventForKvnr(eventKvnr, dbTaskEvent.id);
-                continue;
-            }
-            allTaskEvents.emplace_back(std::move(taskEvent));
+            allTaskEvents.emplace_back(
+                TaskEventConverter(mCodec, mTelematikLookup).convert(dbTaskEvent, keyForTask, keyForMedicationDispense));
         }
         catch (ExceptionWrapperBase& ex)
         {
@@ -128,8 +121,7 @@ MedicationExporterDatabaseFrontend::markFirstEventDeadLetter(const model::EventK
             return TaskEventConverter(mCodec, mTelematikLookup)
                 .convertBareEvent(minimalTaskEventAuditData->kvnr, minimalTaskEventAuditData->hashedKvnr,
                                   minimalTaskEventAuditData->usecase, minimalTaskEventAuditData->prescriptionId,
-                                  minimalTaskEventAuditData->prescriptionType, keyForTask,
-                                  minimalTaskEventAuditData->lastError);
+                                  minimalTaskEventAuditData->prescriptionType, keyForTask);
         }
         catch (ExceptionWrapperBase& ex)
         {
@@ -151,16 +143,9 @@ void MedicationExporterDatabaseFrontend::deleteAllEventsForKvnr(const model::Eve
     mBackend->deleteAllEventsForKvnr(kvnr);
 }
 
-void MedicationExporterDatabaseFrontend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay,
-                                                               const model::EventKvnr& kvnr) const
+void MedicationExporterDatabaseFrontend::updateProcessingDelay(std::int32_t newRetry, std::chrono::seconds delay, const model::EventKvnr& kvnr) const
 {
     mBackend->updateProcessingDelay(newRetry, delay, kvnr);
-}
-
-void MedicationExporterDatabaseFrontend::recordErrorOnFirstEvent(const model::EventKvnr& kvnr,
-                                                                 const std::string& errorText) const
-{
-    mBackend->recordErrorOnFirstEvent(kvnr, errorText);
 }
 
 void MedicationExporterDatabaseFrontend::finalizeKvnr(const model::EventKvnr& kvnr,
@@ -206,15 +191,8 @@ std::optional<std::unique_ptr<model::TRezeptEvent>> MedicationExporterDatabaseFr
 
     try
     {
-        auto trezeptEvent = TaskEventConverter(mCodec, mTelematikLookup)
-                                .convertToTRezeptEvent(*dbModel, keyForTask, keyForMedicationDispense);
-        if (! trezeptEvent)
-        {
-            // The medication dispenses do not belong to the task of the event (error already logged), discard it.
-            mBackend->deleteTRezeptEvent(dbModel->id);
-            return std::nullopt;
-        }
-        return trezeptEvent;
+        return TaskEventConverter(mCodec, mTelematikLookup)
+            .convertToTRezeptEvent(*dbModel, keyForTask, keyForMedicationDispense);
     }
     catch (ExceptionWrapperBase& ex)
     {

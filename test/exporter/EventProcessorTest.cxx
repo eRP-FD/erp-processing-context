@@ -53,17 +53,7 @@ class EventProcessorTest : public PostgresDatabaseTest
 public:
     const std::string healthcareProviderPrescription = ResourceTemplates::kbvBundleXml();
     const std::string medicationDispenseBundle =
-        ::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml(
-                                                 {.medicationDispenses = {{.prescriptionId = prescriptionId1},
-                                                                           {.prescriptionId = prescriptionId1}},
-                                                  .prescriptionId = prescriptionId1}))
-            .serializeToJsonString();
-    const std::string medicationDispenseBundle2 =
-        ::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml(
-                                                 {.medicationDispenses = {{.prescriptionId = prescriptionId2},
-                                                                           {.prescriptionId = prescriptionId2}},
-                                                  .prescriptionId = prescriptionId2}))
-            .serializeToJsonString();
+        ::model::Bundle::fromXmlNoValidation(ResourceTemplates::medicationDispenseBundleXml()).serializeToJsonString();
     JwtBuilder jwtBuilder = JwtBuilder(MockCryptography::getIdpPrivateKey());
     EpaAccountLookupMock epaAccountLookupMock { EpaAccount{
         .kvnr = model::Kvnr{"X000000012"},
@@ -184,7 +174,7 @@ TEST_F(EventProcessorTest, process)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
     insertTaskEvent(kvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::provideDispensation,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle2,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
     EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
@@ -280,7 +270,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
     insertTaskEvent(kvnr2, prescriptionId2.toString(), model::TaskEvent::UseCase::provideDispensation,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle2,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
     const auto events1 = createDbFrontendCommitGuard(TransactionMode::autocommit).db().getAllEventsForKvnr(eventKvnr1);
@@ -288,7 +278,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
     ASSERT_EQ(events1.size(), 2);
 
     EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    eventProcessor.checkRetryCount(eventKvnr1, eventKvnr1.getRetryCount());
+    eventProcessor.checkRetryCount(eventKvnr1);
 
     auto transaction = createTransaction();
     {
@@ -312,7 +302,7 @@ TEST_F(EventProcessorTest, checkRetryCount)
     EXPECT_EQ(numberOfAuditEvents.at(0, 0).as<std::int32_t>(), 0);
 
     const auto next_export_before = model::Timestamp::now();
-    eventProcessor.checkRetryCount(eventKvnr2, eventKvnr2.getRetryCount());
+    eventProcessor.checkRetryCount(eventKvnr2);
     {
         const auto numberOfAuditEvents2 = erpDbTransaction.exec("SELECT COUNT(*) FROM erp.auditevent");
         EXPECT_EQ(numberOfAuditEvents2.at(0, 0).as<std::int32_t>(), 1);
@@ -522,47 +512,6 @@ TEST_F(EventProcessorTest, processOne_Conflict)
         }
         transaction.commit();
     }
-}
-
-TEST_F(EventProcessorTest, processOne_EpaPaused)
-{
-    const EnvironmentVariableGuard envGuard{"ERP_MEDICATION_EXPORTER_EPA_ACCOUNT_LOOKUP_DELAY_PAUSED_EPA_SECONDS",
-                                            "120"};
-    epaAccountLookupMock.epaAccountLookupResult.lookupResult = EpaAccount::Code::paused;
-    model::Kvnr kvnr{"X011300023"};
-    constexpr std::int32_t retryCount = 2;
-    model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                               retryCount);
-    insertTaskKvnr(kvnr, retryCount);
-    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                    mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-
-    const auto next_export_before = model::Timestamp::now();
-    eventProcessor.processOne(eventKvnr);
-
-    auto transaction = createTransaction();
-    {// verify: events are kept
-        const auto results = transaction.exec("SELECT COUNT(*) FROM erp_event.task_event WHERE kvnr_hashed = $1",
-                                              pqxx::params{eventKvnr.kvnrHashed()});
-        EXPECT_EQ(results.at(0, 0).as<std::int32_t>(), 1);
-    }
-    {// verify: kvnr is pending, retry count is unchanged and next_export is delayed by the configured paused delay
-        const auto results = transaction.exec("SELECT state, retry_count, EXTRACT(EPOCH FROM next_export)  "
-                                              "FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                              pqxx::params{eventKvnr.kvnrHashed()});
-        EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(results.at(0, 0).as<std::string>()).value(),
-                  model::EventKvnr::State::pending);
-        EXPECT_EQ(results.at(0, 1).as<std::int32_t>(), retryCount);
-
-        const auto next_export_after = model::Timestamp(results.at(0).at(2).as<double>());
-        const auto expectedDelay = 120s;
-        const auto maxDelayByDbProcessing = 30s;
-        EXPECT_TRUE(equalsPlus(next_export_after, next_export_before, expectedDelay, maxDelayByDbProcessing));
-    }
-    transaction.commit();
 }
 
 
@@ -1058,7 +1007,7 @@ TEST_F(EventProcessorTest, processEpaDeniedOrNotFound)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
     insertTaskEvent(kvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::provideDispensation,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle2,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
     EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
@@ -1092,7 +1041,7 @@ TEST_F(EventProcessorTest, processEpaUnkown)
                     model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, std::nullopt);
     insertTaskEvent(kvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::provideDispensation,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle2,
+                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
                     mDoctorIdentity, mPharmacyIdentity);
 
     EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
@@ -1489,284 +1438,5 @@ TEST_F(EventProcessorTest, processOne_deadLetterQueue_noSerNo2TIDMapping_setsLas
         EXPECT_EQ(results.at(0).at(0).as<std::string>(), "deadLetterQueue");
         EXPECT_EQ(results.at(0).at(1).as<std::string>(), "No mapping in SerNo2TID");
         transaction.commit();
-    }
-}
-
-namespace
-{
-// The EPA mock answers providePrescription for this KVNR with HTTP 500 -> Outcome::Retry
-const model::Kvnr failingKvnr{"X011999974"};
-}
-
-TEST_F(EventProcessorTest, processOne_maxRetryReachedByCurrentError_deadLetterImmediately)
-{
-    // Retry count 8 == max: the check at the beginning of processOne does not trigger yet.
-    // The error that occurs during processing would lead to retry count 9 -> the first event must be moved
-    // to the dead letter queue right away (no additional exponential backoff round).
-    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
-    const model::EventKvnr eventKvnr(kvnrHashed(failingKvnr), std::nullopt, std::nullopt,
-                                     model::EventKvnr::State::processing, 8);
-    insertTaskKvnr(failingKvnr, eventKvnr.getRetryCount());
-    const auto firstId =
-        insertTaskEvent(failingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-    const auto secondId =
-        insertTaskEvent(failingKvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    testing::internal::CaptureStderr();
-    const auto before = model::Timestamp::now();
-    eventProcessor.processOne(eventKvnr);
-    const auto out = testing::internal::GetCapturedStderr();
-
-    // the error that led to the dead letter is logged
-    EXPECT_NE(out.find("Put first event for task in dead letter queue: Max retry count reached"), std::string::npos)
-        << out;
-    EXPECT_NE(out.find(R"("reason":"InternalServerError")"), std::string::npos) << out;
-
-    auto txn = createTransaction();
-    {
-        const auto kvnrResult = txn.exec("SELECT state, retry_count, EXTRACT(EPOCH FROM next_export) "
-                                         "FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                         pqxx::params{eventKvnr.kvnrHashed()});
-        EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
-                  model::EventKvnr::State::pending);
-        EXPECT_EQ(kvnrResult.at(0, 1).as<int>(), 0);
-        EXPECT_GE(model::Timestamp(kvnrResult.at(0, 2).as<double>()), before);
-    }
-    {
-        const auto first =
-            txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{firstId});
-        EXPECT_EQ(first.at(0, 0).as<std::string>(), "deadLetterQueue");
-        EXPECT_EQ(first.at(0, 1).as<std::string>(), "InternalServerError");
-        // transmission of the remaining events of the KVNR is stopped, the second event is untouched
-        const auto second =
-            txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{secondId});
-        EXPECT_EQ(second.at(0, 0).as<std::string>(), "pending");
-        EXPECT_TRUE(second.at(0, 1).is_null());
-    }
-    txn.commit();
-
-    auto erpDbTransaction = createErpDbTransaction();
-    const auto numberOfAuditEvents = erpDbTransaction.exec("SELECT COUNT(*) FROM erp.auditevent");
-    EXPECT_EQ(numberOfAuditEvents.at(0, 0).as<std::int32_t>(), 1);
-}
-
-TEST_F(EventProcessorTest, processOne_retryBelowMax_recordsAndOverwritesLastError)
-{
-    // Retry count 7 -> 8 does not reach the maximum (8): event stays pending, error is recorded and
-    // overwrites the error of the previous attempt.
-    epaAccountLookupMock.WellKnownHost = "epa-as-1-mock";
-    const model::EventKvnr eventKvnr(kvnrHashed(failingKvnr), std::nullopt, std::nullopt,
-                                     model::EventKvnr::State::processing, 7);
-    insertTaskKvnr(failingKvnr, eventKvnr.getRetryCount());
-    const auto eventId =
-        insertTaskEvent(failingKvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-    {
-        auto txn = createTransaction();
-        txn.exec("UPDATE erp_event.task_event SET last_error = 'error of previous attempt' WHERE id = $1",
-                 pqxx::params{eventId});
-        txn.commit();
-    }
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    testing::internal::CaptureStderr();
-    eventProcessor.processOne(eventKvnr);
-    const auto out = testing::internal::GetCapturedStderr();
-    EXPECT_EQ(out.find("dead letter queue"), std::string::npos) << out;
-
-    auto txn = createTransaction();
-    const auto kvnrResult = txn.exec("SELECT state, retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                     pqxx::params{eventKvnr.kvnrHashed()});
-    EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
-              model::EventKvnr::State::pending);
-    EXPECT_EQ(kvnrResult.at(0, 1).as<int>(), 8);
-    const auto event =
-        txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{eventId});
-    EXPECT_EQ(event.at(0, 0).as<std::string>(), "pending");
-    EXPECT_EQ(event.at(0, 1).as<std::string>(), "InternalServerError");
-    txn.commit();
-
-    auto erpDbTransaction = createErpDbTransaction();
-    const auto numberOfAuditEvents = erpDbTransaction.exec("SELECT COUNT(*) FROM erp.auditevent");
-    EXPECT_EQ(numberOfAuditEvents.at(0, 0).as<std::int32_t>(), 0);
-}
-
-TEST_F(EventProcessorTest, processOne_maxRetryExceededAtStart_fallbackKeepsAndLogsLastError)
-{
-    // Fallback: retry count > max when processing starts (e.g. configuration changed, or old data).
-    // The last_error stored at the event is kept and logged.
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     9);
-    insertTaskKvnr(kvnr, eventKvnr.getRetryCount());
-    const auto firstId =
-        insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-    const auto secondId =
-        insertTaskEvent(kvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-    {
-        auto txn = createTransaction();
-        txn.exec("UPDATE erp_event.task_event SET last_error = 'stored last error' WHERE id = $1",
-                 pqxx::params{firstId});
-        txn.commit();
-    }
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    testing::internal::CaptureStderr();
-    eventProcessor.processOne(eventKvnr);
-    const auto out = testing::internal::GetCapturedStderr();
-    EXPECT_NE(out.find("Put first event for task in dead letter queue: Max retry count reached"), std::string::npos)
-        << out;
-    EXPECT_NE(out.find(R"("reason":"stored last error")"), std::string::npos) << out;
-
-    auto txn = createTransaction();
-    const auto kvnrResult = txn.exec("SELECT state, retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                     pqxx::params{eventKvnr.kvnrHashed()});
-    EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
-              model::EventKvnr::State::pending);
-    EXPECT_EQ(kvnrResult.at(0, 1).as<int>(), 0);
-    const auto first =
-        txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{firstId});
-    EXPECT_EQ(first.at(0, 0).as<std::string>(), "deadLetterQueue");
-    EXPECT_EQ(first.at(0, 1).as<std::string>(), "stored last error");
-    const auto second = txn.exec("SELECT state FROM erp_event.task_event WHERE id = $1", pqxx::params{secondId});
-    EXPECT_EQ(second.at(0, 0).as<std::string>(), "pending");
-    txn.commit();
-}
-
-TEST_F(EventProcessorTest, processOne_maxRetryExceededAtStart_noStoredLastError)
-{
-    // Fallback for events which never got a last_error (e.g. created before the column existed)
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     9);
-    insertTaskKvnr(kvnr, eventKvnr.getRetryCount());
-    insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                    model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                    mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    testing::internal::CaptureStderr();
-    eventProcessor.processOne(eventKvnr);
-    const auto out = testing::internal::GetCapturedStderr();
-    EXPECT_NE(out.find(R"("reason":"no last_error stored")"), std::string::npos) << out;
-}
-
-TEST_F(EventProcessorTest, processEpaUnknown_recordsLastErrorOnFirstEventOnly)
-{
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     0);
-    insertTaskKvnr(kvnr, eventKvnr.getRetryCount());
-    const auto firstId =
-        insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-    const auto secondId =
-        insertTaskEvent(kvnr, prescriptionId2.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    eventProcessor.processEpaUnknown(eventKvnr);
-
-    auto txn = createTransaction();
-    const auto kvnrResult = txn.exec("SELECT state, retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                     pqxx::params{eventKvnr.kvnrHashed()});
-    EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
-              model::EventKvnr::State::pending);
-    EXPECT_EQ(kvnrResult.at(0, 1).as<int>(), 1);
-    const auto first =
-        txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{firstId});
-    EXPECT_EQ(first.at(0, 0).as<std::string>(), "pending");
-    EXPECT_EQ(first.at(0, 1).as<std::string>(), "account lookup unknown with given kvnr");
-    const auto second = txn.exec("SELECT last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{secondId});
-    EXPECT_TRUE(second.at(0, 0).is_null());
-    txn.commit();
-}
-
-TEST_F(EventProcessorTest, processEpaUnknown_maxRetryReached_deadLetterImmediately)
-{
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     8);
-    insertTaskKvnr(kvnr, eventKvnr.getRetryCount());
-    const auto firstId =
-        insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    testing::internal::CaptureStderr();
-    eventProcessor.processEpaUnknown(eventKvnr);
-    const auto out = testing::internal::GetCapturedStderr();
-    EXPECT_NE(out.find(R"("reason":"account lookup unknown with given kvnr")"), std::string::npos) << out;
-
-    auto txn = createTransaction();
-    const auto kvnrResult = txn.exec("SELECT state, retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                     pqxx::params{eventKvnr.kvnrHashed()});
-    EXPECT_EQ(magic_enum::enum_cast<model::EventKvnr::State>(kvnrResult.at(0, 0).as<std::string>()).value(),
-              model::EventKvnr::State::pending);
-    EXPECT_EQ(kvnrResult.at(0, 1).as<int>(), 0);
-    const auto first =
-        txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{firstId});
-    EXPECT_EQ(first.at(0, 0).as<std::string>(), "deadLetterQueue");
-    EXPECT_EQ(first.at(0, 1).as<std::string>(), "account lookup unknown with given kvnr");
-    txn.commit();
-}
-
-TEST_F(EventProcessorTest, scheduleRetryQueue_belowAndAtMax)
-{
-    const model::Kvnr kvnr{"X000000012"};
-    const model::EventKvnr eventKvnr(kvnrHashed(kvnr), std::nullopt, std::nullopt, model::EventKvnr::State::processing,
-                                     7);
-    insertTaskKvnr(kvnr, eventKvnr.getRetryCount());
-    const auto eventId =
-        insertTaskEvent(kvnr, prescriptionId1.toString(), model::TaskEvent::UseCase::providePrescription,
-                        model::TaskEvent::State::pending, healthcareProviderPrescription, medicationDispenseBundle,
-                        mDoctorIdentity, std::nullopt);
-
-    EventProcessor eventProcessor(serviceContext, epaAccountLookupMock, Uuid{}.toString());
-    // 7 -> 8: max not exceeded, exponential backoff with 3^7 minutes
-    const auto before = model::Timestamp::now();
-    eventProcessor.scheduleRetryQueue(eventKvnr, "first reason");
-    {
-        auto txn = createTransaction();
-        const auto kvnrResult = txn.exec("SELECT retry_count, EXTRACT(EPOCH FROM next_export) FROM erp_event.kvnr "
-                                         "WHERE kvnr_hashed = $1",
-                                         pqxx::params{eventKvnr.kvnrHashed()});
-        EXPECT_EQ(kvnrResult.at(0, 0).as<int>(), 8);
-        EXPECT_TRUE(equalsPlus(model::Timestamp(kvnrResult.at(0, 1).as<double>()), before,
-                               EventProcessor::calculateExponentialBackoffDelay(7), 30s));
-        const auto event =
-            txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{eventId});
-        EXPECT_EQ(event.at(0, 0).as<std::string>(), "pending");
-        EXPECT_EQ(event.at(0, 1).as<std::string>(), "first reason");
-        txn.commit();
-    }
-
-    // 8 -> 9: max exceeded, the reason of this call is kept at the event in the DLQ
-    const model::EventKvnr eventKvnrAtMax(kvnrHashed(kvnr), std::nullopt, std::nullopt,
-                                          model::EventKvnr::State::processing, 8);
-    eventProcessor.scheduleRetryQueue(eventKvnrAtMax, "second reason");
-    {
-        auto txn = createTransaction();
-        const auto kvnrResult = txn.exec("SELECT retry_count FROM erp_event.kvnr WHERE kvnr_hashed = $1",
-                                         pqxx::params{eventKvnr.kvnrHashed()});
-        EXPECT_EQ(kvnrResult.at(0, 0).as<int>(), 0);
-        const auto event =
-            txn.exec("SELECT state, last_error FROM erp_event.task_event WHERE id = $1", pqxx::params{eventId});
-        EXPECT_EQ(event.at(0, 0).as<std::string>(), "deadLetterQueue");
-        EXPECT_EQ(event.at(0, 1).as<std::string>(), "second reason");
-        txn.commit();
     }
 }

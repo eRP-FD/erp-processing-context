@@ -52,27 +52,6 @@ FhirConstraint::parsedExpression(gsl::not_null<const FhirStructureRepositoryBack
     return mParsedExpression;
 }
 
-void fhirtools::FhirConstraint::enableMeasurement() const
-{
-    if (! dynamic_cast<const ExpressionMeasurement*>(mParsedExpression.get()))
-    {
-        mParsedExpression = std::make_shared<ExpressionMeasurement>(mParsedExpression);
-    }
-}
-
-uint32_t fhirtools::FhirConstraint::callCount() const
-{
-    const auto* measure = dynamic_cast<const ExpressionMeasurement*>(mParsedExpression.get());
-    return measure ? measure->callCount() : 0U;
-}
-
-std::chrono::high_resolution_clock::duration fhirtools::FhirConstraint::runtime() const
-{
-    const auto* measure = dynamic_cast<const ExpressionMeasurement*>(mParsedExpression.get());
-    return measure ? measure->runtime() : std::chrono::high_resolution_clock::duration::zero();
-}
-
-
 decltype(auto) FhirConstraint::tie() const
 {
     return std::tie(mKey, mExpression, mSeverity, mHuman);

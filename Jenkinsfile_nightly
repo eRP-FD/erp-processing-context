@@ -5,8 +5,6 @@
  * non-exclusively licensed to gematik GmbH
  */
 
-def dbImageUUID = UUID.randomUUID().toString();
-
 pipeline {
     agent {
         node {
@@ -18,8 +16,7 @@ pipeline {
     }
 
     options {
-        throttle(['gcc-build-category'])
-        disableConcurrentBuilds(abortPrevious: true)
+        disableConcurrentBuilds()
         skipDefaultCheckout()
         copyArtifactPermission(
             '/eRp/Integration/erp_processing_context_dev, ' +
@@ -32,24 +29,10 @@ pipeline {
     }
 
     environment {
-        ERP_RELEASE_VERSION = "1.24.0"
-        ERP_BUILD_IMAGE = 'de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3'
-        ERP_POSTGRES_IMAGE = "erp-test-database:${dbImageUUID}"
         GIT_SOURCE_CREDS = credentials('jenkins-github-erp')
-        CONAN_HOME = "/media/erp/.conan2"
     }
 
     stages {
-        stage('Status') {
-            steps {
-                script {
-                    sh """
-                        uptime
-                        df -h
-                    """
-                }
-            }
-        }
         stage('Checkout') {
             options {
                 throttle(['unit-test-category'])
@@ -59,181 +42,48 @@ pipeline {
                 commonCheckout()
             }
         }
-        stage ("Build") {
+        stage('Static Analysis') {
             options {
                 throttle(['gcc-build-category'])
             }
+            agent {
+                docker {
+                    label 'dockerstage'
+                    image 'de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1'
+                    registryUrl 'https://de.icr.io/v2'
+                    registryCredentialsId 'icr_image_puller_erp_dev_api_key'
+                    reuseNode true
+                    args '-u root:sudo ' + " -v ${env.WORKSPACE}:/media/erp"
+                }
+            }
             environment {
-                BUILD_WRAPPER_HOME = tool 'Sonar_Build_Wrapper_Linux_eRp'
+                BRANCH_NAME = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
             }
             steps {
                 script {
-                    loadArtifactoryConfigurationeRP {
+                    loadArtifactoryConfiguration {
                         loadGithubSSHConfiguration {
-                            withCredentials([usernamePassword(credentialsId: "jenkins-github-erp",
-                                                            usernameVariable: 'GITHUB_USERNAME',
-                                                            passwordVariable: 'GITHUB_OAUTH_TOKEN')]){
-                                env.CONAN_LOGIN_USERNAME = env.CONAN_USERNAME
-                            inside(env.ERP_BUILD_IMAGE, '-u root:sudo -v jenkins-build-ccache:${HOME}/.ccache' + " -v ${env.WORKSPACE}:/media/erp") {
-                                def erp_build_version = sh(returnStdout: true, script: "git --git-dir='/media/erp/.git' describe").trim().toLowerCase()
-                                sh """#!/bin/bash
-                                    set -ex
-                                    cd /media/erp
-                                    scripts/ci-build.sh \
-                                        --build_version='${erp_build_version}'\
-                                        --release_version='${env.ERP_RELEASE_VERSION}' \
-                                        --with_ccache \
-                                        --build_type=RelWithDebInfo \
-                                        --with_hsm_mock \
-                                        --with_asan
-                                    # remove most of the intermediate build files to make the overall disk-usage footprint smaller
-                                    # Delete CMakeFiles but preserve rules.ninja so that "ninja -t deps"
-                                    # (used by ci-static-analysis.sh) can still load build.ninja.
-                                    find build/RelWithDebInfo -path '*/CMakeFiles*' -type f ! -name 'rules.ninja' -delete
-                                    rm -rf build/RelWithDebInfo/fhir_package_tmp
-                                    # Fix build folder file permissions
-                                    chmod o+w /media/erp/build/
-                                    chmod -R o+r /media/erp/build/
-                                """
+                            env.BRANCH_NAME = "${BRANCH_NAME}"
+                            def erp_build_version = sh(returnStdout: true, script: "git describe").trim()
+                            def erp_release_version = "1.23.0"
+                            sh "cd /media/erp && scripts/ci-build.sh " +
+                                "--build_type=RelWithDebInfo " +
+                                "--build_version='${erp_build_version}' " +
+                                "--release_version='${erp_release_version}' " +
+                                "--skip-build"
+                            sh "cd /media/erp && scripts/ci-static-analysis.sh " +
+                                    "--build-path=build/RelWithDebInfo " +
+                                    "--source-path=. " +
+                                    "--clang-tidy-bin=clang-tidy-19 " +
+                                    "--output=clang-tidy.txt " +
+                                    "--clang-tidy-config=.clang-tidy.nightly "
+                            archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
+                            staticAnalysis("SonarQubeeRp")
+                            timeout(time: 5, unit: 'MINUTES') {
+                                waitForQualityGate abortPipeline: true
                             }
-                        }
-                    }
-                }
-            }
-        }
-            post {
-                always {
-                    archiveArtifacts artifacts: 'build/RelWithDebInfo/conan_trace.log', allowEmptyArchive:true
-                }
-            }
-        }
-        stage ("create test DB image") {
-            steps {
-                script {
-                    docker.withRegistry('https://de.icr.io/v2/', 'icr_image_pusher_erp_dev_api_key') {
-                        docker.build("${env.ERP_POSTGRES_IMAGE}", "'${env.WORKSPACE}' -f '${env.WORKSPACE}/docker/ci/postgres.Dockerfile'")
-                    }
-                }
-            }
-        }
-        stage("Exporter Matrix Tests") {
-            matrix {
-                axes {
-                    axis {
-                        name 'ERP_TEST_DATE'
-                        values 'today'
-                    }
-                }
-                stages {
-                    stage ("exporter-test") {
-                        options {
-                            throttle(['unit-test-category'])
-                        }
-                        steps {
-                            inside(env.ERP_BUILD_IMAGE, "--user root:sudo --volume '${env.WORKSPACE}:/media/erp'") {
-                                sh """#!/bin/bash
-                                    cd build/RelWithDebInfo/bin
-                                    set -o pipefail
-                                    ./exporter-test --erp_testdate=${ERP_TEST_DATE} --gtest_output=xml:exporter-test-${ERP_TEST_DATE}.xml 2>&1 |
-                                        tee unfiltered_exporter-test-${ERP_TEST_DATE}.log |
-                                        ${env.WORKSPACE}/scripts/filter_gtest_output.py
-                                """
-                            }
-                        }
-                        post {
-                            always {
-                                archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
-                                junit "build/RelWithDebInfo/bin/exporter-test-${ERP_TEST_DATE}.xml"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        stage("erp Matrix tests") {
-            matrix {
-                axes {
-                    axis {
-                        name 'SHARD_NUMBER'
-                        values '1', '2', '3','4','5', '6', '7','8','9', '10', '11','12','13', '14'
-                    }
-                    axis {
-                        name 'ERP_TEST_DATE'
-                        values 'today'
-                    }
-                }
-                stages{
-                    stage ("erp-test-shard"){
-                        options {
-                            throttle(['unit-test-category'])
-                        }
-                        steps {
-                            script {
-                                runTestWithDB """
-                                    ./erp-test-shard-${SHARD_NUMBER} --erp_testdate="${ERP_TEST_DATE}" --gtest_output=xml:erp-test-${ERP_TEST_DATE}-${SHARD_NUMBER}.xml 2>&1 |
-                                        tee unfiltered_erp-test-${ERP_TEST_DATE}-${SHARD_NUMBER}.log |
-                                        '${env.WORKSPACE}/scripts/filter_gtest_output.py'
-                                """
-                            }
-                        }
-                        post {
-                            always {
-                                archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
-                                junit "build/RelWithDebInfo/bin/erp-test-${ERP_TEST_DATE}-${SHARD_NUMBER}.xml"
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        stage ("test, analyze in parallel"){
-            parallel  {
-                stage ("Run Tests (fhirtools)") {
-                    options {
-                        throttle(['unit-test-category'])
-                    }
-                    steps {
-                        inside(env.ERP_BUILD_IMAGE, "--user root:sudo --volume '${env.WORKSPACE}:/media/erp'") {
-                            sh """#!/bin/bash
-                                find build/RelWithDebInfo
-                                cd build/RelWithDebInfo/bin
-                                set -o pipefail
-                                ./fhirtools-test --gtest_output=xml:fhirtools-test.xml 2>&1 |
-                                    tee unfiltered_fhirtools-test.log |
-                                    ${env.WORKSPACE}/scripts/filter_gtest_output.py
-                            """
-                        }
-                    }
-                    post {
-                        always {
-                            archiveArtifacts artifacts: "build/RelWithDebInfo/bin/*.log"
-                            junit "build/RelWithDebInfo/bin/fhirtools-test.xml"
-                        }
-                    }
-                }
-                stage('Static Analysis') {
-                    options {
-                        throttle(['gcc-build-category'])
-                    }
-                    environment {
-                        // not a multibranch job: BRANCH_NAME is not set by Jenkins, but used for sonar.branch.name
-                        BRANCH_NAME = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
-                    }
-                    steps {
-                        inside(env.ERP_BUILD_IMAGE, "--user root:sudo --volume '${env.WORKSPACE}:/media/erp'") {
-                            withSonarQubeEnv('SonarQube') {
-                                sh "cd /media/erp && scripts/ci-static-analysis.sh " +
-                                        "--build-path=build/RelWithDebInfo " +
-                                        "--source-path=. " +
-                                        "--clang-tidy-bin=clang-tidy-19 " +
-                                        "--output=clang-tidy.txt " +
-                                        "--clang-tidy-config=.clang-tidy.nightly"
-                                archiveArtifacts artifacts: 'clang-tidy.txt', allowEmptyArchive:true
-                                staticAnalysis("SonarQubeeRp")
-                                timeout(time: 5, unit: 'MINUTES') {
-                                    waitForQualityGate abortPipeline: true
-                                }
-                            }
+                            // Fix build folder file permissions
+                            sh "chmod o+w build/"
                         }
                     }
                 }
@@ -243,7 +93,6 @@ pipeline {
 
     post {
         cleanup {
-            sh "docker image rm '${env.ERP_POSTGRES_IMAGE}' ||:"
             cleanWs()
         }
         failure {
@@ -259,64 +108,6 @@ pipeline {
                 def branchName = sh(returnStdout: true, script: 'git rev-parse --abbrev-ref HEAD').trim()
                 slackSendClient(message: "Nightly build is now successful again on branch `${branchName}`:green_heart:",
                                 channel: '#erp-cpp')
-            }
-        }
-    }
-}
-
-def inside(String imageName, String args = '',  Closure body)
-{
-    docker.withRegistry('https://de.icr.io/v2/', 'icr_image_pusher_erp_dev_api_key') {
-        docker.image(imageName).inside(args, body)
-    }
-}
-
-def waitHealthy(String containerId) {
-    sh """
-        while [ \$(docker inspect '${containerId}' --format='{{.State.Health.Status}}') != healthy ] ; do
-            sleep 0.5
-        done
-    """
-}
-
-def withErpDatabase(Closure actions) {
-    docker.withRegistry('https://de.icr.io/v2/', 'icr_image_pusher_erp_dev_api_key') {
-        def dbImage = docker.image(env.ERP_POSTGRES_IMAGE)
-        def dbContainer = dbImage.run(
-                '--env POSTGRES_HOST_AUTH_METHOD=trust ' +
-                '--env POSTGRES_DB=erp_processing_context ' +
-                '--env POSTGRES_USER=erp_admin ' +
-                '--env POSTGRES_PASSWORD=erp0815 ')
-        try {
-            waitHealthy(dbContainer.id)
-            actions.call(dbContainer)
-        }
-        finally {
-            dbContainer.stop()
-        }
-    }
-}
-
-def runTestWithDB(String command) {
-    withErpDatabase {
-        dbContainer ->
-        docker.image(env.ERP_BUILD_IMAGE).inside(
-            '--user root:sudo ' +
-            "--volume '${env.WORKSPACE}:/media/erp' " +
-            "--link '${dbContainer.id}:postgres-erp'") {
-            loadArtifactoryConfigurationeRP {
-                sh """#!/bin/bash
-                    set -ex
-                    set -o pipefail
-                    cd /media/erp
-                    export ERP_POSTGRES_HOST=postgres-erp
-                    export TEST_USE_POSTGRES=true
-                    export ERP_POSTGRES_USER=erp_admin
-                    export ERP_POSTGRES_CONNECT_TIMEOUT_SECONDS=5
-                    export ERP_POSTGRES_TCP_USER_TIMEOUT_MS=5000
-                    cd build/RelWithDebInfo/bin
-                    ${command}
-                """
             }
         }
     }

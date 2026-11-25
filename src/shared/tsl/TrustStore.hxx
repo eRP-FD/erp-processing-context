@@ -187,8 +187,6 @@ private:
     // Make private methods available to gtest.
 #ifdef FRIEND_TEST
 
-    FRIEND_TEST(TrustStoreRaceConditionTest, lookupAndRefillConcurrently);
-    FRIEND_TEST(TrustStoreRaceConditionTest, extensionsCachedAfterFirstCall);
     FRIEND_TEST(TrustStoreTest, TrustStoreInitallyIsEmpty);
     FRIEND_TEST(TrustStoreTest, DISABLED_MultipleNewCATslXmlIsParsedCorrectly);
     FRIEND_TEST(TslServiceTest, providedTsl);

@@ -11,7 +11,6 @@
 #include "shared/util/Requirement.hxx"
 #include "shared/util/SharedRequirements.hxx"
 
-// clang-format off
 static constexpr Requirement A_20171    ("E-Rezept-Fachdienst - RESTful API CapabilityStatement");
 static constexpr Requirement A_20744    ("E-Rezept-Fachdienst - Selbstauskunft Device-Informationen");
 static constexpr Requirement A_19514    ("E-Rezept-Fachdienst - Http-Status-Codes");
@@ -76,7 +75,7 @@ static constexpr Requirement A_20885_04 ("E-Rezept-Fachdienst - Nachricht einste
 static constexpr Requirement A_22731_01 ("E-Rezept-Fachdienst – Abrechnungsinformation bereitstellen – Prüfung Coverage PKV");
 static constexpr Requirement A_22734    ("E-Rezept-Fachdienst - Nachricht einstellen - Prüfung Existenz ChargeItem");
 static constexpr Requirement A_23876_01 ("E-Rezept - Nachrichtenaustausch - E-Rezept einer Apotheke zuweisen - Datenstruktur Nachricht");
-static constexpr Requirement A_23877_03 ("E-Rezept - Nachrichtenaustausch - Nachricht durch Abgebenden übermitteln - Datenstruktur Nachricht");
+static constexpr Requirement A_23877_01 ("E-Rezept - Nachrichtenaustausch - Nachricht durch Abgebenden übermitteln - Datenstruktur Nachricht");
 static constexpr Requirement A_23878_01 ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_DispReq");
 static constexpr Requirement A_23878_02 ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung Payload GEM_ERP_PR_Communication_DispReq");
 static constexpr Requirement A_23879    ("E-Rezept-Fachdienst - Nachricht einstellen - Validierung des Payload-Inhalt von GEM_ERP_PR_Communication_Reply");
@@ -425,7 +424,6 @@ static constexpr Requirement A_27550("E-Rezept-Fachdienst - Task markieren - Ver
 static constexpr Requirement A_27551("E-Rezept-Fachdienst - Task markieren - Versicherter - FHIR-Validierung Parameters");
 static constexpr Requirement A_27552("E-Rezept-Fachdienst - Task markieren - Versicherter - Aenderung Markierung Task Resource");
 static constexpr Requirement A_28500("E-Rezept-Fachdienst - Task markieren - Versicherter - nur einlösbare E-Rezepte");
-static constexpr Requirement A_28910("E-Rezept-Fachdienst - Task markieren - Versicherter - nur zur Einlösung verfügbare E-Rezepte");
 
 // eu-prescription abfragen
 static constexpr Requirement A_27059("E-Rezept-Fachdienst - eu-prescription abfragen - Rollenprüfung");
@@ -446,7 +444,7 @@ static constexpr Requirement A_27582("E-Rezept-Fachdienst - eu-prescription abfr
 
 // $eu-close
 static constexpr Requirement A_27068("E-Rezept-Fachdienst - Task schließen - EU - Rollenprüfung");
-static constexpr Requirement A_27069_01("E-Rezept-Fachdienst - Task schließen - EU - Schemaprüfung");
+static constexpr Requirement A_27069("E-Rezept-Fachdienst - Task schließen - EU - Schemaprüfung");
 static constexpr Requirement A_27070("E-Rezept-Fachdienst - Task schließen - EU - Prüfung Einwilligung für KVNR");
 static constexpr Requirement A_27071("E-Rezept-Fachdienst - Task schließen - EU - Prüfung Zugriffsberechtigung");
 static constexpr Requirement A_27072("E-Rezept-Fachdienst - Task schließen - EU - Statusprüfung");
@@ -527,7 +525,5 @@ static constexpr Requirement A_27193_02 ("Fachdienst - FdV-Instanz registrieren 
 static constexpr Requirement A_19284_14("E-Rezept-Fachdienst - Versichertenprotokoll zu Operationen");
 static constexpr Requirement A_20165_12("Performance – E-Rezept-Fachdienst - Bearbeitungszeit unter Last");
 static constexpr Requirement A_27783_01("User-Agent - Senden eines User-Agents (Zentrale Dienste der TI)");
-static constexpr Requirement A_28933("E-Rezept-Fachdienst - BfArM - Prüfung der Validierungsstufe des TLS-Server-Zertifikats");
-// clang-format on
 
 #endif

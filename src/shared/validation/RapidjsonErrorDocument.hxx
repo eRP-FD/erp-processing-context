@@ -4,6 +4,9 @@
 
 #ifndef ERP_PROCESSING_CONTEXT_RAPIDJSONERRORDOCUMENT_HXX
 #define ERP_PROCESSING_CONTEXT_RAPIDJSONERRORDOCUMENT_HXX
+
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <rapidjson/document.h>
 #include <rapidjson/schema.h>
 #include <optional>

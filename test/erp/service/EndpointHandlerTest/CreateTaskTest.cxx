@@ -52,6 +52,7 @@ public:
 TEST_P(CreateTaskMultiviewTest, multiView)
 {
     const auto now{model::Timestamp::now()};
+    testutils::ShiftFhirResourceViewsGuard shiftView("GEM_WF_1_6_NON_FDV", floor<std::chrono::days>(now.toChronoTimePoint()));
     auto views = Fhir::instance().structureRepository(now);
     ASSERT_GE(views.size(), 2);
     CreateTaskHandler handler({});
@@ -178,7 +179,7 @@ TEST_F(CreateTaskTest, UnslicedExtensionReject)
     std::string diagnostics = "Parameters.meta.extension[0]: error: element doesn't belong to any slice. "
                               "(from profile: http://hl7.org/fhir/StructureDefinition/Extension|4.0.1); "
                               "Parameters.meta.extension[0]: error: element doesn't belong to any slice. "
-                              "(from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1)";
+                              "(from profile: http://hl7.org/fhir/StructureDefinition/Meta|4.0.1); ";
     EXPECT_ERP_EXCEPTION_WITH_MESSAGE_AND_FHIR_VALIDATION_ERROR(
         handler.handleRequest(sessionContext), "Unintendierte Verwendung von Extensions an unspezifizierter Stelle",
         diagnostics);

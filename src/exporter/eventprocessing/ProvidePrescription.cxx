@@ -114,7 +114,10 @@ Outcome ProvidePrescription::doProcess(const model::ProvidePrescriptionTaskEvent
         case Outcome::Retry:
         case Outcome::Conflict:
         case Outcome::ConsentRevoked:
-            bdeMessage.update(BDEMessage::Data{.error = getFailureDiagnostics(response.httpStatus, response.body)});
+            if (auto diag = EventProcessingBase::getFailureDiagnostics(response.body))
+            {
+                bdeMessage.update(BDEMessage::Data{.error = diag});
+            }
             // no audit event
             logFailure(response.httpStatus, std::move(response.body));
             break;

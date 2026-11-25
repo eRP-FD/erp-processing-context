@@ -8,6 +8,7 @@
 #include "erp/model/CommunicationPayload.hxx"
 #include "fhirtools/model/NumberAsStringParserDocument.hxx"
 #include "shared/model/ResourceNames.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/UrlHelper.hxx"
 #include "shared/validation/JsonValidator.hxx"

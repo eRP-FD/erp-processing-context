@@ -94,7 +94,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
     TVLOG(1) << name() << ": processing request to " << session.request.header().target();
 
     // Set up a DB query with filters that are based on path and query arguments of the request
-    auto roDB = session.serviceContext.readOnlyDatabaseFactory();
+    auto* database = session.database();
 
     A_19522.start("support sent, received, recipient and sender in searching and sorting");
     A_24438.start("Set sent as default sort argument.");
@@ -116,7 +116,7 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
 
     // GEMREQ-start A_19520-01#allPassCaller
     A_19520_02.start("pass caller to database filter");
-    auto communications = roDB->retrieveCommunications(
+    auto communications = database->retrieveCommunications(
         caller, // Used to filter by sender or recipient according to A_19520
         {},     // No filter by communication id for getAll. Also, per ERP-3862, we don't have to support the _id parameter.
         arguments);
@@ -124,17 +124,12 @@ void CommunicationGetAllHandler::handleRequest (PcSessionContext& session)
     // GEMREQ-end A_19520-01#allPassCaller
     try
     {
+        markCommunicationsAsRetrieved(*database, communications, caller);
+
         std::size_t totalSearchMatches =
             responseIsPartOfMultiplePages(arguments->pagingArgument(), communications.size())
-                ? roDB->countCommunications(caller, arguments)
+                ? database->countCommunications(caller, arguments)
                 : communications.size();
-
-        // Close transaction early, before opening the read-write one. MockDatabaseProxy::TransactionMonitor
-        // allows only one open transaction per thread (unit tests, CommunicationGetHandlerTest).
-        roDB.reset();
-
-        auto* database = session.database();
-        markCommunicationsAsRetrieved(*database, communications, caller);
 
         auto bundle = createBundle(communications);
         bundle.setTotalSearchMatches(totalSearchMatches);

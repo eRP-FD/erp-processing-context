@@ -636,10 +636,6 @@ generate_certificate sub_ca1_ec smc_b_osig_ec "SMC-B Osig Signer" smc_b_osig ec:
     subjectAltName=email:admin@example.com
 generate_certificate sub_ca1_ec unrevoked_ec "Example Unrevoked Cert" usr_cert ec:brainpoolP256r1 $normal \
     subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
-generate_certificate sub_ca1_ec ev_tls_ec "Example EV TLS Cert" usr_cert_ev_tls ec:brainpoolP256r1 $normal \
-    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
-generate_certificate sub_ca1_ec ov_tls_ec "Example OV TLS Cert" usr_cert_ov_tls ec:brainpoolP256r1 $normal \
-    subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1
 # certificate revoked, signed by normal CA
 generate_certificate sub_ca1_ec revoked_ec "Example Revoked Cert" usr_cert ec:brainpoolP256r1 $revoked \
     subjectAltName=DNS:www.example.com,DNS:server1.example.com,IP:127.0.0.1 crlDistributionPoints=URI:http://crl.example.com/revoked_crt.crl,URI:ldap://test/

@@ -20,15 +20,8 @@ class ClientRequest;
 class CrlProvider;
 class TokenCache;
 class UrlRequestSender;
-class X509Certificate;
 
 enum class HttpStatus;
-
-namespace boost::asio::ssl
-{
-//NOLINTNEXTLINE(readability-identifier-naming)
-class verify_context;
-}
 
 
 namespace model
@@ -93,12 +86,8 @@ public:
 class OAuthClientBase
 {
 public:
-    using AdditionalCertificateCheck =
-        std::function<bool(const X509Certificate&, boost::asio::ssl::verify_context&)>;
-
     OAuthClientBase(std::string clientId, std::string host, std::string port, std::shared_ptr<CrlProvider> crlProvider,
-                    std::string xContextId,
-                    std::optional<AdditionalCertificateCheck> additionalCertificateCheck = std::nullopt);
+                    std::string xContextId);
     virtual ~OAuthClientBase() = default;
 
     virtual bool testConnection() const;
@@ -155,5 +144,4 @@ private:
     const model::TRezeptEvent* mEvent{nullptr};
     std::shared_ptr<CrlProvider> mCrlProvider;
     std::string mXContextId;
-    std::optional<AdditionalCertificateCheck> mAdditionalCertificateCheck;
 };

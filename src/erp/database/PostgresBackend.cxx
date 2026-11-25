@@ -158,7 +158,7 @@ QUERY(retrieveAllTasksByKvnrWithAccessCode, R"--(
     )--")
 // GEMREQ-end A_22158#query
 
-    QUERY(healthCheckQuery, "SELECT 1")
+    QUERY(healthCheckQuery, "SELECT FROM erp.task LIMIT 1")
 
     QUERY(existsCountryCodeQuery,
           R"--(SELECT EXISTS ( SELECT 1 FROM erp.eu_country_codes WHERE iso_3166_alpha_2 = $1 ))--")

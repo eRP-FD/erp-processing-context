@@ -58,6 +58,6 @@ private:
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<GemErpEuPrParCloseOperationInput>;
 extern template class Parameters<GemErpEuPrParCloseOperationInput>;
-// NOLINTEND(bugprone-exception-escape)
+// NOLINTEND
 
 }// model

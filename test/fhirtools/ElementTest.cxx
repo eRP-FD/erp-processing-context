@@ -146,8 +146,7 @@ TEST_F(ElementTest, ConvertFromInt)
     EXPECT_THROW((void) erpElement.asDate(), std::exception);
     EXPECT_THROW((void) erpElement.asTime(), std::exception);
     EXPECT_THROW((void) erpElement.asDateTime(), std::exception);
-    const auto& asQuantity = erpElement.asQuantity();
-    EXPECT_EQ(asQuantity.compareTo(QuantityType(12, "")), std::strong_ordering::equal) << "value: " << asQuantity.value() << " unit: '" << asQuantity.unit() << "'";
+    EXPECT_EQ(erpElement.asQuantity().compareTo(Element::QuantityType(12, "")), std::strong_ordering::equal);
 }
 
 TEST_F(ElementTest, ConvertFromDecimal)
@@ -164,7 +163,7 @@ TEST_F(ElementTest, ConvertFromDecimal)
     EXPECT_THROW((void) erpElement.asDate(), std::exception);
     EXPECT_THROW((void) erpElement.asTime(), std::exception);
     EXPECT_THROW((void) erpElement.asDateTime(), std::exception);
-    EXPECT_EQ(erpElement.asQuantity().compareTo(QuantityType(DecimalType("1.2"), "")),
+    EXPECT_EQ(erpElement.asQuantity().compareTo(Element::QuantityType(DecimalType("1.2"), "")),
               std::strong_ordering::equal);
 }
 
@@ -199,7 +198,7 @@ TEST_F(ElementTest, ConvertFromIntAsString)
     EXPECT_THROW((void) erpElement.asDate(), std::exception);
     EXPECT_THROW((void) erpElement.asTime(), std::exception);
     EXPECT_THROW((void) erpElement.asDateTime(), std::exception);
-    EXPECT_EQ(erpElement.asQuantity().compareTo(QuantityType(32, "")), std::strong_ordering::equal);
+    EXPECT_EQ(erpElement.asQuantity().compareTo(Element::QuantityType(32, "")), std::strong_ordering::equal);
 }
 
 TEST_F(ElementTest, ConvertFromDecimalAsString)
@@ -216,7 +215,7 @@ TEST_F(ElementTest, ConvertFromDecimalAsString)
     EXPECT_THROW((void) erpElement.asDate(), std::exception);
     EXPECT_THROW((void) erpElement.asTime(), std::exception);
     EXPECT_THROW((void) erpElement.asDateTime(), std::exception);
-    EXPECT_EQ(erpElement.asQuantity().compareTo(QuantityType(DecimalType("3.14"), "")),
+    EXPECT_EQ(erpElement.asQuantity().compareTo(Element::QuantityType(DecimalType("3.14"), "")),
               std::strong_ordering::equal);
 }
 
@@ -302,15 +301,15 @@ TEST_F(ElementTest, ConvertFromQuantity)
     EXPECT_THROW((void) erpElement.asDate(), std::exception);
     EXPECT_THROW((void) erpElement.asTime(), std::exception);
     EXPECT_THROW((void) erpElement.asDateTime(), std::exception);
-    EXPECT_EQ(erpElement.asQuantity().compareTo(QuantityType(10, "km")), std::strong_ordering::equal);
+    EXPECT_EQ(erpElement.asQuantity().compareTo(Element::QuantityType(10, "km")), std::strong_ordering::equal);
 }
 
 TEST_F(ElementTest, QuantityArithmetik)
 {
-    EXPECT_EQ(QuantityType(1, "x").compareTo(QuantityType(2, "x")), std::strong_ordering::less);
-    EXPECT_EQ(QuantityType(2, "x").compareTo(QuantityType(2, "x")), std::strong_ordering::equal);
-    EXPECT_EQ(QuantityType(3, "x").compareTo(QuantityType(2, "x")), std::strong_ordering::greater);
-    EXPECT_EQ(QuantityType(3, "x").compareTo(QuantityType(2, "y")), std::nullopt);
+    EXPECT_EQ(Element::QuantityType(1, "x").compareTo(Element::QuantityType(2, "x")), std::strong_ordering::less);
+    EXPECT_EQ(Element::QuantityType(2, "x").compareTo(Element::QuantityType(2, "x")), std::strong_ordering::equal);
+    EXPECT_EQ(Element::QuantityType(3, "x").compareTo(Element::QuantityType(2, "x")), std::strong_ordering::greater);
+    EXPECT_EQ(Element::QuantityType(3, "x").compareTo(Element::QuantityType(2, "y")), std::nullopt);
 }
 
 TEST_F(ElementTest, CompareTo)
@@ -321,9 +320,9 @@ TEST_F(ElementTest, CompareTo)
     const PrimitiveElement elementDec3(&backend, Element::Type::Decimal, DecimalType(3));
     const PrimitiveElement elementStrA(&backend, Element::Type::String, "abc"s);
     const PrimitiveElement elementStrB(&backend, Element::Type::String, "ABC"s);
-    const PrimitiveElement elementQuantitiy1(&backend, Element::Type::Quantity, QuantityType(15, "cm"));
-    const PrimitiveElement elementQuantitiy2(&backend, Element::Type::Quantity, QuantityType(16, "cm"));
-    const PrimitiveElement elementQuantitiy3(&backend, Element::Type::Quantity, QuantityType(3, ""));
+    const PrimitiveElement elementQuantitiy1(&backend, Element::Type::Quantity, Element::QuantityType(15, "cm"));
+    const PrimitiveElement elementQuantitiy2(&backend, Element::Type::Quantity, Element::QuantityType(16, "cm"));
+    const PrimitiveElement elementQuantitiy3(&backend, Element::Type::Quantity, Element::QuantityType(3, ""));
 
     EXPECT_EQ(elementInt3.compareTo(elementInt3), std::strong_ordering::equal);
     EXPECT_EQ(elementInt3.compareTo(elementInt4), std::strong_ordering::less);
@@ -416,52 +415,15 @@ TEST_F(ElementTest, CompareTo)
     EXPECT_EQ(elementQuantitiy3.compareTo(elementQuantitiy3), std::strong_ordering::equal);
 }
 
-TEST_F(ElementTest, QuickCompareToSubElements)
-{
-    const auto* extensionType = mRepo->findTypeById("Extension");
-    ASSERT_NE(extensionType, nullptr);
-    auto makeElement = [&](const model::NumberAsStringParserDocument& doc) {
-        return std::make_shared<ErpElement>(&backend, std::weak_ptr<const Element>{}, extensionType, "Extension", &doc);
-    };
-    const auto docUrlA = model::NumberAsStringParserDocument::fromJson(R"({"url": "A"})");
-    const auto docUrlB = model::NumberAsStringParserDocument::fromJson(R"({"url": "B"})");
-    const auto docExtA = model::NumberAsStringParserDocument::fromJson(R"({"extension":[{"url": "A"}]})");
-    const auto docExtAB =
-        model::NumberAsStringParserDocument::fromJson(R"({"extension":[{"url": "A"}, {"url": "B"}]})");
-    const auto docExtAA = model::NumberAsStringParserDocument::fromJson(R"({"extension":[{"url": "A"}, {"url": "A"}]})");
-
-    const auto urlA = makeElement(docUrlA);
-    const auto urlB = makeElement(docUrlB);
-    const auto extA = makeElement(docExtA);
-    const auto extAB = makeElement(docExtAB);
-    const auto extAA = makeElement(docExtAA);
-
-    // identical structure
-    EXPECT_EQ(urlA->quickCompareTo(*urlA), std::strong_ordering::equal);
-    EXPECT_EQ(extAB->quickCompareTo(*extAB), std::strong_ordering::equal);
-
-    // same sub-element names, different value in a sub-element
-    EXPECT_EQ(urlA->quickCompareTo(*urlB), std::strong_ordering::less);
-    EXPECT_EQ(urlB->quickCompareTo(*urlA), std::strong_ordering::greater);
-
-    // same sub-element names, different number of sub-elements
-    EXPECT_EQ(extA->quickCompareTo(*extAB), std::strong_ordering::less);
-    EXPECT_EQ(extAB->quickCompareTo(*extA), std::strong_ordering::greater);
-
-    // same sub-element names, same number of sub-elements, different content in nested sub-element
-    EXPECT_EQ(extAA->quickCompareTo(*extAB), std::strong_ordering::less);
-    EXPECT_EQ(extAB->quickCompareTo(*extAA), std::strong_ordering::greater);
-}
-
 TEST_F(ElementTest, QuantityConstructor)
 {
-    QuantityType q1("25m");
-    QuantityType q2("25.0m");
-    QuantityType q3("25.m");
-    QuantityType q4("0.0m");
-    QuantityType q5("25.11111111 cm");
-    QuantityType q6("25.22222222  mm");
-    QuantityType q7("25.33333333  ");
+    Element::QuantityType q1("25m");
+    Element::QuantityType q2("25.0m");
+    Element::QuantityType q3("25.m");
+    Element::QuantityType q4("0.0m");
+    Element::QuantityType q5("25.11111111 cm");
+    Element::QuantityType q6("25.22222222  mm");
+    Element::QuantityType q7("25.33333333  ");
 
     EXPECT_EQ(q1.value(), DecimalType("25"));
     EXPECT_EQ(q1.unit(), "m");

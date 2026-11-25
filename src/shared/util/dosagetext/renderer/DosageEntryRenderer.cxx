@@ -239,7 +239,7 @@ bool DosageEntryRenderer::shouldMergeTimes(const std::vector<model::DosageDgMP>&
 bool DosageEntryRenderer::replicateTimesSortBug(const std::vector<model::DosageDgMP>& dosages)
 {
     // The 1.0.1 script does not sort times for Schema 5: TimeOfDay, although it should according to specification
-    // https://ig.fhir.de/igs/medication/1.0.3/dosierung-textgenerierung.html#4-konkrete-zeiten-timeofday
+    // https://ig.fhir.de/igs/medication/dosierung-textgenerierung.html#4-konkrete-zeiten-timeofday
     switch (detectSchema(dosages))
     {
         case Schema::UNKNOWN:

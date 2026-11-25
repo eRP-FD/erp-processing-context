@@ -39,7 +39,7 @@ EventDispatcher::Result EventDispatcher::dispatch(const model::TaskEvent& erpEve
             .hashedKvnr = model::HashedKvnr(erpEvent.getHashedKvnr()),
             .prescriptionId = erpEvent.getPrescriptionId().toString(),
             .xContextId = erpEvent.getXRequestId()
-    });
+        });
 
     std::optional<model::AuditEventId> successAuditType;
     std::optional<model::AuditEventId> failedAuditType;
@@ -110,7 +110,7 @@ EventDispatcher::Result EventDispatcher::dispatch(const model::TaskEvent& erpEve
     }
     A_19296_04.finish();
 
-    return {.outcome = outcome, .errorReason = message.getData().error.value_or("no error reason given")};
+    return {.outcome = outcome, .deadLetterReason = message.getData().error.value_or("no dead_letter reason given")};
 }
 
 }

@@ -1071,7 +1071,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentReference_notAllowed)
     EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(),
               R"(Communication.payload[0].contentReference: error: )"
               R"----(At most 0 elements expected, but got 1)----"
-              R"----( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1))----");
+              R"----( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1); )----");
 }
 
 TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentAttachment_notAllowed)
@@ -1119,7 +1119,7 @@ TEST_F(CommunicationPostHandlerTest, DispReq_A19450_contentAttachment_notAllowed
     EXPECT_EQ(outcome.value().issues().at(0).diagnostics.value(),
               R"(Communication.payload[0].contentAttachment: error:)"
               R"---( At most 0 elements expected, but got 1)---"
-              R"---( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1))---");
+              R"---( (from profile: http://hl7.org/fhir/StructureDefinition/Communication|4.0.1); )---");
 }
 
 TEST_F(CommunicationPostHandlerTest, DispReq_A26320_task_must_be_ready)

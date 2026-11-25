@@ -7,6 +7,7 @@
 
 #include "shared/crypto/Jwt.hxx"
 #include "shared/database/AccessTokenIdentity.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/util/Expect.hxx"
 #include "shared/util/JsonLog.hxx"
 #include "shared/util/String.hxx"

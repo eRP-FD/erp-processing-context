@@ -125,9 +125,17 @@ fhir_patch(de.gematik.epa.medication 1.0.6-2
 
 fhir_install(de.gematik.epa.medication 1.3.0)
 fhir_patch(de.gematik.epa.medication 1.3.0
-     JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-medication-pzn-ingredient.json")
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-medication-pzn-ingredient.json")
 fhir_patch(de.gematik.epa.medication 1.3.0
-     JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-ms-operation-outcome.json")
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-medication-unique-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-epa-ms-operation-outcome.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-originator-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-prescription-process-identifier-extension.json")
+fhir_patch(de.gematik.epa.medication 1.3.0
+    JQ [[.version="1.3.0"]] "package/StructureDefinition-rx-prescription-process-identifier.json")
 fhir_patch(de.gematik.epa.medication 1.3.0
     FIX_PARAMETERS_PART_TYPE
         package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
@@ -140,10 +148,14 @@ fhir_patch(de.gematik.epa.medication 1.3.0
 )
 
 fhir_install(de.gematik.epa.medication 1.3.2)
-# significant change bump version
 fhir_patch(de.gematik.epa.medication 1.3.2
-     JQ [[.version="1.3.2"]] "package/StructureDefinition-epa-medication-pzn-ingredient.json")
-
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-epa-medication-unique-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-originator-process-identifier.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-prescription-process-identifier-extension.json")
+fhir_patch(de.gematik.epa.medication 1.3.2
+    JQ [[.version="1.3.2"]] "package/StructureDefinition-rx-prescription-process-identifier.json")
 fhir_patch(de.gematik.epa.medication 1.3.2
     FIX_PARAMETERS_PART_TYPE
         package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
@@ -176,35 +188,10 @@ fhir_install(kbv.ita.erp 1.3.3)
 fhir_install(kbv.itv.evdga 1.2.2)
 fhir_install(kbv.ita.erp 1.4.4)
 
-fhir_install(hl7.terminology.r4 7.3.0)
-fhir_install(hl7.fhir.uv.extensions.r4 5.3.0)
-fhir_install(de.gematik.erp.t-prescription 1.2.0)
-fhir_patch(de.gematik.erp.t-prescription 1.2.0
+fhir_install(de.gematik.erp.t-prescription 1.1.0)
+fhir_patch(de.gematik.erp.t-prescription 1.1.0
     FIX_PARAMETERS_PART_TYPE
         package/StructureDefinition-erp-tprescription-carbon-copy.json
-)
-
-
-fhir_install(de.gematik.epa.medication 1.3.4)
-
-fhir_patch(de.gematik.epa.medication 1.3.4
-     JQ [[.version="1.3.4"]] "package/StructureDefinition-emp-medication-request.json")
-fhir_patch(de.gematik.epa.medication 1.3.4
-     JQ [[.version="1.3.4"]] "package/StructureDefinition-epa-medication-statement.json")
-fhir_patch(de.gematik.epa.medication 1.3.4
-     JQ [[.version="1.3.4"]] "package/StructureDefinition-epa-medication-request.json")
-fhir_patch(de.gematik.epa.medication 1.3.4
-     JQ [[.version="1.3.4"]] "package/StructureDefinition-epa-medication-dispense.json")
-
-fhir_patch(de.gematik.epa.medication 1.3.4
-    FIX_PARAMETERS_PART_TYPE
-        package/StructureDefinition-epa-op-add-emp-entry-input-parameters.json
-        package/StructureDefinition-epa-op-cancel-dispensation-erp-input-parameters.json
-        package/StructureDefinition-epa-op-cancel-prescription-erp-input-parameters.json
-        package/StructureDefinition-epa-op-provide-dispensation-erp-input-parameters.json
-        package/StructureDefinition-epa-op-provide-prescription-erp-input-parameters.json
-        package/StructureDefinition-epa-op-rx-dispensation-erp-output-parameters.json
-        package/StructureDefinition-epa-op-rx-prescription-erp-output-parameters.json
 )
 
 add_custom_command(
@@ -236,61 +223,6 @@ add_custom_command(
 )
 add_custom_target("kbv.ita.erp-1.4.4-overrides" DEPENDS "${ERP_FHIR_REPOSITORY_DIR}/kbv.ita.erp#1.4.4/.overrides.stamp")
 add_dependencies("kbv.ita.erp-1.4.4-patched" "kbv.ita.erp-1.4.4-overrides")
-
-set(t_prescription_sampes_SRC_DIR "${ERP_FHIR_REPOSITORY_DIR}/de.gematik.erp.t-prescription#1.2.0/package/example")
-set(t_prescription_sampes_DEST_DIR "${CMAKE_CURRENT_BINARY_DIR}/test/fhir/examples/de.gematik.erp.t-prescription-1.2.0")
-add_custom_command(
-    OUTPUT "${t_prescription_sampes_DEST_DIR}/.stamp"
-    DEPENDS "de.gematik.erp.t-prescription-1.2.0-extract"
-    COMMENT "Copy t-prescription 1.2.0 samples"
-    COMMAND "${CMAKE_COMMAND}" -E make_directory "${t_prescription_sampes_DEST_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/Bundle-VZD-SearchSet-Bundle.json"
-        "${t_prescription_sampes_DEST_DIR}/Bundle-VZD-SearchSet-Bundle.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/MedicationDispense-ExampleMedicationDispense-T.json"
-        "${t_prescription_sampes_DEST_DIR}/MedicationDispense-ExampleMedicationDispense-T.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/Medication-ExampleMedication1-Pomalidomid-T.json"
-        "${t_prescription_sampes_DEST_DIR}/Medication-ExampleMedication1-Pomalidomid-T.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/Medication-ExampleMedication1-Thalidomid-T-Compounding.json"
-        "${t_prescription_sampes_DEST_DIR}/Medication-ExampleMedication1-Thalidomid-T-Compounding.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/Medication-ExampleMedication2-Pomalidomid-T.json"
-        "${t_prescription_sampes_DEST_DIR}/Medication-ExampleMedication2-Pomalidomid-T.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/OperationOutcome-ERP-TPrescription-OperationOutcome-1.json"
-        "${t_prescription_sampes_DEST_DIR}/OperationOutcome-ERP-TPrescription-OperationOutcome-1.json"
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${t_prescription_sampes_SRC_DIR}/Organization-ExampleOrganization-T.json"
-        "${t_prescription_sampes_DEST_DIR}/Organization-ExampleOrganization-T.json"
-# patched examples
-# subject.identifier.system must have fixed value "http://fhir.de/sid/gkv/kvid-10"
-# see:
-#    Digitaler Durchschlag T-Rezept       : https://simplifier.net/packages/de.gematik.erp-t-prescription/1.2.0/files/3731049
-#    E-T-Rezept Medication Request        : https://simplifier.net/packages/de.gematik.erp-t-prescription/1.2.0/files/3731051
-#    10-stellige Krankenversichertennummer: https://simplifier.net/packages/de.basisprofil.r4/1.5.4/files/2879564
-    COMMAND "${jq_EXECUTABLE}" -f '${CMAKE_CURRENT_SOURCE_DIR}/fhir/fix-identifier-system-absent.jq'
-        "${t_prescription_sampes_SRC_DIR}/MedicationRequest-ExampleMedicationRequest-T.json"
-        > "${t_prescription_sampes_DEST_DIR}/MedicationRequest-ExampleMedicationRequest-T.json"
-    COMMAND "${jq_EXECUTABLE}" -f '${CMAKE_CURRENT_SOURCE_DIR}/fhir/fix-identifier-system-absent.jq'
-        "${t_prescription_sampes_SRC_DIR}/MedicationRequest-ExampleMedicationRequest-T-Compounding.json"
-        > "${t_prescription_sampes_DEST_DIR}/MedicationRequest-ExampleMedicationRequest-T-Compounding.json"
-    COMMAND "${jq_EXECUTABLE}" -f '${CMAKE_CURRENT_SOURCE_DIR}/fhir/fix-identifier-system-absent.jq'
-        "${t_prescription_sampes_SRC_DIR}/Parameters-TRP-Carbon-Copy.json"
-        > "${t_prescription_sampes_DEST_DIR}/Parameters-TRP-Carbon-Copy.json"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${t_prescription_sampes_DEST_DIR}/.stamp"
-)
-add_custom_target(t_prescription_sampes DEPENDS "${t_prescription_sampes_DEST_DIR}/.stamp")
-add_dependencies(resources t_prescription_sampes)
-
-add_custom_target(clean-fhir
-    COMMENT "Removing fhir profiles"
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -rf -- "${ERP_FHIR_REPOSITORY_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E rm -rf -- "${ERP_FHIR_RESOURCE_DIR}"
-)
 
 set(SCHEMA_FILES
         "schema/hl7.fhir.r4.core/4.0.1/json/fhir.json"

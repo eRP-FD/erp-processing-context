@@ -29,7 +29,7 @@ class FhirStructureRepositoryView;
 class ValueElement;
 class ValidatorOptions;
 
-using ExpressionPtr = std::shared_ptr<const Expression>;
+using ExpressionPtr = std::shared_ptr<Expression>;
 
 namespace internal
 {

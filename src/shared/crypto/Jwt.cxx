@@ -91,11 +91,11 @@ std::string JWT::serialize(void) const
 // GEMREQ-start A_19439#verify, A_20504#verify
 void JWT::verify(const shared_EVP_PKEY& publicKey) const
 {
+    verifySignature(publicKey);
     checkJwtFormat();
     checkRequiredClaims();
     checkAudClaim();
     checkIfExpired();
-    verifySignature(publicKey);
 }
 // GEMREQ-end A_19439#verify, A_20504#verify
 

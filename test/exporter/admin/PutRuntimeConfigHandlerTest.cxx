@@ -26,8 +26,6 @@
 
 #include <gtest/gtest.h>
 #include <magic_enum/magic_enum_iostream.hpp>
-#include <set>
-#include <string>
 
 class PutRuntimeConfigHandlerTest : public ::testing::Test
 {
@@ -212,63 +210,6 @@ TEST_F(PutRuntimeConfigHandlerTest, PauseResumeThrottle)
     changeConfig("Resume", "true");
     expect = {.pause = false, .epaPause = false, .tRezeptPause = false, .pushPause = false, .throttle = 0};
     checkGetConfig(expect);
-}
-
-TEST_F(PutRuntimeConfigHandlerTest, SetPausedEpas)
-{
-    auto getPausedEpasFromConfig = [&]() -> std::set<std::string> {
-        ServerRequest request{Header(header)};
-        request.header().setMethod(HttpMethod::GET);
-        exporter::SessionContext session{*serviceContext, request, response, accessLog};
-        GetConfigurationHandler handler{
-            ConfigurationKey::MEDICATION_EXPORTER_ADMIN_CREDENTIALS,
-            std::make_unique<exporter::ConfigurationFormatter>(serviceContext->getRuntimeConfiguration())};
-        EXPECT_NO_THROW(handler.handleRequest(session));
-        EXPECT_EQ(session.response.getHeader().status(), HttpStatus::OK);
-        rapidjson::Document doc;
-        doc.Parse(session.response.getBody());
-        const rapidjson::Pointer ptr{"/runtime/PausedEpas/value"};
-        const auto* arr = ptr.Get(doc);
-        EXPECT_NE(arr, nullptr);
-        if (! arr || ! arr->IsArray())
-        {
-            return {};
-        }
-        std::set<std::string> result;
-        for (const auto& v : arr->GetArray())
-        {
-            result.emplace(v.GetString());
-        }
-        return result;
-    };
-
-    // Initially empty
-    EXPECT_TRUE(getPausedEpasFromConfig().empty());
-    EXPECT_FALSE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa1.example.de"));
-
-    // Set two EPAs
-    changeConfig("PausedEpas", "epa1.example.de;epa2.example.de");
-    EXPECT_EQ(getPausedEpasFromConfig(), (std::set<std::string>{"epa1.example.de", "epa2.example.de"}));
-    EXPECT_TRUE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa1.example.de"));
-    EXPECT_TRUE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa2.example.de"));
-    EXPECT_FALSE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa3.example.de"));
-
-    // Replace with a single EPA
-    changeConfig("PausedEpas", "epa3.example.de");
-    EXPECT_EQ(getPausedEpasFromConfig(), (std::set<std::string>{"epa3.example.de"}));
-    EXPECT_FALSE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa1.example.de"));
-    EXPECT_TRUE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa3.example.de"));
-
-    // Empty value clears all
-    changeConfig("PausedEpas", "");
-    EXPECT_TRUE(getPausedEpasFromConfig().empty());
-    EXPECT_FALSE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa3.example.de"));
-
-    // Semicolons percent-encoded (%3B) as a real HTTP client would send them
-    changeConfig("PausedEpas", "epa1.example.de%3Bepa2.example.de");
-    EXPECT_EQ(getPausedEpasFromConfig(), (std::set<std::string>{"epa1.example.de", "epa2.example.de"}));
-    EXPECT_TRUE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa1.example.de"));
-    EXPECT_TRUE(serviceContext->getRuntimeConfigurationGetter()->isEpaPaused("epa2.example.de"));
 }
 
 using magic_enum::ostream_operators::operator<<;

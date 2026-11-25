@@ -149,17 +149,14 @@ private:
     AuditEventTextTemplates mAuditEventTextTemplates;
 
     std::unique_ptr<PseudonameKeyRefreshJob> mReportPseudonameKeyRefreshJob;
+    std::unique_ptr<SeedTimer> mPrngSeeder;
     std::shared_ptr<RegistrationInterface> mRegistrationInterface;
 
-    // mTeeServer owns the io_context (via ThreadPool). All members that hold a
-    // boost::asio steady_timer referencing that io_context MUST be declared
-    // AFTER mTeeServer so they are destroyed BEFORE it
     std::unique_ptr<BaseHttpsServer> mTeeServer;
     gsl::not_null<std::shared_ptr<erp::RuntimeConfiguration>> mRuntimeConfiguration;
 
     std::unique_ptr<IPoPPCertificateVerifierService> mPoPPService;
     std::unique_ptr<PushEventCreator> mPushEventCreator;
-    std::unique_ptr<SeedTimer> mPrngSeeder;
 };
 
 class SessionContext;

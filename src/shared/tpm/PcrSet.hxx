@@ -8,6 +8,8 @@
 #ifndef ERP_PROCESSING_CONTEXT_PCRSET_HXX
 #define ERP_PROCESSING_CONTEXT_PCRSET_HXX
 
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <cstdint>
 #include <optional>
 #include <set>

@@ -607,7 +607,7 @@ TEST_P(ErpWorkflowGetTasksTestP, TaskSearch_AcceptDate_AllPredicates) // NOLINT
             return;
         case model::PrescriptionType::tRezept:
         {
-            if (!runsInErpTest())
+            if (runsInCloudEnv())
             {
                 GTEST_SKIP() << "Integration test cannot time-shift";
             }

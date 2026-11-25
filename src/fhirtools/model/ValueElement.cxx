@@ -65,31 +65,28 @@ bool fhirtools::ValueElement::hasSubElement(const std::string& name) const
     return mValue->children().contains(name) || mValue->attributes().contains(name);
 }
 
-const std::vector<std::string>& ValueElement::subElementNames() const
+std::vector<std::string> ValueElement::subElementNames() const
 {
     const auto* profile = definitionPointer().profile();
-    if (! mSubElementNameCache.empty())
-    {
-        return mSubElementNameCache;
-    }
     bool skipValue = (profile->kind() == FhirStructureDefinition::Kind::primitiveType) || profile->isSystemType();
-    mSubElementNameCache.reserve(mValue->children().size() + mValue->attributes().size());
+    std::vector<std::string> result;
+    result.reserve(mValue->children().size() + mValue->attributes().size());
     for (const auto& attr : mValue->attributes())
     {
         if (skipValue && attr.first == "value")
         {
             continue;
         }
-        mSubElementNameCache.emplace_back(attr.first);
+        result.emplace_back(attr.first);
     }
     for (const auto& child : mValue->children())
     {
-        if (mSubElementNameCache.empty() || mSubElementNameCache.back() != child.first)
+        if (result.empty() || result.back() != child.first)
         {
-            mSubElementNameCache.emplace_back(child.first);
+            result.emplace_back(child.first);
         }
     }
-    return mSubElementNameCache;
+    return result;
 }
 
 std::string fhirtools::ValueElement::asRaw() const
@@ -101,7 +98,7 @@ std::string fhirtools::ValueElement::asRaw() const
 }
 
 
-fhirtools::QuantityType ValueElement::asQuantity() const
+Element::QuantityType ValueElement::asQuantity() const
 {
     return asPrimitiveElement()->asQuantity();
 }

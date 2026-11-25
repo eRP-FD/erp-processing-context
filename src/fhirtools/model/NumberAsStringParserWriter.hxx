@@ -8,9 +8,11 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERWRITER_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_NUMBERASSTRINGPARSERWRITER_HXX
 
+#include "fhirtools/model/NumberAsStringParserDocument.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <rapidjson/writer.h>
 
-#include "fhirtools/model/NumberAsStringParserDocument.hxx"
 
 namespace model
 {

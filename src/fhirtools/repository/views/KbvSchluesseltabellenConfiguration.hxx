@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <date/date.h>
 #include <gsl/gsl-lite.hpp>
 #include <rapidjson/document.h>

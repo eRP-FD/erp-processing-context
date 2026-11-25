@@ -5,7 +5,7 @@
 # non-exclusively licensed to gematik GmbH
 #
 
-FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:3.0.3 AS build
+FROM de.icr.io/erp_dev/erp-pc-ubuntu-build:2.3.1 as build
 
 # ensure strip command is available
 RUN apt-get update --fix-missing && \
@@ -34,6 +34,7 @@ ENV CONAN_LOGIN_USERNAME=${CONAN_LOGIN_USERNAME:-''} \
     ERP_RELEASE_VERSION=${ERP_RELEASE_VERSION:-'0.0.0'}
 
 COPY scripts/ci-build.sh scripts/ci-build.sh
+
 
 RUN scripts/ci-build.sh \
         --source_folder="source" \
@@ -112,8 +113,10 @@ RUN ./create_gramine_manifest.bash install_manifest.txt /debug/erp/bin/exporter-
 
 RUN tar -czf ./erp-processing-context-debug.tar.gz /debug/erp
 
+
+
 # Build runtime image here:
-FROM de.icr.io/erp_dev/rt-gramine-direct:1.0.0 AS runtime
+FROM de.icr.io/erp_dev/rt-gramine-direct:0.0.8 AS runtime
 
 # Dummy key required for the signing steps.
 RUN openssl genrsa -3 -out /enclave-dummy-key.pem 3072

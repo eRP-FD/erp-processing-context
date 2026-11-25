@@ -154,9 +154,7 @@ ResourceProfileTransformer::Result ResourceProfileTransformer::applyMappings(con
                 }
             }
         }
-        // as elements might be changed we make a copy of the sub element names
-        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
-        for (const auto subElementNames = element.subElementNames(); const auto& subElementName : subElementNames)
+        for (const auto& subElementName : element.subElementNames())
         {
             for (const auto& subElement : element.subElements(subElementName))
             {

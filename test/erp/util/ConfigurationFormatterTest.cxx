@@ -214,49 +214,6 @@ TEST_F(ConfigurationFormatterTest, BinaryKeyTypeWithFilePrefix)
 }
 
 
-TEST_F(ConfigurationFormatterTest, FileKeyTypeFileSizeLimitAccepted)
-{
-    static constexpr auto maxSize = static_cast<size_t>(1024 * 50);
-    const std::string file = std::string{TEST_DATA_BINARY_DIR} + "/configuration-formatter-50kib.txt";
-    const std::string content(maxSize, 'a');
-    FileHelper::writeFile(file, content);
-    const EnvironmentVariableGuard guard{ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE,
-                                         "file://" + file};
-
-    rapidjson::Document doc;
-    ASSERT_NO_FATAL_FAILURE(doc = formatAsJson(ConfigurationKeyFlags::all));
-
-    rapidjson::Pointer errorPtr{"/environment/ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE/error"};
-    EXPECT_EQ(errorPtr.Get(doc), nullptr);
-
-    rapidjson::Pointer contentPtr{"/environment/ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE/content"};
-    const auto* const contentValue = contentPtr.Get(doc);
-    ASSERT_NE(contentValue, nullptr);
-    ASSERT_TRUE(contentValue->IsString());
-    EXPECT_EQ(std::string_view(contentValue->GetString(), contentValue->GetStringLength()), content);
-}
-
-TEST_F(ConfigurationFormatterTest, FileKeyTypeFileTooLarge)
-{
-    static constexpr auto tooLargeSize = static_cast<size_t>(1024 * 50 + 1);
-    const std::string file = std::string{TEST_DATA_BINARY_DIR} + "/configuration-formatter-50kib-plus-1.txt";
-    FileHelper::writeFile(file, std::string(tooLargeSize, 'a'));
-    const EnvironmentVariableGuard guard{ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE,
-                                         "file://" + file};
-
-    rapidjson::Document doc;
-    ASSERT_NO_FATAL_FAILURE(doc = formatAsJson(ConfigurationKeyFlags::all));
-
-    rapidjson::Pointer errorPtr{"/environment/ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE/error"};
-    const auto* const error = errorPtr.Get(doc);
-    ASSERT_NE(error, nullptr);
-    ASSERT_TRUE(error->IsString());
-    EXPECT_STREQ(error->GetString(), "file too large (>50kiB)");
-
-    rapidjson::Pointer contentPtr{"/environment/ERP_MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE/content"};
-    EXPECT_EQ(contentPtr.Get(doc), nullptr);
-}
-
 TEST_F(ConfigurationFormatterTest, FileKeyTypeInvalidPrefix)
 {
     const EnvironmentVariableGuard guard{ConfigurationKey::MEDICATION_EXPORTER_PUSH_CLIENT_CERTIFICATE, "just-a-string-no-prefix"};

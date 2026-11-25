@@ -840,11 +840,22 @@ std::optional<std::strong_ordering> fhirtools::Element::compareTo(const Element&
     if (! isImplicitConvertible(type(), rhs.type()) && isImplicitConvertible(rhs.type(), type()))
     {
         auto reverseResult = rhs.compareTo(*this);
-        if (reverseResult.has_value())
+        if (! reverseResult.has_value() || std::is_eq(*reverseResult))
         {
-            return 0 <=> *reverseResult;
+            return reverseResult;
         }
-        return std::nullopt;
+        else if (reverseResult == std::strong_ordering::greater)
+        {
+            return std::make_optional(std::strong_ordering::less);
+        }
+        else if (reverseResult == std::strong_ordering::less)
+        {
+            return std::make_optional(std::strong_ordering::greater);
+        }
+        else
+        {
+            FPFail2("unexpected std::strong_ordering value", std::logic_error);
+        }
     }
     FPExpect(isImplicitConvertible(type(), rhs.type()), "incompatible operands for comparison");
     switch (rhs.type())
@@ -911,8 +922,8 @@ std::optional<bool> fhirtools::Element::equals(const Element& rhs) const
                                                    : std::nullopt;
             }
             case Element::Type::Structured: {
-                const auto& subElementsLhs = subElementNames();
-                const auto& subElementsRhs = rhs.subElementNames();
+                const auto subElementsLhs = subElementNames();
+                const auto subElementsRhs = rhs.subElementNames();
                 if (subElementsLhs != subElementsRhs)
                 {
                     return false;
@@ -957,57 +968,70 @@ bool Element::matches(const Element& pattern) const
     }
     return !pattern.hasValue() || (hasValue() && asRaw() == pattern.asRaw());
 }
-// NOLINTNEXTLINE(misc-no-recursion)
-std::strong_ordering fhirtools::Element::quickCompareTo(const Element& rhs) const
-{
-    bool hasValue = this->hasValue();
-    //NOLINTNEXTLINE(readability-implicit-bool-conversion) - not using spaceship is probably even less readable
-    if (const auto hasValueCmp = hasValue <=> rhs.hasValue(); is_neq(hasValueCmp))
-    {
-        return hasValueCmp;
-    }
-    if (hasValue)
-    {
-        // hasValue == rhs.hasValue() => both have a value
-        if (const auto rawCmp = asRaw() <=> rhs.asRaw(); is_neq(rawCmp))
-        {
-            return rawCmp;
-        }
-    }
-    const auto& subElementNames = this->subElementNames();
-    if (const auto cmp = subElementNames <=> rhs.subElementNames(); is_neq(cmp))
-    {
-        return cmp;
-    }
-    for (const auto& name : subElementNames)
-    {
-        const auto& lhsSubElements = subElements(name);
-        const auto& rhsSubElements = rhs.subElements(name);
-        if (const auto subSizeCmp = lhsSubElements.size() <=> rhsSubElements.size(); is_neq(subSizeCmp))
-        {
-            return subSizeCmp;
-        }
-        for (size_t idx = 0; idx < lhsSubElements.size(); ++idx)
-        {
-            if (const auto elementCmp = lhsSubElements[idx]->quickCompareTo(*rhsSubElements[idx]); is_neq(elementCmp))
-            {
-                return elementCmp;
-            }
-        }
-    }
-    return std::strong_ordering::equal;
-}
-
 
 size_t fhirtools::Element::subElementLevel() const
 {
     return mSubElementLevel;
 }
 
+Element::QuantityType::QuantityType(DecimalType value, const std::string_view& unit)
+    : mValue(std::move(value))
+    , mUnit(unit)
+{
+}
+
+Element::QuantityType::QuantityType(const std::string_view& valueAndUnit)
+{
+    size_t idx = 0;
+    (void) std::stod(std::string(valueAndUnit), &idx);
+    mValue = DecimalType(std::string_view{valueAndUnit.begin(), idx});
+    mUnit = boost::trim_copy(std::string(valueAndUnit.substr(idx)));
+}
+
+std::optional<std::strong_ordering> fhirtools::Element::QuantityType::compareTo(const Element::QuantityType& rhs) const
+{
+    if (! convertibleToUnit(rhs.mUnit))
+    {
+        return std::nullopt;
+    }
+    const auto convertedUnit = convertToUnit(rhs.mUnit);
+    if (convertedUnit.mValue < rhs.mValue)
+    {
+        return std::strong_ordering::less;
+    }
+    else if (convertedUnit.mValue > rhs.mValue)
+    {
+        return std::strong_ordering::greater;
+    }
+    else
+    {
+        return std::strong_ordering::equal;
+    }
+}
+std::optional<bool> fhirtools::Element::QuantityType::equals(const Element::QuantityType& rhs) const
+{
+    const auto result = compareTo(rhs);
+    if (! result.has_value())
+    {
+        return std::nullopt;
+    }
+    return result == std::strong_ordering::equal;
+}
+
+Element::QuantityType Element::QuantityType::convertToUnit(const std::string& unit) const
+{
+    FPExpect(mUnit == unit, "unit " + mUnit + " not convertible to " + unit);
+    return *this;
+}
+
+bool Element::QuantityType::convertibleToUnit(const std::string& unit) const
+{
+    return mUnit == unit;
+}
 
 PrimitiveElement::PrimitiveElement(
     gsl::not_null<const fhirtools::FhirStructureRepositoryBackend*> fhirStructureRepository, Type type,
-    PrimitiveValue&& value, std::weak_ptr<const Element> parent)
+    ValueType&& value, std::weak_ptr<const Element> parent)
     : Element(fhirStructureRepository, std::move(parent),
               ProfiledElementTypeInfo{getStructureDefinition(*fhirStructureRepository, type)})
     , mValue(value)
@@ -1098,7 +1122,29 @@ std::string fhirtools::PrimitiveElement::asRaw() const
 
 int32_t PrimitiveElement::asInt() const
 {
-    return mValue.asInt();
+    switch (type())
+    {
+        case Type::Integer:
+            return std::get<int32_t>(mValue);
+        case Type::String: {
+            const auto& asString = std::get<std::string>(mValue);
+            size_t idx = 0;
+            auto asInt = std::stoi(asString, &idx);
+            if (idx == asString.size())
+                return asInt;
+            break;
+        }
+        case Type::Boolean:
+            return std::get<bool>(mValue) ? 1 : 0;
+        case Type::Decimal:
+        case Type::Structured:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Time:
+        case Type::Quantity:
+            break;
+    }
+    FPFail("not convertible to int");
 }
 
 bool fhirtools::PrimitiveElement::hasSubElement(const std::string&) const
@@ -1106,11 +1152,9 @@ bool fhirtools::PrimitiveElement::hasSubElement(const std::string&) const
     return false;
 }
 
-const std::vector<std::string>& PrimitiveElement::subElementNames() const
+std::vector<std::string> PrimitiveElement::subElementNames() const
 {
-    static const std::vector<std::string> empty{};
-    Expect3(empty.empty(), "empty was modified", std::logic_error);
-    return empty;
+    return {};
 }
 
 bool fhirtools::PrimitiveElement::hasValue() const
@@ -1135,37 +1179,191 @@ std::vector<std::string_view> PrimitiveElement::profiles() const
 
 std::string PrimitiveElement::asString() const
 {
-    return mValue.asString();
+    switch (type())
+    {
+
+        case Type::Integer:
+            return std::to_string(std::get<int32_t>(mValue));
+        case Type::Decimal:
+            return decimalAsString(std::get<DecimalType>(mValue));
+        case Type::String:
+            return std::get<std::string>(mValue);
+        case Type::Boolean:
+            return std::get<bool>(mValue) ? "true" : "false";
+        case Type::Structured:
+            break;
+        case Type::Date:
+            return std::get<Date>(mValue).toString();
+        case Type::DateTime:
+            return std::get<DateTime>(mValue).toString();
+        case Type::Time:
+            return std::get<Time>(mValue).toString();
+        case Type::Quantity: {
+            const auto& q = std::get<QuantityType>(mValue);
+            return decimalAsString(q.value()) + " " + q.unit();
+        }
+    }
+    FPFail("not convertible to string");
+}
+
+std::string PrimitiveElement::decimalAsString(const DecimalType& dec) const
+{
+    auto trimmed =
+        boost::trim_right_copy_if(dec.str(8, std::ios_base::fixed | std::ios_base::showpoint), [](const auto& c) {
+            return c == '0';
+        });
+    if (trimmed.back() == '.')
+        trimmed += '0';
+    return trimmed;
 }
 
 fhirtools::DecimalType PrimitiveElement::asDecimal() const
 {
-    return mValue.asDecimal();
+    switch (type())
+    {
+        case Type::Decimal:
+            return std::get<DecimalType>(mValue);
+        case Type::Integer:
+            return std::get<int32_t>(mValue);
+        case Type::Boolean:
+            return std::get<bool>(mValue) ? DecimalType("1.0") : DecimalType("0.0");
+        case Type::String:
+            return DecimalType(std::get<std::string>(mValue));
+        case Type::Structured:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Time:
+        case Type::Quantity:
+            break;
+    }
+    FPFail("not convertible to decimal");
 }
 
 bool PrimitiveElement::asBool() const
 {
-   return mValue.asBool();
+    switch (type())
+    {
+        case Type::Boolean:
+            return std::get<bool>(mValue);
+        case Type::Integer: {
+            const auto& asInt = std::get<int32_t>(mValue);
+            if (asInt == 0)
+                return false;
+            if (asInt == 1)
+                return true;
+            break;
+        }
+        case Type::Decimal: {
+            const auto& asDecimal = std::get<DecimalType>(mValue);
+            if (asDecimal == 0)
+                return false;
+            if (asDecimal == 1)
+                return true;
+            break;
+        }
+        case Type::String: {
+            auto asString = boost::to_lower_copy(std::get<std::string>(mValue));
+            if (asString == "true" || asString == "t" || asString == "yes" || asString == "y" || asString == "1" ||
+                asString == "1.0")
+                return true;
+            if (asString == "false" || asString == "f" || asString == "no" || asString == "n" || asString == "0" ||
+                asString == "0.0")
+                return false;
+            break;
+        }
+        case Type::Structured:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Time:
+        case Type::Quantity:
+            break;
+    }
+    FPFail("not convertible to bool");
 }
 
 fhirtools::Date PrimitiveElement::asDate() const
 {
-    return mValue.asDate();
+    switch (type())
+    {
+        case Type::Date:
+            return std::get<Date>(mValue);
+        case Type::DateTime:
+            return std::get<DateTime>(mValue).date();
+        case Type::String:
+            return Date(std::get<std::string>(mValue));
+        case Type::Integer:
+        case Type::Decimal:
+        case Type::Boolean:
+        case Type::Time:
+        case Type::Quantity:
+        case Type::Structured:
+            break;
+    }
+    FPFail("not convertible to Date");
 }
 
 fhirtools::Time PrimitiveElement::asTime() const
 {
-    return mValue.asTime();
+    switch (type())
+    {
+        case Type::Time:
+            return std::get<Time>(mValue);
+        case Type::String:
+            return Time(std::get<std::string>(mValue));
+        case Type::Integer:
+        case Type::Decimal:
+        case Type::Boolean:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Quantity:
+        case Type::Structured:
+            break;
+    }
+    FPFail("not convertible to Time");
 }
 
 fhirtools::DateTime PrimitiveElement::asDateTime() const
 {
-  return mValue.asDateTime();
+    switch (type())
+    {
+        case Type::Date:
+            return DateTime(std::get<Date>(mValue));
+        case Type::DateTime:
+            return std::get<DateTime>(mValue);
+        case Type::String:
+            return DateTime(std::get<std::string>(mValue));
+        case Type::Integer:
+        case Type::Decimal:
+        case Type::Boolean:
+        case Type::Time:
+        case Type::Quantity:
+        case Type::Structured:
+            break;
+    }
+    FPFail("not convertible to DateTime");
 }
 
-fhirtools::QuantityType PrimitiveElement::asQuantity() const
+Element::QuantityType PrimitiveElement::asQuantity() const
 {
-  return mValue.asQuantity();
+    switch (type())
+    {
+        case Type::Integer:
+            return QuantityType(std::get<int32_t>(mValue), "");
+        case Type::Decimal:
+            return QuantityType(std::get<DecimalType>(mValue), "");
+        case Type::String:
+            return QuantityType(std::get<std::string>(mValue));
+        case Type::Boolean:
+        case Type::Date:
+        case Type::DateTime:
+        case Type::Time:
+            break;
+        case Type::Quantity:
+            return std::get<QuantityType>(mValue);
+        case Type::Structured:
+            break;
+    }
+    FPFail("not convertible to Quantity");
 }
 
 

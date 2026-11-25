@@ -21,6 +21,6 @@ public:
 // NOLINTBEGIN(bugprone-exception-escape)
 extern template class Resource<GemErpChrgPrParPatchChargeItemInput>;
 extern template class Parameters<GemErpChrgPrParPatchChargeItemInput>;
-// NOLINTEND(bugprone-exception-escape)
+// NOLINTEND
 } // model
 

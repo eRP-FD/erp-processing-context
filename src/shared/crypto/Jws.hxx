@@ -8,13 +8,15 @@
 #ifndef ERP_PROCESSING_CONTEXT_JWS_HXX
 #define ERP_PROCESSING_CONTEXT_JWS_HXX
 
+#include "shared/network/message/MimeType.hxx"
+#include "shared/crypto/Certificate.hxx"
+#include "shared/util/erp-rapidjson-config.hxx"
+
 #include <rapidjson/pointer.h>
 #include <optional>
 #include <string_view>
 #include <vector>
 
-#include "shared/network/message/MimeType.hxx"
-#include "shared/crypto/Certificate.hxx"
 
 class JoseHeader
 {

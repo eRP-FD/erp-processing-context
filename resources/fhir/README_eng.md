@@ -17,13 +17,11 @@
 | de.gematik.epa                                 | 1.3.0         | https://gemspec.gematik.de/ig/fhir/epa/1.3.0/downloads.html                   |
 | de.gematik.epa.medication                      | 1.0.6-2       | https://gemspec.gematik.de/ig/fhir/epa-medication/1.0.6/downloads.html        |
 | de.gematik.epa.medication                      | 1.3.0         | https://gemspec.gematik.de/ig/fhir/epa-medication/1.3.0/downloads.html        |
-| de.gematik.epa.medication                      | 1.3.4         | https://gemspec.gematik.de/ig/fhir/epa-medication/1.3.4/package.tgz           |
 | de.gematik.erezept.eu                          | 1.1.2         | https://simplifier.net/packages/de.gematik.erezept.eu/1.1.2                   |
 | de.gematik.erezept-patientenrechnung.r4        | 1.1.0         | https://simplifier.net/packages/de.gematik.erezept-patientenrechnung.r4/1.1.0 |
 | de.gematik.erezept-workflow.r4                 | 1.5.2         | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.5.2          |
 | de.gematik.erezept-workflow.r4                 | 1.6.1         | https://simplifier.net/packages/de.gematik.erezept-workflow.r4/1.6.1          |
 | de.gematik.erp.t-prescription                  | 1.1.0         | https://simplifier.net/packages/de.gematik.erp.t-prescription/1.1.0           |
-| de.gematik.erp.t-prescription                  | 1.2.0         | Pre-Release via E-Mail                                                        |
 | de.gematik.fhir.directory                      | 1.0.1         | https://simplifier.net/packages/de.gematik.fhir.directory/1.0.1               |
 | de.gematik.fhir.directory                      | 0.11.12       | https://simplifier.net/packages/de.gematik.fhir.directory/0.11.12             |
 | de.gematik.terminology                         | 1.0.5-4       | https://gemspec.gematik.de/ig/fhir/terminology/1.0.5-4/downloads.html         |
@@ -34,11 +32,9 @@
 | de.ihe-d.terminology                           | 3.0.1         | https://simplifier.net/packages/de.ihe-d.terminology/3.0.1                    |
 | dvmd.kdl.r4                                    | 2025.0.1      | https://simplifier.net/packages/dvmd.kdl.r4/2025.0.1                          |
 | hl7.fhir.uv.extensions.r4                      | 5.2.0         | https://simplifier.net/packages/hl7.fhir.uv.extensions.r4/5.2.0               |
-| hl7.fhir.uv.extensions.r4                      | 5.3.0         | https://hl7.org/fhir/extensions/5.3.0/hl7.fhir.uv.extensions.r4.tgz           |
 | hl7.terminology.r4                             | 6.3.0         | https://terminology.hl7.org/6.3.0/hl7.terminology.r4.tgz                      |
 | hl7.terminology.r4                             | 6.5.0         | https://terminology.hl7.org/6.5.0/hl7.terminology.r4.tgz                      |
 | hl7.terminology.r4                             | 7.0.1         | https://terminology.hl7.org/7.0.1/hl7.terminology.r4.tgz                      |
-| hl7.terminology.r4                             | 7.3.0         | https://terminology.hl7.org/7.3.0/hl7.terminology.r4.tgz                      |
 | kbv.basis                                      | 1.7.0         | https://simplifier.net/packages/kbv.basis/1.7.0                               |
 | kbv.ita.erp                                    | 1.3.3         | https://simplifier.net/packages/kbv.ita.erp/1.3.3                             |
 | kbv.ita.erp                                    | 1.4.1         | https://simplifier.net/packages/kbv.ita.erp/1.4.1                             |

@@ -8,6 +8,7 @@
 #ifndef ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 #define ERP_PROCESSING_CONTEXT_MODEL_COMMUNICATIONPAYLOAD_HXX
 
+#include "shared/util/erp-rapidjson-config.hxx"
 #include "shared/validation/SchemaType.hxx"
 
 #include <rapidjson/document.h>
